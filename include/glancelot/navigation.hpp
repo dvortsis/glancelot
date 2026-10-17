@@ -8,6 +8,11 @@ namespace glancelot {
 bool naturalLess(const std::filesystem::path& a, const std::filesystem::path& b);
 bool isSupportedImage(const std::filesystem::path& path);
 std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& directory, std::stop_token cancel = {});
+// Immediate child directories for the folder tree, in the same natural order and with the same link/volume
+// policy as traversal. `accessible` is false when the directory cannot be listed (denied, missing, or reached
+// through a link); `cancelled` results carry no folders. Only one directory level is read.
+struct FolderListing { std::vector<std::filesystem::path> folders; bool accessible{true}, cancelled{false}; };
+FolderListing childFolders(const std::filesystem::path& directory, std::stop_token cancel = {});
 // Lazy traversal searches directories under root; never follows directory links.
 // Cancellation is cooperative; a blocked operating-system filesystem call cannot be interrupted.
 std::optional<std::filesystem::path> adjacentFolderImage(

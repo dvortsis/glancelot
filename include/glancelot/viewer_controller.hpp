@@ -21,6 +21,8 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString boundaryMode READ boundaryMode WRITE setBoundaryMode NOTIFY stateChanged)
     Q_PROPERTY(QString wheelMode READ wheelMode WRITE setWheelMode NOTIFY stateChanged)
     Q_PROPERTY(bool filmstripVisible READ filmstripVisible WRITE setFilmstripVisible NOTIFY stateChanged)
+    Q_PROPERTY(bool treeVisible READ treeVisible WRITE setTreeVisible NOTIFY stateChanged)
+    Q_PROPERTY(bool treePinned READ treePinned WRITE setTreePinned NOTIFY stateChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -39,12 +41,21 @@ public:
     Q_INVOKABLE void resetBindings();
     void setBoundaryMode(const QString& mode); void setWheelMode(const QString& mode);
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
+    bool treeVisible() const; void setTreeVisible(bool visible);
+    bool treePinned() const; void setTreePinned(bool pinned);
+    // Folder selection from the tree: opens the first eligible image of `folder`, or of the first subfolder (in
+    // traversal order) that has one. Asynchronous; the newest request wins. Reports a status when nothing is found.
+    Q_INVOKABLE void openFolder(const QString& folder);
+    // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
+    Q_INVOKABLE void raiseRoot();
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
     void imageChanged(); void stateChanged(); void bindingsChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
+    // The folder tree was just shown by command; the UI should move keyboard focus into it.
+    void treeShown();
     void viewCommand(const QString& id);
 private:
     struct Private;

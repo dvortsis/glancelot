@@ -64,7 +64,8 @@ tasks:
     milestone: M2.1
     priority: 10
     owner: lead
-    state: ready
+    state: implementing
+    memory_action: act_mvcvo164_28dbafafef0a
     depends: [ALPHA-PACKAGE]
     outcome: Collapsible lazy folder tree in the next implementation milestone
     boundaries: Core folder navigation panel only; favorites and full browser grid remain M3

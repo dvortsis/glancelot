@@ -165,6 +165,17 @@ bool isSupportedImage(const fs::path& path) {
         || extension == fs::path(".png").native();
 }
 std::vector<fs::path> imageFiles(const fs::path& directory, std::stop_token cancel) { return entries(directory, false, cancel); }
+FolderListing childFolders(const fs::path& directory, std::stop_token cancel) {
+    FolderListing listing;
+    if (cancel.stop_requested()) { listing.cancelled = true; return listing; }
+    std::error_code ec;
+    // A separate probe without skip_permission_denied distinguishes "cannot list" from "no subfolders".
+    if (!safePath(directory, cancel)) { listing.cancelled = cancel.stop_requested(); listing.accessible = false; return listing; }
+    { fs::directory_iterator probe(directory, ec); if (ec) { listing.accessible = false; return listing; } }
+    listing.folders = entries(directory, true, cancel);
+    if (cancel.stop_requested()) { listing.folders.clear(); listing.cancelled = true; }
+    return listing;
+}
 std::optional<fs::path> adjacentFolderImage(const fs::path& rootPath, const fs::path& directory, int direction, std::stop_token cancel) {
     if (direction == 0 || cancel.stop_requested()) return std::nullopt;
     std::error_code ec;

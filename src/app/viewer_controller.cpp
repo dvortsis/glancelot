@@ -60,7 +60,7 @@ const std::vector<Command> registry {
     {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
     {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"quit","Quit","Ctrl+Q"}
+    {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"quit","Quit","Ctrl+Q"}
 };
 QString configDirectory() {
     const QString override = qEnvironmentVariable("GLANCELOT_CONFIG_DIR");
@@ -75,7 +75,7 @@ struct ViewerController::Private {
     ViewerController* q;
     QImage image;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
-    bool loading{}, filmstrip{true};
+    bool loading{}, filmstrip{true}, tree{}, treePin{};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
     QJsonObject bindings;
@@ -87,7 +87,7 @@ struct ViewerController::Private {
     QByteArray output;
     QCache<QString,QImage> cache{128*1024}; // KiB, only source-revision keyed immutable RGBA pixels.
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; };
-    struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; };
+    struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool navigationPool;
     bool navigationBusy{}, navigationReady{};
     std::deque<std::pair<int,bool>> navigationIntents;
@@ -147,6 +147,8 @@ struct ViewerController::Private {
         const auto savedWheel=object.value("wheel").toString();
         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
+        if (object.value("tree").isBool()) tree=object.value("tree").toBool();
+        if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
     }
     bool save() {
         if (!QDir().mkpath(configDirectory())) return false;
@@ -161,7 +163,7 @@ struct ViewerController::Private {
             previous.close();
             QFile::remove(target+".bak"); QFile::copy(target,target+".bak");
         }
-        object["schema"]=1; object["bindings"]=bindings; object["boundary"]=boundary; object["wheel"]=wheel; object["filmstrip"]=filmstrip;
+        object["schema"]=1; object["bindings"]=bindings; object["boundary"]=boundary; object["wheel"]=wheel; object["filmstrip"]=filmstrip; object["tree"]=tree; object["treePinned"]=treePin;
         QSaveFile file(target);
         const auto bytes=QJsonDocument(object).toJson(QJsonDocument::Indented);
         return file.open(QIODevice::WriteOnly) && file.write(bytes)==bytes.size() && file.commit();
@@ -259,14 +261,15 @@ struct ViewerController::Private {
         auto* future=new QFutureWatcher<NavigationResult>(q);
         const auto token=job.token,sequence=job.sequence;
         const bool scanJob=job.scan;
-        QObject::connect(future,&QFutureWatcher<NavigationResult>::finished,q,[this,future,token,sequence,scanJob]{
+        const QString emptyMessage=job.emptyMessage;
+        QObject::connect(future,&QFutureWatcher<NavigationResult>::finished,q,[this,future,token,sequence,scanJob,emptyMessage]{
             trace("navigation:finished");
             auto result=future->result(); future->deleteLater(); navigationBusy=false;
             if (token==generation && sequence==navigationGeneration) {
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
-                else if(!scanJob) { status="Folder boundary reached. Change the boundary mode or choose another image."; emit q->stateChanged(); }
+                else if(!scanJob) { status=emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
@@ -329,6 +332,7 @@ void ViewerController::nextFolder(){d->navigate(1,true);}void ViewerController::
 void ViewerController::trigger(const QString& id){
     if(id=="next")next();else if(id=="previous")previous();else if(id=="next-folder")nextFolder();else if(id=="previous-folder")previousFolder();
     else if(id=="filmstrip")setFilmstripVisible(!d->filmstrip);
+    else if(id=="tree")setTreeVisible(!d->tree);
     else if(id=="quit")QCoreApplication::quit();else if(d->bindings.contains(id))emit viewCommand(id);
 }
 QString ViewerController::bindingFor(const QString& id) const{return d->bindings.value(id).toString();}
@@ -343,6 +347,36 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     emit bindingsChanged();emit stateChanged();return true;
 }
 void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save();d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}
+bool ViewerController::treeVisible() const{return d->tree;}
+bool ViewerController::treePinned() const{return d->treePin;}
+void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tree=value;if(!d->save())d->status="Folder tree setting changed; settings could not be saved.";emit stateChanged();if(value)emit treeShown();}
+void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save())d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
+void ViewerController::openFolder(const QString& value){
+    const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
+    if(folder.isEmpty()||d->nav.snapshot().current.empty())return;
+    d->navigationIntents.clear();
+    Navigator copy=d->nav;
+    const auto cancellation=d->navigationStop.get_token();
+    copy.setCancellation(cancellation);
+    d->status="Opening folder "+QFileInfo(folder).fileName()+"…";emit stateChanged();
+    d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,directory=nativePath(folder),cancellation]() mutable {
+        const auto files=imageFiles(directory,cancellation);
+        std::optional<std::filesystem::path> destination;
+        if(!files.empty())destination=files.front();else destination=adjacentFolderImage(directory,directory,1,cancellation);
+        return Private::NavigationResult{std::move(copy),destination};
+    },"No supported images in that folder or its subfolders."});
+}
+void ViewerController::raiseRoot(){
+    const auto root=d->nav.snapshot().root;const auto parent=root.parent_path();
+    if(root.empty()||parent.empty()||parent==root)return;
+    Navigator copy=d->nav;
+    const auto cancellation=d->navigationStop.get_token();
+    copy.setCancellation(cancellation);
+    d->submitNavigation({d->generation,++d->navigationGeneration,true,[copy,parent]() mutable {
+        copy.setRoot(parent);
+        return Private::NavigationResult{std::move(copy),std::nullopt};
+    }});
+}
 bool ViewerController::filmstripVisible() const{return d->filmstrip;}
 const NavigationSnapshot& ViewerController::snapshot() const{return d->nav.snapshot();}
 void ViewerController::setFilmstripVisible(bool value){if(d->filmstrip==value)return;d->filmstrip=value;if(!d->save())d->status="Filmstrip setting changed; settings could not be saved.";emit stateChanged();}
