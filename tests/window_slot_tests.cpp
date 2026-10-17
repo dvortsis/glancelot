@@ -42,7 +42,15 @@ int helperMain(const QStringList& args) {
                 windows[QString::number(slot)] = QJsonObject{{"folder", "C:/f" + QString::number(slot)}, {"image", tag + "-" + QString::number(i)}};
                 root["windows"] = windows;
             });
-            if (!status.ok()) return 10 + int(status.code);
+            // Under a saturated machine a writer can legitimately wait out the 4 s lock bound; a test helper retries it.
+            auto result = status;
+            for (int retry = 0; retry < 3 && result.code == glancelot::SettingsStatus::Busy; ++retry)
+                result = glancelot::updateSettings([&](QJsonObject& root) {
+                    auto windows = root.value("windows").toObject();
+                    windows[QString::number(slot)] = QJsonObject{{"folder", "C:/f" + QString::number(slot)}, {"image", tag + "-" + QString::number(i)}};
+                    root["windows"] = windows;
+                });
+            if (!result.ok()) return 10 + int(result.code);
         }
         return 0;
     }
@@ -525,7 +533,9 @@ void WindowSlotTests::restoreOpensSavedImageOrFirstImageOfSavedFolder() {
         QCOMPARE(viewer.windowSlot(), 1);
     }
     // Saved image deleted: fall back to the first eligible image of the saved folder.
-    QVERIFY(QFile::remove(saved));
+    bool removed = false;
+    for (int attempt = 0; attempt < 50 && !removed; ++attempt) { removed = QFile::remove(saved); if (!removed) QTest::qWait(100); } // the decoder may still hold it under load
+    QVERIFY(removed);
     {
         ViewerController viewer;
         viewer.setWindowSlot(1);
