@@ -1,6 +1,9 @@
 #include "glancelot/viewer_controller.hpp"
+#include "glancelot/navigation.hpp"
+#include <functional>
 #include <QColorSpace>
 #include <QFile>
+#include <QDir>
 #include <QGuiApplication>
 #include <QImageWriter>
 #include <QSignalSpy>
@@ -45,6 +48,7 @@ QString writeOrientedJpeg(const QString& directory) {
 class AcceptanceTests final : public QObject {
     Q_OBJECT
 private slots:
+    void generatedTreeReverseOracle();
     void malformedInputTerminates();
     void pngPreservesDimensionsAlphaAndColor();
     void jpegOrientationApplied();
@@ -53,6 +57,35 @@ private slots:
     void stopAndLoopBoundaries();
 };
 
+void AcceptanceTests::generatedTreeReverseOracle() {
+    QTemporaryDir tree; QVERIFY(tree.isValid());
+    QStringList expected;
+    std::function<void(const QString&,int)> enumerate=[&](const QString& directory,int depth) {
+        expected << directory+"/n2.png" << directory+"/n10.png";
+        if (depth==0) return;
+        // Numeric names intentionally differ from lexical ordering.
+        for (const auto& child : {"d2","d10","d30"}) enumerate(directory+"/"+child,depth-1);
+    };
+    enumerate(tree.path(),3);
+    // Filesystem insertion order must not determine traversal order.
+    for (auto it=expected.crbegin(); it!=expected.crend(); ++it) {
+        QVERIFY(QDir().mkpath(QFileInfo(*it).absolutePath()));
+        QFile file(*it); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("fixture");
+    }
+    glancelot::Navigator navigator;
+    std::error_code error;
+    QVERIFY(navigator.open(std::filesystem::path(expected.front().toStdWString()),error));
+    for (int index=1; index<expected.size(); ++index) {
+        const auto next=navigator.step(1); QVERIFY2(next.has_value(),qPrintable(QString("ended at %1").arg(index)));
+        QCOMPARE(QString::fromStdWString(next->wstring()),QDir::toNativeSeparators(expected.at(index)));
+    }
+    QVERIFY(!navigator.step(1));
+    for (int index=expected.size()-2; index>=0; --index) {
+        const auto previous=navigator.step(-1); QVERIFY(previous.has_value());
+        QCOMPARE(QString::fromStdWString(previous->wstring()),QDir::toNativeSeparators(expected.at(index)));
+    }
+    QVERIFY(!navigator.step(-1));
+}
 void AcceptanceTests::malformedInputTerminates() {
     QTemporaryDir files; QVERIFY(files.isValid());
     QFile broken(files.filePath("broken.jpg"));
@@ -140,6 +173,7 @@ void AcceptanceTests::stopAndLoopBoundaries() {
     QVERIFY(!a.isEmpty() && !b.isEmpty());
     ViewerController controller; controller.setBoundaryMode("stop"); controller.open(a);
     QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QTRY_COMPARE_WITH_TIMEOUT(controller.fileCount(),2,10000);
     controller.previous(); QTest::qWait(100);
     QCOMPARE(QFileInfo(controller.filePath()).fileName(),QString("image2.png"));
     controller.next();
@@ -165,4 +199,6 @@ int main(int argc,char** argv) {
     return QTest::qExec(&tests,argc,argv);
 }
 #include "acceptance_tests.moc"
+
+
 
