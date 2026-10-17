@@ -58,6 +58,7 @@ private slots:
     void duplicateBindingRejectedAndSettingsPersist();
     void stopAndLoopBoundaries();
     void boundaryChangeWhileScanPending();
+    void consecutiveNavigationPreservesStepCount();
 };
 
 void AcceptanceTests::generatedTreeReverseOracle() {
@@ -229,6 +230,23 @@ void AcceptanceTests::boundaryChangeWhileScanPending() {
     QCOMPARE(controller.boundaryMode(),QString("stop"));
     controller.setBoundaryMode("continue");
 }
+void AcceptanceTests::consecutiveNavigationPreservesStepCount() {
+    QTemporaryDir files; QVERIFY(files.isValid());
+    QString first;
+    for(int index=1; index<=5; ++index) {
+        const auto path=writePng(files.path(),QString("n%1.png").arg(index),QColor(index*40,0,0));
+        QVERIFY(!path.isEmpty()); if(index==1) first=path;
+    }
+    ViewerController controller; controller.setBoundaryMode("stop"); controller.open(first);
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && controller.fileCount()==5,10000);
+    controller.next(); controller.next(); controller.next();
+    QTRY_COMPARE_WITH_TIMEOUT(QFileInfo(controller.filePath()).fileName(),QString("n4.png"),10000);
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading(),10000);
+    controller.previous(); controller.previous();
+    QTRY_COMPARE_WITH_TIMEOUT(QFileInfo(controller.filePath()).fileName(),QString("n2.png"),10000);
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading(),10000);
+    controller.setBoundaryMode("continue");
+}
 int main(int argc,char** argv) {
     QTemporaryDir preferences;
     qputenv("GLANCELOT_CONFIG_DIR",preferences.path().toUtf8());
@@ -242,6 +260,7 @@ int main(int argc,char** argv) {
     return QTest::qExec(&tests,argc,argv);
 }
 #include "acceptance_tests.moc"
+
 
 
 
