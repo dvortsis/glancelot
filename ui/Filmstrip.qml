@@ -79,7 +79,9 @@ Rectangle {
             required property string path
             required property bool isCurrent
             width: strip.compact ? 68 : 84
-            height: ListView.view.height
+            // 3px of vertical room inside the list's clip keeps the outset focus ring whole.
+            y: 3
+            height: ListView.view.height - 6
             padding: 2
             focusPolicy: Qt.StrongFocus
             Accessible.name: name + (isCurrent ? ", current photo" : "")
