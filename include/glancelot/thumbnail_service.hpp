@@ -8,7 +8,7 @@
 // --thumbnail-server worker processes; this class owns scheduling, deadlines and a size-capped memory cache.
 // Lives on the GUI thread. Results are delivered by queued signal, never synchronously from request().
 // Contract (frozen by the lead; change only through the lead):
-//  * request() returns a non-zero id, or 0 when the bounded queue is full (failed() is not emitted for 0).
+//  * request() returns a non-zero id, or 0 when the bounded queue is full or the epoch is stale (no signal for 0).
 //  * Exactly one of ready()/failed() is emitted per accepted id unless cancel(id) or setEpoch() discarded it.
 //  * A result whose epoch is older than the current epoch is dropped and never emitted.
 //  * Thumbnails are never written to disk; the cache is memory only.

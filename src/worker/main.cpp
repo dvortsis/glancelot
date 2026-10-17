@@ -6,6 +6,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSharedMemory>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <QDateTime>
@@ -36,10 +38,89 @@ bool openShared(QFile& file, const QString& path) {
     return file.open(QIODevice::ReadOnly);
 #endif
 }
+
+// Thumbnail server protocol. Requests: one JSON line {"id":N,"path":"...","edge":E} on stdin.
+// Replies on stdout: {"id":N,"phase":"error","error":"..."} or {"id":N,"phase":"thumb","width":W,"height":H,"bytes":B}
+// followed by exactly B bytes of tightly packed RGBA8888 (B == W*H*4, W,H <= edge <= 256).
+constexpr int kMaxEdge = 256, kMinEdge = 16;
+constexpr size_t kMaxRequestBytes = 131072;
+
+bool readRequestLine(QByteArray& line) {
+    line.clear();
+    char chunk[4096];
+    while (std::fgets(chunk, sizeof(chunk), stdin)) {
+        line += chunk;
+        if (line.endsWith('\n')) return true;
+        if (size_t(line.size()) > kMaxRequestBytes) return false;
+    }
+    return false;
+}
+
+void sendThumbnailError(qint64 id, const QString& message) {
+    send({{"id", double(id)}, {"phase", "error"}, {"error", message}});
+}
+
+QImage makeThumbnail(const QString& path, int edge, QString& error) {
+    const QFileInfo initial(path);
+    QFile source;
+    if (!openShared(source, path)) { error = "Cannot read this file."; return {}; }
+    QImageReader reader(&source);
+    reader.setDecideFormatFromContent(true);
+    reader.setAutoTransform(true);
+    const auto format = reader.format().toLower();
+    if (format != "jpeg" && format != "jpg" && format != "png") { error = "Unsupported format for thumbnails."; return {}; }
+    // Scale in the stored orientation; the EXIF transform is applied after decoding, so the final
+    // aspect ratio is correct even when the orientation swaps the axes.
+    const QSize stored = reader.size();
+    if (!stored.isValid() || stored.width() > 32768 || stored.height() > 32768) { error = "Invalid or unsupported image dimensions."; return {}; }
+    const double factor = (std::min)(1.0, double(edge) / (std::max)(stored.width(), stored.height()));
+    if (factor < 1.0)
+        reader.setScaledSize(QSize((std::max)(1, int(std::lround(stored.width() * factor))), (std::max)(1, int(std::lround(stored.height() * factor)))));
+    QImage image = reader.read();
+    source.close();
+    if (image.isNull()) { error = "Image decode failed: " + reader.errorString(); return {}; }
+    const QFileInfo after(path);
+    if (!after.exists() || after.size() != initial.size() || after.lastModified() != initial.lastModified()) { error = "File changed while decoding."; return {}; }
+    if ((std::max)(image.width(), image.height()) > edge)
+        image = image.scaled(edge, edge, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    if (!image.colorSpace().isValid()) image.setColorSpace(QColorSpace::SRgb);
+    image.convertToColorSpace(QColorSpace::SRgb, QImage::Format_RGBA8888);
+    if (image.isNull() || image.format() != QImage::Format_RGBA8888 || image.width() > edge || image.height() > edge) {
+        error = "Cannot convert thumbnail pixels."; return {};
+    }
+    return image;
+}
+
+int thumbnailServer() {
+#ifdef Q_OS_WIN
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
+    QImageReader::setAllocationLimit(256);
+    QByteArray line;
+    while (readRequestLine(line)) {
+        QJsonParseError parse;
+        const auto request = QJsonDocument::fromJson(line, &parse).object();
+        const qint64 id = request.value("id").toInteger(-1);
+        if (parse.error != QJsonParseError::NoError || id < 0) return 2;
+        const QString path = request.value("path").toString();
+        const int edge = request.value("edge").toInt();
+        if (path.isEmpty() || edge < kMinEdge || edge > kMaxEdge) { sendThumbnailError(id, "Invalid thumbnail request."); continue; }
+        QString error;
+        const QImage image = makeThumbnail(path, edge, error);
+        if (image.isNull()) { sendThumbnailError(id, error); continue; }
+        const qint64 bytes = qint64(image.width()) * image.height() * 4;
+        send({{"id", double(id)}, {"phase", "thumb"}, {"width", image.width()}, {"height", image.height()}, {"bytes", double(bytes)}});
+        for (int y = 0; y < image.height(); ++y) std::fwrite(image.constScanLine(y), 1, size_t(image.width()) * 4, stdout);
+        std::fflush(stdout);
+    }
+    return 0;
+}
 }
 
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
+    if (app.arguments().size() == 2 && app.arguments().at(1) == "--thumbnail-server") return thumbnailServer();
     if (app.arguments().size() != 2) return fail("Expected one image path.");
     const QString path = app.arguments().at(1);
     const QFileInfo initial(path);

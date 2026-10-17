@@ -1,6 +1,9 @@
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
 #include "glancelot/theme_manager.hpp"
+#include "glancelot/filmstrip_model.hpp"
+#include "glancelot/thumbnail_service.hpp"
+#include "thumbnail_provider.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -40,8 +43,21 @@ int main(int argc,char** argv) {
     if(parser.isSet("theme-mode"))theme.setMode(parser.value("theme-mode"));
     app.setWindowIcon(QIcon(":/brand/icons/app/dark/glancelot-256.png"));
     qmlRegisterType<ImageCanvas>("Glancelot",1,0,"ImageCanvas");
+    // Declared before the engine so image-provider consumers are destroyed before the service and its workers.
+    QString decoderProgram=QCoreApplication::applicationDirPath()+"/glancelot-decoder";
+#ifdef Q_OS_WIN
+    decoderProgram+=".exe";
+#endif
+    ThumbnailService thumbnails(decoderProgram);
+    thumbnails.setWorkerCount(2);
+    FilmstripModel filmstrip;
+    QObject::connect(&viewer,&ViewerController::stateChanged,&filmstrip,[&]{filmstrip.sync(viewer.snapshot());});
+    QObject::connect(&viewer,&ViewerController::filesInvalidated,&filmstrip,[&]{filmstrip.invalidate();});
+    QObject::connect(&filmstrip,&FilmstripModel::epochChanged,&thumbnails,[&]{thumbnails.setEpoch(filmstrip.epoch());});
     QQmlApplicationEngine engine;
+    engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
+    engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
     engine.rootContext()->setContextProperty("theme",&theme);
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(2);},Qt::QueuedConnection);
     engine.loadFromModule("Glancelot","Main");

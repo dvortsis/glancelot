@@ -93,7 +93,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered)
+            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.hovered)
                 app.hudVisible = false
             else restart()
         }
@@ -197,6 +197,13 @@ ApplicationWindow {
             ActionButton { text: "Decorate"; visible: app.frameless; onClicked: app.invoke("frameless") }
             ActionButton { text: "Close"; visible: app.frameless; onClicked: app.close() }
         }
+    }
+    Filmstrip {
+        id: filmstripPanel
+        objectName: "filmstrip"
+        anchors { left: parent.left; right: parent.right; top: topPanel.bottom }
+        visible: (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
+        onItemActivated: canvas.forceActiveFocus()
     }
     Rectangle {
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
@@ -314,6 +321,7 @@ ApplicationWindow {
                     ActionButton { text: "Cycle background"; onClicked: app.invoke("background") }
                 }
                 CheckBox { text: "Nearest-neighbor sampling for pixel inspection"; checked: canvas.nearest; onToggled: canvas.nearest=checked }
+                CheckBox { text: "Show filmstrip"; checked: viewer.filmstripVisible; onToggled: viewer.filmstripVisible=checked }
                 CheckBox { text: "Frameless window"; checked: app.frameless; onToggled: app.frameless=checked }
                 Rectangle { Layout.fillWidth: true; height: 1; color: theme.colors.border }
                 Label { text: "CONTROLS"; color: app.muted; font.pixelSize: 11; font.letterSpacing: 1.2 }

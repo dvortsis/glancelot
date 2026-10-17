@@ -24,6 +24,8 @@ public:
     // Content on disk may have changed; delegates must request fresh thumbnails.
     void invalidate();
     Q_INVOKABLE QString pathAt(int row) const;
+    // image:// URL for a delegate. Passing the epoch makes QML bindings re-request after invalidate().
+    Q_INVOKABLE QString thumbnailSource(const QString& path, int edge, quint64 epoch) const;
 signals:
     void countChanged();
     void currentRowChanged();
