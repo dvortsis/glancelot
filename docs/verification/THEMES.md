@@ -41,6 +41,8 @@ A copied executable and decoder ran independently from `build/theme-review/` wit
 First=graphite/dark, restart=graphite/dark, exit=0
 ```
 
+The reviewer subsequently inspected the lead's final `build/compact-final.png`: both 76 px cards in the first row are completely visible at 540 x 360. This closes the minimum-height picker finding.
+
 The neutral photo surround remains independently configurable from themed chrome; theme selection does not transform image pixels.
 
 ## Acceptance and remaining limits
