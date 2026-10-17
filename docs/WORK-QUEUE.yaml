@@ -64,7 +64,9 @@ tasks:
     milestone: M2.1
     priority: 10
     owner: lead
-    state: implementing
+    state: done
+    commit: 4a23cf1
+    evidence: docs/verification/TREE-01.md; integrated build.ps1 -Test -Package 6/6 CTest targets; core tests also on Ubuntu WSL; independent review approved at e6af422 after fixes; ui-design-skills review; Windows only
     memory_action: act_mvcvo164_28dbafafef0a
     depends: [ALPHA-PACKAGE]
     outcome: Collapsible lazy folder tree in the next implementation milestone
@@ -78,7 +80,8 @@ tasks:
     milestone: M2.1
     priority: 9
     owner: lead
-    state: ready
+    state: implementing
+    memory_action: PENDING
     depends: [ALPHA-PACKAGE]
     outcome: Stable numbered window-opening-order slots and coordinated per-slot persistence
     boundaries: Slot ownership, session lifecycle and storage; no automatic reopening of all saved windows
