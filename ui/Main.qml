@@ -166,7 +166,7 @@ ApplicationWindow {
         width: Math.min(460, app.width-64)
         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Glancelot"; color: "#ededed"; font.pixelSize: 38; font.weight: Font.Light }
         Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "A little less interface. More photograph."; color: app.muted; font.pixelSize: 14; wrapMode: Text.Wrap }
-        ActionButton { anchors.horizontalCenter: parent.horizontalCenter; text: "Open a photo"; onClicked: app.invoke("open"); background: Rectangle { radius: 4; color: parent.hovered ? "#eeeeee" : "#d8d8d8" }; palette.buttonText: "#181818" }
+        ActionButton { anchors.horizontalCenter: parent.horizontalCenter; text: "Open a photo"; onClicked: app.invoke("open"); background: Rectangle { radius: 4; color: parent.hovered ? "#eeeeee" : "#d8d8d8" } palette.buttonText: "#181818" }
         Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Drop a JPEG or PNG here\nBrowse the folder with the arrow keys"; color: "#808080"; font.pixelSize: 12; lineHeight: 1.6 }
     }
     Rectangle {
@@ -355,5 +355,6 @@ ApplicationWindow {
         }
     }
 }
+
 
 
