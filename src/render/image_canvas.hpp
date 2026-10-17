@@ -3,7 +3,7 @@
 #include <QImage>
 #include <QColor>
 
-// All viewport distances are logical pixels; zoom is source pixels per physical pixel.
+// All viewport distances are logical pixels; zoom is physical pixels per source pixel.
 class ImageCanvas : public QQuickRhiItem {
     Q_OBJECT
     Q_PROPERTY(QImage image READ image WRITE setImage NOTIFY imageChanged)
@@ -63,4 +63,5 @@ private:
     QString m_savedFit;
     QString m_rendererError;
 };
+
 
