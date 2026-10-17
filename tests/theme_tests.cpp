@@ -104,13 +104,14 @@ void ThemeTests::invalidSelectionsDoNotChangePreferences() {
 void ThemeTests::themeAndControlsPreserveEachOther() {
     QTemporaryDir dir; QVERIFY(dir.isValid()); qputenv("GLANCELOT_CONFIG_DIR",dir.path().toUtf8());
     const auto path=dir.filePath("settings.json");
-    QVERIFY(write(path,R"({"schema":1,"futurePreference":{"retained":true},"bindings":{"open":"Ctrl+Alt+O"},"wheel":"pan","boundary":"loop"})"));
+    QVERIFY(write(path,R"({"schema":1,"futurePreference":{"retained":true},"appearance":{"futureColorSetting":"retained"},"bindings":{"open":"Ctrl+Alt+O"},"wheel":"pan","boundary":"loop"})"));
     ThemeManager theme; ViewerController controls;
     QCOMPARE(controls.bindingFor("open"),QString("Ctrl+Alt+O"));
     theme.setFamily("graphite"); theme.setMode("light"); QVERIFY(theme.error().isEmpty());
     auto saved=QJsonDocument::fromJson(read(path)).object();
     QCOMPARE(saved.value("bindings").toObject().value("open").toString(),QString("Ctrl+Alt+O"));
     QVERIFY(saved.value("futurePreference").toObject().value("retained").toBool());
+    QCOMPARE(saved.value("appearance").toObject().value("futureColorSetting").toString(),QString("retained"));
     QVERIFY(controls.setBinding("next","Alt+Right")); controls.setWheelMode("zoom");
     theme.setMode("dark");
     ViewerController reloadedControls; ThemeManager reloadedTheme;
@@ -118,6 +119,7 @@ void ThemeTests::themeAndControlsPreserveEachOther() {
     QCOMPARE(reloadedControls.wheelMode(),QString("zoom")); QCOMPARE(reloadedControls.boundaryMode(),QString("loop"));
     QCOMPARE(reloadedTheme.family(),QString("graphite")); QCOMPARE(reloadedTheme.mode(),QString("dark"));
     QVERIFY(QJsonDocument::fromJson(read(path)).object().value("futurePreference").toObject().value("retained").toBool());
+    QCOMPARE(QJsonDocument::fromJson(read(path)).object().value("appearance").toObject().value("futureColorSetting").toString(),QString("retained"));
 }
 
 void ThemeTests::futureSchemaRemainsByteIdentical() {
