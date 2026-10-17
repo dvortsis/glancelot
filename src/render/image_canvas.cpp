@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QMatrix4x4>
 #include <QPointer>
+#include <QtMath>
 #include <rhi/qshader.h>
 #include <rhi/qrhi.h>
 #include <algorithm>
@@ -214,6 +215,13 @@ void ImageCanvas::zoomAt(qreal factor,qreal x,qreal y) {
     m_pan=anchor-(anchor-m_pan)*ratio;
     m_zoom=target; m_fitMode.clear(); emit viewChanged(); update();
 }
+QPointF ImageCanvas::imagePointAt(qreal x,qreal y) const {
+    if (m_image.isNull()) return {};
+    const QPointF p=(QPointF(x-width()/2,y-height()/2)-m_pan)*(dpr()/m_zoom);
+    const qreal radians=qDegreesToRadians(qreal(m_rotation));
+    return {std::cos(radians)*p.x()+std::sin(radians)*p.y()+m_image.width()/2.0,
+            -std::sin(radians)*p.x()+std::cos(radians)*p.y()+m_image.height()/2.0};
+}
 void ImageCanvas::panBy(qreal dx,qreal dy) {
     if (m_image.isNull() || !std::isfinite(dx) || !std::isfinite(dy)) return;
     m_pan+=QPointF(dx,dy); m_fitMode.clear(); emit viewChanged(); update();
@@ -242,4 +250,5 @@ void ImageCanvas::cycleBackground() {
 void ImageCanvas::geometryChange(const QRectF& now,const QRectF& old) {
     QQuickRhiItem::geometryChange(now,old); refreshFit();
 }
+
 

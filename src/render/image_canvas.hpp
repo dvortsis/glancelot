@@ -32,6 +32,8 @@ public:
     Q_INVOKABLE void actualSize();
     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
     Q_INVOKABLE void panBy(qreal dx, qreal dy);
+    // Continuous source coordinates, including points outside the image bounds.
+    Q_INVOKABLE QPointF imagePointAt(qreal x, qreal y) const;
     Q_INVOKABLE void rotateClockwise();
     Q_INVOKABLE void beginLoupe(qreal x, qreal y);
     Q_INVOKABLE void endLoupe();
@@ -61,3 +63,4 @@ private:
     QString m_savedFit;
     QString m_rendererError;
 };
+
