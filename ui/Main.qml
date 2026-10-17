@@ -263,12 +263,12 @@ ApplicationWindow {
     }
     Rectangle {
         anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: app.treeInset / 2; bottom: parent.bottom; bottomMargin: 78 }
-        width: Math.min(app.width-48, statusText.implicitWidth+32)
+        width: Math.min(app.width-app.treeInset-48, statusText.implicitWidth+32)
         height: statusText.implicitHeight+20
         radius: 4
         color: theme.colors.surface
         visible: viewer.loading || canvas.rendererError.length > 0 || (viewer.status.length > 0 && app.hudVisible)
-        Text { id: statusText; anchors.centerIn: parent; width: Math.min(implicitWidth,app.width-80); text: canvas.rendererError || viewer.status; color: canvas.rendererError ? theme.colors.danger : theme.colors.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
+        Text { id: statusText; anchors.centerIn: parent; width: Math.min(implicitWidth,app.width-app.treeInset-80); text: canvas.rendererError || viewer.status; color: canvas.rendererError ? theme.colors.danger : theme.colors.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
     }
     FileDialog {
         id: openDialog
