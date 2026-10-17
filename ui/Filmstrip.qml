@@ -26,6 +26,11 @@ Rectangle {
         onTriggered: { const cell = list.itemAtIndex(Math.max(0, filmstrip.currentRow)); if (cell) cell.forceActiveFocus(Qt.TabFocusReason) }
     }
     onVisibleChanged: if (visible) Qt.callLater(centerCurrent)
+    Rectangle { // edge against the canvas; surface-on-surface alone is too faint
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        height: 1
+        color: theme.colors.border
+    }
     implicitHeight: compact ? 68 : 92
     color: theme.colors.surface
     Accessible.role: Accessible.Pane
@@ -36,8 +41,8 @@ Rectangle {
         id: list
         objectName: "filmstripList"
         anchors.fill: parent
-        anchors.leftMargin: 12 // shares the top bar's leading edge
-        anchors.rightMargin: 12
+        leftMargin: 12 // content starts on the top bar's leading edge but scrolls to the window edge
+        rightMargin: 12
         anchors.topMargin: 6
         anchors.bottomMargin: 6
         orientation: ListView.Horizontal
@@ -47,14 +52,17 @@ Rectangle {
         model: strip.visible ? filmstrip : null
         cacheBuffer: 360
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded; height: 6 }
         Accessible.role: Accessible.List
         Accessible.name: "Photos in this folder"
         Component.onCompleted: strip.centerCurrent()
         Connections {
             target: filmstrip
             enabled: strip.visible
-            function onCurrentRowChanged() { strip.centerCurrent() }
+            function onCurrentRowChanged() {
+                strip.centerCurrent()
+                // Keyboard focus follows the photo: arrow-key navigation must not strand the focus ring on an old cell.
+                if (strip.focusedCells > 0) Qt.callLater(strip.focusCurrent)
+            }
         }
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -75,10 +83,11 @@ Rectangle {
             padding: 2
             focusPolicy: Qt.StrongFocus
             Accessible.name: name + (isCurrent ? ", current photo" : "")
-            Accessible.description: "Open this photo"
+            readonly property bool previewFailed: thumb.status === Image.Error
+            Accessible.description: previewFailed ? "Preview unavailable. Open this photo" : "Open this photo"
             ToolTip.visible: hovered
             ToolTip.delay: 600
-            ToolTip.text: name
+            ToolTip.text: previewFailed ? name + " (preview unavailable)" : name
             onClicked: { viewer.open(path); strip.itemActivated(path) }
             onActiveFocusChanged: strip.focusedCells += activeFocus ? 1 : -1
             Component.onDestruction: if (activeFocus) strip.focusedCells -= 1
@@ -87,9 +96,15 @@ Rectangle {
             background: Rectangle {
                 radius: 4
                 color: cell.hovered || cell.visualFocus ? theme.colors.hover : "transparent"
-                // Current photo = primary ring; keyboard focus = text-colored ring, so the two never look alike.
-                border.width: cell.isCurrent || cell.visualFocus ? 2 : 0
-                border.color: cell.visualFocus ? theme.colors.text : theme.colors.primary
+                // Current photo = inner primary ring; keyboard focus = outer text-colored ring (different geometry and color).
+                border.width: cell.isCurrent ? 2 : 0
+                border.color: theme.colors.primary
+                Rectangle { // keyboard focus: a separate outset ring, so it reads even on the current photo
+                    anchors.fill: parent; anchors.margins: -3
+                    radius: 6; color: "transparent"
+                    border.width: 2; border.color: theme.colors.text
+                    visible: cell.visualFocus
+                }
             }
             contentItem: Item {
                 Rectangle { // reserved space while loading, so cells never jump
