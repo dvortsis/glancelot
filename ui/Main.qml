@@ -341,20 +341,21 @@ ApplicationWindow {
         model: app.frameless && app.visibility !== Window.FullScreen && app.visibility !== Window.Maximized ? 8 : 0
         delegate: MouseArea {
             required property int index
-            readonly property bool left: index === 0 || index === 4 || index === 6
-            readonly property bool right: index === 1 || index === 5 || index === 7
-            readonly property bool top: index === 2 || index === 4 || index === 5
-            readonly property bool bottom: index === 3 || index === 6 || index === 7
-            x: right ? app.width-6 : (left ? 0 : 6)
-            y: bottom ? app.height-6 : (top ? 0 : 6)
-            width: left || right ? 6 : app.width-12
-            height: top || bottom ? 6 : app.height-12
+            readonly property bool edgeLeft: index === 0 || index === 4 || index === 6
+            readonly property bool edgeRight: index === 1 || index === 5 || index === 7
+            readonly property bool edgeTop: index === 2 || index === 4 || index === 5
+            readonly property bool edgeBottom: index === 3 || index === 6 || index === 7
+            x: edgeRight ? app.width-6 : (edgeLeft ? 0 : 6)
+            y: edgeBottom ? app.height-6 : (edgeTop ? 0 : 6)
+            width: edgeLeft || edgeRight ? 6 : app.width-12
+            height: edgeTop || edgeBottom ? 6 : app.height-12
             z: 20
-            cursorShape: (left && top) || (right && bottom) ? Qt.SizeFDiagCursor : (right && top) || (left && bottom) ? Qt.SizeBDiagCursor : left || right ? Qt.SizeHorCursor : Qt.SizeVerCursor
-            onPressed: app.startSystemResize((left ? Qt.LeftEdge : 0) | (right ? Qt.RightEdge : 0) | (top ? Qt.TopEdge : 0) | (bottom ? Qt.BottomEdge : 0))
+            cursorShape: (edgeLeft && edgeTop) || (edgeRight && edgeBottom) ? Qt.SizeFDiagCursor : (edgeRight && edgeTop) || (edgeLeft && edgeBottom) ? Qt.SizeBDiagCursor : edgeLeft || edgeRight ? Qt.SizeHorCursor : Qt.SizeVerCursor
+            onPressed: app.startSystemResize((edgeLeft ? Qt.LeftEdge : 0) | (edgeRight ? Qt.RightEdge : 0) | (edgeTop ? Qt.TopEdge : 0) | (edgeBottom ? Qt.BottomEdge : 0))
         }
     }
 }
+
 
 
 
