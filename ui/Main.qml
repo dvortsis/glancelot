@@ -262,7 +262,7 @@ ApplicationWindow {
         }
     }
     Rectangle {
-        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 78 }
+        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: app.treeInset / 2; bottom: parent.bottom; bottomMargin: 78 }
         width: Math.min(app.width-48, statusText.implicitWidth+32)
         height: statusText.implicitHeight+20
         radius: 4

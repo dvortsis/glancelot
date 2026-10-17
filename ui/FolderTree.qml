@@ -10,7 +10,8 @@ Rectangle {
     property bool compact: false
     property alias hovered: hover.hovered
     // The HUD must stay open while the pointer is over the panel or the keyboard cursor is inside it.
-    readonly property bool keepOpen: hover.hovered || list.activeFocus
+    property int focusedControls: 0
+    readonly property bool keepOpen: hover.hovered || list.activeFocus || focusedControls > 0
     signal dismissed()
     function focusList() {
         list.forceActiveFocus(Qt.TabFocusReason)
@@ -22,6 +23,11 @@ Rectangle {
     Accessible.role: Accessible.Pane
     Accessible.name: "Folders"
     HoverHandler { id: hover }
+    MouseArea { // swallow pointer input on blank panel space so it never reaches the canvas behind
+        anchors.fill: parent
+        acceptedButtons: Qt.AllButtons
+        onWheel: wheel => wheel.accepted = true
+    }
     onVisibleChanged: if (visible) Qt.callLater(revealCurrent)
 
     Rectangle { // edge against the canvas
@@ -49,11 +55,14 @@ Rectangle {
                 Accessible.role: Accessible.Heading
             }
             ToolButton {
-                text: "Up"
+                text: "Parent"
                 enabled: folderTree.canRaiseRoot
                 focusPolicy: Qt.StrongFocus
+                onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
+                Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
                 implicitHeight: 32
                 Accessible.name: "Show parent folder"
+                Accessible.description: "Widen the browsing root to the parent folder"
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
                 ToolTip.text: "Widen the browsing root to the parent folder"
@@ -63,6 +72,8 @@ Rectangle {
             ToolButton {
                 text: viewer.treePinned ? "Unpin" : "Pin"
                 focusPolicy: Qt.StrongFocus
+                onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
+                Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
                 implicitHeight: 32
                 checkable: true
                 checked: viewer.treePinned
@@ -102,6 +113,7 @@ Rectangle {
             Keys.onUpPressed: currentIndex = Math.max(0, currentIndex - 1)
             Keys.onDownPressed: currentIndex = Math.min(count - 1, currentIndex + 1)
             Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape) { panel.dismissed(); event.accepted = true; return }
                 if (currentIndex < 0 || currentIndex >= count) return
                 const row = currentIndex
                 if (event.key === Qt.Key_Home) { currentIndex = 0; event.accepted = true }
@@ -117,10 +129,8 @@ Rectangle {
                     else { const parent = folderTree.parentRow(row); if (parent >= 0) currentIndex = parent }
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                    viewer.openFolder(folderTree.pathAt(row))
-                    event.accepted = true
-                } else if (event.key === Qt.Key_Escape) {
-                    panel.dismissed()
+                    const cell = itemAtIndex(row)
+                    if (cell && !cell.isCurrent) viewer.openFolder(folderTree.pathAt(row))
                     event.accepted = true
                 }
             }
@@ -145,7 +155,7 @@ Rectangle {
                 Rectangle { // row surface: hover, current folder, keyboard cursor
                     anchors { fill: parent; leftMargin: 4; rightMargin: 4 }
                     radius: 4
-                    color: row.isCurrent ? Qt.rgba(theme.colors.primary.r, theme.colors.primary.g, theme.colors.primary.b, 0.16)
+                    color: row.isCurrent ? Qt.alpha(theme.colors.primary, 0.16)
                                          : (rowHover.hovered ? theme.colors.hover : "transparent")
                     border.width: row.cursor ? 2 : 0
                     border.color: theme.colors.text
@@ -158,13 +168,20 @@ Rectangle {
                 }
                 HoverHandler { id: rowHover }
                 TapHandler {
-                    onTapped: { list.currentIndex = row.index; list.forceActiveFocus(Qt.MouseFocusReason); viewer.openFolder(row.path) }
+                    onTapped: point => {
+                        // The disclosure owns clicks inside its box; they must not also open the folder.
+                        const local = row.mapToItem(disclosure, point.position.x, point.position.y)
+                        if (row.expandable && disclosure.contains(local)) return
+                        list.currentIndex = row.index
+                        list.forceActiveFocus(Qt.MouseFocusReason)
+                        if (!row.isCurrent) viewer.openFolder(row.path)
+                    }
                 }
                 Item { // disclosure
                     id: disclosure
-                    x: 10 + row.depth * 16
+                    x: 6 + row.depth * 16
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 22; height: 22
+                    width: 28; height: parent.height // generous hit area; the glyph stays 8x12
                     Shape {
                         anchors.centerIn: parent
                         width: 8; height: 12
@@ -191,13 +208,14 @@ Rectangle {
                     }
                     TapHandler {
                         enabled: row.expandable
+                        gesturePolicy: TapHandler.WithinBounds
                         onTapped: { list.currentIndex = row.index; folderTree.toggle(row.index) }
                     }
                 }
                 Label { // state in words, so it never relies on color or a missing chevron alone
                     id: stateNote
                     anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
-                    text: row.nodeState === 2 ? "empty" : (row.nodeState === 3 ? "no access" : "")
+                    text: row.nodeState === 2 ? (row.depth === 0 ? "no subfolders" : "empty") : (row.nodeState === 3 ? "no access" : (row.nodeState === 4 ? "partial" : ""))
                     color: theme.colors.muted
                     font.pixelSize: 11
                 }
@@ -211,7 +229,7 @@ Rectangle {
                 }
                 ToolTip.visible: rowHover.hovered && (row.nodeState === 3 || row.nodeState === 4)
                 ToolTip.delay: 400
-                ToolTip.text: row.nodeState === 3 ? "This folder cannot be listed" : "Only the first 2000 folders are shown"
+                ToolTip.text: row.nodeState === 3 ? "This folder cannot be listed" : "Some folders are not shown because the list limit was reached"
             }
             Label {
                 anchors.centerIn: parent

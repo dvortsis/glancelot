@@ -11,8 +11,15 @@ std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& direc
 // Immediate child directories for the folder tree, in the same natural order and with the same link/volume
 // policy as traversal. `accessible` is false when the directory cannot be listed (denied, missing, or reached
 // through a link); `cancelled` results carry no folders. Only one directory level is read.
-struct FolderListing { std::vector<std::filesystem::path> folders; bool accessible{true}, cancelled{false}; };
-FolderListing childFolders(const std::filesystem::path& directory, std::stop_token cancel = {});
+// `truncated` means more than `limit` folders exist; the returned folders are then an unordered-source subset
+// (still naturally sorted) so a huge directory cannot make the worker allocate without bound.
+struct FolderListing { std::vector<std::filesystem::path> folders; bool accessible{true}, cancelled{false}, truncated{false}; };
+FolderListing childFolders(const std::filesystem::path& directory, std::stop_token cancel = {}, std::size_t limit = 20000);
+// First eligible image in `directory` or, failing that, in its subfolders in traversal (preorder, natural) order,
+// looking at no more than `maxFolders` directories. `exhausted` means the budget ended the search; `accessible`
+// is false when `directory` itself cannot be read; a cancelled search returns nothing.
+struct SubtreeImage { std::optional<std::filesystem::path> image; bool exhausted{false}, accessible{true}; };
+SubtreeImage firstImageInSubtree(const std::filesystem::path& directory, std::stop_token cancel = {}, std::size_t maxFolders = 500);
 // Lazy traversal searches directories under root; never follows directory links.
 // Cancellation is cooperative; a blocked operating-system filesystem call cannot be interrupted.
 std::optional<std::filesystem::path> adjacentFolderImage(

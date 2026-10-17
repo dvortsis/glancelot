@@ -62,6 +62,17 @@ const std::vector<Command> registry {
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
     {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"quit","Quit","Ctrl+Q"}
 };
+// True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
+bool insideRoot(const QString& root, const QString& folder) {
+    auto key=[](const QString& path){ auto value=QDir::cleanPath(QDir::fromNativeSeparators(path));
+#ifdef Q_OS_WIN
+        value=value.toLower();
+#endif
+        return value; };
+    const QString r=key(root),f=key(folder);
+    if(r.isEmpty()||f.isEmpty())return false;
+    return f==r||(f.startsWith(r)&&(r.endsWith(QLatin1Char('/'))||f.at(r.size())==QLatin1Char('/')));
+}
 QString configDirectory() {
     const QString override = qEnvironmentVariable("GLANCELOT_CONFIG_DIR");
     return override.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) : override;
@@ -86,7 +97,7 @@ struct ViewerController::Private {
     qint64 admittedPixelBytes{};
     QByteArray output;
     QCache<QString,QImage> cache{128*1024}; // KiB, only source-revision keyed immutable RGBA pixels.
-    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; };
+    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool navigationPool;
     bool navigationBusy{}, navigationReady{};
@@ -269,7 +280,7 @@ struct ViewerController::Private {
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
-                else if(!scanJob) { status=emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
+                else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
@@ -354,16 +365,23 @@ void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->
 void ViewerController::openFolder(const QString& value){
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(folder.isEmpty()||d->nav.snapshot().current.empty())return;
+    if(!insideRoot(displayPath(d->nav.snapshot().root),folder)){d->status="That folder is outside the current browsing root. Use the parent folder control first.";emit stateChanged();return;}
     d->navigationIntents.clear();
+    // Newest folder request wins: stop whatever search or step is still running and start from a fresh token.
+    d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     Navigator copy=d->nav;
     const auto cancellation=d->navigationStop.get_token();
     copy.setCancellation(cancellation);
     d->status="Opening folder "+QFileInfo(folder).fileName()+"…";emit stateChanged();
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,directory=nativePath(folder),cancellation]() mutable {
-        const auto files=imageFiles(directory,cancellation);
-        std::optional<std::filesystem::path> destination;
-        if(!files.empty())destination=files.front();else destination=adjacentFolderImage(directory,directory,1,cancellation);
-        return Private::NavigationResult{std::move(copy),destination};
+        // Bounded preorder search (500 folders): a huge or hostile tree cannot occupy the navigation thread.
+        const auto found=firstImageInSubtree(directory,cancellation);
+        Private::NavigationResult result{std::move(copy),found.image,{}};
+        if(!found.image) {
+            if(!found.accessible) result.message="That folder cannot be read (missing or no access).";
+            else if(found.exhausted) result.message="No supported images found in the first 500 folders searched. Open a more specific folder.";
+        }
+        return result;
     },"No supported images in that folder or its subfolders."});
 }
 void ViewerController::raiseRoot(){

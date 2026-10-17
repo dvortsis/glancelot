@@ -84,7 +84,8 @@ bool safePath(const fs::path& p, std::stop_token cancel = {}) {
     return true;
 }
 struct ScanCancelled {};
-std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel) {
+std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel,
+                              std::size_t limit = static_cast<std::size_t>(-1), bool* truncated = nullptr) {
     std::vector<fs::path> result;
     if (cancel.stop_requested() || !safePath(directory, cancel)) return result;
     std::error_code ec;
@@ -102,7 +103,10 @@ std::vector<fs::path> entries(const fs::path& directory, bool directories, std::
         }
 #endif
         if (!ec && sameVolume && !link(path) && (directories ? fs::is_directory(status) :
-            (fs::is_regular_file(status) && isSupportedImage(path)))) result.push_back(path);
+            (fs::is_regular_file(status) && isSupportedImage(path)))) {
+            if (result.size() >= limit) { if (truncated) *truncated = true; break; }
+            result.push_back(path);
+        }
         ec.clear();
         it.increment(ec);
     }
@@ -165,16 +169,39 @@ bool isSupportedImage(const fs::path& path) {
         || extension == fs::path(".png").native();
 }
 std::vector<fs::path> imageFiles(const fs::path& directory, std::stop_token cancel) { return entries(directory, false, cancel); }
-FolderListing childFolders(const fs::path& directory, std::stop_token cancel) {
+FolderListing childFolders(const fs::path& directory, std::stop_token cancel, std::size_t limit) {
     FolderListing listing;
     if (cancel.stop_requested()) { listing.cancelled = true; return listing; }
     std::error_code ec;
     // A separate probe without skip_permission_denied distinguishes "cannot list" from "no subfolders".
     if (!safePath(directory, cancel)) { listing.cancelled = cancel.stop_requested(); listing.accessible = false; return listing; }
     { fs::directory_iterator probe(directory, ec); if (ec) { listing.accessible = false; return listing; } }
-    listing.folders = entries(directory, true, cancel);
-    if (cancel.stop_requested()) { listing.folders.clear(); listing.cancelled = true; }
+    listing.folders = entries(directory, true, cancel, limit, &listing.truncated);
+    if (cancel.stop_requested()) { listing.folders.clear(); listing.cancelled = true; listing.truncated = false; }
     return listing;
+}
+SubtreeImage firstImageInSubtree(const fs::path& directory, std::stop_token cancel, std::size_t maxFolders) {
+    SubtreeImage result;
+    if (cancel.stop_requested()) return result;
+    std::error_code ec;
+    if (!safePath(directory, cancel)) { if (!cancel.stop_requested()) result.accessible = false; return result; }
+    { fs::directory_iterator probe(directory, ec); if (ec) { result.accessible = false; return result; } }
+    std::vector<fs::path> pending{directory};
+    std::size_t visited = 0;
+    while (!pending.empty()) {
+        if (cancel.stop_requested()) return SubtreeImage{};
+        if (visited++ >= maxFolders) { result.exhausted = true; return result; }
+        const auto current = pending.back();
+        pending.pop_back();
+        const auto files = imageFiles(current, cancel);
+        if (cancel.stop_requested()) return SubtreeImage{};
+        if (!files.empty()) { result.image = files.front(); return result; }
+        const auto children = entries(current, true, cancel, 20000);
+        if (cancel.stop_requested()) return SubtreeImage{};
+        // Reversed so the natural-order first child is visited first (preorder).
+        for (auto child = children.rbegin(); child != children.rend(); ++child) pending.push_back(*child);
+    }
+    return result;
 }
 std::optional<fs::path> adjacentFolderImage(const fs::path& rootPath, const fs::path& directory, int direction, std::stop_token cancel) {
     if (direction == 0 || cancel.stop_requested()) return std::nullopt;

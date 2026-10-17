@@ -78,6 +78,8 @@ private slots:
     void collapseWhileLoadingCancelsTheListing();
     void oversizedFoldersAreTruncated();
     void destroyingTheModelCancelsAndDoesNotHang();
+    void wedgedListingDoesNotFreezeTeardown();
+    void listingTruncationFlagIsReported();
     void rootRaiseAvailabilityFollowsParent();
     void windowsPathsCompareCaseInsensitively();
     void openFolderOpensFirstImageInSubtree();
@@ -320,6 +322,41 @@ void FolderTreeTests::destroyingTheModelCancelsAndDoesNotHang() {
     QVERIFY2(timer.elapsed() < 10000, "destruction waited for an unbounded listing");
 }
 
+void FolderTreeTests::wedgedListingDoesNotFreezeTeardown() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    std::atomic<bool> release{false}, started{false};
+    QElapsedTimer timer;
+    {
+        FolderTreeModel model;
+        model.setLister([&](const fs::path&, std::stop_token) { // ignores cancellation, like a dead share
+            started = true;
+            while (!release) QThread::msleep(5);
+            return glancelot::FolderListing{};
+        });
+        model.sync(snapshot(dir.path(), dir.path()));
+        QTRY_VERIFY_WITH_TIMEOUT(started.load(), 5000);
+        timer.start();
+    }
+    const auto elapsed = timer.elapsed();
+    release = true;                                  // let the abandoned worker finish before the directory goes away
+    QVERIFY2(elapsed < 3500, qPrintable(QString("teardown blocked the GUI thread for %1 ms").arg(elapsed)));
+    QTest::qWait(100);
+}
+
+void FolderTreeTests::listingTruncationFlagIsReported() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    FolderTreeModel model;
+    model.setLister([&](const fs::path& path, std::stop_token) {
+        glancelot::FolderListing out;
+        out.folders = {path / "one", path / "two"};
+        out.truncated = true;                        // the worker stopped at its own limit
+        return out;
+    });
+    model.sync(snapshot(dir.path(), dir.path()));
+    QTRY_COMPARE_WITH_TIMEOUT(model.count(), 3, 10000);
+    QCOMPARE(stateOf(model, 0), int(FolderTreeModel::Truncated));
+}
+
 void FolderTreeTests::rootRaiseAvailabilityFollowsParent() {
     QTemporaryDir dir; QVERIFY(dir.isValid());
     make(dir, "a/b");
@@ -352,7 +389,7 @@ void FolderTreeTests::windowsPathsCompareCaseInsensitively() {
 void FolderTreeTests::openFolderOpensFirstImageInSubtree() {
     QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
     qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
-    const auto start = writePng(make(files, "one"), "p1.png");
+    const auto start = writePng(files.path(), "p1.png"); // the opened file defines the browsing root
     const auto deep = writePng(make(files, "two/sub/deeper"), "p2.png");
     writePng(make(files, "two/sub"), "p3.png");
     make(files, "two/empty");
@@ -373,8 +410,9 @@ void FolderTreeTests::openFolderOpensFirstImageInSubtree() {
 void FolderTreeTests::openFolderWithoutImagesReportsAndKeepsSelection() {
     QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
     qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
-    const auto start = writePng(make(files, "one"), "p1.png");
+    const auto start = writePng(files.path(), "p1.png");
     make(files, "bare/also-bare");
+    for (int i = 0; i < 520; ++i) make(files, QString("wide/w%1").arg(1000 + i)); // before open(): the watcher would reload
     ViewerController viewer;
     viewer.open(start);
     QTRY_VERIFY_WITH_TIMEOUT(!viewer.snapshot().current.empty() && !viewer.loading(), 15000);
@@ -382,7 +420,14 @@ void FolderTreeTests::openFolderWithoutImagesReportsAndKeepsSelection() {
     QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("No supported images"), 15000);
     QVERIFY(same(viewer.snapshot().current, start));
     viewer.openFolder(files.filePath("does-not-exist"));
-    QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("No supported images"), 15000);
+    QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("cannot be read"), 15000);
+    QVERIFY(same(viewer.snapshot().current, start));
+    viewer.openFolder(QFileInfo(files.path()).absoluteDir().absolutePath());   // above the root: never followed
+    QVERIFY(viewer.status().contains("outside the current browsing root"));
+    QVERIFY(same(viewer.snapshot().current, start));
+    // A hostile or huge empty tree ends in a bounded search with an honest message, not a hang.
+    viewer.openFolder(files.filePath("wide"));
+    QTRY_VERIFY2_WITH_TIMEOUT(viewer.status().contains("first 500 folders"), qPrintable(viewer.status()), 30000);
     QVERIFY(same(viewer.snapshot().current, start));
     viewer.openFolder(QString{});                    // ignored
     ViewerController fresh;
@@ -395,7 +440,7 @@ void FolderTreeTests::openFolderWithoutImagesReportsAndKeepsSelection() {
 void FolderTreeTests::newestOpenFolderWins() {
     QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
     qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
-    const auto start = writePng(make(files, "one"), "p1.png");
+    const auto start = writePng(files.path(), "p1.png");
     writePng(make(files, "alpha"), "a.png");
     const auto beta = writePng(make(files, "beta"), "b.png");
     writePng(make(files, "gamma"), "g.png");

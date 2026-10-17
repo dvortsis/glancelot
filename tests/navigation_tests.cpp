@@ -251,9 +251,71 @@ void linksAndLaziness() {
               << " file=" << fileLinkAvailable << '\n';
 }
 }
+void childFoldersAndSubtreeSearch() {
+    Fixture f;
+    for (const char* name : {"10", "2", "a/deep/deeper", "B", "1"}) fs::create_directories(f.root / name);
+    f.file("file.jpg");
+    auto names = [](const FolderListing& listing) {
+        std::vector<std::string> out;
+        for (const auto& folder : listing.folders) out.push_back(folder.filename().string());
+        return out;
+    };
+    const auto listing = childFolders(f.root);
+    require(listing.accessible && !listing.cancelled && !listing.truncated, "child listing flags");
+    require(names(listing) == std::vector<std::string>({"1", "2", "10", "a", "B"}), "child folders: natural order, one level, files ignored");
+    std::stop_source stopped; stopped.request_stop();
+    const auto cancelled = childFolders(f.root, stopped.get_token());
+    require(cancelled.cancelled && cancelled.folders.empty(), "cancelled child listing returned folders");
+    require(!childFolders(f.root / "missing").accessible && !childFolders(f.root / "file.jpg").accessible, "missing or non-directory listed as accessible");
+    require(childFolders(f.root / "1").accessible && childFolders(f.root / "1").folders.empty(), "empty folder should list as accessible and empty");
+    Fixture many;
+    for (int i = 0; i < 30; ++i) fs::create_directories(many.root / ("d" + std::to_string(100 + i)));
+    const auto limited = childFolders(many.root, {}, 10);
+    require(limited.truncated && limited.folders.size() == 10, "limit did not bound the listing");
+    require(std::is_sorted(limited.folders.begin(), limited.folders.end(), naturalLess), "truncated listing is not sorted");
+    require(!childFolders(many.root, {}, 30).truncated, "exact limit must not report truncation");
+    std::error_code ec;
+    Fixture outside; fs::create_directories(outside.root / "target");
+    fs::create_directory_symlink(outside.root, f.root / "00-link", ec);
+    if (!ec) {
+        require(names(childFolders(f.root)).front() != "00-link", "linked directory listed in tree");
+        require(!childFolders(f.root / "00-link").accessible, "linked directory listed directly");
+    }
+#ifndef _WIN32
+    fs::create_directories(f.root / "locked");
+    fs::permissions(f.root / "locked", fs::perms::none);
+    const bool denied = !childFolders(f.root / "locked").accessible;
+    fs::permissions(f.root / "locked", fs::perms::owner_all);
+    std::cout << "child-folder permission-denial enforcement=" << denied << '\n';
+#endif
+
+    // Subtree search: preorder (own files, then children in natural order), budgeted and cancellable.
+    Fixture t;
+    fs::create_directories(t.root / "a/empty");
+    const auto first = t.file("a/b/img1.jpg");
+    t.file("c/img0.jpg");
+    const auto found = firstImageInSubtree(t.root);
+    require(found.image == first && !found.exhausted && found.accessible, "subtree preorder first image");
+    const auto own = t.file("top.png");
+    require(firstImageInSubtree(t.root).image == own, "a folder own images win over subfolders");
+    fs::remove(own);
+    const auto tight = firstImageInSubtree(t.root, {}, 2);
+    require(!tight.image && tight.exhausted, "budget did not stop the search");
+    require(!firstImageInSubtree(t.root, stopped.get_token()).image, "cancelled search returned an image");
+    require(!firstImageInSubtree(t.root / "missing").accessible, "missing subtree root accessible");
+    Fixture wide;
+    for (int i = 0; i < 600; ++i) fs::create_directories(wide.root / ("f" + std::to_string(1000 + i)));
+    const auto end = wide.file("zz/end.jpg");
+    const auto bounded = firstImageInSubtree(wide.root);
+    require(!bounded.image && bounded.exhausted, "default 500-folder budget not enforced");
+    require(firstImageInSubtree(wide.root, {}, 1000).image == end, "larger budget should find the image");
+    Fixture bare; fs::create_directories(bare.root / "x/y");
+    const auto none = firstImageInSubtree(bare.root);
+    require(!none.image && !none.exhausted && none.accessible, "image-less subtree misreported");
+}
 int main() {
     try {
-        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness();
+        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch();
         std::cout << "navigation: all generated fixture tests passed\n";
         return 0;
     } catch (const std::exception& error) {

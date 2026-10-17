@@ -36,6 +36,11 @@ Rectangle {
     Accessible.role: Accessible.Pane
     Accessible.name: "Filmstrip"
     HoverHandler { id: hover }
+    MouseArea { // swallow pointer input on blank strip space so it never reaches the canvas behind
+        anchors.fill: parent
+        acceptedButtons: Qt.AllButtons
+        onWheel: wheel => wheel.accepted = true
+    }
 
     ListView {
         id: list

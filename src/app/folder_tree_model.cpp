@@ -57,14 +57,17 @@ struct FolderTreeModel::Private {
     int current{-1}, inFlight{};
     bool canRaise{};
     Lister lister{[](const fs::path& path, std::stop_token cancel) { return glancelot::childFolders(path, cancel); }};
-    QThreadPool pool;
+    // Heap-allocated so a listing that ignores cancellation (dead network share) can be abandoned at teardown
+    // instead of freezing the GUI thread; the leaked pool and its thread hold only by-value captures.
+    QThreadPool* pool = new QThreadPool;
     QHash<QString, Load> loads;
 
     // Two workers: one wedged listing (e.g. a dead network share) must not stall every other expansion.
-    explicit Private(FolderTreeModel* owner) : q(owner) { pool.setMaxThreadCount(2); }
+    explicit Private(FolderTreeModel* owner) : q(owner) { pool->setMaxThreadCount(2); }
     ~Private() {
         for (auto& load : loads) load.stop.request_stop();
-        pool.waitForDone();
+        if (pool->waitForDone(1000)) delete pool;
+        // else: abandon the pool; its worker finishes (or stays wedged in the OS) without touching this object.
     }
 
     int indexOfKey(const QString& key) const {
@@ -128,7 +131,7 @@ struct FolderTreeModel::Private {
             --inFlight;
             applyListing(key, seq, startEpoch, std::move(listing));
         });
-        watcher->setFuture(QtConcurrent::run(&pool, [lister = lister, path = nativePath(node.path), token] { return lister(path, token); }));
+        watcher->setFuture(QtConcurrent::run(pool, [lister = lister, path = nativePath(node.path), token] { return lister(path, token); }));
     }
     void applyListing(const QString& key, quint64 seq, quint64 startEpoch, glancelot::FolderListing listing) {
         QString finishedPath;
@@ -144,7 +147,7 @@ struct FolderTreeModel::Private {
                 const int room = std::max(0, kMaxRows - int(rows.size()));
                 const int wanted = int(std::min<std::size_t>(listing.folders.size(), std::size_t(kMaxChildren)));
                 const int take = std::min(wanted, room);
-                node.state = (take < int(listing.folders.size())) ? Truncated : HasChildren;
+                node.state = (listing.truncated || take < int(listing.folders.size())) ? Truncated : HasChildren;
                 std::vector<Node> children;
                 children.reserve(std::size_t(take));
                 for (int i = 0; i < take; ++i) {
