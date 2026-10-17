@@ -32,7 +32,7 @@ QString writeOrientedJpeg(const QString& directory, int orientation) {
     QFile input(base);
     if (!input.open(QIODevice::ReadOnly)) return {};
     const auto bytes=input.readAll();
-    // EXIF orientation 6 means rotate stored pixels 90 degrees clockwise.
+    // Insert a minimal TIFF IFD with the requested EXIF orientation.
     auto exif=QByteArray::fromHex("45786966000049492a0008000000010012010300010000000600000000000000");
     exif[24]=char(orientation);
     QByteArray segment=QByteArray::fromHex("ffe1");
@@ -105,7 +105,7 @@ void AcceptanceTests::malformedInputTerminates() {
     QVERIFY2(!controller.status().isEmpty(),"Decode failure needs an actionable status");
     const auto good=writePng(files.path(),"recovery.png",Qt::green);
     QVERIFY(!good.isEmpty()); controller.open(good);
-    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QTRY_VERIFY2_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),qPrintable(controller.status()),10000);
     QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::green));
 }
 
@@ -114,7 +114,7 @@ void AcceptanceTests::pngPreservesDimensionsAlphaAndColor() {
     const QColor expected(51,102,153,128);
     const auto path=writePng(files.path(),"known-color.png",expected);
     QVERIFY(!path.isEmpty()); ViewerController controller; controller.open(path);
-    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QTRY_VERIFY2_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),qPrintable(controller.status()),10000);
     QCOMPARE(controller.imageWidth(),17); QCOMPARE(controller.imageHeight(),11);
     const auto actual=controller.image().pixelColor(8,5);
     QVERIFY(qAbs(actual.red()-expected.red())<=1);
@@ -140,7 +140,7 @@ void AcceptanceTests::jpegOrientationApplied() {
     QFETCH(int,orientation); QFETCH(QString,corners);
     QTemporaryDir files; QVERIFY(files.isValid()); const auto path=writeOrientedJpeg(files.path(),orientation);
     QVERIFY(!path.isEmpty()); ViewerController controller; controller.open(path);
-    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QTRY_VERIFY2_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),qPrintable(controller.status()),10000);
     const QSize expected=orientation<5 ? QSize(30,20) : QSize(20,30);
     QCOMPARE(controller.image().size(),expected);
     const QList<QPoint> points{{4,4},{expected.width()-5,4},{4,expected.height()-5},{expected.width()-5,expected.height()-5}};
@@ -178,7 +178,7 @@ void AcceptanceTests::explicitOpenDoesNotReuseSameSizeTimestampPixels() {
     };
     QVERIFY(replace(Qt::red));
     ViewerController controller; controller.open(path);
-    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QTRY_VERIFY2_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),qPrintable(controller.status()),10000);
     QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::red));
     QVERIFY(replace(Qt::blue));
     // Open before delivering watcher notifications. Equal byte size and timestamp
@@ -215,7 +215,7 @@ void AcceptanceTests::stopAndLoopBoundaries() {
     const auto b=writePng(files.path(),"image10.png",Qt::blue);
     QVERIFY(!a.isEmpty() && !b.isEmpty());
     ViewerController controller; controller.setBoundaryMode("stop"); controller.open(a);
-    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QTRY_VERIFY2_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),qPrintable(controller.status()),10000);
     QTRY_COMPARE_WITH_TIMEOUT(controller.fileCount(),2,10000);
     controller.previous(); QTest::qWait(100);
     QCOMPARE(QFileInfo(controller.filePath()).fileName(),QString("image2.png"));
@@ -278,6 +278,8 @@ int main(int argc,char** argv) {
     return QTest::qExec(&tests,argc,argv);
 }
 #include "acceptance_tests.moc"
+
+
 
 
 
