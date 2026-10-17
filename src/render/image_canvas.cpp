@@ -131,12 +131,25 @@ protected:
                 updates->uploadTexture(texture.get(),image);
                 upload=false; imageKey=image.cacheKey();
             }
+            // Project in actual target pixels: fractional OS scale must not turn a
+            // nominal 1:1 image into a fractional-size texture quad.
+            const auto target=renderTarget()->pixelSize();
             QMatrix4x4 projection;
-            projection.ortho(0,float(viewport.width()),float(viewport.height()),0,-1,1);
+            projection.ortho(0,float(target.width()),float(target.height()),0,-1,1);
+            qreal cx=target.width()/2.0+pan.x()*dpr;
+            qreal cy=target.height()/2.0+pan.y()*dpr;
+            if (std::abs(zoom-1.0)<1e-8) {
+                const qreal iw=rotation%180?image.height():image.width();
+                const qreal ih=rotation%180?image.width():image.height();
+                // Pixel-align odd-size images too; linear sampling at half-pixel
+                // edges would blur an otherwise correctly scaled inspection view.
+                cx=std::round(cx-iw/2)+iw/2;
+                cy=std::round(cy-ih/2)+ih/2;
+            }
             QMatrix4x4 model;
-            model.translate(float(viewport.width()/2+pan.x()),float(viewport.height()/2+pan.y()));
+            model.translate(float(cx),float(cy));
             model.rotate(float(rotation),0,0,1);
-            model.scale(float(image.width()*zoom/dpr),float(image.height()*zoom/dpr));
+            model.scale(float(image.width()*zoom),float(image.height()*zoom));
             const auto matrix=rhi()->clipSpaceCorrMatrix()*projection*model;
             float data[24]{};
             std::memcpy(data,matrix.constData(),64);
@@ -250,5 +263,6 @@ void ImageCanvas::cycleBackground() {
 void ImageCanvas::geometryChange(const QRectF& now,const QRectF& old) {
     QQuickRhiItem::geometryChange(now,old); refreshFit();
 }
+
 
 
