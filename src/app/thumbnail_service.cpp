@@ -7,6 +7,7 @@
 #include <QProcess>
 #include <QTimer>
 #include <algorithm>
+#include <cstring>
 #include <deque>
 #include <vector>
 
@@ -139,8 +140,12 @@ struct ThumbnailService::Private {
                 worker.bodyBytes = bytes; worker.width = int(w); worker.height = int(h);
             }
             if (worker.buffer.size() < worker.bodyBytes) return;
-            QImage image(reinterpret_cast<const uchar*>(worker.buffer.constData()), worker.width, worker.height, worker.width * 4, QImage::Format_RGBA8888);
-            const QImage owned = image.copy();
+            // Copy into an image-owned, aligned buffer; the QByteArray offset after remove() may be unaligned.
+            QImage owned(worker.width, worker.height, QImage::Format_RGBA8888);
+            if (!owned.isNull()) {
+                const char* source = worker.buffer.constData();
+                for (int y = 0; y < worker.height; ++y) std::memcpy(owned.scanLine(y), source + qint64(y) * worker.width * 4, size_t(worker.width) * 4);
+            }
             worker.buffer.remove(0, worker.bodyBytes);
             if (owned.isNull()) { breakWorker(worker, "Cannot allocate the thumbnail."); return; }
             finish(worker, owned, {});
@@ -172,6 +177,7 @@ struct ThumbnailService::Private {
             const auto w = weak.lock();
             if (w && w->process) breakWorker(*w, "Thumbnail worker exited.");
         });
+        worker->process->setStandardErrorFile(QProcess::nullDevice()); // never leave worker stderr undrained
         worker->process->start(program, {"--thumbnail-server"});
         workers.push_back(worker);
         return worker;

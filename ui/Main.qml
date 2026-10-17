@@ -93,7 +93,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.hovered)
+            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -116,6 +116,14 @@ ApplicationWindow {
         image: viewer.image
         background: "#191919"
         focus: true
+        // Keyboard route into the auto-hiding filmstrip: Tab wakes the HUD and focuses the current photo's cell.
+        Keys.onTabPressed: event => {
+            if (viewer.filmstripVisible && filmstrip.count > 0) {
+                app.hudVisible = true; hideHud.restart()
+                Qt.callLater(filmstripPanel.focusCurrent)
+                event.accepted = true
+            }
+        }
         Accessible.name: "Photo canvas"
         Accessible.description: viewer.fileName.length ? viewer.fileName + ", " + viewer.imageWidth + " by " + viewer.imageHeight + " pixels" : "Open or drop a photo to begin"
     }

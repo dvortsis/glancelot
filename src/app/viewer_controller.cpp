@@ -130,6 +130,14 @@ struct ViewerController::Private {
         for (auto it=stored.begin();it!=stored.end();++it) {
             if (candidate.contains(it.key()) && it.value().isString()) candidate[it.key()]=QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText).toString(QKeySequence::PortableText);
         }
+        // A command added after the settings file was written gets its default only if that key is still free;
+        // otherwise the user's explicit choice wins and the new command starts unassigned.
+        for (auto it=candidate.begin();it!=candidate.end();++it) {
+            if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
+            for (auto other=stored.begin();other!=stored.end();++other) {
+                if (other.key()!=it.key() && candidate.contains(other.key()) && candidate.value(other.key()).toString().compare(it.value().toString(),Qt::CaseInsensitive)==0) { it.value()=QString(); break; }
+            }
+        }
         QStringList seen;
         bool valid=true;
         for (const auto& value:candidate) { const auto sequence=value.toString(); if (!sequence.isEmpty()&&seen.contains(sequence,Qt::CaseInsensitive)) { valid=false; break; } seen.append(sequence); }

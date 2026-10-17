@@ -6,8 +6,24 @@ import QtQuick.Controls
 Rectangle {
     id: strip
     property alias hovered: hover.hovered
+    property int focusedCells: 0
+    // The HUD must stay open while the pointer is over the strip or one of its cells has keyboard focus.
+    readonly property bool keepOpen: hover.hovered || focusedCells > 0
     readonly property int thumbEdge: 160
     signal itemActivated(string path)
+    function centerCurrent() { if (filmstrip.currentRow >= 0) list.positionViewAtIndex(filmstrip.currentRow, ListView.Center) }
+    // Moves keyboard focus onto the current photo's cell (Tab from the canvas).
+    function focusCurrent() {
+        const cell = list.itemAtIndex(Math.max(0, filmstrip.currentRow))
+        if (cell) cell.forceActiveFocus(Qt.TabFocusReason)
+        else retryFocus.restart() // the strip was just revealed; delegates are created on the next layout pass
+    }
+    Timer {
+        id: retryFocus
+        interval: 80
+        onTriggered: { const cell = list.itemAtIndex(Math.max(0, filmstrip.currentRow)); if (cell) cell.forceActiveFocus(Qt.TabFocusReason) }
+    }
+    onVisibleChanged: if (visible) Qt.callLater(centerCurrent)
     implicitHeight: 92
     color: theme.colors.surface
     Accessible.role: Accessible.Pane
@@ -22,16 +38,18 @@ Rectangle {
         orientation: ListView.Horizontal
         spacing: 6
         clip: true
-        model: filmstrip
+        // A hidden strip must not decode: with no model there are no delegates, so no thumbnail requests.
+        model: strip.visible ? filmstrip : null
         cacheBuffer: 360
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded; height: 6 }
         Accessible.role: Accessible.List
         Accessible.name: "Photos in this folder"
-        Component.onCompleted: if (filmstrip.currentRow >= 0) positionViewAtIndex(filmstrip.currentRow, ListView.Center)
+        Component.onCompleted: strip.centerCurrent()
         Connections {
             target: filmstrip
-            function onCurrentRowChanged() { if (filmstrip.currentRow >= 0) list.positionViewAtIndex(filmstrip.currentRow, ListView.Center) }
+            enabled: strip.visible
+            function onCurrentRowChanged() { strip.centerCurrent() }
         }
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -57,6 +75,8 @@ Rectangle {
             ToolTip.delay: 600
             ToolTip.text: name
             onClicked: { viewer.open(path); strip.itemActivated(path) }
+            onActiveFocusChanged: strip.focusedCells += activeFocus ? 1 : -1
+            Component.onDestruction: if (activeFocus) strip.focusedCells -= 1
             Keys.onReturnPressed: clicked()
             Keys.onEnterPressed: clicked()
             background: Rectangle {

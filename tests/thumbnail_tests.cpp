@@ -8,6 +8,7 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImage>
+#include <QPointer>
 #include <QProcess>
 #include <QQuickImageResponse>
 #include <QQuickTextureFactory>
@@ -116,6 +117,7 @@ private slots:
     void queueIsBounded();
     void cancelledRequestsNeverReport();
     void staleEpochResultsAreDropped();
+    void staleSuccessfulResultIsNeitherDeliveredNorCached();
     void cacheServesRepeatsUntilEpochChanges();
     void killedWorkerIsReplacedAndBatchContinues();
     void sourceDirectoryIsNeverModified();
@@ -252,6 +254,23 @@ void ThumbnailTests::staleEpochResultsAreDropped() {
     service.shutdown();
 }
 
+void ThumbnailTests::staleSuccessfulResultIsNeitherDeliveredNorCached() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    const auto png = writePng(dir.path(), "x.png", QSize(2000, 1500));
+    ThumbnailService service(decoder()); Collector got(service);
+    const auto id = service.request(png, 64, 1);
+    QVERIFY(id);
+    service.setEpoch(2); // the decode is already on a worker and will succeed
+    QTRY_COMPARE_WITH_TIMEOUT(service.active(), 0, 20000);
+    QTest::qWait(200);
+    QVERIFY2(!got.done(id), "a result from an older epoch was delivered");
+    QCOMPARE(service.cacheBytes(), qint64(0));
+    const auto fresh = service.request(png, 64, 2);
+    QTRY_VERIFY_WITH_TIMEOUT(got.done(fresh), 20000);
+    QVERIFY(got.ready.contains(fresh));
+    service.shutdown();
+}
+
 void ThumbnailTests::cacheServesRepeatsUntilEpochChanges() {
     QTemporaryDir dir; QVERIFY(dir.isValid());
     const auto path = writePng(dir.path(), "r.png", QSize(200, 100));
@@ -344,9 +363,12 @@ void ThumbnailTests::shutdownLeavesNoProcesses() {
     service.setWorkerCount(2);
     const auto a = service.request(png, 64, 1), b = service.request(png + "x", 64, 1);
     QTRY_VERIFY_WITH_TIMEOUT(got.done(a) && got.done(b), 20000);
-    QVERIFY(!service.findChildren<QProcess*>().isEmpty());
+    QList<QPointer<QProcess>> processes;
+    for (auto* process : service.findChildren<QProcess*>()) { QVERIFY(process->state() == QProcess::Running); processes << process; }
+    QVERIFY(!processes.isEmpty());
     service.shutdown();
-    for (auto* process : service.findChildren<QProcess*>()) QVERIFY(process->state() == QProcess::NotRunning);
+    for (const auto& process : processes) QVERIFY2(process.isNull(), "worker process object survived shutdown()");
+    QVERIFY(service.findChildren<QProcess*>().isEmpty());
     QCOMPARE(service.pending(), 0); QCOMPARE(service.active(), 0);
     // The temporary media can now be removed on Windows without a lingering worker handle.
 }

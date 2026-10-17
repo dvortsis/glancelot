@@ -61,7 +61,10 @@ void sendThumbnailError(qint64 id, const QString& message) {
 }
 
 QImage makeThumbnail(const QString& path, int edge, QString& error) {
-    const QFileInfo initial(path);
+    // QFileInfo stats lazily: read the values now, or the later comparison would compare two post-decode stats.
+    const QFileInfo initialInfo(path);
+    const qint64 initialSize = initialInfo.size();
+    const QDateTime initialModified = initialInfo.lastModified();
     QFile source;
     if (!openShared(source, path)) { error = "Cannot read this file."; return {}; }
     QImageReader reader(&source);
@@ -80,7 +83,7 @@ QImage makeThumbnail(const QString& path, int edge, QString& error) {
     source.close();
     if (image.isNull()) { error = "Image decode failed: " + reader.errorString(); return {}; }
     const QFileInfo after(path);
-    if (!after.exists() || after.size() != initial.size() || after.lastModified() != initial.lastModified()) { error = "File changed while decoding."; return {}; }
+    if (!after.exists() || after.size() != initialSize || after.lastModified() != initialModified) { error = "File changed while decoding."; return {}; }
     if ((std::max)(image.width(), image.height()) > edge)
         image = image.scaled(edge, edge, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if (!image.colorSpace().isValid()) image.setColorSpace(QColorSpace::SRgb);
@@ -123,7 +126,9 @@ int main(int argc, char** argv) {
     if (app.arguments().size() == 2 && app.arguments().at(1) == "--thumbnail-server") return thumbnailServer();
     if (app.arguments().size() != 2) return fail("Expected one image path.");
     const QString path = app.arguments().at(1);
-    const QFileInfo initial(path);
+    const QFileInfo initialInfo(path);
+    const qint64 initialSize = initialInfo.size();
+    const QDateTime initialModified = initialInfo.lastModified();
     QFile source;
     if (!openShared(source, path)) return fail("Cannot read this file. Check that it exists and is accessible.");
     QImageReader::setAllocationLimit(256);
@@ -148,7 +153,7 @@ int main(int argc, char** argv) {
     source.close();
     if (image.isNull()) return fail("Image decode failed: " + reader.errorString());
     const QFileInfo after(path);
-    if (!after.exists() || after.size() != initial.size() || after.lastModified() != initial.lastModified()) return fail("File changed while decoding; retry when the writer finishes.");
+    if (!after.exists() || after.size() != initialSize || after.lastModified() != initialModified) return fail("File changed while decoding; retry when the writer finishes.");
     const bool tagged = image.colorSpace().isValid();
     if (!tagged) image.setColorSpace(QColorSpace::SRgb);
     image.convertToColorSpace(QColorSpace::SRgb, QImage::Format_RGBA8888);
