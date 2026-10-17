@@ -81,7 +81,7 @@ tasks:
     priority: 9
     owner: lead
     state: implementing
-    memory_action: PENDING
+    memory_action: act_mvcxj3ch_d14c97220e5d
     depends: [ALPHA-PACKAGE]
     outcome: Stable numbered window-opening-order slots and coordinated per-slot persistence
     boundaries: Slot ownership, session lifecycle and storage; no automatic reopening of all saved windows
