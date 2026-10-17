@@ -13,6 +13,7 @@
 //    as settings.json.damaged, `recovered` is set, and the edit applies on top of the restored settings.
 //    Without a valid copy it is also left untouched until resetSettings() sets it aside (--reset-settings).
 //  * readSettings() takes no lock: replacement is atomic, so a reader sees the old or the new file, never a mix.
+//  * Interactive writes never wait for a lock or retry replacements; transient failures can be retried later.
 //  * Busy means the lock stayed contended past the timeout; WriteFailed covers every other write failure.
 namespace glancelot {
 struct SettingsStatus {
@@ -25,7 +26,8 @@ QString settingsDirectory();   // GLANCELOT_CONFIG_DIR, otherwise the OS applica
 QString settingsFilePath();
 // A missing file is Ok with an empty object.
 SettingsStatus readSettings(QJsonObject& out);
-SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit);
+// waitOnExit permits bounded lock/replacement retries during final teardown only.
+SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit, bool waitOnExit = false);
 // Safe-mode reset: renames settings.json to settings.json.reset-<timestamp> (never deletes it). True when there
 // was nothing to set aside or the rename succeeded.
 bool resetSettings(QString* movedTo = nullptr);

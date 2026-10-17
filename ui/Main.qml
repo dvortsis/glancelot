@@ -384,7 +384,7 @@ ApplicationWindow {
                             onEditingFinished: {
                                 if (text !== modelData.binding) {
                                     const ok=viewer.setBinding(modelData.id,text)
-                                    app.bindingMessage=ok ? "Binding saved." : "Binding rejected: use a valid, unassigned key sequence."
+                                    app.bindingMessage=viewer.status
                                     if (!ok) text=modelData.binding
                                 }
                             }

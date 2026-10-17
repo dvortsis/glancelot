@@ -21,6 +21,7 @@
 #include <QScopeGuard>
 #include <array>
 #include <iostream>
+#include <future>
 
 namespace {
 // ---- helper processes (this executable re-launched with a mode) ----------------------------------------------
@@ -125,6 +126,10 @@ class WindowSlotTests final : public QObject {
 private slots:
     void init() { QTest::failOnWarning(QRegularExpression("QProcess: Destroyed while process.*still running.*")); }
     void cleanup() { qunsetenv("GLANCELOT_CONFIG_DIR"); }
+    void lateSlotClaimRemembersOnlySuccessfulImages();
+    void conflictingEditsFromDifferentWindowsAreRejected();
+    void contendedPositionSaveRetriesWithoutBlocking();
+    void counterLimitDoesNotReuseLiveSlots();
     void slotsFollowOpeningOrderAndAreNeverRenumbered();
     void reverseCloseOrderStartsANewSessionAtOne();
     void simultaneousLaunchesGetDistinctSlots();
@@ -146,6 +151,66 @@ private slots:
     void explicitOpenOverridesRestore();
     void positionFlushesOnDestructionAndDisabledSlotWritesNothing();
 };
+
+void WindowSlotTests::lateSlotClaimRemembersOnlySuccessfulImages() {
+    QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    const auto good=writePng(files.path(),"good.png"), bad=writePng(files.path(),"bad.png",false);
+    ViewerController viewer;
+    viewer.restoreWindow(); // no claim yet
+    viewer.open(good); waitOpen(viewer,good);
+    QVERIFY(!viewer.image().isNull());
+    viewer.open(bad); QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading(),20000);
+    viewer.setWindowSlot(1); viewer.restoreWindow(); viewer.flushWindowPosition();
+    QVERIFY(same(settingsOf(config.path()).value("windows").toObject().value("1").toObject().value("image").toString(),good));
+    ViewerController resumed;
+    resumed.restoreWindow(); // unavailable at startup, then coordination recovers
+    resumed.setWindowSlot(1); resumed.restoreWindow(); waitOpen(resumed,good);
+    QVERIFY(!resumed.image().isNull());
+}
+
+void WindowSlotTests::conflictingEditsFromDifferentWindowsAreRejected() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    ViewerController first, second;
+    QVERIFY(first.setBinding("rotate","X"));
+    QVERIFY(!second.setBinding("fit","X"));
+    QCOMPARE(second.bindingFor("fit"),QString("F"));
+    QVERIFY(second.status().contains("another window"));
+    ViewerController reopened;
+    QCOMPARE(reopened.bindingFor("rotate"),QString("X"));
+    QCOMPARE(reopened.bindingFor("fit"),QString("F"));
+    QVERIFY(second.setBinding("fit","Y"));
+    QCOMPARE(second.bindingFor("rotate"),QString("X"));
+}
+
+void WindowSlotTests::contendedPositionSaveRetriesWithoutBlocking() {
+    QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    const auto good=writePng(files.path(),"good.png");
+    ViewerController viewer; viewer.setWindowSlot(1); viewer.open(good); waitOpen(viewer,good);
+    FileLock lock(config.filePath("settings.json.lock")); QVERIFY(lock.acquire(0));
+    QElapsedTimer elapsed; elapsed.start(); viewer.flushWindowPosition();
+    QVERIFY2(elapsed.elapsed()<250,"position flush blocked on the GUI thread");
+    lock.release();
+    QTRY_VERIFY_WITH_TIMEOUT(same(settingsOf(config.path()).value("windows").toObject().value("1").toObject().value("image").toString(),good),5000);
+    FileLock sessionLock(config.filePath("sessions.json.lock")); QVERIFY(sessionLock.acquire(0));
+    elapsed.restart(); WindowSlot slot(config.path(),0);
+    QCOMPARE(slot.number(),0); QVERIFY(elapsed.elapsed()<250);
+    sessionLock.release(); QVERIFY(slot.claim(0));
+}
+
+void WindowSlotTests::counterLimitDoesNotReuseLiveSlots() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    WindowSlot live(config.path()); QCOMPARE(live.number(),1);
+    const auto path=config.filePath("sessions.json");
+    auto state=QJsonDocument::fromJson(readFile(path)).object();
+    state["counter"]=1000000;
+    QVERIFY(writeFile(path,QJsonDocument(state).toJson()));
+    WindowSlot refused(config.path()); QCOMPARE(refused.number(),0);
+    QCOMPARE(QJsonDocument::fromJson(readFile(path)).object().value("counter").toInt(),1000000);
+    live.release(); QVERIFY(refused.claim()); QCOMPARE(refused.number(),1);
+}
 
 void WindowSlotTests::slotsFollowOpeningOrderAndAreNeverRenumbered() {
     QTemporaryDir dir; QVERIFY(dir.isValid());
@@ -316,10 +381,14 @@ void WindowSlotTests::settingsWritesSurviveReadersAndLockContention() {
     QVERIFY(readerA.process.waitForReadyRead(15000) && readerB.process.waitForReadyRead(15000) && foreign.process.waitForReadyRead(15000));
     int failures = 0, lastCode = 0;
     QElapsedTimer writes; writes.start();
+    // Exercise the bounded-retry background writer; interactive writes intentionally return
+    // immediately under contention and are covered by contendedPositionSaveRetriesWithoutBlocking.
+    std::async(std::launch::async,[&] {
     for (int i = 0; i < 150; ++i) {
         const auto status = glancelot::updateSettings([&](QJsonObject& root) { root["n"] = i; });
         if (!status.ok()) { ++failures; lastCode = int(status.code); }
     }
+    }).get();
     QVERIFY2(failures == 0, qPrintable(QString("%1 of 150 writes failed (last code %2) in %3 ms").arg(failures).arg(lastCode).arg(writes.elapsed())));
                                // a reader holding the file open at the rename must not lose a write
     QCOMPARE(settingsOf(dir.path()).value("n").toInt(), 149);

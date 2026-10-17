@@ -1,6 +1,7 @@
 #include "glancelot/settings_file.hpp"
 #include "file_lock.hpp"
 #include <QDateTime>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -13,6 +14,11 @@
 namespace glancelot {
 namespace {
 constexpr qint64 kMaxSettingsBytes = 1024 * 1024;
+// Interactive writes never sleep behind another process or retry a replacement.
+bool interactiveThread() {
+    const auto* app = QCoreApplication::instance();
+    return app && QThread::currentThread() == app->thread();
+}
 
 SettingsStatus parseExisting(const QString& path, QJsonObject& out) {
     out = {};
@@ -37,12 +43,12 @@ bool validBackup(const QString& path, QJsonObject& out) {
 
 // One atomic replacement. On Windows the rename can fail for a moment while another process has the file open,
 // so a few jittered retries are part of a write, not an error.
-bool replaceFile(const QString& path, const QByteArray& bytes) {
-    for (int attempt = 0; attempt < 10; ++attempt) {
+bool replaceFile(const QString& path, const QByteArray& bytes, bool retry) {
+    for (int attempt = 0; attempt < (retry ? 10 : 1); ++attempt) {
         QSaveFile output(path);
         if (output.open(QIODevice::WriteOnly) && output.write(bytes) == bytes.size() && output.commit()) return true;
         // Jittered: timer granularity can otherwise phase-lock a retry with a periodic foreign reader.
-        QThread::msleep(quint32(10 + 15 * attempt + QRandomGenerator::global()->bounded(20)));
+        if (retry) QThread::msleep(quint32(10 + 15 * attempt + QRandomGenerator::global()->bounded(20)));
     }
     return false;
 }
@@ -73,11 +79,12 @@ SettingsStatus readSettings(QJsonObject& out) {
     return status;
 }
 
-SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit) {
+SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit, bool waitOnExit) {
+    const bool retry=waitOnExit || !interactiveThread();
     const QString path = settingsFilePath();
     if (!QDir().mkpath(QFileInfo(path).absolutePath())) return {SettingsStatus::WriteFailed};
     FileLock lock(path + ".lock");
-    if (!lock.acquire(4000)) return {lock.contended() ? SettingsStatus::Busy : SettingsStatus::WriteFailed};
+    if (!lock.acquire(retry ? 4000 : 0)) return {lock.contended() ? SettingsStatus::Busy : SettingsStatus::WriteFailed};
     QJsonObject root;
     auto status = parseExisting(path, root);
     bool recovered = false, primaryGood = status.ok();
@@ -94,7 +101,7 @@ SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit) {
     // Only a verified-good file becomes the last-known-good copy; a damaged one never overwrites it.
     if (existed && primaryGood) { QFile::remove(path + ".bak"); QFile::copy(path, path + ".bak"); }
     const auto bytes = QJsonDocument(root).toJson(QJsonDocument::Indented);
-    if (!replaceFile(path, bytes)) return {SettingsStatus::WriteFailed};
+    if (!replaceFile(path, bytes, retry)) return {SettingsStatus::WriteFailed};
     return {SettingsStatus::Ok, recovered};
 }
 
@@ -102,7 +109,7 @@ bool resetSettings(QString* movedTo) {
     const QString path = settingsFilePath();
     if (!QFileInfo::exists(path)) return true;
     FileLock lock(path + ".lock");
-    if (!lock.acquire(4000)) return false;
+    if (!lock.acquire(interactiveThread() ? 0 : 4000)) return false;
     const QString target = path + ".reset-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
     if (movedTo) *movedTo = target;
     return QFile::rename(path, target);

@@ -37,6 +37,7 @@ int main(int argc,char** argv) {
     parser.addOption({"report","Write local JSON startup/render evidence before timed exit.","path"});
     parser.addOption({"theme","Select a built-in family (saved preference).","id"});
     parser.addOption({"theme-mode","Select system, dark, or light (saved preference).","mode"});
+    parser.addOption({"show-settings","Open settings at startup (test automation)."});
     parser.addOption({"show-themes","Open the theme picker at startup (test automation)."});
     parser.addOption({"reset-settings","Set a damaged or incompatible settings.json aside (renamed, never deleted) and start with defaults."});
     parser.addOption({"no-resume","Do not claim a window slot or remember/restore the browsing position (test automation)."});
@@ -44,17 +45,18 @@ int main(int argc,char** argv) {
     parser.process(app);
     QElapsedTimer elapsed;elapsed.start();
     if(parser.isSet("reset-settings")){QString moved;if(glancelot::resetSettings(&moved)&&!moved.isEmpty())std::fprintf(stderr,"Glancelot: settings set aside as %s\n",qPrintable(moved));}
-    ViewerController viewer;
     // The slot is claimed before the window shows; it is released on normal exit, and a crashed window's slot is
     // reclaimed by the next claim (pid plus process start time).
     std::unique_ptr<WindowSlot> windowSlot;
-    if(!parser.isSet("no-resume"))windowSlot=std::make_unique<WindowSlot>();
+    if(!parser.isSet("no-resume"))windowSlot=std::make_unique<WindowSlot>(QString{},0);
+    // Keep ownership until after the controller destructor has finished its final save.
+    ViewerController viewer;
     viewer.setWindowSlot(windowSlot?windowSlot->number():0);
-    QObject::connect(&app,&QGuiApplication::aboutToQuit,&app,[&]{viewer.flushWindowPosition();if(windowSlot)windowSlot->release();});
+    QObject::connect(&app,&QGuiApplication::aboutToQuit,&app,[&]{viewer.flushWindowPosition();});
     // If coordination was busy at startup, keep trying for a while instead of silently running without memory.
     QTimer slotRetry;slotRetry.setInterval(4000);int slotAttempts=0;
     if(windowSlot&&windowSlot->number()==0){
-        QObject::connect(&slotRetry,&QTimer::timeout,&app,[&]{if(windowSlot->claim()){viewer.setWindowSlot(windowSlot->number());slotRetry.stop();}else if(++slotAttempts>=8)slotRetry.stop();});
+        QObject::connect(&slotRetry,&QTimer::timeout,&app,[&]{if(windowSlot->claim(0)){viewer.setWindowSlot(windowSlot->number());viewer.restoreWindow();slotRetry.stop();}else if(++slotAttempts>=8)slotRetry.stop();});
         slotRetry.start();
     }
     ThemeManager theme;
@@ -86,6 +88,7 @@ int main(int argc,char** argv) {
     engine.loadFromModule("Glancelot","Main");
     if(engine.rootObjects().isEmpty())return 2;
     if(parser.isSet("show-themes"))QTimer::singleShot(100,engine.rootObjects().first(),[&]{QMetaObject::invokeMethod(engine.rootObjects().first(),"openThemes");});
+    if(parser.isSet("show-settings"))QTimer::singleShot(100,&viewer,[&]{viewer.trigger("settings");});
     auto* window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
     if(window&&parser.isSet("window-size")) { const auto dimensions=parser.value("window-size").split('x'); if(dimensions.size()==2)window->resize(qMax(540,dimensions[0].toInt()),qMax(360,dimensions[1].toInt())); }
     qint64 firstImage=-1,firstFrame=-1; int frames=0;
@@ -104,6 +107,7 @@ int main(int argc,char** argv) {
                     {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
                     {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
                     {"loading",viewer.loading()},{"status",viewer.status()},
+                    {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},
                     {"theme",theme.family()},{"theme_mode",theme.mode()},
                     {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
                     {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};

@@ -80,7 +80,8 @@ tasks:
     milestone: M2.1
     priority: 9
     owner: lead
-    state: implementing
+    state: integration
+    evidence: docs/verification/WINDOW-SESSIONS.md; independent review approved; worktree 7/7 CTest and five process checks passed; integrated checks pending
     memory_action: act_mvcxj3ch_d14c97220e5d
     depends: [ALPHA-PACKAGE]
     outcome: Stable numbered window-opening-order slots and coordinated per-slot persistence
@@ -94,7 +95,9 @@ tasks:
     milestone: M2.1
     priority: 9
     owner: lead
-    state: pending
+    state: integration
+    evidence: docs/verification/WINDOW-SESSIONS.md; independent review approved; worktree 7/7 CTest and five process checks passed; integrated checks pending
+    memory_action: act_mvd22gx9_d31a0cef7c3c
     depends: [WINDOW-SLOTS-01]
     outcome: Each window restores its own last folder and image after complete application exit
     boundaries: Folder/image location only; geometry, zoom/pan and ephemeral tags are separate features

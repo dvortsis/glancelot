@@ -74,16 +74,16 @@ Loaded load(const QString& directory, Session& session) {
     return Loaded::Ok;
 }
 
-bool store(const QString& directory, const Session& session) {
+bool store(const QString& directory, const Session& session, bool retry) {
     QJsonObject root = session.extra;
     root["schema"] = 1;
     root["counter"] = session.counter;
     root["live"] = session.live;
     const auto bytes = QJsonDocument(root).toJson(QJsonDocument::Compact);
-    for (int attempt = 0; attempt < 8; ++attempt) {
+    for (int attempt = 0; attempt < (retry ? 8 : 1); ++attempt) {
         QSaveFile file(statePath(directory));
         if (file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit()) return true;
-        QThread::msleep(quint32(8 + 7 * attempt));
+        if (retry) QThread::msleep(quint32(8 + 7 * attempt));
     }
     return false;
 }
@@ -96,21 +96,21 @@ bool locked(const QString& directory, int timeoutMs, Body body) {
     if (!lock.acquire(timeoutMs)) return false;
     Session session;
     if (load(directory, session) == Loaded::Refuse) return false;
-    body(session);
-    return store(directory, session);
+    if (!body(session)) return false;
+    return store(directory, session, timeoutMs > 0);
 }
 }
 
-WindowSlot::WindowSlot(const QString& directory) : directory_(directory.isEmpty() ? glancelot::settingsDirectory() : directory) {
-    claim();
+WindowSlot::WindowSlot(const QString& directory, int timeoutMs) : directory_(directory.isEmpty() ? glancelot::settingsDirectory() : directory) {
+    claim(timeoutMs);
 }
 
-bool WindowSlot::claim() {
+bool WindowSlot::claim(int timeoutMs) {
     if (number_ != 0) return true;
     const qint64 pid = QCoreApplication::applicationPid();
     const qint64 stamp = std::max<qint64>(1, processStamp(pid));
     int claimed = 0;
-    const bool ok = locked(directory_, 3000, [&](Session& session) {
+    const bool ok = locked(directory_, timeoutMs, [&](Session& session) {
         QJsonArray alive;
         for (const auto& entry : std::as_const(session.live)) {
             const auto object = entry.toObject();
@@ -118,9 +118,11 @@ bool WindowSlot::claim() {
             if (stampNow != 0 && stampNow == object.value("stamp").toInteger()) alive.append(object);
         }
         session.live = alive;
-        if (session.live.isEmpty() || session.counter >= kMaxCounter) session.counter = 0; // a new session
+        if (session.live.isEmpty()) session.counter = 0; // a new session
+        if (session.counter >= kMaxCounter) return false; // never reuse a live session's slots
         claimed = ++session.counter;
         session.live.append(QJsonObject{{"slot", claimed}, {"pid", pid}, {"stamp", stamp}});
+        return true;
     });
     number_ = ok ? claimed : 0;
     return number_ != 0;
@@ -139,6 +141,7 @@ void WindowSlot::release() {
         }
         session.live = remaining;
         if (session.live.isEmpty()) session.counter = 0;
+        return true;
     });
 }
 

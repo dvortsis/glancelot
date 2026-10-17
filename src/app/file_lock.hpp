@@ -39,7 +39,7 @@ public:
             if (result == Attempt::Held) return true;
             contended_ = result == Attempt::Contended;
             // Transient errors (antivirus or an indexer touching the file) get a short grace period only.
-            if (timer.hasExpired(contended_ ? timeoutMs : std::min(timeoutMs, 400))) return false;
+            if (timeoutMs <= 0 || timer.hasExpired(contended_ ? timeoutMs : std::min(timeoutMs, 400))) return false;
             QThread::msleep(quint32(5 + QRandomGenerator::global()->bounded(15)));
         }
     }

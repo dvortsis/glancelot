@@ -17,13 +17,14 @@
 //  * Saved positions are stored by the settings writer (keyed by slot) and are not removed when a window closes.
 class WindowSlot {
 public:
-    explicit WindowSlot(const QString& directory = {});
+    explicit WindowSlot(const QString& directory = {}, int timeoutMs = 3000);
     ~WindowSlot();
     WindowSlot(const WindowSlot&) = delete;
     WindowSlot& operator=(const WindowSlot&) = delete;
     int number() const { return number_; }
     // Retries the claim after a failed one; true when this window holds a slot.
-    bool claim();
+    // timeoutMs=0 never waits for contention or retries file replacement (interactive callers).
+    bool claim(int timeoutMs = 3000);
     void release();
 private:
     QString directory_;

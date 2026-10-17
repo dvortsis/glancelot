@@ -107,7 +107,8 @@ struct ViewerController::Private {
     std::optional<NavigationJob> pendingNavigation;
     std::stop_source navigationStop;
     int slot{};
-    QString pendingFolder, pendingImage;
+    QString pendingFolder, pendingImage, lastDecodedPath;
+    int positionRetries{};
     bool positionDirty{}, restoreRequested{};
     QTimer positionTimer;
 
@@ -131,26 +132,31 @@ struct ViewerController::Private {
         QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
         QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
     }
-    ~Private() { writePosition(); navigationStop.request_stop(); cancel(); navigationPool.waitForDone(); }
+    ~Private() { writePosition(true); navigationStop.request_stop(); cancel(); navigationPool.waitForDone(); }
     void notePosition(const QString& file) {
+        lastDecodedPath=file;
         if (slot<=0) return;
+        positionRetries=0;
         pendingImage=file; pendingFolder=QFileInfo(file).absolutePath(); positionDirty=true;
         positionTimer.start();
     }
-    bool writePosition() {
+    bool writePosition(bool final = false) {
         positionTimer.stop();
         if (!positionDirty || slot<=0) return true;
         const QString folder=pendingFolder,image=pendingImage;
         const int target=slot;
-        const bool ok=updateSettings([&](QJsonObject& object) {
+        const auto result=updateSettings([&](QJsonObject& object) {
             // Re-read under the lock: only this slot's entry changes; other windows' slots, bindings, themes
             // and unknown keys stay as they are on disk.
             auto windows=object.value("windows").toObject();
             windows[QString::number(target)]=QJsonObject{{"folder",folder},{"image",image},{"saved",QDateTime::currentSecsSinceEpoch()}};
             object["windows"]=windows;
-        }).ok();
-        positionDirty=!ok; // a failed write is retried with the next successful image
-        return ok;
+        },final);
+        positionDirty=!result.ok();
+        // Retry transient contention without waiting in the UI or requiring another navigation.
+        if (!final && positionDirty && (result.code==SettingsStatus::Busy || result.code==SettingsStatus::WriteFailed) && ++positionRetries<=8)
+            positionTimer.start(500);
+        return result.ok();
     }
     QString cacheKey(const QString& file) const {
         const QFileInfo info(file);
@@ -345,7 +351,14 @@ struct ViewerController::Private {
 ViewerController::ViewerController(QObject* parent):QObject(parent),d(std::make_unique<Private>(this)){}
 ViewerController::~ViewerController()=default; // ~Private flushes the pending window position
 int ViewerController::windowSlot() const{return d->slot;}
-void ViewerController::setWindowSlot(int slot){if(slot<0||slot==d->slot)return;d->writePosition();d->slot=slot;emit stateChanged();}
+void ViewerController::setWindowSlot(int slot){
+    if(slot<0||slot==d->slot)return;
+    d->writePosition();
+    d->positionTimer.stop(); d->positionDirty=false;
+    d->slot=slot;
+    if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    emit stateChanged();
+}
 void ViewerController::flushWindowPosition(){d->writePosition();}
 void ViewerController::restoreWindow(){
     if(d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
@@ -407,8 +420,23 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if(!sequence.trimmed().isEmpty()&&(normalized.isEmpty()||parsed[0].key()==Qt::Key_unknown)){d->status="That shortcut is not valid.";emit stateChanged();return false;}
     for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&!normalized.isEmpty()&&it.value().toString().compare(normalized,Qt::CaseInsensitive)==0){d->status="Shortcut already assigned to "+it.key()+". Clear it first.";emit stateChanged();return false;}}
+    QJsonObject merged=d->bindings;
+    merged[id]=normalized;
+    QString conflict;
+    const auto result=updateSettings([&](QJsonObject& object) {
+        auto stored=object.value("bindings").toObject();
+        // Validate the effective map while holding the writer lock: another window may have
+        // assigned this shortcut since our settings were loaded.
+        for(auto it=stored.begin();it!=stored.end();++it)
+            if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
+        for(auto it=merged.begin();it!=merged.end();++it)
+            if(it.key()!=id&&!normalized.isEmpty()&&it.value().toString().compare(normalized,Qt::CaseInsensitive)==0){conflict=it.key();return;}
+        stored[id]=normalized;object["bindings"]=stored;
+    });
+    if(!conflict.isEmpty()){d->status="Shortcut already assigned to "+conflict+" in another window. Clear it first.";emit stateChanged();return false;}
+    d->bindings=result.ok()?merged:d->bindings;
     d->bindings[id]=normalized;
-    const bool saved=d->save({"bindings"},id);d->status=saved?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    d->status=result.ok()?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
     emit bindingsChanged();emit stateChanged();return true;
 }
 void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save({"bindings"});d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}
