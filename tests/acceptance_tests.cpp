@@ -21,11 +21,11 @@ QString writePng(const QString& directory, const QString& name, const QColor& co
     const auto path = directory + "/" + name;
     return image.save(path, "PNG") ? path : QString{};
 }
-QString writeOrientedJpeg(const QString& directory) {
+QString writeOrientedJpeg(const QString& directory, int orientation) {
     QImage image(30, 20, QImage::Format_RGB32);
     image.fill(Qt::red);
     for (int y=0; y<20; ++y)
-        for (int x=15; x<30; ++x) image.setPixelColor(x,y,Qt::blue);
+        for (int x=0; x<30; ++x) image.setPixelColor(x,y,y<10 ? (x<15 ? Qt::red : Qt::green) : (x<15 ? Qt::blue : Qt::yellow));
     image.setColorSpace(QColorSpace::SRgb);
     const auto base = directory + "/orientation-source.jpg";
     if (!image.save(base,"JPEG",100)) return {};
@@ -33,7 +33,8 @@ QString writeOrientedJpeg(const QString& directory) {
     if (!input.open(QIODevice::ReadOnly)) return {};
     const auto bytes=input.readAll();
     // EXIF orientation 6 means rotate stored pixels 90 degrees clockwise.
-    const auto exif=QByteArray::fromHex("45786966000049492a0008000000010012010300010000000600000000000000");
+    auto exif=QByteArray::fromHex("45786966000049492a0008000000010012010300010000000600000000000000");
+    exif[24]=char(orientation);
     QByteArray segment=QByteArray::fromHex("ffe1");
     const auto length=exif.size()+2;
     segment.append(char(length>>8)); segment.append(char(length&255)); segment+=exif;
@@ -52,6 +53,7 @@ private slots:
     void generatedTreeReverseOracle();
     void malformedInputTerminates();
     void pngPreservesDimensionsAlphaAndColor();
+    void jpegOrientationApplied_data();
     void jpegOrientationApplied();
     void newestOpenWins();
     void explicitOpenDoesNotReuseSameSizeTimestampPixels();
@@ -122,17 +124,33 @@ void AcceptanceTests::pngPreservesDimensionsAlphaAndColor() {
     QVERIFY(controller.image().colorSpace().isValid());
 }
 
+void AcceptanceTests::jpegOrientationApplied_data() {
+    QTest::addColumn<int>("orientation");
+    QTest::addColumn<QString>("corners");
+    QTest::newRow("normal") << 1 << "RGBY";
+    QTest::newRow("mirror-horizontal") << 2 << "GRYB";
+    QTest::newRow("rotate-180") << 3 << "YBGR";
+    QTest::newRow("mirror-vertical") << 4 << "BYRG";
+    QTest::newRow("transpose") << 5 << "RBGY";
+    QTest::newRow("rotate-clockwise") << 6 << "BRYG";
+    QTest::newRow("transverse") << 7 << "YGBR";
+    QTest::newRow("rotate-counterclockwise") << 8 << "GYRB";
+}
 void AcceptanceTests::jpegOrientationApplied() {
-    QTemporaryDir files; QVERIFY(files.isValid()); const auto path=writeOrientedJpeg(files.path());
+    QFETCH(int,orientation); QFETCH(QString,corners);
+    QTemporaryDir files; QVERIFY(files.isValid()); const auto path=writeOrientedJpeg(files.path(),orientation);
     QVERIFY(!path.isEmpty()); ViewerController controller; controller.open(path);
     QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
-    QCOMPARE(controller.imageWidth(),20); QCOMPARE(controller.imageHeight(),30);
-    const auto top=controller.image().pixelColor(10,4);
-    const auto bottom=controller.image().pixelColor(10,25);
-    QVERIFY(top.red()>230 && top.blue()<25);
-    QVERIFY(bottom.blue()>230 && bottom.red()<25);
+    const QSize expected=orientation<5 ? QSize(30,20) : QSize(20,30);
+    QCOMPARE(controller.image().size(),expected);
+    const QList<QPoint> points{{4,4},{expected.width()-5,4},{4,expected.height()-5},{expected.width()-5,expected.height()-5}};
+    const auto reference=[](QChar color) { return color=='R' ? QColor(Qt::red) : color=='G' ? QColor(Qt::green) : color=='B' ? QColor(Qt::blue) : QColor(Qt::yellow); };
+    for(int index=0;index<points.size();++index) {
+        const auto actual=controller.image().pixelColor(points[index]);
+        const auto target=reference(corners[index]);
+        QVERIFY2(qAbs(actual.red()-target.red())<25 && qAbs(actual.green()-target.green())<25 && qAbs(actual.blue()-target.blue())<25,qPrintable(QString("EXIF %1 corner %2 color mismatch").arg(orientation).arg(index)));
+    }
 }
-
 void AcceptanceTests::newestOpenWins() {
     QTemporaryDir files; QVERIFY(files.isValid());
     const auto slow=writePng(files.path(),"large.png",Qt::red,QSize(4096,4096));
@@ -260,6 +278,7 @@ int main(int argc,char** argv) {
     return QTest::qExec(&tests,argc,argv);
 }
 #include "acceptance_tests.moc"
+
 
 
 
