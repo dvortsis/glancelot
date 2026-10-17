@@ -2,6 +2,7 @@
 #include "image_canvas.hpp"
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/filmstrip_model.hpp"
+#include "glancelot/folder_tree_model.hpp"
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
 #include <QGuiApplication>
@@ -53,11 +54,15 @@ int main(int argc,char** argv) {
     FilmstripModel filmstrip;
     QObject::connect(&viewer,&ViewerController::stateChanged,&filmstrip,[&]{filmstrip.sync(viewer.snapshot());});
     QObject::connect(&viewer,&ViewerController::filesInvalidated,&filmstrip,[&]{filmstrip.invalidate();});
+    // The tree only follows navigation while it is wanted, so a hidden tree never lists folders.
+    FolderTreeModel folderTree;
+    QObject::connect(&viewer,&ViewerController::stateChanged,&folderTree,[&]{if(viewer.treeVisible())folderTree.sync(viewer.snapshot());});
     QObject::connect(&filmstrip,&FilmstripModel::epochChanged,&thumbnails,[&]{thumbnails.setEpoch(filmstrip.epoch());});
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
     engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
+    engine.rootContext()->setContextProperty("folderTree",&folderTree);
     engine.rootContext()->setContextProperty("theme",&theme);
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(2);},Qt::QueuedConnection);
     engine.loadFromModule("Glancelot","Main");

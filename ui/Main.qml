@@ -68,7 +68,11 @@ ApplicationWindow {
     }
     onActiveChanged: if (!active) canvas.endLoupe()
     onModalOpenChanged: if (modalOpen) canvas.endLoupe()
-    Connections { target: viewer; function onViewCommand(id) { app.handleViewCommand(id) } }
+    Connections {
+        target: viewer
+        function onViewCommand(id) { app.handleViewCommand(id) }
+        function onTreeShown() { app.hudVisible = true; hideHud.restart(); Qt.callLater(treePanel.focusList) }
+    }
     Instantiator {
         model: viewer.commands
         delegate: Shortcut {
@@ -93,7 +97,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.keepOpen)
+            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -109,14 +113,22 @@ ApplicationWindow {
     }
     ThemePicker { id: themePicker; anchors.centerIn: parent; onClosed: canvas.forceActiveFocus() }
     function openThemes() { themePicker.open() }
+    // A pinned folder panel makes room instead of covering the photo, except in narrow windows.
+    readonly property int treeInset: treePanel.visible && viewer.treePinned && app.width >= 720 ? treePanel.width : 0
     ImageCanvas {
         id: canvas
         objectName: "canvas"
-        anchors.fill: parent
+        anchors { fill: parent; leftMargin: app.treeInset }
         image: viewer.image
         background: "#191919"
         focus: true
         // Keyboard route into the auto-hiding filmstrip: Tab wakes the HUD and focuses the current photo's cell.
+        // Shift+Tab: keyboard route into the folder tree (shows it when hidden).
+        Keys.onBacktabPressed: event => {
+            if (!viewer.treeVisible) viewer.treeVisible = true
+            else { app.hudVisible = true; hideHud.restart(); Qt.callLater(treePanel.focusList) }
+            event.accepted = true
+        }
         Keys.onTabPressed: event => {
             if (viewer.filmstripVisible && filmstrip.count > 0) {
                 app.hudVisible = true; hideHud.restart()
@@ -129,7 +141,7 @@ ApplicationWindow {
     }
     MouseArea {
         id: interaction
-        anchors.fill: parent
+        anchors.fill: canvas
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         hoverEnabled: true
         property real lastX: 0
@@ -196,6 +208,7 @@ ApplicationWindow {
             spacing: 4
             Image { Layout.preferredWidth: 28; Layout.preferredHeight: 28; source: "qrc:/brand/icons/app/" + (theme.dark ? "dark" : "light") + "/glancelot-64.png"; fillMode: Image.PreserveAspectFit }
             ActionButton { text: "Open"; onClicked: app.invoke("open"); ToolTip.text: viewer.bindingFor("open") }
+            ActionButton { text: "Folders"; enabled: viewer.fileCount > 0; onClicked: app.invoke("tree"); ToolTip.text: viewer.bindingFor("tree"); Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree" }
             Label { text: " / "; color: theme.colors.border }
             Label { text: viewer.fileName || "Glancelot"; elide: Text.ElideMiddle; Layout.fillWidth: true; color: theme.colors.text }
             ActionButton { text: app.width > 720 ? "Commands" : "Menu"; onClicked: app.invoke("palette"); ToolTip.text: viewer.bindingFor("palette") }
@@ -214,7 +227,21 @@ ApplicationWindow {
         visible: (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
         onItemActivated: canvas.forceActiveFocus()
     }
+    FolderTree {
+        id: treePanel
+        objectName: "folderTree"
+        compact: app.width < 720 || app.height < 480
+        anchors {
+            left: parent.left
+            top: filmstripPanel.visible ? filmstripPanel.bottom : topPanel.bottom
+            bottom: bottomPanel.visible ? bottomPanel.top : parent.bottom
+        }
+        width: implicitWidth
+        visible: viewer.treeVisible && (viewer.treePinned || app.hudVisible || app.frameless)
+        onDismissed: canvas.forceActiveFocus()
+    }
     Rectangle {
+        id: bottomPanel
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         height: 58
         visible: app.hudVisible
@@ -330,6 +357,7 @@ ApplicationWindow {
                     ActionButton { text: "Cycle background"; onClicked: app.invoke("background") }
                 }
                 CheckBox { text: "Nearest-neighbor sampling for pixel inspection"; checked: canvas.nearest; onToggled: canvas.nearest=checked }
+                CheckBox { text: "Pin folder tree open"; checked: viewer.treePinned; onToggled: viewer.treePinned=checked }
                 CheckBox { text: "Show filmstrip"; checked: viewer.filmstripVisible; onToggled: viewer.filmstripVisible=checked }
                 CheckBox { text: "Frameless window"; checked: app.frameless; onToggled: app.frameless=checked }
                 Rectangle { Layout.fillWidth: true; height: 1; color: theme.colors.border }
