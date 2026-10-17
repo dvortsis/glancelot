@@ -209,6 +209,7 @@ ApplicationWindow {
     Filmstrip {
         id: filmstripPanel
         objectName: "filmstrip"
+        compact: app.height < 480
         anchors { left: parent.left; right: parent.right; top: topPanel.bottom }
         visible: (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
         onItemActivated: canvas.forceActiveFocus()

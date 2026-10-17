@@ -10,6 +10,8 @@ Rectangle {
     // The HUD must stay open while the pointer is over the strip or one of its cells has keyboard focus.
     readonly property bool keepOpen: hover.hovered || focusedCells > 0
     readonly property int thumbEdge: 160
+    // Short windows get a smaller strip so it leaves the photo visible (set by the host layout).
+    property bool compact: false
     signal itemActivated(string path)
     function centerCurrent() { if (filmstrip.currentRow >= 0) list.positionViewAtIndex(filmstrip.currentRow, ListView.Center) }
     // Moves keyboard focus onto the current photo's cell (Tab from the canvas).
@@ -24,7 +26,7 @@ Rectangle {
         onTriggered: { const cell = list.itemAtIndex(Math.max(0, filmstrip.currentRow)); if (cell) cell.forceActiveFocus(Qt.TabFocusReason) }
     }
     onVisibleChanged: if (visible) Qt.callLater(centerCurrent)
-    implicitHeight: 92
+    implicitHeight: compact ? 68 : 92
     color: theme.colors.surface
     Accessible.role: Accessible.Pane
     Accessible.name: "Filmstrip"
@@ -34,7 +36,10 @@ Rectangle {
         id: list
         objectName: "filmstripList"
         anchors.fill: parent
-        anchors.margins: 6
+        anchors.leftMargin: 12 // shares the top bar's leading edge
+        anchors.rightMargin: 12
+        anchors.topMargin: 6
+        anchors.bottomMargin: 6
         orientation: ListView.Horizontal
         spacing: 6
         clip: true
@@ -65,7 +70,7 @@ Rectangle {
             required property string name
             required property string path
             required property bool isCurrent
-            width: 84
+            width: strip.compact ? 68 : 84
             height: ListView.view.height
             padding: 2
             focusPolicy: Qt.StrongFocus
@@ -82,10 +87,16 @@ Rectangle {
             background: Rectangle {
                 radius: 4
                 color: cell.hovered || cell.visualFocus ? theme.colors.hover : "transparent"
+                // Current photo = primary ring; keyboard focus = text-colored ring, so the two never look alike.
                 border.width: cell.isCurrent || cell.visualFocus ? 2 : 0
-                border.color: theme.colors.primary
+                border.color: cell.visualFocus ? theme.colors.text : theme.colors.primary
             }
             contentItem: Item {
+                Rectangle { // reserved space while loading, so cells never jump
+                    anchors.fill: parent; anchors.margins: 2; radius: 2
+                    visible: thumb.status !== Image.Ready
+                    color: theme.colors.hover
+                }
                 Image {
                     id: thumb
                     anchors.fill: parent
@@ -94,6 +105,7 @@ Rectangle {
                     asynchronous: true
                     source: filmstrip.thumbnailSource(cell.path, strip.thumbEdge, filmstrip.epoch)
                     opacity: status === Image.Ready ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                 }
                 Label {
                     anchors.fill: parent
@@ -101,7 +113,7 @@ Rectangle {
                     visible: thumb.status !== Image.Ready
                     text: thumb.status === Image.Error ? cell.name : ""
                     color: theme.colors.muted
-                    font.pixelSize: 10
+                    font.pixelSize: 11
                     wrapMode: Text.WrapAnywhere
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
