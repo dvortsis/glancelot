@@ -4,6 +4,7 @@
 #include <QColorSpace>
 #include <QFile>
 #include <QDir>
+#include <QDateTime>
 #include <QGuiApplication>
 #include <QImageWriter>
 #include <QSignalSpy>
@@ -53,6 +54,7 @@ private slots:
     void pngPreservesDimensionsAlphaAndColor();
     void jpegOrientationApplied();
     void newestOpenWins();
+    void explicitOpenDoesNotReuseSameSizeTimestampPixels();
     void duplicateBindingRejectedAndSettingsPersist();
     void stopAndLoopBoundaries();
     void boundaryChangeWhileScanPending();
@@ -145,6 +147,27 @@ void AcceptanceTests::newestOpenWins() {
     QCOMPARE(QFileInfo(controller.filePath()).canonicalFilePath(),QFileInfo(final).canonicalFilePath());
 }
 
+void AcceptanceTests::explicitOpenDoesNotReuseSameSizeTimestampPixels() {
+    QTemporaryDir files; QVERIFY(files.isValid());
+    const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+    const auto path=files.filePath("replacement.png");
+    const auto replace=[&](const QColor color) {
+        if (writePng(files.path(),"replacement.png",color,QSize(7,5)).isEmpty()) return false;
+        QFile file(path);
+        if (!file.open(QIODevice::ReadWrite) || file.size()>4096 || !file.resize(4096)) return false;
+        return file.setFileTime(stamp,QFileDevice::FileModificationTime);
+    };
+    QVERIFY(replace(Qt::red));
+    ViewerController controller; controller.open(path);
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && !controller.image().isNull(),10000);
+    QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::red));
+    QVERIFY(replace(Qt::blue));
+    // Open before delivering watcher notifications. Equal byte size and timestamp
+    // are insufficient proof that cached source pixels remain current.
+    controller.open(path);
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading(),10000);
+    QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::blue));
+}
 void AcceptanceTests::duplicateBindingRejectedAndSettingsPersist() {
     QString first,second;
     {
@@ -219,6 +242,7 @@ int main(int argc,char** argv) {
     return QTest::qExec(&tests,argc,argv);
 }
 #include "acceptance_tests.moc"
+
 
 
 
