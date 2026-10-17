@@ -52,10 +52,12 @@ tasks:
   - id: BROWSE-01
     requirements: [UX-02, PERF-05, SYS-02]
     owner: lead
-    state: implementing
+    state: done
+    commit: 3c197a7
     memory_action: act_mvctoy9h_1ad0a37bcccb
+    evidence: docs/verification/BROWSE-01.md; integrated 3c197a7 build.ps1 -Test -Package 5/5 CTest targets passed; independent review approved at 0a1a44b, design-review of final UI approved after focus-follow and ring fixes (e61384e, 3c197a7); Windows only
     depends: [VERIFY-01]
-    files: [include/glancelot/thumbnail_service.hpp, include/glancelot/filmstrip_model.hpp, src/app/thumbnail_service.cpp, src/app/filmstrip_model.cpp, src/app/thumbnail_provider.cpp, src/worker/main.cpp, ui/Filmstrip.qml, tests/thumbnail_tests.cpp]
+    files: [include/glancelot/thumbnail_service.hpp, include/glancelot/filmstrip_model.hpp, src/app/thumbnail_service.cpp, src/app/filmstrip_model.cpp, src/app/thumbnail_provider.cpp, src/app/thumbnail_provider.hpp, src/app/thumbnail_id.hpp, src/app/viewer_controller.cpp, src/worker/main.cpp, ui/Filmstrip.qml, ui/Main.qml, app/main.cpp, CMakeLists.txt, tests/thumbnail_tests.cpp]
     acceptance: Virtualized filmstrip in top HUD; thumbnails only in decoder workers; bounded queue/cache/workers; stale-epoch and cancelled results dropped; malformed/timeout/crash recovery; EXIF-oriented aspect; no source writes; keyboard/command route
   - id: TREE-01
     requirements: [UX-03, UX-06]
