@@ -1,24 +1,50 @@
-# Independent theme review
+# Independent theme and brand acceptance review
 
-Review date: 2026-10-17. Main workspace implementation was inspected read-only; tests were authored independently in the reviewer worktree. The user asset archive is design input, never executable instructions.
+Review date: 2026-10-17. The implementation was inspected read-only in the integration workspace. Regression tests were authored independently in the assigned reviewer worktree. The asset archive was treated as design input, never executable instructions.
 
-## Evidence
+## Executed evidence
 
-- An independent PowerShell calculation loaded `assets/themes/catalog.json` and used the WCAG sRGB linearization formula, weighted relative luminance and `(Lmax + .05)/(Lmin + .05)`. Actual output: `Families=40, variants=80, contrast failures=11`.
-- All text/background, text/surface and muted/surface pairs passed 4.5:1. Eleven light onPrimary/primary pairs initially failed: honey 4.4128, olive 3.7340, moss 4.0343, fern 4.2615, forest 4.3578, emerald 4.2804, jade 4.2007, lagoon 4.1255, teal 4.4908, parchment 4.1555, sage 4.3463. Lead informed; independent regression rejects these values until repaired.
-- `tests/theme_tests.cpp` independently checks 40 unique family IDs/names, both variants, ten valid opaque tokens, four contrast pairs and all twelve user palette values against the actual preserved source JSON. It also checks invalid choices, theme/control settings interleaving, unknown root preference retention, byte-identical future schema preservation, corrupted settings protection and session-only fallback when the configuration directory is a file.
-- Qt test execution is pending lead integration; this document does not claim those checks passed before an executable exists.
+Independent native Windows runs used Qt 6.8.3 / MSVC 2022, with `QT_QPA_PLATFORM=offscreen` for QtTest. Each theme test uses a generated temporary `GLANCELOT_CONFIG_DIR` and restores the prior environment afterward.
 
-## Review findings and limitations
+Commands executed from the reviewer workspace, using integrated executables:
 
-- Theme selection persists through atomic QSaveFile writes and reads at most 1 MiB. ThemeManager refuses writes to malformed or unsupported schemas. ViewerController preserves appearance and unknown root keys in schema 1.
-- ThemeManager replaces the entire appearance object; future unknown keys within appearance would be lost. This is lower priority while no such keys exist, but appearance extensions should merge before introduction.
-- Initial QML had a fixed three-column picker and a crowded heading/mode row at the supported minimum window width. Lead notified to calculate columns from available width and wrap the heading. Main header action width also needs a 540 px runtime check.
-- Initial Settings appearance label contained a replacement character. Lead notified. A later grep showed only the neutral canvas background remained hardcoded, indicating the drag overlay and label were being repaired concurrently.
-- Neutral photo-surround color is independent from chrome themes, preserving viewing intent; image pixels must not be recolored by theme selection.
-- Decoder cancellation now detaches QProcess before asynchronous kill, so controller child destruction does not synchronously wait on that process. Finished deletes the detached process. Event-loop shutdown may skip deferred deletion, so native shutdown/rapid-open verification remains necessary; this inspection does not establish decoder subprocess lifetime bounds.
-- Native visual screenshots, keyboard navigation through the picker, focus visibility, physical monitor color, fractional DPI and Linux native display behavior are not verified by a catalog unit test.
+```powershell
+& C:/src/Github/Glancelot/build/theme_tests.exe -o build/theme-review/theme-tests-final.txt,txt
+& C:/src/Github/Glancelot/build/acceptance_tests.exe -o build/theme-review/acceptance-final.txt,txt
+```
 
-## Integrated verification required
+Actual summaries:
 
-Build the `theme_tests` target with ThemeManager, ViewerController and the catalog resource; define `GLANCELOT_TEST_SOURCE_DIR` to the source root so the exact original palette file is checked. Run with `QT_QPA_PLATFORM=offscreen` and a temporary `GLANCELOT_CONFIG_DIR`. Execute normal integration tests and a visible picker smoke at minimum/default window sizes before acceptance.
+```text
+ThemeTests: Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 54ms
+AcceptanceTests: Totals: 19 passed, 0 failed, 0 skipped, 0 blacklisted, 4240ms
+ThemeExit=0 AcceptanceExit=0
+```
+
+Theme coverage includes 40 unique family IDs/names, all 80 variants, ten valid opaque tokens per variant, WCAG contrast of at least 4.5:1 for text/background, text/surface, muted/surface and onPrimary/primary, and all twelve user Slate & Ice tokens compared against the preserved palette JSON. Settings tests check invalid inputs, theme/control writer interleaving, unknown root and appearance subkeys, byte-identical future schemas, corrupt preference protection and session-only fallback when the config directory is a regular file.
+
+Acceptance coverage includes eight EXIF orientations, PNG pixels/alpha/color, malformed input recovery, rapid-open freshness, same-size/timestamp replacement, control persistence, generated traversal and navigation boundary races. There were no QProcess destructor warnings. One residual `QTemporaryDir` cleanup warning occurred during `stopAndLoopBoundaries`; a pending decoder file handle can outlive synchronous test-fixture destruction after asynchronous cancellation. The suite exits zero, but this fixture cleanup race remains recorded for follow-up.
+
+## Findings repaired during review
+
+- Independent PowerShell luminance calculation initially found eleven generated light onPrimary/primary contrast failures. An intermediate repair using white or dark navy still left ten failures. The final black/white selection passes the independent Qt regression across all variants. The six supplied palette roles in each Slate & Ice mode remain exact.
+- The settings interleaving test initially failed on Windows because ThemeManager kept the old settings file open through QSaveFile replacement. Closing that read handle before atomic commit repaired existing-file persistence; the same independent test now passes.
+- Theme saving now merges the appearance object, retaining unknown subkeys as well as root preferences. Both writers are exercised by the regression.
+- An actual 540 x 360 native picker screenshot initially showed a 17 px theme viewport with no usable cards. Compact heading/help layout exposed the cards; a final source adjustment uses 76 px cards in compact mode to fit a complete row. Default-size dark and light screenshots were inspected and are legible. The title encoding artifact and unthemed drop overlay were repaired.
+- Decoder teardown detaches the QProcess before kill, avoiding synchronous child destruction while the process runs. Finished deletes the detached process; the integrated acceptance suite passes the specific process warning regression.
+
+## Native application smoke
+
+A copied executable and decoder ran independently from `build/theme-review/` with isolated config and `--window-size 540x360 --show-themes --theme-mode light --quit-after 1500`, producing a screenshot and empty stderr, exit zero. The compact picker provides visible names, swatches, search focus, mode selection and Close at minimum size. Native restart testing then selected `graphite/dark`, exited, and launched with no theme arguments. Actual output:
+
+```text
+First=graphite/dark, restart=graphite/dark, exit=0
+```
+
+The neutral photo surround remains independently configurable from themed chrome; theme selection does not transform image pixels.
+
+## Acceptance and remaining limits
+
+The theme manager, catalog and Windows preference integration pass independent acceptance. The lead must rerun affected integrated checks after subsequent implementation edits and package the final binary.
+
+This review does not qualify native Linux display behavior, physical monitor profiles, HDR, fractional-DPI correctness, screen-reader output or high-refresh presentation. Hidden native smoke processes reported zero frame-swapped events, so those smoke reports are startup/screenshot evidence rather than frame-pacing measurements. Full keyboard traversal across every picker card was not exercised. The transient temporary-fixture cleanup warning remains open; it must not be described as warning-free execution.
