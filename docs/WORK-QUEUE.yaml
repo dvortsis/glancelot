@@ -57,6 +57,48 @@ tasks:
     depends: [VERIFY-01]
     files: [include/glancelot/thumbnail_service.hpp, include/glancelot/filmstrip_model.hpp, src/app/thumbnail_service.cpp, src/app/filmstrip_model.cpp, src/app/thumbnail_provider.cpp, src/worker/main.cpp, ui/Filmstrip.qml, tests/thumbnail_tests.cpp]
     acceptance: Virtualized filmstrip in top HUD; thumbnails only in decoder workers; bounded queue/cache/workers; stale-epoch and cancelled results dropped; malformed/timeout/crash recovery; EXIF-oriented aspect; no source writes; keyboard/command route
+  - id: TREE-01
+    requirements: [UX-03, UX-06]
+    milestone: M2.1
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [ALPHA-PACKAGE]
+    outcome: Collapsible lazy folder tree in the next implementation milestone
+    boundaries: Core folder navigation panel only; favorites and full browser grid remain M3
+    interfaces: Lead freezes folder-model and folder-selection contracts before delegated implementation
+    acceptance: Lazy child expansion/collapse, current-folder selection, keyboard navigation, remappable show/hide, pin/auto-hide; ui-design-skills review in dark/light and compact layouts
+    verification: Independent nested/empty/inaccessible folder tests plus native UI focus, resize and theme checks
+    handoff: Commit, actual test evidence, platform coverage and remaining limitations
+  - id: WINDOW-SLOTS-01
+    requirements: [UX-08, UX-12, SYS-03]
+    milestone: M2.1
+    priority: 9
+    owner: lead
+    state: ready
+    depends: [ALPHA-PACKAGE]
+    outcome: Stable numbered window-opening-order slots and coordinated per-slot persistence
+    boundaries: Slot ownership, session lifecycle and storage; no automatic reopening of all saved windows
+    interfaces: Lead freezes window slot and session-state storage contracts; no runtime API change in this roadmap task
+    acceptance: First/second/etc slots fixed despite close order; reset counter after full app exit; retain closed/unopened slots; independent processes cannot collide or overwrite unrelated settings
+    verification: Two-or-more windows, reversed close order, simultaneous launches and atomic-write interruption tests
+    handoff: Commit, actual test evidence, platform coverage and remaining limitations
+  - id: WINDOW-RESUME-01
+    requirements: [UX-12, SYS-03]
+    milestone: M2.1
+    priority: 9
+    owner: lead
+    state: pending
+    depends: [WINDOW-SLOTS-01]
+    outcome: Each window restores its own last folder and image after complete application exit
+    boundaries: Folder/image location only; geometry, zoom/pan and ephemeral tags are separate features
+    interfaces: Stable slot and session-storage contracts from WINDOW-SLOTS-01; existing navigation/decode generations
+    acceptance: Persist successful locations during browsing and flush on close/exit; restore slots as windows open; explicit files override resume; missing/empty/inaccessible sources do not clobber saved slots
+    verification: Distinct locations in multiple windows across full restart, unopened-slot retention, sort changes, deleted paths, disconnected source and explicit shell-open override; bindings/themes preserved
+    handoff: Commit, actual test evidence, platform coverage and remaining limitations
+next_milestone: M2.1
+priority_order: [TREE-01, WINDOW-SLOTS-01, WINDOW-RESUME-01]
+priority_note: Finish the already-started BROWSE-01 integration; prioritize the tree before additional M3 features
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation
   - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)

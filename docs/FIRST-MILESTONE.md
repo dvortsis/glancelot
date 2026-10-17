@@ -2,6 +2,16 @@
 
 Planning baseline: October 17, 2026. This is an implementation backlog, not work already performed. See [the master plan](BUILD-PLAN.md) for product boundaries and [the requirement matrix](REQUIREMENTS.md) for IDs.
 
+## Current next implementation priority (approved amendment)
+
+The initial bootstrap/alpha work below remains the historical feasibility sequence. After integrating the filmstrip already in progress, the next milestone is **M2.1: folder tree and window resume**, ahead of the remaining M3 browsing features:
+
+1. **TREE-01 / UX-03:** collapsible left folder tree with lazy child expansion, folder selection, current-folder indication, keyboard access and remappable show/hide plus pin/auto-hide behavior. Apply relevant ui-design-skills; validate theme and compact-window behavior. Favorites can follow in M3.
+2. **WINDOW-SLOTS-01 / UX-12:** stable first/second/etc window-opening-order slots and coordinated, atomic per-slot storage across independent processes. Closing windows out of order does not rename slots; reset opening order only after the entire application has exited.
+3. **WINDOW-RESUME-01 / UX-12:** persist each slot's own last folder/image during browsing and on close/exit; restore it when that numbered window is next opened. Keep unopened slots, honor explicit file opens, and recover gracefully from missing/inaccessible folders/images without overwriting saved locations or other preferences.
+
+Do not automatically open all previously used windows. Validate two or more different locations across full shutdown/restart, reverse close order, sort changes, single-window later sessions, concurrent launches and interrupted writes. These are planned tasks, not delivered behavior.
+
 ## M0 goal and budget
 
 In 3-4 focused engineer-weeks, determine whether the proposed stack can deliver correct, responsive viewing on the actual Windows/Linux support targets. Produce small disposable experiments, written decisions, benchmark results, and UX wireframes. Do not spend M0 building the entire settings UI, adding every codec, or designing an extensibility framework.
