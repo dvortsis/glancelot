@@ -55,6 +55,7 @@ private slots:
     void newestOpenWins();
     void duplicateBindingRejectedAndSettingsPersist();
     void stopAndLoopBoundaries();
+    void boundaryChangeWhileScanPending();
 };
 
 void AcceptanceTests::generatedTreeReverseOracle() {
@@ -186,6 +187,25 @@ void AcceptanceTests::stopAndLoopBoundaries() {
     QTRY_COMPARE_WITH_TIMEOUT(QFileInfo(controller.filePath()).fileName(),QString("image10.png"),10000);
 }
 
+void AcceptanceTests::boundaryChangeWhileScanPending() {
+    QTemporaryDir files; QVERIFY(files.isValid());
+    QVERIFY(QDir().mkpath(files.filePath("child")));
+    const auto root=writePng(files.path(),"root.png",Qt::red);
+    const auto child=writePng(files.filePath("child"),"child.png",Qt::blue);
+    QVERIFY(!root.isEmpty() && !child.isEmpty());
+    ViewerController controller; controller.setBoundaryMode("continue");
+    controller.open(root);
+    // No event-loop turn has published the scan result. Changing the preference
+    // now must win over the preference captured by the pending scan job.
+    controller.setBoundaryMode("stop");
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.loading() && controller.fileCount()==1,10000);
+    QSignalSpy stateChanged(&controller,&ViewerController::stateChanged);
+    controller.next();
+    QTRY_VERIFY_WITH_TIMEOUT(stateChanged.count()>0 && !controller.loading(),10000);
+    QCOMPARE(QFileInfo(controller.filePath()).canonicalFilePath(),QFileInfo(root).canonicalFilePath());
+    QCOMPARE(controller.boundaryMode(),QString("stop"));
+    controller.setBoundaryMode("continue");
+}
 int main(int argc,char** argv) {
     QTemporaryDir preferences;
     qputenv("GLANCELOT_CONFIG_DIR",preferences.path().toUtf8());
@@ -199,6 +219,7 @@ int main(int argc,char** argv) {
     return QTest::qExec(&tests,argc,argv);
 }
 #include "acceptance_tests.moc"
+
 
 
 
