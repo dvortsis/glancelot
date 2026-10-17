@@ -3,7 +3,7 @@
 #include <QFile>
 #include <QMatrix4x4>
 #include <QPointer>
-#include <QShader>
+#include <rhi/qshader.h>
 #include <rhi/qrhi.h>
 #include <algorithm>
 #include <cmath>
@@ -242,3 +242,4 @@ void ImageCanvas::cycleBackground() {
 void ImageCanvas::geometryChange(const QRectF& now,const QRectF& old) {
     QQuickRhiItem::geometryChange(now,old); refreshFit();
 }
+

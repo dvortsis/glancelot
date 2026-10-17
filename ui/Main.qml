@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import QtQml.Models
 import Glancelot
 
 ApplicationWindow {
@@ -354,4 +355,5 @@ ApplicationWindow {
         }
     }
 }
+
 
