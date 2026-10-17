@@ -1,6 +1,6 @@
 # Glancelot requirements and acceptance matrix
 
-Baseline: October 17, 2026. All rows are **planned**, not implemented or verified. The phase is the intended first complete delivery; prototypes may appear earlier. M0-M6 form the proposed v1, and E1-E3 are expansion milestones defined in [the build plan](BUILD-PLAN.md). “Conditional” means a dependency/platform/format feasibility gate must pass before the feature can be promised.
+Baseline: October 17, 2026. Rows describe target acceptance, not blanket implementation claims; consult the work queue and verification records for actual delivered evidence. The phase is the intended first complete delivery; prototypes may appear earlier. M0-M6, including the approved M2.1 priority milestone, form the proposed v1; E1-E3 are expansion milestones defined in [the build plan](BUILD-PLAN.md). “Conditional” means a dependency/platform/format feasibility gate must pass before the feature can be promised. Approved amendment: core folder tree moves from M3 to the next milestone M2.1; UX-12 adds persistent numbered-window browsing locations. There are now 88 requirement rows.
 
 Each implementation issue should reference these IDs and record the exact tests, platform coverage, screenshots/traces where useful, and remaining limitations. Preserve the [original input](original-feature-specification.txt) when requirements change; record amendments explicitly.
 
@@ -40,7 +40,7 @@ Each implementation issue should reference these IDs and record the exact tests,
 | --- | --- | --- | --- |
 | UX-01 | Frameless zero-chrome launch, optional image-sized window | M2; sizing M3 | Window can always be moved, resized and closed; decorated mode available; work-area bounds and fractional DPI tested. |
 | UX-02 | Top HUD: filmstrip, filters, sort | M3 | Virtualized large-folder strip; active item visible; controls operate by keyboard; preview generation does not stall canvas. |
-| UX-03 | Left HUD: live directory tree and favorites | M3 | Lazy expansion, valid/invalid favorites and changing directories; no eager recursive scan. |
+| UX-03 | Collapsible left HUD: live directory tree and favorites | M2.1 NEXT: core tree; M3: favorites | Expand/collapse, lazy cancellable child loading, active-folder indication and selection, keyboard navigation, remappable show/hide and pin/auto-hide; no eager recursive scan. Validate dark/light themes and narrow widths using ui-design-skills. Favorites follow in M3 without delaying the tree. |
 | UX-04 | Right HUD: EXIF, histogram and ICC status | M3 metadata; M5 histogram | Clear preview/source/color status; expensive calculations async; no metadata wait on initial display. |
 | UX-05 | Bottom HUD: zoom, size, pixel coordinates, index, actions | M3 | Physical zoom accurate; orientation-aware coordinates; unknown count shows scanning; menu/exit routes remain available. |
 | UX-06 | Four edge triggers with configurable delay and pinning | M3 | Dwell, corner arbitration, focus persistence, active-drag suppression and reduced-motion behavior pass usability tests. |
@@ -49,6 +49,7 @@ Each implementation issue should reference these IDs and record the exact tests,
 | UX-09 | Always-on-top reference, 20-100% opacity and click-through | M5 conditional per platform | Actual capability detected; reliable recovery outside click-through canvas; unsupported controls disabled with reasons. |
 | UX-10 | Controller plus clean second-monitor presentation | M5 | Controller UI never appears on output; output-specific color/scale; monitor unplug and focus changes recover. |
 | UX-11 | Modern minimal visual system and accessibility | M0 designs; M6 gate | Cohesive controls/icons/text, screen-reader names, keyboard routes, text scaling/contrast, five-workflow usability record. |
+| UX-12 | Persist last folder/image independently for each window-opening-order slot | M2.1 | First/second/etc windows retain stable slots; close order does not change ownership. After complete app exit, reopen windows one by one and restore each slot's own folder/image. Retain unopened slots; save atomically during browsing and on close/exit; coordinate independent processes. Explicit file opens take precedence. Test sort changes, missing image/folder, inaccessible/empty sources and write interruption without cross-slot or theme/binding data loss. |
 
 ## 4. Zoom, pan and resampling
 
@@ -140,4 +141,4 @@ Each row is a target inventory, not a support claim. The package's generated cap
 
 ## Change-control rule
 
-A feature may move between milestones only with an updated row, a reason, and its dependencies. A conditional feature may remain unsupported; the documentation must say so. A requirement becomes verified only when evidence exists on the declared platform/format combinations. The status of this entire matrix is currently **planned**.
+A feature may move between milestones only with an updated row, a reason, and its dependencies. A conditional feature may remain unsupported; the documentation must say so. A requirement becomes verified only when evidence exists on the declared platform/format combinations. UX-03 was moved earlier and UX-12 added by explicit user approval on October 17, 2026; both remain planned pending implementation and evidence.

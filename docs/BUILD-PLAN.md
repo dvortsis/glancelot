@@ -2,6 +2,8 @@
 
 Planning baseline: October 17, 2026. Status: proposed, not an implementation commitment.
 
+Approved roadmap amendment, October 17, 2026: the next implementation milestone is **M2.1: folder tree and window resume**. Prioritize the collapsible folder navigation tree before the remaining M3 browsing features. Add persistent last-folder/last-image positions for window slots 1, 2, 3, and so on, assigned in window-opening order and restored across complete application exits. This amendment supersedes the earlier M3 scheduling of the core tree and the optional treatment of browsing-position persistence; the original supplied feature specification remains unchanged.
+
 Build a native, local-first Windows/Linux photo viewer whose distinguishing strengths are predictable folder traversal, fully configurable interaction, accurate image display, and a quiet interface. Make those strengths dependable before pursuing the entire format and diagnostics wishlist.
 
 The workspace was empty when inspected. This plan starts from a new application. No application code, dependency installation, license adoption, repository creation, or publishing is included in this planning task.
@@ -291,6 +293,8 @@ Use platform UI font behavior as the accessibility baseline; evaluate Geist Sans
 
 All HUDs auto-hide in immersive viewing; each may be pinned, opened by a command, or reached by keyboard. The bottom HUD exposes a menu/exit route. A brief dismissible first-run hint explains controls without blocking the initial image.
 
+Deliver the **collapsible left folder tree in M2.1**, the next milestone after the current alpha/filmstrip integration. Include expand/collapse, lazy child loading, current-folder indication, folder selection, a remappable show/hide command, keyboard navigation and pin/auto-hide behavior. Apply the relevant ui-design-skills to its native Qt/QML design and review, preserving theme tokens in dark and light modes. Favorites and the remaining browser grid/filter/sort features stay in M3; they must not postpone the core tree.
+
 Specify each panel as Hidden -> Armed -> Visible -> Pinned. Proposed defaults for usability testing: 250 ms edge dwell, 500 ms dismissal delay, 4 device-independent-pixel activation band. Do not open on a fast pointer crossing, active pan/loupe/drag, or when a modal owns input. Keep a panel open while its controls have focus; resolve corner collisions by explicit priority. Tune using real mouse/trackpad sessions.
 
 Frameless is the proposed default requested by the specification. Provide standard decorated-window mode, resize handles, system move/resize support, context menu, keyboard alternatives, and an always-recoverable Exit Fullscreen/Show Controls action. Dynamic window-size-to-image behavior is optional and bounded by the work area; do not unexpectedly resize on every image by default.
@@ -309,7 +313,19 @@ Expose the scroll matrix as a small dedicated settings page: base wheel behavior
 
 ### Configuration and settings
 
-Use one versioned UTF-8 `settings.json` for preferences, bindings, layouts, external tools, and optional window/session state. Store optional caches and operation journals separately; they are not portable preferences. Support explicit portable mode and normal OS config locations.
+Use one versioned UTF-8 `settings.json` for preferences, bindings, layouts, external tools, required per-window browsing positions and other optional session state. Store optional caches and operation journals separately; they are not portable preferences. Support explicit portable mode and normal OS config locations.
+
+### Persistent browsing position per window (M2.1)
+
+Assign stable numbered slots by window-opening order within an application session: the first window is slot 1, the second is slot 2, and so on. Each slot stores its own last folder and image path. The first window opened after a complete exit restores slot 1; the next window restores slot 2 when opened. Do not automatically reopen all saved windows merely to restore their positions.
+
+Keep each live window's slot fixed until it closes. Closing windows out of order must not renumber remaining windows or overwrite another slot; a newly opened window takes the next opening-order slot, and closed slots remain saved for future application sessions. A new full application session starts the opening-order counter at 1. Coordinate slot assignment and writes across independent viewer processes as well as multiple windows in one process.
+
+Persist the latest successful folder/image selection during browsing with debounced atomic writes, and flush on window close and normal application exit. Retain slots not opened during the current session. Persist an image's identity/path rather than only its list index, so sorting changes do not restore a different photo. This feature stores browsing location; zoom/pan state, selection tags and window geometry are separate requirements.
+
+An explicitly supplied file takes precedence over restoration for that window and becomes its remembered location only after a successful open. If a remembered image is missing, retain the saved folder and select its first eligible image if available. If the folder is missing, inaccessible or empty, show an actionable state without an automatic drive-wide scan or deleting the saved location. Failed/partial restores must not clobber valid slots. Preserve bindings, theme settings and unknown supported preference fields when saving positions.
+
+Acceptance: browse different folders/images in two or more windows; close them in both normal and reversed order; exit the entire application; reopen windows one by one and verify the correct slot-specific locations. Also test a later session opening only one window, different file sorting, deleted images/folders, empty or disconnected sources, explicit shell-open overrides, simultaneous process launches and interrupted settings writes.
 
 Validate before applying; write atomically with last-known-good backup. Preserve unknown fields when feasible, back up before migration, reject unsupported future schemas gracefully, and expose a reset/safe-mode launch option. OS-specific bindings can coexist in one file. Monitor IDs/paths use fallbacks on another machine. Never execute external tool definitions merely because a config was imported; show them for review and run only on an explicit handoff action.
 
@@ -420,7 +436,8 @@ Effort estimates assume a senior full-time maintainer and are planning ranges, n
 | M0: feasibility and product contracts | 3-4 engineer-weeks | Qt/GPU startup and 60 MP spike on both OSes; navigation oracle; DPI/color prototype; worker overhead; licensing/capability inventory; wireframes; selected stack ADR. |
 | M1: foundation | 2-3 | Reproducible builds/CI, command registry, versioned config, source/asset contracts, worker IPC/resource limits, initial package skeleton and fixture corpus. |
 | M2: daily viewer alpha | 5-7 | Shell-open JPEG/PNG; correct orientation/color baseline; full traversal/boundaries; fit/pan/zoom/loupe; basic remapping/palette; bounded cache; frameless/fullscreen; both-platform installable alpha. |
-| M3: browsing and performance beta | 6-9 | Four HUDs, virtualized grid/tree/filmstrip, filters/sorts, chord/hold/wheel settings, common raster expansion, RAW preview, hot reload, cache/I/O tuning; benchmark gates on reference hardware. |
+| M2.1: folder tree and window resume — NEXT | Re-estimate from scoped agent tasks | Collapsible lazy folder tree with keyboard/toggle/pin behavior; stable first/second/etc window slots; last folder/image restored after full exit; multi-process coordination and missing-source recovery verified. |
+| M3: browsing and performance beta | 6-9; re-estimate after M2.1 | Complete the remaining HUDs, virtualized grid/filmstrip, favorites, filters/sorts, chord/hold/wheel settings, common raster expansion, RAW preview, hot reload, cache/I/O tuning; benchmark gates on reference hardware. Core folder tree and window resume already delivered in M2.1. |
 | M4: culling and workflow beta | 7-10 | 2-up/4-up, zoom lock, tags, tested XMP profiles, safe copy/move/trash, clipboard/external tools, metadata inspector, monitor-aware SDR validation, accessibility review. |
 | M5: release feature completion | 5-8 | AVIF/JXL stills and conditional HEIF, basic animation/TIFF pages, selected diagnostics, reference/presentation capabilities, JPEG transform safety, documented format matrix. |
 | M6: stable v1 hardening | 5-7 | Cross-platform soak, fault/fuzz findings addressed, UX retest, signed/package-tested releases, contributor documentation, no unresolved release-blocking defects. |
@@ -428,7 +445,7 @@ Effort estimates assume a senior full-time maintainer and are planning ranges, n
 | E2: deeper inspection and motion | 6-12 additional | Full animation timelines, qualified sequences, advanced histogram/sampler, AI schema coverage, optional full RAW path, Apple/Android motion assets. |
 | E3: HDR and specialist formats | 10-20+ additional | Qualified native HDR outputs, gain-map families, EXR controls, design/game formats; conditional CLIP decision. |
 
-M0-M6 total: 33-48 engineer-weeks before contingency. Add approximately 25% for platform defects, integration, and release support: about 41-60 full-time weeks, or roughly 10-15 months for a stable v1. The first useful alpha is approximately 10-14 weeks from project start. Much of the full wishlist is likely an 18-30+ month solo effort; proprietary-format and compositor limits can remain conditional indefinitely. Re-estimate after M0 and each beta using observed throughput.
+Original M0-M6 baseline, before the approved M2.1 amendment: 33-48 engineer-weeks before contingency. Add approximately 25% for platform defects, integration, and release support: about 41-60 full-time weeks, or roughly 10-15 months for a stable v1. The first useful alpha was estimated at approximately 10-14 weeks from project start. These are historical human-effort estimates, not a revised agent-delivery forecast. Moving the tree earlier does not add tree scope; per-window persistence adds explicit acceptance work. Re-estimate M2.1 and subsequent milestones from observed agent throughput. Much of the full wishlist is likely an 18-30+ month solo effort; proprietary-format and compositor limits can remain conditional indefinitely.
 
 At 10 focused hours per week, elapsed time is roughly four times the full-time engineering baseline before coordination/context costs. A two- or three-person experienced team can work across UI, core/decoding, and platform/testing, but should not simply divide the estimates by headcount.
 
