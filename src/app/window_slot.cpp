@@ -1,13 +1,15 @@
 #include "glancelot/window_slot.hpp"
 #include "glancelot/settings_file.hpp"
+#include "file_lock.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QLockFile>
 #include <QSaveFile>
+#include <QThread>
+#include <algorithm>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -19,6 +21,8 @@
 #endif
 
 namespace {
+constexpr int kMaxCounter = 1000000;
+
 // A value that identifies one run of a process: 0 when it is not alive. Pid reuse produces a different stamp.
 qint64 processStamp(qint64 pid) {
 #ifdef Q_OS_WIN
@@ -37,66 +41,89 @@ qint64 processStamp(qint64 pid) {
     if (!stat.open(QIODevice::ReadOnly)) return 1; // alive but no /proc: identity cannot be refined
     const QByteArray line = stat.readAll();
     const int close = line.lastIndexOf(')');
+    if (close < 0 || close + 2 >= line.size()) return 1;
+    if (line.at(close + 2) == 'Z') return 0;       // a crashed, not yet reaped child is not a live window
     const QList<QByteArray> fields = line.mid(close + 2).split(' ');
     return fields.size() > 19 ? fields.at(19).toLongLong() + 2 : 1; // starttime (field 22), never 0 or 1
 #endif
 }
 
 struct Session {
+    QJsonObject extra;   // unknown keys of a schema-1 file are carried through untouched
     int counter{};
     QJsonArray live;
 };
+enum class Loaded { Ok, Refuse };
 
 QString statePath(const QString& directory) { return QDir(directory).filePath("sessions.json"); }
 
-Session load(const QString& directory) {
-    Session session;
+// A missing, oversized or unparseable file is only liveness bookkeeping, so it restarts empty. A file of another
+// schema belongs to a different version of the program: it is never rewritten (the caller gets no slot).
+Loaded load(const QString& directory, Session& session) {
+    session = {};
     QFile file(statePath(directory));
-    if (!file.open(QIODevice::ReadOnly) || file.size() > 64 * 1024) return session;
-    const auto root = QJsonDocument::fromJson(file.readAll()).object();
-    if (root.value("schema").toInt() != 1) return session;
-    session.counter = std::max(0, root.value("counter").toInt());
+    if (!file.exists() || !file.open(QIODevice::ReadOnly) || file.size() > 64 * 1024) return Loaded::Ok;
+    QJsonParseError error;
+    const auto document = QJsonDocument::fromJson(file.readAll(), &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) return Loaded::Ok;
+    const auto root = document.object();
+    if (root.value("schema").toInt() != 1) return Loaded::Refuse;
+    session.extra = root;
+    session.counter = std::clamp(root.value("counter").toInt(), 0, kMaxCounter);
     session.live = root.value("live").toArray();
-    return session;
+    return Loaded::Ok;
 }
 
 bool store(const QString& directory, const Session& session) {
-    QSaveFile file(statePath(directory));
-    const QJsonObject root{{"schema", 1}, {"counter", session.counter}, {"live", session.live}};
+    QJsonObject root = session.extra;
+    root["schema"] = 1;
+    root["counter"] = session.counter;
+    root["live"] = session.live;
     const auto bytes = QJsonDocument(root).toJson(QJsonDocument::Compact);
-    return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit();
+    for (int attempt = 0; attempt < 8; ++attempt) {
+        QSaveFile file(statePath(directory));
+        if (file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit()) return true;
+        QThread::msleep(quint32(8 + 7 * attempt));
+    }
+    return false;
 }
 
-// Runs `body(session)` under the cross-process lock; false when the lock or the write failed.
+// Runs `body(session)` under the cross-process lock; false when the lock, the file's schema or the write refused.
 template <typename Body>
-bool locked(const QString& directory, Body body) {
+bool locked(const QString& directory, int timeoutMs, Body body) {
     if (!QDir().mkpath(directory)) return false;
-    QLockFile lock(statePath(directory) + ".lock");
-    lock.setStaleLockTime(15000);
-    if (!lock.tryLock(10000)) return false; // a cold-start burst of windows may queue briefly; losing the slot is worse
-    Session session = load(directory);
+    FileLock lock(statePath(directory) + ".lock");
+    if (!lock.acquire(timeoutMs)) return false;
+    Session session;
+    if (load(directory, session) == Loaded::Refuse) return false;
     body(session);
     return store(directory, session);
 }
 }
 
 WindowSlot::WindowSlot(const QString& directory) : directory_(directory.isEmpty() ? glancelot::settingsDirectory() : directory) {
+    claim();
+}
+
+bool WindowSlot::claim() {
+    if (number_ != 0) return true;
     const qint64 pid = QCoreApplication::applicationPid();
-    const qint64 stamp = processStamp(pid);
+    const qint64 stamp = std::max<qint64>(1, processStamp(pid));
     int claimed = 0;
-    const bool ok = locked(directory_, [&](Session& session) {
+    const bool ok = locked(directory_, 3000, [&](Session& session) {
         QJsonArray alive;
         for (const auto& entry : std::as_const(session.live)) {
             const auto object = entry.toObject();
-            const qint64 other = object.value("pid").toInteger();
-            if (processStamp(other) != 0 && processStamp(other) == object.value("stamp").toInteger()) alive.append(object);
+            const qint64 stampNow = processStamp(object.value("pid").toInteger());
+            if (stampNow != 0 && stampNow == object.value("stamp").toInteger()) alive.append(object);
         }
         session.live = alive;
-        if (session.live.isEmpty()) session.counter = 0; // a new session: every window of the last one is gone
+        if (session.live.isEmpty() || session.counter >= kMaxCounter) session.counter = 0; // a new session
         claimed = ++session.counter;
         session.live.append(QJsonObject{{"slot", claimed}, {"pid", pid}, {"stamp", stamp}});
     });
     number_ = ok ? claimed : 0;
+    return number_ != 0;
 }
 
 void WindowSlot::release() {
@@ -104,7 +131,7 @@ void WindowSlot::release() {
     const qint64 pid = QCoreApplication::applicationPid();
     const int slot = number_;
     number_ = 0;
-    locked(directory_, [&](Session& session) {
+    locked(directory_, 3000, [&](Session& session) {
         QJsonArray remaining;
         for (const auto& entry : std::as_const(session.live)) {
             const auto object = entry.toObject();

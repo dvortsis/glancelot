@@ -25,7 +25,7 @@ public:
 signals:
     void changed();
 private:
-    void save();
+    void save(const char* key);
     QVariantList m_families;
     QString m_family{"slate-ice"},m_mode{"system"},m_error;
 };

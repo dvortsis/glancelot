@@ -334,6 +334,13 @@ ApplicationWindow {
                 width: parent.width
                 spacing: 14
                 ActionButton { text: "Appearance · 40 theme families"; onClicked: { settingsDialog.close(); app.openThemes() } }
+                Label { text: "THIS WINDOW"; color: app.muted; font.pixelSize: 11; font.letterSpacing: 1.2 }
+                Label {
+                    Layout.fillWidth: true
+                    text: viewer.windowSlot > 0 ? "Window " + viewer.windowSlot + " remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file."
+                                                : "Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch."
+                    color: app.muted; wrapMode: Text.Wrap; font.pixelSize: 12
+                }
                 Label { text: "VIEWING"; color: app.muted; font.pixelSize: 11; font.letterSpacing: 1.2 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -357,7 +364,6 @@ ApplicationWindow {
                     ActionButton { text: "Cycle background"; onClicked: app.invoke("background") }
                 }
                 CheckBox { text: "Nearest-neighbor sampling for pixel inspection"; checked: canvas.nearest; onToggled: canvas.nearest=checked }
-                Label { visible: viewer.windowSlot > 0; Layout.fillWidth: true; text: "This is window " + viewer.windowSlot + ". It remembers its own last folder and photo for the next time you open a window."; color: app.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
                 CheckBox { text: "Pin folder tree open"; checked: viewer.treePinned; onToggled: viewer.treePinned=checked }
                 CheckBox { text: "Show filmstrip"; checked: viewer.filmstripVisible; onToggled: viewer.filmstripVisible=checked }
                 CheckBox { text: "Frameless window"; checked: app.frameless; onToggled: app.frameless=checked }

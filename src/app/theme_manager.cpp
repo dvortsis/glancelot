@@ -21,9 +21,8 @@ QString settingsPath() {
 ThemeManager::ThemeManager(QObject* parent):QObject(parent) {
     QFile catalog(":/themes/catalog.json");
     if(catalog.open(QIODevice::ReadOnly)) m_families=QJsonDocument::fromJson(catalog.readAll()).array().toVariantList();
-    QFile settings(settingsPath());
-    if(settings.open(QIODevice::ReadOnly)&&settings.size()<=1024*1024) {
-        const auto root=QJsonDocument::fromJson(settings.readAll()).object();
+    QJsonObject root;
+    if(glancelot::readSettings(root).ok()) {
         if(root.value("schema").toInt()==1) {
             const auto appearance=root.value("appearance").toObject();
             const auto selected=appearance.value("family").toString();
@@ -42,14 +41,15 @@ QVariantMap ThemeManager::preview(const QString& family,bool isDark) const {
     return {};
 }
 QVariantMap ThemeManager::colors() const {return preview(m_family,dark());}
-void ThemeManager::setFamily(const QString& family) {if(family==m_family||preview(family,true).isEmpty())return;m_family=family;save();emit changed();}
-void ThemeManager::setMode(const QString& mode) {if(mode==m_mode||(mode!="system"&&mode!="dark"&&mode!="light"))return;m_mode=mode;save();emit changed();}
-void ThemeManager::save() {
+void ThemeManager::setFamily(const QString& family) {if(family==m_family||preview(family,true).isEmpty())return;m_family=family;save("family");emit changed();}
+void ThemeManager::setMode(const QString& mode) {if(mode==m_mode||(mode!="system"&&mode!="dark"&&mode!="light"))return;m_mode=mode;save("mode");emit changed();}
+void ThemeManager::save(const char* key) {
     m_error.clear();
     // Only the appearance key is written, through the shared cross-process writer that preserves everything else.
     const auto status=glancelot::updateSettings([&](QJsonObject& root){
         auto appearance=root.value("appearance").toObject();
-        appearance["family"]=m_family;appearance["mode"]=m_mode;
+        // Only the changed key is written, so another window changing the other one is not reverted.
+        if(QLatin1String(key)=="family")appearance["family"]=m_family;else appearance["mode"]=m_mode;
         root["appearance"]=appearance;
     });
     if(status.code==glancelot::SettingsStatus::Unreadable)m_error="Preferences could not be read; theme applies for this session.";

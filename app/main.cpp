@@ -2,6 +2,7 @@
 #include "image_canvas.hpp"
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/window_slot.hpp"
+#include "glancelot/settings_file.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/thumbnail_service.hpp"
@@ -37,10 +38,12 @@ int main(int argc,char** argv) {
     parser.addOption({"theme","Select a built-in family (saved preference).","id"});
     parser.addOption({"theme-mode","Select system, dark, or light (saved preference).","mode"});
     parser.addOption({"show-themes","Open the theme picker at startup (test automation)."});
+    parser.addOption({"reset-settings","Set a damaged or incompatible settings.json aside (renamed, never deleted) and start with defaults."});
     parser.addOption({"no-resume","Do not claim a window slot or remember/restore the browsing position (test automation)."});
     parser.addOption({"window-size","Initial logical window size for UI verification, e.g. 540x360.","size"});
     parser.process(app);
     QElapsedTimer elapsed;elapsed.start();
+    if(parser.isSet("reset-settings")){QString moved;if(glancelot::resetSettings(&moved)&&!moved.isEmpty())std::fprintf(stderr,"Glancelot: settings set aside as %s\n",qPrintable(moved));}
     ViewerController viewer;
     // The slot is claimed before the window shows; it is released on normal exit, and a crashed window's slot is
     // reclaimed by the next claim (pid plus process start time).
@@ -48,6 +51,12 @@ int main(int argc,char** argv) {
     if(!parser.isSet("no-resume"))windowSlot=std::make_unique<WindowSlot>();
     viewer.setWindowSlot(windowSlot?windowSlot->number():0);
     QObject::connect(&app,&QGuiApplication::aboutToQuit,&app,[&]{viewer.flushWindowPosition();if(windowSlot)windowSlot->release();});
+    // If coordination was busy at startup, keep trying for a while instead of silently running without memory.
+    QTimer slotRetry;slotRetry.setInterval(4000);int slotAttempts=0;
+    if(windowSlot&&windowSlot->number()==0){
+        QObject::connect(&slotRetry,&QTimer::timeout,&app,[&]{if(windowSlot->claim()){viewer.setWindowSlot(windowSlot->number());slotRetry.stop();}else if(++slotAttempts>=8)slotRetry.stop();});
+        slotRetry.start();
+    }
     ThemeManager theme;
     if(parser.isSet("theme"))theme.setFamily(parser.value("theme"));
     if(parser.isSet("theme-mode"))theme.setMode(parser.value("theme-mode"));

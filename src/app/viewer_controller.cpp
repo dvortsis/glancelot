@@ -160,7 +160,8 @@ struct ViewerController::Private {
         QJsonObject object;
         const auto result=readSettings(object);
         if (result.code==SettingsStatus::Unreadable) { status="Settings could not be read; defaults are active."; return; }
-        if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active."; return; }
+        if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active. Start Glancelot with --reset-settings to set a damaged file aside."; return; }
+        if (result.recovered) status="Settings were damaged; your last saved copy was restored.";
         if (object.isEmpty()) return;
         auto candidate=bindings;
         const auto stored=object.value("bindings").toObject();
@@ -189,11 +190,13 @@ struct ViewerController::Private {
     }
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
-    bool save(std::initializer_list<const char*> keys) {
+    bool save(std::initializer_list<const char*> keys,const QString& bindingId=QString()) {
         return updateSettings([&](QJsonObject& object) {
             for (const char* key: keys) {
                 const QString name=QString::fromLatin1(key);
-                if (name=="bindings") object[name]=bindings;
+                // One changed shortcut is merged into the stored map, so another window's other edits survive.
+                if (name=="bindings" && !bindingId.isEmpty()) { auto stored=object.value(name).toObject(); stored[bindingId]=bindings.value(bindingId); object[name]=stored; }
+                else if (name=="bindings") object[name]=bindings;
                 else if (name=="boundary") object[name]=boundary;
                 else if (name=="wheel") object[name]=wheel;
                 else if (name=="filmstrip") object[name]=filmstrip;
@@ -356,8 +359,10 @@ void ViewerController::restoreWindow(){
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[image=nativePath(image),folder=nativePath(folder),folderText=folder,cancellation=d->navigationStop.get_token()]() mutable {
         namespace fs=std::filesystem;
         std::optional<fs::path> destination;QString message;std::error_code ec;
-        if(!image.empty()&&isSupportedImage(image)&&fs::is_regular_file(image,ec)) destination=image;
+        // The saved image is only trusted inside a listable, link-free folder, like every other open.
+        if(!image.empty()&&isSupportedImage(image)&&fs::is_regular_file(image,ec)&&childFolders(image.parent_path(),cancellation).accessible) destination=image;
         else if(folder.empty()||!fs::is_directory(folder,ec)) message="Your last folder for this window is unavailable: "+folderText+". Open a photo to continue; the saved location is kept.";
+        else if(!childFolders(folder,cancellation).accessible) message="Your last folder for this window cannot be read (no access, or it is a link): "+folderText+". The saved location is kept.";
         else {
             const auto files=imageFiles(folder,cancellation);
             if(!files.empty()) destination=files.front();
@@ -403,7 +408,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     if(!sequence.trimmed().isEmpty()&&(normalized.isEmpty()||parsed[0].key()==Qt::Key_unknown)){d->status="That shortcut is not valid.";emit stateChanged();return false;}
     for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&!normalized.isEmpty()&&it.value().toString().compare(normalized,Qt::CaseInsensitive)==0){d->status="Shortcut already assigned to "+it.key()+". Clear it first.";emit stateChanged();return false;}}
     d->bindings[id]=normalized;
-    const bool saved=d->save({"bindings"});d->status=saved?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    const bool saved=d->save({"bindings"},id);d->status=saved?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
     emit bindingsChanged();emit stateChanged();return true;
 }
 void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save({"bindings"});d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}

@@ -1,6 +1,7 @@
 #include "glancelot/settings_file.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/window_slot.hpp"
+#include "../src/app/file_lock.hpp"
 #include <QColorSpace>
 #include <QCoreApplication>
 #include <QDir>
@@ -41,9 +42,25 @@ int helperMain(const QStringList& args) {
                 windows[QString::number(slot)] = QJsonObject{{"folder", "C:/f" + QString::number(slot)}, {"image", tag + "-" + QString::number(i)}};
                 root["windows"] = windows;
             });
-            if (!status.ok()) return 3;
+            if (!status.ok()) return 10 + int(status.code);
         }
         return 0;
+    }
+    if (mode == "--lock-holder") {          // holds sessions.json.lock for N ms (a stuck or slow peer)
+        FileLock lock(QDir(dir).filePath("sessions.json.lock"));
+        if (!lock.acquire(5000)) return 3;
+        std::cout << "held" << std::endl;
+        QThread::msleep(quint32(args.value(3).toInt()));
+        return 0;
+    }
+    if (mode == "--reader-spin") {          // windows starting up: the shared reader, far more often than real
+        std::cout << "ready" << std::endl;
+        for (;;) { QJsonObject snapshot; glancelot::readSettings(snapshot); QThread::msleep(25); }
+    }
+    if (mode == "--foreign-reader") {       // software that is not Glancelot (indexer, scanner) opening the file now and then
+        std::cout << "ready" << std::endl;
+        const QString path = QDir(dir).filePath("settings.json");
+        for (;;) { { QFile file(path); if (file.open(QIODevice::ReadOnly)) file.readAll(); } QThread::msleep(20); }
     }
     if (mode == "--settings-spin") {
         std::cout << "ready" << std::endl;
@@ -108,6 +125,12 @@ private slots:
     void settingsUpdatesFromManyProcessesLoseNothing();
     void killedWriterNeverCorruptsSettings();
     void futureOrCorruptSettingsAreNeverWritten();
+    void settingsWritesSurviveReadersAndLockContention();
+    void slotClaimPollsTheLockAndRetriesAfterTimeout();
+    void sessionStateOfAnotherSchemaIsNeverRewritten();
+    void damagedSettingsRecoverFromLastGoodCopyOrResetExplicitly();
+    void windowsEditingDifferentPreferencesDoNotRevertEachOther();
+    void restoreFromJunctionFolderIsReportedAsUnreadable();
     void positionIsSavedOnlyAfterSuccessfulDecode();
     void windowsKeepIndependentPositionsAndPreserveOtherSettings();
     void restoreOpensSavedImageOrFirstImageOfSavedFolder();
@@ -273,6 +296,160 @@ void WindowSlotTests::futureOrCorruptSettingsAreNeverWritten() {
     waitOpen(viewer);
     viewer.flushWindowPosition();
     QCOMPARE(readFile(path), future);
+}
+
+void WindowSlotTests::settingsWritesSurviveReadersAndLockContention() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", dir.path().toUtf8());
+    QVERIFY(writeFile(QDir(dir.path()).filePath("settings.json"), R"({"schema":1})"));
+    Helper readerA, readerB, foreign;
+    const auto stop = qScopeGuard([&] { for (Helper* h : {&readerA, &readerB, &foreign}) if (h->process.state() != QProcess::NotRunning) h->crash(); });
+    QVERIFY(readerA.start("--reader-spin", dir.path()) && readerB.start("--reader-spin", dir.path()) && foreign.start("--foreign-reader", dir.path()));
+    QVERIFY(readerA.process.waitForReadyRead(15000) && readerB.process.waitForReadyRead(15000) && foreign.process.waitForReadyRead(15000));
+    int failures = 0, lastCode = 0;
+    QElapsedTimer writes; writes.start();
+    for (int i = 0; i < 150; ++i) {
+        const auto status = glancelot::updateSettings([&](QJsonObject& root) { root["n"] = i; });
+        if (!status.ok()) { ++failures; lastCode = int(status.code); }
+    }
+    QVERIFY2(failures == 0, qPrintable(QString("%1 of 150 writes failed (last code %2) in %3 ms").arg(failures).arg(lastCode).arg(writes.elapsed())));
+                               // a reader holding the file open at the rename must not lose a write
+    QCOMPARE(settingsOf(dir.path()).value("n").toInt(), 149);
+    // Contention among writers is a short wait, not a multi-second backoff.
+    std::array<Helper, 6> writers;
+    QElapsedTimer timer; timer.start();
+    for (int i = 0; i < 6; ++i) QVERIFY(writers[std::size_t(i)].start("--settings-helper", dir.path(), {QString::number(i + 1), "30", "c" + QString::number(i)}));
+    for (auto& writer : writers) { QVERIFY(writer.process.waitForFinished(120000)); QCOMPARE(writer.process.exitCode(), 0); }
+    QVERIFY2(timer.elapsed() < 20000, qPrintable(QString("contended writes took %1 ms").arg(timer.elapsed())));
+}
+
+void WindowSlotTests::slotClaimPollsTheLockAndRetriesAfterTimeout() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    {
+        Helper holder;
+        QVERIFY(holder.start("--lock-holder", dir.path(), {"600"}));
+        QVERIFY(holder.process.waitForReadyRead(15000));
+        QElapsedTimer timer; timer.start();
+        WindowSlot slot(dir.path());                   // the lock frees after ~600 ms; polling must notice quickly
+        QCOMPARE(slot.number(), 1);
+        QVERIFY2(timer.elapsed() < 2500, qPrintable(QString("claim waited %1 ms").arg(timer.elapsed())));
+        holder.process.waitForFinished(15000);
+    }
+    Helper longHolder;
+    QVERIFY(longHolder.start("--lock-holder", dir.path(), {"6000"}));
+    QVERIFY(longHolder.process.waitForReadyRead(15000));
+    QElapsedTimer timer; timer.start();
+    WindowSlot slot(dir.path());
+    QCOMPARE(slot.number(), 0);                        // bounded wait, then "no position memory" rather than a hang
+    QVERIFY2(timer.elapsed() < 5500, qPrintable(QString("timeout took %1 ms").arg(timer.elapsed())));
+    QVERIFY(longHolder.process.waitForFinished(15000));
+    QVERIFY(slot.claim());                              // a later retry succeeds
+    QVERIFY(slot.number() >= 1);
+}
+
+void WindowSlotTests::sessionStateOfAnotherSchemaIsNeverRewritten() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    const auto path = QDir(dir.path()).filePath("sessions.json");
+    const QByteArray future = R"({"schema":2,"counter":9,"live":[],"newField":{"keep":"me"}})";
+    QVERIFY(writeFile(path, future));
+    {
+        WindowSlot slot(dir.path());
+        QCOMPARE(slot.number(), 0);
+    }
+    QCOMPARE(readFile(path), future);
+    // Oversized or unparseable bookkeeping is disposable and restarts empty.
+    QVERIFY(writeFile(path, "{ nope"));
+    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 1); }
+    QVERIFY(writeFile(path, QByteArray(70 * 1024, '{')));
+    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 1); }
+    // Unknown keys of a valid schema-1 file travel through unchanged.
+    QVERIFY(writeFile(path, R"({"schema":1,"counter":0,"live":[],"extra":{"k":[1,2]}})"));
+    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 1); QJsonObject root = QJsonDocument::fromJson(readFile(path)).object(); QCOMPARE(root.value("extra").toObject().value("k").toArray().size(), 2); }
+}
+
+void WindowSlotTests::damagedSettingsRecoverFromLastGoodCopyOrResetExplicitly() {
+    QTemporaryDir dir; QVERIFY(dir.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", dir.path().toUtf8());
+    const auto path = QDir(dir.path()).filePath("settings.json");
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root) { root["first"] = 1; root["keep"] = "a"; }).ok());
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root) { root["second"] = 2; }).ok()); // .bak now holds the 'first' state
+    const QByteArray damaged = "{\"schema\":1,\"truncat";
+    for (const QByteArray& bytes : {damaged, QByteArray()}) {
+        QVERIFY(writeFile(path, bytes));
+        QJsonObject read;
+        const auto status = glancelot::readSettings(read);
+        QVERIFY(status.ok() && status.recovered);
+        QCOMPARE(read.value("keep").toString(), QString("a"));
+        const auto update = glancelot::updateSettings([](QJsonObject& root) { root["third"] = 3; });
+        QVERIFY(update.ok() && update.recovered);
+        QCOMPARE(readFile(path + ".damaged"), bytes);                      // the damaged bytes are kept, not discarded
+        const auto after = settingsOf(dir.path());
+        QCOMPARE(after.value("keep").toString(), QString("a"));
+        QCOMPARE(after.value("third").toInt(), 3);
+        QVERIFY(!after.contains("second"));                                // last-known-good, as documented
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root) { root["fourth"] = 4; }).ok());
+        QVERIFY(!glancelot::updateSettings([](QJsonObject&) {}).recovered);
+    }
+    // No valid copy: nothing is written until the user explicitly resets.
+    QFile::remove(path + ".bak");
+    QVERIFY(writeFile(path, damaged));
+    QCOMPARE(glancelot::updateSettings([](QJsonObject& root) { root["x"] = 1; }).code, glancelot::SettingsStatus::Corrupt);
+    QCOMPARE(readFile(path), damaged);
+    QString moved;
+    QVERIFY(glancelot::resetSettings(&moved));
+    QVERIFY(!QFileInfo::exists(path));
+    QCOMPARE(readFile(moved), damaged);                                    // set aside, never deleted
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root) { root["fresh"] = true; }).ok());
+    QVERIFY(settingsOf(dir.path()).value("fresh").toBool());
+    // A future schema is not damage: it is never recovered over, even when a backup exists.
+    const QByteArray future = R"({"schema":2,"x":1})";
+    QVERIFY(writeFile(path, future));
+    QCOMPARE(glancelot::updateSettings([](QJsonObject&) {}).code, glancelot::SettingsStatus::Unsupported);
+    QCOMPARE(readFile(path), future);
+}
+
+void WindowSlotTests::windowsEditingDifferentPreferencesDoNotRevertEachOther() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    ViewerController first, second;                    // both started with identical in-memory preferences
+    first.setWheelMode("zoom");
+    second.setBoundaryMode("stop");
+    QVERIFY(first.setBinding("rotate", "Y"));
+    QVERIFY(second.setBinding("fit", "X"));
+    first.setFilmstripVisible(false);
+    second.setTreePinned(true);
+    const auto root = settingsOf(config.path());
+    QCOMPARE(root.value("wheel").toString(), QString("zoom"));
+    QCOMPARE(root.value("boundary").toString(), QString("stop"));
+    QCOMPARE(root.value("bindings").toObject().value("rotate").toString(), QString("Y"));
+    QCOMPARE(root.value("bindings").toObject().value("fit").toString(), QString("X"));
+    QVERIFY(!root.value("filmstrip").toBool(true));
+    QVERIFY(root.value("treePinned").toBool());
+}
+
+void WindowSlotTests::restoreFromJunctionFolderIsReportedAsUnreadable() {
+#ifdef Q_OS_WIN
+    QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    const auto real = make(files, "real");
+    const auto image = writePng(real, "r.png");
+    const auto junction = files.filePath("junction");
+    QProcess link;
+    link.start("cmd.exe", {"/c", "mklink", "/J", QDir::toNativeSeparators(junction), QDir::toNativeSeparators(real)});
+    QVERIFY(link.waitForFinished(15000));
+    if (link.exitCode() != 0 || !QFileInfo::exists(junction)) QSKIP("Directory junctions cannot be created here");
+    const QJsonObject entry{{"folder", junction}, {"image", junction + "/r.png"}};
+    QVERIFY(glancelot::updateSettings([&](QJsonObject& root) { root["windows"] = QJsonObject{{"1", entry}}; }).ok());
+    ViewerController viewer;
+    viewer.setWindowSlot(1);
+    viewer.restoreWindow();
+    QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("cannot be read"), 20000);   // links are never followed, even for restore
+    QVERIFY(viewer.snapshot().current.empty());
+    Q_UNUSED(image);
+    QDir().rmdir(junction);                            // removes the junction itself, not its target
+#else
+    QSKIP("Windows junction fixture");
+#endif
 }
 
 void WindowSlotTests::positionIsSavedOnlyAfterSuccessfulDecode() {
@@ -459,7 +636,7 @@ int main(int argc, char** argv) {
         QStringList args;
         for (int i = 0; i < argc; ++i) args << QString::fromLocal8Bit(argv[i]);
         const QString mode = args.value(1);
-        if (mode == "--slot-helper" || mode == "--crash-helper" || mode == "--settings-helper" || mode == "--settings-spin") return helperMain(args);
+        if (mode == "--slot-helper" || mode == "--crash-helper" || mode == "--settings-helper" || mode == "--settings-spin" || mode == "--lock-holder" || mode == "--reader-spin" || mode == "--foreign-reader") return helperMain(args);
     }
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
