@@ -1,6 +1,7 @@
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
 #include "glancelot/theme_manager.hpp"
+#include "glancelot/window_slot.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/thumbnail_service.hpp"
@@ -18,6 +19,7 @@
 #include <QTimer>
 #include <cstdio>
 #include <QIcon>
+#include <memory>
 
 int main(int argc,char** argv) {
     QGuiApplication app(argc,argv);
@@ -35,10 +37,17 @@ int main(int argc,char** argv) {
     parser.addOption({"theme","Select a built-in family (saved preference).","id"});
     parser.addOption({"theme-mode","Select system, dark, or light (saved preference).","mode"});
     parser.addOption({"show-themes","Open the theme picker at startup (test automation)."});
+    parser.addOption({"no-resume","Do not claim a window slot or remember/restore the browsing position (test automation)."});
     parser.addOption({"window-size","Initial logical window size for UI verification, e.g. 540x360.","size"});
     parser.process(app);
     QElapsedTimer elapsed;elapsed.start();
     ViewerController viewer;
+    // The slot is claimed before the window shows; it is released on normal exit, and a crashed window's slot is
+    // reclaimed by the next claim (pid plus process start time).
+    std::unique_ptr<WindowSlot> windowSlot;
+    if(!parser.isSet("no-resume"))windowSlot=std::make_unique<WindowSlot>();
+    viewer.setWindowSlot(windowSlot?windowSlot->number():0);
+    QObject::connect(&app,&QGuiApplication::aboutToQuit,&app,[&]{viewer.flushWindowPosition();if(windowSlot)windowSlot->release();});
     ThemeManager theme;
     if(parser.isSet("theme"))theme.setFamily(parser.value("theme"));
     if(parser.isSet("theme-mode"))theme.setMode(parser.value("theme-mode"));
@@ -73,7 +82,9 @@ int main(int argc,char** argv) {
     qint64 firstImage=-1,firstFrame=-1; int frames=0;
     QObject::connect(&viewer,&ViewerController::imageChanged,&app,[&]{if(firstImage<0&&!viewer.image().isNull())firstImage=elapsed.elapsed();});
     if(window)QObject::connect(window,&QQuickWindow::frameSwapped,&app,[&]{++frames;if(firstFrame<0&&!viewer.image().isNull())firstFrame=elapsed.elapsed();});
+    // An explicit file wins over resume and is remembered only once it decodes successfully.
     if(!parser.positionalArguments().isEmpty())QTimer::singleShot(0,&viewer,[&]{viewer.open(parser.positionalArguments().first());});
+    else QTimer::singleShot(0,&viewer,[&]{viewer.restoreWindow();});
     if(parser.isSet("quit-after")) {
         bool valid=false;const int duration=parser.value("quit-after").toInt(&valid);
         if(!valid || duration<100 || duration>3600000)return 2;

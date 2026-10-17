@@ -23,6 +23,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(bool filmstripVisible READ filmstripVisible WRITE setFilmstripVisible NOTIFY stateChanged)
     Q_PROPERTY(bool treeVisible READ treeVisible WRITE setTreeVisible NOTIFY stateChanged)
     Q_PROPERTY(bool treePinned READ treePinned WRITE setTreePinned NOTIFY stateChanged)
+    Q_PROPERTY(int windowSlot READ windowSlot NOTIFY stateChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -48,6 +49,14 @@ public:
     Q_INVOKABLE void openFolder(const QString& folder);
     // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
     Q_INVOKABLE void raiseRoot();
+    // Per-window position memory (UX-12). Slot 0 disables it. The last folder and image are written (debounced,
+    // atomically, through the shared settings writer) only after an image decodes successfully.
+    int windowSlot() const; void setWindowSlot(int slot);
+    // Reopens this slot's saved image, or the first image of its saved folder, unless something is already open;
+    // an explicit open() always wins. A missing folder reports an actionable status and never erases the saved slot.
+    Q_INVOKABLE void restoreWindow();
+    // Writes any pending position immediately (window close / application exit).
+    void flushWindowPosition();
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:

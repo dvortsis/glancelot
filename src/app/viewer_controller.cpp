@@ -1,5 +1,6 @@
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/navigation.hpp"
+#include "glancelot/settings_file.hpp"
 #include <QtConcurrent/QtConcurrentRun>
 #include <QCache>
 #include <QColorSpace>
@@ -105,6 +106,10 @@ struct ViewerController::Private {
     bool navigationOpen{};
     std::optional<NavigationJob> pendingNavigation;
     std::stop_source navigationStop;
+    int slot{};
+    QString pendingFolder, pendingImage;
+    bool positionDirty{}, restoreRequested{};
+    QTimer positionTimer;
 
     explicit Private(ViewerController* owner):q(owner) {
         trace("controller:construct");
@@ -112,6 +117,8 @@ struct ViewerController::Private {
         for (const auto& command: registry) bindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
         load();
         trace("controller:settings-loaded");
+        positionTimer.setSingleShot(true); positionTimer.setInterval(500);
+        QObject::connect(&positionTimer,&QTimer::timeout,q,[this]{ writePosition(); });
         deadline.setSingleShot(true); deadline.setInterval(15000);
         QObject::connect(&deadline,&QTimer::timeout,q,[this]{ fail("Decoder timed out. You can open another image or retry."); });
         reload.setSingleShot(true); reload.setInterval(120);
@@ -124,18 +131,37 @@ struct ViewerController::Private {
         QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
         QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
     }
-    ~Private() { navigationStop.request_stop(); cancel(); navigationPool.waitForDone(); }
+    ~Private() { writePosition(); navigationStop.request_stop(); cancel(); navigationPool.waitForDone(); }
+    void notePosition(const QString& file) {
+        if (slot<=0) return;
+        pendingImage=file; pendingFolder=QFileInfo(file).absolutePath(); positionDirty=true;
+        positionTimer.start();
+    }
+    bool writePosition() {
+        positionTimer.stop();
+        if (!positionDirty || slot<=0) return true;
+        const QString folder=pendingFolder,image=pendingImage;
+        const int target=slot;
+        const bool ok=updateSettings([&](QJsonObject& object) {
+            // Re-read under the lock: only this slot's entry changes; other windows' slots, bindings, themes
+            // and unknown keys stay as they are on disk.
+            auto windows=object.value("windows").toObject();
+            windows[QString::number(target)]=QJsonObject{{"folder",folder},{"image",image},{"saved",QDateTime::currentSecsSinceEpoch()}};
+            object["windows"]=windows;
+        }).ok();
+        positionDirty=!ok; // a failed write is retried with the next successful image
+        return ok;
+    }
     QString cacheKey(const QString& file) const {
         const QFileInfo info(file);
         return file + '|' + QString::number(info.size()) + '|' + QString::number(info.lastModified().toMSecsSinceEpoch());
     }
     void load() {
-        QFile file(QDir(configDirectory()).filePath("settings.json"));
-        if (!file.exists()) return;
-        if (!file.open(QIODevice::ReadOnly) || file.size()>1024*1024) { status="Settings could not be read; defaults are active."; return; }
-        QJsonParseError error;
-        const auto object=QJsonDocument::fromJson(file.readAll(),&error).object();
-        if (error.error!=QJsonParseError::NoError || object.value("schema").toInt()!=1) { status="Settings are invalid or from a newer version; defaults are active."; return; }
+        QJsonObject object;
+        const auto result=readSettings(object);
+        if (result.code==SettingsStatus::Unreadable) { status="Settings could not be read; defaults are active."; return; }
+        if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active."; return; }
+        if (object.isEmpty()) return;
         auto candidate=bindings;
         const auto stored=object.value("bindings").toObject();
         for (auto it=stored.begin();it!=stored.end();++it) {
@@ -161,23 +187,20 @@ struct ViewerController::Private {
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
     }
-    bool save() {
-        if (!QDir().mkpath(configDirectory())) return false;
-        const QString target=QDir(configDirectory()).filePath("settings.json");
-        // Retain unknown preferences in the supported schema; never overwrite a future schema.
-        QJsonObject object;
-        QFile previous(target);
-        if (previous.open(QIODevice::ReadOnly)) {
-            const auto old=QJsonDocument::fromJson(previous.read(1024*1024)).object();
-            if (!old.isEmpty() && old.value("schema").toInt()!=1) return false;
-            object=old;
-            previous.close();
-            QFile::remove(target+".bak"); QFile::copy(target,target+".bak");
-        }
-        object["schema"]=1; object["bindings"]=bindings; object["boundary"]=boundary; object["wheel"]=wheel; object["filmstrip"]=filmstrip; object["tree"]=tree; object["treePinned"]=treePin;
-        QSaveFile file(target);
-        const auto bytes=QJsonDocument(object).toJson(QJsonDocument::Indented);
-        return file.open(QIODevice::WriteOnly) && file.write(bytes)==bytes.size() && file.commit();
+    // Writes only the named preferences through the shared locked writer, so another window's changes to other
+    // keys (and unknown keys, never a future schema) survive.
+    bool save(std::initializer_list<const char*> keys) {
+        return updateSettings([&](QJsonObject& object) {
+            for (const char* key: keys) {
+                const QString name=QString::fromLatin1(key);
+                if (name=="bindings") object[name]=bindings;
+                else if (name=="boundary") object[name]=boundary;
+                else if (name=="wheel") object[name]=wheel;
+                else if (name=="filmstrip") object[name]=filmstrip;
+                else if (name=="tree") object[name]=tree;
+                else if (name=="treePinned") object[name]=treePin;
+            }
+        }).ok();
     }
     void cancel() {
         deadline.stop();
@@ -250,6 +273,7 @@ struct ViewerController::Private {
                     if (cost<=cache.maxCost()) cache.insert(key,new QImage(image),cost);
                     loading=false; deadline.stop();
                     status=message.value("color").toString()+" · display profile not yet managed";
+                    notePosition(path);
                     process->write("ok\n");
                     observe(); emit q->imageChanged(); emit q->stateChanged();
                 } else { fail("Unknown decoder response."); return; }
@@ -316,7 +340,32 @@ struct ViewerController::Private {
 };
 
 ViewerController::ViewerController(QObject* parent):QObject(parent),d(std::make_unique<Private>(this)){}
-ViewerController::~ViewerController()=default;
+ViewerController::~ViewerController()=default; // ~Private flushes the pending window position
+int ViewerController::windowSlot() const{return d->slot;}
+void ViewerController::setWindowSlot(int slot){if(slot<0||slot==d->slot)return;d->writePosition();d->slot=slot;emit stateChanged();}
+void ViewerController::flushWindowPosition(){d->writePosition();}
+void ViewerController::restoreWindow(){
+    if(d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
+    QJsonObject settings;
+    if(!readSettings(settings).ok())return;
+    const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
+    const QString folder=entry.value("folder").toString(),image=entry.value("image").toString();
+    if(folder.isEmpty()&&image.isEmpty())return;
+    d->restoreRequested=true;
+    d->status="Restoring your last folder…";emit stateChanged();
+    d->submitNavigation({d->generation,++d->navigationGeneration,false,[image=nativePath(image),folder=nativePath(folder),folderText=folder,cancellation=d->navigationStop.get_token()]() mutable {
+        namespace fs=std::filesystem;
+        std::optional<fs::path> destination;QString message;std::error_code ec;
+        if(!image.empty()&&isSupportedImage(image)&&fs::is_regular_file(image,ec)) destination=image;
+        else if(folder.empty()||!fs::is_directory(folder,ec)) message="Your last folder for this window is unavailable: "+folderText+". Open a photo to continue; the saved location is kept.";
+        else {
+            const auto files=imageFiles(folder,cancellation);
+            if(!files.empty()) destination=files.front();
+            else message="Your last folder for this window has no supported images: "+folderText+". The saved location is kept.";
+        }
+        return Private::NavigationResult{Navigator{},destination,message};
+    },""});
+}
 QImage ViewerController::image() const{return d->image;}
 QString ViewerController::filePath() const{return d->path;}
 QString ViewerController::fileName() const{return QFileInfo(d->path).fileName();}
@@ -354,14 +403,14 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     if(!sequence.trimmed().isEmpty()&&(normalized.isEmpty()||parsed[0].key()==Qt::Key_unknown)){d->status="That shortcut is not valid.";emit stateChanged();return false;}
     for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&!normalized.isEmpty()&&it.value().toString().compare(normalized,Qt::CaseInsensitive)==0){d->status="Shortcut already assigned to "+it.key()+". Clear it first.";emit stateChanged();return false;}}
     d->bindings[id]=normalized;
-    const bool saved=d->save();d->status=saved?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    const bool saved=d->save({"bindings"});d->status=saved?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
     emit bindingsChanged();emit stateChanged();return true;
 }
-void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save();d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}
+void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save({"bindings"});d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}
 bool ViewerController::treeVisible() const{return d->tree;}
 bool ViewerController::treePinned() const{return d->treePin;}
-void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tree=value;if(!d->save())d->status="Folder tree setting changed; settings could not be saved.";emit stateChanged();if(value)emit treeShown();}
-void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save())d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
+void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tree=value;if(!d->save({"tree"}))d->status="Folder tree setting changed; settings could not be saved.";emit stateChanged();if(value)emit treeShown();}
+void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save({"treePinned"}))d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::openFolder(const QString& value){
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(folder.isEmpty()||d->nav.snapshot().current.empty())return;
@@ -397,6 +446,6 @@ void ViewerController::raiseRoot(){
 }
 bool ViewerController::filmstripVisible() const{return d->filmstrip;}
 const NavigationSnapshot& ViewerController::snapshot() const{return d->nav.snapshot();}
-void ViewerController::setFilmstripVisible(bool value){if(d->filmstrip==value)return;d->filmstrip=value;if(!d->save())d->status="Filmstrip setting changed; settings could not be saved.";emit stateChanged();}
-void ViewerController::setBoundaryMode(const QString& value){if(value!="continue"&&value!="stop"&&value!="loop")return;d->boundary=value;d->nav.setBoundary(boundaryValue(value));if(!d->save())d->status="Boundary mode changed; settings could not be saved.";emit stateChanged();}
-void ViewerController::setWheelMode(const QString& value){if(value!="navigate"&&value!="zoom"&&value!="pan")return;d->wheel=value;if(!d->save())d->status="Wheel behavior changed; settings could not be saved.";emit stateChanged();}
+void ViewerController::setFilmstripVisible(bool value){if(d->filmstrip==value)return;d->filmstrip=value;if(!d->save({"filmstrip"}))d->status="Filmstrip setting changed; settings could not be saved.";emit stateChanged();}
+void ViewerController::setBoundaryMode(const QString& value){if(value!="continue"&&value!="stop"&&value!="loop")return;d->boundary=value;d->nav.setBoundary(boundaryValue(value));if(!d->save({"boundary"}))d->status="Boundary mode changed; settings could not be saved.";emit stateChanged();}
+void ViewerController::setWheelMode(const QString& value){if(value!="navigate"&&value!="zoom"&&value!="pan")return;d->wheel=value;if(!d->save({"wheel"}))d->status="Wheel behavior changed; settings could not be saved.";emit stateChanged();}

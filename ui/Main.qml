@@ -357,6 +357,7 @@ ApplicationWindow {
                     ActionButton { text: "Cycle background"; onClicked: app.invoke("background") }
                 }
                 CheckBox { text: "Nearest-neighbor sampling for pixel inspection"; checked: canvas.nearest; onToggled: canvas.nearest=checked }
+                Label { visible: viewer.windowSlot > 0; Layout.fillWidth: true; text: "This is window " + viewer.windowSlot + ". It remembers its own last folder and photo for the next time you open a window."; color: app.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
                 CheckBox { text: "Pin folder tree open"; checked: viewer.treePinned; onToggled: viewer.treePinned=checked }
                 CheckBox { text: "Show filmstrip"; checked: viewer.filmstripVisible; onToggled: viewer.filmstripVisible=checked }
                 CheckBox { text: "Frameless window"; checked: app.frameless; onToggled: app.frameless=checked }

@@ -1,4 +1,5 @@
 #include "glancelot/theme_manager.hpp"
+#include "glancelot/settings_file.hpp"
 #include <QGuiApplication>
 #include <QStyleHints>
 #include <QFile>
@@ -45,21 +46,13 @@ void ThemeManager::setFamily(const QString& family) {if(family==m_family||previe
 void ThemeManager::setMode(const QString& mode) {if(mode==m_mode||(mode!="system"&&mode!="dark"&&mode!="light"))return;m_mode=mode;save();emit changed();}
 void ThemeManager::save() {
     m_error.clear();
-    const auto path=settingsPath();
-    QJsonObject root;
-    QFile previous(path);
-    if(previous.exists()) {
-        QJsonParseError parse;
-        if(!previous.open(QIODevice::ReadOnly)||previous.size()>1024*1024){m_error="Preferences could not be read; theme applies for this session.";return;}
-        const auto document=QJsonDocument::fromJson(previous.readAll(),&parse);
-        if(parse.error!=QJsonParseError::NoError||!document.isObject()||document.object().value("schema").toInt()!=1){m_error="Unsupported preferences; theme applies for this session.";return;}
-        root=document.object();
-        previous.close();
-    }
-    auto appearance=root.value("appearance").toObject();
-    appearance["family"]=m_family;appearance["mode"]=m_mode;
-    root["schema"]=1;root["appearance"]=appearance;
-    if(!QDir().mkpath(QFileInfo(path).absolutePath())){m_error="Preferences folder could not be created.";return;}
-    QSaveFile output(path);const auto bytes=QJsonDocument(root).toJson();
-    if(!output.open(QIODevice::WriteOnly)||output.write(bytes)!=bytes.size()||!output.commit())m_error="Theme applies for this session; preferences could not be saved.";
+    // Only the appearance key is written, through the shared cross-process writer that preserves everything else.
+    const auto status=glancelot::updateSettings([&](QJsonObject& root){
+        auto appearance=root.value("appearance").toObject();
+        appearance["family"]=m_family;appearance["mode"]=m_mode;
+        root["appearance"]=appearance;
+    });
+    if(status.code==glancelot::SettingsStatus::Unreadable)m_error="Preferences could not be read; theme applies for this session.";
+    else if(status.code==glancelot::SettingsStatus::Corrupt||status.code==glancelot::SettingsStatus::Unsupported)m_error="Unsupported preferences; theme applies for this session.";
+    else if(!status.ok())m_error="Theme applies for this session; preferences could not be saved.";
 }
