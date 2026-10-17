@@ -2,24 +2,29 @@
 #include "contracts.hpp"
 #include <optional>
 #include <system_error>
+#include <stop_token>
 
 namespace glancelot {
 bool naturalLess(const std::filesystem::path& a, const std::filesystem::path& b);
 bool isSupportedImage(const std::filesystem::path& path);
-std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& directory);
+std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& directory, std::stop_token cancel = {});
 // Lazy traversal searches directories under root; never follows directory links.
+// Cancellation is cooperative; a blocked operating-system filesystem call cannot be interrupted.
 std::optional<std::filesystem::path> adjacentFolderImage(
-    const std::filesystem::path& root, const std::filesystem::path& directory, int direction);
+    const std::filesystem::path& root, const std::filesystem::path& directory, int direction,
+    std::stop_token cancel = {});
 class Navigator {
 public:
     bool open(const std::filesystem::path& file, std::error_code& error);
     bool setRoot(const std::filesystem::path& root);
     void setBoundary(BoundaryMode mode);
+    void setCancellation(std::stop_token cancel) { cancel_ = cancel; }
     std::optional<std::filesystem::path> step(int direction);
     std::optional<std::filesystem::path> folder(int direction);
     void refresh();
     const NavigationSnapshot& snapshot() const { return state_; }
 private:
     NavigationSnapshot state_;
+    std::stop_token cancel_;
 };
 }

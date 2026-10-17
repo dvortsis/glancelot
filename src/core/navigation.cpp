@@ -73,21 +73,24 @@ bool link(const fs::path& p) {
 #endif
     return false;
 }
-bool safePath(const fs::path& p) {
+bool safePath(const fs::path& p, std::stop_token cancel = {}) {
     fs::path prefix;
     for (const auto& part : p) {
+        if (cancel.stop_requested()) return false;
         prefix /= part;
         if (prefix == p.root_name()) continue;
         if (link(prefix)) return false;
     }
     return true;
 }
-std::vector<fs::path> entries(const fs::path& directory, bool directories) {
+struct ScanCancelled {};
+std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel) {
     std::vector<fs::path> result;
-    if (!safePath(directory)) return result;
+    if (cancel.stop_requested() || !safePath(directory, cancel)) return result;
     std::error_code ec;
     fs::directory_iterator it(directory, fs::directory_options::skip_permission_denied, ec), end;
     while (!ec && it != end) {
+        if (cancel.stop_requested()) return {};
         const auto path = it->path();
         const auto status = it->symlink_status(ec);
         bool sameVolume = true;
@@ -103,16 +106,27 @@ std::vector<fs::path> entries(const fs::path& directory, bool directories) {
         ec.clear();
         it.increment(ec);
     }
-    std::sort(result.begin(), result.end(), naturalLess);
+    if (cancel.stop_requested()) return {};
+    try {
+        std::sort(result.begin(), result.end(), [cancel](const fs::path& a, const fs::path& b) {
+            if (cancel.stop_requested()) throw ScanCancelled{};
+            return naturalLess(a, b);
+        });
+    } catch (const ScanCancelled&) { return {}; }
+    if (cancel.stop_requested()) return {};
     return result;
 }
-std::optional<fs::path> adjacentDirectory(const fs::path& root, fs::path current, int direction) {
+std::optional<fs::path> adjacentDirectory(const fs::path& root, fs::path current, int direction, std::stop_token cancel) {
+    if (cancel.stop_requested()) return std::nullopt;
     if (direction > 0) {
-        const auto children = entries(current, true);
+        const auto children = entries(current, true, cancel);
+        if (cancel.stop_requested()) return std::nullopt;
         if (!children.empty()) return children.front();
         while (!inside(current, root)) {
+            if (cancel.stop_requested()) return std::nullopt;
             const auto parent = current.parent_path();
-            const auto siblings = entries(parent, true);
+            const auto siblings = entries(parent, true, cancel);
+            if (cancel.stop_requested()) return std::nullopt;
             const auto next = std::upper_bound(siblings.begin(), siblings.end(), current, naturalLess);
             if (next != siblings.end()) return *next;
             if (parent == current || !inside(root, parent)) break;
@@ -120,12 +134,15 @@ std::optional<fs::path> adjacentDirectory(const fs::path& root, fs::path current
         }
     } else if (!inside(current, root)) {
         const auto parent = current.parent_path();
-        const auto siblings = entries(parent, true);
+        const auto siblings = entries(parent, true, cancel);
+        if (cancel.stop_requested()) return std::nullopt;
         auto previous = std::lower_bound(siblings.begin(), siblings.end(), current, naturalLess);
         if (previous == siblings.begin()) return parent;
         current = *--previous;
         for (;;) {
-            const auto children = entries(current, true);
+            if (cancel.stop_requested()) return std::nullopt;
+            const auto children = entries(current, true, cancel);
+            if (cancel.stop_requested()) return std::nullopt;
             if (children.empty()) return current;
             current = children.back();
         }
@@ -147,44 +164,60 @@ bool isSupportedImage(const fs::path& path) {
     return extension == fs::path(".jpg").native() || extension == fs::path(".jpeg").native()
         || extension == fs::path(".png").native();
 }
-std::vector<fs::path> imageFiles(const fs::path& directory) { return entries(directory, false); }
-std::optional<fs::path> adjacentFolderImage(const fs::path& rootPath, const fs::path& directory, int direction) {
-    if (direction == 0) return std::nullopt;
+std::vector<fs::path> imageFiles(const fs::path& directory, std::stop_token cancel) { return entries(directory, false, cancel); }
+std::optional<fs::path> adjacentFolderImage(const fs::path& rootPath, const fs::path& directory, int direction, std::stop_token cancel) {
+    if (direction == 0 || cancel.stop_requested()) return std::nullopt;
     std::error_code ec;
     const auto root = absolutePath(rootPath, ec);
     if (ec) return std::nullopt;
     const auto initial = absolutePath(directory, ec);
-    if (ec || !inside(root, initial) || !safePath(root)) return std::nullopt;
+    if (ec || !inside(root, initial) || !safePath(root, cancel)) return std::nullopt;
     // A deleted current directory is a valid ordering anchor, but a live link is not.
-    if (fs::exists(initial, ec) && !safePath(initial)) return std::nullopt;
-    auto next = adjacentDirectory(root, initial, direction);
+    if (fs::exists(initial, ec) && !safePath(initial, cancel)) return std::nullopt;
+    auto next = adjacentDirectory(root, initial, direction, cancel);
     while (next) {
-        const auto files = imageFiles(*next);
+        if (cancel.stop_requested()) return std::nullopt;
+        const auto files = imageFiles(*next, cancel);
+        if (cancel.stop_requested()) return std::nullopt;
         if (!files.empty()) return direction > 0 ? files.front() : files.back();
-        next = adjacentDirectory(root, *next, direction);
+        next = adjacentDirectory(root, *next, direction, cancel);
     }
     return std::nullopt;
 }
 
 bool Navigator::open(const fs::path& file, std::error_code& error) {
     error.clear();
+    const auto cancelled = [&] {
+        if (!cancel_.stop_requested()) return false;
+        error = std::make_error_code(std::errc::operation_canceled);
+        return true;
+    };
+    if (cancelled()) return false;
     const auto path = absolutePath(file, error);
     if (error) return false;
     if (!isSupportedImage(path)) { error = std::make_error_code(std::errc::not_supported); return false; }
-    if (!safePath(path)) { error = std::make_error_code(std::errc::no_such_file_or_directory); return false; }
-    if (!fs::is_regular_file(path, error)) {
+    if (!safePath(path, cancel_)) {
+        if (cancelled()) return false;
+        error = std::make_error_code(std::errc::no_such_file_or_directory); return false; }
+    const bool regular = fs::is_regular_file(path, error);
+    if (cancelled()) return false;
+    if (!regular) {
         if (!error) error = std::make_error_code(std::errc::invalid_argument);
         return false;
     }
     std::ifstream readable(path, std::ios::binary);
+    if (cancelled()) return false;
     if (!readable) { error = std::make_error_code(std::errc::permission_denied); return false; }
-    auto files = imageFiles(path.parent_path());
+    auto files = imageFiles(path.parent_path(), cancel_);
+    if (cancelled()) return false;
     const auto selected = std::find_if(files.begin(), files.end(), [&](const fs::path& candidate) {
-        return sameComponent(candidate.filename(), path.filename());
+        return cancel_.stop_requested() || sameComponent(candidate.filename(), path.filename());
     });
+    if (cancelled()) return false;
     if (selected == files.end()) {
         error = std::make_error_code(std::errc::no_such_file_or_directory); return false;
     }
+    if (cancelled()) return false;
     state_.root = state_.directory = path.parent_path();
     state_.current = *selected;
     state_.files = std::move(files);
@@ -192,18 +225,19 @@ bool Navigator::open(const fs::path& file, std::error_code& error) {
     return true;
 }
 bool Navigator::setRoot(const fs::path& root) {
-    if (state_.current.empty()) return false;
+    if (state_.current.empty() || cancel_.stop_requested()) return false;
     std::error_code ec;
     const auto path = absolutePath(root, ec);
-    if (ec || !inside(path, state_.root) || !safePath(path) || !fs::is_directory(path, ec) || ec) return false;
+    if (ec || !inside(path, state_.root) || !safePath(path, cancel_) || !fs::is_directory(path, ec) || ec || cancel_.stop_requested()) return false;
     state_.root = path;
     ++state_.generation;
     return true;
 }
 void Navigator::setBoundary(BoundaryMode mode) { state_.boundary = mode; }
 std::optional<fs::path> Navigator::step(int direction) {
-    if (direction == 0 || state_.current.empty()) return std::nullopt;
+    if (direction == 0 || state_.current.empty() || cancel_.stop_requested()) return std::nullopt;
     refresh();
+    if (cancel_.stop_requested()) return std::nullopt;
     const auto& files = state_.files;
     auto found = std::lower_bound(files.begin(), files.end(), state_.current, naturalLess);
     std::optional<fs::path> destination;
@@ -214,22 +248,27 @@ std::optional<fs::path> Navigator::step(int direction) {
     if (!destination && state_.boundary == BoundaryMode::LoopFolder && !files.empty())
         destination = direction > 0 ? files.front() : files.back();
     if (!destination && state_.boundary == BoundaryMode::ContinueTree) return folder(direction);
+    if (cancel_.stop_requested()) return std::nullopt;
     if (destination) { state_.current = *destination; ++state_.generation; }
     return destination;
 }
 std::optional<fs::path> Navigator::folder(int direction) {
-    if (state_.current.empty()) return std::nullopt;
-    const auto destination = adjacentFolderImage(state_.root, state_.directory, direction);
+    if (state_.current.empty() || cancel_.stop_requested()) return std::nullopt;
+    const auto destination = adjacentFolderImage(state_.root, state_.directory, direction, cancel_);
     if (!destination) return std::nullopt;
+    auto files = imageFiles(destination->parent_path(), cancel_);
+    if (cancel_.stop_requested()) return std::nullopt;
     state_.directory = destination->parent_path();
-    state_.files = imageFiles(state_.directory);
+    state_.files = std::move(files);
     state_.current = *destination;
     ++state_.generation;
     return destination;
 }
 void Navigator::refresh() {
-    if (state_.directory.empty()) return;
-    state_.files = imageFiles(state_.directory);
+    if (state_.directory.empty() || cancel_.stop_requested()) return;
+    auto files = imageFiles(state_.directory, cancel_);
+    if (cancel_.stop_requested()) return;
+    state_.files = std::move(files);
     // Preserve a deleted current name as an anchor for deterministic next/previous.
     ++state_.generation;
 }

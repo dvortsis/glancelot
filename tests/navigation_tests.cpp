@@ -1,6 +1,8 @@
 #include "glancelot/navigation.hpp"
 #include <algorithm>
 #include <chrono>
+#include <atomic>
+#include <thread>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -175,6 +177,56 @@ void permissionBypass() {
     std::cout << "permission-denial enforcement=" << denied << '\n';
 #endif
 }
+void cancellation() {
+    Fixture f;
+    const auto a = f.file("a.jpg"), b = f.file("b.jpg");
+    f.file("child/c.jpg");
+    Navigator nav;
+    std::error_code ec;
+    require(nav.open(a, ec), "cancellation setup");
+    const auto before = nav.snapshot();
+    std::stop_source stopped;
+    stopped.request_stop();
+    const auto token = stopped.get_token();
+    require(imageFiles(f.root, token).empty(), "stopped listing returned entries");
+    require(!adjacentFolderImage(f.root, f.root, 1, token), "stopped traversal returned target");
+    nav.setCancellation(token);
+    require(!nav.open(b, ec) && ec == std::errc::operation_canceled, "stopped open error");
+    require(!nav.step(1) && !nav.folder(1) && !nav.setRoot(f.root), "stopped navigator returned target");
+    nav.refresh();
+    require(nav.snapshot().current == before.current && nav.snapshot().files == before.files
+        && nav.snapshot().generation == before.generation, "already-stopped operation mutated snapshot");
+    nav.setCancellation({});
+    require(nav.step(1) == b, "new uncancelled token did not resume navigation");
+
+    // A wide empty tree would require repeated sibling scans without cancellation.
+    // Request stop from another thread after entering the worker operation. The
+    // test reports if an exceptionally fast filesystem completes before the stop.
+    Fixture wide;
+    const auto start = wide.file("start.jpg");
+    for (int i = 0; i < 500; ++i)
+        fs::create_directories(wide.root / ("folder" + std::to_string(i)));
+    wide.file("folder9999/end.jpg");
+    Navigator scanning;
+    require(scanning.open(start, ec), "mid-scan setup");
+    const auto stable = scanning.snapshot();
+    std::stop_source running;
+    scanning.setCancellation(running.get_token());
+    std::atomic<bool> entered{false};
+    std::jthread stopper([&] {
+        while (!entered.load(std::memory_order_acquire)) std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        running.request_stop();
+    });
+    entered.store(true, std::memory_order_release);
+    const auto result = scanning.folder(1);
+    const bool interrupted = !result && running.stop_requested();
+    stopper.join();
+    if (interrupted) require(scanning.snapshot().current == stable.current
+        && scanning.snapshot().files == stable.files && scanning.snapshot().generation == stable.generation,
+        "cancelled in-progress folder navigation mutated snapshot");
+    std::cout << "in-progress cancellation observed=" << interrupted << '\n';
+}
 void linksAndLaziness() {
     Fixture f, outside;
     const auto a = f.file("a.jpg"), b = f.file("10-real/b.jpg");
@@ -201,7 +253,7 @@ void linksAndLaziness() {
 }
 int main() {
     try {
-        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); linksAndLaziness();
+        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness();
         std::cout << "navigation: all generated fixture tests passed\n";
         return 0;
     } catch (const std::exception& error) {
