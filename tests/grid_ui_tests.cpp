@@ -160,6 +160,35 @@ private slots:
         qInfo() << "reset viewport before=" << before << "after=" << after;
         QVERIFY2(after > 1000, "A background reset jumped to an offscreen cursor instead of preserving the browsed viewport");
     }
+    // REVIEW (adversarial): the reset must restore the same first-visible item, not merely "some" deep offset.
+    void reviewResetRestoresSameTopItem() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        const auto name = [](int i) { return QString("file-%1.txt").arg(i, 4, 10, QLatin1Char('0')); };
+        for (int i = 0; i < 400; ++i) { QFile file(media.filePath(name(i))); QVERIFY(file.open(QIODevice::WriteOnly)); }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.fileGrid.setDirectory(media.path()); h.showGrid();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 400);
+        QTRY_COMPARE(h.selected(), 0);
+        const int columns = h.grid()->property("columns").toInt(); QVERIFY(columns > 0);
+        const auto topPath = [&] {
+            const qreal y = h.view()->property("contentY").toReal() - h.view()->property("originY").toReal();
+            const qreal cell = h.view()->property("cellHeight").toReal();
+            return h.fileGrid.pathAt(int(qFloor((y + 1) / cell)) * columns);
+        };
+        QVERIFY(QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, 240), Q_ARG(int, 0))); // Beginning
+        QTest::qWait(100);
+        const QString before = topPath();
+        qInfo() << "columns" << columns << "top" << before;
+        QVERIFY(before.endsWith(name(240 - 240 % columns)));
+        for (int i = 1; i < 120; i += 2) QVERIFY(QFile::remove(media.filePath(name(i))));
+        QSignalSpy resets(&h.fileGrid, &QAbstractItemModel::modelReset);
+        h.fileGrid.refresh();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 340);
+        QTest::qWait(150);
+        QCOMPARE(resets.count(), 1);
+        qInfo() << "top before" << before << "after" << topPath();
+        QCOMPARE(topPath(), before);
+    }
     void cleanupTestCase() { listingFixture(-1); }
     void init() {
         config = std::make_unique<QTemporaryDir>();
@@ -1238,6 +1267,7 @@ private slots:
         h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         QTRY_VERIFY(h.fileGrid.count() >= 22);
         h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
+        QTest::qWait(150); // REVIEW: let the post-listing reveal run first, or it replaces the multi-selection below
         h.fileGrid.select(h.fileGrid.rowOf(media.file("Day 2")));
         h.fileGrid.select(h.fileGrid.rowOf(media.file("beach.png")), DirectoryEntryModel::Range);
         QDir().mkpath(".cache/file-grid");

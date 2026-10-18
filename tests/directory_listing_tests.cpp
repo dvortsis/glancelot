@@ -1,4 +1,5 @@
 #include "glancelot/directory_listing.hpp"
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
@@ -218,6 +219,27 @@ int main() {
         const auto listing = listDirectory(d, SortSpec{SortKey::Size, false});
         check(find(listing, "big.txt")->meta.known && find(listing, "big.txt")->meta.size == 300, "size metadata");
         std::cout << "sort keys ok\n";
+    }
+    {   // REVIEW (adversarial): an external delete burst racing the listing must never fail the folder closed.
+        const auto d = fx.dir("burst");
+        for (int i = 0; i < 8000; ++i) write(d / ("del" + std::to_string(i) + ".png"), 0);
+        std::atomic<bool> done{false};
+        std::thread deleter([&] { std::error_code ec; for (int i = 0; i < 8000; ++i) fs::remove(d / ("del" + std::to_string(i) + ".png"), ec); done = true; });
+        int runs = 0, inaccessible = 0;
+        while (!done || runs == 0) { const auto l = listDirectory(d, {}); ++runs; if (!l.accessible) ++inaccessible; }
+        deleter.join();
+        check(inaccessible == 0, "delete burst flipped a live folder inaccessible " + std::to_string(inaccessible) + "/" + std::to_string(runs));
+        std::cout << "delete burst ok (" << runs << " listings, " << inaccessible << " inaccessible)\n";
+        // Same, with creation and deletion interleaved (sync-tool churn).
+        std::atomic<bool> stop{false};
+        std::thread churn([&] { std::error_code ec; for (int round = 0; round < 20; ++round) {
+            for (int i = 0; i < 400; ++i) write(d / ("c" + std::to_string(i) + ".txt"));
+            for (int i = 0; i < 400; ++i) fs::remove(d / ("c" + std::to_string(i) + ".txt"), ec); } stop = true; });
+        runs = 0; inaccessible = 0;
+        while (!stop) { const auto l = listDirectory(d, {}); ++runs; if (!l.accessible) ++inaccessible; }
+        churn.join();
+        check(inaccessible == 0, "create/delete churn flipped a live folder inaccessible " + std::to_string(inaccessible) + "/" + std::to_string(runs));
+        std::cout << "churn ok (" << runs << " listings, " << inaccessible << " inaccessible)\n";
     }
     if (failures) { std::cerr << failures << " directory listing check(s) failed\n"; return 1; }
     std::cout << "directory listing tests passed\n";
