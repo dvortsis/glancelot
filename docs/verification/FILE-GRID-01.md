@@ -34,6 +34,7 @@ Branch `agent/file-grid`, worktree `.worktrees/file-grid`, build `build-file-gri
 - Enter acts on the cursor item. Folder: `viewer.navigateDirectory` (the grid stays open). Photo: open and return to the canvas. Other file: inline explanation only. The status-bar action reads "Open folder", "Open", or is disabled for a file.
 - File symlinks and dangling links are listed as File with a link badge. A directory link or junction is listed as a folder with a badge. Entering one goes through `navigateDirectory`, which refuses links under the existing traversal policy, and the grid shows the controller's error inline.
 - The cursor follows the viewed photo only when the grid is (re)entered and the viewed photo has changed since the last entry. While the grid is open, navigation keeps the cursor on the grid's own items.
+- Cursor placement (on the viewed photo, the folder just left, or the first item) runs once per grid entry or folder change. An ordinary refresh caused by an external change never replaces the selection or scrolls the view. When the cursor item is deleted, the cursor becomes -1 and the next arrow key starts from the first item. `externalRenameAndDeleteRefreshKeepSelection` covers this.
 
 ## Acceptance coverage
 
@@ -63,23 +64,40 @@ Branch `agent/file-grid`, worktree `.worktrees/file-grid`, build `build-file-gri
 
 ## Evidence
 
-Full suite on Windows 11, MSVC 2022, Qt 6.8.3, at the final test commit:
+Full suite on Windows 11, MSVC 2022, Qt 6.8.3, after merging `agent/panes` 52e10e0 (clean merge, no conflicts):
 
 ```
 > ./scripts/build.ps1 -BuildDir build-file-grid -QtRoot C:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64 -Test
- 1/11 Test  #1: navigation .......................   Passed    1.85 sec
- 2/11 Test  #2: directory_listing ................   Passed    8.11 sec
- 3/11 Test  #3: viewer_acceptance ................   Passed    4.26 sec
- 4/11 Test  #4: thumbnails .......................   Passed    6.07 sec
- 5/11 Test  #5: folder_tree ......................   Passed    7.04 sec
- 6/11 Test  #6: pane_layout ......................   Passed    0.16 sec
- 7/11 Test  #7: window_slots .....................   Passed   20.74 sec
- 8/11 Test  #8: folder_grid ......................   Passed   34.72 sec
- 9/11 Test  #9: directory_model ..................   Passed    5.48 sec
+ 1/11 Test  #1: navigation .......................   Passed    2.25 sec
+ 2/11 Test  #2: directory_listing ................   Passed    7.16 sec
+ 3/11 Test  #3: viewer_acceptance ................   Passed    4.17 sec
+ 4/11 Test  #4: thumbnails .......................   Passed    5.24 sec
+ 5/11 Test  #5: folder_tree ......................   Passed    7.00 sec
+ 6/11 Test  #6: pane_layout ......................   Passed    0.23 sec
+ 7/11 Test  #7: window_slots .....................   Passed   19.56 sec
+ 8/11 Test  #8: folder_grid ......................   Passed   40.86 sec
+ 9/11 Test  #9: directory_model ..................   Passed    5.74 sec
 10/11 Test #10: viewport .........................   Passed    0.05 sec
-11/11 Test #11: themes ...........................   Passed    0.11 sec
+11/11 Test #11: themes ...........................   Passed    0.12 sec
 100% tests passed, 0 tests failed out of 11
-Total Test time (real) =  88.60 sec
+Total Test time (real) =  92.41 sec
+```
+
+Flake found and fixed before the merge. One earlier full run crashed in `mixedTilesFolderEntryAndParentNavigation`, inside `QQuickItem::height`. The cause was that the test helper `gridCell` returned a null delegate right after a relisting and the test used it unchecked. The helper now polls until the delegate exists, and every caller `QVERIFY`s the result. After the fix, the four new interaction cases passed 8 out of 8 repeated runs. A post-merge repeat loop of the whole `grid_ui_tests` executable was not run, because the session's permission policy refused it.
+
+Linux core check: WSL Ubuntu 24.04, g++ 13.3, non-root, no CMake available there. Only the core sources and `directory_listing_tests` were compiled (`g++ -std=c++20 -Wall -Wextra -Wpedantic`), with the build output in /tmp:
+
+```
+ordering and types ok
+empty/missing ok
+hidden ok
+directory symlink ok
+file symlink ok
+permission denied ok
+cancellation ok (5/5 racing runs cancelled); 20000 entries listed in 157 ms
+truncation ok
+sort keys ok
+directory listing tests passed
 ```
 
 Core listing tests (`build-file-grid/directory_listing_tests.exe`):
@@ -115,10 +133,12 @@ Real-application smoke run with a scratch `GLANCELOT_CONFIG_DIR` and generated P
 
 ## Limits
 
-- Windows directory and file symlinks could not be created without Developer Mode or elevation. Those cases are reported UNVERIFIED; the junction case ran. Linux symlink, dangling-link and `chmod 000` paths are written but unverified until the Linux Docker run.
+- Windows directory and file symlinks could not be created without Developer Mode or elevation. Those cases are reported UNVERIFIED; the junction case ran.
+- On Linux, the POSIX symlink, dangling-link and `chmod 000` cases passed in WSL. On Linux, only the core was compiled. The Qt model, QML and UI tests have not been built on Linux, so the Docker functional run is still pending.
+- On Windows, every reparse point counts as a link, as in `Navigator`. OneDrive Files-On-Demand placeholders may carry a cloud reparse tag. If they do, such photos appear as linked non-photo files. The filmstrip already excludes them, so this is not a regression, but the grid makes it visible. Classifying them as photos is a traversal-policy decision for the lead. One option is to badge only `IO_REPARSE_TAG_SYMLINK` and `IO_REPARSE_TAG_MOUNT_POINT`. Not verified on a OneDrive folder.
 - Truncation at the real 100,000-entry limit is tested only in the core (small limit). The UI banner was not exercised with 100,001 generated files.
 - Shuffle order in the grid uses `SortSpec`'s default seed. The controller's per-session shuffle seed is not reachable through the frozen interfaces, so with "Shuffle" the grid's file order differs from the filmstrip and canvas. Proposed lead change: expose the seed (for example `ViewerController::sortSeed()`, or a seed argument to `DirectoryEntryModel::setSort`).
-- `ModifiedRole` converts `file_clock` ticks with `clock_cast`. It is display-only and not yet shown in the UI.
+- `ModifiedRole` converts `file_clock` ticks by offsetting against both clocks' `now()`. This works on both MSVC and libstdc++. The value is display-only and not yet shown in the UI.
 - Network-share latency, a wedged share, and storage-aware concurrency (PERF-05) are bounded by design but not measured on SMB/HDD hardware: two workers, cancellation, a pool abandoned at teardown.
 - Hidden-file display has no setting yet (UI-SETTINGS-01). Ctrl+arrow cursor-only movement is not provided.
 - Live assistive technology, high-DPI and touch input are unverified.
