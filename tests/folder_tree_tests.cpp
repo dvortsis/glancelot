@@ -674,6 +674,12 @@ void FolderTreeTests::exactDirectoryVisitsAreAtomicAndKeepErrorsLocal() {
     failedEarly.open(png);failedEarly.navigateDirectory(media.filePath("missing"));
     QTRY_VERIFY_WITH_TIMEOUT(!failedEarly.directoryPending(),15000);
     failedEarly.next();QTRY_COMPARE_WITH_TIMEOUT(failedEarly.filePath(),second,15000);
+    const auto other=make(media,"other");
+    const auto otherFirst=writePng(other,"a.png"),otherSecond=writePng(other,"b.png");
+    QVERIFY(!otherFirst.isEmpty()&&!otherSecond.isEmpty());
+    failedEarly.open(otherFirst);failedEarly.navigateDirectory(media.filePath("missing"));
+    QTRY_VERIFY_WITH_TIMEOUT(!failedEarly.directoryPending(),15000);
+    failedEarly.next();QTRY_COMPARE_WITH_TIMEOUT(failedEarly.filePath(),otherSecond,15000);
     viewer.setWindowSlot(9);viewer.navigateDirectory(empty);
     QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),15000);viewer.flushWindowPosition();
     ViewerController restored;restored.setWindowSlot(9);restored.restoreWindow();

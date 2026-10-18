@@ -385,7 +385,7 @@ struct ViewerController::Private {
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
                 else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
-                if(result.directoryFailed&&!path.isEmpty()&&nav.snapshot().current.empty())scan(path,generation);
+                if(result.directoryFailed&&!path.isEmpty())scan(path,generation);
                 if(!result.destination && !pendingNavigation && needsResort()) startResort();
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
             }
