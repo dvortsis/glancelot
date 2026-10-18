@@ -68,6 +68,22 @@ private slots:
         QVERIFY(file.open(QIODevice::ReadOnly));QCOMPARE(file.readAll(),QByteArray("{not json")); // never overwritten
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
+    void malformedVersionIsReplaceableAndOrdersRenumber() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s){s["layouts"]=QJsonObject{{"6",QJsonObject{{"version","1"}}}};}).ok());
+        PaneLayout model;model.setSlot(6);QVERIFY(!model.feedback().isEmpty());
+        QVERIFY(model.resize("tree",333));QVERIFY(model.feedback().isEmpty());
+        PaneLayout restarted;restarted.setSlot(6);QCOMPARE(restarted.pane("tree")["extent"].toInt(),333);
+        // Inserting before an occupied position renumbers instead of tying.
+        QVERIFY(restarted.move("topbar","left",0));
+        QCOMPARE(restarted.pane("topbar")["order"].toInt(),0);QCOMPARE(restarted.pane("tree")["order"].toInt(),1);
+        QVERIFY(restarted.move("tree","left",0)); // "earlier" now swaps with the neighbour
+        QCOMPARE(restarted.pane("tree")["order"].toInt(),0);QCOMPARE(restarted.pane("topbar")["order"].toInt(),1);
+        PaneLayout disk;disk.setSlot(6);
+        QCOMPARE(disk.pane("tree")["order"].toInt(),0);QCOMPARE(disk.pane("topbar")["order"].toInt(),1);
+        QCOMPARE(disk.pane("topbar")["region"].toString(),QString("left"));
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
     void invalidAndUnknownFields() {
         QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         QVERIFY(glancelot::updateSettings([](QJsonObject& s) {

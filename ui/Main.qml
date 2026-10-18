@@ -22,12 +22,27 @@ ApplicationWindow {
     property var resizePreview: ({})
     readonly property var workspace: {
         const state=JSON.parse(JSON.stringify(paneLayout.panes))
-        const active={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible&&(viewer.treePinned||state.tree.frozen||hudVisible||frameless),
-            topbar:state.topbar.visible&&(gridMode||hudVisible||frameless||state.topbar.frozen),
-            statusbar:state.statusbar.visible&&(gridMode||hudVisible||state.statusbar.frozen),
-            filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0&&(hudVisible||frameless||state.filmstrip.frozen),
+        // Only one content pane shows until GRID-PREVIEW-01, so it fills the center wherever it is saved
+        // (its saved edge placement is kept for the combined view).
+        state[gridMode?"grid":"preview"].region="center"
+        const all=["topbar","statusbar","filmstrip","tree","preview","grid"]
+        // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
+        // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
+        const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
+            topbar:state.topbar.visible, statusbar:state.statusbar.visible,
+            filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
             preview:!gridMode,grid:gridMode}
-        const ids=["topbar","statusbar","filmstrip","tree","preview","grid"].filter(id=>active[id])
+        const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
+            topbar:shown.topbar&&(gridMode||state.topbar.frozen),
+            statusbar:shown.statusbar&&(gridMode||state.statusbar.frozen),
+            filmstrip:shown.filmstrip&&state.filmstrip.frozen,
+            preview:shown.preview,grid:shown.grid}
+        const active={tree:shown.tree&&(docked.tree||hudVisible||frameless),
+            topbar:shown.topbar&&(docked.topbar||hudVisible||frameless),
+            statusbar:shown.statusbar&&(docked.statusbar||hudVisible),
+            filmstrip:shown.filmstrip&&(docked.filmstrip||hudVisible||frameless),
+            preview:shown.preview,grid:shown.grid}
+        const ids=all.filter(id=>active[id])
         function horizontal(id) { return ["top","bottom"].indexOf(state[id].region)>=0 }
         function overlay(id) { return id==="tree"&&(width<720||!viewer.treePinned)&&["left","right"].indexOf(state[id].region)>=0 }
         function minimum(id) {
@@ -36,9 +51,11 @@ ApplicationWindow {
             if(id==="filmstrip")return horizontal(id)?68:100
             return 120
         }
-        function group(horizontalAxis) { return ids.filter(id=>state[id].region!=="center"&&!overlay(id)&&horizontal(id)===horizontalAxis) }
-        const reservedCenter=ids.some(id=>overlay(id))?320:120
-        let recovered=group(true).reduce((n,id)=>n+minimum(id),0)>height-120 || group(false).reduce((n,id)=>n+minimum(id),0)>width-reservedCenter
+        function group(list,horizontalAxis) { return list.filter(id=>state[id].region!=="center"&&!overlay(id)&&horizontal(id)===horizontalAxis) }
+        const shownIds=all.filter(id=>shown[id])
+        const reservedCenter=shownIds.some(id=>overlay(id))?320:120
+        // Decided on the HUD-independent set so recovery cannot flip on and off with auto-hide.
+        let recovered=group(shownIds,true).reduce((n,id)=>n+minimum(id),0)>height-120 || group(shownIds,false).reduce((n,id)=>n+minimum(id),0)>width-reservedCenter
         if(recovered) {
             const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640]}
             for(const id of Object.keys(defaults)) {
@@ -46,32 +63,39 @@ ApplicationWindow {
             }
         }
         function preferred(id) { return Math.max(minimum(id),!recovered&&resizePreview[id]!==undefined?resizePreview[id]:state[id].extent) }
-        const extents={}
-        for(const axis of [true,false]) {
-            const members=group(axis),budget=axis?height-120:width-(ids.some(id=>overlay(id))?320:120)
-            const base=members.reduce((n,id)=>n+minimum(id),0)
-            const extra=members.reduce((n,id)=>n+preferred(id)-minimum(id),0)
-            const scale=Math.min(1,Math.max(0,budget-base)/Math.max(1,extra))
-            for(const id of members)extents[id]=minimum(id)+(preferred(id)-minimum(id))*scale
-        }
-        let bounds={x:0,y:0,width:width,height:height},result={}
-        ids.sort((a,b)=>state[a].order-state[b].order)
-        for(const region of ["top","bottom","left","right"]) {
-            for(const id of ids.filter(id=>state[id].region===region&&!overlay(id))) {
-                const h=horizontal(id),extent=extents[id]
-                const rect={x:bounds.x,y:bounds.y,width:h?bounds.width:extent,height:h?extent:bounds.height}
-                if(region==="bottom")rect.y+=bounds.height-extent
-                if(region==="right")rect.x+=bounds.width-extent
-                result[id]=rect
-                if(h){if(region==="top")bounds.y+=extent;bounds.height-=extent}
-                else{if(region==="left")bounds.x+=extent;bounds.width-=extent}
+        // Stacks edge panes outward-in by order (ties keep the stable id order) and returns the remaining center.
+        function place(list) {
+            const extents={}
+            for(const axis of [true,false]) {
+                const members=group(list,axis),budget=axis?height-120:width-reservedCenter
+                const base=members.reduce((n,id)=>n+minimum(id),0)
+                const extra=members.reduce((n,id)=>n+preferred(id)-minimum(id),0)
+                const scale=Math.min(1,Math.max(0,budget-base)/Math.max(1,extra))
+                for(const id of members)extents[id]=minimum(id)+(preferred(id)-minimum(id))*scale
             }
+            const bounds={x:0,y:0,width:width,height:height},rects={}
+            const ordered=list.slice().sort((a,b)=>state[a].order-state[b].order||all.indexOf(a)-all.indexOf(b))
+            for(const region of ["top","bottom","left","right"]) {
+                for(const id of ordered.filter(id=>state[id].region===region&&!overlay(id))) {
+                    const h=horizontal(id),extent=extents[id]
+                    const rect={x:bounds.x,y:bounds.y,width:h?bounds.width:extent,height:h?extent:bounds.height}
+                    if(region==="bottom")rect.y+=bounds.height-extent
+                    if(region==="right")rect.x+=bounds.width-extent
+                    rects[id]=rect
+                    if(h){if(region==="top")bounds.y+=extent;bounds.height-=extent}
+                    else{if(region==="left")bounds.x+=extent;bounds.width-=extent}
+                }
+            }
+            return {rects:rects,bounds:bounds}
         }
+        const live=place(ids),bounds=place(all.filter(id=>docked[id])).bounds
+        const result=live.rects
         for(const id of ids.filter(id=>state[id].region==="center"))result[id]=Object.assign({},bounds)
         let content=Object.assign({},result[gridMode?"grid":"preview"]||bounds)
         for(const id of ids.filter(id=>overlay(id))) {
-            const extent=Math.min(preferred(id),Math.max(0,bounds.width-120))
-            result[id]={x:state[id].region==="right"?bounds.x+bounds.width-extent:bounds.x,y:bounds.y,width:extent,height:bounds.height}
+            // Overlays sit beside the bars that are visible now, not only the docked ones.
+            const area=live.bounds,extent=Math.min(preferred(id),Math.max(0,area.width-120))
+            result[id]={x:state[id].region==="right"?area.x+area.width-extent:area.x,y:area.y,width:extent,height:area.height}
             const cover=result[id]
             const intersection=Math.max(0,Math.min(content.x+content.width,cover.x+cover.width)-Math.max(content.x,cover.x))
             if(cover.y<content.y+content.height && cover.y+cover.height>content.y && intersection>0) {
@@ -115,7 +139,8 @@ ApplicationWindow {
     palette.toolTipText: Theme.background
     palette.link: Theme.primary
 
-    onLayoutEditingChanged: { if(layoutEditing)wakeHud();else resizePreview=({}) }
+    // Leaving arrangement returns keyboard focus to content so no hidden grip keeps editing the layout.
+    onLayoutEditingChanged: { if(layoutEditing)wakeHud();else { resizePreview=({}); if(!modalOpen)Qt.callLater(focusContent) } }
     Connections { target: paneLayout; function onChanged() { if(paneLayout.locked)app.resizePreview=({}) } }
     function wakeHud() { hudVisible = true; hideHud.restart() }
     function focusWithin(item) {
@@ -156,7 +181,7 @@ ApplicationWindow {
         else if (id === "rotate") canvas.rotateClockwise()
         else if (id === "background") canvas.cycleBackground()
         else if (id === "frameless") { frameless = !frameless; wakeHud() }
-        else if (id === "arrange-panes") { if (!paneLayout.locked) layoutEditing = true }
+        else if (id === "arrange-panes") layoutEditing = true // a locked layout explains itself inside arrangement
         else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "quit") close()
@@ -180,7 +205,8 @@ ApplicationWindow {
     }
     Shortcut {
         sequence: "Escape"
-        enabled: !app.modalOpen && (app.layoutEditing || !app.editingText)
+        // Text fields own Escape (the address field reverts, then leaves arrangement itself).
+        enabled: !app.modalOpen && !app.editingText
         onActivated: {
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }

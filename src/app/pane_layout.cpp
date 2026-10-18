@@ -1,9 +1,17 @@
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/settings_file.hpp"
 #include <QJsonArray>
+#include <algorithm>
 #include <cmath>
 
 namespace {
+// Only an integer schema above ours is "newer" and preserved; anything else malformed is replaceable.
+bool newerVersion(const QJsonObject& layout) {
+    const auto value=layout.value("version");
+    return value.isDouble()&&std::floor(value.toDouble())==value.toDouble()&&value.toDouble()>1;
+}
+bool currentVersion(const QJsonObject& layout){return layout.value("version").isDouble()&&layout.value("version").toDouble()==1;}
+const QStringList& stableOrder() {static const QStringList ids{"topbar","statusbar","filmstrip","tree","preview","grid"};return ids;}
 bool regionValid(const QString& value) {
     return QStringList{"left","right","top","bottom","center"}.contains(value);
 }
@@ -40,7 +48,8 @@ void PaneLayout::load() {
             const auto saved=savedValue.toObject();
             if((!layoutsValue.isUndefined()&&!layoutsValue.isObject())||(!savedValue.isUndefined()&&!savedValue.isObject()))
                 feedback_="Layout settings are invalid; defaults are active.";
-            if(!saved.isEmpty()&&saved.value("version").toInt()!=1)feedback_="Unsupported layout version; defaults are active.";
+            if(!saved.isEmpty()&&newerVersion(saved))feedback_="Unsupported layout version; defaults are active.";
+            else if(!saved.isEmpty()&&!currentVersion(saved))feedback_="Layout settings are invalid; defaults are active.";
             else {
                 locked_=saved.value("locked").toBool(false);
                 const auto center=saved.value("center").toObject();
@@ -61,8 +70,9 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
     const auto result=glancelot::updateSettings([&](QJsonObject& settings) {
         auto layouts=settings.value("layouts").toObject();
         auto layout=layouts.value(QString::number(slot_)).toObject();
-        // Never downgrade or overwrite a newer layout schema.
-        if(!layout.isEmpty()&&layout.value("version").toInt()!=1){unsupported=true;return;}
+        // Never downgrade or overwrite a newer layout schema; a malformed one is replaced.
+        if(!layout.isEmpty()&&newerVersion(layout)){unsupported=true;return;}
+        if(!layout.isEmpty()&&!currentVersion(layout))layout=QJsonObject{};
         layout["version"]=1;
         if(lockOnly)layout["locked"]=locked_;
         else if(id=="_center") {
@@ -81,6 +91,12 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
                 auto center=layout.value("center").toObject();
                 for(auto it=center_.begin();it!=center_.end();++it)center[it.key()]=it.value();
                 layout["center"]=center;
+            } else if(id=="_panes") { // several panes at once: {paneId: {field: value}}
+                for(auto pane=fields.begin();pane!=fields.end();++pane) {
+                    auto entry=stored.value(pane.key()).toObject();const auto changes=pane.value().toObject();
+                    for(auto it=changes.begin();it!=changes.end();++it)entry[it.key()]=it.value();
+                    stored[pane.key()]=entry;
+                }
             } else {
                 auto entry=stored.value(id).toObject();
                 for(auto it=fields.begin();it!=fields.end();++it)entry[it.key()]=it.value();
@@ -109,7 +125,31 @@ bool PaneLayout::move(const QString& id,const QString& region,int order) {
         feedback_="The center is reserved for image and grid content. Choose an edge for this pane.";
         emit changed();return false;
     }
-    return edit(id,{{"region",region},{"order",order}},true);
+    if(!panes_.contains(id))return false;
+    if(locked_||panes_.value(id).toObject().value("frozen").toBool()) {
+        feedback_=locked_?"Unlock the layout before changing panes.":"Unfreeze this pane before changing its layout.";emit changed();return false;
+    }
+    // Insert at `order` among the region's other panes, then renumber 0..n-1 so orders never tie and
+    // "earlier/later" always has an effect when there is a neighbour.
+    QStringList members;
+    for(const auto& key:panes_.keys())
+        if(key!=id&&panes_.value(key).toObject().value("region").toString()==region)members<<key;
+    std::sort(members.begin(),members.end(),[&](const QString& a,const QString& b) {
+        const int oa=panes_.value(a).toObject().value("order").toInt(),ob=panes_.value(b).toObject().value("order").toInt();
+        return oa!=ob?oa<ob:stableOrder().indexOf(a)<stableOrder().indexOf(b);
+    });
+    members.insert(std::min<qsizetype>(order,members.size()),id);
+    QJsonObject changes;
+    for(int i=0;i<members.size();++i) {
+        auto pane=panes_.value(members[i]).toObject();QJsonObject fields;
+        if(members[i]==id&&pane.value("region").toString()!=region)fields["region"]=region;
+        if(pane.value("order").toInt()!=i)fields["order"]=i;
+        if(fields.isEmpty())continue;
+        for(auto it=fields.begin();it!=fields.end();++it)pane[it.key()]=it.value();
+        panes_[members[i]]=pane;changes[members[i]]=fields;
+    }
+    if(changes.isEmpty())return true;
+    feedback_.clear();persist("_panes",changes);emit changed();return true;
 }
 bool PaneLayout::resize(const QString& id,double extent) {
     if(!std::isfinite(extent)||extent<32||extent>4096)return false;
