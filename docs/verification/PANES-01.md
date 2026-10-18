@@ -1,6 +1,6 @@
 # PANES-01 verification
 
-Branch `agent/panes`, worktree `.worktrees/panes`, build `build-panes`. State: implementation complete; independent review and Linux functional checks pending. Contract: docs/PANES-PLAN.md.
+Branch `agent/panes`, worktree `.worktrees/panes`, build `build-panes`. State: implementation complete; Linux checks passed; independent review pending. Contract: docs/PANES-PLAN.md.
 
 Adds the validated `PaneLayout` model (six pane IDs, dock region/order/extent/visible/frozen, center split, global lock) with per-slot persistence via field-level merges under the settings writer lock. It also adds native region hosts with responsive recovery that never persists, pointer and keyboard arrangement, Settings controls, and the remappable commands Arrange panes, Lock or unlock workspace layout, and Reset workspace layout. These commands start unbound so they cannot collide with stored shortcuts, and they are discoverable through command search. While locked, the top bar shows a "Layout locked" indicator that unlocks when activated. Command search marks Arrange panes "Layout locked" while the layout is locked.
 
@@ -24,6 +24,7 @@ Adds the validated `PaneLayout` model (six pane IDs, dock region/order/extent/vi
 ## Evidence
 
 - Windows, branch with main merged: `scripts/build.ps1 -BuildDir build-panes -QtRoot C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64 -Test` passed 9/9 in 67.48s.
+- Linux `5c3f092`: `docker build -t glancelot-browser:panes .` in WSL Ubuntu (Qt 6.8.3, full CTest inside the image build) passed 9/9 in 55.46s, including `pane_layout` and `folder_grid` with the offscreen software scene graph. This verifies interaction logic, not GPU output.
 - New UI case run directly: `grid_ui_tests paneCommandsLockIndicatorAndDragCancellation` passed 3/3 (with init/cleanup) in 448ms.
 - Opt-in captures (`GLANCELOT_REVIEW_CAPTURE=1`) land in `build-panes/.cache/panes-matrix`, `panes-ui/tree-*` and `panes-ui/locked-*`. The lead checked the locked indicator in dark and light at 1180×780.
 
@@ -32,4 +33,3 @@ Adds the validated `PaneLayout` model (six pane IDs, dock region/order/extent/vi
 - No UI text-scale or reduced-motion setting exists yet (UI-SETTINGS-01). Pane arrangement uses no animation, so reduced motion is not affected. Large-label behavior is verified only through toolbar reflow into vertical regions.
 - Detached floating windows are excluded (MONITOR-CUSTOM-01).
 - Physical mixed-DPI, multi-monitor hardware and live assistive technology are unverified.
-- Linux functional checks are pending. Run them through `wsl -d Ubuntu -- bash -lc docker`.
