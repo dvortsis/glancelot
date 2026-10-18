@@ -150,10 +150,12 @@ struct DirectoryEntryModel::Private {
         const int oldCount = int(rows.size());
         accessible = listing.accessible; truncated = listing.truncated;
         merge(std::move(listing));
-        // Selection, anchor and cursor are keys: keep those that still exist, drop the rest.
-        for (auto it = selected.begin(); it != selected.end();) { if (index.contains(*it)) ++it; else it = selected.erase(it); }
-        if (!index.contains(anchorKey)) anchorKey.clear();
-        if (!index.contains(cursorKey)) cursorKey.clear();
+        // Selection, anchor and cursor are keys: keep those that still exist, drop the rest. A failed listing of the
+        // same folder (a transient share or permission error) proves nothing about which entries exist, so the keys
+        // are kept for the next successful listing, as setActive(false) does. They are not counted meanwhile.
+        if (accessible) for (auto it = selected.begin(); it != selected.end();) { if (index.contains(*it)) ++it; else it = selected.erase(it); }
+        if (accessible && !index.contains(anchorKey)) anchorKey.clear();
+        if (accessible && !index.contains(cursorKey)) cursorKey.clear();
         setLoading(false);
         if (int(rows.size()) != oldCount) emit q->countChanged();
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
@@ -352,7 +354,7 @@ void DirectoryEntryModel::clearSelection() {
     d->changedRows(previous, {SelectedRole});
     emit selectionChanged();
 }
-int DirectoryEntryModel::selectedCount() const { return int(d->selected.size()); }
+int DirectoryEntryModel::selectedCount() const { return d->accessible ? int(d->selected.size()) : 0; }
 int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
     QStringList paths;

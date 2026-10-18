@@ -211,6 +211,23 @@ private slots:
         touch(dir.filePath("x.png"));
         model.setDirectory(dir.path()); QVERIFY(model.accessible()); QVERIFY(settle(model)); QCOMPARE(model.count(), 1);
     }
+    // A transient failure of the same folder (share blip, permission flicker) must not discard the selection.
+    void transientFailureKeepsSelectionForRecovery() {
+        QTemporaryDir root; QVERIFY(QDir(root.path()).mkpath("album"));
+        const QString album = root.filePath("album"), away = root.filePath("away");
+        for (const char* n : {"a.png", "b.png", "c.txt"}) touch(album + "/" + n);
+        DirectoryEntryModel model; model.setActive(true); model.setDirectory(album); QVERIFY(settle(model));
+        model.select(0); model.select(2, DirectoryEntryModel::Toggle);
+        QCOMPARE(model.selectedCount(), 2);
+        QVERIFY(QDir().rename(album, away));
+        model.refresh(); QVERIFY(settle(model));
+        QVERIFY(!model.accessible()); QCOMPARE(model.count(), 0);
+        QCOMPARE(model.selectedCount(), 0); QVERIFY(model.selectedPaths().isEmpty()); // nothing actionable while failed
+        QVERIFY(QDir().rename(away, album));
+        model.refresh(); QVERIFY(settle(model));
+        QVERIFY(model.accessible()); QCOMPARE(model.count(), 3);
+        QCOMPARE(model.selectedCount(), 2); QCOMPARE(model.cursorRow(), 2);
+    }
     void currentImageRole() {
         QTemporaryDir dir; for (const char* n : {"a.png", "b.png"}) touch(dir.filePath(n));
         DirectoryEntryModel model; model.setActive(true); model.setDirectory(dir.path()); QVERIFY(settle(model));
