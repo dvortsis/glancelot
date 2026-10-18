@@ -567,12 +567,13 @@ ApplicationWindow {
         Rectangle {
             anchors.centerIn: parent
             visible: splitHandle.editable && (splitMouse.containsMouse || splitMouse.pressed || splitHandle.activeFocus)
-            width: splitHandle.horizontal ? Theme.gapXs : 2 * Theme.iconSize
-            height: splitHandle.horizontal ? 2 * Theme.iconSize : Theme.gapXs
-            radius: Theme.gapXxs
-            color: splitMouse.pressed ? Theme.primary : Theme.muted
-            border.width: splitHandle.activeFocus ? Theme.focusWidth : 0
-            border.color: Theme.focusRing
+            // Keyboard focus enlarges the grip and draws it in the focus colour so the active divider is unmistakable.
+            readonly property int length: splitHandle.activeFocus ? 3 * Theme.iconSize : 2 * Theme.iconSize
+            readonly property int thickness: splitHandle.activeFocus ? Theme.gapXs + Theme.gapXxs : Theme.gapXs
+            width: splitHandle.horizontal ? thickness : length
+            height: splitHandle.horizontal ? length : thickness
+            radius: thickness / 2
+            color: splitHandle.activeFocus ? Theme.focusRing : splitMouse.pressed ? Theme.primary : Theme.muted
         }
         MouseArea {
             id: splitMouse
@@ -935,7 +936,7 @@ ApplicationWindow {
                 readonly property var current: app.contentModes.find(mode => mode.id === paneLayout.contentMode) || app.contentModes[0]
                 iconName: current.icon
                 text: current.label
-                tip: "Change view: photo, grid or both"
+                tip: modeMenu.visible ? "" : "Change view: photo, grid or both"
                 Accessible.role: Accessible.ButtonMenu
                 Accessible.name: "View: " + current.tip + ". Change view"
                 onClicked: modeMenu.opened ? modeMenu.close() : modeMenu.open()
@@ -943,9 +944,10 @@ ApplicationWindow {
                     id: modeMenu
                     objectName: "contentModeMenuPopup"
                     y: parent.height + Theme.gapXs
+                    margins: Theme.gapSm // kept inside narrow windows
                     padding: Theme.gapXs
                     background: Rectangle {
-                        implicitWidth: 248
+                        implicitWidth: 344 // the longest row (name and shortcut) never elides
                         radius: Theme.radiusControl
                         color: Theme.surface
                         border.width: Theme.borderWidth
@@ -1055,14 +1057,14 @@ ApplicationWindow {
             }
             UiButton { text: "Next"; visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
             BarLabel {
-                visible: app.gridMode || app.combinedMode
+                visible: app.workspace._gridShown
                 font.features: { "tnum": 1 }
                 text: photoGrid.selectedCount > 1 ? photoGrid.selectedCount + " selected"
                     : photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " of " + fileGrid.count : "No selection"
                 Layout.leftMargin: Theme.gapXs
             }
             BarLabel {
-                visible: (app.gridMode || app.combinedMode) && app.width > 680
+                visible: app.workspace._gridShown && app.width > 680
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
@@ -1071,7 +1073,7 @@ ApplicationWindow {
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }
-            UiButton { objectName: "gridOpenSelected"; visible: app.gridMode || app.combinedMode; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
+            UiButton { objectName: "gridOpenSelected"; visible: app.workspace._gridShown; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
             BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; Layout.rightMargin: Theme.gapSm }
             UiButton {
                 visible: !app.gridMode

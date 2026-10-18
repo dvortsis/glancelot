@@ -1673,6 +1673,7 @@ private slots:
         for (const QString mode : {"dark", "light"}) {
             h.theme.setMode(mode);
             QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTRY_VERIFY(h.view()->hasActiveFocus());
+            h.window->requestActivate(); QVERIFY(QTest::qWaitForWindowActive(h.window)); // focus rings show only in an active window
             QTest::keyClick(h.window, Qt::Key_Home); QTRY_COMPARE(previewState(h), QString("folder")); QVERIFY(shot("state-folder-" + mode));
             QTest::keyClick(h.window, Qt::Key_End); QTRY_COMPARE(previewState(h), QString("unsupported")); QVERIFY(shot("state-unsupported-" + mode));
             h.fileGrid.clearSelection();

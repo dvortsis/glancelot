@@ -24,7 +24,8 @@ Rectangle {
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
     // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
-    readonly property int columns: Math.max(1, Math.min(12, Math.floor((grid.width - 24) / (compact ? 136 : 176))))
+    // Measured on the full view width so a half-width combined pane (about 360 px) still gets two columns.
+    readonly property int columns: Math.max(1, Math.min(12, Math.floor(grid.width / (compact ? 136 : 176))))
     readonly property int count: grid.count
     readonly property int thumbEdge: 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
