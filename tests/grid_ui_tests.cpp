@@ -84,6 +84,28 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void auditFailedCurrentPhotoCanBeRetriedFromGrid() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QFile broken(media.filePath("broken.png")); QVERIFY(broken.open(QIODevice::WriteOnly)); broken.write("not a png"); broken.close();
+        Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("broken.png"));
+        QTRY_COMPARE(h.viewer.fileCount(),1); QTRY_VERIFY(!h.viewer.loading());
+        QVERIFY(!h.viewer.status().isEmpty());
+        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(),0);
+        QVERIFY(QMetaObject::invokeMethod(h.grid(),"activate"));
+        QVERIFY2(h.viewer.loading(),"Grid activation must retry a failed current path");
+        QTRY_VERIFY(!h.viewer.loading());
+    }
+    void auditTallGridQueueBound() {
+        Harness h; QVERIFY(h.window); h.fill(10000); h.showGrid();
+        QTRY_VERIFY(h.view()->hasActiveFocus());
+        // Run this case with QT_QPA_PLATFORM=offscreen to bypass native desktop clamping.
+        h.window->resize(7680,6000);
+        QTest::qWait(500);
+        if (h.grid()->height()<5000) QSKIP("Native window manager clamped the window; rerun with QT_QPA_PLATFORM=offscreen");
+        const int live=h.grid()->property("liveDelegateCount").toInt();
+        qInfo()<<"grid dimensions"<<h.grid()->width()<<h.grid()->height()<<"live"<<live;
+        QVERIFY2(live<=256,qPrintable(QString("live delegates=%1 exceed thumbnail queue").arg(live)));
+    }
     void virtualizedAndHidden() {
         Harness h; QVERIFY(h.window); h.fill(10000, 0); h.showGrid();
         QTRY_COMPARE(h.view()->property("count").toInt(), 10000);
@@ -202,3 +224,7 @@ private:
 
 QTEST_MAIN(GridUiTests)
 #include "grid_ui_tests.moc"
+
+
+
+

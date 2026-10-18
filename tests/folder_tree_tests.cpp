@@ -67,6 +67,8 @@ class FolderTreeTests final : public QObject {
     Q_OBJECT
 private slots:
     void init() { QTest::failOnWarning(QRegularExpression("QProcess: Destroyed while process.*still running.*")); }
+    void auditRootRaiseKeepsMarker();
+    void auditQueueIsBounded();
     void childFoldersUsesNaturalOrderAndOneLevel();
     void lazyListingExpandsOneLevelAtATime();
     void collapseDiscardsChildrenAndReexpandRelists();
@@ -507,5 +509,26 @@ void FolderTreeTests::treeSettingsPersistAndDoNotDisplaceBindings() {
     qunsetenv("GLANCELOT_CONFIG_DIR");
 }
 
+void FolderTreeTests::auditRootRaiseKeepsMarker() {
+ QTemporaryDir d; make(d,"a/b"); FolderTreeModel m;
+ m.sync(snapshot(d.filePath("a/b"), d.filePath("a/b")));
+ QTRY_COMPARE(m.pendingLoads(),0); QVERIFY(m.currentRow()>=0);
+ m.sync(snapshot(d.filePath("a"),d.filePath("a/b")));
+ QTRY_COMPARE(m.pendingLoads(),0); QVERIFY(m.currentRow()>=0);
+ m.sync(snapshot(d.path(),d.filePath("a/b")));
+ QTRY_COMPARE(m.pendingLoads(),0);
+ QVERIFY2(m.currentRow()>=0,"root raise lost current folder marker");
+}
+void FolderTreeTests::auditQueueIsBounded() {
+ QTemporaryDir d; std::atomic<bool> release{false}; FolderTreeModel m;
+ m.setLister([&](const fs::path&,std::stop_token){while(!release) QThread::msleep(1); return glancelot::FolderListing{};});
+ m.sync(snapshot(d.path(),d.path()));
+ for(int i=0;i<1000;++i){m.collapse(0); m.expand(0);}
+ const int queued=m.pendingLoads(); release=true;
+ QTRY_COMPARE(m.pendingLoads(),0);
+ QVERIFY2(queued<=256,qPrintable(QString("unbounded accepted jobs=%1").arg(queued)));
+}
 QTEST_MAIN(FolderTreeTests)
 #include "folder_tree_tests.moc"
+
+
