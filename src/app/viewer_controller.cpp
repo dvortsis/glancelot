@@ -374,7 +374,7 @@ struct ViewerController::Private {
             auto stored=object.value("sort").toObject();
             if(next.key!=previous.key)stored["key"]=sortKeyName(next.key);
             if(next.descending!=previous.descending)stored["descending"]=next.descending;
-            if(next.seed!=previous.seed)stored["seed"]=double(next.seed);
+            if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))stored["seed"]=double(next.seed);
             object["sort"]=stored;
         }).ok();
         if (nav.snapshot().current.empty()) {
