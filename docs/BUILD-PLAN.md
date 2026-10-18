@@ -1,12 +1,14 @@
 # Glancelot: product, architecture, and delivery plan
 
-Planning baseline: October 17, 2026. Status: proposed, not an implementation commitment.
+Planning baseline: October 17, 2026. This is the living product roadmap. The architecture and acceptance budgets below remain targets where implementation or qualification evidence is absent.
 
-Approved roadmap amendment, October 17, 2026: the next implementation milestone is **M2.1: folder tree and window resume**. Prioritize the collapsible folder navigation tree before the remaining M3 browsing features. Add persistent last-folder/last-image positions for window slots 1, 2, 3, and so on, assigned in window-opening order and restored across complete application exits. This amendment supersedes the earlier M3 scheduling of the core tree and the optional treatment of browsing-position persistence; the original supplied feature specification remains unchanged.
+Approved roadmap amendment, October 17, 2026: the approved sequence inserted **M2.1: folder tree and window resume** before M3. Prioritize the collapsible folder navigation tree before the remaining M3 browsing features. Add persistent last-folder/last-image positions for window slots 1, 2, 3, and so on, assigned in window-opening order and restored across complete application exits. This amendment supersedes the earlier M3 scheduling of the core tree and the optional treatment of browsing-position persistence; the original supplied feature specification remains unchanged.
 
 Build a native, local-first Windows/Linux photo viewer whose distinguishing strengths are predictable folder traversal, fully configurable interaction, accurate image display, and a quiet interface. Make those strengths dependable before pursuing the entire format and diagnostics wishlist.
 
-The workspace was empty when inspected. This plan starts from a new application. No application code, dependency installation, license adoption, repository creation, or publishing is included in this planning task.
+The original planning task began in an empty workspace. The repository now contains a C++20 / Qt 6.8.3 Windows alpha, local toolchain, GPL-3.0-or-later license, tests, and portable packaging. Treat that earlier planning baseline as history rather than a statement of current delivery.
+
+Current delivery: JPEG/PNG canvas viewing, deterministic traversal, remappable keyboard commands, themes, worker-backed filmstrip, lazy folder tree, numbered-window resume, and folder grid are implemented on Windows. Name/modified/size/seeded-shuffle sorting is under final audit and integration. See [the live work queue](WORK-QUEUE.yaml), [agent execution plan](AGENT-BUILD-PLAN.md), and [whole-code audit](verification/CLAUDE-AUDIT.md). Neither the Windows alpha nor passing offscreen UI tests completes the Linux GUI, physical pixel/color, HDR, performance, storage, or stable-release gates.
 
 Companion documents:
 
@@ -436,8 +438,8 @@ Effort estimates assume a senior full-time maintainer and are planning ranges, n
 | M0: feasibility and product contracts | 3-4 engineer-weeks | Qt/GPU startup and 60 MP spike on both OSes; navigation oracle; DPI/color prototype; worker overhead; licensing/capability inventory; wireframes; selected stack ADR. |
 | M1: foundation | 2-3 | Reproducible builds/CI, command registry, versioned config, source/asset contracts, worker IPC/resource limits, initial package skeleton and fixture corpus. |
 | M2: daily viewer alpha | 5-7 | Shell-open JPEG/PNG; correct orientation/color baseline; full traversal/boundaries; fit/pan/zoom/loupe; basic remapping/palette; bounded cache; frameless/fullscreen; both-platform installable alpha. |
-| M2.1: folder tree and window resume — NEXT | Re-estimate from scoped agent tasks | Collapsible lazy folder tree with keyboard/toggle/pin behavior; stable first/second/etc window slots; last folder/image restored after full exit; multi-process coordination and missing-source recovery verified. |
-| M3: browsing and performance beta | 6-9; re-estimate after M2.1 | Complete the remaining HUDs, virtualized grid/filmstrip, favorites, filters/sorts, chord/hold/wheel settings, common raster expansion, RAW preview, hot reload, cache/I/O tuning; benchmark gates on reference hardware. Core folder tree and window resume already delivered in M2.1. |
+| M2.1: folder tree and window resume | Re-estimate from scoped agent tasks | Collapsible lazy folder tree with keyboard/toggle/pin behavior; stable first/second/etc window slots; last folder/image restored after full exit; multi-process coordination and missing-source recovery verified. |
+| M3: browsing and performance beta | 6-9; re-estimate after M2.1 | Complete the remaining HUDs, favorites, filters/sorts, chord/hold/wheel settings, common raster expansion, RAW preview, hot reload, cache/I/O tuning; benchmark gates on reference hardware. Core folder tree/window resume and initial filmstrip/grid are implemented on Windows; remaining platform and hardware gates stay open. |
 | M4: culling and workflow beta | 7-10 | 2-up/4-up, zoom lock, tags, tested XMP profiles, safe copy/move/trash, clipboard/external tools, metadata inspector, monitor-aware SDR validation, accessibility review. |
 | M5: release feature completion | 5-8 | AVIF/JXL stills and conditional HEIF, basic animation/TIFF pages, selected diagnostics, reference/presentation capabilities, JPEG transform safety, documented format matrix. |
 | M6: stable v1 hardening | 5-7 | Cross-platform soak, fault/fuzz findings addressed, UX retest, signed/package-tested releases, contributor documentation, no unresolved release-blocking defects. |

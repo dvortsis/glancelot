@@ -69,7 +69,7 @@ tasks:
     evidence: docs/verification/TREE-01.md; integrated build.ps1 -Test -Package 6/6 CTest targets; core tests also on Ubuntu WSL; independent review approved at e6af422 after fixes; ui-design-skills review; Windows only
     memory_action: act_mvcvo164_28dbafafef0a
     depends: [ALPHA-PACKAGE]
-    outcome: Collapsible lazy folder tree in the next implementation milestone
+    outcome: Collapsible lazy folder tree implemented on Windows; audit follow-up strengthens scheduling and root reveal
     boundaries: Core folder navigation panel only; favorites and full browser grid remain M3
     interfaces: Lead freezes folder-model and folder-selection contracts before delegated implementation
     acceptance: Lazy child expansion/collapse, current-folder selection, keyboard navigation, remappable show/hide, pin/auto-hide; ui-design-skills review in dark/light and compact layouts
@@ -112,9 +112,9 @@ tasks:
     milestone: M3
     priority: 10
     owner: grid-ui
-    state: done
+    state: integration
     commit: 822d882
-    evidence: docs/verification/GRID-01.md; integrated build.ps1 -Test -Package 8/8 CTest targets; verify-folder-grid.py 10001-file run passed; portable cleanPATH smoke passed; independent review APPROVE WITH FIXES, fixes verified by new tests (reviewer not re-run); Windows only
+    evidence: docs/verification/GRID-01.md; integrated build.ps1 -Test -Package 8/8 CTest targets; verify-folder-grid.py 10001-file run passed; portable cleanPATH smoke passed; prior review fixes were not independently re-run; final gate reopened by REVIEW-ALL-01; Windows only
     memory_action: act_mvd2jba0_ebb2f6d14794
     base_commit: a10eb08
     depends: [BROWSE-01, TREE-01, WINDOW-RESUME-01]
@@ -129,17 +129,102 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: integration
     base_commit: 6f14dcc
+    implementation_commits: [00bacab, 0950710]
+    evidence: docs/verification/CLAUDE-AUDIT.md; sort runtime and all audit fixes independently approved at 3dea7bf; integrated checks pending
     depends: [GRID-01]
     outcome: File sort modes (name, modified, size, seeded shuffle; ascending/descending) shared by next/previous, filmstrip and grid
     boundaries: Dimension/capture-date sorts need metadata parsing and stay later; folder order and cross-folder landing stay natural and independent of file sort
     interfaces: Lead-frozen core API SortKey/SortSpec/sortedImageFiles and Navigator::setSort; remappable sort and sort-reverse commands; sort settings persisted per user
     acceptance: Stable ties and missing metadata sort last; deleted-current anchor keeps next/previous deterministic; sort change keeps current image; folder order unchanged by sort; settings persisted
     verification: Core tests (all keys, both directions, ties, missing metadata, deleted anchor, cancellation, folder order invariance), controller/filmstrip order test, independent review and integrated build
+  - id: REVIEW-ALL-01
+    requirements: [SYS-02, SYS-03, SYS-05, SYS-06, NAV-06, UX-02, UX-03, UX-12]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: integration
+    memory_action: act_mvd89vdx_ef758c5be217
+    base_commit: f529d25
+    evidence: docs/verification/CLAUDE-AUDIT.md; independent 8/8 CTest (38.47s) and direct regressions pass at 3dea7bf; integrated checks pending
+    outcome: Whole-code audit, reproduced bug fixes and build-plan reconciliation
+    acceptance: Atomic settings backup/recovery; fail-closed slot ownership; bounded folder work; current-folder reveal; tall-grid request limits; valid-image no-op and failed-image retry; sort correctness and honest save status
+  - id: PLATFORM-01
+    requirements: [SYS-04, SYS-05, PERF-01, VIEW-04, COLOR-01]
+    milestone: M3
+    priority: 9
+    owner: lead
+    state: ready
+    depends: [REVIEW-ALL-01]
+    outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
+    acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
+  - id: CACHE-01
+    requirements: [PERF-04, NAV-07, SYS-02]
+    milestone: M3
+    priority: 8
+    owner: lead
+    state: ready
+    depends: [REVIEW-ALL-01]
+    outcome: Revision-validated bidirectional decoded cache and cancellable cross-folder lookahead
+    acceptance: Actual hit path; stale revisions discarded; shared admission counts current/worker/staging/cache; reversal and pressure tests
+  - id: IO-01
+    requirements: [PERF-05, SYS-02]
+    milestone: M3
+    priority: 8
+    owner: lead
+    state: ready
+    depends: [CACHE-01]
+    outcome: Shared storage-aware scheduling across current decode, previews and metadata
+    acceptance: Bounded combined allocations/jobs; current-image priority; manual override; SSD/HDD/SMB evidence rather than fixed-worker claims
+  - id: FAVORITES-01
+    requirements: [UX-03, SYS-03]
+    milestone: M3
+    priority: 7
+    owner: lead
+    state: ready
+    depends: [REVIEW-ALL-01]
+    outcome: Folder favorites in the existing tree with coordinated settings and missing-path recovery
+    acceptance: Add/remove/reorder and keyboard routes; no scans while hidden; unknown preference preservation; native UI review
+  - id: FILTER-01
+    requirements: [NAV-05, UX-02]
+    milestone: M3
+    priority: 7
+    owner: lead
+    state: ready
+    depends: [SORT-01, REVIEW-ALL-01]
+    outcome: Explicit persistent versus temporary folder-file filtering
+    acceptance: Temporary filters clear only after a successful crossing; failed search retains selection/filter; grid and traversal agree
+  - id: META-HUD-01
+    requirements: [META-01, UX-04, UX-05]
+    milestone: M3
+    priority: 6
+    owner: lead
+    state: ready
+    depends: [IO-01]
+    outcome: Bounded asynchronous metadata HUD and accurate basic image/index status
+    acceptance: No parsing on UI/render thread; generation validation; malformed/large metadata fixtures; histogram remains M5
+  - id: INPUT-02
+    requirements: [IN-01, IN-02, IN-03, IN-05]
+    milestone: M3
+    priority: 6
+    owner: lead
+    state: ready
+    depends: [REVIEW-ALL-01]
+    outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
+    acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
+  - id: FORMAT-02
+    requirements: [FMT-02, FMT-03, FMT-06, PERF-03]
+    milestone: M3
+    priority: 5
+    owner: lead
+    state: ready
+    depends: [IO-01]
+    outcome: Qualified common raster additions and RAW embedded-preview-first adapters
+    acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [SORT-01]
-priority_note: GRID-01 complete on Windows; remaining M3 items (favorites, filters/sorts, hot reload, format expansion) and platform qualification follow
+priority_order: [REVIEW-ALL-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
+priority_note: Close the whole-code audit and independent grid/sort review gates before new M3 work; preserve Windows-only scope and remaining performance/platform acceptance
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation
   - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)

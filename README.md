@@ -4,7 +4,7 @@ A native, local-first photo viewer for Windows and Linux. Built with C++20, Qt Q
 
 ## Run
 
-Windows portable package: extract `dist/Glancelot.zip` and run `bin/glancelot.exe`. Keep `glancelot-decoder.exe` beside it. Open with Ctrl+O or drop a JPEG/PNG. Right/Left browse; Page Down/Up jump folders; F fits; 1 shows actual size; R rotates the view; F11 fullscreen; Ctrl+Shift+P opens commands. Drag to pan, Ctrl+wheel zooms, right-button hold shows the loupe. Settings remap commands and wheel/boundary behavior. T toggles the filmstrip; Ctrl+B shows the folder tree. Each window remembers its own last successfully opened photo by opening order; explicit file arguments override resume.
+Windows portable package: extract `dist/Glancelot.zip` and run `bin/glancelot.exe`. Keep `glancelot-decoder.exe` beside it. Open with Ctrl+O or drop a JPEG/PNG. Right/Left browse; Page Down/Up jump folders; F fits; 1 shows actual size; R rotates the view; F11 fullscreen; Ctrl+Shift+P opens commands. Drag to pan, Ctrl+wheel zooms, right-button hold shows the loupe. Settings remap commands and wheel/boundary behavior. S cycles file order (name, modified, size, shuffle); Shift+S reverses it. T toggles the filmstrip; Ctrl+B shows the folder tree. Each window remembers its own last successfully opened photo by opening order; explicit file arguments override resume.
 
 ## Appearance
 
@@ -16,6 +16,6 @@ Preferences: normal OS application-config directory, or `GLANCELOT_CONFIG_DIR` f
 
 ## Development and status
 
-See [BUILDING.md](BUILDING.md), [execution plan](docs/AGENT-BUILD-PLAN.md), [work queue](docs/WORK-QUEUE.yaml), and [full requirements](docs/REQUIREMENTS.md). The full roadmap remains in progress. RAW, XMP culling, comparison, archive reading, HDR, calibrated monitor output and complete input-matrix support are not delivered by this alpha. Native Linux desktop/GPU behavior remains unqualified; Linux core tests run in WSL.
+See [current capabilities](docs/SUPPORTED-CAPABILITIES.md), [BUILDING.md](BUILDING.md), [execution plan](docs/AGENT-BUILD-PLAN.md), [work queue](docs/WORK-QUEUE.yaml), and [full requirements](docs/REQUIREMENTS.md). The full roadmap remains in progress. RAW, XMP culling, comparison, archive reading, HDR, calibrated monitor output and complete input-matrix support are not delivered by this alpha. Native Linux desktop/GPU behavior remains unqualified; Linux core tests run in WSL.
 
 No telemetry, cloud, mandatory catalog or automatic updates. Source under GPL-3.0-or-later; see LICENSE and THIRD_PARTY_NOTICES.md. Brand assets were supplied by the project owner; their provenance is preserved in assets/brand.

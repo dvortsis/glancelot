@@ -2,15 +2,13 @@
 
 Planning baseline: October 17, 2026. This is an implementation backlog, not work already performed. See [the master plan](BUILD-PLAN.md) for product boundaries and [the requirement matrix](REQUIREMENTS.md) for IDs.
 
-## Current next implementation priority (approved amendment)
+## Current status and next work
 
-The initial bootstrap/alpha work below remains the historical feasibility sequence. After integrating the filmstrip already in progress, the next milestone is **M2.1: folder tree and window resume**, ahead of the remaining M3 browsing features:
+The bootstrap sequence and estimates below are the historical feasibility backlog. Windows now has the initial JPEG/PNG alpha, filmstrip, folder tree, window slots/resume, and folder grid. The full audit is closing correctness and review gaps before further M3 expansion; name/modified/size/shuffle sorting is included in that integration. See [WORK-QUEUE.yaml](WORK-QUEUE.yaml) and [CLAUDE-AUDIT.md](verification/CLAUDE-AUDIT.md) for exact commits and evidence.
 
-1. **TREE-01 / UX-03:** collapsible left folder tree with lazy child expansion, folder selection, current-folder indication, keyboard access and remappable show/hide plus pin/auto-hide behavior. Apply relevant ui-design-skills; validate theme and compact-window behavior. Favorites can follow in M3.
-2. **WINDOW-SLOTS-01 / UX-12:** stable first/second/etc window-opening-order slots and coordinated, atomic per-slot storage across independent processes. Closing windows out of order does not rename slots; reset opening order only after the entire application has exited.
-3. **WINDOW-RESUME-01 / UX-12:** persist each slot's own last folder/image during browsing and on close/exit; restore it when that numbered window is next opened. Keep unopened slots, honor explicit file opens, and recover gracefully from missing/inaccessible folders/images without overwriting saved locations or other preferences.
+The approved M2.1 sequence was TREE-01 -> WINDOW-SLOTS-01 -> WINDOW-RESUME-01. Those Windows features preserve slot ownership across close order, retain unopened positions, honor explicit file opens, and use atomic coordinated settings. They do not automatically reopen all remembered windows.
 
-Do not automatically open all previously used windows. Validate two or more different locations across full shutdown/restart, reverse close order, sort changes, single-window later sessions, concurrent launches and interrupted writes. These are planned tasks, not delivered behavior.
+Next bounded work is platform qualification and the remaining M3 foundations: revision-validated cache/lookahead, shared I/O admission, favorites, filters, metadata HUDs, richer input contexts, and qualified raster/RAW previews. The live queue owns priority and implementation state. M0/M2 requirements for Linux GUI, mixed-DPI/ICC/HDR, reference-hardware performance, fresh-machine installs, and accessibility are still open; implementation on one workstation does not satisfy them.
 
 ## M0 goal and budget
 

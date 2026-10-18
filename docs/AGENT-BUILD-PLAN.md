@@ -8,15 +8,15 @@ Task packet: ID/requirements; outcome; dependencies/base commit; owned files/exc
 
 Waves: (0) toolchain/contracts/fixtures; (1) isolated decode + GPU/SDR/DPI proof; (2) daily viewer alpha; (3) browsing/HUD/RAW; (4) culling/XMP/safe file operations; (5) qualified formats/diagnostics; (6) hardening/release; (7) archives/motion/HDR expansions. Each wave ends with a runnable artifact and evidence. Linux hardware claims remain unverified until measured; WSL/VM only validates corresponding capabilities.
 
-## Approved next milestone: M2.1 folder tree and window resume
+## Approved M2.1 sequence and preserved acceptance gates
 
-The user confirmed this reprioritization on October 17, 2026. Finish integration/review of the already-started filmstrip, then prioritize the collapsible folder tree before starting additional M3 feature work. The tree must not wait for favorites, a full grid, RAW or the other HUDs. Use relevant ui-design-skills for the Qt/QML tree and its independent UI review.
+The user confirmed this reprioritization on October 17, 2026. The filmstrip, tree and window-session slices are now implemented on Windows; the following records the approved order and acceptance contract. The tree must not wait for favorites, a full grid, RAW or the other HUDs. Use relevant ui-design-skills for the Qt/QML tree and its independent UI review.
 
 Execution order: TREE-01 (lazy collapsible folder panel), WINDOW-SLOTS-01 (stable numbered window ownership and coordinated storage), then WINDOW-RESUME-01 (save and restore each slot's last folder/image). TREE-01 and slot/storage foundations may run in the two implementation lanes after the lead freezes their interfaces; restoration depends on those slot contracts. Only the lead edits shared contracts and integrates.
 
 Slot semantics: first window opened is slot 1, second is slot 2, etc. Keep assignments fixed despite close order; keep saved locations for closed and unopened slots. After full application exit, reset the opening-order counter and restore each slot only when its corresponding window is opened. Do not spawn all remembered windows automatically. Explicit file arguments override restoration for that window; failed/missing-path restore cannot overwrite another slot or erase the saved location.
 
-M2.1 exit requires independent tests for keyboard/tree behavior, dark/light/compact layouts, two or more distinct window positions across complete exit/restart, reversed close order, unopened saved slots, simultaneous launches, missing sources, explicit shell-open overrides and atomic preference writes preserving themes/bindings. The roadmap addition is not evidence that either feature is already implemented.
+M2.1 exit requires independent tests for keyboard/tree behavior, dark/light/compact layouts, two or more distinct window positions across complete exit/restart, reversed close order, unopened saved slots, simultaneous launches, missing sources, explicit shell-open overrides and atomic preference writes preserving themes/bindings. Implementation evidence is linked from WORK-QUEUE.yaml; the roadmap amendment alone is not completion evidence.
 
 Author tests -> independent review/acceptance -> serial integration -> integrated checks -> done. Your feedback is advisory and not a routine gate. Agents continue ready tasks, preserving evidence of infrastructure blocks. Public publishing, paid services and new external access are separate actions. Forecast from first ten integrated tasks, not agent-count multiplication. Sessions checkpoint work; agents do not promise execution after the session ends.
 
@@ -24,7 +24,11 @@ Author tests -> independent review/acceptance -> serial integration -> integrate
 
 M2.1 is implemented and independently verified on Windows; see WORK-QUEUE.yaml and verification/WINDOW-SESSIONS.md. Physical-display qualification and Linux GUI delivery remain open gates, not inferred from Windows or WSL results.
 
-Next scoped task: GRID-01 adds a virtualized current-folder grid using the existing bounded thumbnail service and folder snapshot. Selection stays separate from opening a photo. Keyboard/grid/modal routing, hidden-view cancellation, 10,000-row delegate bounds, compact/wide layout and theme checks precede independent review and serial integration. No new decoder formats or media mutation are part of this task. Remaining M3 work still includes sorts/filters, favorites, other HUDs, input matrix/chords, raster/RAW qualification, caching/lookahead, and performance/storage tuning.
+GRID-01 is implemented on Windows. The whole-code audit reopens its final review gate because the earlier fixes had not been rerun by an independent reviewer. REVIEW-ALL-01 fixes persistence, scheduling, reveal and grid-retry defects, then obtains independent checks on the combined code. SORT-01 already has implementation commits and is included in that audited integration; it must not remain labeled as merely planned after landing.
+
+After audit closure, execute the ready tasks recorded in WORK-QUEUE.yaml. Prioritize PLATFORM-01 qualification and CACHE-01 / IO-01 resource foundations, followed by favorites, filters, metadata HUDs, input contexts, and qualified format expansion. A task marked done certifies only its declared slice/platform; it never closes every requirement ID it references. In particular PERF-04/PERF-05, full IN-02, and SYS-02 still have substantial unfinished acceptance work.
+
+Use generated media, source hashes and actual command output. UI semantics may be tested with offscreen/software Qt Quick; GPU, physical displays and native file-dialog timing require separate evidence. Run the required Windows integrated build/test/package and core Linux checks where available. Do not claim Linux Qt delivery from WSL core-only tests.
 
 ## Initial contracts and allocation
 
