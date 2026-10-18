@@ -93,6 +93,10 @@ bool PaneLayout::edit(const QString& id,const QJsonObject& fields,bool geometry)
 }
 bool PaneLayout::move(const QString& id,const QString& region,int order) {
     if(!regionValid(region)||order<0||order>99)return false;
+    if(region=="center"&&id!="preview"&&id!="grid") {
+        feedback_="The center is reserved for image and grid content. Choose an edge for this pane.";
+        emit changed();return false;
+    }
     return edit(id,{{"region",region},{"order",order}},true);
 }
 bool PaneLayout::resize(const QString& id,double extent) {

@@ -100,6 +100,30 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void paneGeometryMovesFreezesAndResets() {
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.viewer.setTreeVisible(true);
+        auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);
+        QTRY_VERIFY(tree->isVisible());
+        QVERIFY(h.layout.move("tree","right",0));
+        QTRY_VERIFY(tree->x()>h.window->width()/2);
+        QVERIFY(h.layout.resize("tree",320));QTRY_COMPARE(qRound(tree->width()),320);
+        QVERIFY(h.layout.freeze("tree",true));
+        QVERIFY(!h.layout.move("tree","left",0));QVERIFY(!h.layout.resize("tree",400));
+        QCOMPARE(qRound(tree->width()),320);
+        h.window->setProperty("hudVisible",false);QTRY_VERIFY(tree->isVisible());
+        h.layout.setLocked(true);QVERIFY(!h.layout.freeze("tree",false));
+        h.layout.reset();h.window->setProperty("hudVisible",true);
+        QTRY_COMPARE(qRound(tree->x()),0);QTRY_COMPARE(qRound(tree->width()),280);
+        for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.theme.setMode(mode);h.window->resize(540,360);QTest::qWait(100);
+            QVERIFY(tree->width()>0&&tree->height()>0);
+            QVERIFY(tree->x()+tree->width()<=h.window->width());
+            if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+                QDir().mkpath(".cache/panes-ui");
+                QVERIFY(h.window->grabWindow().save(".cache/panes-ui/tree-"+mode+".png"));
+            }
+        }
+    }
     void addressEditingClipboardAndEscape() {
         QTemporaryDir media; QVERIFY(media.isValid());
         QDir().mkpath(media.filePath("empty folder"));

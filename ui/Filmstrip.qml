@@ -13,6 +13,7 @@ Rectangle {
     readonly property int thumbEdge: 160
     // Short windows get a smaller strip so it leaves the photo visible (set by the host layout).
     property bool compact: false
+    property bool vertical: false
     signal itemActivated(string path)
     function centerCurrent() { if (filmstrip.currentRow >= 0) list.positionViewAtIndex(filmstrip.currentRow, ListView.Center) }
     // Moves keyboard focus onto the current photo's cell (Tab from the canvas).
@@ -51,7 +52,7 @@ Rectangle {
         rightMargin: Theme.gapMd
         anchors.topMargin: Theme.gapXs + Theme.gapXxs
         anchors.bottomMargin: Theme.gapXs + Theme.gapXxs
-        orientation: ListView.Horizontal
+        orientation: strip.vertical ? ListView.Vertical : ListView.Horizontal
         spacing: Theme.gapXs + Theme.gapXxs
         clip: true
         // A hidden strip must not decode: with no model there are no delegates, so no thumbnail requests.

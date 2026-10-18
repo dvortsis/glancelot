@@ -18,6 +18,34 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property bool gridMode: false
+    readonly property var workspace: {
+        const state = paneLayout.panes
+        const active = {tree: viewer.treeVisible && state.tree.visible && (viewer.treePinned || state.tree.frozen || hudVisible || frameless),
+            topbar: state.topbar.visible && (gridMode || hudVisible || frameless || state.topbar.frozen),
+            statusbar: state.statusbar.visible && (gridMode || hudVisible || state.statusbar.frozen),
+            filmstrip: state.filmstrip.visible && !gridMode && viewer.filmstripVisible && filmstrip.count > 0 && (hudVisible || frameless || state.filmstrip.frozen),
+            preview: !gridMode, grid: gridMode}
+        let bounds = {x:0,y:0,width:width,height:height}, result = {}
+        const ids = ["topbar","statusbar","filmstrip","tree","preview","grid"].filter(id => active[id])
+        ids.sort((a,b) => state[a].order-state[b].order)
+        for (const region of ["top","bottom","left","right"]) {
+            for (const id of ids.filter(id => state[id].region === region)) {
+                const horizontal = region === "top" || region === "bottom"
+                const extent = Math.min(state[id].extent, Math.max(32,(horizontal ? bounds.height : bounds.width)-120))
+                const rect = {x:bounds.x,y:bounds.y,width:horizontal?bounds.width:extent,height:horizontal?extent:bounds.height}
+                if(region === "bottom")rect.y += bounds.height-extent
+                if(region === "right")rect.x += bounds.width-extent
+                result[id] = rect
+                if(horizontal) { if(region === "top")bounds.y += extent;bounds.height -= extent }
+                else { if(region === "left")bounds.x += extent;bounds.width -= extent }
+            }
+        }
+        for(const id of ids.filter(id => state[id].region === "center"))result[id] = bounds
+        for(const id of Object.keys(active))if(!active[id])result[id]={x:0,y:0,width:0,height:0}
+        return result
+    }
+    function paneRect(id) { return workspace[id] || {x:0,y:0,width:0,height:0} }
+
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
     property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
     property real pointerX: width / 2
@@ -146,7 +174,8 @@ ApplicationWindow {
     ImageCanvas {
         id: canvas
         objectName: "canvas"
-        anchors { fill: parent; leftMargin: app.treeInset }
+        x: app.paneRect("preview").x; y: app.paneRect("preview").y
+        width: app.paneRect("preview").width; height: app.paneRect("preview").height
         image: viewer.image
         background: "#191919" // photo backdrop, deliberately independent of the interface palette
         focus: !app.gridMode
@@ -210,7 +239,8 @@ ApplicationWindow {
     PhotoGrid {
         id: photoGrid
         objectName: "photoGrid"
-        anchors { left: parent.left; right: parent.right; top: topPanel.bottom; bottom: bottomPanel.top; leftMargin: app.treeInset }
+        x: app.paneRect("grid").x; y: app.paneRect("grid").y
+        width: app.paneRect("grid").width; height: app.paneRect("grid").height
         visible: app.gridMode
         inputEnabled: !app.modalOpen
         onItemActivated: app.showCanvas()
@@ -296,10 +326,11 @@ ApplicationWindow {
             color: Theme.border
             visible: !filmstripPanel.visible
         }
-        RowLayout {
+        GridLayout {
+            columns: paneLayout.panes.topbar.region === "left" || paneLayout.panes.topbar.region === "right" ? 1 : children.length
+            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
             anchors.fill: parent
             anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
-            spacing: Theme.gapXs
             Image {
                 Layout.preferredWidth: 24; Layout.preferredHeight: 24
                 Layout.rightMargin: Theme.gapXs
@@ -362,31 +393,31 @@ ApplicationWindow {
         id: filmstripPanel
         objectName: "filmstrip"
         compact: app.height < 480
-        anchors { left: parent.left; right: parent.right; top: topPanel.bottom }
-        visible: !app.gridMode && (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
+        x: app.paneRect("filmstrip").x; y: app.paneRect("filmstrip").y
+        width: app.paneRect("filmstrip").width; height: app.paneRect("filmstrip").height
+        vertical: paneLayout.panes.filmstrip.region === "left" || paneLayout.panes.filmstrip.region === "right"
+        visible: width > 0 && height > 0
         onItemActivated: canvas.forceActiveFocus()
     }
     FolderTree {
         id: treePanel
         objectName: "folderTree"
         compact: app.width < 720 || app.height < 480
-        anchors {
-            left: parent.left
-            top: filmstripPanel.visible ? filmstripPanel.bottom : topPanel.bottom
-            bottom: bottomPanel.visible ? bottomPanel.top : parent.bottom
-        }
-        width: implicitWidth
+        x: app.paneRect("tree").x; y: app.paneRect("tree").y
+        width: app.paneRect("tree").width; height: app.paneRect("tree").height
         maximumWidth: Math.max(200, Math.round(app.width * 0.45))
-        visible: viewer.treeVisible && (viewer.treePinned || app.hudVisible || app.frameless)
+        layoutFrozen: paneLayout.locked || paneLayout.panes.tree.frozen
+        onResizeCommitted: extent => paneLayout.resize("tree", extent)
+        visible: width > 0 && height > 0
         onDismissed: app.focusContent()
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
     }
     Rectangle {
         id: bottomPanel
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: Theme.barHeight
-        visible: app.gridMode || app.hudVisible
+        x: app.paneRect("statusbar").x; y: app.paneRect("statusbar").y
+        width: app.paneRect("statusbar").width; height: app.paneRect("statusbar").height
+        visible: width > 0 && height > 0
         color: Theme.surface
         HoverHandler { id: bottomHover }
         Rectangle {
@@ -394,10 +425,11 @@ ApplicationWindow {
             height: Theme.borderWidth
             color: Theme.border
         }
-        RowLayout {
+        GridLayout {
+            columns: paneLayout.panes.statusbar.region === "left" || paneLayout.panes.statusbar.region === "right" ? 1 : children.length
+            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
             anchors.fill: parent
             anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
-            spacing: Theme.gapXs
             UiButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
             BarLabel {
                 visible: !app.gridMode
