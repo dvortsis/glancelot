@@ -1,4 +1,5 @@
 #include "glancelot/navigation.hpp"
+#include "link_policy.hpp"
 #include <algorithm>
 #include <fstream>
 #include <string_view>
@@ -63,29 +64,9 @@ fs::path absolutePath(const fs::path& p, std::error_code& ec) {
     if (p.empty()) { ec = std::make_error_code(std::errc::invalid_argument); return {}; }
     return fs::absolute(p, ec).lexically_normal();
 }
-bool link(const fs::path& p) {
-    std::error_code ec;
-    const auto status = fs::symlink_status(p, ec);
-    if (ec || fs::is_symlink(status)) return true;
-#ifdef _WIN32
-    // Junctions and other reparse points are also excluded, including volume mounts.
-    const auto attributes = GetFileAttributesW(p.c_str());
-    if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) return true;
-#endif
-    return false;
-}
-bool safePath(const fs::path& p, std::stop_token cancel = {}) {
-    fs::path prefix;
-    for (const auto& part : p) {
-        if (cancel.stop_requested()) return false;
-        prefix /= part;
-        // A UNC server root (\\server\) is not a listable share. Validate from the
-        // complete share component onward, rather than rejecting all UNC paths here.
-        if (prefix == p.root_name() || (p.has_root_name() && prefix == p.root_path())) continue;
-        if (link(prefix)) return false;
-    }
-    return true;
-}
+// Junctions and other reparse points are also excluded, including volume mounts (src/core/link_policy.hpp).
+bool link(const fs::path& p) { return detail::isLink(p); }
+using detail::safePath;
 struct ScanCancelled {};
 using MetaMap = std::unordered_map<fs::path::string_type, FileMeta>;
 std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel,

@@ -1,7 +1,14 @@
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
+#include "glancelot/directory_entry_model.hpp"
 #include "glancelot/settings_file.hpp"
+#include "../src/app/thumbnail_id.hpp"
+#include "../src/app/file_grid_wiring.hpp"
+#include <QMutex>
+#include <QProcess>
+#include <cmath>
+#include <map>
 #include <QJsonObject>
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
@@ -26,14 +33,41 @@ class PreviewProvider final : public QQuickImageProvider {
 public:
     PreviewProvider() : QQuickImageProvider(Image) {}
     std::atomic_int requests{0};
-    QImage requestImage(const QString&, QSize* size, const QSize& requested) override {
+    std::atomic_bool succeed{false};
+    QMutex mutex;
+    QStringList paths; // every decoded request path, to prove non-images never reach the thumbnail pipeline
+    QStringList requested() { QMutexLocker lock(&mutex); return paths; }
+    QImage requestImage(const QString& id, QSize* size, const QSize& requested) override {
         ++requests;
+        const auto parts = thumbnail_id::decode(id);
+        { QMutexLocker lock(&mutex); paths << (parts ? parts->path : QStringLiteral("<malformed>")); }
         if (size) *size = QSize(32, 24);
         Q_UNUSED(requested);
-        // Deliberately fail previews; each cell must remain named and activatable.
-        return {};
+        // By default previews fail deliberately; each cell must remain named and activatable. Review captures use
+        // generated previews instead, except for names containing "broken".
+        if (!succeed || (parts && parts->path.contains("broken"))) return {};
+        QImage image(160, 120, QImage::Format_RGB32);
+        const uint seed = qHash(parts ? parts->path : id);
+        image.fill(QColor::fromHsv(int(seed % 360), 90, 170));
+        for (int y = 0; y < 120; ++y) for (int x = 0; x < 160; x += 1) if (y > 70 + int(20 * std::sin(x / 18.0 + seed))) image.setPixelColor(x, y, QColor::fromHsv(int((seed / 7) % 360), 120, 90));
+        if (size) *size = image.size();
+        return image;
     }
 };
+
+// Disposable folders of empty "Photo N.png" files for tests that only need a listing; shared across cases so the
+// 10,000-entry fixture is generated once.
+QTemporaryDir* listingFixture(int count) {
+    static std::map<int, std::unique_ptr<QTemporaryDir>> fixtures;
+    if (count < 0) { fixtures.clear(); return nullptr; }
+    auto& slot = fixtures[count];
+    if (!slot) {
+        slot = std::make_unique<QTemporaryDir>();
+        for (int i = 0; i < count; ++i) { QFile file(slot->filePath(QString("Photo %1.png").arg(i))); if (file.open(QIODevice::WriteOnly)) file.close(); }
+    }
+    return slot.get();
+}
+QString gridKey(const QString& path) { return file_grid_wiring::directoryKey(path); }
 
 struct Harness {
     QTemporaryDir config;
@@ -42,6 +76,7 @@ struct Harness {
     FilmstripModel model;
     FolderTreeModel folders;
     PaneLayout layout;
+    DirectoryEntryModel fileGrid;
     QQmlApplicationEngine engine;
     PreviewProvider* provider = new PreviewProvider;
     QQuickWindow* window{};
@@ -56,20 +91,26 @@ struct Harness {
         engine.rootContext()->setContextProperty("theme", &theme);
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);
+        engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
         // Tests that inject a listing with fill() must not be overwritten by the (empty) controller snapshot.
-        if (live) QObject::connect(&viewer, &ViewerController::stateChanged, &model, [&] { model.sync(viewer.snapshot()); });
+        // Live wiring is app/main.cpp's: the same file_grid_wiring helpers, plus the filmstrip connections.
+        if (live) {
+            QObject::connect(&viewer, &ViewerController::stateChanged, &model, [&] { model.sync(viewer.snapshot()); });
+            QObject::connect(&viewer, &ViewerController::filesInvalidated, &model, [&] { model.invalidate(); });
+            file_grid_wiring::followViewer(viewer, fileGrid);
+        }
+        file_grid_wiring::lockThumbnailEpoch(model, fileGrid);
         engine.load(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Main.qml")));
         if (!engine.rootObjects().empty()) window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
     }
     QQuickItem* grid() const { return window->findChild<QQuickItem*>("photoGrid"); }
     QQuickItem* view() const { return window->findChild<QQuickItem*>("photoGridView"); }
     void showGrid() { viewer.trigger("grid"); window->requestActivate(); }
+    // Injects a real generated listing into the grid (non-live harness) with `current` as the viewed photo.
     void fill(int count, int current = 0) {
-        glancelot::NavigationSnapshot snapshot;
-        snapshot.directory = "generated";
-        for (int i=0;i<count;++i) snapshot.files.emplace_back("generated/Photo " + std::to_string(i) + ".png");
-        if (count) snapshot.current = snapshot.files[current];
-        model.sync(snapshot);
+        QTemporaryDir* dir = listingFixture(count);
+        fileGrid.setCurrentImage(count ? dir->filePath(QString("Photo %1.png").arg(current)) : QString{});
+        fileGrid.setDirectory(dir->path());
     }
     int selected() const { return grid()->property("selectedIndex").toInt(); }
     // Delegates are visual (not QObject) children, so walk the item tree.
@@ -130,6 +171,31 @@ private slots:
         // The source-loaded UI has no generated qmldir, so the token singleton is registered as the app module does.
         qmlRegisterSingletonType(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Theme.qml")), "Glancelot", 1, 0, "Theme");
     }
+    void resetRetainsScrolledViewport() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        for (int i = 0; i < 400; ++i) {
+            QFile file(media.filePath(QString("file-%1.txt").arg(i, 4, 10, QLatin1Char('0'))));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+        }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.fileGrid.setDirectory(media.path()); h.showGrid();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 400);
+        QTRY_COMPARE(h.selected(), 0);
+        QVERIFY(QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, 200), Q_ARG(int, 0)));
+        QTest::qWait(100);
+        const qreal before = h.view()->property("contentY").toReal(); QVERIFY(before > 1000);
+        QSignalSpy resets(&h.fileGrid, &QAbstractItemModel::modelReset);
+        for (int i = 1; i < 80; i += 2)
+            QVERIFY(QFile::remove(media.filePath(QString("file-%1.txt").arg(i, 4, 10, QLatin1Char('0')))));
+        h.fileGrid.refresh();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 360);
+        QTest::qWait(100);
+        QCOMPARE(resets.count(), 1); QCOMPARE(h.selected(), 0);
+        const qreal after = h.view()->property("contentY").toReal();
+        qInfo() << "reset viewport before=" << before << "after=" << after;
+        QVERIFY2(after > 1000, "A background reset jumped to an offscreen cursor instead of preserving the browsed viewport");
+    }
+    void cleanupTestCase() { listingFixture(-1); }
     void init() {
         config = std::make_unique<QTemporaryDir>();
         QVERIFY(config->isValid());
@@ -710,6 +776,7 @@ private slots:
         QTest::keyClick(h.window, Qt::Key_Escape);
         QTRY_VERIFY(!h.window->property("gridMode").toBool());
         QTRY_COMPARE(h.view()->property("count").toInt(), 0);
+        QCOMPARE(h.fileGrid.count(), 0); QVERIFY(!h.fileGrid.loading()); // hidden grid holds no listing
         QVERIFY(h.window->findChild<QQuickItem*>("canvas")->hasActiveFocus());
         QTest::qWait(100); const int hiddenRequests = h.provider->requests.load();
         QTest::qWait(100); QCOMPARE(h.provider->requests.load(), hiddenRequests);
@@ -743,7 +810,7 @@ private slots:
         for(int i=0;i<3;++i) QVERIFY(image.save(media.filePath(QString::number(i)+".png")));
         Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("0.png"));
         QTRY_COMPARE(h.viewer.fileCount(),3); QTRY_VERIFY(!h.viewer.loading());
-        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(),0); // the listing is asynchronous
         const QString original=h.viewer.filePath();
         QTest::keyClick(h.window, Qt::Key_Right); QCOMPARE(h.selected(),1); QCOMPARE(h.viewer.filePath(),original);
         QTRY_VERIFY(h.cell(2));
@@ -763,7 +830,7 @@ private slots:
         QTRY_VERIFY(h.viewer.filePath().endsWith("0.png"));
     }
     void gridKeysBeatRemappedShortcutsAndCommandsAreScoped() {
-        Harness h; QVERIFY(h.window); h.fill(100, 0); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        Harness h; QVERIFY(h.window); h.fill(100, 0); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(), 0);
         QVERIFY(h.viewer.setBinding("next", ""));
         QVERIFY(h.viewer.setBinding("tree", "Down"));
         QVERIFY(h.viewer.setBinding("palette", "Right"));
@@ -1158,6 +1225,292 @@ private slots:
         }
         h.fill(0); QTRY_COMPARE(h.selected(),-1); QTRY_COMPARE(h.view()->property("count").toInt(),0);
         QTest::keyClick(h.window,Qt::Key_Return); QVERIFY(h.window->property("gridMode").toBool());
+    }
+public: // helpers (moc treats everything under private slots as test functions)
+    // ---- FILE-GRID-01: mixed folders, photos and other files ----
+    static QQuickItem* named(QQuickItem* root, const QString& name) { for (auto* item : descendants(root)) if (item->objectName() == name) return item; return nullptr; }
+    static QPoint centre(QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); }
+    // Generated mixed folder: subfolders, a directory link where creatable, photos and unsupported files.
+    struct MixedFolder {
+        QTemporaryDir root; QString path; bool link{};
+        MixedFolder() {
+            path = root.filePath("Holiday 2026");
+            QDir().mkpath(path + "/Day 1"); QDir().mkpath(path + "/Day 2/inner"); QDir().mkpath(root.filePath("elsewhere"));
+            QFile log(path + "/Day 1/log.txt"); if (log.open(QIODevice::WriteOnly)) log.write("x");
+            QImage image(48, 32, QImage::Format_RGB32); image.fill(QColor(70, 120, 170));
+            for (const char* name : {"beach.png", "sunset.jpg", "broken-preview.png"}) image.save(path + "/" + name);
+            for (const char* name : {"notes.txt", "itinerary.pdf", "README"}) { QFile file(path + "/" + name); if (file.open(QIODevice::WriteOnly)) file.write("not a photo"); }
+#ifdef Q_OS_WIN
+            QProcess mklink; mklink.start("cmd", {"/d", "/c", "mklink", "/J", QDir::toNativeSeparators(path + "/Shortcut to elsewhere"), QDir::toNativeSeparators(root.filePath("elsewhere"))});
+            link = mklink.waitForFinished(10000) && mklink.exitCode() == 0;
+#else
+            link = QFile::link(root.filePath("elsewhere"), path + "/Shortcut to elsewhere");
+#endif
+            if (!link) qInfo() << "UNVERIFIED: directory link fixture could not be created";
+        }
+        QString file(const QString& name) const { return path + "/" + name; }
+    };
+    QQuickItem* gridCell(Harness& h, const QString& path) {
+        // Polls: after a relisting the delegate for `path` may not exist yet. Callers QVERIFY the result.
+        for (int attempt = 0; attempt < 100; ++attempt) {
+            const int row = h.fileGrid.loading() ? -1 : h.fileGrid.rowOf(path);
+            if (row >= 0) {
+                QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, row), Q_ARG(int, 4 /* Contain */));
+                QTest::qWait(30);
+                if (QQuickItem* cell = h.cell(row)) return cell;
+            } else QTest::qWait(20);
+        }
+        return nullptr;
+    }
+private slots:
+    void mixedTilesFolderEntryAndParentNavigation() {
+        MixedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); h.window->resize(1180, 780); h.window->requestActivate();
+        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.folders, [&] { h.folders.sync(h.viewer.snapshot()); });
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true); h.folders.browseComputer();
+        h.viewer.open(media.file("beach.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        const int total = media.link ? 9 : 8;
+        QTRY_COMPARE(h.fileGrid.count(), total);
+        // Folders first (natural), then every file in the viewer's name order; the cursor lands on the viewed photo.
+        QStringList kinds; for (int i = 0; i < total; ++i) kinds << h.fileGrid.kindAt(i);
+        const int folders = media.link ? 3 : 2;
+        for (int i = 0; i < folders; ++i) QCOMPARE(kinds[i], QString("folder"));
+        QCOMPARE(h.fileGrid.pathAt(folders), media.file("beach.png"));
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() >= 8); // rowOf is -1 until the listing lands
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("beach.png")));
+        QCOMPARE(h.fileGrid.kindAt(h.fileGrid.rowOf(media.file("notes.txt"))), QString("file"));
+        QCOMPARE(h.fileGrid.kindAt(h.fileGrid.rowOf(media.file("sunset.jpg"))), QString("image"));
+        // Tiles: generic file icon with an extension label; link badge on the directory link; image previews only.
+        QQuickItem* notes = gridCell(h, media.file("notes.txt")); QVERIFY(notes);
+        QQuickItem* ext = named(notes, "gridExtension"); QVERIFY(ext); QVERIFY(ext->isVisible()); QCOMPARE(ext->property("text").toString(), QString("TXT"));
+        QVERIFY(!named(notes, "gridLinkBadge")->isVisible());
+        if (media.link) { QQuickItem* link = gridCell(h, media.file("Shortcut to elsewhere")); QVERIFY(link); QVERIFY(named(link, "gridLinkBadge")->isVisible()); }
+        else qInfo() << "UNVERIFIED: link badge (no link fixture)";
+        QTest::qWait(150);
+        for (const auto& requested : h.provider->requested())
+            QVERIFY2(requested.endsWith(".png") || requested.endsWith(".jpg"), qPrintable("non-image reached the thumbnail provider: " + requested));
+        // Enter on a folder navigates through the controller; the grid stays open and the tree and path bar follow.
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("Day 2")));
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_COMPARE(gridKey(h.viewer.directory()), gridKey(media.file("Day 2")));
+        QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.file("Day 2")));
+        QVERIFY(h.window->property("gridMode").toBool());
+        QTRY_COMPARE(h.fileGrid.count(), 1); QCOMPARE(h.fileGrid.kindAt(0), QString("folder"));
+        QTRY_VERIFY(h.folders.currentRow() >= 0);
+        QCOMPARE(gridKey(h.folders.pathAt(h.folders.currentRow())), gridKey(media.file("Day 2")));
+        auto* address = h.window->findChild<QQuickItem*>("folderAddress"); QVERIFY(address);
+        QTRY_COMPARE(gridKey(address->property("text").toString()), gridKey(media.file("Day 2")));
+        QTRY_VERIFY(h.view()->hasActiveFocus());
+        // Backspace returns to the parent with the cursor on the folder just left; Alt+Up goes one more level.
+        QTest::keyClick(h.window, Qt::Key_Backspace);
+        QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.path));
+        QTRY_COMPARE(h.fileGrid.count(), total);
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("Day 2")));
+        QTest::keyClick(h.window, Qt::Key_Up, Qt::AltModifier);
+        QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.root.path()));
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.path));
+        QTRY_COMPARE(gridKey(address->property("text").toString()), gridKey(media.root.path()));
+        // Mouse: double-click enters a folder, the header's Up button returns.
+        QQuickItem* holiday = gridCell(h, media.path); QVERIFY(holiday);
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(holiday));
+        QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.path));
+        QVERIFY(h.window->property("gridMode").toBool());
+        auto* up = named(h.window->contentItem(), "gridParent"); QVERIFY(up); QVERIFY(up->isEnabled());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(up));
+        QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.root.path()));
+        // A directory link is listed but is never entered: the controller refuses it and the grid explains why.
+        if (media.link) {
+            QQuickItem* again = gridCell(h, media.path); QVERIFY(again);
+            QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(again));
+            QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.path));
+            QTRY_COMPARE(h.fileGrid.count(), total);
+            h.fileGrid.select(h.fileGrid.rowOf(media.file("Shortcut to elsewhere")));
+            QTest::keyClick(h.window, Qt::Key_Return);
+            QTRY_VERIFY(!h.viewer.directoryPending() && !h.viewer.directoryError().isEmpty());
+            QCOMPARE(gridKey(h.fileGrid.directory()), gridKey(media.path));
+            auto* notice = named(h.window->contentItem(), "gridNotice"); QVERIFY(notice); QTRY_VERIFY(notice->isVisible());
+        }
+    }
+    void unsupportedActivationNeverDecodes() {
+        MixedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.open(media.file("beach.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() >= 8); // rowOf is -1 until the listing lands
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("beach.png")));
+        const QString opened = h.viewer.filePath();
+        QSignalSpy images(&h.viewer, &ViewerController::imageChanged), states(&h.viewer, &ViewerController::stateChanged);
+        auto* notice = named(h.window->contentItem(), "gridNotice"); QVERIFY(notice); QVERIFY(!notice->isVisible());
+        for (const char* name : {"notes.txt", "README", "itinerary.pdf"}) {
+            h.fileGrid.select(h.fileGrid.rowOf(media.file(name)));
+            QTest::keyClick(h.window, Qt::Key_Return);
+            QTRY_VERIFY(notice->isVisible());
+            QVERIFY(notice->property("text").toString().contains(name));
+            QVERIFY(!h.viewer.loading()); QCOMPARE(h.viewer.filePath(), opened);
+        }
+        QQuickItem* notes = gridCell(h, media.file("notes.txt")); QVERIFY(notes);
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(notes));
+        QTest::qWait(150);
+        QVERIFY(h.window->property("gridMode").toBool()); // still browsing
+        QCOMPARE(images.count(), 0); QCOMPARE(states.count(), 0); // the controller was never asked to open anything
+        auto* openButton = named(h.window->contentItem(), "gridOpenSelected");
+        QVERIFY(openButton); QVERIFY(!openButton->isEnabled()); // the cursor is on notes.txt
+        for (const auto& requested : h.provider->requested()) {
+            QVERIFY2(!requested.endsWith(".txt") && !requested.endsWith(".pdf") && !requested.endsWith("README"), qPrintable(requested));
+        }
+    }
+    void multiSelectionKeyboardMouseAndCount() {
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780); h.fill(30, 0); h.showGrid();
+        QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(), 0);
+        // Grid keys win over window shortcuts remapped onto the same chords.
+        QVERIFY(h.viewer.setBinding("tree", "Ctrl+A"));
+        QVERIFY(h.viewer.setBinding("sort-reverse", ""));
+        QVERIFY(h.viewer.setBinding("sort", "Shift+Right"));
+        auto* label = named(h.window->contentItem(), "gridSelectionCount"); QVERIFY(label);
+        QVERIFY(!label->isVisible());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(h.cell(2)));
+        QCOMPARE(h.fileGrid.selectedCount(), 1); QCOMPARE(h.selected(), 2); QVERIFY(!label->isVisible());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::ControlModifier, centre(h.cell(4)));
+        QCOMPARE(h.fileGrid.selectedCount(), 2); QTRY_VERIFY(label->isVisible());
+        QCOMPARE(label->property("text").toString(), QString("2 selected"));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::ShiftModifier, centre(h.cell(7)));   // anchor 4 .. 7 replaces
+        QCOMPARE(h.fileGrid.selectedCount(), 4); QCOMPARE(h.selected(), 7);
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::ControlModifier | Qt::ShiftModifier, centre(h.cell(0))); // adds 0 .. 4
+        QCOMPARE(h.fileGrid.selectedCount(), 8); QCOMPARE(label->property("text").toString(), QString("8 selected"));
+        QTest::keyClick(h.window, Qt::Key_Right, Qt::ShiftModifier);  // keyboard range from the anchor (4) to 1
+        QCOMPARE(h.selected(), 1); QCOMPARE(h.fileGrid.selectedCount(), 4);
+        QCOMPARE(h.viewer.sortKey(), QString("name"));
+        QTest::keyClick(h.window, Qt::Key_End, Qt::ShiftModifier);
+        QCOMPARE(h.selected(), 29); QCOMPARE(h.fileGrid.selectedCount(), 26);
+        QTest::keyClick(h.window, Qt::Key_A, Qt::ControlModifier);
+        QCOMPARE(h.fileGrid.selectedCount(), 30); QVERIFY(!h.viewer.treeVisible());
+        QTest::keyClick(h.window, Qt::Key_Space, Qt::ControlModifier);
+        QCOMPARE(h.fileGrid.selectedCount(), 29);
+        QVERIFY(!h.fileGrid.data(h.fileGrid.index(29), DirectoryEntryModel::SelectedRole).toBool());
+        // The status bar mirrors the count.
+        bool statusShowsCount = false;
+        const auto inHeader = descendants(label);
+        for (auto* item : descendants(h.window->contentItem()))
+            if (item->isVisible() && !inHeader.contains(item) && item->property("text").toString() == "29 selected") statusShowsCount = true;
+        QVERIFY(statusShowsCount);
+        // Plain arrows collapse to one item; Escape clears a multi-selection first, then leaves the grid.
+        QTest::keyClick(h.window, Qt::Key_A, Qt::ControlModifier);
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QCOMPARE(h.fileGrid.selectedCount(), 0); QVERIFY(h.window->property("gridMode").toBool()); QCOMPARE(h.selected(), 29);
+        QTest::keyClick(h.window, Qt::Key_Left); QCOMPARE(h.fileGrid.selectedCount(), 1); QCOMPARE(h.selected(), 28);
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::ControlModifier, centre(h.cell(27)));
+        QTRY_VERIFY(label->isVisible());
+        auto* clear = named(label, "gridClearSelection"); QVERIFY(clear);
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(clear));
+        QCOMPARE(h.fileGrid.selectedCount(), 0); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!h.window->property("gridMode").toBool());
+    }
+    void externalRenameAndDeleteRefreshKeepSelection() {
+        MixedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        h.viewer.open(media.file("beach.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() >= 8); // rowOf is -1 until the listing lands
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("beach.png")));
+        // The cursor item (notes.txt) is deleted below; the surviving selected item must stay selected.
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("sunset.jpg")));
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("README")), DirectoryEntryModel::Toggle);
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("notes.txt")), DirectoryEntryModel::Toggle);
+        QCOMPARE(h.fileGrid.selectedCount(), 3);
+        QVERIFY(QFile::rename(media.file("README"), media.file("README.md")));
+        QVERIFY(QFile::remove(media.file("itinerary.pdf")));
+        QVERIFY(QFile::remove(media.file("notes.txt")));
+        { QFile added(media.file("added.txt")); QVERIFY(added.open(QIODevice::WriteOnly)); }
+        // The controller's folder watcher invalidates; the grid relists in place.
+        QTRY_VERIFY_WITH_TIMEOUT(h.fileGrid.rowOf(media.file("added.txt")) >= 0, 10000);
+        QTRY_COMPARE(h.fileGrid.rowOf(media.file("itinerary.pdf")), -1);
+        QCOMPARE(h.fileGrid.rowOf(media.file("README")), -1);
+        QVERIFY(h.fileGrid.rowOf(media.file("README.md")) >= 0);
+        QTRY_COMPARE(h.fileGrid.rowOf(media.file("notes.txt")), -1);
+        QTest::qWait(150); // past the grid's post-listing cursor placement
+        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.file("sunset.jpg")});
+        QCOMPARE(h.selected(), -1); // the cursor's file is gone; nothing else was selected in its place
+        QVERIFY(h.window->property("gridMode").toBool());
+    }
+    // Review I3: ThumbnailService accepts one epoch (the filmstrip's); grid thumbnail URLs must carry the same one
+    // through folder changes and on-disk invalidation, or every grid preview is rejected in the real application.
+    void gridThumbnailEpochFollowsFilmstrip() {
+        QTemporaryDir one, two; QVERIFY(one.isValid() && two.isValid());
+        QImage image(16, 12, QImage::Format_RGB32); image.fill(Qt::darkCyan);
+        QVERIFY(image.save(one.filePath("a.png"))); QVERIFY(image.save(two.filePath("b.png")));
+        Harness h(true); QVERIFY(h.window);
+        const auto thumbEpoch = [&]() -> qint64 {
+            QQuickItem* cell = h.cell(0); if (!cell) return -1;
+            for (auto* item : descendants(cell)) if (item->objectName().startsWith("gridThumb")) {
+                const auto parts = thumbnail_id::decode(item->property("source").toUrl().toString().mid(QString("image://thumb/").size()));
+                return parts ? qint64(parts->epoch) : -1;
+            }
+            return -1;
+        };
+        h.viewer.open(one.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.showGrid(); QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 1);
+        QVERIFY(h.model.epoch() > 1); // the first folder sync already advanced the filmstrip epoch
+        QCOMPARE(h.fileGrid.epoch(), h.model.epoch());
+        QTRY_COMPARE(thumbEpoch(), qint64(h.model.epoch()));
+        h.viewer.open(two.filePath("b.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && h.viewer.filePath().endsWith("b.png"), 15000);
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.rowOf(two.filePath("b.png")) == 0);
+        QCOMPARE(h.fileGrid.epoch(), h.model.epoch());
+        QTRY_COMPARE(thumbEpoch(), qint64(h.model.epoch()));
+        const quint64 before = h.model.epoch();
+        QImage changed(16, 12, QImage::Format_RGB32); changed.fill(Qt::darkRed); QVERIFY(changed.save(two.filePath("b.png")));
+        QTRY_VERIFY_WITH_TIMEOUT(h.model.epoch() > before, 10000); // the controller's watcher invalidated
+        QCOMPARE(h.fileGrid.epoch(), h.model.epoch());
+        QTRY_COMPARE(thumbEpoch(), qint64(h.model.epoch()));
+    }
+    void emptyInaccessibleAndNoFolderStates() {
+        QTemporaryDir empty; QVERIFY(empty.isValid());
+        Harness h; QVERIFY(h.window); h.window->resize(540, 360);
+        auto* state = named(h.window->contentItem(), "gridState"); QVERIFY(state);
+        h.showGrid(); QTRY_VERIFY(h.grid()->isVisible());
+        QTRY_COMPARE(state->property("stateName").toString(), QString("none"));
+        h.fileGrid.setDirectory(empty.path());
+        QTRY_COMPARE(state->property("stateName").toString(), QString("empty")); QVERIFY(state->isVisible());
+        QTest::keyClick(h.window, Qt::Key_Return); QVERIFY(h.window->property("gridMode").toBool()); // nothing to activate
+        h.fileGrid.setDirectory(empty.filePath("gone"));
+        QTRY_COMPARE(state->property("stateName").toString(), QString("inaccessible"));
+        const bool capture = qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE");
+        if (capture) {
+            QDir().mkpath(".cache/file-grid");
+            for (const auto& mode : {QString("dark"), QString("light")}) {
+                h.theme.setMode(mode); QTest::qWait(120);
+                QVERIFY(h.window->grabWindow().save(".cache/file-grid/inaccessible-" + mode + "-540.png"));
+            }
+            h.fileGrid.setDirectory(empty.path()); QTRY_COMPARE(state->property("stateName").toString(), QString("empty"));
+            QTest::qWait(120); QVERIFY(h.window->grabWindow().save(".cache/file-grid/empty-light-540.png"));
+        }
+    }
+    void reviewCapturesMixedFolder() {
+        if (!qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) QSKIP("Set GLANCELOT_REVIEW_CAPTURE to write review captures");
+        MixedFolder media; QVERIFY(media.root.isValid());
+        for (int i = 0; i < 14; ++i) { QImage image(40, 30, QImage::Format_RGB32); image.fill(Qt::gray); image.save(media.file(QString("IMG_%1.png").arg(1000 + i))); }
+        Harness h(true); QVERIFY(h.window); h.provider->succeed = true;
+        h.viewer.open(media.file("beach.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTRY_VERIFY(h.fileGrid.count() >= 22);
+        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("Day 2")));
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("beach.png")), DirectoryEntryModel::Range);
+        QDir().mkpath(".cache/file-grid");
+        for (const QSize size : {QSize(540, 360), QSize(1180, 780)}) for (const auto& mode : {QString("dark"), QString("light")}) {
+            h.window->resize(size); h.theme.setMode(mode);
+            h.viewer.setTreeVisible(size.width() > 1000); h.viewer.setTreePinned(true);
+            QMetaObject::invokeMethod(h.view(), "positionViewAtBeginning"); QTest::qWait(300);
+            QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTest::qWait(100);
+            QVERIFY(h.window->grabWindow().save(QString(".cache/file-grid/mixed-%1-%2.png").arg(mode).arg(size.width())));
+        }
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("notes.txt")));
+        QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, h.fileGrid.cursorRow()), Q_ARG(int, 4));
+        QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Return); QTRY_VERIFY(named(h.window->contentItem(), "gridNotice")->isVisible()); QTest::qWait(200);
+        QVERIFY(h.window->grabWindow().save(".cache/file-grid/notice-light-1180.png"));
+        h.provider->succeed = false;
     }
 private:
     std::unique_ptr<QTemporaryDir> config;

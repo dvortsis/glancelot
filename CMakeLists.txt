@@ -7,7 +7,7 @@ include(CTest)
 include(GNUInstallDirs)
 find_package(Threads REQUIRED)
 option(GLANCELOT_BUILD_VIEWER "Build the Qt viewer" ON)
-add_library(glancelot_core src/core/navigation.cpp)
+add_library(glancelot_core src/core/navigation.cpp src/core/directory_listing.cpp)
 target_include_directories(glancelot_core PUBLIC include)
 if(MSVC)
   target_compile_options(glancelot_core PRIVATE /W4 /permissive- /utf-8)
@@ -18,6 +18,9 @@ if(BUILD_TESTING)
   add_executable(navigation_tests tests/navigation_tests.cpp)
   target_link_libraries(navigation_tests PRIVATE glancelot_core Threads::Threads)
   add_test(NAME navigation COMMAND navigation_tests)
+  add_executable(directory_listing_tests tests/directory_listing_tests.cpp)
+  target_link_libraries(directory_listing_tests PRIVATE glancelot_core Threads::Threads)
+  add_test(NAME directory_listing COMMAND directory_listing_tests)
 endif()
 if(GLANCELOT_BUILD_VIEWER)
   find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick QuickControls2 ShaderTools Test Concurrent)
@@ -27,6 +30,7 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp src/app/thumbnail_id.hpp
     src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
     src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
+    src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
     src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
@@ -84,6 +88,7 @@ if(GLANCELOT_BUILD_VIEWER)
       src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
       src/app/settings_file.cpp include/glancelot/settings_file.hpp
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
+      src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
       src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
       src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
@@ -99,6 +104,11 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(grid_ui_tests glancelot-decoder)
     add_test(NAME folder_grid COMMAND grid_ui_tests -o -,txt)
     set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 180)
+    qt_add_executable(directory_model_tests tests/directory_model_tests.cpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp)
+    target_include_directories(directory_model_tests PRIVATE include src/app)
+    target_link_libraries(directory_model_tests PRIVATE glancelot_core Qt6::Gui Qt6::Test Qt6::Concurrent)
+    add_test(NAME directory_model COMMAND directory_model_tests)
+    set_tests_properties(directory_model PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     qt_add_executable(canvas_tests tests/canvas_tests.cpp src/render/image_canvas.cpp src/render/image_canvas.hpp)
     target_include_directories(canvas_tests PRIVATE src/render)
     target_link_libraries(canvas_tests PRIVATE Qt6::Quick Qt6::GuiPrivate Qt6::Test)

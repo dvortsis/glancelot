@@ -9,6 +9,8 @@ Item {
     property string name
     property color color: Theme.text
     property int size: Theme.iconSize
+    // Stroke in 16-unit grid units. Large tile glyphs pass a thinner grid stroke so the drawn line stays light.
+    property real lineWidth: 1.5
     implicitWidth: size
     implicitHeight: size
     Accessible.ignored: true
@@ -34,7 +36,9 @@ Item {
         "appearance": "M8 2 A6 6 0 1 0 8 14 A6 6 0 1 0 8 2 Z M8 2 V14 M8 5 L11.6 3.4 M8 8.5 L13.8 6.5 M8 12 L13 10.6",
         "eye": "M1.5 8 Q8 0.8 14.5 8 Q8 15.2 1.5 8 Z M8 6 A2 2 0 1 0 8 10 A2 2 0 1 0 8 6 Z",
         "keyboard": "M2.5 4 H13.5 Q14.5 4 14.5 5 V11 Q14.5 12 13.5 12 H2.5 Q1.5 12 1.5 11 V5 Q1.5 4 2.5 4 Z M4.5 6.75 L4.51 6.75 M7 6.75 L7.01 6.75 M9.5 6.75 L9.51 6.75 M12 6.75 L12.01 6.75 M5 9.5 H11",
-        "info": "M8 2 A6 6 0 1 0 8 14 A6 6 0 1 0 8 2 Z M8 7.5 V11 M8 5 L8.01 5",
+        "file": "M4.5 1.75 H9.25 L12.75 5.25 V13 Q12.75 14.25 11.5 14.25 H4.5 Q3.25 14.25 3.25 13 V3 Q3.25 1.75 4.5 1.75 Z M9.25 1.75 V4.25 Q9.25 5.25 10.25 5.25 H12.75",
+        "link": "M6.5 9.5 L9.5 6.5 M7.25 4.75 L8.5 3.5 Q10.25 1.75 12 3.5 Q13.75 5.25 12 7 L10.75 8.25 M8.75 11.25 L7.5 12.5 Q5.75 14.25 4 12.5 Q2.25 10.75 4 9 L5.25 7.75",
+        "info":"M8 2 A6 6 0 1 0 8 14 A6 6 0 1 0 8 2 Z M8 7.5 V11 M8 5 L8.01 5",
         "spinner": "M8 2 A6 6 0 1 1 2 8"
     })
 
@@ -45,7 +49,7 @@ Item {
         preferredRendererType: Shape.GeometryRenderer
         antialiasing: true
         ShapePath {
-            strokeWidth: 1.5
+            strokeWidth: icon.lineWidth
             strokeColor: icon.color
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap

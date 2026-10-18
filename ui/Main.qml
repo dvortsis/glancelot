@@ -605,7 +605,9 @@ ApplicationWindow {
             UiButton { text: "Next"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
             BarLabel {
                 visible: app.gridMode
-                text: photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " of " + filmstrip.count + " selected" : "No selection"
+                font.features: { "tnum": 1 }
+                text: photoGrid.selectedCount > 1 ? photoGrid.selectedCount + " selected"
+                    : photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " of " + fileGrid.count : "No selection"
                 Layout.leftMargin: Theme.gapXs
             }
             BarLabel {
@@ -613,12 +615,12 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - 520)
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrow keys select · Enter opens"
+                text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
                 color: viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }
-            UiButton { visible: app.gridMode; variant: "primary"; text: "Open selected"; enabled: photoGrid.selectedIndex >= 0; tip: "Open selected (Enter)"; onClicked: photoGrid.activate() }
+            UiButton { objectName: "gridOpenSelected"; visible: app.gridMode; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
             BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; Layout.rightMargin: Theme.gapSm }
             UiButton {
                 visible: !app.gridMode
