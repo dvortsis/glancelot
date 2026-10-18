@@ -5,7 +5,9 @@
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
+#include <QFontDatabase>
 #include <QGuiApplication>
+#include <QQuickStyle>
 #include <QQuickImageProvider>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -80,7 +82,14 @@ struct Harness {
 class GridUiTests final : public QObject {
     Q_OBJECT
 private slots:
-    void initTestCase() { qmlRegisterType<ImageCanvas>("Glancelot", 1, 0, "ImageCanvas"); }
+    void initTestCase() {
+        QQuickStyle::setStyle("Basic"); // the style the application uses
+        for (const char* face : {"Geist-Light", "Geist-Regular", "Geist-Medium", "Geist-SemiBold", "GeistMono-Regular"})
+            QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)));
+        qmlRegisterType<ImageCanvas>("Glancelot", 1, 0, "ImageCanvas");
+        // The source-loaded UI has no generated qmldir, so the token singleton is registered as the app module does.
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Theme.qml")), "Glancelot", 1, 0, "Theme");
+    }
     void init() {
         config = std::make_unique<QTemporaryDir>();
         QVERIFY(config->isValid());
@@ -326,6 +335,167 @@ private slots:
         QTRY_VERIFY(h.viewer.filePath().startsWith(two.path()) && !h.viewer.filePath().endsWith("a.png"));
         QCOMPARE(h.viewer.fileCount(), 5);
         QVERIFY(h.viewer.sortDescending() && h.viewer.sortKey() == "size");
+    }
+    static QList<QQuickItem*> descendants(QQuickItem* root) {
+        QList<QQuickItem*> found; QList<QQuickItem*> pending{root};
+        while (!pending.isEmpty()) { QQuickItem* item = pending.takeFirst(); found << item; pending << item->childItems(); }
+        return found;
+    }
+    void settingsMergesThemesAndCommands() {
+        Harness h; QVERIFY(h.window);
+        h.window->resize(1180, 780); h.window->requestActivate();
+        // The top bar keeps a single Settings entry: no separate Commands or Themes buttons.
+        QVERIFY(h.window->findChild<QQuickItem*>("settingsButton"));
+        for (QQuickItem* item : descendants(h.window->contentItem())) {
+            const QString text = item->property("text").toString();
+            QVERIFY2(!(item->inherits("QQuickAbstractButton") && (text == "Commands" || text == "Themes" || text == "Menu")), qPrintable(text));
+        }
+        auto* dialog = h.window->findChild<QObject*>("settingsDialog"); QVERIFY(dialog);
+        // The palette command opens Settings > Controls with the search field focused.
+        QSignalSpy commands(&h.viewer, &ViewerController::viewCommand);
+        h.viewer.trigger("palette");
+        QTRY_VERIFY(h.window->property("modalOpen").toBool());
+        QCOMPARE(dialog->property("section").toString(), QString("controls"));
+        auto* search = h.window->findChild<QQuickItem*>("commandSearch"); QVERIFY(search);
+        QTRY_VERIFY(search->hasActiveFocus());
+        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+        QVERIFY(commands.contains(QVariantList{QString("rotate")}));
+        // --show-themes keeps working: appearance now lives in Settings.
+        QVERIFY(QMetaObject::invokeMethod(h.window, "openThemes"));
+        QTRY_VERIFY(h.window->property("modalOpen").toBool());
+        QCOMPARE(dialog->property("section").toString(), QString("appearance"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+        // Commands that act on the hidden canvas are listed but not runnable from the grid view.
+        h.fill(20); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        commands.clear();
+        h.viewer.trigger("palette"); QTRY_VERIFY(search->hasActiveFocus());
+        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTest::qWait(50);
+        QVERIFY(!commands.contains(QVariantList{QString("rotate")}));
+        QVERIFY(h.window->property("modalOpen").toBool());
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(h.view()->hasActiveFocus());
+        // Clicking the current section keeps it marked (section items select, they do not toggle).
+        h.viewer.trigger("settings"); QTRY_VERIFY(h.window->property("modalOpen").toBool());
+        auto* nav = h.window->findChild<QQuickItem*>("settingsNav"); QVERIFY(nav);
+        QQuickItem* current = nullptr;
+        QTRY_VERIFY([&] { for (QQuickItem* item : descendants(nav)) if (item->property("selected").toBool()) { current = item; return true; } return false; }());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, current->mapToScene(QPointF(current->width() / 2, current->height() / 2)).toPoint());
+        QTest::qWait(30);
+        QVERIFY(current->property("selected").toBool());
+        QCOMPARE(dialog->property("section").toString(), QString("controls"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+        // Optional review captures of every section, wide and compact, both modes (set GLANCELOT_REVIEW_CAPTURE).
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            QDir().mkpath(".cache/review");
+            for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) {
+                h.window->resize(size);
+                for (const char* mode : {"dark", "light"}) {
+                    h.theme.setMode(mode);
+                    for (const char* section : {"appearance", "viewing", "browsing", "controls", "about"}) {
+                        QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString(section)), Q_ARG(QVariant, false)));
+                        QTest::qWait(300); // past the 150-200 ms state transitions
+                        QVERIFY(h.window->grabWindow().save(QString(".cache/review/settings-%1-%2-%3.png").arg(section, mode).arg(size.width())));
+                    }
+                }
+            }
+        }
+    }
+    void startupStatusAndEmptyState() {
+        {   // Fresh start: the empty state carries the "how to begin" hint, so the toast stays hidden.
+            Harness h; QVERIFY(h.window);
+            auto* toast = h.window->findChild<QQuickItem*>("statusToast"); QVERIFY(toast);
+            QCOMPARE(h.viewer.status(), QString("Open a JPEG or PNG to begin.")); // Main.qml suppresses exactly this text
+            QTest::qWait(50); QVERIFY(!toast->isVisible());
+        }
+        {   // A settings file from a newer version is reported at start-up, even though the empty state is showing.
+            QFile settings(QDir(qEnvironmentVariable("GLANCELOT_CONFIG_DIR")).filePath("settings.json"));
+            QVERIFY(settings.open(QIODevice::WriteOnly)); settings.write("{\"schema\":99}"); settings.close();
+            Harness h; QVERIFY(h.window);
+            auto* toast = h.window->findChild<QQuickItem*>("statusToast"); QVERIFY(toast);
+            QVERIFY(h.viewer.status() != "Open a JPEG or PNG to begin.");
+            QTRY_VERIFY(toast->isVisible());
+        }
+    }
+    void pinButtonAnswersEnter() {
+        Harness h; QVERIFY(h.window);
+        h.window->resize(1180, 780); h.viewer.setTreeVisible(true); h.window->requestActivate();
+        auto* pin = h.window->findChild<QQuickItem*>("treePin"); QVERIFY(pin);
+        QTRY_VERIFY(pin->isVisible());
+        QVERIFY(!h.viewer.treePinned());
+        pin->forceActiveFocus(Qt::TabFocusReason);
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(h.viewer.treePinned());
+        h.viewer.setTreePinned(false); // a change made elsewhere (Settings) is reflected on the button
+        QTRY_VERIFY(!pin->property("checked").toBool());
+    }
+    void treeRowClickEnterAndChevron() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QDir(media.path()).mkpath("album/inner");
+        QImage image(8, 8, QImage::Format_RGB32); image.fill(Qt::blue);
+        QVERIFY(image.save(media.filePath("top.png"))); QVERIFY(image.save(media.filePath("album/inner.png")));
+        Harness h(true); QVERIFY(h.window);
+        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.folders, [&] { h.folders.sync(h.viewer.snapshot()); });
+        h.window->resize(1180, 780); h.window->requestActivate();
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+        h.folders.browseComputer();
+        h.viewer.open(media.filePath("top.png"));
+        QTRY_COMPARE(h.viewer.fileCount(), 1);
+        QTRY_VERIFY(h.folders.currentRow() >= 0);
+        auto* list = h.window->findChild<QQuickItem*>("folderList"); QVERIFY(list);
+        auto rowFor = [&](const QString& path) -> QQuickItem* {
+            for (QQuickItem* item : descendants(list))
+                if (item->objectName() == "folderRow" && QDir::cleanPath(item->property("path").toString()) == QDir::cleanPath(path)) return item;
+            return nullptr;
+        };
+        // Rows below the viewport exist but are clipped; scroll one into view before pointing at it.
+        auto reveal = [&](const QString& path) -> QQuickItem* {
+            QQuickItem* row = rowFor(path); if (!row) return nullptr;
+            QMetaObject::invokeMethod(list, "positionViewAtIndex", Q_ARG(int, row->property("index").toInt()), Q_ARG(int, 4 /* ListView.Contain */));
+            QTest::qWait(30);
+            return rowFor(path);
+        };
+        const int current = h.folders.currentRow();
+        h.folders.expand(current);
+        QTRY_VERIFY(rowFor(media.filePath("album")));
+        QQuickItem* album = reveal(media.filePath("album"));
+        QVERIFY(!album->property("expanded").toBool());
+        // The chevron expands without opening the folder.
+        const QString opened = h.viewer.filePath();
+        const qreal chevronX = album->property("levelX").toReal() + 6;
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, album->mapToScene(QPointF(chevronX, album->height() / 2)).toPoint());
+        QTRY_VERIFY(rowFor(media.filePath("album")) && rowFor(media.filePath("album"))->property("expanded").toBool());
+        QCOMPARE(h.viewer.filePath(), opened);
+        // A click on the name opens the folder (non-root rows navigate).
+        album = reveal(media.filePath("album"));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, album->mapToScene(QPointF(album->width() - 24, album->height() / 2)).toPoint());
+        QTRY_VERIFY(h.viewer.filePath().endsWith("inner.png"));
+        QTRY_VERIFY(list->hasActiveFocus());
+        // Enter on the keyboard cursor opens the selected folder; the original folder is one row up.
+        QTRY_VERIFY(rowFor(media.path()));
+        list->setProperty("currentIndex", rowFor(media.path())->property("index"));
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(h.viewer.filePath().endsWith("top.png"));
+        // Double-click on a non-root row, as in Explorer's navigation pane: the first click opens the folder,
+        // the double-click toggles its expansion exactly once.
+        QTRY_VERIFY(rowFor(media.filePath("album")));
+        album = reveal(media.filePath("album"));
+        const bool wasExpanded = album->property("expanded").toBool();
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, album->mapToScene(QPointF(album->width() - 24, album->height() / 2)).toPoint());
+        QTRY_VERIFY(h.viewer.filePath().endsWith("inner.png"));
+        QTRY_VERIFY(rowFor(media.filePath("album")) && rowFor(media.filePath("album"))->property("expanded").toBool() != wasExpanded);
+        // Double-clicking the chevron toggles once too, instead of collapsing and relisting the folder.
+        QTest::qWait(400); // past the double-click interval
+        album = reveal(media.filePath("album"));
+        const bool beforeChevron = album->property("expanded").toBool();
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, album->mapToScene(QPointF(album->property("levelX").toReal() + 6, album->height() / 2)).toPoint());
+        QTest::qWait(100);
+        QTRY_VERIFY(rowFor(media.filePath("album")) && rowFor(media.filePath("album"))->property("expanded").toBool() != beforeChevron);
     }
     void resizeTreeAndEmpty() {
         Harness h; QVERIFY(h.window); h.fill(50); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());

@@ -20,6 +20,7 @@
 #include <QTimer>
 #include <cstdio>
 #include <QIcon>
+#include <QFontDatabase>
 #include <memory>
 
 int main(int argc,char** argv) {
@@ -28,6 +29,10 @@ int main(int argc,char** argv) {
     QCoreApplication::setOrganizationName("Glancelot");
     QCoreApplication::setApplicationVersion("0.1.0-alpha.1");
     QQuickStyle::setStyle("Basic");
+    // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
+    for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
+        if(QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)))<0)
+            std::fprintf(stderr,"Glancelot: bundled font %s could not be registered; using a system font\n",face);
     QCommandLineParser parser;
     parser.setApplicationDescription("A local-first native photo viewer. JPEG/PNG alpha.");
     parser.addHelpOption();parser.addVersionOption();

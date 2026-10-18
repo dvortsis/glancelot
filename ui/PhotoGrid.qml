@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Controls
+import Glancelot
 
 // Selection is a browsing cursor, independent of the decoded photo. Only activation opens media.
 Rectangle {
     id: panel
-    color: theme.colors.background
+    color: Theme.background
     property int selectedIndex: -1
     property string selectedPath: ""
     property string entryCurrentPath: ""
@@ -56,7 +57,7 @@ Rectangle {
         id: grid
         objectName: "photoGridView"
         anchors.fill: parent
-        anchors.margins: 12
+        anchors.margins: Theme.gapMd
         clip: true
         model: panel.visible ? filmstrip : null
         cellWidth: width / panel.columns
@@ -72,7 +73,7 @@ Rectangle {
         Accessible.role: Accessible.List
         Accessible.name: "Photos in this folder"
         Accessible.description: "Arrow keys select a photo. Enter opens it. Escape returns to the canvas."
-        ScrollBar.vertical: ScrollBar { }
+        ScrollBar.vertical: UiScrollBar { }
         // Grid navigation keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
         Keys.onShortcutOverride: event => {
             if (event.modifiers !== Qt.NoModifier && event.modifiers !== Qt.KeypadModifier) return
@@ -111,9 +112,9 @@ Rectangle {
             objectName: "photoGridCell"
             Component.onCompleted: ++panel.liveDelegateCount
             Component.onDestruction: --panel.liveDelegateCount
-            width: grid.cellWidth - 8
-            height: grid.cellHeight - 8
-            padding: 8
+            width: grid.cellWidth - Theme.gapSm
+            height: grid.cellHeight - Theme.gapSm
+            padding: Theme.gapSm
             focusPolicy: Qt.NoFocus
             Accessible.role: Accessible.ListItem
             Accessible.name: name + (isCurrent ? ", current photo" : "")
@@ -127,18 +128,19 @@ Rectangle {
             ToolTip.text: name + (previewFailed ? " (preview unavailable)" : "")
             onClicked: { panel.select(index); panel.focusGrid() }
             onDoubleClicked: { panel.select(index); panel.activate() }
+            // Selected = selection fill plus a ring (focus colour while the grid has keyboard focus); hover = hover fill.
             background: Rectangle {
-                radius: 4
-                color: cell.selected || cell.hovered ? theme.colors.hover : theme.colors.surface
-                border.width: cell.selected ? 2 : 0
-                border.color: grid.activeFocus ? theme.colors.text : theme.colors.primary
+                radius: Theme.radiusCard
+                color: cell.selected ? Theme.selection : (cell.hovered ? Theme.hover : Theme.surface)
+                border.width: cell.selected ? Theme.focusWidth : 0
+                border.color: grid.activeFocus ? Theme.focusRing : Theme.primary
             }
             contentItem: Column {
-                spacing: 6
+                spacing: Theme.gapXs + Theme.gapXxs
                 Item {
                     width: parent.width
-                    height: cell.availableHeight - filename.height - 6
-                    Rectangle { anchors.fill: parent; color: theme.colors.hover; visible: thumb.status !== Image.Ready; radius: 2 }
+                    height: cell.availableHeight - filename.height - parent.spacing
+                    Rectangle { anchors.fill: parent; color: Theme.hover; visible: thumb.status !== Image.Ready; radius: Theme.radiusSmall }
                     Image {
                         id: thumb
                         objectName: "gridThumb" + cell.index
@@ -156,18 +158,20 @@ Rectangle {
                         text: cell.previewFailed ? "Preview unavailable" : "Loading preview…"
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
-                        color: theme.colors.muted
-                        font.pixelSize: 12
+                        color: Theme.muted
+                        font.pixelSize: Theme.textSmall
                         visible: thumb.status !== Image.Ready
                     }
-                    Label {
-                        anchors { left: parent.left; bottom: parent.bottom }
+                    Label { // tag
+                        anchors { left: parent.left; bottom: parent.bottom; margins: Theme.gapXs }
                         visible: cell.isCurrent
                         text: "Viewing"
-                        padding: 4
-                        font.pixelSize: 12
-                        color: theme.colors.onPrimary
-                        background: Rectangle { color: theme.colors.primary; radius: 2 }
+                        leftPadding: Theme.gapXs + Theme.gapXxs; rightPadding: leftPadding
+                        topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
+                        font.pixelSize: Theme.textCaption
+                        font.weight: Font.Medium
+                        color: Theme.textOnPrimary
+                        background: Rectangle { color: Theme.primary; radius: Theme.radiusSmall }
                     }
                 }
                 Label {
@@ -175,19 +179,20 @@ Rectangle {
                     width: parent.width
                     text: cell.name
                     elide: Text.ElideMiddle
-                    color: theme.colors.text
-                    font.pixelSize: 12
+                    color: Theme.text
+                    font.pixelSize: Theme.textSmall
                 }
             }
         }
     }
     Label {
         anchors.centerIn: parent
-        width: Math.max(0, parent.width - 48)
+        width: Math.max(0, Math.min(420, parent.width - 2 * Theme.gapXl))
         visible: filmstrip.count === 0
         text: viewer.loading ? "Loading folder…" : "No photos in this folder. Open a photo or choose another folder."
         wrapMode: Text.Wrap
         horizontalAlignment: Text.AlignHCenter
-        color: theme.colors.muted
+        lineHeight: 1.4
+        color: Theme.muted
     }
 }

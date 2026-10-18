@@ -1,25 +1,36 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Shapes
+import Glancelot
 
 // Collapsible, lazily loaded folder tree for the left HUD. The model lists one level per expansion on a
 // background thread; this file only presents it and routes selection to viewer.openFolder().
+// Standard tree conventions: chevron disclosure, per-level indent with guides, folder glyphs, full-row hover
+// and selection, a keyboard cursor distinct from the current folder, double-click to expand.
 Rectangle {
     id: panel
     property bool compact: false
     property alias hovered: hover.hovered
     // The HUD must stay open while the pointer is over the panel or the keyboard cursor is inside it.
     property int focusedControls: 0
-    readonly property bool keepOpen: hover.hovered || list.activeFocus || focusedControls > 0
+    readonly property bool keepOpen: hover.hovered || list.activeFocus || focusedControls > 0 || resizer.pressed
+    readonly property int indent: 12
+    // Drag the trailing edge to resize (this session); the host bounds it so the photo keeps most of the window.
+    property int userWidth: 0
+    property int maximumWidth: 480
     signal dismissed()
     function focusList() {
         list.forceActiveFocus(Qt.TabFocusReason)
         if (list.currentIndex < 0) list.currentIndex = Math.max(0, folderTree.currentRow)
     }
     function revealCurrent() { if (folderTree.currentRow >= 0) list.positionViewAtIndex(folderTree.currentRow, ListView.Contain) }
-    implicitWidth: compact ? 224 : 280
-    color: theme.colors.surface
+    // A drive or "/" would become the traversal root and let navigation walk the whole volume, so roots only expand.
+    function activate(row, depth, expandable, isCurrent, path) {
+        if (depth === 0 && expandable) folderTree.toggle(row)
+        else if (!isCurrent) viewer.openFolder(path)
+    }
+    implicitWidth: Math.min(maximumWidth, userWidth > 0 ? userWidth : (compact ? 232 : 280))
+    color: Theme.surface
     Accessible.role: Accessible.Pane
     Accessible.name: "Folders"
     HoverHandler { id: hover }
@@ -30,74 +41,81 @@ Rectangle {
     }
     onVisibleChanged: if (visible) Qt.callLater(revealCurrent)
 
-    Rectangle { // edge against the canvas
+    Rectangle { // edge against the canvas; doubles as the resize affordance under the pointer
         anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
-        width: 1
-        color: theme.colors.border
+        width: resizer.containsMouse || resizer.pressed ? Theme.focusWidth : Theme.borderWidth
+        color: resizer.containsMouse || resizer.pressed ? Theme.primary : Theme.border
+    }
+    MouseArea {
+        id: resizer
+        objectName: "treeResizer"
+        anchors { top: parent.top; bottom: parent.bottom; right: parent.right; rightMargin: -Theme.gapXs }
+        width: Theme.gapSm
+        z: 2
+        hoverEnabled: true
+        cursorShape: Qt.SizeHorCursor
+        onPositionChanged: mouse => {
+            if (pressed) panel.userWidth = Math.round(Math.max(200, Math.min(panel.maximumWidth, mapToItem(panel, mouse.x, 0).x)))
+        }
+        onDoubleClicked: panel.userWidth = 0 // back to the default width
+    }
+
+    component PanelButton: UiButton {
+        onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
+        Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
     }
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.rightMargin: 1
+        anchors.rightMargin: Theme.borderWidth
         spacing: 0
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
-            Layout.leftMargin: 12
-            Layout.rightMargin: 8
-            spacing: 4
+            Layout.preferredHeight: Theme.controlHeight + Theme.gapSm
+            Layout.topMargin: Theme.gapXs
+            Layout.leftMargin: Theme.gapMd // shares the leading edge of the depth-0 chevrons
+            Layout.rightMargin: Theme.gapSm
+            spacing: Theme.gapXxs
             Label {
                 text: "Folders"
-                color: theme.colors.text
-                font.pixelSize: 13
-                font.weight: Font.Medium
+                color: Theme.text
+                font.pixelSize: Theme.textBody
+                font.weight: Font.DemiBold
                 Layout.fillWidth: true
                 Accessible.role: Accessible.Heading
             }
-            ToolButton {
-                text: "Parent"
+            PanelButton {
+                objectName: "treeParent"
+                text: "Show parent folder"
+                iconName: "corner-up"
+                iconOnly: true
+                tip: "Widen the browsing root to the parent folder"
                 enabled: viewer.canRaiseRoot
-                focusPolicy: Qt.StrongFocus
-                onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
-                Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
-                implicitHeight: 32
-                Accessible.name: "Show parent folder"
-                Accessible.description: "Widen the browsing root to the parent folder"
-                ToolTip.visible: hovered
-                ToolTip.delay: 600
-                ToolTip.text: "Widen the browsing root to the parent folder"
                 onClicked: viewer.raiseRoot()
-                background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
             }
-            ToolButton {
-                text: viewer.treePinned ? "Unpin" : "Pin"
-                focusPolicy: Qt.StrongFocus
-                onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
-                Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
-                implicitHeight: 32
+            PanelButton {
+                objectName: "treePin"
+                text: viewer.treePinned ? "Unpin folder panel" : "Pin folder panel open"
+                iconName: "pin"
+                iconOnly: true
                 checkable: true
                 checked: viewer.treePinned
-                Accessible.name: viewer.treePinned ? "Unpin folder panel" : "Pin folder panel open"
-                ToolTip.visible: hovered
-                ToolTip.delay: 600
-                ToolTip.text: viewer.treePinned ? "Let the panel hide with the other controls" : "Keep the panel open and make room for the photo"
-                onToggled: viewer.treePinned = checked
-                background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus || parent.checked ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
+                tip: viewer.treePinned ? "Unpin: let the panel hide with the other controls" : "Pin: keep the panel open and make room for the photo"
+                onToggled: { viewer.treePinned = checked; checked = Qt.binding(() => viewer.treePinned) } // stays in sync with Settings
             }
         }
 
-        ToolButton {
+        PanelButton {
             objectName: "allLocations"
             text: "All locations"
-            Layout.fillWidth: true
-            Layout.leftMargin: 8; Layout.rightMargin: 8
-            implicitHeight: 32
-            focusPolicy: Qt.StrongFocus
-            onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
-            Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
+            iconName: "computer"
+            alignment: Qt.AlignLeft
+            leftPadding: Theme.gapXs + panel.indent + Theme.gapXxs // icon sits on the same column as the root glyphs
             Accessible.name: "Browse all filesystem locations"
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
+            Layout.bottomMargin: Theme.gapXs
             onClicked: { folderTree.browseComputer(); panel.focusList() }
-            background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
         }
 
         ListView {
@@ -105,6 +123,9 @@ Rectangle {
             objectName: "folderList"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            leftMargin: Theme.gapSm
+            rightMargin: Theme.gapSm
+            bottomMargin: Theme.gapSm
             clip: true
             // A hidden panel must not load folders: no model, no rows.
             model: panel.visible ? folderTree : null
@@ -113,7 +134,7 @@ Rectangle {
             reuseItems: false
             Accessible.role: Accessible.Tree
             Accessible.name: "Folder tree"
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.vertical: UiScrollBar {}
             Connections {
                 target: folderTree
                 enabled: panel.visible
@@ -130,8 +151,11 @@ Rectangle {
                 if (event.key === Qt.Key_Escape) { panel.dismissed(); event.accepted = true; return }
                 if (currentIndex < 0 || currentIndex >= count) return
                 const row = currentIndex
+                const page = Math.max(1, Math.floor(height / Theme.rowHeight) - 1)
                 if (event.key === Qt.Key_Home) { currentIndex = 0; event.accepted = true }
                 else if (event.key === Qt.Key_End) { currentIndex = count - 1; event.accepted = true }
+                else if (event.key === Qt.Key_PageUp) { currentIndex = Math.max(0, row - page); event.accepted = true }
+                else if (event.key === Qt.Key_PageDown) { currentIndex = Math.min(count - 1, row + page); event.accepted = true }
                 else if (event.key === Qt.Key_Right) {
                     const cell = itemAtIndex(row)
                     if (cell && cell.expandable && !cell.expanded) folderTree.expand(row)
@@ -144,14 +168,14 @@ Rectangle {
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
                     const cell = itemAtIndex(row)
-                    if (cell && cell.depth === 0 && cell.expandable) folderTree.toggle(row)
-                    else if (cell && !cell.isCurrent) viewer.openFolder(folderTree.pathAt(row))
+                    if (cell) panel.activate(row, cell.depth, cell.expandable, cell.isCurrent, cell.path)
                     event.accepted = true
                 }
             }
 
             delegate: Item {
                 id: row
+                objectName: "folderRow"
                 required property int index
                 required property string name
                 required property string path
@@ -162,101 +186,121 @@ Rectangle {
                 required property bool isCurrent
                 readonly property bool expandable: nodeState !== 2 && nodeState !== 3 // not Empty, not Inaccessible
                 readonly property bool cursor: ListView.isCurrentItem && list.activeFocus
-                width: ListView.view.width
-                height: 34
+                readonly property int levelX: Theme.gapXs + depth * panel.indent
+                width: ListView.view.width - list.leftMargin - list.rightMargin
+                height: Theme.rowHeight
                 Accessible.role: Accessible.TreeItem
                 Accessible.name: name + (isCurrent ? ", current folder" : "") + (nodeState === 3 ? ", no access" : "")
-                Accessible.description: expandable ? (expanded ? "Expanded" : "Collapsed") : ""
-                Rectangle { // row surface: hover, current folder, keyboard cursor
-                    anchors { fill: parent; leftMargin: 4; rightMargin: 4 }
-                    radius: 4
-                    color: row.isCurrent ? Qt.alpha(theme.colors.primary, 0.16)
-                                         : (rowHover.hovered ? theme.colors.hover : "transparent")
-                    border.width: row.cursor ? 2 : 0
-                    border.color: theme.colors.text
-                    Rectangle { // current-folder marker that does not rely on color alone with the bold name
+                Accessible.description: expandable ? (expanded ? "Expanded" : "Collapsed") : "" // state in words: Qt 6.8 QML has no expandable/expanded accessibility properties
+                Accessible.selected: isCurrent
+
+                Repeater { // indent guides: one hairline per ancestor level, centred under that level's chevron
+                    model: row.depth
+                    delegate: Rectangle {
+                        required property int index
+                        x: Theme.gapXs + index * panel.indent + panel.indent / 2
+                        width: Theme.borderWidth
+                        height: row.height
+                        color: Theme.border
+                    }
+                }
+                Rectangle { // row surface: hover and current folder; the keyboard cursor is a separate ring
+                    anchors.fill: parent
+                    radius: Theme.radiusControl
+                    color: row.isCurrent ? Theme.selection : (rowHover.hovered ? Theme.hover : "transparent")
+                    border.width: row.cursor ? Theme.focusWidth : 0
+                    border.color: Theme.focusRing
+                    Rectangle { // current-folder marker, so the state does not rely on fill colour alone
                         visible: row.isCurrent
                         anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 6; bottomMargin: 6 }
                         width: 3; radius: 1.5
-                        color: theme.colors.primary
+                        color: Theme.primary
                     }
                 }
                 HoverHandler { id: rowHover }
                 TapHandler {
                     onTapped: point => {
+                        if (tapCount > 1) return // the second click of a double-click belongs to onDoubleTapped
                         // The disclosure owns clicks inside its box; they must not also open the folder.
                         const local = row.mapToItem(disclosure, point.position.x, point.position.y)
                         if (row.expandable && disclosure.contains(local)) return
                         list.currentIndex = row.index
                         list.forceActiveFocus(Qt.MouseFocusReason)
-                        // A drive or "/" would become the traversal root and let navigation walk the whole volume.
-                        if (row.depth === 0 && row.expandable) folderTree.toggle(row.index)
-                        else if (!row.isCurrent) viewer.openFolder(row.path)
+                        panel.activate(row.index, row.depth, row.expandable, row.isCurrent, row.path)
+                    }
+                    // Double-click expands or collapses, as in standard trees; roots already toggle on a single click.
+                    onDoubleTapped: point => {
+                        const local = row.mapToItem(disclosure, point.position.x, point.position.y)
+                        if (row.depth > 0 && row.expandable && !disclosure.contains(local)) folderTree.toggle(row.index)
                     }
                 }
-                Item { // disclosure
+                Item { // disclosure: generous hit area, 16px glyph
                     id: disclosure
-                    x: 6 + row.depth * 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 28; height: parent.height // generous hit area; the glyph stays 8x12
-                    Shape {
+                    x: row.levelX - Theme.gapXs - Theme.gapXxs
+                    width: 22 // >= 22px target even with the compact 12px indent
+                    height: parent.height
+                    UiIcon {
                         anchors.centerIn: parent
-                        width: 8; height: 12
+                        anchors.horizontalCenterOffset: 1 // glyph centre stays on the indent guide column
                         visible: row.expandable && !row.loading
+                        name: "chevron-right"
+                        color: Theme.muted
                         rotation: row.expanded ? 90 : 0
-                        Behavior on rotation { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-                        ShapePath {
-                            strokeWidth: 2
-                            strokeColor: theme.colors.muted
-                            fillColor: "transparent"
-                            capStyle: ShapePath.RoundCap
-                            joinStyle: ShapePath.RoundJoin
-                            startX: 1.5; startY: 1.5
-                            PathLine { x: 6.5; y: 6 }
-                            PathLine { x: 1.5; y: 10.5 }
-                        }
+                        Behavior on rotation { NumberAnimation { duration: Theme.durationFast; easing.type: Easing.OutCubic } }
                     }
-                    BusyIndicator {
+                    UiIcon {
                         anchors.centerIn: parent
-                        width: 16; height: 16
-                        running: row.loading
+                        anchors.horizontalCenterOffset: 1 // glyph centre stays on the indent guide column
                         visible: row.loading
-                        Accessible.ignored: true
+                        name: "spinner"
+                        color: Theme.muted
                     }
                     TapHandler {
                         enabled: row.expandable
                         gesturePolicy: TapHandler.WithinBounds
-                        onTapped: { list.currentIndex = row.index; folderTree.toggle(row.index) }
+                        onTapped: { if (tapCount > 1) return; list.currentIndex = row.index; folderTree.toggle(row.index) } // a double-click must not collapse and relist
                     }
                 }
-                Label { // state in words, so it never relies on color or a missing chevron alone
+                UiIcon {
+                    id: glyph
+                    x: row.levelX + panel.indent + Theme.gapXxs
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: row.depth === 0 ? "drive" : (row.expanded ? "folder-open" : "folder")
+                    color: row.isCurrent ? Theme.primary : (row.nodeState === 3 ? Theme.border : Theme.muted)
+                }
+                Label { // state in words, so it never relies on colour or a missing chevron alone
                     id: stateNote
-                    anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                    anchors { right: parent.right; rightMargin: Theme.gapSm; verticalCenter: parent.verticalCenter }
                     text: row.nodeState === 2 ? (row.depth === 0 ? "no subfolders" : "empty") : (row.nodeState === 3 ? "no access" : (row.nodeState === 4 ? "partial" : ""))
-                    color: theme.colors.muted
-                    font.pixelSize: 11
+                    color: Theme.muted
+                    font.pixelSize: Theme.textCaption
                 }
                 Label {
-                    anchors { left: disclosure.right; leftMargin: 4; right: stateNote.text.length > 0 ? stateNote.left : parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                    id: nameLabel
+                    anchors { left: glyph.right; leftMargin: Theme.gapSm - Theme.gapXxs; right: stateNote.text.length > 0 ? stateNote.left : parent.right; rightMargin: Theme.gapSm; verticalCenter: parent.verticalCenter }
                     text: row.name
-                    elide: Text.ElideMiddle
-                    color: row.nodeState === 3 ? theme.colors.muted : theme.colors.text
-                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                    color: row.nodeState === 3 ? Theme.muted : Theme.text
+                    font.pixelSize: Theme.textBody
                     font.weight: row.isCurrent ? Font.DemiBold : Font.Normal
                 }
-                ToolTip.visible: rowHover.hovered && (row.nodeState === 3 || row.nodeState === 4)
+                // Full name when it is cut off, and the reason behind a state note.
+                readonly property string tip: (nameLabel.truncated ? row.name : "")
+                    + (row.nodeState === 3 ? (nameLabel.truncated ? " — " : "") + "This folder cannot be listed"
+                       : row.nodeState === 4 ? (nameLabel.truncated ? " — " : "") + "Some folders are not shown because the list limit was reached" : "")
+                ToolTip.visible: rowHover.hovered && tip.length > 0
                 ToolTip.delay: 400
-                ToolTip.text: row.nodeState === 3 ? "This folder cannot be listed" : "Some folders are not shown because the list limit was reached"
+                ToolTip.text: tip
             }
             Label {
                 anchors.centerIn: parent
-                width: parent.width - 32
+                width: parent.width - 2 * Theme.gapXl
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
                 visible: folderTree.count === 0
                 text: "No filesystem locations are available."
-                color: theme.colors.muted
-                font.pixelSize: 12
+                color: Theme.muted
+                font.pixelSize: Theme.textSmall
             }
         }
     }

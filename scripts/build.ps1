@@ -27,6 +27,7 @@ if ($Package) {
     & cmake --install $BuildDir --prefix (Join-Path $repoRoot 'dist\Glancelot')
     if ($LASTEXITCODE -ne 0) { throw 'Deploy failed.' }
     Copy-Item -LiteralPath 'README.md','LICENSE','THIRD_PARTY_NOTICES.md' -Destination 'dist\Glancelot'
+    Copy-Item -LiteralPath 'assets\fonts\geist\OFL.txt' -Destination 'dist\Glancelot\Geist-OFL.txt'
     Copy-Item -LiteralPath (Join-Path $QtRoot 'sbom') -Destination 'dist\Glancelot\qt-sbom' -Recurse -Force
     if (Test-Path 'dist\Glancelot.zip') { Remove-Item -LiteralPath (Join-Path $repoRoot 'dist\Glancelot.zip') }
     Compress-Archive -Path 'dist\Glancelot\*' -DestinationPath 'dist\Glancelot.zip'

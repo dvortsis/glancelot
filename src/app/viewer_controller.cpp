@@ -57,7 +57,7 @@ QString displayPath(const std::filesystem::path& path) {
 const std::vector<Command> registry {
     {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true}, {"previous","Previous image","Left",true},
     {"next-folder","Next folder","PgDown"}, {"previous-folder","Previous folder","PgUp"},
-    {"palette","Command palette","Ctrl+Shift+P"}, {"settings","Controls and preferences","Ctrl+,"},
+    {"palette","Find a command","Ctrl+Shift+P"}, {"settings","Settings","Ctrl+,"},
     {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
     {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
