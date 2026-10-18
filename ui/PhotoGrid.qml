@@ -43,7 +43,7 @@ Rectangle {
     }
     function activate() {
         const path = filmstrip.pathAt(selectedIndex)
-        if (inputEnabled && path.length) { if (path !== viewer.filePath) viewer.open(path); itemActivated(path) }
+        if (inputEnabled && path.length) { if (!viewer.isCurrentImage(path)) viewer.open(path); itemActivated(path) }
     }
     onVisibleChanged: if (visible) Qt.callLater(enter)
     Connections {
@@ -60,7 +60,10 @@ Rectangle {
         clip: true
         model: panel.visible ? filmstrip : null
         cellWidth: width / panel.columns
-        cellHeight: Math.max(160, Math.min(220, cellWidth * 0.75 + 46))
+        // Bound rows as well as columns, including cache/partially visible rows. A very tall
+        // viewport grows the cells instead of submitting hundreds of simultaneous previews.
+        cellHeight: Math.max(160, Math.min(220, cellWidth * 0.75 + 46),
+                             Math.ceil(height / Math.max(1, Math.floor(160 / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
