@@ -108,7 +108,7 @@ struct ViewerController::Private {
     QCache<QString,QImage> cache{128*1024}; // KiB, only source-revision keyed immutable RGBA pixels.
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
-    QThreadPool navigationPool;
+    QThreadPool* navigationPool=new QThreadPool;
     bool navigationBusy{}, navigationReady{};
     std::deque<std::pair<int,bool>> navigationIntents;
     bool navigationOpen{};
@@ -124,7 +124,7 @@ struct ViewerController::Private {
 
     explicit Private(ViewerController* owner):q(owner) {
         trace("controller:construct");
-        navigationPool.setMaxThreadCount(1);
+        navigationPool->setMaxThreadCount(1);
         for (const auto& command: registry) bindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
         load();
         trace("controller:settings-loaded");
@@ -142,7 +142,12 @@ struct ViewerController::Private {
         QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
         QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
     }
-    ~Private() { writePosition(true); navigationStop.request_stop(); cancel(); navigationPool.waitForDone(); }
+    ~Private() {
+        writePosition(true);navigationStop.request_stop();cancel();
+        // A blocked filesystem call cannot honor cancellation. Jobs own only by-value
+        // captures, so a stalled thread can be abandoned rather than freezing window close.
+        if(navigationPool->waitForDone(1000))delete navigationPool;
+    }
     void notePosition(const QString& file) {
         lastDecodedPath=file;
         if (slot<=0) return;
@@ -343,7 +348,7 @@ struct ViewerController::Private {
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
         });
-        future->setFuture(QtConcurrent::run(&navigationPool,std::move(job.work)));
+        future->setFuture(QtConcurrent::run(navigationPool,std::move(job.work)));
     }
     // Applies a new file order on the navigation worker (never the GUI thread); the current image stays current.
     // The navigator the UI shows can be older than a job that is still in flight, so a re-sort is only ever built
