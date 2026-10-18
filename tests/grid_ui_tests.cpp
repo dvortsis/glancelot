@@ -105,6 +105,7 @@ private slots:
         auto* field=h.window->findChild<QQuickItem*>("folderAddress");QVERIFY(field);
         auto* copy=h.window->findChild<QQuickItem*>("copyFolderAddress");QVERIFY(copy);
         auto* list=h.window->findChild<QQuickItem*>("folderList");QVERIFY(list);
+        QTRY_VERIFY(list->hasActiveFocus()); // treeShown queues its initial focus restoration
         field->forceActiveFocus();QTRY_VERIFY(field->hasActiveFocus());
         QGuiApplication::clipboard()->setText(media.filePath("empty folder"));
         QTest::keyClick(h.window,Qt::Key_V,Qt::ControlModifier);

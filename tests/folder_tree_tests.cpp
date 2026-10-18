@@ -640,8 +640,14 @@ void FolderTreeTests::exactDirectoryVisitsAreAtomicAndKeepErrorsLocal() {
     viewer.navigateDirectory(album);
     QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending()&&viewer.imageReady(),15000);
     QVERIFY(same(viewer.snapshot().directory,album)); QVERIFY(same(viewer.snapshot().current,png));
+    bool emptySignalCoherent=true;
+    const auto emptyConnection=QObject::connect(&viewer,&ViewerController::imageChanged,&viewer,[&] {
+        if(viewer.image().isNull()&&(!viewer.filePath().isEmpty()||!same(viewer.snapshot().directory,empty)||!viewer.snapshot().files.empty()))
+            emptySignalCoherent=false;
+    });
     viewer.navigateDirectory(empty);
     QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),15000);
+    QVERIFY(emptySignalCoherent);QObject::disconnect(emptyConnection);
     QVERIFY(same(viewer.snapshot().directory,empty));
     QCOMPARE(QDir::cleanPath(viewer.directory()),QDir::cleanPath(empty));
     QVERIFY(viewer.filePath().isEmpty());QVERIFY(viewer.image().isNull());QVERIFY(!viewer.imageReady());
@@ -660,5 +666,14 @@ void FolderTreeTests::exactDirectoryVisitsAreAtomicAndKeepErrorsLocal() {
     QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),15000);
     QVERIFY(!viewer.directoryPending()); QVERIFY(viewer.directoryError().isEmpty());
     QCOMPARE(viewer.filePath(),png);
+    const auto second=writePng(album,"second.png");QVERIFY(!second.isEmpty());
+    ViewerController early;
+    early.open(png);early.navigateDirectory(empty);early.cancelDirectoryNavigation();early.next();
+    QTRY_COMPARE_WITH_TIMEOUT(early.filePath(),second,15000);
+    viewer.setWindowSlot(9);viewer.navigateDirectory(empty);
+    QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),15000);viewer.flushWindowPosition();
+    ViewerController restored;restored.setWindowSlot(9);restored.restoreWindow();
+    QTRY_VERIFY_WITH_TIMEOUT(same(restored.snapshot().directory,empty),15000);
+    QVERIFY(restored.filePath().isEmpty());QCOMPARE(restored.fileCount(),0);
     qunsetenv("GLANCELOT_CONFIG_DIR");
 }

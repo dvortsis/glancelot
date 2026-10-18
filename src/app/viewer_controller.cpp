@@ -369,15 +369,18 @@ struct ViewerController::Private {
                     else if(!result.destination) {
                         ++generation; cancel(); reload.stop();
                         path.clear(); image=QImage{}; imageReady=false; loading=false;
-                        lastDecodedPath.clear(); pendingFolder.clear(); pendingImage.clear();
-                        positionDirty=false; positionTimer.stop();
+                        lastDecodedPath.clear(); pendingImage.clear();
+                        pendingFolder=displayPath(result.navigator.snapshot().directory);
+                        positionRetries=0;positionDirty=slot>0;
+                        if(positionDirty)positionTimer.start();
                         if(!watcher.files().isEmpty())watcher.removePaths(watcher.files());
                         if(!watcher.directories().isEmpty())watcher.removePaths(watcher.directories());
                         watcher.addPath(displayPath(result.navigator.snapshot().directory));
-                        emit q->imageChanged();
                     }
                 }
+                const bool clearedImage=result.directoryVisit&&!result.directoryFailed&&!result.destination;
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
+                if(clearedImage)emit q->imageChanged();
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
@@ -478,6 +481,13 @@ void ViewerController::restoreWindow(){
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[image=nativePath(image),folder=nativePath(folder),folderText=folder,cancellation=d->navigationStop.get_token()]() mutable {
         namespace fs=std::filesystem;
         std::optional<fs::path> destination;QString message;std::error_code ec;
+        if(image.empty()&&!folder.empty()) {
+            Navigator target;target.setCancellation(cancellation);
+            if(target.openDirectory(folder,ec)) {
+                const auto current=target.snapshot().current;
+                return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
+            }
+        }
         // The saved image is only trusted inside a listable, link-free folder, like every other open.
         if(!image.empty()&&isSupportedImage(image)&&fs::is_regular_file(image,ec)&&childFolders(image.parent_path(),cancellation).accessible) destination=image;
         else if(folder.empty()||!fs::is_directory(folder,ec)) message="Your last folder for this window is unavailable: "+folderText+". Open a photo to continue; the saved location is kept.";
@@ -572,6 +582,7 @@ void ViewerController::cancelDirectoryNavigation() {
     if(d->directoryPending) {
         d->navigationStop.request_stop();d->navigationStop=std::stop_source{};
         ++d->navigationGeneration;d->pendingNavigation.reset();d->navigationIntents.clear();
+        if(!d->navigationReady&&!d->path.isEmpty())d->scan(d->path,d->generation);
     }
     d->directoryPending=false;d->directoryError.clear();emit stateChanged();
 }
