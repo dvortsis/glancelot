@@ -92,9 +92,13 @@ const std::vector<Command> registry {
     {"view-preview","Show photo preview only",""}, {"view-grid","Show folder grid only",""},
     {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
 #ifdef Q_OS_WIN
-    {"delete-selection","Move selected items to the Recycle Bin",""},
+    {"delete-selection","Move selected items to the Recycle Bin","Delete"},
+    {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
+    {"delete-current-folder","Move current folder to the Recycle Bin","Ctrl+Shift+Delete"},
 #else
-    {"delete-selection","Move selected items to the Trash",""},
+    {"delete-selection","Move selected items to the Trash","Delete"},
+    {"delete-current-file","Move current photo to the Trash","Ctrl+Delete"},
+    {"delete-current-folder","Move current folder to the Trash","Ctrl+Shift+Delete"},
 #endif
     {"quit","Quit","Ctrl+Q"}
 };

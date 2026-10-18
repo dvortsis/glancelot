@@ -2215,11 +2215,11 @@ private slots:
         h.fileGrid.select(h.fileGrid.rowOf(media.file("img2.png")));
         QTRY_VERIFY(action->isVisible()); QVERIFY(action->isEnabled());
         QVERIFY(action->property("text").toString().startsWith("Move to "));
-        // The command exists for search, with no default binding (DELETE-KEYS-01 adds bindings).
+        // The command exists for search, with default binding Delete (DELETE-KEYS-01).
         bool listed = false;
         for (const auto& command : h.viewer.commands()) {
             const auto row = command.toMap();
-            if (row["id"].toString() == "delete-selection") { listed = true; QVERIFY(row["binding"].toString().isEmpty()); }
+            if (row["id"].toString() == "delete-selection") { listed = true; QCOMPARE(row["binding"].toString(), QString("Delete")); }
         }
         QVERIFY(listed);
         // Nothing was touched just by selecting and showing the action.
@@ -2472,6 +2472,183 @@ private slots:
         QTRY_VERIFY(overlayItem(h, "deleteNotice")->isVisible()); QTest::qWait(250);
         QVERIFY(h.window->grabWindow().save(".cache/delete/notice-dark-1180.png"));
         h.provider->succeed = false;
+    }
+    // ---- DELETE-KEYS-01: Delete shortcuts and auto-repeat prevention ----
+    void deleteShortcutsRegisteredAndBound() {
+        ViewerController viewer;
+        const auto commands = viewer.commands();
+        QMap<QString, QVariantMap> map;
+        for (const auto& cmd : commands) {
+            const auto row = cmd.toMap();
+            map[row["id"].toString()] = row;
+        }
+
+        QVERIFY(map.contains("delete-selection"));
+        QCOMPARE(map["delete-selection"]["binding"].toString(), QString("Delete"));
+#ifdef Q_OS_WIN
+        QCOMPARE(map["delete-selection"]["label"].toString(), QString("Move selected items to the Recycle Bin"));
+#else
+        QCOMPARE(map["delete-selection"]["label"].toString(), QString("Move selected items to the Trash"));
+#endif
+
+        QVERIFY(map.contains("delete-current-file"));
+        QCOMPARE(map["delete-current-file"]["binding"].toString(), QString("Ctrl+Delete"));
+#ifdef Q_OS_WIN
+        QCOMPARE(map["delete-current-file"]["label"].toString(), QString("Move current photo to the Recycle Bin"));
+#else
+        QCOMPARE(map["delete-current-file"]["label"].toString(), QString("Move current photo to the Trash"));
+#endif
+
+        QVERIFY(map.contains("delete-current-folder"));
+        QCOMPARE(map["delete-current-folder"]["binding"].toString(), QString("Ctrl+Shift+Delete"));
+#ifdef Q_OS_WIN
+        QCOMPARE(map["delete-current-folder"]["label"].toString(), QString("Move current folder to the Recycle Bin"));
+#else
+        QCOMPARE(map["delete-current-folder"]["label"].toString(), QString("Move current folder to the Trash"));
+#endif
+    }
+    void deleteCurrentFileAndFolderShortcuts() {
+        DeleteFolder media(3, 2); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 6));
+        QTest::qWait(150);
+
+        // Select different files in grid: note1.txt and note2.txt.
+        selectNames(h, media, {"note1.txt", "note2.txt"});
+        QCOMPARE(h.fileGrid.selectedCount(), 2);
+
+        // Trigger delete-current-file shortcut (Ctrl+Delete): snapshots viewer.filePath, not grid selection.
+        QTest::keyClick(h.window, Qt::Key_Delete, Qt::ControlModifier);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        QVariantList targets = deleteFlow(h)->property("targets").toList();
+        QCOMPARE(targets.size(), 1);
+        QCOMPARE(gridKey(targets[0].toMap()["path"].toString()), gridKey(media.file("img1.png")));
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this file to the " + deleteFlow(h)->property("trashName").toString() + "?");
+
+        // Cancel dialog
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // Trigger delete-current-folder shortcut (Ctrl+Shift+Delete): snapshots viewer.directory, not grid selection.
+        QTest::keyClick(h.window, Qt::Key_Delete, Qt::ControlModifier | Qt::ShiftModifier);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        targets = deleteFlow(h)->property("targets").toList();
+        QCOMPARE(targets.size(), 1);
+        QCOMPARE(gridKey(targets[0].toMap()["path"].toString()), gridKey(media.path));
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");
+
+        // Cancel dialog
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // When no photo is open, delete-current-file shows notice
+        Harness hEmpty; QVERIFY(hEmpty.window);
+        QTest::keyClick(hEmpty.window, Qt::Key_Delete, Qt::ControlModifier);
+        QVERIFY(!dialogOpen(hEmpty, "deleteConfirmation"));
+        QQuickItem* notice = overlayItem(hEmpty, "deleteNotice");
+        QVERIFY(notice && notice->isVisible());
+        QVERIFY(notice->property("text").toString().contains("No photo is currently open"));
+
+        // When no folder is open, delete-current-folder shows notice
+        QTest::keyClick(hEmpty.window, Qt::Key_Delete, Qt::ControlModifier | Qt::ShiftModifier);
+        QVERIFY(!dialogOpen(hEmpty, "deleteConfirmation"));
+        QVERIFY(notice && notice->isVisible());
+        QVERIFY(notice->property("text").toString().contains("No folder is currently open"));
+    }
+    void deleteSelectionKeyResolution() {
+        DeleteFolder media(3, 2); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 6));
+        QTest::qWait(150);
+
+        // 1. Grid selection when grid is focused/selected
+        selectNames(h, media, {"note1.txt", "note2.txt"});
+        QCOMPARE(h.fileGrid.selectedCount(), 2);
+        QTest::keyClick(h.window, Qt::Key_Delete);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        QVariantList targets = deleteFlow(h)->property("targets").toList();
+        QCOMPARE(targets.size(), 2);
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move 2 items to the " + deleteFlow(h)->property("trashName").toString() + "?");
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // 2. Tree item when tree is focused
+        QImage pic(20, 20, QImage::Format_RGB32); pic.fill(Qt::darkGreen); QVERIFY(pic.save(media.file("album/pic.png")));
+        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.folders, [&] { h.folders.sync(h.viewer.snapshot()); });
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true); h.folders.browseComputer();
+        h.viewer.open(media.file("album/pic.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(treeRow(h, media.file("album")) >= 0, 15000);
+        auto* list = h.window->findChild<QQuickItem*>("folderList"); QVERIFY(list);
+        QMetaObject::invokeMethod(h.window->findChild<QObject*>("folderTree"), "focusList");
+        list->setProperty("currentIndex", treeRow(h, media.file("album")));
+        QTRY_VERIFY(list->hasActiveFocus());
+
+        QTest::keyClick(h.window, Qt::Key_Delete);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        targets = deleteFlow(h)->property("targets").toList();
+        QCOMPARE(targets.size(), 1);
+        QCOMPARE(gridKey(targets[0].toMap()["path"].toString()), gridKey(media.file("album")));
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // 3. Current file when canvas preview is active without selection
+        h.viewer.setTreeVisible(false);
+        h.fileGrid.clearSelection();
+        QCOMPARE(h.fileGrid.selectedCount(), 0);
+        h.viewer.trigger("view-preview");
+        QTest::qWait(150);
+        QVERIFY(!h.window->property("gridMode").toBool());
+        QTest::keyClick(h.window, Qt::Key_Delete);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        targets = deleteFlow(h)->property("targets").toList();
+        QCOMPARE(targets.size(), 1);
+        QCOMPARE(gridKey(targets[0].toMap()["path"].toString()), gridKey(media.file("album/pic.png")));
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this file to the " + deleteFlow(h)->property("trashName").toString() + "?");
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+    }
+    void deleteShortcutsIgnoreAutoRepeat() {
+        DeleteFolder media(2, 1); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 4));
+        QTest::qWait(150);
+        selectNames(h, media, {"note1.txt"});
+        QCOMPARE(h.fileGrid.selectedCount(), 1);
+
+        // Delete with autoRepeat=true must be ignored
+        sendKey(h.window, Qt::Key_Delete, true);
+        QTest::qWait(150);
+        QVERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // Delete with autoRepeat=false activates shortcut
+        sendKey(h.window, Qt::Key_Delete, false);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // Ctrl+Delete with autoRepeat=true must be ignored
+        sendKey(h.window, Qt::Key_Delete, true, Qt::ControlModifier);
+        QTest::qWait(150);
+        QVERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // Ctrl+Delete with autoRepeat=false activates shortcut
+        sendKey(h.window, Qt::Key_Delete, false, Qt::ControlModifier);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // Ctrl+Shift+Delete with autoRepeat=true must be ignored
+        sendKey(h.window, Qt::Key_Delete, true, Qt::ControlModifier | Qt::ShiftModifier);
+        QTest::qWait(150);
+        QVERIFY(!dialogOpen(h, "deleteConfirmation"));
+
+        // Ctrl+Shift+Delete with autoRepeat=false activates shortcut
+        sendKey(h.window, Qt::Key_Delete, false, Qt::ControlModifier | Qt::ShiftModifier);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
     }
 private:
     std::unique_ptr<QTemporaryDir> config;
