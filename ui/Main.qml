@@ -29,7 +29,7 @@ ApplicationWindow {
         // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
         // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
         const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
-            topbar:state.topbar.visible, statusbar:state.statusbar.visible,
+            topbar:state.topbar.visible||frameless, statusbar:state.statusbar.visible,
             filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
             preview:!gridMode,grid:gridMode}
         const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
@@ -237,6 +237,15 @@ ApplicationWindow {
         font.features: { "tnum": 1 }
         verticalAlignment: Text.AlignVCenter
     }
+    // Window controls for the application-drawn title bar (frameless or full screen). Glyphs follow the active state
+    // like a native caption: text when the window is active, muted when it is not.
+    component WindowControl: UiButton {
+        iconOnly: true
+        foreground: dangerFilled ? Theme.background : (app.active ? Theme.text : Theme.muted)
+    }
+    // The application owns the title bar when there is no system one: frameless mode, or full screen.
+    readonly property bool ownsTitleBar: frameless || visibility === Window.FullScreen
+    function toggleMaximized() { if (visibility === Window.Maximized) showNormal(); else showMaximized() }
     component BarDivider: Rectangle {
         implicitWidth: Theme.borderWidth
         implicitHeight: Theme.iconSize + Theme.gapXs
@@ -415,13 +424,40 @@ ApplicationWindow {
     }
     Rectangle {
         id: topPanel
+        objectName: "topBar"
         x: app.paneRect("topbar").x; y: app.paneRect("topbar").y
         width: app.paneRect("topbar").width; height: app.paneRect("topbar").height
         color: Theme.surface
         visible: width > 0 && height > 0
         HoverHandler { id: topBar }
-        MouseArea { anchors.fill: parent; enabled: app.frameless; onPressed: app.startSystemMove(); onDoubleClicked: app.visibility === Window.Maximized ? app.showNormal() : app.showMaximized() }
+        // A horizontal bar collapses optional items by measured fit rather than fixed window widths, so the window
+        // controls and a minimum title (the frameless drag target) always keep their room. Yield order: the lock
+        // label first, then "Show frame", then Sort. Implicit widths do not depend on visibility, so no binding loop.
+        readonly property bool horizontalBar: barGridtopbar.columns !== 1
+        readonly property real titleMinimum: 72
+        readonly property real fitBudget: {
+            const gap = barGridtopbar.columnSpacing
+            let need = 2 * Theme.gapMd + brandMark.Layout.preferredWidth + brandMark.Layout.rightMargin + gap
+            for (const item of [openButton, foldersButton, gridButton, settingsButton])
+                need += item.implicitWidth + gap
+            const divider = Theme.borderWidth + 2 * Theme.gapXs + gap // BarDivider carries its own side margins
+            need += divider + titleMinimum + gap
+            if (exitFullScreenButton.visible) need += exitFullScreenButton.implicitWidth + gap
+            if (app.ownsTitleBar) {
+                need += divider + minimizeButton.implicitWidth + gap + closeButton.implicitWidth + gap
+                if (maximizeButton.visible) need += maximizeButton.implicitWidth + gap
+            }
+            if (paneLayout.locked) need += Theme.controlHeight + gap
+            return topbarScroll.availableWidth - need
+        }
+        readonly property bool fitSort: !horizontalBar || fitBudget >= sortButton.implicitWidth + barGridtopbar.columnSpacing
+        readonly property real afterSort: fitBudget - (fitSort ? sortButton.implicitWidth + barGridtopbar.columnSpacing : 0)
+        readonly property bool fitShowFrame: !horizontalBar || afterSort >= showFrameButton.implicitWidth + barGridtopbar.columnSpacing
+        readonly property real afterShowFrame: afterSort - (app.frameless && fitShowFrame ? showFrameButton.implicitWidth + barGridtopbar.columnSpacing : 0)
+        readonly property bool fitLockLabel: !horizontalBar || afterShowFrame >= lockLabelMeasure.implicitWidth - Theme.controlHeight
+        UiButton { id: lockLabelMeasure; visible: false; iconName: "lock"; text: "Layout locked" } // width of the labelled lock
         Rectangle { // edge against the canvas when no filmstrip sits below
+            objectName: "topBarEdge"
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
             height: Theme.borderWidth
             color: Theme.border
@@ -434,6 +470,14 @@ ApplicationWindow {
             contentWidth: availableWidth
             contentHeight: barGridtopbar.implicitHeight
             ScrollBar.vertical: UiScrollBar {}
+        Item { // in the frameless mode, empty bar space is the title bar: drag moves, double-click maximizes
+            objectName: "titleBarDragArea"
+            width: topbarScroll.availableWidth
+            height: Math.max(topbarScroll.availableHeight, barGridtopbar.implicitHeight)
+            enabled: app.frameless && app.visibility !== Window.FullScreen // full screen has no title bar to move
+            DragHandler { target: null; onActiveChanged: if (active) app.startSystemMove() }
+            TapHandler { onDoubleTapped: app.toggleMaximized() }
+        }
         GridLayout {
             id: barGridtopbar
             columns: app.paneState("topbar").region === "left" || app.paneState("topbar").region === "right" ? 1 : children.length
@@ -442,6 +486,8 @@ ApplicationWindow {
             x: Theme.gapMd
             y: Math.max(0,(topbarScroll.availableHeight-implicitHeight)/2)
             Image {
+                id: brandMark
+                objectName: "brandMark"
                 Layout.preferredWidth: 24; Layout.preferredHeight: 24
                 Layout.rightMargin: Theme.gapXs
                 source: "qrc:/brand/icons/app/" + (Theme.dark ? "dark" : "light") + "/glancelot-64.png"
@@ -449,8 +495,9 @@ ApplicationWindow {
                 fillMode: Image.PreserveAspectFit
                 Accessible.ignored: true
             }
-            UiButton { text: "Open"; tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
+            UiButton { id: openButton; text: "Open"; tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
             UiButton {
+                id: foldersButton
                 objectName: "foldersToggle"
                 text: "Folders"
                 checkable: true
@@ -460,6 +507,7 @@ ApplicationWindow {
                 onClicked: { checked = Qt.binding(() => viewer.treeVisible); app.invoke("tree") }
             }
             UiButton {
+                id: gridButton
                 objectName: "gridToggle"
                 text: "Grid"
                 checkable: true
@@ -470,8 +518,9 @@ ApplicationWindow {
                 onClicked: { checked = Qt.binding(() => app.gridMode); app.invoke("grid") }
             }
             UiButton {
+                id: sortButton
                 objectName: "sortButton"
-                visible: app.width >= 760
+                visible: topPanel.fitSort
                 iconName: viewer.sortDescending ? "arrow-down" : "arrow-up"
                 text: ({ name: "Name", modified: "Date", size: "Size", shuffle: "Shuffle" }[viewer.sortKey])
                 enabled: viewer.fileCount > 0
@@ -480,32 +529,51 @@ ApplicationWindow {
                 Accessible.name: "File order: " + ({ name: "name", modified: "date modified", size: "size", shuffle: "shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? ", descending" : ", ascending")
                 Accessible.description: "Changes the order of photos inside folders, not the folder order"
             }
-            BarDivider {}
+            BarDivider { id: topBarDivider; objectName: "topBarDivider" }
             Label {
+                objectName: "topBarTitle"
                 text: viewer.fileName || "No photo open"
                 elide: Text.ElideMiddle
                 Layout.fillWidth: true
-                color: viewer.fileName ? Theme.text : Theme.muted
+                // Like a native caption, an inactive window shows its title in the muted role (still >= 4.5:1).
+                color: viewer.fileName && app.active ? Theme.text : Theme.muted
                 font.pixelSize: Theme.textBody
             }
             UiButton { // lock state stays visible outside Settings; activating it unlocks
                 objectName: "layoutLockIndicator"
                 visible: paneLayout.locked
                 iconName: "lock"
+                // In a narrow horizontal bar the label yields so the window controls keep their room; the name stays
+                // the tooltip and accessible name.
+                iconOnly: !topPanel.fitLockLabel
                 text: "Layout locked"
                 tip: "Workspace layout is locked. Select to unlock" + app.shortcutHint("layout-lock")
                 Accessible.name: "Workspace layout locked. Unlock layout"
                 onClicked: app.invoke("layout-lock")
             }
             UiButton {
+                id: settingsButton
                 objectName: "settingsButton"
                 text: "Settings"
                 tip: "Settings, palettes and shortcuts" + app.shortcutHint("settings") + (viewer.bindingFor("palette").length ? ". Find a command: " + viewer.bindingFor("palette") : "")
                 onClicked: app.invoke("settings")
             }
-            UiButton { text: "Exit full screen"; visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
-            UiButton { text: "Show frame"; visible: app.frameless; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
-            UiButton { text: "Close window"; iconName: "close"; iconOnly: true; visible: app.frameless; onClicked: app.close() }
+            UiButton { id: exitFullScreenButton; text: "Exit full screen"; visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
+            // Window controls must never be pushed out of a narrow bar, so "Show frame" yields its room there; the
+            // command stays in Settings and command search, with its shortcut.
+            UiButton { id: showFrameButton; objectName: "showFrameButton"; text: "Show frame"; visible: app.frameless && topPanel.fitShowFrame; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
+            BarDivider { id: windowDivider; visible: app.ownsTitleBar }
+            WindowControl { id: minimizeButton; objectName: "minimizeButton"; text: "Minimize"; iconName: "minimize"; visible: app.ownsTitleBar; onClicked: app.showMinimized() }
+            WindowControl {
+                id: maximizeButton
+                objectName: "maximizeButton"
+                readonly property bool maximized: app.visibility === Window.Maximized
+                text: maximized ? "Restore" : "Maximize"
+                iconName: maximized ? "restore" : "maximize"
+                visible: app.frameless && app.visibility !== Window.FullScreen
+                onClicked: app.toggleMaximized()
+            }
+            WindowControl { id: closeButton; objectName: "closeButton"; variant: "danger"; text: "Close window"; iconName: "close"; visible: app.ownsTitleBar; onClicked: app.close() }
         }
         }
     }

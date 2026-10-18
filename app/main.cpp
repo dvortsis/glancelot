@@ -10,9 +10,11 @@
 #include "file_grid_wiring.hpp"
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
+#include "native_title_bar.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQmlProperty>
 #include <QQuickWindow>
 #include <QQuickStyle>
 #include <QCommandLineParser>
@@ -48,6 +50,7 @@ int main(int argc,char** argv) {
     parser.addOption({"show-grid","Open the folder grid at startup (test automation)."});
     parser.addOption({"show-settings","Open settings at startup (test automation)."});
     parser.addOption({"show-themes","Open the theme picker at startup (test automation)."});
+    parser.addOption({"frameless","Start in the frameless window mode (test automation)."});
     parser.addOption({"reset-settings","Set a damaged or incompatible settings.json aside (renamed, never deleted) and start with defaults."});
     parser.addOption({"no-resume","Do not claim a window slot or remember/restore the browsing position (test automation)."});
     parser.addOption({"window-size","Initial logical window size for UI verification, e.g. 540x360.","size"});
@@ -115,6 +118,13 @@ int main(int argc,char** argv) {
     if(parser.isSet("show-grid"))QTimer::singleShot(100,&viewer,[&]{viewer.trigger("grid");});
     auto* window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
     if(window&&parser.isSet("window-size")) { const auto dimensions=parser.value("window-size").split('x'); if(dimensions.size()==2)window->resize(qMax(540,dimensions[0].toInt()),qMax(360,dimensions[1].toInt())); }
+    if(window&&parser.isSet("frameless"))window->setProperty("frameless",true);
+    // The decorated title bar follows the theme where the OS allows it (Windows); a no-op elsewhere.
+    QPointer<glancelot::NativeTitleBarSync> titleBar=window?new glancelot::NativeTitleBarSync(window,&theme):nullptr;
+    // Changing the frameless flag can restyle or recreate the native window; re-apply once Qt has done so.
+    QTimer titleBarRefresh;titleBarRefresh.setSingleShot(true);titleBarRefresh.setInterval(0);
+    QObject::connect(&titleBarRefresh,&QTimer::timeout,&app,[&]{if(titleBar)titleBar->apply();});
+    if(window)QQmlProperty(window,"frameless").connectNotifySignal(&titleBarRefresh,SLOT(start()));
     qint64 firstImage=-1,firstFrame=-1; int frames=0;
     QObject::connect(&viewer,&ViewerController::imageChanged,&app,[&]{if(firstImage<0&&!viewer.image().isNull())firstImage=elapsed.elapsed();});
     if(window)QObject::connect(window,&QQuickWindow::frameSwapped,&app,[&]{++frames;if(firstFrame<0&&!viewer.image().isNull())firstFrame=elapsed.elapsed();});
@@ -138,6 +148,9 @@ int main(int argc,char** argv) {
                     {"thumbnail_pending",thumbnails.pending()},{"thumbnail_active",thumbnails.active()},
                     {"thumbnail_cache_bytes",double(thumbnails.cacheBytes())},
                     {"theme",theme.family()},{"theme_mode",theme.mode()},
+                    {"frameless",window?window->property("frameless").toBool():false},{"window_active",window?window->isActive():false},
+                    {"native_title_bar",QJsonObject{{"dark_mode",titleBar&&titleBar->last().darkMode},{"caption_color",titleBar&&titleBar->last().caption},
+                        {"text_color",titleBar&&titleBar->last().text},{"border_color",titleBar&&titleBar->last().border}}},
                     {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
                     {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};
                 QFile file(parser.value("report"));if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(report).toJson());

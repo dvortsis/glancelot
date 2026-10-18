@@ -1,6 +1,8 @@
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
+#include "../src/app/native_title_bar.hpp"
 #include <QColor>
+#include <QOperatingSystemVersion>
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
@@ -42,6 +44,9 @@ private slots:
     void futureSchemaRemainsByteIdentical();
     void corruptPreferencesRemainByteIdentical();
     void unavailableConfigIsSessionOnly();
+    void topBarRolesMeetContrastInEveryVariant();
+    void nativeTitleBarColorsFollowTokens();
+    void nativeTitleBarAppliesOnWindows();
 private:
     QByteArray originalConfig;
     bool hadConfig{};
@@ -146,6 +151,95 @@ void ThemeTests::unavailableConfigIsSessionOnly() {
     qputenv("GLANCELOT_CONFIG_DIR",path.toUtf8());
     ThemeManager theme; theme.setFamily("graphite");
     QCOMPARE(theme.family(),QString("graphite")); QVERIFY(!theme.error().isEmpty()); QCOMPARE(read(path),bytes);
+}
+
+// TOPBAR-THEME-01: the catalog roles the top bar and title bar draw with, in every built-in variant.
+// Derived roles (pressed, selection) are checked through the live Theme singleton in grid_ui_tests.
+void ThemeTests::topBarRolesMeetContrastInEveryVariant() {
+    QTemporaryDir dir; QVERIFY(dir.isValid()); qputenv("GLANCELOT_CONFIG_DIR",dir.path().toUtf8());
+    ThemeManager manager;
+    double borderMin=100,borderMax=0; int variants=0;
+    for(const auto& entry:manager.families()) {
+        const auto id=entry.toMap().value("id").toString();
+        for(bool dark:{false,true}) {
+            const auto palette=manager.preview(id,dark);
+            const auto role=[&](const char* name) { return QColor(palette.value(QLatin1String(name)).toString()); };
+            const auto context=id+(dark?" dark ":" light ");
+            const auto require=[&](const char* fg,const char* bg,double minimum,const char* use) {
+                const auto ratio=contrast(role(fg),role(bg));
+                QVERIFY2(ratio>=minimum,qPrintable(context+fg+"/"+bg+" ("+use+") "+QString::number(ratio,'f',2)+" < "+QString::number(minimum)));
+            };
+            require("text","surface",4.5,"title, labels");
+            require("muted","surface",4.5,"inactive title, placeholder title");
+            require("text","hover",4.5,"hovered label");
+            require("muted","hover",4.5,"inactive control glyph under the pointer");
+            require("text","surface",3.0,"icons and the focus ring");
+            require("primary","surface",3.0,"on-state marker");
+            require("background","danger",3.0,"close glyph on its danger fill");
+            require("danger","surface",3.0,"danger role is distinguishable on the bar");
+            // Separators are decorative (WCAG 1.4.11 exempts them); they only need to differ from the surface.
+            const auto separator=contrast(role("border"),role("surface"));
+            QVERIFY2(separator>1.05,qPrintable(context+"border indistinguishable from surface"));
+            borderMin=std::min(borderMin,separator); borderMax=std::max(borderMax,separator);
+            ++variants;
+        }
+    }
+    QCOMPARE(variants,80);
+    qInfo("border/surface separator contrast across %d variants: min %.2f, max %.2f",variants,borderMin,borderMax);
+}
+
+void ThemeTests::nativeTitleBarColorsFollowTokens() {
+    QTemporaryDir dir; QVERIFY(dir.isValid()); qputenv("GLANCELOT_CONFIG_DIR",dir.path().toUtf8());
+    ThemeManager manager;
+    QCOMPARE(glancelot::toColorRef(QColor(0x12,0x34,0x56)),0x00563412ul); // COLORREF is 0x00BBGGRR
+    for(const auto& entry:manager.families()) {
+        const auto id=entry.toMap().value("id").toString();
+        for(bool dark:{false,true}) {
+            const auto palette=manager.preview(id,dark);
+            for(bool active:{true,false}) {
+                const auto colors=glancelot::titleBarColors(palette,dark,active);
+                QCOMPARE(colors.dark,dark);
+                QCOMPARE(colors.caption,QColor(palette.value("surface").toString()));
+                QCOMPARE(colors.border,QColor(palette.value("border").toString()));
+                QCOMPARE(colors.text,QColor(palette.value(active?"text":"muted").toString()));
+                QVERIFY2(contrast(colors.text,colors.caption)>=4.5,qPrintable(id+(active?" active":" inactive")+" caption text"));
+            }
+        }
+    }
+    // The live selection drives it: switching family and mode changes the colors.
+    manager.setFamily("ruby"); manager.setMode("light");
+    QCOMPARE(glancelot::titleBarColors(manager.colors(),manager.dark(),true).caption,QColor(manager.preview("ruby",false).value("surface").toString()));
+    manager.setMode("dark");
+    QCOMPARE(glancelot::titleBarColors(manager.colors(),manager.dark(),true).caption,QColor(manager.preview("ruby",true).value("surface").toString()));
+}
+
+void ThemeTests::nativeTitleBarAppliesOnWindows() {
+    // Failure case first: an invalid handle is refused on every platform.
+    const auto none=glancelot::applyNativeTitleBar(0,{true,Qt::black,Qt::white,Qt::gray});
+    QVERIFY(!none.darkMode&&!none.caption&&!none.text&&!none.border);
+#ifdef Q_OS_WIN
+    // A real top-level HWND (never shown), independent of the offscreen Qt platform used by this test.
+    HWND hwnd=CreateWindowExW(0,L"STATIC",L"Glancelot title bar test",WS_OVERLAPPEDWINDOW,0,0,320,200,nullptr,nullptr,GetModuleHandleW(nullptr),nullptr);
+    QVERIFY(hwnd);
+    const auto palette=QVariantMap{{"surface","#1B2937"},{"text","#EAF3FB"},{"muted","#B5C0CC"},{"border","#33465A"}};
+    const auto result=glancelot::applyNativeTitleBar(reinterpret_cast<quintptr>(hwnd),glancelot::titleBarColors(palette,true,true));
+    const bool windows11=QOperatingSystemVersion::current()>=QOperatingSystemVersion::Windows11;
+    qInfo("Windows build %d: dark=%d caption=%d text=%d border=%d",QOperatingSystemVersion::current().microVersion(),
+          result.darkMode,result.caption,result.text,result.border);
+    QVERIFY(result.darkMode);
+    QCOMPARE(result.caption,windows11); QCOMPARE(result.text,windows11); QCOMPARE(result.border,windows11);
+    BOOL dark=FALSE;
+    if(SUCCEEDED(DwmGetWindowAttribute(hwnd,20,&dark,sizeof dark))) QVERIFY(dark);
+    const auto light=glancelot::applyNativeTitleBar(reinterpret_cast<quintptr>(hwnd),glancelot::titleBarColors(palette,false,false));
+    QVERIFY(light.darkMode);
+    if(SUCCEEDED(DwmGetWindowAttribute(hwnd,20,&dark,sizeof dark))) QVERIFY(!dark);
+    DestroyWindow(hwnd);
+    // A destroyed handle is refused rather than passed to DWM.
+    const auto destroyed=glancelot::applyNativeTitleBar(reinterpret_cast<quintptr>(hwnd),glancelot::titleBarColors(palette,true,true));
+    QVERIFY(!destroyed.darkMode&&!destroyed.caption);
+#else
+    QSKIP("Native title-bar colors are Windows-only; other platforms keep their window-manager decorations.");
+#endif
 }
 
 QTEST_MAIN(ThemeTests)
