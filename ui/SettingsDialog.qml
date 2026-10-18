@@ -204,6 +204,11 @@ UiDialog {
             Page {
                 heading: "Browsing"
                 SectionLabel { text: "Workspace layout" }
+                UiButton {
+                    text: "Arrange panes"
+                    enabled: !paneLayout.locked
+                    onClicked: { dialog.close();dialog.host.layoutEditing=true }
+                }
                 UiSwitch {
                     objectName: "layoutLock"
                     Layout.fillWidth: true

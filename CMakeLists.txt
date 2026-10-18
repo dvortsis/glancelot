@@ -32,7 +32,7 @@ if(GLANCELOT_BUILD_VIEWER)
   target_link_libraries(glancelot PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
-    ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml)
+    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml)
   # Interface typefaces (SIL OFL 1.1, assets/fonts/geist/OFL.txt), registered at startup.
   set(ui_fonts assets/fonts/geist/Geist-Light.ttf assets/fonts/geist/Geist-Regular.ttf assets/fonts/geist/Geist-Medium.ttf assets/fonts/geist/Geist-SemiBold.ttf assets/fonts/geist/GeistMono-Regular.ttf)
   qt_add_resources(glancelot ui_fonts PREFIX "/" BASE assets FILES ${ui_fonts})

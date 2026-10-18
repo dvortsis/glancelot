@@ -100,6 +100,27 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void paneArrangementBoundsAndGestures() {
+        Harness h;QVERIFY(h.window);h.window->resize(540,360);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        for(const auto& id:{"tree","topbar","statusbar","filmstrip"}) {
+            QVERIFY(h.layout.move(id,"top",0));QVERIFY(h.layout.resize(id,4096));
+        }
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);
+        QTRY_VERIFY(canvas->height()>=119);QVERIFY(canvas->y()+canvas->height()<=h.window->height()+0.1);
+        h.layout.reset();h.window->resize(1180,780);h.window->requestActivate();h.window->setProperty("layoutEditing",true);
+        auto* handle=h.window->findChild<QQuickItem*>("paneResize-tree");QVERIFY(handle);
+        QTRY_VERIFY(handle->isVisible());
+        const auto origin=handle->mapToScene(QPointF(handle->width()/2,handle->height()/2)).toPoint();
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);
+        QTest::mouseMove(h.window,origin+QPoint(40,0),30);
+        auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);
+        QTRY_VERIFY(tree->width()>300);
+        QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,origin+QPoint(40,0));
+        QTRY_VERIFY(h.layout.pane("tree")["extent"].toDouble()>300);
+        QVERIFY(h.layout.freeze("tree",true));h.viewer.setTreeVisible(false);
+        QTRY_VERIFY(tree->isVisible());
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+    }
     void paneGeometryMovesFreezesAndResets() {
         Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.viewer.setTreeVisible(true);
         auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);

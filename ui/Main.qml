@@ -18,25 +18,35 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property bool gridMode: false
+    property bool layoutEditing: false
+    property var resizePreview: ({})
     readonly property var workspace: {
         const state = paneLayout.panes
-        const active = {tree: viewer.treeVisible && state.tree.visible && (viewer.treePinned || state.tree.frozen || hudVisible || frameless),
+        const active = {tree: (viewer.treeVisible || state.tree.frozen) && state.tree.visible && (viewer.treePinned || state.tree.frozen || hudVisible || frameless),
             topbar: state.topbar.visible && (gridMode || hudVisible || frameless || state.topbar.frozen),
             statusbar: state.statusbar.visible && (gridMode || hudVisible || state.statusbar.frozen),
-            filmstrip: state.filmstrip.visible && !gridMode && viewer.filmstripVisible && filmstrip.count > 0 && (hudVisible || frameless || state.filmstrip.frozen),
+            filmstrip: state.filmstrip.visible && !gridMode && (viewer.filmstripVisible || state.filmstrip.frozen) && filmstrip.count > 0 && (hudVisible || frameless || state.filmstrip.frozen),
             preview: !gridMode, grid: gridMode}
         let bounds = {x:0,y:0,width:width,height:height}, result = {}
         const ids = ["topbar","statusbar","filmstrip","tree","preview","grid"].filter(id => active[id])
         ids.sort((a,b) => state[a].order-state[b].order)
+        function preferred(id) { return resizePreview[id] !== undefined ? resizePreview[id] : state[id].extent }
+        function overlay(id) { return id === "tree" && (width < 720 || !viewer.treePinned) && ["left","right"].indexOf(state[id].region) >= 0 }
+        const horizontalIds=ids.filter(id => ["top","bottom"].indexOf(state[id].region)>=0)
+        const verticalIds=ids.filter(id => ["left","right"].indexOf(state[id].region)>=0 && !overlay(id))
+        const totalHorizontal=horizontalIds.reduce((total,id)=>total+preferred(id),0)
+        const totalVertical=verticalIds.reduce((total,id)=>total+preferred(id),0)
+        const horizontalScale=Math.min(1,Math.max(0,height-120)/Math.max(1,totalHorizontal))
+        const verticalScale=Math.min(1,Math.max(0,width-120)/Math.max(1,totalVertical))
         for (const region of ["top","bottom","left","right"]) {
             for (const id of ids.filter(id => state[id].region === region)) {
                 const horizontal = region === "top" || region === "bottom"
-                const extent = Math.min(state[id].extent, Math.max(32,(horizontal ? bounds.height : bounds.width)-120))
+                const extent = overlay(id) ? Math.min(preferred(id),Math.max(0,bounds.width-120)) : preferred(id)*(horizontal?horizontalScale:verticalScale)
                 const rect = {x:bounds.x,y:bounds.y,width:horizontal?bounds.width:extent,height:horizontal?extent:bounds.height}
                 if(region === "bottom")rect.y += bounds.height-extent
                 if(region === "right")rect.x += bounds.width-extent
                 result[id] = rect
-                if(id === "tree" && (width < 720 || !viewer.treePinned) && (region === "left" || region === "right"))continue
+                if(overlay(id))continue
                 if(horizontal) { if(region === "top")bounds.y += extent;bounds.height -= extent }
                 else { if(region === "left")bounds.x += extent;bounds.width -= extent }
             }
@@ -76,6 +86,8 @@ ApplicationWindow {
     palette.toolTipText: Theme.background
     palette.link: Theme.primary
 
+    onLayoutEditingChanged: { if(layoutEditing)wakeHud();else resizePreview=({}) }
+    Connections { target: paneLayout; function onChanged() { if(paneLayout.locked)app.resizePreview=({}) } }
     function wakeHud() { hudVisible = true; hideHud.restart() }
     function focusWithin(item) {
         for (let focused = activeFocusItem; focused; focused = focused.parent)
@@ -139,6 +151,7 @@ ApplicationWindow {
         enabled: !app.modalOpen && !app.editingText
         onActivated: {
             canvas.endLoupe()
+            if(app.layoutEditing) { app.layoutEditing=false; return }
             if (app.gridMode) app.showCanvas()
             else if (app.visibility === Window.FullScreen) app.showNormal()
             else app.wakeHud()
@@ -149,7 +162,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (!app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+            if (!app.layoutEditing && !app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -248,6 +261,7 @@ ApplicationWindow {
         onDismissed: app.showCanvas()
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
     }
+    PaneArrangement { anchors.fill: parent; host: app; visible: app.layoutEditing; z: 20 }
     DropArea {
         anchors.fill: parent
         onEntered: drag => { drag.accepted = drag.hasUrls }
@@ -261,11 +275,10 @@ ApplicationWindow {
     }
     ColumnLayout { // empty state: one message, one action
         id: emptyState
-        anchors.centerIn: parent
-        anchors.horizontalCenterOffset: app.canvasCover / 2
+        anchors.centerIn: canvas
         spacing: Theme.gapSm
         visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
-        width: Math.min(440, app.width - app.canvasCover - 2 * Theme.gapXxl)
+        width: Math.max(0,Math.min(440,canvas.width-2*Theme.gapMd))
         Image {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: app.height < 480 ? 96 : 144
@@ -407,7 +420,7 @@ ApplicationWindow {
         x: app.paneRect("tree").x; y: app.paneRect("tree").y
         width: app.paneRect("tree").width; height: app.paneRect("tree").height
         maximumWidth: Math.max(200, Math.round(app.width * 0.45))
-        layoutFrozen: paneLayout.locked || paneLayout.panes.tree.frozen
+        layoutFrozen: true
         onResizeCommitted: extent => paneLayout.resize("tree", extent)
         visible: width > 0 && height > 0
         onDismissed: app.focusContent()
@@ -470,8 +483,9 @@ ApplicationWindow {
     }
     Rectangle { // status toast, centred on the part of the canvas no panel covers
         objectName: "statusToast"
-        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: app.canvasCover / 2; bottom: parent.bottom; bottomMargin: Theme.barHeight + Theme.gapLg }
-        width: Math.min(app.width - app.canvasCover - 2 * Theme.gapXl, statusText.implicitWidth + 2 * Theme.gapLg)
+        x: canvas.x + (canvas.width-width)/2
+        y: canvas.y + canvas.height-height-Theme.gapLg
+        width: Math.max(0,Math.min(canvas.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
         height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
         radius: Theme.radiusCard
         color: Theme.surface
