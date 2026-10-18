@@ -101,7 +101,13 @@ private slots:
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
     void everyPaneDockRegionStaysInWindow() {
-        Harness h;QVERIFY(h.window);h.fill(8);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        QTemporaryDir media;QVERIFY(media.isValid());
+        QImage image(64,48,QImage::Format_RGB32);image.fill(QColor(56,130,190));
+        for(int x=0;x<64;x+=8)for(int y=0;y<48;y+=8)image.setPixelColor(x,y,Qt::white);
+        for(const auto& name:{"a.png","b.png","c.png"})QVERIFY(image.save(media.filePath(name)));
+        Harness h(true);QVERIFY(h.window);h.viewer.open(media.filePath("a.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(),15000);QTRY_COMPARE(h.model.count(),3);
+        h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
         int placements=0;
         for(const QSize size:{QSize(540,360),QSize(1180,780)})for(const auto& mode:{QString("dark"),QString("light")}) {
             h.window->resize(size);h.theme.setMode(mode);
