@@ -29,7 +29,7 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
-  qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml)
+  qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml)
   file(GLOB_RECURSE brand_resources RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/assets" "assets/brand/icons/*.png" "assets/brand/icons/*.svg" "assets/brand/mascots/transparent/01_mascot_standing.png")
   qt_add_resources(glancelot brand_assets PREFIX "/" BASE assets FILES assets/themes/catalog.json)
   foreach(asset IN LISTS brand_resources)
@@ -70,6 +70,20 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(window_slot_tests glancelot-decoder)
     add_test(NAME window_slots COMMAND window_slot_tests -o -,txt)
     set_tests_properties(window_slots PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 240)
+    qt_add_executable(grid_ui_tests tests/grid_ui_tests.cpp
+      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
+      src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
+      src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
+    target_include_directories(grid_ui_tests PRIVATE include src/render)
+    target_compile_definitions(grid_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(grid_ui_tests PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
+    qt_add_resources(grid_ui_tests grid_theme_catalog PREFIX "/" BASE assets FILES assets/themes/catalog.json)
+    add_dependencies(grid_ui_tests glancelot-decoder)
+    add_test(NAME folder_grid COMMAND grid_ui_tests -o -,txt)
+    set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QSG_RHI_BACKEND=software" TIMEOUT 180)
     qt_add_executable(canvas_tests tests/canvas_tests.cpp src/render/image_canvas.cpp src/render/image_canvas.hpp)
     target_include_directories(canvas_tests PRIVATE src/render)
     target_link_libraries(canvas_tests PRIVATE Qt6::Quick Qt6::GuiPrivate Qt6::Test)
