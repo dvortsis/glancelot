@@ -7,6 +7,7 @@
 #include "image_canvas.hpp"
 #include <QFontDatabase>
 #include <QGuiApplication>
+#include <QClipboard>
 #include <QQuickStyle>
 #include <QQuickImageProvider>
 #include <QQuickItem>
@@ -95,6 +96,41 @@ private slots:
         config = std::make_unique<QTemporaryDir>();
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
+    }
+    void addressEditingClipboardAndEscape() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QDir().mkpath(media.filePath("empty folder"));
+        Harness h(true);QVERIFY(h.window);h.window->resize(540,360);
+        h.viewer.setTreeVisible(true);h.window->requestActivate();
+        auto* field=h.window->findChild<QQuickItem*>("folderAddress");QVERIFY(field);
+        auto* copy=h.window->findChild<QQuickItem*>("copyFolderAddress");QVERIFY(copy);
+        auto* list=h.window->findChild<QQuickItem*>("folderList");QVERIFY(list);
+        field->forceActiveFocus();QTRY_VERIFY(field->hasActiveFocus());
+        QGuiApplication::clipboard()->setText(media.filePath("empty folder"));
+        QTest::keyClick(h.window,Qt::Key_V,Qt::ControlModifier);
+        QCOMPARE(field->property("text").toString(),media.filePath("empty folder"));
+        QVERIFY(h.viewer.directory().isEmpty()); // paste is an edit, not navigation
+        QTest::keyClick(h.window,Qt::Key_Return);
+        QTRY_COMPARE(QDir::cleanPath(h.viewer.directory()),QDir::cleanPath(media.filePath("empty folder")));
+        QTRY_VERIFY(!h.viewer.directoryPending());
+        QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,copy->mapToScene(QPointF(copy->width()/2,copy->height()/2)).toPoint());
+        QCOMPARE(QGuiApplication::clipboard()->text(),h.viewer.directory());
+        field->forceActiveFocus();QTest::keyClick(h.window,Qt::Key_A,Qt::ControlModifier);
+        for(char key:QByteArray("GTS"))QTest::keyClick(h.window,key); // global grid/filmstrip/sort bindings must not run
+        QVERIFY(!h.window->property("gridMode").toBool());QVERIFY(h.viewer.filmstripVisible());
+        QCOMPARE(h.viewer.sortKey(),QString("name"));
+        QTest::keyClick(h.window,Qt::Key_Escape);
+        QCOMPARE(field->property("text").toString(),h.viewer.directory());
+        QTRY_VERIFY(list->hasActiveFocus());QVERIFY(h.viewer.treeVisible());
+        field->forceActiveFocus();QTest::keyClick(h.window,Qt::Key_A,Qt::ControlModifier);
+        for(char key:QByteArray("missing-address-target"))QTest::keyClick(h.window,key);QTest::keyClick(h.window,Qt::Key_Return);
+        QTRY_VERIFY(!h.viewer.directoryPending()&&!h.viewer.directoryError().isEmpty());
+        QVERIFY(field->property("text").toString().contains("missing-address-target"));
+        for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.theme.setMode(mode);QTest::qWait(150);
+            QDir().mkpath(".cache/path-bar-ui");
+            QVERIFY(h.window->grabWindow().save(".cache/path-bar-ui/error-"+mode+".png"));
+        }
     }
     void reviewAllLocationsAtMinimumSize() {
         Harness h; QVERIFY(h.window);

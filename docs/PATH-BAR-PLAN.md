@@ -1,0 +1,13 @@
+# PATH-BAR-01 implementation contract
+
+Lead freeze: October 18, 2026. Worktree `.worktrees/path-bar`, branch `agent/path-bar`, build `build-path-bar`.
+
+The address is the displayed browsing directory, independent of an opened image. Submitting it visits exactly that directory; it does not recursively choose a descendant. A directory without supported images is a valid location and publishes an empty current-image selection. Existing tree openFolder traversal semantics remain available to tree activation. Mixed-entry tiles arrive in FILE-GRID-01; until then the grid correctly shows no supported images.
+
+Add Navigator::openDirectory(path,error) for worker-only validation/enumeration with cancellation. Success atomically installs root/directory, sorted eligible files and first-image current (or empty); failure preserves the prior snapshot. All filesystem probes remain off the UI thread. Empty directories participate in directory/root state rather than synthesizing a nonexistent image.
+
+Add ViewerController::navigateDirectory(QString), directory navigation busy/error properties and a result marker for an accepted explicit location. Capture a normalized absolute textual path relative to the current browsing directory (no shell expansion or URL execution). Newer navigation cancels older pending results. Errors retain the accepted location and expose inline text; successful empty navigation clears the image/decode state and synchronizes tree/filmstrip/grid. Existing image-open and subtree-open commands supersede pending address results. Directory access can block inside the OS; cooperative cancellation prevents publication but cannot interrupt that call.
+
+The field above the tree uses the existing UiTextField, semantic tokens and native text selection/clipboard shortcuts. Copy copies the full accepted path even when clipped; Enter submits; pasting alone never navigates; Escape restores the accepted path and returns tree focus. Invalid text remains editable with an inline error. Focus and text edits keep the pane visible and suppress global image shortcuts. Incoming external location changes update a clean field and never overwrite an active modified edit. Accessible name, busy/error feedback and full-path tooltip are required.
+
+Verification: generated Unicode/space/long paths, supported/unsupported/empty directories, invalid/missing/file-as-folder targets, cancellation/newest request, prior-location retention, first publication coherence, copy/paste and text command precedence. Windows drive/UNC and Linux path syntax are platform-specific; real disconnected-share latency and hardware-dependent behavior stay unverified without fixtures. Independent review and integrated tests required before queue state done.

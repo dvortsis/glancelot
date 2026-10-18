@@ -336,6 +336,32 @@ bool Navigator::open(const fs::path& file, std::error_code& error) {
     ++state_.generation;
     return true;
 }
+bool Navigator::openDirectory(const fs::path& directory, std::error_code& error) {
+    error.clear();
+    const auto cancelled=[&] {
+        if(!cancel_.stop_requested())return false;
+        error=std::make_error_code(std::errc::operation_canceled); return true;
+    };
+    if(cancelled())return false;
+    const auto path=absolutePath(directory,error);
+    if(error)return false;
+    if(!safePath(path,cancel_)) {
+        if(!cancelled())error=std::make_error_code(std::errc::no_such_file_or_directory);
+        return false;
+    }
+    // Do not use skip_permission_denied: an inaccessible folder must not look empty.
+    fs::directory_iterator readable(path,error);
+    if(error||cancelled())return false;
+    std::vector<fs::path> files; std::vector<FileMeta> meta;
+    list(path,files,meta);
+    if(cancelled())return false;
+    state_.root=state_.directory=path;
+    state_.current=files.empty()?fs::path{}:files.front();
+    state_.files=std::move(files); meta_=std::move(meta);
+    anchor_=meta_.empty()?FileMeta{}:meta_.front();
+    ++state_.generation;
+    return true;
+}
 bool Navigator::setRoot(const fs::path& root) {
     if (state_.current.empty() || cancel_.stop_requested()) return false;
     std::error_code ec;

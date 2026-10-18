@@ -73,6 +73,7 @@ private slots:
     void reviewLocationsRetainCurrentFolder();
     void reviewUnmappedUncRemainsAvailable();
     void reviewExplicitFolderDefinesTraversalRoot();
+    void exactDirectoryVisitsAreAtomicAndKeepErrorsLocal();
     void childFoldersUsesNaturalOrderAndOneLevel();
     void lazyListingExpandsOneLevelAtATime();
     void collapseDiscardsChildrenAndReexpandRelists();
@@ -626,5 +627,38 @@ void FolderTreeTests::reviewExplicitFolderDefinesTraversalRoot() {
     QObject::disconnect(connection);
     QTRY_VERIFY_WITH_TIMEOUT(same(viewer.snapshot().current,first),15000);
     QVERIFY2(same(viewer.snapshot().root,album),"Selecting a child folder discarded the selected album traversal root");
+    qunsetenv("GLANCELOT_CONFIG_DIR");
+}
+
+void FolderTreeTests::exactDirectoryVisitsAreAtomicAndKeepErrorsLocal() {
+    QTemporaryDir media,config; QVERIFY(media.isValid()&&config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    const auto album=make(media,QString::fromUtf8("album ü space"));
+    const auto empty=make(media,"empty");
+    const auto png=writePng(album,"photo.png"); QVERIFY(!png.isEmpty());
+    ViewerController viewer;
+    viewer.navigateDirectory(album);
+    QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending()&&viewer.imageReady(),15000);
+    QVERIFY(same(viewer.snapshot().directory,album)); QVERIFY(same(viewer.snapshot().current,png));
+    viewer.navigateDirectory(empty);
+    QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),15000);
+    QVERIFY(same(viewer.snapshot().directory,empty));
+    QCOMPARE(QDir::cleanPath(viewer.directory()),QDir::cleanPath(empty));
+    QVERIFY(viewer.filePath().isEmpty());QVERIFY(viewer.image().isNull());QVERIFY(!viewer.imageReady());
+    QCOMPARE(viewer.fileCount(),0);
+    viewer.navigateDirectory(media.filePath("missing"));
+    QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),15000);
+    QVERIFY(!viewer.directoryError().isEmpty()); QVERIFY(same(viewer.snapshot().directory,empty));
+    viewer.navigateDirectory(album);viewer.navigateDirectory(empty);
+    QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),15000);
+    QVERIFY(same(viewer.snapshot().directory,empty)); QVERIFY(viewer.filePath().isEmpty());
+    viewer.navigateDirectory(album);viewer.cancelDirectoryNavigation();
+    QVERIFY(!viewer.directoryPending());QTest::qWait(100);
+    QVERIFY(same(viewer.snapshot().directory,empty));
+    // An explicit image open supersedes an address request without a stale error/location.
+    viewer.navigateDirectory(media.filePath("missing"));viewer.open(png);
+    QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),15000);
+    QVERIFY(!viewer.directoryPending()); QVERIFY(viewer.directoryError().isEmpty());
+    QCOMPARE(viewer.filePath(),png);
     qunsetenv("GLANCELOT_CONFIG_DIR");
 }

@@ -1,3 +1,5 @@
+#include <QClipboard>
+#include <QGuiApplication>
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
@@ -117,6 +119,8 @@ struct ViewerController::Private {
     ViewerController* q;
     QImage image;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
+    QString directoryError;
+    bool directoryPending{};
     bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
@@ -128,7 +132,7 @@ struct ViewerController::Private {
     qint64 admittedPixelBytes{};
     QByteArray output;
     QCache<QString,QImage> cache{128*1024}; // KiB, only source-revision keyed immutable RGBA pixels.
-    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; };
+    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool* navigationPool=new QThreadPool;
     bool navigationBusy{}, navigationReady{};
@@ -159,6 +163,7 @@ struct ViewerController::Private {
             cache.clear();
             emit q->filesInvalidated();
             if (QFileInfo::exists(path)) { const QString target=path; q->open(target); }
+            else if(path.isEmpty()&&!nav.snapshot().directory.empty())q->navigateDirectory(displayPath(nav.snapshot().directory));
             else { navigate(1, false); }
         });
         QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
@@ -357,6 +362,21 @@ struct ViewerController::Private {
             trace("navigation:finished");
             auto result=future->result(); future->deleteLater(); navigationBusy=false;
             if (token==generation && sequence==navigationGeneration) {
+                if(result.directoryVisit) {
+                    directoryPending=false;
+                    directoryError=result.directoryFailed?result.message:QString{};
+                    if(result.directoryFailed) { status=result.message; emit q->stateChanged(); }
+                    else if(!result.destination) {
+                        ++generation; cancel(); reload.stop();
+                        path.clear(); image=QImage{}; imageReady=false; loading=false;
+                        lastDecodedPath.clear(); pendingFolder.clear(); pendingImage.clear();
+                        positionDirty=false; positionTimer.stop();
+                        if(!watcher.files().isEmpty())watcher.removePaths(watcher.files());
+                        if(!watcher.directories().isEmpty())watcher.removePaths(watcher.directories());
+                        watcher.addPath(displayPath(result.navigator.snapshot().directory));
+                        emit q->imageChanged();
+                    }
+                }
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
@@ -473,7 +493,10 @@ void ViewerController::restoreWindow(){
 QImage ViewerController::image() const{return d->image;}
 QString ViewerController::filePath() const{return d->path;}
 QString ViewerController::fileName() const{return QFileInfo(d->path).fileName();}
-QString ViewerController::directory() const{return QFileInfo(d->path).absolutePath();}
+QString ViewerController::directory() const{return d->path.isEmpty()?displayPath(d->nav.snapshot().directory):QFileInfo(d->path).absolutePath();}
+QString ViewerController::directoryError() const{return d->directoryError;}
+bool ViewerController::directoryPending() const{return d->directoryPending;}
+void ViewerController::copyDirectory() const{QGuiApplication::clipboard()->setText(directory());}
 QString ViewerController::status() const{return d->status;}
 bool ViewerController::loading() const{return d->loading;}
 bool ViewerController::imageReady() const{return d->imageReady;}
@@ -496,6 +519,7 @@ QString ViewerController::boundaryMode() const{return d->boundary;}
 QString ViewerController::wheelMode() const{return d->wheel;}
 void ViewerController::open(const QString& value){
     trace("open:begin");
+    d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(!d->navigationOpen)d->navigationIntents.clear();
     ++d->generation; d->cancel(); d->reload.stop();
@@ -544,7 +568,34 @@ bool ViewerController::treeVisible() const{return d->tree;}
 bool ViewerController::treePinned() const{return d->treePin;}
 void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tree=value;if(!d->save({"tree"}))d->status="Folder tree setting changed; settings could not be saved.";emit stateChanged();if(value)emit treeShown();}
 void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save({"treePinned"}))d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
+void ViewerController::cancelDirectoryNavigation() {
+    if(d->directoryPending) {
+        d->navigationStop.request_stop();d->navigationStop=std::stop_source{};
+        ++d->navigationGeneration;d->pendingNavigation.reset();d->navigationIntents.clear();
+    }
+    d->directoryPending=false;d->directoryError.clear();emit stateChanged();
+}
+void ViewerController::navigateDirectory(const QString& value) {
+    d->navigationIntents.clear();
+    d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
+    const auto cancellation=d->navigationStop.get_token();
+    Navigator copy=d->nav; copy.setCancellation(cancellation);
+    const auto sort=d->sortSpec;
+    // Pure textual normalization: filesystem validation runs only on the navigation worker.
+    const QString base=directory().isEmpty()?QDir::currentPath():directory();
+    const QString folder=QDir::cleanPath(QDir(base).absoluteFilePath(QDir::fromNativeSeparators(value)));
+    d->directoryPending=true;d->directoryError.clear();emit stateChanged();
+    d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,folder,sort,cancellation,empty=value.isEmpty()]() mutable {
+        Navigator target; target.setCancellation(cancellation); target.setSort(sort);
+        std::error_code error;
+        if(empty||!target.openDirectory(nativePath(folder),error))
+            return Private::NavigationResult{std::move(copy),std::nullopt,"Cannot open that folder. Check the path and access permissions.",true,true};
+        const auto current=target.snapshot().current;
+        return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
+    },"No supported images in this folder."});
+}
 void ViewerController::openFolder(const QString& value){
+    d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(value.trimmed().isEmpty()||folder.isEmpty())return;
     d->navigationIntents.clear();
