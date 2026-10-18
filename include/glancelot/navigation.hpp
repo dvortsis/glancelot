@@ -19,7 +19,10 @@ struct SortSpec {
     bool operator==(const SortSpec&) const = default;
 };
 struct FileMeta { std::int64_t modified{}; std::uintmax_t size{}; bool known{}; };
-// `meta`, when given, receives one entry per returned file (same order).
+// The file order itself (exposed so ordering properties, e.g. unreadable metadata last, are testable).
+bool fileSortBefore(const SortSpec& sort, const std::filesystem::path& a, const FileMeta& metaA,
+                    const std::filesystem::path& b, const FileMeta& metaB);
+// `meta`, when given, receives one entry per returned file (same order); only Modified/Size read real metadata.
 std::vector<std::filesystem::path> sortedImageFiles(const std::filesystem::path& directory, const SortSpec& sort,
     std::stop_token cancel = {}, std::vector<FileMeta>* meta = nullptr);
 // Immediate child directories for the folder tree, in the same natural order and with the same link/volume
@@ -49,10 +52,12 @@ public:
     const SortSpec& sort() const { return sort_; }
     void setCancellation(std::stop_token cancel) { cancel_ = cancel; }
     std::optional<std::filesystem::path> step(int direction);
+    // Explicit folder jump: lands on the natural first/last image of the target folder (NAV-02).
     std::optional<std::filesystem::path> folder(int direction);
     void refresh();
     const NavigationSnapshot& snapshot() const { return state_; }
 private:
+    std::optional<std::filesystem::path> enterFolder(int direction, bool sortedLanding);
     void list(const std::filesystem::path& directory, std::vector<std::filesystem::path>& files, std::vector<FileMeta>& meta);
     NavigationSnapshot state_;
     SortSpec sort_;

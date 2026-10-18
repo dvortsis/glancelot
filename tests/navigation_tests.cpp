@@ -377,6 +377,55 @@ void fileSorting() {
     nav.setSort(SortSpec{SortKey::Name, true, 1});
     require(names(nav.snapshot().files) == "d.jpg b.jpg a10.jpg " && nav.snapshot().current.filename() == "a10.jpg", "name descending after deletes");
 
+    // Unreadable metadata sorts last in both directions and the comparator stays a strict weak order.
+    {
+        const FileMeta known{100, 5, true}, other{200, 9, true}, unknown{};
+        for (const auto key : {SortKey::Modified, SortKey::Size}) for (const bool desc : {false, true}) {
+            const SortSpec spec{key, desc, 1};
+            require(fileSortBefore(spec, "z.jpg", known, "a.jpg", unknown), "readable metadata must precede unreadable");
+            require(!fileSortBefore(spec, "a.jpg", unknown, "z.jpg", known), "unreadable metadata must be last");
+            require(fileSortBefore(spec, "a.jpg", unknown, "b.jpg", unknown) && !fileSortBefore(spec, "b.jpg", unknown, "a.jpg", unknown), "unreadable ties are natural");
+            const std::pair<fs::path, FileMeta> items[]{{"a.jpg", known}, {"b.jpg", other}, {"c.jpg", unknown}, {"d.jpg", known}, {"e.jpg", unknown}};
+            for (const auto& x : items) {
+                require(!fileSortBefore(spec, x.first, x.second, x.first, x.second), "comparator not irreflexive");
+                for (const auto& y : items) for (const auto& z : items) {
+                    if (fileSortBefore(spec, x.first, x.second, y.first, y.second)) require(!fileSortBefore(spec, y.first, y.second, x.first, x.second), "comparator not asymmetric");
+                    if (fileSortBefore(spec, x.first, x.second, y.first, y.second) && fileSortBefore(spec, y.first, y.second, z.first, z.second))
+                        require(fileSortBefore(spec, x.first, x.second, z.first, z.second), "comparator not transitive");
+                }
+            }
+        }
+    }
+
+    // Stepping across a folder boundary continues the visible order (nothing skipped); explicit jumps stay natural.
+    Fixture w;
+    for (const char* folder : {"a", "b"}) for (const auto& [name, bytes] : {std::pair{"1.jpg", 30}, std::pair{"2.jpg", 20}, std::pair{"3.jpg", 10}}) {
+        const auto path = w.root / folder / name; fs::create_directories(path.parent_path());
+        std::ofstream(path, std::ios::binary) << std::string(std::size_t(bytes), 'x');
+    }
+    Navigator walk; walk.setSort(SortSpec{SortKey::Size, false, 1});
+    require(walk.open(w.root / "a" / "3.jpg", error), "open walk"); walk.setRoot(w.root);
+    std::string forward = "a/3";
+    for (int i = 0; i < 5; ++i) { const auto step = walk.step(1); require(step.has_value(), "walk ended early"); forward += " " + step->parent_path().filename().string() + "/" + step->stem().string(); }
+    require(forward == "a/3 a/2 a/1 b/3 b/2 b/1" && !walk.step(1), ("walk skipped or reordered images: " + forward).c_str());
+    std::string backward = "b/1";
+    for (int i = 0; i < 5; ++i) { const auto step = walk.step(-1); require(step.has_value(), "backward walk ended early"); backward += " " + step->parent_path().filename().string() + "/" + step->stem().string(); }
+    require(backward == "b/1 b/2 b/3 a/1 a/2 a/3", ("backward walk skipped images: " + backward).c_str());
+
+    // The anchor exists right after open and after landing, so deleting the current image keeps next/previous defined.
+    Navigator fresh; fresh.setSort(SortSpec{SortKey::Size, false, 1});
+    require(fresh.open(w.root / "a" / "2.jpg", error), "open for anchor");
+    fs::remove(w.root / "a" / "2.jpg");
+    const auto afterOpen = fresh.step(1);
+    require(afterOpen && afterOpen->filename() == "1.jpg", "deleting the just-opened image broke next");
+    Navigator lander; lander.setSort(SortSpec{SortKey::Size, false, 1});
+    require(lander.open(w.root / "b" / "3.jpg", error), "open for landing"); lander.setRoot(w.root);
+    const auto landedOn = lander.folder(-1);   // explicit jump to the previous folder: natural last image of a
+    require(landedOn && *landedOn == w.root / "a" / "3.jpg", "explicit jump left the natural endpoint");
+    fs::remove(*landedOn);   // a/2 was removed above, so a/1 is the only image left in size order after a/3
+    const auto afterLanding = lander.step(1);
+    require(afterLanding && *afterLanding == w.root / "a" / "1.jpg", "deleting the landed image broke next");
+
     // Folder order and landing are independent of the file sort (NAV-02/NAV-06).
     Fixture t;
     for (const char* folder : {"a", "b"}) { t.file(fs::path(folder) / "1.jpg"); t.file(fs::path(folder) / "2.jpg"); t.file(fs::path(folder) / "3.jpg"); }

@@ -236,7 +236,8 @@ ApplicationWindow {
                 text: "Sort: " + ({ name: "Name", modified: "Date", size: "Size", shuffle: "Shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? " ↓" : " ↑")
                 enabled: viewer.fileCount > 0
                 onClicked: app.invoke("sort")
-                ToolTip.text: "Cycle file order (" + viewer.bindingFor("sort") + "); reverse with " + viewer.bindingFor("sort-reverse")
+                ToolTip.text: "Cycle file order" + (viewer.bindingFor("sort").length ? " (" + viewer.bindingFor("sort") + ")" : "") + (viewer.bindingFor("sort-reverse").length ? "; reverse with " + viewer.bindingFor("sort-reverse") : "")
+                Accessible.name: "File order: " + ({ name: "name", modified: "date modified", size: "size", shuffle: "shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? ", descending" : ", ascending")
                 Accessible.description: "Changes the order of photos inside folders, not the folder order"
             }
             Label { text: " / "; color: theme.colors.border }
