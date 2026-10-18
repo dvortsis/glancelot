@@ -76,7 +76,8 @@ Rectangle {
             onWheel: event => {
                 const delta = event.angleDelta.x !== 0 ? event.angleDelta.x : event.angleDelta.y
                 list.cancelFlick()
-                list.contentX = Math.max(0, Math.min(list.contentWidth - list.width, list.contentX - delta))
+                if(strip.vertical)list.contentY = Math.max(0,Math.min(list.contentHeight-list.height,list.contentY-delta))
+                else list.contentX = Math.max(0, Math.min(list.contentWidth - list.width, list.contentX - delta))
             }
         }
         delegate: ItemDelegate {
@@ -85,10 +86,10 @@ Rectangle {
             required property string name
             required property string path
             required property bool isCurrent
-            width: strip.compact ? 68 : 84
+            width: strip.vertical ? list.width-2*Theme.gapMd : (strip.compact ? 68 : 84)
             // 3px of vertical room inside the list's clip keeps the outset focus ring whole.
             y: 3
-            height: ListView.view.height - 6
+            height: strip.vertical ? (strip.compact ? 68 : 84) : ListView.view.height - 6
             padding: 2
             focusPolicy: Qt.StrongFocus
             Accessible.name: name + (isCurrent ? ", current photo" : "")

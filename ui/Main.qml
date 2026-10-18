@@ -36,6 +36,7 @@ ApplicationWindow {
                 if(region === "bottom")rect.y += bounds.height-extent
                 if(region === "right")rect.x += bounds.width-extent
                 result[id] = rect
+                if(id === "tree" && (width < 720 || !viewer.treePinned) && (region === "left" || region === "right"))continue
                 if(horizontal) { if(region === "top")bounds.y += extent;bounds.height -= extent }
                 else { if(region === "left")bounds.x += extent;bounds.width -= extent }
             }
@@ -314,10 +315,10 @@ ApplicationWindow {
     }
     Rectangle {
         id: topPanel
-        anchors { left: parent.left; right: parent.right; top: parent.top }
-        height: Theme.barHeight
+        x: app.paneRect("topbar").x; y: app.paneRect("topbar").y
+        width: app.paneRect("topbar").width; height: app.paneRect("topbar").height
         color: Theme.surface
-        visible: app.gridMode || app.hudVisible || app.frameless
+        visible: width > 0 && height > 0
         HoverHandler { id: topBar }
         MouseArea { anchors.fill: parent; enabled: app.frameless; onPressed: app.startSystemMove(); onDoubleClicked: app.visibility === Window.Maximized ? app.showNormal() : app.showMaximized() }
         Rectangle { // edge against the canvas when no filmstrip sits below
