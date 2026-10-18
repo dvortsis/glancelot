@@ -130,7 +130,10 @@ private slots:
         for(const auto& mode:{QString("dark"),QString("light")}) {
             h.theme.setMode(mode);QTest::qWait(150);
             QDir().mkpath(".cache/path-bar-ui");
-            QVERIFY(h.window->grabWindow().save(".cache/path-bar-ui/error-"+mode+".png"));
+            const auto capture=h.window->grabWindow();
+            QVERIFY(!capture.isNull());
+            if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE"))
+                QVERIFY(capture.save(".cache/path-bar-ui/error-"+mode+".png"));
         }
     }
     void reviewAllLocationsAtMinimumSize() {
