@@ -88,4 +88,33 @@ Native screenshots (`glancelot.exe --no-resume --window-size … --theme-mode �
 - Reduced-motion preference: Qt 6.8 exposes no platform reduced-motion hint to QML. Motion is limited to 150–200 ms state changes and the tree's loading spinner, and nothing waits on an animation.
 - The tree panel width set by dragging is per session and not persisted.
 - Screen-reader output was checked by reading roles and names, not with a live screen reader.
-- The independent review result is recorded in WORK-QUEUE when it lands.
+- The default-hint suppression compares against the controller's default status text; `startupStatusAndEmptyState` pins that string so a drift fails the test.
+- Deferred hygiene: a few component-intrinsic literal sizes (switch track, swatches, card height), `pragma ComponentBehavior: Bound`, and unqualified `theme` context-property access in `Theme.qml`.
+
+## Independent review
+
+Reviewer agent in a separate detached worktree; it did not implement the change.
+
+**Round 1 (`e6b20c6`): CHANGES REQUIRED.** Build and tests 8/8; `grid_ui_tests` 17/17; 48 app captures (olive and slate-ice, dark and light, 540/1180/1920); contrast script over all 80 catalog variants.
+- **Blocking:** start-up settings-load errors were hidden behind the empty state, because the toast suppressed whatever status existed at load.
+- **Important:**
+  - Clicking the current Settings section cleared its highlight (a checkable button with a bound `checked`).
+  - The checked state was shown only by a fill that fails 3:1 in 80 of 80 variants.
+  - Reasons for disabled commands sat only in tooltips on unfocusable buttons (IN-04).
+  - Geist licence notice: OFL missing from the Docker image, and the copyright line did not match the files.
+- **Polish:** Enter on Pin did nothing; a chevron double-click relisted the folder; 16 px chevron target; test captures were unconditional, taken mid-transition, and asserted nothing.
+
+**Fixes (`8c17d96`, plus the polish commit that follows):**
+- Only the exact default hint is suppressed; there is a new test with `{"schema":99}`.
+- `UiButton.selected` plus a primary marker bar: a leading bar in the sidebar and tree header, an underline on centred buttons. Primary measures at least 3.06:1 against selection, hover and surface in all 80 variants.
+- Command rows stay focusable, with a visible and accessible reason, and Enter skips them. The Fit setting explains that it needs a photo.
+- Upstream `OFL.txt`, copied into the Docker image; failed font registration is logged.
+- Return/Enter toggles checkable buttons. The chevron target is 22 px, with a guard on the second tap.
+- Gated captures (`GLANCELOT_REVIEW_CAPTURE`) with 300 ms waits.
+- After review: constant font weight on toggles (no width shift), and the muted colour instead of opacity on unavailable command rows (at least 6.42:1).
+
+**Round 2 (`8c17d96`): APPROVE.**
+- Build and tests 8/8; `grid_ui_tests` 19/19 with captures.
+- Schema-99, invalid-JSON and fresh-start captures confirm the toast behaviour.
+- Marker contrast confirmed: minimum 3.06 against selection and 3.16 against hover, with 0 failures in 80 variants.
+- Remaining minor notes are listed above as deferred hygiene; the two cheap ones (width shift and row contrast) are fixed.

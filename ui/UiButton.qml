@@ -17,7 +17,7 @@ Button {
     property int alignment: Qt.AlignHCenter
     property bool selected: false
     readonly property bool isOn: checked || selected
-    readonly property color foreground: variant === "primary" ? Theme.textOnPrimary : Theme.text
+    property color foreground: variant === "primary" ? Theme.textOnPrimary : Theme.text
 
     implicitHeight: Theme.controlHeight
     implicitWidth: iconOnly ? Theme.controlHeight : Math.max(Theme.controlHeight, implicitContentWidth + leftPadding + rightPadding)
@@ -29,7 +29,7 @@ Button {
     hoverEnabled: true
     opacity: enabled ? 1 : Theme.disabledOpacity
     font.pixelSize: Theme.textBody
-    font.weight: variant === "primary" || isOn ? Font.Medium : Font.Normal
+    font.weight: variant === "primary" ? Font.Medium : Font.Normal // constant weight: toggling never shifts the layout
     Accessible.name: text
     Accessible.checked: checked
     // Return/Enter behave like Space: checkable buttons toggle (and emit toggled) before clicked.

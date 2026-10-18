@@ -298,7 +298,7 @@ UiDialog {
                                 Layout.fillWidth: true
                                 alignment: Qt.AlignLeft
                                 text: commandRow.modelData.label
-                                opacity: commandRow.reason.length ? 0.6 : 1
+                                foreground: commandRow.reason.length ? Theme.muted : Theme.text // muted, not opacity: keeps 4.5:1
                                 Accessible.name: (commandRow.reason.length ? "" : "Run ") + commandRow.modelData.label
                                 Accessible.description: commandRow.reason
                                 onClicked: dialog.run(commandRow.modelData.id)
