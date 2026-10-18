@@ -75,7 +75,8 @@ SettingsStatus readSettings(QJsonObject& out) {
         // A schema-1 file is never empty, so ok-and-empty means "absent". Once a writer has used this directory
         // (its lock file exists) absence can be the instant of a concurrent replacement on Linux; look again.
         const bool vanished = status.ok() && out.isEmpty() && QFileInfo::exists(path + ".lock");
-        if (status.code != SettingsStatus::Unreadable && !vanished) break;
+        // A genuinely absent file (e.g. after a reset) must not cost the UI thread the full unreadable budget.
+        if (status.code != SettingsStatus::Unreadable && !(vanished && attempt < 2)) break;
         QThread::msleep(10);
     }
     if (status.code == SettingsStatus::Corrupt) {
