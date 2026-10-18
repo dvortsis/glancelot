@@ -17,6 +17,10 @@ Item {
         if(x>=host.width/2)return "right"
         return id === "preview" || id === "grid" ? "center" : "left"
     }
+    Connections {
+        target: paneLayout
+        function onChanged() { arrangement.dragging=false;arrangement.dropRegion="";arrangement.host.resizePreview=({}) }
+    }
     onVisibleChanged: if(!visible) { dragging=false;dropRegion="";host.resizePreview=({}) }
     Rectangle {
         visible: arrangement.dragging

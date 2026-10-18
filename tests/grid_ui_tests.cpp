@@ -108,7 +108,14 @@ private slots:
         auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);
         QTRY_VERIFY(canvas->height()>=119);QVERIFY(canvas->y()+canvas->height()<=h.window->height()+0.1);
         h.layout.reset();h.window->resize(1180,780);h.window->requestActivate();h.window->setProperty("layoutEditing",true);
-        auto* handle=h.window->findChild<QQuickItem*>("paneResize-tree");QVERIFY(handle);
+        QQuickItem* handle=nullptr;
+        QList<QQuickItem*> pending{h.window->contentItem()};
+        while(!pending.isEmpty()) {
+            auto* item=pending.takeFirst();
+            if(item->objectName()=="paneResize-tree"){handle=item;break;}
+            pending<<item->childItems();
+        }
+        QVERIFY(handle);
         QTRY_VERIFY(handle->isVisible());
         const auto origin=handle->mapToScene(QPointF(handle->width()/2,handle->height()/2)).toPoint();
         QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);
