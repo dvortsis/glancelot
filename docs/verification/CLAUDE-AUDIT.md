@@ -18,7 +18,7 @@ The existing implementation is a useful Windows JPEG/PNG alpha. The earlier plan
 6. **Activating a failed current path could not retry it.** The previous no-op checked the requested path rather than successful decode state. The controller now tracks whether the current attempt succeeded and provides a separator/case-aware path comparison without filesystem access. Failed images retry; a valid current image avoids reopening, including Windows slash/case aliases.
 7. **Sort persistence failure was hidden by a success message.** Session-only ordering is now reported when the shared settings writer is busy or unavailable. Sort worker generations, natural folder order/explicit landing, deleted anchors, stable ties, missing metadata and visible-order stepping are covered by core/controller tests.
 
-8. **Concurrent sort edits could revert another window's preferences.** A stale window changing only direction replaced the entire sort object, resetting the sort key and dropping unknown nested fields. Sort updates now merge only edited fields under the shared writer lock. Independent regression and verification are required before closing this final finding.
+8. **Concurrent sort edits could revert another window's preferences.** A stale window changing only direction replaced the entire sort object, resetting the sort key and dropping unknown nested fields. Sort updates now merge only edited fields under the shared writer lock. The independent regression failed before the fix and passes afterward, retaining the other window's key, direction, seed and unknown nested fields. Selecting shuffle also persists its seed with its mode.
 
 Additional hardening: decoder stderr is discarded instead of accumulating; a failed pixel copy no longer destroys the previous good image; worker request limits are checked before accepting a newline; subtree-search pending storage is bounded as well as visited work; viewer teardown has a one-second navigation cancellation grace instead of waiting indefinitely on a blocked filesystem call. Incomplete UNC server-root validation was corrected, but actual SMB behavior remains unverified.
 
@@ -33,7 +33,7 @@ viewport 0.13s; themes 0.38s
 100% tests passed out of 8; total 50.42s
 ```
 
-Independent reviewer reruns passed all eight targets (41.43s, then 42.72s after the oversized-request regression). Direct Qt logs also exercise the actual new cases: tree reveal/queue, successful-current no-op, failed-current retry and the tall grid (132 cells). The final teardown-change reviewer rerun passed all eight targets in 38.47s on runtime `3dea7bf`; direct tree/grid/parser/persistence regressions also passed. Independent approval is complete. Integrated-commit checks remain pending at this checkpoint.
+Independent reviewer reruns passed all eight targets (41.43s, then 42.72s after the oversized-request regression). Direct Qt logs also exercise the actual new cases: tree reveal/queue, successful-current no-op, failed-current retry and the tall grid (132 cells). The final teardown-change reviewer rerun passed all eight targets in 38.47s on runtime `3dea7bf`; direct tree/grid/parser/persistence regressions also passed. The final sort fix at `bf7f0b8` was then independently approved: all 31 persistence cases and both sort UI cases passed.
 
 Native Windows `verify-folder-grid.py` passed compact dark/light, wide and 10,001-image cases: 6/6/32/32 live cells, no queued/active work at capture, cache 76,000/76,000/441,600/441,600 bytes. All 10,001 source entries are compared by SHA256, including a malformed PNG and a long Unicode filename. The independent reviewer repeated this script and inspected the compact screenshots.
 
@@ -48,6 +48,8 @@ link creation: directory=1 cycle=1 file=1
 child-folder permission-denial enforcement=1
 navigation: all generated fixture tests passed
 ```
+
+Final integrated `main` runtime `bf7f0b8`: `scripts/build.ps1 -Test -Package` succeeded, all eight CTest targets passed in **38.51s** (navigation 1.50s, viewer 4.24s, thumbnails 5.43s, tree 4.87s, slots 18.48s, grid 3.60s, viewport 0.03s, themes 0.11s). The portable package passed native open/resume/grid checks with Qt development paths removed, zero stderr and unchanged generated source bytes. Packaging warned that the local Qt developer installation has no translations; this does not qualify localized delivery. Root logs: `.cache/audit/integrated-final.log` and `.cache/audit/portable-final.log`.
 
 Local author artifacts: `.worktrees/audit/.cache/audit/`; independent artifacts: `.worktrees/audit-review/.cache/`. Use `scripts/build.ps1 -Test -Package` for the required integrated Windows gate. Qt GUI tests use an offscreen/software backend for interaction semantics; native screenshots use the Windows backend. Neither is physical display/color/HDR/performance qualification.
 

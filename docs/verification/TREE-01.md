@@ -24,3 +24,7 @@ Integrated at 4a23cf1 (contracts 1cc844e). Windows evidence; Linux GUI, real SMB
 - The default root is the opened file's folder, so a leaf folder shows one row until the user chooses Parent; raising is explicit by design.
 - Live-window keyboard sessions of the Main.qml wiring (Shift+Tab, `treeShown` focus, button focus keeping the HUD open) were verified by reading and QTest harnesses with stub viewers, not by real focus in a full window.
 - The controller's navigation thread pool still waits for running jobs on destruction (pre-existing); the tree model no longer does.
+
+## Whole-code audit follow-up (October 17, 2026)
+
+REVIEW-ALL-01 supersedes the UNC-prefix and controller-teardown limitations above: incomplete server prefixes are skipped during validation (real SMB remains unverified), and controller shutdown now gives navigation cancellation a bounded one-second grace. It also bounds outstanding tree jobs to two and repairs current-folder reveal after repeated completed Parent navigation. Independent tests passed; see [CLAUDE-AUDIT.md](CLAUDE-AUDIT.md). Rapid overlapping Parent requests still coalesce as documented above.

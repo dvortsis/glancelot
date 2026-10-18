@@ -8,7 +8,7 @@ Build a native, local-first Windows/Linux photo viewer whose distinguishing stre
 
 The original planning task began in an empty workspace. The repository now contains a C++20 / Qt 6.8.3 Windows alpha, local toolchain, GPL-3.0-or-later license, tests, and portable packaging. Treat that earlier planning baseline as history rather than a statement of current delivery.
 
-Current delivery: JPEG/PNG canvas viewing, deterministic traversal, remappable keyboard commands, themes, worker-backed filmstrip, lazy folder tree, numbered-window resume, and folder grid are implemented on Windows. Name/modified/size/seeded-shuffle sorting is under final audit and integration. See [the live work queue](WORK-QUEUE.yaml), [agent execution plan](AGENT-BUILD-PLAN.md), and [whole-code audit](verification/CLAUDE-AUDIT.md). Neither the Windows alpha nor passing offscreen UI tests completes the Linux GUI, physical pixel/color, HDR, performance, storage, or stable-release gates.
+Current delivery: JPEG/PNG canvas viewing, deterministic traversal, remappable keyboard commands, themes, worker-backed filmstrip, lazy folder tree, numbered-window resume, and folder grid are implemented on Windows. Name/modified/size/seeded-shuffle sorting is implemented and independently reviewed on Windows. See [the live work queue](WORK-QUEUE.yaml), [agent execution plan](AGENT-BUILD-PLAN.md), and [whole-code audit](verification/CLAUDE-AUDIT.md). Neither the Windows alpha nor passing offscreen UI tests completes the Linux GUI, physical pixel/color, HDR, performance, storage, or stable-release gates.
 
 Companion documents:
 

@@ -112,9 +112,10 @@ tasks:
     milestone: M3
     priority: 10
     owner: grid-ui
-    state: integration
-    commit: 822d882
-    evidence: docs/verification/GRID-01.md; integrated build.ps1 -Test -Package 8/8 CTest targets; verify-folder-grid.py 10001-file run passed; portable cleanPATH smoke passed; prior review fixes were not independently re-run; final gate reopened by REVIEW-ALL-01; Windows only
+    state: done
+    commit: bf7f0b8
+    implementation_commit: 822d882
+    evidence: docs/verification/CLAUDE-AUDIT.md; final runtime bf7f0b8 independently approved; integrated build.ps1 -Test -Package 8/8 (38.51s); portable open/resume/grid with Qt off PATH passed; native 10001-source checks passed; Windows scope
     memory_action: act_mvd2jba0_ebb2f6d14794
     base_commit: a10eb08
     depends: [BROWSE-01, TREE-01, WINDOW-RESUME-01]
@@ -129,10 +130,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: done
+    commit: bf7f0b8
     base_commit: 6f14dcc
     implementation_commits: [00bacab, 0950710]
-    evidence: docs/verification/CLAUDE-AUDIT.md; sort runtime and all audit fixes independently approved at 3dea7bf; integrated checks pending
+    evidence: docs/verification/CLAUDE-AUDIT.md; final runtime bf7f0b8 independently approved; integrated build.ps1 -Test -Package 8/8 (38.51s); portable open/resume/grid with Qt off PATH passed; native 10001-source checks passed; Windows scope
     depends: [GRID-01]
     outcome: File sort modes (name, modified, size, seeded shuffle; ascending/descending) shared by next/previous, filmstrip and grid
     boundaries: Dimension/capture-date sorts need metadata parsing and stay later; folder order and explicit folder-jump landing stay natural and independent of file sort
@@ -144,10 +146,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: done
+    commit: bf7f0b8
     memory_action: act_mvd89vdx_ef758c5be217
     base_commit: f529d25
-    evidence: docs/verification/CLAUDE-AUDIT.md; independent 8/8 CTest (38.47s) and direct regressions pass at 3dea7bf; integrated checks pending
+    evidence: docs/verification/CLAUDE-AUDIT.md; final runtime bf7f0b8 independently approved; integrated build.ps1 -Test -Package 8/8 (38.51s); portable open/resume/grid with Qt off PATH passed; native 10001-source checks passed; Windows scope
     outcome: Whole-code audit, reproduced bug fixes and build-plan reconciliation
     acceptance: Atomic settings backup/recovery; fail-closed slot ownership; bounded folder work; current-folder reveal; tall-grid request limits; valid-image no-op and failed-image retry; sort correctness and honest save status
   - id: PLATFORM-01
@@ -223,8 +226,8 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [REVIEW-ALL-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
-priority_note: Close the whole-code audit and independent grid/sort review gates before new M3 work; preserve Windows-only scope and remaining performance/platform acceptance
+priority_order: [PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
+priority_note: Audit and independent grid/sort gates are closed; proceed with platform qualification and resource foundations while preserving Windows-only scope and remaining acceptance
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation
   - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)

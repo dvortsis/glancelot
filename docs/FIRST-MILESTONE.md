@@ -4,7 +4,7 @@ Planning baseline: October 17, 2026. This is an implementation backlog, not work
 
 ## Current status and next work
 
-The bootstrap sequence and estimates below are the historical feasibility backlog. Windows now has the initial JPEG/PNG alpha, filmstrip, folder tree, window slots/resume, and folder grid. The full audit is closing correctness and review gaps before further M3 expansion; name/modified/size/shuffle sorting is included in that integration. See [WORK-QUEUE.yaml](WORK-QUEUE.yaml) and [CLAUDE-AUDIT.md](verification/CLAUDE-AUDIT.md) for exact commits and evidence.
+The bootstrap sequence and estimates below are the historical feasibility backlog. Windows now has the initial JPEG/PNG alpha, filmstrip, folder tree, window slots/resume, and folder grid. The full audit corrected persistence, scheduling and UI defects and independently verified the grid and name/modified/size/shuffle sorting before further M3 expansion. See [WORK-QUEUE.yaml](WORK-QUEUE.yaml) and [CLAUDE-AUDIT.md](verification/CLAUDE-AUDIT.md) for exact commits and evidence.
 
 The approved M2.1 sequence was TREE-01 -> WINDOW-SLOTS-01 -> WINDOW-RESUME-01. Those Windows features preserve slot ownership across close order, retain unopened positions, honor explicit file opens, and use atomic coordinated settings. They do not automatically reopen all remembered windows.
 

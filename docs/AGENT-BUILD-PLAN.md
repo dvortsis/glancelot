@@ -24,7 +24,7 @@ Author tests -> independent review/acceptance -> serial integration -> integrate
 
 M2.1 is implemented and independently verified on Windows; see WORK-QUEUE.yaml and verification/WINDOW-SESSIONS.md. Physical-display qualification and Linux GUI delivery remain open gates, not inferred from Windows or WSL results.
 
-GRID-01 is implemented on Windows. The whole-code audit reopens its final review gate because the earlier fixes had not been rerun by an independent reviewer. REVIEW-ALL-01 fixes persistence, scheduling, reveal and grid-retry defects, then obtains independent checks on the combined code. SORT-01 already has implementation commits and is included in that audited integration; it must not remain labeled as merely planned after landing.
+GRID-01 and SORT-01 are implemented and independently reviewed on Windows. REVIEW-ALL-01 corrected persistence, scheduling, reveal, grid-retry and concurrent-sort defects and closed the previously missing independent grid rerun. See verification/CLAUDE-AUDIT.md for integrated checks and remaining platform limits.
 
 After audit closure, execute the ready tasks recorded in WORK-QUEUE.yaml. Prioritize PLATFORM-01 qualification and CACHE-01 / IO-01 resource foundations, followed by favorites, filters, metadata HUDs, input contexts, and qualified format expansion. A task marked done certifies only its declared slice/platform; it never closes every requirement ID it references. In particular PERF-04/PERF-05, full IN-02, and SYS-02 still have substantial unfinished acceptance work.
 
