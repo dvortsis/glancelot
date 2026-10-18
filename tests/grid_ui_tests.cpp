@@ -217,7 +217,7 @@ private slots:
         QTRY_VERIFY(minimize->isVisible() && close->isVisible());
         QVERIFY(!grid->isEnabled()); // no folder: the disabled state is the shared disabled opacity
         auto* marker = settings->findChild<QQuickItem*>("selectionMarker"); QVERIFY(marker);
-        int variants = 0;
+        int variants = 0; double pressedMarkerMin = 100;
         for (const auto& entry : h.theme.families()) {
             const auto id = entry.toMap().value("id").toString();
             for (bool dark : {true, false}) {
@@ -246,8 +246,9 @@ private slots:
                 settings->setProperty("selected", true); settings->setProperty("down", true);
                 QTRY_COMPARE(itemColor(buttonBackground(settings)), pressed);
                 QVERIFY(marker->isVisible());
-                QVERIFY2(contrastRatio(itemColor(marker), itemColor(buttonBackground(settings))) >= 3,
-                         qPrintable(context + " on-marker/pressed"));
+                const double markerOnPressed = contrastRatio(itemColor(marker), itemColor(buttonBackground(settings)));
+                pressedMarkerMin = std::min(pressedMarkerMin, markerOnPressed);
+                QVERIFY2(markerOnPressed >= 3, qPrintable(context + " on-marker/pressed"));
                 settings->setProperty("down", false);
                 QCOMPARE(itemColor(marker), role("primary"));
                 settings->setProperty("selected", false);
@@ -256,6 +257,7 @@ private slots:
             }
         }
         QCOMPARE(variants, 80);
+        qInfo("on-marker/pressed contrast across %d variants: min %.2f", variants, pressedMarkerMin);
     }
     // Hover, pressed, focus and danger-hover backgrounds follow a live theme change while the state is held.
     void topBarStatesFollowLiveThemeChanges() {
