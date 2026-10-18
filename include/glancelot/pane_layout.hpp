@@ -10,12 +10,15 @@ class PaneLayout final : public QObject {
     Q_PROPERTY(QVariantMap centerSplit READ centerSplit NOTIFY changed)
     Q_PROPERTY(bool locked READ locked WRITE setLocked NOTIFY changed)
     Q_PROPERTY(QString feedback READ feedback NOTIFY changed)
+    Q_PROPERTY(QString contentMode READ contentMode NOTIFY changed)   // "preview" | "grid" | "combined"
 public:
     explicit PaneLayout(QObject* parent=nullptr);
     QVariantMap panes() const;
     QVariantMap centerSplit() const { return center_.toVariantMap(); }
     Q_INVOKABLE bool setCenterOrientation(const QString& orientation);
     Q_INVOKABLE bool setCenterRatio(double ratio);
+    QString contentMode() const;
+    Q_INVOKABLE bool setContentMode(const QString& mode);              // false for unknown values; no-op when equal
     bool locked() const { return locked_; }
     QString feedback() const { return feedback_; }
     void setSlot(int slot);
@@ -34,6 +37,7 @@ private:
     QString feedback_;
     QJsonObject panes_;
     QJsonObject center_{{"orientation","horizontal"},{"ratio",0.5}};
+    QString mode_{QStringLiteral("preview")};
     bool editCenter(const QJsonObject& fields);
     static QJsonObject defaults();
     void load();
