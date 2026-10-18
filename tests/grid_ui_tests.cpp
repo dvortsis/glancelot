@@ -907,7 +907,8 @@ private slots:
         QVERIFY(h.window->grabWindow().save(".cache/review/tree-compact-light.png"));
     }
     void foldersButtonWorksWithoutPhoto() {
-        Harness h; QVERIFY(h.window);
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.window->requestActivate(); QVERIFY(QTest::qWaitForWindowActive(h.window));
         auto* button=h.window->findChild<QQuickItem*>("foldersToggle"); QVERIFY(button);
         QVERIFY(button->isEnabled()); QVERIFY(!h.viewer.treeVisible());
         const auto point=button->mapToScene(QPointF(button->width()/2,button->height()/2)).toPoint();

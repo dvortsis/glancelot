@@ -990,8 +990,8 @@ ApplicationWindow {
                 objectName: "contentModeMenu"
                 visible: app.modeCompact
                 readonly property var current: app.contentModes.find(mode => mode.id === paneLayout.contentMode) || app.contentModes[0]
-                iconName: current.icon
                 text: current.label
+                leftPadding: Theme.gapSm + Theme.gapXxs; rightPadding: Theme.gapSm + Theme.gapXxs
                 tip: modeMenu.visible ? "" : "Change view: photo, grid or both"
                 Accessible.role: Accessible.ButtonMenu
                 Accessible.name: "View: " + current.tip + ". Change view"
