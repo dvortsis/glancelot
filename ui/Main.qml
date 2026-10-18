@@ -45,7 +45,7 @@ ApplicationWindow {
     function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
     function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
     function gridAllowsCommand(id) {
-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless"].indexOf(id) >= 0
+        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -230,6 +230,15 @@ ApplicationWindow {
             ActionButton { text: "Open"; onClicked: app.invoke("open"); ToolTip.text: viewer.bindingFor("open") }
             ActionButton { text: "Folders"; enabled: viewer.fileCount > 0; onClicked: app.invoke("tree"); ToolTip.text: viewer.bindingFor("tree"); Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree" }
             ActionButton { objectName: "gridToggle"; text: app.gridMode ? "Photo" : "Grid"; enabled: viewer.fileCount > 0; onClicked: app.invoke("grid"); ToolTip.text: viewer.bindingFor("grid"); Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid" }
+            ActionButton {
+                objectName: "sortButton"
+                visible: app.width >= 760
+                text: "Sort: " + ({ name: "Name", modified: "Date", size: "Size", shuffle: "Shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? " ↓" : " ↑")
+                enabled: viewer.fileCount > 0
+                onClicked: app.invoke("sort")
+                ToolTip.text: "Cycle file order (" + viewer.bindingFor("sort") + "); reverse with " + viewer.bindingFor("sort-reverse")
+                Accessible.description: "Changes the order of photos inside folders, not the folder order"
+            }
             Label { text: " / "; color: theme.colors.border }
             Label { text: viewer.fileName || "Glancelot"; elide: Text.ElideMiddle; Layout.fillWidth: true; color: theme.colors.text }
             ActionButton { text: app.width > 720 ? "Commands" : "Menu"; onClicked: app.invoke("palette"); ToolTip.text: viewer.bindingFor("palette") }
@@ -391,6 +400,12 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Label { text: "Folder boundary"; Layout.fillWidth: true }
                     ComboBox { model: ["Stop", "Loop current folder", "Continue through tree"]; currentIndex: ["stop","loop","continue"].indexOf(viewer.boundaryMode); onActivated: viewer.boundaryMode=["stop","loop","continue"][currentIndex]; Accessible.name: "Folder boundary mode" }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label { text: "File order in a folder"; Layout.fillWidth: true }
+                    ComboBox { model: ["Name", "Date modified", "Size", "Shuffle"]; currentIndex: ["name","modified","size","shuffle"].indexOf(viewer.sortKey); onActivated: viewer.sortKey=["name","modified","size","shuffle"][currentIndex]; Accessible.name: "File order" }
+                    CheckBox { text: "Reverse"; checked: viewer.sortDescending; onToggled: viewer.sortDescending=checked; Accessible.name: "Reverse file order" }
                 }
                 RowLayout {
                     Layout.fillWidth: true

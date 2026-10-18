@@ -1,5 +1,7 @@
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
+#include "glancelot/settings_file.hpp"
+#include <QJsonObject>
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
@@ -178,6 +180,42 @@ private slots:
         QTest::keyClick(h.window, Qt::Key_End); QTRY_COMPARE(h.selected(), 9999); QTRY_VERIFY(inView(9999));
         h.viewer.trigger("palette"); QTRY_VERIFY(h.window->property("modalOpen").toBool());
         QVERIFY(!h.grid()->property("inputEnabled").toBool());
+    }
+    void sortOrderFollowsControllerKeepsCurrentAndPersists() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        // Name order a<b<c; size order b<c<a; modified order is not asserted here (covered by core tests).
+        const struct { const char* name; int edge; } files[]{{"a.png", 96}, {"b.png", 8}, {"c.png", 40}};
+        for (const auto& file : files) {
+            QImage image(file.edge, file.edge, QImage::Format_RGB32);
+            for (int y = 0; y < file.edge; ++y) for (int x = 0; x < file.edge; ++x) image.setPixel(x, y, qRgb((x * 7) & 255, (y * 13) & 255, (x * y) & 255));
+            QVERIFY(image.save(media.filePath(file.name)));
+        }
+        QVERIFY(QFileInfo(media.filePath("b.png")).size() < QFileInfo(media.filePath("c.png")).size());
+        QVERIFY(QFileInfo(media.filePath("c.png")).size() < QFileInfo(media.filePath("a.png")).size());
+        {
+            Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("a.png"));
+            QTRY_COMPARE(h.viewer.fileCount(), 3); QTRY_VERIFY(!h.viewer.loading());
+            QCOMPARE(h.viewer.sortKey(), QString("name"));
+            QVERIFY(h.model.pathAt(0).endsWith("a.png"));
+            h.viewer.trigger("sort");   // name -> modified
+            QTRY_COMPARE(h.viewer.sortKey(), QString("modified"));
+            h.viewer.setSortKey("size");
+            QTRY_VERIFY(h.model.pathAt(0).endsWith("b.png"));
+            QVERIFY(h.model.pathAt(2).endsWith("a.png"));
+            QVERIFY(h.viewer.filePath().endsWith("a.png"));       // sorting never changes what is open
+            QCOMPARE(h.viewer.currentIndex(), 3);
+            h.viewer.trigger("sort-reverse");
+            QTRY_VERIFY(h.model.pathAt(0).endsWith("a.png"));
+            QVERIFY(h.viewer.sortDescending());
+            h.viewer.next();   // next follows the visible order: a -> c
+            QTRY_VERIFY(h.viewer.filePath().endsWith("c.png"));
+            QTRY_VERIFY(!h.viewer.loading());
+        }
+        QJsonObject stored; QVERIFY(glancelot::readSettings(stored).ok());
+        QCOMPARE(stored.value("sort").toObject().value("key").toString(), QString("size"));
+        QVERIFY(stored.value("sort").toObject().value("descending").toBool());
+        ViewerController restarted;   // a new run starts in the saved order
+        QCOMPARE(restarted.sortKey(), QString("size")); QVERIFY(restarted.sortDescending());
     }
     void resizeTreeAndEmpty() {
         Harness h; QVERIFY(h.window); h.fill(50); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());

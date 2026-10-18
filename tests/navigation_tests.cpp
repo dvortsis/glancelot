@@ -5,6 +5,7 @@
 #include <thread>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -313,9 +314,84 @@ void childFoldersAndSubtreeSearch() {
     const auto none = firstImageInSubtree(bare.root);
     require(!none.image && !none.exhausted && none.accessible, "image-less subtree misreported");
 }
+void fileSorting() {
+    Fixture f;
+    // name, bytes, minutes after a fixed epoch
+    struct Spec { const char* name; int bytes; int minutes; };
+    const Spec specs[]{{"b.jpg", 30, 5}, {"a10.jpg", 10, 20}, {"a2.png", 30, 10}, {"c.jpeg", 20, 5}, {"d.jpg", 5, 40}};
+    const auto epoch = fs::file_time_type::clock::now() - std::chrono::hours(24);
+    for (const auto& spec : specs) {
+        const auto path = f.root / spec.name;
+        std::ofstream(path, std::ios::binary) << std::string(std::size_t(spec.bytes), 'x');
+        fs::last_write_time(path, epoch + std::chrono::minutes(spec.minutes));
+    }
+    const auto names = [](const std::vector<fs::path>& files) {
+        std::string joined; for (const auto& p : files) joined += p.filename().string() + " "; return joined;
+    };
+    const auto order = [&](SortKey key, bool descending, std::uint64_t seed = 1) {
+        return names(sortedImageFiles(f.root, SortSpec{key, descending, seed}));
+    };
+    require(order(SortKey::Name, false) == "a2.png a10.jpg b.jpg c.jpeg d.jpg ", "name ascending");
+    require(order(SortKey::Name, true) == "d.jpg c.jpeg b.jpg a10.jpg a2.png ", "name descending");
+    require(order(SortKey::Size, false) == "d.jpg a10.jpg c.jpeg a2.png b.jpg ", "size ascending, ties natural");
+    require(order(SortKey::Size, true) == "a2.png b.jpg c.jpeg a10.jpg d.jpg ", "size descending keeps natural ties");
+    require(order(SortKey::Modified, false) == "b.jpg c.jpeg a2.png a10.jpg d.jpg ", "modified ascending, ties natural");
+    require(order(SortKey::Modified, true) == "d.jpg a10.jpg a2.png b.jpg c.jpeg ", "modified descending keeps natural ties");
+    const auto shuffled = order(SortKey::Shuffle, false, 7);
+    require(shuffled == order(SortKey::Shuffle, false, 7), "shuffle is not deterministic");
+    std::string reversedAll = names([&] { auto v = sortedImageFiles(f.root, SortSpec{SortKey::Shuffle, true, 7}); std::reverse(v.begin(), v.end()); return v; }());
+    require(reversedAll == shuffled, ("descending shuffle is not the reverse permutation: " + reversedAll + "| " + shuffled).c_str());
+    bool differs = false;
+    for (std::uint64_t seed = 1; seed < 40 && !differs; ++seed) differs = order(SortKey::Shuffle, false, seed) != shuffled;
+    require(differs, "shuffle seed has no effect");
+    auto sorted = sortedImageFiles(f.root, SortSpec{SortKey::Shuffle, false, 7});
+    std::sort(sorted.begin(), sorted.end(), naturalLess);
+    require(names(sorted) == order(SortKey::Name, false), "shuffle is not a permutation");
+    f.file("zz-new.jpg");
+    const auto grown = order(SortKey::Shuffle, false, 7);
+    std::string without; { std::istringstream in(grown); std::string token; while (in >> token) if (token != "zz-new.jpg") without += token + " "; }
+    require(without == shuffled, "adding a file reordered unrelated shuffle entries");
+    fs::remove(f.root / "zz-new.jpg");
+    std::stop_source stop; stop.request_stop();
+    require(sortedImageFiles(f.root, SortSpec{SortKey::Size, false, 1}, stop.get_token()).empty(), "cancelled sort returned files");
+    std::vector<FileMeta> meta;
+    const auto bySize = sortedImageFiles(f.root, SortSpec{SortKey::Size, false, 1}, {}, &meta);
+    require(meta.size() == bySize.size() && meta.front().known && meta.front().size == 5, "metadata is not parallel to files");
+
+    // Navigation follows the active sort, keeps the current image when the sort changes, and survives deleting it.
+    Navigator nav; std::error_code error;
+    require(nav.open(f.root / "a10.jpg", error), "open for sorted navigation");
+    nav.setSort(SortSpec{SortKey::Size, false, 1});
+    require(nav.snapshot().current.filename() == "a10.jpg", "sort change lost the current image");
+    require(names(nav.snapshot().files) == "d.jpg a10.jpg c.jpeg a2.png b.jpg ", "snapshot not in sort order");
+    auto next = nav.step(1);
+    require(next && next->filename() == "c.jpeg", "next in size order");
+    require(nav.step(-1)->filename() == "a10.jpg" && nav.step(-1)->filename() == "d.jpg", "previous in size order");
+    require(nav.step(1)->filename() == "a10.jpg" && nav.step(1)->filename() == "c.jpeg", "walk back to c.jpeg");
+    fs::remove(f.root / "c.jpeg");
+    next = nav.step(1);
+    require(next && next->filename() == "a2.png", "deleted current: next did not use its sort position");
+    fs::remove(f.root / "a2.png");
+    next = nav.step(-1);
+    require(next && next->filename() == "a10.jpg", "deleted current: previous did not use its sort position");
+    nav.setSort(SortSpec{SortKey::Name, true, 1});
+    require(names(nav.snapshot().files) == "d.jpg b.jpg a10.jpg " && nav.snapshot().current.filename() == "a10.jpg", "name descending after deletes");
+
+    // Folder order and landing are independent of the file sort (NAV-02/NAV-06).
+    Fixture t;
+    for (const char* folder : {"a", "b"}) { t.file(fs::path(folder) / "1.jpg"); t.file(fs::path(folder) / "2.jpg"); t.file(fs::path(folder) / "3.jpg"); }
+    Navigator tree; require(tree.open(t.root / "a" / "2.jpg", error), "open tree");
+    tree.setRoot(t.root);
+    tree.setSort(SortSpec{SortKey::Name, true, 1});
+    const auto landed = tree.folder(1);
+    require(landed && *landed == t.root / "b" / "1.jpg", "forward landing depended on file sort");
+    require(names(tree.snapshot().files) == "3.jpg 2.jpg 1.jpg ", "list in new folder did not follow the sort");
+    const auto back = tree.folder(-1);
+    require(back && *back == t.root / "a" / "3.jpg", "backward landing depended on file sort");
+}
 int main() {
     try {
-        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch();
+        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch(); fileSorting();
         std::cout << "navigation: all generated fixture tests passed\n";
         return 0;
     } catch (const std::exception& error) {
