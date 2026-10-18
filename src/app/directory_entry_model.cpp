@@ -17,6 +17,8 @@ namespace {
 namespace fs = std::filesystem;
 constexpr int kMaxConcurrentListings = 2;
 constexpr std::size_t kMaxEntries = 100000;
+// Above this many separate insertion/removal runs a refresh resets instead of merging in place (bounded GUI work).
+constexpr int kMaxMergeRuns = 32;
 
 QString displayPath(const fs::path& path) {
 #ifdef Q_OS_WIN
@@ -173,6 +175,15 @@ struct DirectoryEntryModel::Private {
             if (at <= last) { reset(std::move(listing)); return; }
             last = at;
         }
+        // Every removal or insertion run costs an O(rows) vector move plus one model signal on the GUI thread, so
+        // many scattered changes (a sync tool touching a large folder) would stall the UI for seconds. Count the
+        // runs first (O(rows)) and replace the listing in one reset when the in-place merge would be expensive.
+        int runs = 0;
+        for (int i = 0; i < int(rows.size()); ++i)
+            if (!listing.index.contains(rows[std::size_t(i)].key) && (i == 0 || listing.index.contains(rows[std::size_t(i - 1)].key))) ++runs;
+        for (int i = 0; i < int(incoming.size()); ++i)
+            if (!index.contains(incoming[std::size_t(i)].key) && (i == 0 || index.contains(incoming[std::size_t(i - 1)].key))) ++runs;
+        if (runs > kMaxMergeRuns) { reset(std::move(listing)); return; }
         // Removals, back to front in contiguous runs.
         for (int i = int(rows.size()) - 1; i >= 0;) {
             if (listing.index.contains(rows[std::size_t(i)].key)) { --i; continue; }

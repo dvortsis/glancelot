@@ -221,6 +221,52 @@ private slots:
         QCOMPARE(data.count(), 1);
         QCOMPARE(model.cursorRow(), -1); // the opened image is not the cursor
     }
+    // Review B1: scattered external changes in a large folder must not stall the GUI thread during the refresh
+    // merge, and selection/cursor/anchor keys must survive the fallback reset.
+    void largeInterleavedRefreshStaysResponsive() {
+        // GLANCELOT_MERGE_BASE / GLANCELOT_MERGE_ADD scale the case for manual runs (e.g. 80000 / 8000).
+        const int base = qEnvironmentVariableIntValue("GLANCELOT_MERGE_BASE") > 0 ? qEnvironmentVariableIntValue("GLANCELOT_MERGE_BASE") : 30000;
+        const int added = qEnvironmentVariableIntValue("GLANCELOT_MERGE_ADD") > 0 ? qEnvironmentVariableIntValue("GLANCELOT_MERGE_ADD") : 5000;
+        const auto name = [](int n) { return QString("f%1.png").arg(n, 6, 10, QChar('0')); };
+        QTemporaryDir dir;
+        for (int i = 0; i < base; ++i) touch(dir.filePath(name(i * 2)));
+        DirectoryEntryModel model; model.setActive(true); model.setDirectory(dir.path()); QVERIFY(settle(model, 60000));
+        QCOMPARE(model.count(), base);
+        // Originals are f(2i); the removal below deletes even i (multiples of 4), so 2 * odd survives both steps.
+        const QString kept = dir.filePath(name(2 * 101)), cursor = dir.filePath(name(2 * 7001)), dropped = dir.filePath(name(0));
+        model.select(model.rowOf(kept));
+        model.select(model.rowOf(dropped), DirectoryEntryModel::Toggle);
+        model.select(model.rowOf(cursor), DirectoryEntryModel::Toggle);
+        QCOMPARE(model.selectedCount(), 3);
+        QElapsedTimer clock; clock.start(); qint64 last = 0, worst = 0;
+        QTimer tick; tick.setInterval(5);
+        connect(&tick, &QTimer::timeout, this, [&] { const auto now = clock.elapsed(); worst = std::max(worst, now - last); last = now; });
+        const auto measure = [&] {
+            worst = 0; tick.start(); last = clock.elapsed();
+            model.refresh(); const bool done = settle(model, 60000);
+            QTest::qWait(20); tick.stop();
+            return done;
+        };
+        // Interleaved insertions: one new name between existing ones, 5,000 separate runs.
+        const int stride = base / added;
+        for (int k = 0; k < added; ++k) touch(dir.filePath(name(k * stride * 2 + 1)));
+        QVERIFY(measure());
+        qInfo() << "interleaved +" << added << "on" << base << ": worst GUI gap" << worst << "ms";
+        QCOMPARE(model.count(), base + added);
+        QVERIFY2(worst < 250, qPrintable(QString("GUI thread stalled %1 ms on interleaved inserts").arg(worst)));
+        QCOMPARE(model.selectedCount(), 3); QCOMPARE(model.cursorRow(), model.rowOf(cursor));
+        // Interleaved removals: every other original file, 15,000 separate runs.
+        for (int i = 0; i < base; i += 2) QVERIFY(QFile::remove(dir.filePath(name(i * 2))));
+        QVERIFY(measure());
+        qInfo() << "interleaved -" << base / 2 << ": worst GUI gap" << worst << "ms";
+        QCOMPARE(model.count(), base / 2 + added);
+        QVERIFY2(worst < 250, qPrintable(QString("GUI thread stalled %1 ms on interleaved removals").arg(worst)));
+        QCOMPARE(model.selectedPaths(), (QStringList{kept, cursor}));
+        QCOMPARE(model.cursorRow(), model.rowOf(cursor));
+        // The anchor survived too: a range from it still works.
+        model.select(model.rowOf(kept), DirectoryEntryModel::Range);
+        QCOMPARE(model.selectedCount(), model.rowOf(cursor) - model.rowOf(kept) + 1);
+    }
     void largeFolderStaysResponsive() {
         QTemporaryDir dir;
         QElapsedTimer make; make.start();
