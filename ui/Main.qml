@@ -264,7 +264,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
-    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
+    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -316,7 +316,7 @@ ApplicationWindow {
     }
     function gridAllowsCommand(id) {
         return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
-                "view-preview", "view-grid", "view-combined", "combined-orientation"].indexOf(id) >= 0
+                "view-preview", "view-grid", "view-combined", "combined-orientation", "delete-selection"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -350,6 +350,11 @@ ApplicationWindow {
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
         else if (id === "combined-orientation") toggleOrientation()
+        else if (id === "delete-selection") {
+            // The selection lives in the grid; the canvas never moves an item the user cannot see selected.
+            if (gridMode || (combinedMode && workspace._gridShown)) deleteFlow.request(photoGrid.deletionTargets(), "command", fileGrid.directory)
+            else deleteFlow.showNotice("Open the grid (" + (viewer.bindingFor("grid") || "Grid") + ") and select items to move them to the " + deleteFlow.trashName + ".")
+        }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -531,6 +536,8 @@ ApplicationWindow {
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
         tabHandler: app.combinedMode ? (() => app.focusPane("preview")) : null
         Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("preview"); event.accepted = true } }
+        deleteBlocked: deleteFlow.isReadOnly(fileGrid.directory)
+        onDeleteRequested: paths => deleteFlow.request(paths, "grid", fileGrid.directory)
     }
     // ---- GRID-PREVIEW-01 combined view: split handle, explicit preview states, pane focus rings and notices.
     Item {
@@ -943,6 +950,7 @@ ApplicationWindow {
                 onClicked: { checked = Qt.binding(() => viewer.treeVisible); app.invoke("tree") }
             }
             Rectangle { // content mode: one segmented choice (GRID-PREVIEW-01); a menu in narrow windows
+                id: modeSelector
                 objectName: "contentModeSegments"
                 visible: !app.modeCompact
                 implicitWidth: modeRow.implicitWidth + 2 * Theme.gapXxs
@@ -1063,7 +1071,7 @@ ApplicationWindow {
                 visible: app.frameless && app.visibility !== Window.FullScreen
                 onClicked: app.toggleMaximized()
             }
-            WindowControl { id: closeButton; objectName: "closeButton"; variant: "danger"; text: "Close window"; iconName: "close"; visible: app.ownsTitleBar; onClicked: app.close() }
+            WindowControl { id: closeButton; objectName: "closeButton"; variant: "danger-quiet"; text: "Close window"; iconName: "close"; visible: app.ownsTitleBar; onClicked: app.close() }
         }
         }
     }
@@ -1091,6 +1099,15 @@ ApplicationWindow {
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
+        onDeleteRequested: path => deleteFlow.request([path], "tree", "")
+    }
+    DeleteFlow { // DELETE-01 confirmation, progress, notice and results
+        id: deleteFlow
+        objectName: "deleteFlow"
+        host: app
+        anchors.fill: parent
+        z: 25
+        onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
     }
     Rectangle {
         id: bottomPanel

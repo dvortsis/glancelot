@@ -5,7 +5,7 @@ import Glancelot
 
 // The canonical button. Variants: "quiet" (toolbar and list actions, the default), "primary" (one per decision
 // area), "outline" (secondary actions in content) and "danger" (a quiet action that fills with the danger role while
-// hovered or pressed, such as closing the window; its glyph then uses the background role). The "on" state (checked toggles, or `selected` for an item that
+// hovered or pressed for "danger-quiet" (caption close), or always for "danger" (confirmation); its glyph uses the background role). The "on" state (checked toggles, or `selected` for an item that
 // marks the current choice without toggling) shows a selection fill plus a primary marker bar, so it never relies on
 // a faint fill alone: a leading bar on left-aligned items, an underline on centred ones.
 // An icon-only button keeps `text` as its accessible name and tooltip.
@@ -19,7 +19,10 @@ Button {
     property bool selected: false
     property int cornerRadius: Theme.radiusControl // nested buttons (segments inside an outline) pass a concentric radius
     readonly property bool isOn: checked || selected
-    readonly property bool dangerFilled: variant === "danger" && (hovered || down)
+    readonly property bool dangerFilled: variant === "danger" || (variant === "danger-quiet" && (hovered || down))
+    readonly property bool filled: variant === "primary" || variant === "danger"
+    // Destructive confirmations reject held Enter/Return repeats.
+    property bool ignoreKeyRepeat: false
     property color foreground: variant === "primary" ? Theme.textOnPrimary : (dangerFilled ? Theme.background : Theme.text)
 
     implicitHeight: Theme.controlHeight
@@ -32,13 +35,13 @@ Button {
     hoverEnabled: true
     opacity: enabled ? 1 : Theme.disabledOpacity
     font.pixelSize: Theme.textBody
-    font.weight: variant === "primary" ? Font.Medium : Font.Normal // constant weight: toggling never shifts the layout
+    font.weight: filled ? Font.Medium : Font.Normal // constant weight: toggling never shifts the layout
     Accessible.name: text
     Accessible.checked: checked
     // Return/Enter behave like Space: checkable buttons toggle (and emit toggled) before clicked.
     function activate() { if (checkable) { toggle(); toggled() } clicked() }
-    Keys.onReturnPressed: activate()
-    Keys.onEnterPressed: activate()
+    Keys.onReturnPressed: event => { if (!(ignoreKeyRepeat && event.isAutoRepeat)) activate() }
+    Keys.onEnterPressed: event => { if (!(ignoreKeyRepeat && event.isAutoRepeat)) activate() }
     ToolTip.visible: hovered && tip.length > 0
     ToolTip.delay: 600
     ToolTip.text: tip
@@ -73,7 +76,7 @@ Button {
         border.color: control.visualFocus ? Theme.focusRing : Theme.border
         // The danger fill switches together with its glyph (background role), as a native caption button does;
         // fading it in would leave the glyph nearly invisible on a transparent fill for the transition.
-        Behavior on color { enabled: control.variant !== "danger"; ColorAnimation { duration: Theme.durationFast } }
+        Behavior on color { enabled: control.variant !== "danger" && control.variant !== "danger-quiet"; ColorAnimation { duration: Theme.durationFast } }
         Rectangle { // primary hover/press feedback, drawn in the button's own foreground so it works in every family
             anchors.fill: parent
             radius: parent.radius

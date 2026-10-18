@@ -2,6 +2,7 @@
 #include "contracts.hpp"
 #include <QObject>
 #include <QImage>
+#include <QStringList>
 #include <QVariantList>
 #include <memory>
 
@@ -71,6 +72,10 @@ public:
     QString directoryError() const; bool directoryPending() const;
     // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
     Q_INVOKABLE void raiseRoot();
+    // DELETE-01: `paths` were just moved to the Trash/Recycle Bin. Invalidates derived data (filesInvalidated), then
+    // either steps from a removed opened image to the next eligible one (deleted-current anchor) or, when the browsing
+    // folder or an ancestor was removed, visits the nearest existing ancestor. Filesystem checks run on the worker.
+    Q_INVOKABLE void reconcileRemovedPaths(const QStringList& paths);
     // Per-window position memory (UX-12). Slot 0 disables it. The last folder and image are written (debounced,
     // atomically, through the shared settings writer) only after an image decodes successfully.
     int windowSlot() const; void setWindowSlot(int slot);

@@ -91,6 +91,11 @@ const std::vector<Command> registry {
     // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
     {"view-preview","Show photo preview only",""}, {"view-grid","Show folder grid only",""},
     {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
+#ifdef Q_OS_WIN
+    {"delete-selection","Move selected items to the Recycle Bin",""},
+#else
+    {"delete-selection","Move selected items to the Trash",""},
+#endif
     {"quit","Quit","Ctrl+Q"}
 };
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
@@ -153,6 +158,13 @@ struct ViewerController::Private {
     int positionRetries{};
     bool positionDirty{}, restoreRequested{};
     QTimer positionTimer;
+    // Paths this window just moved to the trash (DELETE-01); cleared by the next explicit open.
+    QStringList removedPaths;
+    bool removedCovers(const QString& value) const {
+        if (value.isEmpty()) return false;
+        for (const auto& removed: removedPaths) if (insideRoot(removed,value)) return true;
+        return false;
+    }
 
     explicit Private(ViewerController* owner):q(owner) {
         trace("controller:construct");
@@ -168,6 +180,8 @@ struct ViewerController::Private {
         QObject::connect(&reload,&QTimer::timeout,q,[this]{
             cache.clear();
             emit q->filesInvalidated();
+            // A removal this window reconciled itself is already being handled; stepping again would skip a photo.
+            if (removedCovers(path) || removedCovers(path.isEmpty() ? displayPath(nav.snapshot().directory) : QString{})) return;
             if (QFileInfo::exists(path)) { const QString target=path; q->open(target); }
             else if(path.isEmpty()&&!nav.snapshot().directory.empty())q->navigateDirectory(displayPath(nav.snapshot().directory));
             else { navigate(1, false); }
@@ -539,6 +553,7 @@ void ViewerController::open(const QString& value){
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(!d->navigationOpen)d->navigationIntents.clear();
+    d->removedPaths.clear();
     ++d->generation; d->cancel(); d->reload.stop();
     d->path=path;d->loading=true;d->imageReady=false;d->status="Opening "+QFileInfo(path).fileName()+"…";
     emit stateChanged(); d->scan(path,d->generation); d->decode(path,d->generation);
@@ -661,6 +676,58 @@ void ViewerController::raiseRoot(){
         // The tree lists the whole computer, so state the widened traversal root where the user can see it.
         return Private::NavigationResult{std::move(copy),std::nullopt,"Navigation now covers "+displayPath(parent)};
     }});
+}
+void ViewerController::reconcileRemovedPaths(const QStringList& paths) {
+    if(paths.isEmpty())return;
+    d->removedPaths=paths;
+    // Thumbnails and cached pixels of removed paths are stale; the grid and filmstrip relist (newest generation wins).
+    d->cache.clear();
+    emit filesInvalidated();
+    const QString folder=directory();
+    const bool folderRemoved=d->removedCovers(folder);
+    const bool imageRemoved=d->removedCovers(d->path);
+    if(!folderRemoved&&!imageRemoved)return;
+    // This window steps exactly once; a pending watcher reload or queued key repeat must not step again.
+    d->reload.stop(); d->navigationIntents.clear();
+    d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
+    const auto cancellation=d->navigationStop.get_token();
+    Navigator copy=d->nav; copy.setCancellation(cancellation);
+    const auto sort=d->sortSpec;
+    const bool anchored=imageRemoved&&!folderRemoved&&!d->nav.snapshot().current.empty()
+        &&insideRoot(d->path,displayPath(d->nav.snapshot().current))&&insideRoot(displayPath(d->nav.snapshot().current),d->path);
+    d->status=QStringLiteral("Updating after the move…");
+    emit stateChanged();
+    if(anchored) {
+        // The removed photo keeps its sort position (deleted-current anchor): land on the next eligible image,
+        // else the previous one, else show the folder itself.
+        d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,sort,cancellation]() mutable {
+            auto destination=copy.step(1);
+            if(!destination)destination=copy.step(-1);
+            if(destination)return Private::NavigationResult{std::move(copy),destination};
+            Navigator target; target.setCancellation(cancellation); target.setSort(sort); std::error_code error;
+            if(target.openDirectory(copy.snapshot().directory,error))
+                return Private::NavigationResult{std::move(target),std::nullopt,"No photos are left in this folder.",true,false};
+            return Private::NavigationResult{std::move(copy),std::nullopt,"No photos are left in this folder.",true,true};
+        },"No photos are left in this folder."});
+        return;
+    }
+    // The browsing folder (or an ancestor) is gone, or the image's navigation state is not settled: visit the nearest
+    // existing ancestor. Existence is only ever tested here, on the navigation worker.
+    const auto start=nativePath(folderRemoved ? folder : QFileInfo(d->path).absolutePath());
+    d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,start,sort,cancellation,folderRemoved]() mutable {
+        auto candidate=folderRemoved ? start.parent_path() : start;
+        for(int depth=0;depth<256&&!candidate.empty()&&!cancellation.stop_requested();++depth) {
+            Navigator target; target.setCancellation(cancellation); target.setSort(sort); std::error_code error;
+            if(target.openDirectory(candidate,error)) {
+                const auto current=target.snapshot().current;
+                return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
+            }
+            const auto parent=candidate.parent_path();
+            if(parent==candidate)break;
+            candidate=parent;
+        }
+        return Private::NavigationResult{std::move(copy),std::nullopt,"The folder you were browsing is gone, and no folder above it can be opened.",true,true};
+    },"No supported images in this folder."});
 }
 bool ViewerController::filmstripVisible() const{return d->filmstrip;}
 const NavigationSnapshot& ViewerController::snapshot() const{return d->nav.snapshot();}

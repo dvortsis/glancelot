@@ -8,6 +8,8 @@
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
+#include "file_operation_wiring.hpp"
+#include "glancelot/file_operation_service.hpp"
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
 #include "native_title_bar.hpp"
@@ -102,6 +104,9 @@ int main(int argc,char** argv) {
     // filmstrip's (directory changes and on-disk invalidation both pass through FilmstripModel::invalidate).
     file_grid_wiring::lockThumbnailEpoch(filmstrip,fileGrid);
     QObject::connect(&filmstrip,&FilmstripModel::epochChanged,&thumbnails,[&]{thumbnails.setEpoch(filmstrip.epoch());});
+    // DELETE-01: the one user-initiated mutation path (Trash/Recycle Bin only). Viewing never reaches it.
+    FileOperationService fileOperations;
+    file_operation_wiring::follow(fileOperations,viewer,folderTree);
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
@@ -110,6 +115,7 @@ int main(int argc,char** argv) {
     engine.rootContext()->setContextProperty("folderTree",&folderTree);
     engine.rootContext()->setContextProperty("fileGrid",&fileGrid);
     engine.rootContext()->setContextProperty("theme",&theme);
+    engine.rootContext()->setContextProperty("fileOperations",&fileOperations);
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(2);},Qt::QueuedConnection);
     engine.loadFromModule("Glancelot","Main");
     if(engine.rootObjects().isEmpty())return 2;

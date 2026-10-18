@@ -5,6 +5,11 @@
 #include "glancelot/settings_file.hpp"
 #include "../src/app/thumbnail_id.hpp"
 #include "../src/app/file_grid_wiring.hpp"
+#include "../src/app/file_operation_wiring.hpp"
+#include "glancelot/file_operation_service.hpp"
+#include "glancelot/file_operations.hpp"
+#include <condition_variable>
+#include <mutex>
 #include <QMutex>
 #include <QProcess>
 #include <cmath>
@@ -69,6 +74,31 @@ QTemporaryDir* listingFixture(int count) {
 }
 QString gridKey(const QString& path) { return file_grid_wiring::directoryKey(path); }
 
+// DELETE-01: the UI harness never touches the real Trash/Recycle Bin. This backend renames (never copies or deletes)
+// into a disposable folder, refuses anything outside the temp directory, can fail chosen file names and can be held.
+struct TestTrash final : glancelot::TrashBackend {
+    std::filesystem::path bin;
+    std::mutex mutex; std::condition_variable wake; bool held{}; int waiting{};
+    std::map<QString, glancelot::DeleteOutcome> fail; // by file name
+    std::atomic_int calls{0};
+    explicit TestTrash(const QString& folder) : bin(folder.toStdWString()) {}
+    void hold() { std::lock_guard lock(mutex); held = true; }
+    void release() { { std::lock_guard lock(mutex); held = false; } wake.notify_all(); }
+    int blocked() { std::lock_guard lock(mutex); return waiting; }
+    glancelot::DeleteResult moveToTrash(const glancelot::MutationTarget& target) override {
+        { std::unique_lock lock(mutex); ++waiting; wake.wait(lock, [this] { return !held; }); --waiting; }
+        const int n = ++calls;
+        const QString name = QString::fromStdWString(target.path.filename().wstring());
+        const QString temp = QDir::cleanPath(QDir::tempPath()).toCaseFolded();
+        if (!QDir::cleanPath(QString::fromStdWString(target.path.wstring()).replace('\\', '/')).toCaseFolded().startsWith(temp))
+            return {target.path, glancelot::DeleteOutcome::Denied, "test trash only accepts generated files"};
+        { std::lock_guard lock(mutex); if (auto it = fail.find(name); it != fail.end()) return {target.path, it->second, "simulated"}; }
+        std::error_code ec;
+        std::filesystem::rename(target.path, bin / (std::to_wstring(n) + L"-" + target.path.filename().wstring()), ec);
+        return {target.path, ec ? glancelot::DeleteOutcome::Failed : glancelot::DeleteOutcome::Trashed, ec ? ec.message() : std::string{}};
+    }
+};
+
 struct Harness {
     QTemporaryDir config;
     ViewerController viewer;
@@ -77,6 +107,9 @@ struct Harness {
     FolderTreeModel folders;
     PaneLayout layout;
     DirectoryEntryModel fileGrid;
+    QTemporaryDir trashBin;
+    TestTrash* trash = new TestTrash(trashBin.path());
+    FileOperationService fileOperations{std::unique_ptr<glancelot::TrashBackend>(trash)};
     QQmlApplicationEngine engine;
     PreviewProvider* provider = new PreviewProvider;
     QQuickWindow* window{};
@@ -93,6 +126,8 @@ struct Harness {
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);
         engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
+        engine.rootContext()->setContextProperty("fileOperations", &fileOperations);
+        file_operation_wiring::follow(fileOperations, viewer, folders); // the shipped reconciliation wiring
         // Tests that inject a listing with fill() must not be overwritten by the (empty) controller snapshot.
         // Live wiring is app/main.cpp's: the same file_grid_wiring helpers, plus the filmstrip connections.
         if (live) {
@@ -2088,6 +2123,329 @@ private slots:
         QTest::keyClick(h.window, Qt::Key_Escape);
         h.theme.setMode("dark"); QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTest::keyClick(h.window, Qt::Key_Home);
         QVERIFY(shot("state-folder-dark-540"));
+        h.provider->succeed = false;
+    }
+public: // ---- DELETE-01 helpers (outside private slots so moc does not run them as tests) ----
+    // A generated folder: photos that decode, other files and one subfolder with contents.
+    struct DeleteFolder {
+        QTemporaryDir root; QString path;
+        explicit DeleteFolder(int photos = 3, int others = 0) {
+            path = root.filePath("Shoot");
+            QDir().mkpath(path + "/album/inner");
+            QImage image(40, 30, QImage::Format_RGB32);
+            for (int i = 1; i <= photos; ++i) { image.fill(QColor::fromHsv(i * 40 % 360, 120, 180)); image.save(path + QString("/img%1.png").arg(i)); }
+            for (int i = 1; i <= others; ++i) { QFile file(path + QString("/note%1.txt").arg(i)); if (file.open(QIODevice::WriteOnly)) file.write("generated"); }
+            for (const char* name : {"album/one.jpg", "album/two.jpg", "album/inner/three.jpg"}) { QFile file(path + "/" + name); if (file.open(QIODevice::WriteOnly)) file.write("x"); }
+        }
+        QString file(const QString& name) const { return path + "/" + name; }
+    };
+    static QQuickItem* overlayItem(Harness& h, const QString& name) { return named(h.window->contentItem(), name); }
+    static QObject* deleteFlow(Harness& h) { return h.window->findChild<QObject*>("deleteFlow"); }
+    static QString phase(Harness& h) { return deleteFlow(h)->property("phase").toString(); }
+    static bool dialogOpen(Harness& h, const char* name) { QObject* d = h.window->findChild<QObject*>(name); return d && d->property("visible").toBool(); }
+    // Opens the grid on `media` with `photo` viewed, then waits for the listing (count before selection).
+    static bool browse(Harness& h, const DeleteFolder& media, const QString& photo, int expected) {
+        h.window->resize(1180, 780);
+        h.viewer.open(media.file(photo));
+        if (!QTest::qWaitFor([&] { return h.viewer.imageReady(); }, 15000)) return false;
+        h.showGrid();
+        return QTest::qWaitFor([&] { return !h.fileGrid.loading() && h.fileGrid.count() == expected; }, 10000);
+    }
+    static void sendKey(QQuickWindow* window, int key, bool autoRepeat, Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+        QKeyEvent press(QEvent::KeyPress, key, modifiers, QString(), autoRepeat);
+        QGuiApplication::sendEvent(window, &press);
+        QKeyEvent release(QEvent::KeyRelease, key, modifiers, QString(), autoRepeat);
+        QGuiApplication::sendEvent(window, &release);
+    }
+    // Selects exactly `names` (by path) in the grid.
+    static void selectNames(Harness& h, const DeleteFolder& media, const QStringList& names) {
+        h.fileGrid.clearSelection();
+        bool first = true;
+        for (const auto& name : names) {
+            h.fileGrid.select(h.fileGrid.rowOf(media.file(name)), first ? DirectoryEntryModel::Replace : DirectoryEntryModel::Toggle);
+            first = false;
+        }
+    }
+    static int treeRow(Harness& h, const QString& path) {
+        for (int row = 0; row < h.folders.count(); ++row) if (gridKey(h.folders.pathAt(row)) == gridKey(path)) return row;
+        return -1;
+    }
+    bool openConfirmationFromHeader(Harness& h) {
+        QQuickItem* action = named(h.window->contentItem(), "gridMoveToTrash");
+        if (!action || !action->isVisible() || !action->isEnabled()) return false;
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(action));
+        return QTest::qWaitFor([&] { return dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm"; }, 10000);
+    }
+private slots:
+    // ---- DELETE-01: move to the Trash/Recycle Bin ----
+    void deleteActionShowsOnlyWithSelection() {
+        DeleteFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 4));
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("img1.png")));
+        QTest::qWait(150); // past the post-listing cursor placement
+        QQuickItem* action = named(h.window->contentItem(), "gridMoveToTrash"); QVERIFY(action);
+        h.fileGrid.clearSelection();
+        QTRY_VERIFY(!action->isVisible());
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("img2.png")));
+        QTRY_VERIFY(action->isVisible()); QVERIFY(action->isEnabled());
+        QVERIFY(action->property("text").toString().startsWith("Move to "));
+        // The command exists for search, with no default binding (DELETE-KEYS-01 adds bindings).
+        bool listed = false;
+        for (const auto& command : h.viewer.commands()) {
+            const auto row = command.toMap();
+            if (row["id"].toString() == "delete-selection") { listed = true; QVERIFY(row["binding"].toString().isEmpty()); }
+        }
+        QVERIFY(listed);
+        // Nothing was touched just by selecting and showing the action.
+        QCOMPARE(h.trash->calls.load(), 0);
+    }
+    void deleteConfirmationNamesTargetsScopeAndResistsHeldKeys() {
+        DeleteFolder media(3, 4); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 8));
+        QTest::qWait(150);
+        const QStringList chosen{"album", "img1.png", "img2.png", "img3.png", "note1.txt", "note2.txt", "note3.txt"};
+        selectNames(h, media, chosen);
+        QCOMPARE(h.fileGrid.selectedCount(), 7);
+        QVERIFY(openConfirmationFromHeader(h));
+        QObject* flow = deleteFlow(h);
+        const QString trash = flow->property("trashName").toString();
+        QCOMPARE(flow->property("title").toString(), "Move 7 items to the " + trash + "?");
+        QQuickItem* more = overlayItem(h, "deleteMore"); QVERIFY(more); QVERIFY(more->isVisible());
+        QCOMPARE(more->property("text").toString(), QString("and 2 more"));
+        QQuickItem* scope = overlayItem(h, "deleteScope"); QVERIFY(scope);
+        QCOMPARE(scope->property("text").toString(), QString("6 files and 1 folder (containing 3 files and 1 folder)"));
+        QVERIFY(overlayItem(h, "deleteNote")->property("text").toString().contains("sidecars"));
+        // Initial focus is on Cancel; Delete and a held (auto-repeating) Enter cannot confirm.
+        QQuickItem* cancel = overlayItem(h, "deleteCancel"); QQuickItem* confirm = overlayItem(h, "deleteConfirm");
+        QVERIFY(cancel && confirm);
+        QTRY_VERIFY(cancel->hasActiveFocus());
+        for (int i = 0; i < 5; ++i) sendKey(h.window, Qt::Key_Delete, i > 0);
+        QTest::keyClick(h.window, Qt::Key_Tab);
+        QTRY_VERIFY(confirm->hasActiveFocus());
+        for (int i = 0; i < 5; ++i) sendKey(h.window, Qt::Key_Return, true);
+        QTest::qWait(150);
+        QVERIFY(dialogOpen(h, "deleteConfirmation")); QCOMPARE(h.trash->calls.load(), 0);
+        // Escape cancels.
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+        // Enter on the initially focused Cancel cancels too.
+        QVERIFY(openConfirmationFromHeader(h));
+        QTRY_VERIFY(overlayItem(h, "deleteCancel")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+        QTest::qWait(150);
+        QCOMPARE(h.trash->calls.load(), 0);
+        for (const auto& name : chosen) QVERIFY2(QFileInfo::exists(media.file(name)), qPrintable(name));
+        QTRY_VERIFY(h.view()->hasActiveFocus()); // focus returns to the grid
+    }
+    void deleteCapturedPlanSurvivesSelectionChange() {
+        DeleteFolder media(3, 2); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 6));
+        QTest::qWait(150);
+        selectNames(h, media, {"note1.txt", "note2.txt"});
+        QVERIFY(openConfirmationFromHeader(h));
+        // Behind the dialog, the selection changes; the captured plan does not.
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("img3.png")));
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("album")), DirectoryEntryModel::Toggle);
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move 2 items to the " + deleteFlow(h)->property("trashName").toString() + "?");
+        QSignalSpy finished(&h.fileOperations, &FileOperationService::finished);
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(h, "deleteConfirm")));
+        QTRY_COMPARE(finished.count(), 1);
+        QVERIFY(!QFileInfo::exists(media.file("note1.txt")) && !QFileInfo::exists(media.file("note2.txt")));
+        QVERIFY(QFileInfo::exists(media.file("img3.png")) && QFileInfo::exists(media.file("album/one.jpg")));
+        // Full success: a short notice, no results dialog; the grid relists and keeps the surviving selection.
+        QQuickItem* notice = overlayItem(h, "deleteNotice"); QVERIFY(notice);
+        QTRY_VERIFY(notice->isVisible());
+        QVERIFY(notice->property("text").toString().startsWith("Moved 2 items to the "));
+        QVERIFY(!dialogOpen(h, "deleteResults"));
+        QTRY_COMPARE(h.fileGrid.count(), 4);
+        QCOMPARE(h.fileGrid.selectedCount(), 2);
+        QVERIFY(h.fileGrid.selectedPaths().contains(media.file("img3.png")));
+    }
+    void deleteBatchProgressStopAndPartialFailureResults() {
+        DeleteFolder media(3, 4); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img1.png", 8));
+        QTest::qWait(150);
+        h.trash->fail["note2.txt"] = glancelot::DeleteOutcome::InUse;
+        h.trash->fail["note3.txt"] = glancelot::DeleteOutcome::TrashUnavailable;
+        selectNames(h, media, {"note1.txt", "note2.txt", "note3.txt", "note4.txt"});
+        QVERIFY(openConfirmationFromHeader(h));
+        h.trash->hold();
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(h, "deleteConfirm")));
+        QTRY_COMPARE(phase(h), QString("executing"));
+        QQuickItem* progress = overlayItem(h, "deleteProgress"); QVERIFY(progress); QTRY_VERIFY(progress->isVisible());
+        QTRY_VERIFY(overlayItem(h, "deleteCancel")->hasActiveFocus()); // Stop
+        QCOMPARE(overlayItem(h, "deleteCancel")->property("text").toString(), QString("Stop"));
+        QTRY_COMPARE(h.trash->blocked(), 1);
+        QVERIFY(h.window->property("modalOpen").toBool());
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            QDir().mkpath(".cache/delete");
+            QTest::qWait(100); QVERIFY(h.window->grabWindow().save(".cache/delete/progress-dark-1180.png"));
+        }
+        h.trash->release();
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "deleteResults"), 10000);
+        QObject* results = h.window->findChild<QObject*>("deleteResults");
+        const QString trash = deleteFlow(h)->property("trashName").toString();
+        QCOMPARE(results->property("title").toString(), "Moved 2 of 4 items to the " + trash);
+        QStringList reasons;
+        for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
+        QCOMPARE(reasons.size(), 2);
+        QVERIFY(reasons.join("|").contains("open in another app"));
+        QVERIFY(reasons.join("|").contains("Nothing was deleted"));
+        QVERIFY(QFileInfo::exists(media.file("note2.txt")) && QFileInfo::exists(media.file("note3.txt")));
+        QVERIFY(!QFileInfo::exists(media.file("note1.txt")) && !QFileInfo::exists(media.file("note4.txt")));
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/results-" + mode + "-1180.png")); }
+            h.window->resize(540, 360); QTest::qWait(250); QVERIFY(h.window->grabWindow().save(".cache/delete/results-light-540.png"));
+        }
+        QTRY_VERIFY(overlayItem(h, "deleteResultsClose")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(!dialogOpen(h, "deleteResults"));
+        // Stop: the item in the backend completes, the rest are reported as not moved.
+        h.trash->fail.clear();
+        h.window->resize(1180, 780);
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 6);
+        selectNames(h, media, {"img1.png", "img2.png", "img3.png"});
+        QVERIFY(openConfirmationFromHeader(h));
+        h.trash->hold();
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(h, "deleteConfirm")));
+        QTRY_COMPARE(h.trash->blocked(), 1);
+        QTest::keyClick(h.window, Qt::Key_Space); // Stop has focus
+        QTRY_COMPARE(overlayItem(h, "deleteCancel")->property("text").toString(), QString("Stopping…"));
+        h.trash->release();
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "deleteResults"), 10000);
+        QCOMPARE(h.window->findChild<QObject*>("deleteResults")->property("title").toString(), "Moved 1 of 3 items to the " + trash);
+        QVERIFY(QFileInfo::exists(media.file("img2.png")) && QFileInfo::exists(media.file("img3.png")));
+    }
+    void deleteOpenedImageStepsToNextAndStaleListingCannotRestore() {
+        DeleteFolder media(3, 0); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QVERIFY(browse(h, media, "img2.png", 4));
+        QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("img2.png")));
+        QTest::qWait(150);
+        selectNames(h, media, {"img2.png"});
+        QVERIFY(openConfirmationFromHeader(h));
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this file to the " + deleteFlow(h)->property("trashName").toString() + "?");
+        h.fileGrid.refresh(); // a listing that may still see img2.png is in flight while the move runs
+        QSignalSpy removed(&h.fileOperations, &FileOperationService::pathsRemoved);
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(h, "deleteConfirm")));
+        QTRY_COMPARE(removed.count(), 1);
+        // The opened photo was removed: the viewer lands on the immediate next one (deleted-current anchor), once.
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && h.viewer.filePath().endsWith("img3.png"), 15000);
+        QTest::qWait(600); // past the folder watcher's reload: it must not step again
+        QVERIFY2(h.viewer.filePath().endsWith("img3.png"), qPrintable(h.viewer.filePath()));
+        QCOMPARE(h.viewer.fileCount(), 2);
+        QTRY_VERIFY(!h.fileGrid.loading());
+        QCOMPARE(h.fileGrid.rowOf(media.file("img2.png")), -1);
+        QCOMPARE(h.fileGrid.count(), 3);
+        QVERIFY(gridKey(h.fileGrid.currentImage()) == gridKey(media.file("img3.png")));
+        // The window position follows the new image (persisted through the shared settings writer).
+        QVERIFY(QFileInfo::exists(media.file("img1.png")) && QFileInfo::exists(media.file("img3.png")));
+    }
+    void deleteBrowsingFolderFromTreeVisitsNearestAncestor() {
+        DeleteFolder media(2, 0); QVERIFY(media.root.isValid());
+        // Browse inside Shoot/album; delete Shoot/album from its tree row with the keyboard (Menu key).
+        QImage image(20, 20, QImage::Format_RGB32); image.fill(Qt::darkGreen); QVERIFY(image.save(media.file("album/pic.png")));
+        Harness h(true); QVERIFY(h.window); h.window->resize(1180, 780);
+        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.folders, [&] { h.folders.sync(h.viewer.snapshot()); });
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true); h.folders.browseComputer();
+        h.viewer.open(media.file("album/pic.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(treeRow(h, media.file("album")) >= 0 && h.folders.currentRow() == treeRow(h, media.file("album")), 15000);
+        auto* list = h.window->findChild<QQuickItem*>("folderList"); QVERIFY(list);
+        QMetaObject::invokeMethod(h.window->findChild<QObject*>("folderTree"), "focusList");
+        list->setProperty("currentIndex", treeRow(h, media.file("album")));
+        QTRY_VERIFY(list->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Menu);
+        QObject* menu = h.window->findChild<QObject*>("folderRowMenu"); QVERIFY(menu);
+        QTRY_VERIFY(menu->property("visible").toBool());
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            QDir().mkpath(".cache/delete");
+            for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/tree-menu-" + mode + "-1180.png")); }
+        }
+        QTest::keyClick(h.window, Qt::Key_Down); // highlight the only item
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");
+        QCOMPARE(overlayItem(h, "deleteScope")->property("text").toString(), QString("1 folder (containing 4 files and 1 folder)"));
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/confirm-folder-" + mode + "-1180.png")); }
+        }
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(h, "deleteConfirm")));
+        // The browsing folder is gone: the viewer visits the nearest existing ancestor and the tree drops the row.
+        QTRY_VERIFY_WITH_TIMEOUT(gridKey(h.viewer.directory()) == gridKey(media.path), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && h.viewer.filePath().endsWith("img1.png"), 15000);
+        QTRY_COMPARE(treeRow(h, media.file("album")), -1);
+        QTRY_VERIFY(treeRow(h, media.path) >= 0);
+        QVERIFY(!QFileInfo::exists(media.file("album")));
+        // A drive row's menu item is disabled with its reason, never offered.
+        const int drive = 0;
+        list->setProperty("currentIndex", drive);
+        QMetaObject::invokeMethod(h.window->findChild<QObject*>("folderTree"), "focusList");
+        QTRY_VERIFY(list->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
+        QTRY_VERIFY(menu->property("visible").toBool());
+        QObject* item = h.window->findChild<QObject*>("folderMoveToTrash"); QVERIFY(item);
+        QVERIFY(!item->property("enabled").toBool());
+        QVERIFY(item->property("text").toString().startsWith("Drives can't"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!menu->property("visible").toBool());
+    }
+    void deleteRejectedOnlyPlanExplainsAndCannotConfirm() {
+        DeleteFolder media(1, 0); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); h.window->resize(1180, 780);
+        QMetaObject::invokeMethod(deleteFlow(h), "request", Q_ARG(QVariant, QVariant(QStringList{QDir::rootPath(), media.file("missing.png")})),
+                                  Q_ARG(QVariant, QVariant(QString("command"))), Q_ARG(QVariant, QVariant(QString())));
+        QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
+        QCOMPARE(deleteFlow(h)->property("title").toString(), QString("Nothing can be moved"));
+        QVERIFY(!overlayItem(h, "deleteConfirm")->isVisible());
+        QCOMPARE(overlayItem(h, "deleteCancel")->property("text").toString(), QString("Close"));
+        QVERIFY(overlayItem(h, "deleteRejected")->isVisible());
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            QDir().mkpath(".cache/delete"); QTest::qWait(150);
+            QVERIFY(h.window->grabWindow().save(".cache/delete/rejected-dark-1180.png"));
+        }
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+        QCOMPARE(h.trash->calls.load(), 0);
+    }
+    // In-process stand-in for a second window: another controller and grid watching the same folder reconcile through
+    // their own filesystem invalidation (the folder watcher), without any message from the deleting window.
+    void deleteOtherWindowReconcilesThroughWatcher() {
+        DeleteFolder media(3, 1); QVERIFY(media.root.isValid());
+        Harness first(true), second(true); QVERIFY(first.window && second.window);
+        QVERIFY(browse(second, media, "img1.png", 5));
+        QVERIFY(browse(first, media, "img1.png", 5));
+        QTest::qWait(150);
+        selectNames(first, media, {"note1.txt"});
+        QVERIFY(openConfirmationFromHeader(first));
+        QTest::mouseClick(first.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(first, "deleteConfirm")));
+        QTRY_VERIFY_WITH_TIMEOUT(second.fileGrid.rowOf(media.file("note1.txt")) < 0 && !second.fileGrid.loading() && second.fileGrid.count() == 4, 10000);
+    }
+    void deleteReviewCaptures() {
+        if (!qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) QSKIP("Set GLANCELOT_REVIEW_CAPTURE to write review captures");
+        DeleteFolder media(3, 4); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); h.provider->succeed = true;
+        QVERIFY(browse(h, media, "img1.png", 8));
+        QTest::qWait(200);
+        selectNames(h, media, {"album", "img1.png", "img2.png", "img3.png", "note1.txt", "note2.txt", "note3.txt"});
+        QDir().mkpath(".cache/delete");
+        for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) for (const auto& mode : {QString("dark"), QString("light")}) {
+            h.window->resize(size); h.theme.setMode(mode); QTest::qWait(250);
+            QVERIFY(h.window->grabWindow().save(QString(".cache/delete/grid-action-%1-%2.png").arg(mode).arg(size.width())));
+            QVERIFY(openConfirmationFromHeader(h)); QTest::qWait(250);
+            QVERIFY(h.window->grabWindow().save(QString(".cache/delete/confirm-%1-%2.png").arg(mode).arg(size.width())));
+            QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!dialogOpen(h, "deleteConfirmation"));
+        }
+        h.window->resize(1180, 780); h.theme.setMode("dark");
+        selectNames(h, media, {"note4.txt"});
+        QVERIFY(openConfirmationFromHeader(h));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(overlayItem(h, "deleteConfirm")));
+        QTRY_VERIFY(overlayItem(h, "deleteNotice")->isVisible()); QTest::qWait(250);
+        QVERIFY(h.window->grabWindow().save(".cache/delete/notice-dark-1180.png"));
         h.provider->succeed = false;
     }
 private:

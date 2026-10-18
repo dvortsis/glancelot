@@ -10,6 +10,8 @@ Dialog {
     modal: true
     // Short windows get tighter margins so the content, not the frame, keeps the space.
     readonly property bool tight: parent && (parent.height < 480 || parent.width < 640)
+    // False hides the title-row close button while the dialog must not be dismissed (e.g. a running operation).
+    property bool closable: true
     padding: tight ? Theme.gapLg : Theme.gapXl
     topPadding: tight ? Theme.gapSm : Theme.gapLg
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -34,6 +36,8 @@ Dialog {
             iconOnly: true
             tip: "Close (Esc)"
             focusPolicy: Qt.TabFocus
+            enabled: dialog.closable
+            opacity: dialog.closable ? 1 : 0 // keeps the title row height stable
             onClicked: dialog.close()
             Layout.rightMargin: dialog.tight ? Theme.gapSm : Theme.gapMd
             Layout.topMargin: dialog.tight ? Theme.gapXs : Theme.gapMd
