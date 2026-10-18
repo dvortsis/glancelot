@@ -112,7 +112,9 @@ tasks:
     milestone: M3
     priority: 10
     owner: grid-ui
-    state: implementing
+    state: done
+    commit: 822d882
+    evidence: docs/verification/GRID-01.md; integrated build.ps1 -Test -Package 8/8 CTest targets; verify-folder-grid.py 10001-file run passed; portable cleanPATH smoke passed; independent review APPROVE WITH FIXES, fixes verified by new tests (reviewer not re-run); Windows only
     memory_action: act_mvd2jba0_ebb2f6d14794
     base_commit: a10eb08
     depends: [BROWSE-01, TREE-01, WINDOW-RESUME-01]
@@ -123,8 +125,8 @@ tasks:
     verification: 10000-row virtualization, empty/error states, stale/reset listing, keyboard and modal behavior, compact/wide screenshots, independent review and integrated build tests
     handoff: Commit, actual test output, platform scope and remaining performance limitations
 next_milestone: M3
-priority_order: [GRID-01]
-priority_note: M2.1 tree and window-session tasks complete on Windows; remaining M3 browsing and platform qualification follow
+priority_order: []
+priority_note: GRID-01 complete on Windows; remaining M3 items (favorites, filters/sorts, hot reload, format expansion) and platform qualification follow
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation
   - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)
