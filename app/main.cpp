@@ -7,7 +7,7 @@
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/directory_entry_model.hpp"
-#include <QDir>
+#include "file_grid_wiring.hpp"
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
 #include <QGuiApplication>
@@ -93,21 +93,11 @@ int main(int argc,char** argv) {
     // Mixed file-manager grid. It follows the controller's folder, sort and opened photo; PhotoGrid activates it
     // only while visible. A directory change is detected by key so ordinary image steps never relist the folder.
     DirectoryEntryModel fileGrid;
-    const auto followViewer=[&]{
-        const auto key=[](const QString& path){QString k=QDir::cleanPath(QDir::fromNativeSeparators(path));
-#ifdef Q_OS_WIN
-            k=k.toCaseFolded();
-#endif
-            return k;};
-        fileGrid.setSort(viewer.sortKey(),viewer.sortDescending(),viewer.sortSeed());
-        if(key(viewer.directory())!=key(fileGrid.directory()))fileGrid.setDirectory(viewer.directory());
-        fileGrid.setCurrentImage(viewer.filePath());
-    };
-    QObject::connect(&viewer,&ViewerController::stateChanged,&fileGrid,followViewer);
-    QObject::connect(&viewer,&ViewerController::filesInvalidated,&fileGrid,[&]{fileGrid.refresh();});
+    // Shared with the grid UI test harness (src/app/file_grid_wiring.hpp) so tests run the shipped wiring.
+    file_grid_wiring::followViewer(viewer,fileGrid);
     // One thumbnail epoch: the service accepts a single epoch, so the grid's URLs advance in lockstep with the
     // filmstrip's (directory changes and on-disk invalidation both pass through FilmstripModel::invalidate).
-    QObject::connect(&filmstrip,&FilmstripModel::epochChanged,&fileGrid,[&]{while(fileGrid.epoch()<filmstrip.epoch())fileGrid.invalidate();});
+    file_grid_wiring::lockThumbnailEpoch(filmstrip,fileGrid);
     QObject::connect(&filmstrip,&FilmstripModel::epochChanged,&thumbnails,[&]{thumbnails.setEpoch(filmstrip.epoch());});
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));

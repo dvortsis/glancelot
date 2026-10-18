@@ -4,6 +4,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/settings_file.hpp"
 #include "../src/app/thumbnail_id.hpp"
+#include "../src/app/file_grid_wiring.hpp"
 #include <QMutex>
 #include <QProcess>
 #include <cmath>
@@ -65,13 +66,7 @@ QTemporaryDir* listingFixture(int count) {
     }
     return slot.get();
 }
-QString gridKey(const QString& path) {
-    QString key = QDir::cleanPath(QDir::fromNativeSeparators(path));
-#ifdef Q_OS_WIN
-    key = key.toCaseFolded();
-#endif
-    return key;
-}
+QString gridKey(const QString& path) { return file_grid_wiring::directoryKey(path); }
 
 struct Harness {
     QTemporaryDir config;
@@ -97,16 +92,13 @@ struct Harness {
         engine.rootContext()->setContextProperty("folderTree", &folders);
         engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
         // Tests that inject a listing with fill() must not be overwritten by the (empty) controller snapshot.
-        // Live wiring matches app/main.cpp: the grid follows the controller's folder, sort and opened photo.
+        // Live wiring is app/main.cpp's: the same file_grid_wiring helpers, plus the filmstrip connections.
         if (live) {
             QObject::connect(&viewer, &ViewerController::stateChanged, &model, [&] { model.sync(viewer.snapshot()); });
-            QObject::connect(&viewer, &ViewerController::stateChanged, &fileGrid, [&] {
-                fileGrid.setSort(viewer.sortKey(), viewer.sortDescending(), viewer.sortSeed());
-                if (gridKey(viewer.directory()) != gridKey(fileGrid.directory())) fileGrid.setDirectory(viewer.directory());
-                fileGrid.setCurrentImage(viewer.filePath());
-            });
-            QObject::connect(&viewer, &ViewerController::filesInvalidated, &fileGrid, [&] { fileGrid.refresh(); fileGrid.invalidate(); });
+            QObject::connect(&viewer, &ViewerController::filesInvalidated, &model, [&] { model.invalidate(); });
+            file_grid_wiring::followViewer(viewer, fileGrid);
         }
+        file_grid_wiring::lockThumbnailEpoch(model, fileGrid);
         engine.load(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Main.qml")));
         if (!engine.rootObjects().empty()) window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
     }
@@ -1160,6 +1152,36 @@ private slots:
         QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.file("sunset.jpg")});
         QCOMPARE(h.selected(), -1); // the cursor's file is gone; nothing else was selected in its place
         QVERIFY(h.window->property("gridMode").toBool());
+    }
+    // Review I3: ThumbnailService accepts one epoch (the filmstrip's); grid thumbnail URLs must carry the same one
+    // through folder changes and on-disk invalidation, or every grid preview is rejected in the real application.
+    void gridThumbnailEpochFollowsFilmstrip() {
+        QTemporaryDir one, two; QVERIFY(one.isValid() && two.isValid());
+        QImage image(16, 12, QImage::Format_RGB32); image.fill(Qt::darkCyan);
+        QVERIFY(image.save(one.filePath("a.png"))); QVERIFY(image.save(two.filePath("b.png")));
+        Harness h(true); QVERIFY(h.window);
+        const auto thumbEpoch = [&]() -> qint64 {
+            QQuickItem* cell = h.cell(0); if (!cell) return -1;
+            for (auto* item : descendants(cell)) if (item->objectName().startsWith("gridThumb")) {
+                const auto parts = thumbnail_id::decode(item->property("source").toUrl().toString().mid(QString("image://thumb/").size()));
+                return parts ? qint64(parts->epoch) : -1;
+            }
+            return -1;
+        };
+        h.viewer.open(one.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.showGrid(); QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 1);
+        QVERIFY(h.model.epoch() > 1); // the first folder sync already advanced the filmstrip epoch
+        QCOMPARE(h.fileGrid.epoch(), h.model.epoch());
+        QTRY_COMPARE(thumbEpoch(), qint64(h.model.epoch()));
+        h.viewer.open(two.filePath("b.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && h.viewer.filePath().endsWith("b.png"), 15000);
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.rowOf(two.filePath("b.png")) == 0);
+        QCOMPARE(h.fileGrid.epoch(), h.model.epoch());
+        QTRY_COMPARE(thumbEpoch(), qint64(h.model.epoch()));
+        const quint64 before = h.model.epoch();
+        QImage changed(16, 12, QImage::Format_RGB32); changed.fill(Qt::darkRed); QVERIFY(changed.save(two.filePath("b.png")));
+        QTRY_VERIFY_WITH_TIMEOUT(h.model.epoch() > before, 10000); // the controller's watcher invalidated
+        QCOMPARE(h.fileGrid.epoch(), h.model.epoch());
+        QTRY_COMPARE(thumbEpoch(), qint64(h.model.epoch()));
     }
     void emptyInaccessibleAndNoFolderStates() {
         QTemporaryDir empty; QVERIFY(empty.isValid());
