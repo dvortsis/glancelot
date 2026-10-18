@@ -50,7 +50,8 @@ Item {
             readonly property var state: arrangement.host.paneState(modelData)   // displayed
             readonly property var saved: paneLayout.panes[modelData]             // preferred; every edit starts here
             // The content pane's frame shows the unobstructed area, not the canvas under the overlaid bars.
-            readonly property var rect: state.region === "center" && arrangement.host.paneRect(modelData).width > 0
+            // In the combined view each content pane keeps its own half of the split.
+            readonly property var rect: state.region === "center" && arrangement.host.paneRect(modelData).width > 0 && !arrangement.host.combinedMode
                 ? arrangement.host.workspace._clear : arrangement.host.paneRect(modelData)
             readonly property bool horizontalEdge: state.region === "top" || state.region === "bottom"
             readonly property bool immutable: paneLayout.locked || state.frozen || arrangement.recovered
@@ -65,7 +66,7 @@ Item {
                 activeFocusOnTab: true
                 // Center panes put their grip in the middle so a compact overlay tree's grip never sits on top of it.
                 // Centered in the uncovered content, so it never sits under an overlay tree.
-                readonly property var content: arrangement.host.workspace._content
+                readonly property var content: arrangement.host.combinedMode ? frame.rect : arrangement.host.workspace._content
                 x: frame.centered ? content.x-frame.x+(content.width-width)/2 : 0
                 y: frame.centered ? content.y-frame.y+(content.height-height)/2 : 0
                 radius: Theme.radiusControl

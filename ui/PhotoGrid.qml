@@ -19,6 +19,8 @@ Rectangle {
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
+    // A host that pairs the grid with another pane takes Tab (GRID-PREVIEW-01); null keeps the focus chain.
+    property var tabHandler: null
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
     // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
@@ -329,6 +331,7 @@ Rectangle {
             panel.select(next, action === "extend" ? panel.modeRange : panel.modeReplace)
         }
         Keys.onBacktabPressed: event => { panel.foldersRequested(); event.accepted = true }
+        Keys.onTabPressed: event => { if (panel.tabHandler) panel.tabHandler(); event.accepted = panel.tabHandler !== null }
         delegate: ItemDelegate {
             id: cell
             required property int index

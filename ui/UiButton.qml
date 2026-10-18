@@ -16,6 +16,7 @@ Button {
     property string tip: iconOnly ? text : ""
     property int alignment: Qt.AlignHCenter
     property bool selected: false
+    property int cornerRadius: Theme.radiusControl // nested buttons (segments inside an outline) pass a concentric radius
     readonly property bool isOn: checked || selected
     property color foreground: variant === "primary" ? Theme.textOnPrimary : Theme.text
 
@@ -62,7 +63,7 @@ Button {
         Item { Layout.fillWidth: true; visible: control.alignment === Qt.AlignHCenter }
     }
     background: Rectangle {
-        radius: Theme.radiusControl
+        radius: control.cornerRadius
         color: control.variant === "primary" ? Theme.primary
                : (control.down ? Theme.pressed : (control.isOn ? Theme.selection : (control.hovered ? Theme.hover : "transparent")))
         border.width: control.visualFocus ? Theme.focusWidth : (control.variant === "outline" ? Theme.borderWidth : 0)
