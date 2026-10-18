@@ -462,9 +462,29 @@ void fileSorting() {
     const auto back = tree.folder(-1);
     require(back && *back == t.root / "a" / "3.jpg", "backward landing depended on file sort");
 }
+void exactDirectoryNavigation() {
+    Fixture f;
+    const auto first=f.file("album/photo2.png");
+    f.file("album/photo10.png"); f.file("album/readme.txt");
+    f.file("album/child/hidden.png");
+    fs::create_directories(f.root/"empty folder");
+    Navigator nav; std::error_code error;
+    require(nav.openDirectory(f.root/"album",error)&&!error,"exact album visit failed");
+    require(nav.snapshot().directory==f.root/"album"&&nav.snapshot().current==first,"album visit did not select sorted first image");
+    require(nav.snapshot().files.size()==2,"exact directory included descendants or unsupported files");
+    require(nav.openDirectory(f.root/"empty folder",error),"empty directory rejected");
+    require(nav.snapshot().directory==f.root/"empty folder"&&nav.snapshot().current.empty()&&nav.snapshot().files.empty(),"empty directory retained old image/list");
+    const auto generation=nav.snapshot().generation;
+    require(!nav.openDirectory(f.root/"missing",error)&&bool(error),"missing directory accepted");
+    require(nav.snapshot().generation==generation&&nav.snapshot().directory==f.root/"empty folder","failed visit changed snapshot");
+    require(!nav.openDirectory(first,error),"file accepted as directory");
+    std::stop_source cancelled; cancelled.request_stop(); nav.setCancellation(cancelled.get_token());
+    require(!nav.openDirectory(f.root/"album",error)&&error==std::errc::operation_canceled,"cancelled visit accepted");
+    require(nav.snapshot().generation==generation,"cancelled visit changed snapshot");
+}
 int main() {
     try {
-        naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch(); fileSorting();
+        exactDirectoryNavigation(); naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch(); fileSorting();
         std::cout << "navigation: all generated fixture tests passed\n";
         return 0;
     } catch (const std::exception& error) {

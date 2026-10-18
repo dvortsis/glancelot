@@ -18,6 +18,7 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property bool gridMode: false
+    readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
     property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
     property real pointerX: width / 2
     property real pointerY: height / 2
@@ -100,13 +101,13 @@ ApplicationWindow {
             required property var modelData
             sequence: modelData.binding
             context: Qt.WindowShortcut
-            enabled: !app.modalOpen && modelData.binding.length > 0 && (!app.gridMode || app.gridAllowsCommand(modelData.id))
+            enabled: !app.modalOpen && !app.editingText && modelData.binding.length > 0 && (!app.gridMode || app.gridAllowsCommand(modelData.id))
             onActivated: app.invoke(modelData.id)
         }
     }
     Shortcut {
         sequence: "Escape"
-        enabled: !app.modalOpen
+        enabled: !app.modalOpen && !app.editingText
         onActivated: {
             canvas.endLoupe()
             if (app.gridMode) app.showCanvas()
@@ -322,7 +323,7 @@ ApplicationWindow {
                 text: "Grid"
                 checkable: true
                 checked: app.gridMode
-                enabled: viewer.fileCount > 0
+                enabled: viewer.directory.length > 0
                 tip: (app.gridMode ? "Return to the photo" : "Browse the folder as a grid") + app.shortcutHint("grid")
                 Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid"
                 onClicked: { checked = Qt.binding(() => app.gridMode); app.invoke("grid") }

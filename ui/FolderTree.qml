@@ -13,7 +13,7 @@ Rectangle {
     property alias hovered: hover.hovered
     // The HUD must stay open while the pointer is over the panel or the keyboard cursor is inside it.
     property int focusedControls: 0
-    readonly property bool keepOpen: hover.hovered || list.activeFocus || focusedControls > 0 || resizer.pressed
+    readonly property bool keepOpen: hover.hovered || list.activeFocus || focusedControls > 0 || address.activeFocus || resizer.pressed
     readonly property int indent: 12
     // Drag the trailing edge to resize (this session); the host bounds it so the photo keeps most of the window.
     property int userWidth: 0
@@ -116,6 +116,60 @@ Rectangle {
             Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
             Layout.bottomMargin: Theme.gapXs
             onClicked: { folderTree.browseComputer(); panel.focusList() }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
+            Layout.bottomMargin: Theme.gapXs
+            spacing: Theme.gapXs
+            UiTextField {
+                id: address
+                objectName: "folderAddress"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                mono: true
+                placeholderText: "Folder path"
+                Accessible.name: "Current folder path"
+                Accessible.description: "Enter a path and press Enter to navigate. Escape restores the current folder."
+                property bool modified: false
+                text: viewer.directory
+                selectByMouse: true
+                onTextEdited: modified = true
+                onAccepted: { modified = false; viewer.navigateDirectory(text) }
+                Keys.onEscapePressed: event => {
+                    viewer.cancelDirectoryNavigation(); text = viewer.directory; modified = false; panel.focusList(); event.accepted = true
+                }
+                ToolTip.visible: hovered && !activeFocus
+                ToolTip.text: viewer.directory
+                Connections {
+                    target: viewer
+                    function onStateChanged() {
+                        if (!address.activeFocus || !address.modified) {
+                            if (!viewer.directoryPending && viewer.directoryError.length === 0) address.text = viewer.directory
+                        }
+                    }
+                }
+            }
+            PanelButton {
+                objectName: "copyFolderAddress"
+                text: "Copy"
+                tip: "Copy the full current folder path"
+                enabled: viewer.directory.length > 0
+                onClicked: viewer.copyDirectory()
+            }
+        }
+        Label {
+            objectName: "folderAddressFeedback"
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.gapMd; Layout.rightMargin: Theme.gapMd
+            Layout.bottomMargin: visible ? Theme.gapSm : 0
+            visible: viewer.directoryPending || viewer.directoryError.length > 0
+            text: viewer.directoryPending ? "Opening folder…" : viewer.directoryError
+            color: Theme.text
+            font.pixelSize: Theme.textSmall
+            wrapMode: Text.Wrap
+            Accessible.name: text
         }
 
         ListView {

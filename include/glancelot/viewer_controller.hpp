@@ -12,6 +12,8 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString fileName READ fileName NOTIFY stateChanged)
     Q_PROPERTY(QString directory READ directory NOTIFY stateChanged)
     Q_PROPERTY(QString status READ status NOTIFY stateChanged)
+    Q_PROPERTY(QString directoryError READ directoryError NOTIFY stateChanged)
+    Q_PROPERTY(bool directoryPending READ directoryPending NOTIFY stateChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY stateChanged)
     Q_PROPERTY(bool imageReady READ imageReady NOTIFY stateChanged)
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY stateChanged)
@@ -60,6 +62,11 @@ public:
     // Folder selection from the tree: opens the first eligible image of `folder`, or of the first subfolder (in
     // traversal order) that has one. Asynchronous; the newest request wins. Reports a status when nothing is found.
     Q_INVOKABLE void openFolder(const QString& folder);
+    // Exact asynchronous address visit; empty directories are valid and errors retain the location.
+    Q_INVOKABLE void navigateDirectory(const QString& folder);
+    Q_INVOKABLE void copyDirectory() const;
+    Q_INVOKABLE void cancelDirectoryNavigation();
+    QString directoryError() const; bool directoryPending() const;
     // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
     Q_INVOKABLE void raiseRoot();
     // Per-window position memory (UX-12). Slot 0 disables it. The last folder and image are written (debounced,

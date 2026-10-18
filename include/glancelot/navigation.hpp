@@ -47,6 +47,8 @@ std::optional<std::filesystem::path> adjacentFolderImage(
 class Navigator {
 public:
     bool open(const std::filesystem::path& file, std::error_code& error);
+    // Exact folder visit, including empty folders; worker-only, failure preserves the snapshot.
+    bool openDirectory(const std::filesystem::path& directory, std::error_code& error);
     bool setRoot(const std::filesystem::path& root);
     void setBoundary(BoundaryMode mode);
     // Re-lists the current folder in the new order; the current image stays current.
