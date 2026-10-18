@@ -22,6 +22,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString boundaryMode READ boundaryMode WRITE setBoundaryMode NOTIFY stateChanged)
     Q_PROPERTY(QString wheelMode READ wheelMode WRITE setWheelMode NOTIFY stateChanged)
     Q_PROPERTY(bool filmstripVisible READ filmstripVisible WRITE setFilmstripVisible NOTIFY stateChanged)
+    Q_PROPERTY(bool canRaiseRoot READ canRaiseRoot NOTIFY stateChanged)
     Q_PROPERTY(bool treeVisible READ treeVisible WRITE setTreeVisible NOTIFY stateChanged)
     Q_PROPERTY(bool treePinned READ treePinned WRITE setTreePinned NOTIFY stateChanged)
     Q_PROPERTY(int windowSlot READ windowSlot NOTIFY stateChanged)
@@ -49,6 +50,7 @@ public:
     Q_INVOKABLE void resetBindings();
     void setBoundaryMode(const QString& mode); void setWheelMode(const QString& mode);
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
+    bool canRaiseRoot() const;
     bool treeVisible() const; void setTreeVisible(bool visible);
     bool treePinned() const; void setTreePinned(bool pinned);
     // File order within a folder: "name", "modified", "size" or "shuffle". Folder order never changes. A change

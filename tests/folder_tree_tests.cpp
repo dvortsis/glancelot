@@ -440,6 +440,10 @@ void FolderTreeTests::openFolderWithoutImagesReportsAndKeepsSelection() {
     const auto next=writePng(elsewhere.path(), "other.png");
     fresh.openFolder(elsewhere.path());
     QTRY_VERIFY_WITH_TIMEOUT(same(fresh.snapshot().current,next) && fresh.imageReady(),15000);
+    QVERIFY(same(fresh.snapshot().root,elsewhere.path()));
+    fresh.openFolder(files.path());
+    QTRY_VERIFY_WITH_TIMEOUT(same(fresh.snapshot().current,start) && fresh.imageReady(),15000);
+    QVERIFY(same(fresh.snapshot().root,files.path()));
     qunsetenv("GLANCELOT_CONFIG_DIR");
 }
 
