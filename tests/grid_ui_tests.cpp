@@ -166,6 +166,7 @@ private slots:
                 for(const auto& region:{QString("left"),QString("right"),QString("top"),QString("bottom"),QString("center")}) {
                     if(region=="center"&&id!="preview"&&id!="grid")continue;
                     h.layout.reset();QVERIFY(h.layout.move(id,region,0));
+                    h.window->setProperty("hudVisible",true); // auto-hide must not race the assertions or captures
                     QCoreApplication::processEvents();
                     const auto layout=h.window->property("workspace").toMap();
                     const auto rect=layout.value(id).toMap();
@@ -215,11 +216,18 @@ private slots:
             h.theme.setMode(mode);QTest::qWait(50);QDir().mkpath(".cache/panes-ui");
             QVERIFY(h.window->grabWindow().save(".cache/panes-ui/locked-"+mode+".png"));
         }
-        h.viewer.trigger("arrange-panes");QCoreApplication::processEvents();
-        QVERIFY(!h.window->property("layoutEditing").toBool()); // locked layouts cannot enter arrangement
+        // A locked layout can still be inspected; arrangement explains the lock instead of silently doing nothing.
+        h.viewer.trigger("arrange-panes");QTRY_VERIFY(h.window->property("layoutEditing").toBool());
+        auto* note=find("arrangementNote");QVERIFY(note);QTRY_VERIFY(note->isVisible());
+        QVERIFY(note->property("text").toString().contains("locked"));
+        h.window->setProperty("layoutEditing",false);
         QMetaObject::invokeMethod(indicator,"clicked");QTRY_VERIFY(!h.layout.locked());QTRY_VERIFY(!indicator->isVisible());
         QVERIFY(h.layout.resize("tree",360));h.viewer.trigger("layout-reset");QTRY_COMPARE(h.layout.pane("tree")["extent"].toInt(),280);
         h.viewer.trigger("arrange-panes");QTRY_VERIFY(h.window->property("layoutEditing").toBool());
+        if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE"))for(const QSize size:{QSize(540,360),QSize(1180,780)})for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.window->resize(size);h.theme.setMode(mode);QTest::qWait(150);QDir().mkpath(".cache/panes-ui");
+            QVERIFY(h.window->grabWindow().save(QString(".cache/panes-ui/arrange-%1-%2.png").arg(mode).arg(size.width())));
+        }
         auto* grip=find("paneGrip-tree");QVERIFY(grip);QTRY_VERIFY(grip->isVisible());
         const auto origin=grip->mapToScene(QPointF(grip->width()/2,grip->height()/2)).toPoint();
         const QPoint target(int(h.window->width()*0.85),h.window->height()/2);
@@ -240,7 +248,43 @@ private slots:
         QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
         QTRY_COMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));QCOMPARE(changes.count(),1);
         QVERIFY(grip->hasActiveFocus());
-        h.layout.reset();h.window->setProperty("layoutEditing",false);
+        // Leaving arrangement hands focus back to content; arrow keys and Space no longer edit the layout.
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+        QTRY_VERIFY(!grip->hasActiveFocus());
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);QTRY_VERIFY(canvas->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_Left);QTest::keyClick(h.window,Qt::Key_Space);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));QVERIFY(!h.layout.pane("tree")["frozen"].toBool());
+        h.layout.reset();
+    }
+    void hudAutoHideNeverReflowsCanvas() {
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);
+        h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();
+        const QRectF awake(canvas->x(),canvas->y(),canvas->width(),canvas->height());
+        h.window->setProperty("hudVisible",false);QCoreApplication::processEvents();
+        QCOMPARE(QRectF(canvas->x(),canvas->y(),canvas->width(),canvas->height()),awake);
+        QCOMPARE(awake,QRectF(0,0,1180,780));
+        // A frozen bar stays up, so it reserves its space instead of covering the photo.
+        QVERIFY(h.layout.freeze("statusbar",true));QCoreApplication::processEvents();
+        QTRY_VERIFY(canvas->height()<780);const qreal reserved=canvas->height();
+        h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();QCOMPARE(canvas->height(),reserved);
+        h.layout.reset();
+    }
+    void recoveredLayoutIsNotEditableAndKeepsPreferences() {
+        Harness h;QVERIFY(h.window);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        QVERIFY(h.layout.move("tree","right",0));QVERIFY(h.layout.resize("tree",400));
+        QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.move("statusbar","right",1));
+        h.window->resize(540,360);QTRY_VERIFY(h.window->property("workspace").toMap().value("_recovered").toBool());
+        h.window->requestActivate();h.window->setProperty("layoutEditing",true);
+        QQuickItem* grip=nullptr;QList<QQuickItem*> pending{h.window->contentItem()};
+        while(!pending.isEmpty()){auto* item=pending.takeFirst();if(item->objectName()=="paneGrip-tree"){grip=item;break;}pending<<item->childItems();}
+        QVERIFY(grip);QTest::qWait(100);grip->forceActiveFocus();QTRY_VERIFY(grip->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_Right,Qt::ControlModifier);QTest::keyClick(h.window,Qt::Key_Down,Qt::ShiftModifier);
+        QCOMPARE(h.layout.pane("tree")["extent"].toInt(),400);QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+        h.window->resize(1180,780);QTRY_VERIFY(!h.window->property("workspace").toMap().value("_recovered").toBool());
+        QTRY_COMPARE(qRound(h.window->property("workspace").toMap().value("tree").toMap().value("width").toDouble()),400);
+        h.layout.reset();h.viewer.setTreePinned(false);h.viewer.setTreeVisible(false);
     }
     void paneArrangementBoundsAndGestures() {
         Harness h;QVERIFY(h.window);h.window->resize(540,360);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
@@ -265,6 +309,8 @@ private slots:
         QVERIFY(adapted.value("_recovered").toBool());
         QCOMPARE(h.layout.pane("statusbar")["region"].toString(),QString("right"));
         h.layout.reset();h.window->resize(1180,780);h.window->requestActivate();h.window->setProperty("layoutEditing",true);
+        // Arrangement is disabled while recovered, so wait for the larger window to apply first.
+        QTRY_COMPARE(h.window->width(),1180);QTRY_COMPARE(h.window->height(),780);QTRY_VERIFY(!h.window->property("workspace").toMap().value("_recovered").toBool());
         QQuickItem* handle=nullptr;
         QList<QQuickItem*> pending{h.window->contentItem()};
         while(!pending.isEmpty()) {
@@ -273,7 +319,8 @@ private slots:
             pending<<item->childItems();
         }
         QVERIFY(handle);
-        QTRY_VERIFY(handle->isVisible());
+        QTRY_VERIFY(handle->isVisible());QTRY_VERIFY(handle->isEnabled());
+        QTRY_VERIFY(handle->mapRectToScene(QRectF(0,0,handle->width(),handle->height())).bottom()>600);
         const auto origin=handle->mapToScene(QPointF(handle->width()/2,handle->height()/2)).toPoint();
         QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);
         QTest::mouseMove(h.window,origin+QPoint(40,0),30);
