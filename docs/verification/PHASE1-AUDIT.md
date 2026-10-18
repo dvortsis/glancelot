@@ -1,6 +1,6 @@
 # Phase 1 integration and application audit
 
-Audit date: October 18, 2026. Integrated baseline `8eb2d2f`; navigation follow-up `015b664` is under independent review. This record supplements UI-POLISH-01.md; it does not qualify untested hardware or future roadmap features.
+Audit date: October 18, 2026. Integrated baseline `8eb2d2f`; navigation follow-up `015b664` was independently approved and integrated in `262a00c`. This record supplements UI-POLISH-01.md; it does not qualify untested hardware or future roadmap features.
 
 ## Scope and method
 
@@ -28,10 +28,10 @@ Windows baseline/integration `8eb2d2f`: `scripts/build.ps1 -BuildDir build -Test
 
 Real viewer grid verification passed compact dark/light and wide cases, plus 10,001 entries with 33 live cells. All 10,001 original source hashes remained unchanged. Thumbnail limits remained two workers, 256 queued requests and 64 MiB cache.
 
-Follow-up `015b664`: Windows full suite 8/8 passed in 73.30s using the explicit project-local QtRoot. Initial worktree invocation omitted that runtime path and failed DLL lookup; it is not application failure evidence. Linux targeted folder-publication regression: 3 passed in 181ms; tree activation plus resize: 4 passed in 2.479s. Full Linux suite: 8/8 passed in 54.20s in the isolated diagnostic build. The production Docker build with its unchanged full-test gate remains pending in this record.
+Follow-up `015b664`: Windows full suite 8/8 passed in 73.30s using the explicit project-local QtRoot. Initial worktree invocation omitted that runtime path and failed DLL lookup; it is not application failure evidence. Linux targeted folder-publication regression: 3 passed in 181ms; tree activation plus resize: 4 passed in 2.479s. Full Linux suite: 8/8 passed in 54.20s in the isolated diagnostic build. The production Docker build with its unchanged full-test gate passed 8/8 in 48.99s; image `glancelot-browser:phase1` SHA256 `7925d629fd4d84cef469e7125f93a4e41d6304d60db78b9f92d62b05b45c8f01`. Independent Windows follow-up: 8/8 in 68.98s. Integrated main build/test/package: 8/8 in 70.26s.
 
 ## Limits and unresolved evidence
 
 The initial Linux delivery gate failed tree Enter and once crashed in resizeTreeAndEmpty. The tree failure now has a reproduced cause and targeted passing fix. The separate crash has no captured backtrace and did not recur in repeated full/debugger runs or the independent ASAN run (leak detection disabled). Do not label its cause resolved or attribute it to Qt without evidence. Software-scenegraph tests warn that QQuickRhiItem has no QRhi; these tests do not prove GPU rendering. Actual native captures exercise the RHI path separately.
 
-Physical multi-monitor, per-monitor ICC/HDR, hardware-specific GPU recovery, Linux Wayland/X11 desktop interaction and live screen-reader operation remain unverified. Second-monitor support is a roadmap item, not shipped functionality. Qt packaging reports unavailable translations from the developer distribution. Browser delivery and final refreshed native package must be rechecked after the follow-up is integrated.
+Physical multi-monitor, per-monitor ICC/HDR, hardware-specific GPU recovery, Linux Wayland/X11 desktop interaction and live screen-reader operation remain unverified. Second-monitor support is a roadmap item, not shipped functionality. Qt packaging reports unavailable translations from the developer distribution. The refreshed portable app was launched from `dist/Glancelot/bin/glancelot.exe` after successful integrated packaging. Browser testing container `glancelot-testing-phase1` runs the production image with loopback port 16080, read-only generated-media mount and a private password file; HTTP and container health checks passed, and wmctrl/ps confirmed the actual viewer window/process. The in-app browser automation helper failed to initialize because of its Windows sandbox setup, so interactive browser rendering has not been re-audited at this revision.

@@ -14,8 +14,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: ready
+    state: implementing
     depends: [TREE-START-01]
+    branch: agent/path-bar
+    worktree: .worktrees/path-bar
+    plan: docs/PATH-BAR-PLAN.md
     outcome: Selectable editable current-folder path above the tree with copy and paste-to-navigate
     acceptance: Full path is available even when visually clipped; copy button and native text shortcuts; pasted or typed path navigates on Enter; Escape restores current path; tree and grid stay synchronized; invalid or inaccessible paths retain the prior location with inline feedback
     boundaries: Folder-address navigation and text clipboard only; no file copy or move operation; no navigation just from pasting
