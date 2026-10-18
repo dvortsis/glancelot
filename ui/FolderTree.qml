@@ -22,6 +22,22 @@ Rectangle {
     signal resizeCommitted(real extent)
     property int maximumWidth: 480
     signal dismissed()
+    // DELETE-01: a row's context menu (right-click, Menu key, Shift+F10) asks the host to confirm a move to the trash.
+    signal deleteRequested(string path)
+    readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
+    function openRowMenu(row, x, y) {
+        const info = folderTree.rowInfo(row)
+        if (!info.path) return
+        rowMenu.path = info.path; rowMenu.depth = info.depth
+        rowMenu.popup(panel, x, y)
+    }
+    function openRowMenuAtCursor() {
+        if (list.currentIndex < 0) return
+        list.positionViewAtIndex(list.currentIndex, ListView.Contain) // the cursor row may be scrolled out of view
+        const item = list.itemAtIndex(list.currentIndex)
+        const at = item ? item.mapToItem(panel, Theme.gapXl, item.height) : list.mapToItem(panel, Theme.gapXl, Theme.gapSm)
+        openRowMenu(list.currentIndex, at.x, at.y)
+    }
     function focusList() {
         list.forceActiveFocus(Qt.TabFocusReason)
         if (list.currentIndex < 0) list.currentIndex = Math.max(0, folderTree.currentRow)
@@ -202,7 +218,8 @@ Rectangle {
             // Keys the tree owns while it has focus; without this the window-level shortcuts would also fire.
             Keys.onShortcutOverride: event => {
                 event.accepted = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End,
-                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape].indexOf(event.key) >= 0
+                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0
+                                 || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))
             }
             Keys.onUpPressed: currentIndex = Math.max(0, currentIndex - 1)
             Keys.onDownPressed: currentIndex = Math.min(count - 1, currentIndex + 1)
@@ -212,7 +229,8 @@ Rectangle {
                 const row = currentIndex
                 const cell = folderTree.rowInfo(row)
                 const page = Math.max(1, Math.floor(height / Theme.rowHeight) - 1)
-                if (event.key === Qt.Key_Home) { currentIndex = 0; event.accepted = true }
+                if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { panel.openRowMenuAtCursor(); event.accepted = true }
+                else if (event.key === Qt.Key_Home) { currentIndex = 0; event.accepted = true }
                 else if (event.key === Qt.Key_End) { currentIndex = count - 1; event.accepted = true }
                 else if (event.key === Qt.Key_PageUp) { currentIndex = Math.max(0, row - page); event.accepted = true }
                 else if (event.key === Qt.Key_PageDown) { currentIndex = Math.min(count - 1, row + page); event.accepted = true }
@@ -275,6 +293,15 @@ Rectangle {
                     }
                 }
                 HoverHandler { id: rowHover }
+                TapHandler { // context menu
+                    acceptedButtons: Qt.RightButton
+                    onTapped: point => {
+                        list.currentIndex = row.index
+                        list.forceActiveFocus(Qt.MouseFocusReason)
+                        const at = row.mapToItem(panel, point.position.x, point.position.y)
+                        panel.openRowMenu(row.index, at.x, at.y)
+                    }
+                }
                 TapHandler {
                     onTapped: point => {
                         if (tapCount > 1) return // the second click of a double-click belongs to onDoubleTapped
@@ -348,6 +375,45 @@ Rectangle {
                 ToolTip.visible: rowHover.hovered && tip.length > 0
                 ToolTip.delay: 400
                 ToolTip.text: tip
+            }
+            Menu {
+                id: rowMenu
+                objectName: "folderRowMenu"
+                property string path: ""
+                property int depth: 0
+                property bool handedOff: false // the confirmation dialog owns focus after a choice
+                padding: Theme.gapXs
+                onOpened: { handedOff = false; panel.focusedControls += 1 }
+                onClosed: { panel.focusedControls -= 1; if (!handedOff && panel.visible) list.forceActiveFocus(Qt.PopupFocusReason); handedOff = false }
+                background: Rectangle {
+                    implicitWidth: 232
+                    radius: Theme.radiusControl
+                    color: Theme.surface
+                    border.width: Theme.borderWidth
+                    border.color: Theme.border
+                }
+                MenuItem {
+                    id: trashItem
+                    objectName: "folderMoveToTrash"
+                    // Drives and other roots are never moved; the item stays visible and explains itself.
+                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move to " + panel.trashName
+                    enabled: rowMenu.depth > 0 && !fileOperations.busy
+                    implicitHeight: Theme.controlHeight
+                    leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+                    onTriggered: { rowMenu.handedOff = true; panel.deleteRequested(rowMenu.path) }
+                    contentItem: RowLayout {
+                        spacing: Theme.gapSm
+                        opacity: trashItem.enabled ? 1 : Theme.disabledOpacity
+                        UiIcon { name: "trash"; color: trashItem.enabled ? Theme.danger : Theme.muted }
+                        Label {
+                            text: trashItem.text
+                            color: trashItem.enabled ? Theme.danger : Theme.muted
+                            font.pixelSize: Theme.textBody
+                            Layout.fillWidth: true
+                        }
+                    }
+                    background: Rectangle { radius: Theme.radiusSmall; color: trashItem.highlighted ? Theme.hover : "transparent" }
+                }
             }
             Label {
                 anchors.centerIn: parent

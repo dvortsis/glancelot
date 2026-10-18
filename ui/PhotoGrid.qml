@@ -40,6 +40,15 @@ Rectangle {
     signal itemActivated(string path)
     signal dismissed()
     signal foldersRequested()
+    // DELETE-01: the header action asks the host to confirm moving these paths to the trash; nothing happens here.
+    signal deleteRequested(var paths)
+    property bool deleteBlocked: false // every item here is on a read-only drive
+    readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
+    // The selected paths, or the cursor item when nothing is selected.
+    function deletionTargets() {
+        const selected = fileGrid.selectedPaths()
+        return selected.length ? selected : (selectedPath.length ? [selectedPath] : [])
+    }
     Accessible.role: Accessible.Pane
     Accessible.name: "Folder grid"
 
@@ -247,6 +256,25 @@ Rectangle {
                         onClicked: { fileGrid.clearSelection(); panel.focusGrid() }
                     }
                 }
+            }
+            Label { // a known read-only drive: the action stays visible, disabled, with the reason beside it
+                objectName: "gridTrashBlocked"
+                visible: panel.deleteBlocked && fileGrid.selectedCount > 0
+                text: "Read-only drive"
+                color: Theme.muted
+                font.pixelSize: Theme.textSmall
+            }
+            UiButton {
+                objectName: "gridMoveToTrash"
+                visible: fileGrid.selectedCount > 0
+                iconName: "trash"
+                iconOnly: panel.width < 640
+                text: "Move to " + panel.trashName
+                tip: "Move the selected items to the " + panel.trashName + ". You can restore them from there."
+                Accessible.description: panel.deleteBlocked ? "Unavailable: this drive is read-only" : tip
+                enabled: panel.inputEnabled && !panel.deleteBlocked && !fileOperations.busy
+                focusPolicy: Qt.NoFocus
+                onClicked: panel.deleteRequested(panel.deletionTargets())
             }
         }
     }

@@ -117,7 +117,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
-    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
+    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -158,7 +158,7 @@ ApplicationWindow {
     function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
     function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
     function gridAllowsCommand(id) {
-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset"].indexOf(id) >= 0
+        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset", "delete-selection"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -190,6 +190,11 @@ ApplicationWindow {
         else if (id === "arrange-panes") layoutEditing = true // a locked layout explains itself inside arrangement
         else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
         else if (id === "layout-reset") paneLayout.reset()
+        else if (id === "delete-selection") {
+            // The selection lives in the grid; the canvas never moves an item the user cannot see selected.
+            if (gridMode) deleteFlow.request(photoGrid.deletionTargets(), "command", fileGrid.directory)
+            else deleteFlow.showNotice("Open the grid (" + (viewer.bindingFor("grid") || "Grid") + ") and select items to move them to the " + deleteFlow.trashName + ".")
+        }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -324,6 +329,8 @@ ApplicationWindow {
         onItemActivated: app.showCanvas()
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
+        deleteBlocked: deleteFlow.isReadOnly(fileGrid.directory)
+        onDeleteRequested: paths => deleteFlow.request(paths, "grid", fileGrid.directory)
     }
     Label {
         objectName: "layoutRecoveryNotice"
@@ -533,6 +540,15 @@ ApplicationWindow {
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
+        onDeleteRequested: path => deleteFlow.request([path], "tree", "")
+    }
+    DeleteFlow { // DELETE-01 confirmation, progress, notice and results
+        id: deleteFlow
+        objectName: "deleteFlow"
+        host: app
+        anchors.fill: parent
+        z: 25
+        onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
     }
     Rectangle {
         id: bottomPanel
