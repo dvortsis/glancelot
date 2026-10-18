@@ -10,7 +10,8 @@ Rectangle {
     property string entryCurrentPath: ""
     property bool inputEnabled: true
     property int liveDelegateCount: 0
-    readonly property int columns: Math.max(1, Math.floor((grid.width - 24) / 176))
+    // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
+    readonly property int columns: Math.max(1, Math.min(12, Math.floor((grid.width - 24) / 176)))
     readonly property int count: grid.count
     readonly property int thumbEdge: 256
     signal itemActivated(string path)
@@ -42,7 +43,7 @@ Rectangle {
     }
     function activate() {
         const path = filmstrip.pathAt(selectedIndex)
-        if (inputEnabled && path.length) { viewer.open(path); itemActivated(path) }
+        if (inputEnabled && path.length) { if (path !== viewer.filePath) viewer.open(path); itemActivated(path) }
     }
     onVisibleChanged: if (visible) Qt.callLater(enter)
     Connections {
@@ -59,7 +60,7 @@ Rectangle {
         clip: true
         model: panel.visible ? filmstrip : null
         cellWidth: width / panel.columns
-        cellHeight: Math.min(220, cellWidth * 0.75 + 46)
+        cellHeight: Math.max(160, Math.min(220, cellWidth * 0.75 + 46))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
@@ -69,6 +70,12 @@ Rectangle {
         Accessible.name: "Photos in this folder"
         Accessible.description: "Arrow keys select a photo. Enter opens it. Escape returns to the canvas."
         ScrollBar.vertical: ScrollBar { }
+        // Grid navigation keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
+        Keys.onShortcutOverride: event => {
+            if (event.modifiers !== Qt.NoModifier && event.modifiers !== Qt.KeypadModifier) return
+            if ([Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown,
+                 Qt.Key_Return, Qt.Key_Enter, Qt.Key_Escape].indexOf(event.key) >= 0) event.accepted = true
+        }
         Keys.onPressed: event => {
             if (event.modifiers !== Qt.NoModifier && event.modifiers !== Qt.KeypadModifier) return
             const page = Math.max(1, Math.floor(height / cellHeight)) * panel.columns
@@ -155,7 +162,7 @@ Rectangle {
                         visible: cell.isCurrent
                         text: "Viewing"
                         padding: 4
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         color: theme.colors.onPrimary
                         background: Rectangle { color: theme.colors.primary; radius: 2 }
                     }

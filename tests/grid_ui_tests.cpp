@@ -150,6 +150,35 @@ private slots:
         QTRY_VERIFY(!h.window->property("gridMode").toBool());
         QTRY_VERIFY(h.viewer.filePath().endsWith("0.png"));
     }
+    void gridKeysBeatRemappedShortcutsAndCommandsAreScoped() {
+        Harness h; QVERIFY(h.window); h.fill(100, 0); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QVERIFY(h.viewer.setBinding("next", ""));
+        QVERIFY(h.viewer.setBinding("tree", "Down"));
+        QVERIFY(h.viewer.setBinding("palette", "Right"));
+        QTest::keyClick(h.window, Qt::Key_Right); QTRY_COMPARE(h.selected(), 1);
+        QVERIFY(!h.window->property("modalOpen").toBool());
+        const int columns = h.grid()->property("columns").toInt();
+        QTest::keyClick(h.window, Qt::Key_Down); QTRY_COMPARE(h.selected(), 1 + columns);
+        QVERIFY(!h.viewer.treeVisible());
+        // Commands that act on the hidden canvas are ignored from toolbar/palette routes while browsing.
+        QVERIFY(QMetaObject::invokeMethod(h.window, "invoke", Q_ARG(QVariant, QVariant("rotate"))));
+        QVERIFY(h.window->property("gridMode").toBool());
+    }
+    void currentItemIsRevealedAndModalsBlockInput() {
+        Harness h; QVERIFY(h.window); h.fill(10000, 7000); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTRY_COMPARE(h.selected(), 7000);
+        QTRY_VERIFY(h.cell(7000));
+        auto inView = [&](int index) {
+            QQuickItem* cell = h.cell(index); if (!cell) return false;
+            const QPointF top = cell->mapToItem(h.view(), QPointF(0, 0)), bottom = cell->mapToItem(h.view(), QPointF(0, cell->height()));
+            return top.y() >= -1 && bottom.y() <= h.view()->height() + 1;
+        };
+        QVERIFY(inView(7000));
+        QTest::keyClick(h.window, Qt::Key_Home); QTRY_COMPARE(h.selected(), 0); QTRY_VERIFY(inView(0));
+        QTest::keyClick(h.window, Qt::Key_End); QTRY_COMPARE(h.selected(), 9999); QTRY_VERIFY(inView(9999));
+        h.viewer.trigger("palette"); QTRY_VERIFY(h.window->property("modalOpen").toBool());
+        QVERIFY(!h.grid()->property("inputEnabled").toBool());
+    }
     void resizeTreeAndEmpty() {
         Harness h; QVERIFY(h.window); h.fill(50); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         for(bool dark:{false,true}) {

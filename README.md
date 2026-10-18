@@ -8,7 +8,7 @@ Windows portable package: extract `dist/Glancelot.zip` and run `bin/glancelot.ex
 
 ## Appearance
 
-Use **Themes** in the toolbar or **Settings → Appearance**. Forty built-in families provide eighty light/dark variants, with live search, swatch previews, immediate application and saved preferences. Follow system, force dark, or force light. Slate & Ice uses the exact supplied palette and original knight assets. Themes affect interface chrome; the photo canvas keeps its independent neutral background and source pixels are unchanged.
+Use **Themes** in the toolbar (wide windows) or **Settings → Appearance**. Forty built-in families provide eighty light/dark variants, with live search, swatch previews, immediate application and saved preferences. Follow system, force dark, or force light. Slate & Ice uses the exact supplied palette and original knight assets. Themes affect interface chrome; the photo canvas keeps its independent neutral background and source pixels are unchanged.
 
 Families: Slate & Ice, Graphite, Arctic, Ocean, Cobalt, Indigo, Iris, Lavender, Plum, Orchid, Rose, Cranberry, Ruby, Coral, Terracotta, Copper, Amber, Sandstone, Honey, Olive, Moss, Fern, Forest, Emerald, Jade, Lagoon, Teal, Glacier, Steel, Storm, Midnight, Lilac, Heather, Mulberry, Blush, Clay, Espresso, Parchment, Sage, Monochrome.
 

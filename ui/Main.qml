@@ -41,7 +41,7 @@ ApplicationWindow {
     palette.placeholderText: theme.colors.muted
 
     function wakeHud() { hudVisible = true; hideHud.restart() }
-    function invoke(id) { viewer.trigger(id); wakeHud() }
+    function invoke(id) { if (gridMode && !gridAllowsCommand(id)) return; viewer.trigger(id); wakeHud() }
     function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
     function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
     function gridAllowsCommand(id) {
@@ -260,6 +260,8 @@ ApplicationWindow {
         width: implicitWidth
         visible: viewer.treeVisible && (viewer.treePinned || app.hudVisible || app.frameless)
         onDismissed: app.focusContent()
+        // Hiding a focused panel must not strand keyboard input on an invisible item.
+        onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
     }
     Rectangle {
         id: bottomPanel
@@ -276,7 +278,14 @@ ApplicationWindow {
             Label { visible: !app.gridMode; text: viewer.fileCount > 0 ? viewer.currentIndex + " / " + viewer.fileCount : "No photo"; color: app.muted; font.pixelSize: 12 }
             ActionButton { text: "Next"; visible: !app.gridMode; enabled: viewer.fileCount > 0; onClicked: app.invoke("next"); ToolTip.text: viewer.bindingFor("next") }
             Label { visible: app.gridMode; text: photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " / " + filmstrip.count + " selected" : "No selection"; color: app.muted; font.pixelSize: 12 }
-            Label { visible: app.gridMode && app.width > 680; text: "Arrows select · Enter opens"; color: app.muted; font.pixelSize: 12 }
+            Label {
+                visible: app.gridMode && app.width > 680
+                Layout.maximumWidth: Math.max(120, app.width - 520)
+                elide: Text.ElideRight
+                text: viewer.status.length > 0 ? viewer.status : "Arrows select · Enter opens"
+                color: viewer.status.length > 0 ? theme.colors.text : app.muted
+                font.pixelSize: 12
+            }
             ActionButton { visible: app.gridMode; text: "Open selected"; enabled: photoGrid.selectedIndex >= 0; onClicked: photoGrid.activate() }
             ActionButton { visible: app.gridMode; text: "Back to photo"; onClicked: app.showCanvas() }
             Item { Layout.fillWidth: true }
