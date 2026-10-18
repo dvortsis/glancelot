@@ -437,6 +437,7 @@ private slots:
         QTest::keyClick(h.window, Qt::Key_Escape);
         QTRY_VERIFY(!h.window->property("gridMode").toBool());
         QTRY_COMPARE(h.view()->property("count").toInt(), 0);
+        QCOMPARE(h.fileGrid.count(), 0); QVERIFY(!h.fileGrid.loading()); // hidden grid holds no listing
         QVERIFY(h.window->findChild<QQuickItem*>("canvas")->hasActiveFocus());
         QTest::qWait(100); const int hiddenRequests = h.provider->requests.load();
         QTest::qWait(100); QCOMPARE(h.provider->requests.load(), hiddenRequests);
