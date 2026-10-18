@@ -45,8 +45,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: ready
+    state: implementing
     depends: [PANES-01, FILE-GRID-01]
+    branch: agent/grid-preview
+    worktree: .worktrees/grid-preview
+    plan: docs/GRID-PREVIEW-PLAN.md
     outcome: Show grid and image preview simultaneously with adjustable horizontal or vertical split
     acceptance: Grid-only, preview-only and combined modes are discoverable and remappable; selecting an image in combined mode updates preview without closing the grid; grid focus, multiselection and opened image are distinct; folder or unsupported-file selection has an explicit preview state; preserve canvas fit and physical zoom during resize
     verification: Rapid selection and folder changes discard stale previews; modal/text/focused-pane command precedence; bounded combined thumbnail and decode work; compact/wide layouts, theme variants and mode restoration
@@ -57,8 +60,9 @@ tasks:
     owner: lead
     state: review
     depends: [GRID-01, SORT-01, TREE-START-01, PATH-BAR-01]
-    branch: agent/file-grid
-    worktree: .worktrees/file-grid
+    branch: agent/continuation
+    worktree: .worktrees/continuation
+    review: independent review APPROVED b63e931 (agent/file-grid-final-review); review fixes 8db4014 Windows 11/11 138.50s; fix re-check pending in agent/topbar-review
     plan: docs/FILE-GRID-PLAN.md
     outcome: File-manager-style grid of folders and all regular files with image thumbnails and multiselection
     interfaces: Lead freezes mixed-entry identity/type/revision model and selection contracts; image traversal and filmstrip retain eligible-image semantics
@@ -69,8 +73,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: ready
+    state: implementing
     depends: [FILE-GRID-01]
+    branch: agent/delete
+    worktree: .worktrees/delete
+    plan: docs/DELETE-PLAN.md
     outcome: Delete selected files and folders from the grid and delete a selected folder from the tree
     interfaces: Lead freezes explicit mutation targets, revision checks, operation results and cancellation contract before file-operation implementation
     acceptance: Shared asynchronous operation service; Trash/Recycle Bin by default; confirmation names targets and folder-content scope; snapshot and revalidate targets; collapse ancestor/descendant duplicates; never follow directory links into targets; block filesystem roots; no silent permanent-delete fallback; explicit paired-file policy; per-target success/failure and honest recovery limits
@@ -102,8 +109,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: ready
+    state: review
     depends: [REVIEW-ALL-01]
+    branch: agent/titlebar-finish
+    worktree: .worktrees/titlebar-finish
+    evidence: docs/verification/TOPBAR-THEME-01.md; f95d0b7 merged with FILE-GRID b63e931 Windows 11/11 126.41s; independent review in agent/topbar-review
     outcome: Top toolbar and application-controlled title bar consistently match the selected theme
     acceptance: Existing semantic tokens drive surfaces, text, icons, separators and hover/pressed/focus/disabled states; live theme changes leave no stale colors; retain supplied branding and accessible contrast; native OS-decorated title-bar limitations are explicit
     verification: All built-in theme variants for token/contrast checks; representative dark/light compact/wide native screenshots and active/inactive window states; preserve drag, resize, minimize, maximize, close and fullscreen behavior
