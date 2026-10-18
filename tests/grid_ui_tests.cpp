@@ -20,6 +20,7 @@
 #include <QWheelEvent>
 #include <QtTest>
 #include <atomic>
+#include <cmath>
 
 class PreviewProvider final : public QQuickImageProvider {
 public:
@@ -84,6 +85,40 @@ struct Harness {
     QQuickItem* cell(int index) const { for (auto* c : cells()) if (c->property("index").toInt() == index) return c; return nullptr; }
 };
 
+// TOPBAR-THEME-01 helpers: find a named item anywhere in the visual tree, and WCAG contrast.
+static QQuickItem* namedItem(QQuickWindow* window, const QString& name) {
+    QList<QQuickItem*> pending{window->contentItem()};
+    while (!pending.isEmpty()) {
+        QQuickItem* item = pending.takeFirst();
+        if (item->objectName() == name) return item;
+        pending << item->childItems();
+    }
+    return nullptr;
+}
+static double relativeLuminance(const QColor& color) {
+    const auto channel = [](double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+}
+static double contrastRatio(const QColor& a, const QColor& b) {
+    const double x = relativeLuminance(a), y = relativeLuminance(b);
+    return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05);
+}
+static QColor over(const QColor& top, const QColor& below) { // source-over compositing onto an opaque color
+    const double a = top.alphaF();
+    return QColor::fromRgbF(top.redF() * a + below.redF() * (1 - a), top.greenF() * a + below.greenF() * (1 - a), top.blueF() * a + below.blueF() * (1 - a));
+}
+static QColor itemColor(QQuickItem* item, const char* property = "color") { return item ? item->property(property).value<QColor>() : QColor(); }
+static QQuickItem* buttonBackground(QQuickItem* button) { return button ? button->property("background").value<QQuickItem*>() : nullptr; }
+static QQuickItem* buttonIcon(QQuickItem* button) {
+    QList<QQuickItem*> pending{button};
+    while (!pending.isEmpty()) {
+        QQuickItem* item = pending.takeFirst();
+        if (item != button && item->property("paths").isValid() && item->property("name").toString().size()) return item;
+        pending << item->childItems();
+    }
+    return nullptr;
+}
+
 class GridUiTests final : public QObject {
     Q_OBJECT
 private slots:
@@ -99,6 +134,212 @@ private slots:
         config = std::make_unique<QTemporaryDir>();
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
+    }
+    // TOPBAR-THEME-01: every built-in variant, switched live on one window, reaches every top-bar item with no stale
+    // color, and the derived interaction roles keep their contrast.
+    void topBarFollowsEveryThemeVariantLive() {
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.window->setProperty("frameless", true); // the window controls are part of the bar under test
+        h.window->requestActivate(); QTRY_VERIFY(h.window->isActive());
+        QObject* tokens = h.engine.singletonInstance<QObject*>("Glancelot", "Theme"); QVERIFY(tokens);
+        auto* bar = namedItem(h.window, "topBar"); auto* edge = namedItem(h.window, "topBarEdge");
+        auto* divider = namedItem(h.window, "topBarDivider"); auto* title = namedItem(h.window, "topBarTitle");
+        auto* brand = namedItem(h.window, "brandMark"); auto* settings = namedItem(h.window, "settingsButton");
+        auto* grid = namedItem(h.window, "gridToggle");
+        auto* minimize = namedItem(h.window, "minimizeButton"); auto* close = namedItem(h.window, "closeButton");
+        QVERIFY(bar && edge && divider && title && brand && settings && grid && minimize && close);
+        QTRY_VERIFY(minimize->isVisible() && close->isVisible());
+        QVERIFY(!grid->isEnabled()); // no folder: the disabled state is the shared disabled opacity
+        int variants = 0; double pressedMarkerMin = 100; QStringList pressedMarkerLow;
+        for (const auto& entry : h.theme.families()) {
+            const auto id = entry.toMap().value("id").toString();
+            for (bool dark : {true, false}) {
+                h.theme.setFamily(id); h.theme.setMode(dark ? "dark" : "light"); QCoreApplication::processEvents();
+                const auto palette = h.theme.preview(id, dark);
+                const auto role = [&](const char* name) { return QColor(palette.value(QLatin1String(name)).toString()); };
+                const auto token = [&](const char* name) { return tokens->property(name).value<QColor>(); };
+                const QString context = id + (dark ? " dark" : " light");
+                QVERIFY2(itemColor(bar) == role("surface"), qPrintable(context));
+                QCOMPARE(h.window->color(), role("background"));
+                QCOMPARE(itemColor(edge), role("border"));
+                QCOMPARE(itemColor(divider), role("border"));
+                QCOMPARE(itemColor(title), role("muted")); // "No photo open" placeholder
+                QCOMPARE(itemColor(settings, "foreground"), role("text"));
+                QCOMPARE(itemColor(buttonIcon(minimize)), role("text"));
+                QCOMPARE(itemColor(buttonIcon(close)), role("text"));
+                QCOMPARE(grid->opacity(), tokens->property("disabledOpacity").toReal());
+                QVERIFY2(brand->property("source").toUrl().toString().contains(dark ? "/dark/" : "/light/"), qPrintable(context));
+                // Derived roles as the Theme singleton computes them (selection is translucent over the bar).
+                const QColor pressed = token("pressed"), selection = over(token("selection"), role("surface"));
+                QVERIFY2(contrastRatio(role("text"), pressed) >= 4.5, qPrintable(context + " text/pressed"));
+                QVERIFY2(contrastRatio(role("text"), selection) >= 4.5, qPrintable(context + " text/selection"));
+                QVERIFY2(contrastRatio(token("focusRing"), role("surface")) >= 3, qPrintable(context + " focus ring"));
+                QVERIFY2(contrastRatio(role("primary"), selection) >= 3, qPrintable(context + " on-marker/selection"));
+                // Not asserted: a checked button held down shows its marker on pressed only for the press (recorded).
+                pressedMarkerMin = std::min(pressedMarkerMin, contrastRatio(role("primary"), pressed));
+                if (contrastRatio(role("primary"), pressed) < 3) pressedMarkerLow << context;
+                QVERIFY2(contrastRatio(role("background"), role("danger")) >= 3, qPrintable(context + " close glyph"));
+                ++variants;
+            }
+        }
+        QCOMPARE(variants, 80);
+        qInfo("on-marker/pressed minimum %.2f; below 3:1 in: %s", pressedMarkerMin, qPrintable(pressedMarkerLow.join(", ")));
+    }
+    // Hover, pressed, focus and danger-hover backgrounds follow a live theme change while the state is held.
+    void topBarStatesFollowLiveThemeChanges() {
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.window->setProperty("frameless", true);
+        h.window->requestActivate(); QTRY_VERIFY(h.window->isActive());
+        QObject* tokens = h.engine.singletonInstance<QObject*>("Glancelot", "Theme"); QVERIFY(tokens);
+        const auto token = [&](const char* name) { return tokens->property(name).value<QColor>(); };
+        auto* settings = namedItem(h.window, "settingsButton"); auto* close = namedItem(h.window, "closeButton");
+        auto* title = namedItem(h.window, "topBarTitle");
+        QVERIFY(settings && close && title); QTRY_VERIFY(close->isVisible());
+        const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
+        const QList<QPair<QString, bool>> variants{{"slate-ice", true}, {"ruby", false}, {"graphite", true}, {"amber", false}};
+        for (const auto& [family, dark] : variants) {
+            h.theme.setFamily(family); h.theme.setMode(dark ? "dark" : "light");
+            QTest::mouseMove(h.window, centre(settings));
+            QTRY_COMPARE(itemColor(buttonBackground(settings)), token("hover"));
+            QTest::mousePress(h.window, Qt::LeftButton, Qt::NoModifier, centre(settings));
+            QTRY_COMPARE(itemColor(buttonBackground(settings)), token("pressed"));
+            QTest::mouseMove(h.window, centre(title));
+            QTest::mouseRelease(h.window, Qt::LeftButton, Qt::NoModifier, centre(title)); // released away: no click
+            QTest::mouseMove(h.window, centre(close));
+            QTRY_COMPARE(itemColor(buttonBackground(close)), token("danger"));
+            QCOMPARE(itemColor(buttonIcon(close)), token("background"));
+            // Switch while the pointer stays on Close: the held state re-resolves to the new roles.
+            h.theme.setMode(dark ? "light" : "dark");
+            QTRY_COMPARE(itemColor(buttonBackground(close)), token("danger"));
+            QCOMPARE(itemColor(buttonIcon(close)), token("background"));
+            QTest::mouseMove(h.window, centre(title));
+            QTRY_COMPARE(itemColor(buttonBackground(close)).alpha(), 0);
+            QCOMPARE(itemColor(buttonIcon(close)), token("text"));
+        }
+        namedItem(h.window, "canvas")->forceActiveFocus(); // move focus away first so the Tab reason is recorded
+        settings->forceActiveFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(settings->property("visualFocus").toBool());
+        QObject* border = buttonBackground(settings)->property("border").value<QObject*>(); QVERIFY(border);
+        QCOMPARE(border->property("color").value<QColor>(), token("focusRing"));
+        h.theme.setMode(h.theme.dark() ? "light" : "dark");
+        QTRY_COMPARE(border->property("color").value<QColor>(), token("focusRing"));
+        QCOMPARE(border->property("width").toInt(), tokens->property("focusWidth").toInt());
+    }
+    // Frameless title bar: each control performs its window action; drag area double-click maximizes; the bar
+    // cannot be hidden while it is the only way to move or close the window.
+    void framelessWindowControlsDriveTheWindow() {
+        qGuiApp->setQuitOnLastWindowClosed(false);
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.window->requestActivate(); QTRY_VERIFY(h.window->isActive());
+        auto* minimize = namedItem(h.window, "minimizeButton"); auto* maximize = namedItem(h.window, "maximizeButton");
+        auto* close = namedItem(h.window, "closeButton"); auto* showFrame = namedItem(h.window, "showFrameButton");
+        auto* title = namedItem(h.window, "topBarTitle");
+        QVERIFY(minimize && maximize && close && showFrame && title);
+        QVERIFY(!minimize->isVisible() && !maximize->isVisible() && !close->isVisible()); // the system frame owns them
+        QVERIFY(!(h.window->flags() & Qt::FramelessWindowHint));
+        h.window->setProperty("frameless", true);
+        QTRY_VERIFY(h.window->flags() & Qt::FramelessWindowHint);
+        QTRY_VERIFY(minimize->isVisible() && maximize->isVisible() && close->isVisible() && showFrame->isVisible());
+        QTRY_VERIFY(minimize->x() + minimize->width() <= maximize->x() && maximize->x() + maximize->width() <= close->x()); // laid out
+        // At the minimum window size every window control stays inside the bar and the window.
+        auto* bar = namedItem(h.window, "topBar"); QVERIFY(bar);
+        const auto rightEdge = [&](QQuickItem* item) { return item->mapToItem(bar, QPointF(item->width(), item->height())).x(); };
+        h.window->resize(540, 360);
+        QTRY_COMPARE(bar->width(), 540.0);
+        QTRY_VERIFY(!showFrame->isVisible());
+        QTRY_VERIFY(rightEdge(close) <= bar->width() - 8 && rightEdge(minimize) < rightEdge(maximize));
+        QVERIFY(namedItem(h.window, "topBarTitle")->width() > 0); // the title keeps some room
+        h.window->resize(1180, 780);
+        QTRY_VERIFY(showFrame->isVisible());
+        QTRY_VERIFY(maximize->x() + maximize->width() <= close->x());
+        const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
+        QCOMPARE(maximize->property("text").toString(), QString("Maximize"));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(maximize));
+        QTRY_COMPARE(h.window->visibility(), QWindow::Maximized);
+        QTRY_COMPARE(maximize->property("text").toString(), QString("Restore"));
+        QCOMPARE(buttonIcon(maximize)->property("name").toString(), QString("restore"));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(maximize));
+        QTRY_COMPARE(h.window->visibility(), QWindow::Windowed);
+        // Empty title-bar space (the title label passes pointer input through) toggles maximize on double-click.
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(title));
+        QTRY_COMPARE(h.window->visibility(), QWindow::Maximized);
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(title));
+        QTRY_COMPARE(h.window->visibility(), QWindow::Windowed);
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(minimize));
+        QTRY_COMPARE(h.window->visibility(), QWindow::Minimized);
+        h.window->showNormal(); h.window->requestActivate(); QTRY_COMPARE(h.window->visibility(), QWindow::Windowed);
+        // Full screen keeps minimize and close; maximize has no meaning there.
+        h.viewer.trigger("fullscreen");
+        QTRY_COMPARE(h.window->visibility(), QWindow::FullScreen);
+        QTRY_VERIFY(!maximize->isVisible()); QVERIFY(minimize->isVisible() && close->isVisible());
+        h.viewer.trigger("fullscreen");
+        QTRY_COMPARE(h.window->visibility(), QWindow::Windowed);
+        QTRY_VERIFY(maximize->isVisible());
+        // Hiding the top bar pane would leave no way to move or close a frameless window, so it stays.
+        QVERIFY(h.layout.setVisible("topbar", false));
+        QCoreApplication::processEvents();
+        QVERIFY(namedItem(h.window, "topBar")->isVisible()); QVERIFY(close->isVisible());
+        // Show frame returns the system title bar and its controls.
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(showFrame));
+        QTRY_VERIFY(!(h.window->flags() & Qt::FramelessWindowHint));
+        QTRY_VERIFY(!namedItem(h.window, "topBar")->isVisible()); // the user's hidden pane applies again
+        QVERIFY(h.layout.setVisible("topbar", true));
+        h.window->setProperty("frameless", true);
+        QTRY_VERIFY(close->isVisible());
+        QSignalSpy closing(h.window, SIGNAL(closing(QQuickCloseEvent*)));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(close));
+        QTRY_COMPARE(closing.count(), 1);
+        QTRY_VERIFY(!h.window->isVisible());
+        qGuiApp->setQuitOnLastWindowClosed(true);
+    }
+    // An inactive window mutes its title and window-control glyphs like a native caption; activation restores them.
+    void inactiveWindowMutesTitleBar() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(64, 48, QImage::Format_RGB32); image.fill(QColor(56, 130, 190)); QVERIFY(image.save(media.filePath("title.png")));
+        Harness h(true); QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.open(media.filePath("title.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.window->setProperty("frameless", true);
+        QObject* tokens = h.engine.singletonInstance<QObject*>("Glancelot", "Theme"); QVERIFY(tokens);
+        const auto token = [&](const char* name) { return tokens->property(name).value<QColor>(); };
+        auto* title = namedItem(h.window, "topBarTitle"); auto* minimize = namedItem(h.window, "minimizeButton");
+        QVERIFY(title && minimize);
+        h.window->requestActivate(); QTRY_VERIFY(h.window->isActive());
+        QTRY_COMPARE(itemColor(title), token("text"));
+        QCOMPARE(itemColor(buttonIcon(minimize)), token("text"));
+        QWindow other; other.resize(200, 100); other.show(); other.requestActivate();
+        QTRY_VERIFY(!h.window->isActive());
+        QTRY_COMPARE(itemColor(title), token("muted"));
+        QCOMPARE(itemColor(buttonIcon(minimize)), token("muted"));
+        h.theme.setMode(h.theme.dark() ? "light" : "dark"); // live change while inactive
+        QTRY_COMPARE(itemColor(title), token("muted"));
+        other.hide(); h.window->requestActivate(); QTRY_VERIFY(h.window->isActive());
+        QTRY_COMPARE(itemColor(title), token("text"));
+        QCOMPARE(itemColor(buttonIcon(minimize)), token("text"));
+    }
+    // Opt-in review captures (GLANCELOT_REVIEW_CAPTURE): dark/light, compact/wide, framed/frameless, active/inactive.
+    // These are client-area captures; the native caption is captured separately (docs/verification/TOPBAR-THEME-01.md).
+    void topBarReviewCaptures() {
+        if (!qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) QSKIP("Set GLANCELOT_REVIEW_CAPTURE to write captures.");
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(640, 400, QImage::Format_RGB32);
+        for (int y = 0; y < image.height(); ++y) for (int x = 0; x < image.width(); ++x) image.setPixelColor(x, y, QColor(40 + x / 5, 90 + y / 6, 150));
+        QVERIFY(image.save(media.filePath("Harbour at dusk.png")));
+        Harness h(true); QVERIFY(h.window);
+        h.viewer.open(media.filePath("Harbour at dusk.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QDir().mkpath(".cache/topbar");
+        QWindow other; other.resize(200, 100);
+        for (const QSize size : {QSize(540, 360), QSize(1180, 780)})
+            for (const auto& mode : {QString("dark"), QString("light")})
+                for (bool frameless : {false, true})
+                    for (bool active : {true, false}) {
+                        h.window->resize(size); h.theme.setMode(mode); h.window->setProperty("frameless", frameless);
+                        h.window->setProperty("hudVisible", true);
+                        if (active) { other.hide(); h.window->requestActivate(); QTRY_VERIFY(h.window->isActive()); }
+                        else { other.show(); other.requestActivate(); QTRY_VERIFY(!h.window->isActive()); }
+                        QTest::qWait(200);
+                        QVERIFY(h.window->grabWindow().save(QString(".cache/topbar/%1-%2-%3-%4.png").arg(mode).arg(size.width())
+                            .arg(frameless ? "frameless" : "framed", active ? "active" : "inactive")));
+                    }
     }
     void everyPaneDockRegionStaysInWindow() {
         QTemporaryDir media;QVERIFY(media.isValid());
