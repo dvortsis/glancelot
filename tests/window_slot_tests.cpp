@@ -126,6 +126,7 @@ class WindowSlotTests final : public QObject {
 private slots:
     void init() { QTest::failOnWarning(QRegularExpression("QProcess: Destroyed while process.*still running.*")); }
     void cleanup() { qunsetenv("GLANCELOT_CONFIG_DIR"); }
+    void staleWindowsMergeIndependentSortFields();
     void contendedSortReportsSessionOnly();
     void failedBackupAndOversizedEditsPreservePrimary();
     void staleSessionCounterCannotReuseLiveSlot();
@@ -156,6 +157,21 @@ private slots:
     void positionFlushesOnDestructionAndDisabledSlotWritesNothing();
 };
 
+void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root){
+        root["sort"]=QJsonObject{{"key","name"},{"descending",false},{"seed",7},{"future-sort-option","preserve me"}};
+    }).ok());
+    ViewerController first, second;
+    first.setSortKey("size");
+    second.setSortDescending(true);
+    const auto sort=settingsOf(config.path()).value("sort").toObject();
+    QCOMPARE(sort.value("key").toString(),QString("size"));
+    QVERIFY(sort.value("descending").toBool());
+    QCOMPARE(sort.value("seed").toInt(),7);
+    QCOMPARE(sort.value("future-sort-option").toString(),QString("preserve me"));
+}
 void WindowSlotTests::contendedSortReportsSessionOnly() {
     QTemporaryDir config; QVERIFY(config.isValid());
     qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
@@ -794,3 +810,4 @@ int main(int argc, char** argv) {
     return QTest::qExec(&tests, argc, argv);
 }
 #include "window_slot_tests.moc"
+
