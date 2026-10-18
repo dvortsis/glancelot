@@ -20,6 +20,12 @@ M2.1 exit requires independent tests for keyboard/tree behavior, dark/light/comp
 
 Author tests -> independent review/acceptance -> serial integration -> integrated checks -> done. Your feedback is advisory and not a routine gate. Agents continue ready tasks, preserving evidence of infrastructure blocks. Public publishing, paid services and new external access are separate actions. Forecast from first ten integrated tasks, not agent-count multiplication. Sessions checkpoint work; agents do not promise execution after the session ends.
 
+## Current continuation: M3 browsing
+
+M2.1 is implemented and independently verified on Windows; see WORK-QUEUE.yaml and verification/WINDOW-SESSIONS.md. Physical-display qualification and Linux GUI delivery remain open gates, not inferred from Windows or WSL results.
+
+Next scoped task: GRID-01 adds a virtualized current-folder grid using the existing bounded thumbnail service and folder snapshot. Selection stays separate from opening a photo. Keyboard/grid/modal routing, hidden-view cancellation, 10,000-row delegate bounds, compact/wide layout and theme checks precede independent review and serial integration. No new decoder formats or media mutation are part of this task. Remaining M3 work still includes sorts/filters, favorites, other HUDs, input matrix/chords, raster/RAW qualification, caching/lookahead, and performance/storage tuning.
+
 ## Initial contracts and allocation
 
 Frozen headers in include/glancelot establish identity/revisions, commands/navigation, decode/pixel metadata and viewport/display capabilities. Initial source support is JPEG/PNG only; the capability page must report actual delivery instead of the full target inventory.

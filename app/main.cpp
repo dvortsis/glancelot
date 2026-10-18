@@ -110,6 +110,11 @@ int main(int argc,char** argv) {
                     {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
                     {"loading",viewer.loading()},{"status",viewer.status()},
                     {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},
+                    {"grid_visible",engine.rootObjects().first()->property("gridMode").toBool()},
+                    {"grid_live_cells",engine.rootObjects().first()->findChild<QObject*>("photoGrid") ? engine.rootObjects().first()->findChild<QObject*>("photoGrid")->property("liveDelegateCount").toInt() : 0},
+                    {"folder_count",filmstrip.count()},
+                    {"thumbnail_pending",thumbnails.pending()},{"thumbnail_active",thumbnails.active()},
+                    {"thumbnail_cache_bytes",double(thumbnails.cacheBytes())},
                     {"theme",theme.family()},{"theme_mode",theme.mode()},
                     {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
                     {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};
