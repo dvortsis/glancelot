@@ -26,12 +26,13 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
     src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp src/app/thumbnail_id.hpp
     src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
+    src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
-    ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml)
+    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml)
   # Interface typefaces (SIL OFL 1.1, assets/fonts/geist/OFL.txt), registered at startup.
   set(ui_fonts assets/fonts/geist/Geist-Light.ttf assets/fonts/geist/Geist-Regular.ttf assets/fonts/geist/Geist-Medium.ttf assets/fonts/geist/Geist-SemiBold.ttf assets/fonts/geist/GeistMono-Regular.ttf)
   qt_add_resources(glancelot ui_fonts PREFIX "/" BASE assets FILES ${ui_fonts})
@@ -69,6 +70,10 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(folder_tree_tests glancelot-decoder)
     add_test(NAME folder_tree COMMAND folder_tree_tests)
     set_tests_properties(folder_tree PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
+    qt_add_executable(pane_layout_tests tests/pane_layout_tests.cpp src/app/pane_layout.cpp include/glancelot/pane_layout.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    target_include_directories(pane_layout_tests PRIVATE include src/app)
+    target_link_libraries(pane_layout_tests PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME pane_layout COMMAND pane_layout_tests -o -,txt)
     qt_add_executable(window_slot_tests tests/window_slot_tests.cpp src/app/window_slot.cpp include/glancelot/window_slot.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
     target_include_directories(window_slot_tests PRIVATE include)
     target_link_libraries(window_slot_tests PRIVATE glancelot_core Qt6::Gui Qt6::Test Qt6::Concurrent)
@@ -78,6 +83,7 @@ if(GLANCELOT_BUILD_VIEWER)
     qt_add_executable(grid_ui_tests tests/grid_ui_tests.cpp
       src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
       src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
       src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
       src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp

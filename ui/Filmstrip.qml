@@ -13,6 +13,7 @@ Rectangle {
     readonly property int thumbEdge: 160
     // Short windows get a smaller strip so it leaves the photo visible (set by the host layout).
     property bool compact: false
+    property bool vertical: false
     signal itemActivated(string path)
     function centerCurrent() { if (filmstrip.currentRow >= 0) list.positionViewAtIndex(filmstrip.currentRow, ListView.Center) }
     // Moves keyboard focus onto the current photo's cell (Tab from the canvas).
@@ -51,7 +52,7 @@ Rectangle {
         rightMargin: Theme.gapMd
         anchors.topMargin: Theme.gapXs + Theme.gapXxs
         anchors.bottomMargin: Theme.gapXs + Theme.gapXxs
-        orientation: ListView.Horizontal
+        orientation: strip.vertical ? ListView.Vertical : ListView.Horizontal
         spacing: Theme.gapXs + Theme.gapXxs
         clip: true
         // A hidden strip must not decode: with no model there are no delegates, so no thumbnail requests.
@@ -75,7 +76,8 @@ Rectangle {
             onWheel: event => {
                 const delta = event.angleDelta.x !== 0 ? event.angleDelta.x : event.angleDelta.y
                 list.cancelFlick()
-                list.contentX = Math.max(0, Math.min(list.contentWidth - list.width, list.contentX - delta))
+                if(strip.vertical)list.contentY = Math.max(0,Math.min(list.contentHeight-list.height,list.contentY-delta))
+                else list.contentX = Math.max(0, Math.min(list.contentWidth - list.width, list.contentX - delta))
             }
         }
         delegate: ItemDelegate {
@@ -84,10 +86,10 @@ Rectangle {
             required property string name
             required property string path
             required property bool isCurrent
-            width: strip.compact ? 68 : 84
+            width: strip.vertical ? list.width-2*Theme.gapMd : (strip.compact ? 68 : 84)
             // 3px of vertical room inside the list's clip keeps the outset focus ring whole.
             y: 3
-            height: ListView.view.height - 6
+            height: strip.vertical ? (strip.compact ? 68 : 84) : ListView.view.height - 6
             padding: 2
             focusPolicy: Qt.StrongFocus
             Accessible.name: name + (isCurrent ? ", current photo" : "")

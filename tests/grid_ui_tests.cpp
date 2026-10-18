@@ -1,3 +1,4 @@
+#include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/settings_file.hpp"
@@ -39,6 +40,7 @@ struct Harness {
     ThemeManager theme;
     FilmstripModel model;
     FolderTreeModel folders;
+    PaneLayout layout;
     QQmlApplicationEngine engine;
     PreviewProvider* provider = new PreviewProvider;
     QQuickWindow* window{};
@@ -49,6 +51,7 @@ struct Harness {
         engine.setImportPathList(imports);
         engine.addImageProvider("thumb", provider);
         engine.rootContext()->setContextProperty("viewer", &viewer);
+        engine.rootContext()->setContextProperty("paneLayout", &layout);
         engine.rootContext()->setContextProperty("theme", &theme);
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);
@@ -96,6 +99,231 @@ private slots:
         config = std::make_unique<QTemporaryDir>();
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
+    }
+    void everyPaneDockRegionStaysInWindow() {
+        QTemporaryDir media;QVERIFY(media.isValid());
+        QImage image(64,48,QImage::Format_RGB32);image.fill(QColor(56,130,190));
+        for(int x=0;x<64;x+=8)for(int y=0;y<48;y+=8)image.setPixelColor(x,y,Qt::white);
+        for(const auto& name:{"a.png","b.png","c.png"})QVERIFY(image.save(media.filePath(name)));
+        Harness h(true);QVERIFY(h.window);h.viewer.open(media.filePath("a.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(),15000);QTRY_COMPARE(h.model.count(),3);
+        h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        int placements=0;
+        for(const QSize size:{QSize(540,360),QSize(1180,780)})for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.window->resize(size);h.theme.setMode(mode);
+            for(const auto& id:{QString("tree"),QString("preview"),QString("grid"),QString("filmstrip"),QString("topbar"),QString("statusbar")}) {
+                h.window->setProperty("gridMode",id=="grid");
+                for(const auto& region:{QString("left"),QString("right"),QString("top"),QString("bottom"),QString("center")}) {
+                    if(region=="center"&&id!="preview"&&id!="grid")continue;
+                    h.layout.reset();QVERIFY(h.layout.move(id,region,0));
+                    h.window->setProperty("hudVisible",true); // auto-hide must not race the assertions or captures
+                    QCoreApplication::processEvents();
+                    const auto layout=h.window->property("workspace").toMap();
+                    const auto rect=layout.value(id).toMap();
+                    QVERIFY2(rect.value("width").toDouble()>0,qPrintable(id+"/"+region));
+                    QVERIFY(rect.value("height").toDouble()>0);
+                    QVERIFY(rect.value("x").toDouble()>=-0.1);QVERIFY(rect.value("y").toDouble()>=-0.1);
+                    QVERIFY(rect.value("x").toDouble()+rect.value("width").toDouble()<=size.width()+0.1);
+                    QVERIFY(rect.value("y").toDouble()+rect.value("height").toDouble()<=size.height()+0.1);
+                    if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+                        QTest::qWait(50);QDir().mkpath(".cache/panes-matrix");
+                        QVERIFY(h.window->grabWindow().save(QString(".cache/panes-matrix/%1-%2-%3-%4.png").arg(id,region,mode).arg(size.width())));
+                    }
+                    ++placements;
+                }
+            }
+        }
+        QCOMPARE(placements,104);
+    }
+    void paneArrangementKeyboardCommands() {
+        Harness h;QVERIFY(h.window);h.viewer.setTreeVisible(true);h.window->requestActivate();
+        h.window->setProperty("layoutEditing",true);
+        QQuickItem* grip=nullptr;QList<QQuickItem*> pending{h.window->contentItem()};
+        while(!pending.isEmpty()) {
+            auto* item=pending.takeFirst();if(item->objectName()=="paneGrip-tree"){grip=item;break;}
+            pending<<item->childItems();
+        }
+        QVERIFY(grip);QTest::qWait(100);grip->forceActiveFocus();QTRY_VERIFY(grip->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_Right);QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));
+        QTest::keyClick(h.window,Qt::Key_Right,Qt::ControlModifier);QCOMPARE(h.layout.pane("tree")["extent"].toInt(),296);
+        QTest::keyClick(h.window,Qt::Key_Space);QVERIFY(h.layout.pane("tree")["frozen"].toBool());
+        QTest::keyClick(h.window,Qt::Key_Space);QVERIFY(!h.layout.pane("tree")["frozen"].toBool());
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+    }
+    void paneCommandsLockIndicatorAndDragCancellation() {
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        h.window->requestActivate();
+        const auto find=[&](const QString& name)->QQuickItem* {
+            QList<QQuickItem*> pending{h.window->contentItem()};
+            while(!pending.isEmpty()){auto* item=pending.takeFirst();if(item->objectName()==name)return item;pending<<item->childItems();}
+            return nullptr;
+        };
+        QStringList ids;for(const auto& row:h.viewer.commands())ids<<row.toMap()["id"].toString();
+        for(const auto& id:{"arrange-panes","layout-lock","layout-reset"}){QVERIFY(ids.contains(id));QVERIFY(h.viewer.bindingFor(id).isEmpty());}
+        auto* indicator=find("layoutLockIndicator");QVERIFY(indicator);QVERIFY(!indicator->isVisible());
+        h.viewer.trigger("layout-lock");QTRY_VERIFY(h.layout.locked());QTRY_VERIFY(indicator->isVisible());
+        if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE"))for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.theme.setMode(mode);QTest::qWait(50);QDir().mkpath(".cache/panes-ui");
+            QVERIFY(h.window->grabWindow().save(".cache/panes-ui/locked-"+mode+".png"));
+        }
+        // A locked layout can still be inspected; arrangement explains the lock instead of silently doing nothing.
+        h.viewer.trigger("arrange-panes");QTRY_VERIFY(h.window->property("layoutEditing").toBool());
+        auto* note=find("arrangementNote");QVERIFY(note);QTRY_VERIFY(note->isVisible());
+        QVERIFY(note->property("text").toString().contains("locked"));
+        h.window->setProperty("layoutEditing",false);
+        QMetaObject::invokeMethod(indicator,"clicked");QTRY_VERIFY(!h.layout.locked());QTRY_VERIFY(!indicator->isVisible());
+        QVERIFY(h.layout.resize("tree",360));h.viewer.trigger("layout-reset");QTRY_COMPARE(h.layout.pane("tree")["extent"].toInt(),280);
+        h.viewer.trigger("arrange-panes");QTRY_VERIFY(h.window->property("layoutEditing").toBool());
+        if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE"))for(const QSize size:{QSize(540,360),QSize(1180,780)})for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.window->resize(size);h.theme.setMode(mode);QTest::qWait(150);QDir().mkpath(".cache/panes-ui");
+            QVERIFY(h.window->grabWindow().save(QString(".cache/panes-ui/arrange-%1-%2.png").arg(mode).arg(size.width())));
+        }
+        auto* grip=find("paneGrip-tree");QVERIFY(grip);QTRY_VERIFY(grip->isVisible());
+        const auto origin=grip->mapToScene(QPointF(grip->width()/2,grip->height()/2)).toPoint();
+        const QPoint target(int(h.window->width()*0.85),h.window->height()/2);
+        // Escape mid-drag leaves arrangement and discards the drop.
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);QTest::mouseMove(h.window,target,30);
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+        QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("left"));
+        // Locking mid-drag cancels the gesture.
+        h.window->setProperty("layoutEditing",true);QTRY_VERIFY(grip->isVisible());
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);QTest::mouseMove(h.window,target,30);
+        h.layout.setLocked(true);QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("left"));
+        h.layout.setLocked(false);
+        // A completed drag commits exactly once.
+        QSignalSpy changes(&h.layout,&PaneLayout::changed);
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);QTest::mouseMove(h.window,target,30);
+        QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
+        QTRY_COMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));QCOMPARE(changes.count(),1);
+        QVERIFY(grip->hasActiveFocus());
+        // Leaving arrangement hands focus back to content; arrow keys and Space no longer edit the layout.
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+        QTRY_VERIFY(!grip->hasActiveFocus());
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);QTRY_VERIFY(canvas->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_Left);QTest::keyClick(h.window,Qt::Key_Space);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));QVERIFY(!h.layout.pane("tree")["frozen"].toBool());
+        h.layout.reset();
+    }
+    void hudAutoHideNeverReflowsCanvas() {
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);
+        h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();
+        const QRectF awake(canvas->x(),canvas->y(),canvas->width(),canvas->height());
+        h.window->setProperty("hudVisible",false);QCoreApplication::processEvents();
+        QCOMPARE(QRectF(canvas->x(),canvas->y(),canvas->width(),canvas->height()),awake);
+        QCOMPARE(awake,QRectF(0,0,1180,780));
+        // A frozen bar stays up, so it reserves its space instead of covering the photo.
+        QVERIFY(h.layout.freeze("statusbar",true));QCoreApplication::processEvents();
+        QTRY_VERIFY(canvas->height()<780);const qreal reserved=canvas->height();
+        h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();QCOMPARE(canvas->height(),reserved);
+        h.layout.reset();
+        const auto rectOf=[](const QVariant& v){const auto m=v.toMap();return QRectF(m["x"].toDouble(),m["y"].toDouble(),m["width"].toDouble(),m["height"].toDouble());};
+        // Notices and toasts use the unobstructed area, which excludes the visible overlaid bars.
+        h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();
+        auto ws=h.window->property("workspace").toMap();
+        QVERIFY(!rectOf(ws["_clear"]).intersects(rectOf(ws["statusbar"])));QVERIFY(!rectOf(ws["_clear"]).intersects(rectOf(ws["topbar"])));
+        // A docked tree inside auto-hiding vertical bars keeps its place and never covers the canvas.
+        h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.move("statusbar","right",0));QCoreApplication::processEvents();
+        auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);QTRY_VERIFY(tree->isVisible());
+        const qreal treeX=tree->x();QVERIFY(tree->x()+tree->width()<=canvas->x()+0.1);
+        h.window->setProperty("hudVisible",false);QCoreApplication::processEvents();
+        QCOMPARE(tree->x(),treeX);QVERIFY(tree->x()+tree->width()<=canvas->x()+0.1);
+        h.layout.reset();h.viewer.setTreePinned(false);h.viewer.setTreeVisible(false);
+    }
+    void recoveredLayoutIsNotEditableAndKeepsPreferences() {
+        Harness h;QVERIFY(h.window);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        QVERIFY(h.layout.move("tree","right",0));QVERIFY(h.layout.resize("tree",400));
+        QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.move("statusbar","right",1));
+        h.window->resize(540,360);QTRY_VERIFY(h.window->property("workspace").toMap().value("_recovered").toBool());
+        {   // The recovery notice never covers a toolbar.
+            auto* notice=h.window->findChild<QQuickItem*>("layoutRecoveryNotice");QVERIFY(notice);QTRY_VERIFY(notice->isVisible());
+            const auto top=h.window->property("workspace").toMap()["topbar"].toMap();
+            const QRectF bar(top["x"].toDouble(),top["y"].toDouble(),top["width"].toDouble(),top["height"].toDouble());
+            QVERIFY(!QRectF(notice->x(),notice->y(),notice->width(),notice->height()).intersects(bar));
+        }
+        h.window->requestActivate();h.window->setProperty("layoutEditing",true);
+        QQuickItem* grip=nullptr;QList<QQuickItem*> pending{h.window->contentItem()};
+        while(!pending.isEmpty()){auto* item=pending.takeFirst();if(item->objectName()=="paneGrip-tree"){grip=item;break;}pending<<item->childItems();}
+        QVERIFY(grip);QTest::qWait(100);grip->forceActiveFocus();QTRY_VERIFY(grip->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_Right,Qt::ControlModifier);QTest::keyClick(h.window,Qt::Key_Down,Qt::ShiftModifier);
+        QCOMPARE(h.layout.pane("tree")["extent"].toInt(),400);QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+        h.window->resize(1180,780);QTRY_VERIFY(!h.window->property("workspace").toMap().value("_recovered").toBool());
+        QTRY_COMPARE(qRound(h.window->property("workspace").toMap().value("tree").toMap().value("width").toDouble()),400);
+        h.layout.reset();h.viewer.setTreePinned(false);h.viewer.setTreeVisible(false);
+    }
+    void paneArrangementBoundsAndGestures() {
+        Harness h;QVERIFY(h.window);h.window->resize(540,360);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        for(const auto& id:{"tree","topbar","statusbar","filmstrip"}) {
+            QVERIFY(h.layout.move(id,"top",0));QVERIFY(h.layout.resize(id,4096));
+        }
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);
+        QTRY_VERIFY(canvas->height()>=119);QVERIFY(canvas->y()+canvas->height()<=h.window->height()+0.1);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("top"));
+        QCOMPARE(h.layout.pane("tree")["extent"].toInt(),4096); // responsive recovery never persists
+        h.layout.reset();
+        QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.resize("topbar",32));
+        QVERIFY(h.layout.resize("tree",4096));
+        auto* treeBefore=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(treeBefore);
+        const auto workspace=h.window->property("workspace").toMap();
+        const auto toolbarRect=workspace.value("topbar").toMap();
+        QTRY_VERIFY(treeBefore->x()>=toolbarRect.value("x").toDouble()+toolbarRect.value("width").toDouble()-0.1);
+        QVERIFY(toolbarRect.value("width").toDouble()>=200);
+        QVERIFY(h.layout.move("statusbar","right",0));
+        QTRY_VERIFY(treeBefore->width()>=200);
+        const auto adapted=h.window->property("workspace").toMap();
+        QVERIFY(adapted.value("_recovered").toBool());
+        QCOMPARE(h.layout.pane("statusbar")["region"].toString(),QString("right"));
+        h.layout.reset();h.window->resize(1180,780);h.window->requestActivate();h.window->setProperty("layoutEditing",true);
+        // Arrangement is disabled while recovered, so wait for the larger window to apply first.
+        QTRY_COMPARE(h.window->width(),1180);QTRY_COMPARE(h.window->height(),780);QTRY_VERIFY(!h.window->property("workspace").toMap().value("_recovered").toBool());
+        QQuickItem* handle=nullptr;
+        QList<QQuickItem*> pending{h.window->contentItem()};
+        while(!pending.isEmpty()) {
+            auto* item=pending.takeFirst();
+            if(item->objectName()=="paneResize-tree"){handle=item;break;}
+            pending<<item->childItems();
+        }
+        QVERIFY(handle);
+        QTRY_VERIFY(handle->isVisible());QTRY_VERIFY(handle->isEnabled());
+        QTRY_VERIFY(handle->mapRectToScene(QRectF(0,0,handle->width(),handle->height())).bottom()>600);
+        const auto origin=handle->mapToScene(QPointF(handle->width()/2,handle->height()/2)).toPoint();
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);
+        QTest::mouseMove(h.window,origin+QPoint(40,0),30);
+        auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);
+        QTRY_VERIFY(tree->width()>300);
+        QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,origin+QPoint(40,0));
+        QTRY_VERIFY(h.layout.pane("tree")["extent"].toDouble()>300);
+        QVERIFY(h.layout.freeze("tree",true));h.viewer.setTreeVisible(false);
+        QTRY_VERIFY(tree->isVisible());
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+    }
+    void paneGeometryMovesFreezesAndResets() {
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.viewer.setTreeVisible(true);
+        auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);
+        QTRY_VERIFY(tree->isVisible());
+        QVERIFY(h.layout.move("tree","right",0));
+        QTRY_VERIFY(tree->x()>h.window->width()/2);
+        QVERIFY(h.layout.resize("tree",320));QTRY_COMPARE(qRound(tree->width()),320);
+        QVERIFY(h.layout.freeze("tree",true));
+        QVERIFY(!h.layout.move("tree","left",0));QVERIFY(!h.layout.resize("tree",400));
+        QCOMPARE(qRound(tree->width()),320);
+        h.window->setProperty("hudVisible",false);QTRY_VERIFY(tree->isVisible());
+        h.layout.setLocked(true);QVERIFY(!h.layout.freeze("tree",false));
+        h.layout.reset();h.window->setProperty("hudVisible",true);
+        QTRY_COMPARE(qRound(tree->x()),0);QTRY_COMPARE(qRound(tree->width()),280);
+        for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.theme.setMode(mode);h.window->resize(540,360);QTest::qWait(100);
+            QVERIFY(tree->width()>0&&tree->height()>0);
+            QVERIFY(tree->x()+tree->width()<=h.window->width());
+            if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+                QDir().mkpath(".cache/panes-ui");
+                QVERIFY(h.window->grabWindow().save(".cache/panes-ui/tree-"+mode+".png"));
+            }
+        }
     }
     void addressEditingClipboardAndEscape() {
         QTemporaryDir media; QVERIFY(media.isValid());
@@ -561,7 +789,7 @@ private slots:
                     QMetaObject::invokeMethod(dialog, "close");
                     QTRY_VERIFY(!h.window->property("modalOpen").toBool());
                 }
-                QCOMPARE(choices, 5); // appearance mode; fit/wheel; file order/folder boundary
+                QCOMPARE(choices, 7); // appearance mode; fit/wheel; file order/folder boundary
             }
         }
         QVERIFY(original.open(QIODevice::ReadOnly)); QCOMPARE(original.readAll(), bytes);

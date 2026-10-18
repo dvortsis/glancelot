@@ -17,6 +17,9 @@ Rectangle {
     readonly property int indent: 12
     // Drag the trailing edge to resize (this session); the host bounds it so the photo keeps most of the window.
     property int userWidth: 0
+    property bool layoutFrozen: false
+    property bool arrangementMode: false
+    signal resizeCommitted(real extent)
     property int maximumWidth: 480
     signal dismissed()
     function focusList() {
@@ -48,6 +51,8 @@ Rectangle {
     }
     MouseArea {
         id: resizer
+        enabled: !panel.layoutFrozen
+        onReleased: panel.resizeCommitted(panel.userWidth)
         objectName: "treeResizer"
         anchors { top: parent.top; bottom: parent.bottom; right: parent.right; rightMargin: -Theme.gapXs }
         width: Theme.gapSm
@@ -138,7 +143,7 @@ Rectangle {
                 onTextEdited: modified = true
                 onAccepted: { modified = false; viewer.navigateDirectory(text) }
                 Keys.onEscapePressed: event => {
-                    viewer.cancelDirectoryNavigation(); text = viewer.directory; modified = false; panel.focusList(); event.accepted = true
+                    viewer.cancelDirectoryNavigation(); text = viewer.directory; modified = false; if(panel.arrangementMode)panel.dismissed();else panel.focusList(); event.accepted = true
                 }
                 ToolTip.visible: hovered && !activeFocus
                 ToolTip.text: viewer.directory

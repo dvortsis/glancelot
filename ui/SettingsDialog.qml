@@ -203,6 +203,89 @@ UiDialog {
 
             Page {
                 heading: "Browsing"
+                SectionLabel { text: "Workspace layout" }
+                UiButton {
+                    text: "Arrange panes"
+                    onClicked: { dialog.close();dialog.host.layoutEditing=true }
+                }
+                UiSwitch {
+                    objectName: "layoutLock"
+                    Layout.fillWidth: true
+                    text: "Lock workspace layout"
+                    description: "Keep pane positions and sizes fixed while using their contents."
+                    checked: paneLayout.locked
+                    onToggled: paneLayout.locked = checked
+                }
+                SettingRow {
+                    label: "Pane"
+                    UiComboBox {
+                        id: paneChoice
+                        objectName: "layoutPaneChoice"
+                        property var ids: ["tree","preview","grid","filmstrip","topbar","statusbar"]
+                        model: ["Folder tree","Image preview","File grid","Filmstrip","Top toolbar","Status toolbar"]
+                        Accessible.name: "Pane to customize"
+                    }
+                }
+                SettingRow {
+                    label: "Position"
+                    UiComboBox {
+                        objectName: "layoutPosition"
+                        property string paneId: paneChoice.ids[paneChoice.currentIndex]
+                        property var state: paneLayout.panes[paneId]
+                        property var regions: ["left","right","top","bottom","center"]
+                        model: ["Left","Right","Top","Bottom","Center"]
+                        currentIndex: regions.indexOf(state.region)
+                        enabled: !paneLayout.locked && !state.frozen
+                        onActivated: paneLayout.move(paneId,regions[currentIndex],state.order)
+                        Accessible.name: "Pane position"
+                    }
+                }
+                SettingRow {
+                    label: "Preferred size"
+                    description: "Logical pixels; smaller windows constrain the displayed size."
+                    UiTextField {
+                        objectName: "layoutExtent"
+                        property string paneId: paneChoice.ids[paneChoice.currentIndex]
+                        property var state: paneLayout.panes[paneId]
+                        implicitWidth: 100
+                        text: Math.round(state.extent)
+                        enabled: !paneLayout.locked && !state.frozen
+                        validator: IntValidator { bottom: 32; top: 4096 }
+                        onAccepted: paneLayout.resize(paneId,Number(text))
+                        Accessible.name: "Preferred pane size in logical pixels"
+                    }
+                }
+                UiSwitch {
+                    objectName: "layoutFreeze"
+                    property string paneId: paneChoice.ids[paneChoice.currentIndex]
+                    Layout.fillWidth: true
+                    text: "Freeze this pane"
+                    description: "Lock its placement and size and keep it visible."
+                    checked: paneLayout.panes[paneId].frozen
+                    enabled: !paneLayout.locked
+                    onToggled: paneLayout.freeze(paneId,checked)
+                }
+                RowLayout {
+                    UiButton {
+                        text: "Move earlier"
+                        enabled: !paneLayout.locked && !paneLayout.panes[paneChoice.ids[paneChoice.currentIndex]].frozen
+                        onClicked: {
+                            const id=paneChoice.ids[paneChoice.currentIndex], state=paneLayout.panes[id]
+                            paneLayout.move(id,state.region,Math.max(0,state.order-1))
+                        }
+                    }
+                    UiButton {
+                        text: "Move later"
+                        enabled: !paneLayout.locked && !paneLayout.panes[paneChoice.ids[paneChoice.currentIndex]].frozen
+                        onClicked: {
+                            const id=paneChoice.ids[paneChoice.currentIndex], state=paneLayout.panes[id]
+                            paneLayout.move(id,state.region,Math.min(99,state.order+1))
+                        }
+                    }
+                }
+                UiButton { text: "Reset workspace layout"; onClicked: paneLayout.reset() }
+                Note { visible: paneLayout.feedback.length > 0; text: paneLayout.feedback }
+
                 SettingRow {
                     label: "File order"
                     description: "Order of photos inside a folder. Folders always keep natural name order."

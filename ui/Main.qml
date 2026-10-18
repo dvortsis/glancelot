@@ -18,6 +18,104 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property bool gridMode: false
+    property bool layoutEditing: false
+    property var resizePreview: ({})
+    readonly property var workspace: {
+        const state=JSON.parse(JSON.stringify(paneLayout.panes))
+        // Only one content pane shows until GRID-PREVIEW-01, so it fills the center wherever it is saved
+        // (its saved edge placement is kept for the combined view).
+        state[gridMode?"grid":"preview"].region="center"
+        const all=["topbar","statusbar","filmstrip","tree","preview","grid"]
+        // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
+        // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
+        const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
+            topbar:state.topbar.visible, statusbar:state.statusbar.visible,
+            filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
+            preview:!gridMode,grid:gridMode}
+        const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
+            topbar:shown.topbar&&(gridMode||state.topbar.frozen),
+            statusbar:shown.statusbar&&(gridMode||state.statusbar.frozen),
+            filmstrip:shown.filmstrip&&state.filmstrip.frozen,
+            preview:shown.preview,grid:shown.grid}
+        const active={tree:shown.tree&&(docked.tree||hudVisible||frameless),
+            topbar:shown.topbar&&(docked.topbar||hudVisible||frameless),
+            statusbar:shown.statusbar&&(docked.statusbar||hudVisible),
+            filmstrip:shown.filmstrip&&(docked.filmstrip||hudVisible||frameless),
+            preview:shown.preview,grid:shown.grid}
+        const ids=all.filter(id=>active[id])
+        function horizontal(id) { return ["top","bottom"].indexOf(state[id].region)>=0 }
+        function overlay(id) { return id==="tree"&&(width<720||!viewer.treePinned)&&["left","right"].indexOf(state[id].region)>=0 }
+        function minimum(id) {
+            if(id==="topbar"||id==="statusbar")return horizontal(id)?48:200
+            if(id==="tree")return 200
+            if(id==="filmstrip")return horizontal(id)?68:100
+            return 120
+        }
+        function group(list,horizontalAxis) { return list.filter(id=>state[id].region!=="center"&&!overlay(id)&&horizontal(id)===horizontalAxis) }
+        const shownIds=all.filter(id=>shown[id])
+        const reservedCenter=shownIds.some(id=>overlay(id))?320:120
+        // Decided on the HUD-independent set so recovery cannot flip on and off with auto-hide.
+        let recovered=group(shownIds,true).reduce((n,id)=>n+minimum(id),0)>height-120 || group(shownIds,false).reduce((n,id)=>n+minimum(id),0)>width-reservedCenter
+        if(recovered) {
+            const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640]}
+            for(const id of Object.keys(defaults)) {
+                state[id].region=defaults[id][0];state[id].order=defaults[id][1];state[id].extent=defaults[id][2]
+            }
+        }
+        function preferred(id) { return Math.max(minimum(id),!recovered&&resizePreview[id]!==undefined?resizePreview[id]:state[id].extent) }
+        // Stacks edge panes outward-in by order (ties keep the stable id order) and returns the remaining center.
+        function place(list) {
+            const extents={}
+            for(const axis of [true,false]) {
+                const members=group(list,axis),budget=axis?height-120:width-reservedCenter
+                const base=members.reduce((n,id)=>n+minimum(id),0)
+                const extra=members.reduce((n,id)=>n+preferred(id)-minimum(id),0)
+                const scale=Math.min(1,Math.max(0,budget-base)/Math.max(1,extra))
+                for(const id of members)extents[id]=minimum(id)+(preferred(id)-minimum(id))*scale
+            }
+            const bounds={x:0,y:0,width:width,height:height},rects={}
+            // Docked panes stack outermost so they keep the place the canvas reserved for them while auto-hiding
+            // bars come and go; within each group, saved order then the stable id order.
+            const ordered=list.slice().sort((a,b)=>(docked[a]?0:1)-(docked[b]?0:1)||state[a].order-state[b].order||all.indexOf(a)-all.indexOf(b))
+            for(const region of ["top","bottom","left","right"]) {
+                for(const id of ordered.filter(id=>state[id].region===region&&!overlay(id))) {
+                    const h=horizontal(id),extent=extents[id]
+                    const rect={x:bounds.x,y:bounds.y,width:h?bounds.width:extent,height:h?extent:bounds.height}
+                    if(region==="bottom")rect.y+=bounds.height-extent
+                    if(region==="right")rect.x+=bounds.width-extent
+                    rects[id]=rect
+                    if(h){if(region==="top")bounds.y+=extent;bounds.height-=extent}
+                    else{if(region==="left")bounds.x+=extent;bounds.width-=extent}
+                }
+            }
+            return {rects:rects,bounds:bounds}
+        }
+        const live=place(ids),bounds=place(all.filter(id=>docked[id])).bounds
+        const result=live.rects
+        for(const id of ids.filter(id=>state[id].region==="center"))result[id]=Object.assign({},bounds)
+        // content: the canvas area minus an overlay tree. clear: what is unobstructed right now (also minus the
+        // auto-hiding bars that are visible), for notices and toasts that must not cover controls.
+        let content=Object.assign({},result[gridMode?"grid":"preview"]||bounds),clear=Object.assign({},live.bounds)
+        function uncover(area,cover) {
+            const intersection=Math.max(0,Math.min(area.x+area.width,cover.x+cover.width)-Math.max(area.x,cover.x))
+            if(cover.y<area.y+area.height && cover.y+cover.height>area.y && intersection>0) {
+                if(cover.x<=area.x)area.x+=intersection
+                area.width-=intersection
+            }
+        }
+        for(const id of ids.filter(id=>overlay(id))) {
+            // Overlays sit beside the bars that are visible now, not only the docked ones.
+            const area=live.bounds,extent=Math.min(preferred(id),Math.max(0,area.width-120))
+            result[id]={x:state[id].region==="right"?area.x+area.width-extent:area.x,y:area.y,width:extent,height:area.height}
+            uncover(content,result[id]);uncover(clear,result[id])
+        }
+        for(const id of Object.keys(active))if(!active[id])result[id]={x:0,y:0,width:0,height:0}
+        result._state=state;result._recovered=recovered;result._content=content;result._clear=clear
+        return result
+    }
+    function paneRect(id) { return workspace[id]||{x:0,y:0,width:0,height:0} }
+    function paneState(id) { return workspace._state[id] }
+
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
     property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
     property real pointerX: width / 2
@@ -47,6 +145,9 @@ ApplicationWindow {
     palette.toolTipText: Theme.background
     palette.link: Theme.primary
 
+    // Leaving arrangement returns keyboard focus to content so no hidden grip keeps editing the layout.
+    onLayoutEditingChanged: { if(layoutEditing)wakeHud();else { resizePreview=({}); if(!modalOpen)Qt.callLater(focusContent) } }
+    Connections { target: paneLayout; function onChanged() { if(paneLayout.locked)app.resizePreview=({}) } }
     function wakeHud() { hudVisible = true; hideHud.restart() }
     function focusWithin(item) {
         for (let focused = activeFocusItem; focused; focused = focused.parent)
@@ -57,7 +158,7 @@ ApplicationWindow {
     function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
     function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
     function gridAllowsCommand(id) {
-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse"].indexOf(id) >= 0
+        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -86,6 +187,9 @@ ApplicationWindow {
         else if (id === "rotate") canvas.rotateClockwise()
         else if (id === "background") canvas.cycleBackground()
         else if (id === "frameless") { frameless = !frameless; wakeHud() }
+        else if (id === "arrange-panes") layoutEditing = true // a locked layout explains itself inside arrangement
+        else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
+        else if (id === "layout-reset") paneLayout.reset()
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -107,9 +211,11 @@ ApplicationWindow {
     }
     Shortcut {
         sequence: "Escape"
+        // Text fields own Escape (the address field reverts, then leaves arrangement itself).
         enabled: !app.modalOpen && !app.editingText
         onActivated: {
             canvas.endLoupe()
+            if(app.layoutEditing) { app.layoutEditing=false; return }
             if (app.gridMode) app.showCanvas()
             else if (app.visibility === Window.FullScreen) app.showNormal()
             else app.wakeHud()
@@ -120,7 +226,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (!app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+            if (!app.layoutEditing && !app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -146,7 +252,8 @@ ApplicationWindow {
     ImageCanvas {
         id: canvas
         objectName: "canvas"
-        anchors { fill: parent; leftMargin: app.treeInset }
+        x: app.paneRect("preview").x; y: app.paneRect("preview").y
+        width: app.paneRect("preview").width; height: app.paneRect("preview").height
         image: viewer.image
         background: "#191919" // photo backdrop, deliberately independent of the interface palette
         focus: !app.gridMode
@@ -210,13 +317,29 @@ ApplicationWindow {
     PhotoGrid {
         id: photoGrid
         objectName: "photoGrid"
-        anchors { left: parent.left; right: parent.right; top: topPanel.bottom; bottom: bottomPanel.top; leftMargin: app.treeInset }
+        x: app.paneRect("grid").x; y: app.paneRect("grid").y
+        width: app.paneRect("grid").width; height: app.paneRect("grid").height
         visible: app.gridMode
         inputEnabled: !app.modalOpen
         onItemActivated: app.showCanvas()
-        onDismissed: app.showCanvas()
+        onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
     }
+    Label {
+        objectName: "layoutRecoveryNotice"
+        visible: app.workspace._recovered
+        x: app.workspace._clear.x+Theme.gapSm
+        y: app.workspace._clear.y+Theme.gapSm
+        width: Math.max(0,app.workspace._clear.width-2*Theme.gapSm)
+        text: app.workspace._clear.width < 280 ? "Layout adapted. Reset in Settings." : "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
+        wrapMode: Text.Wrap
+        color: Theme.text
+        padding: Theme.gapSm
+        background: Rectangle { color: Theme.surface;radius: Theme.radiusControl }
+        z: 15
+        Accessible.name: text
+    }
+    PaneArrangement { anchors.fill: parent; host: app; visible: app.layoutEditing; z: 20 }
     DropArea {
         anchors.fill: parent
         onEntered: drag => { drag.accepted = drag.hasUrls }
@@ -230,12 +353,14 @@ ApplicationWindow {
     }
     ColumnLayout { // empty state: one message, one action
         id: emptyState
-        anchors.centerIn: parent
-        anchors.horizontalCenterOffset: app.canvasCover / 2
+        readonly property bool compactContent: app.workspace._content.width < 280 || app.workspace._content.height < 320
+        x: app.workspace._content.x+(app.workspace._content.width-width)/2
+        y: app.workspace._content.y+(app.workspace._content.height-height)/2
         spacing: Theme.gapSm
         visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
-        width: Math.min(440, app.width - app.canvasCover - 2 * Theme.gapXxl)
+        width: Math.max(0,Math.min(440,app.workspace._content.width-2*Theme.gapMd))
         Image {
+            visible: !emptyState.compactContent
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: app.height < 480 ? 96 : 144
             Layout.preferredHeight: Layout.preferredWidth
@@ -245,6 +370,7 @@ ApplicationWindow {
             Accessible.ignored: true
         }
         Label {
+            visible: !emptyState.compactContent
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.gapSm
             text: "Glancelot"
@@ -258,6 +384,7 @@ ApplicationWindow {
         Label {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
+            visible: !emptyState.compactContent
             text: "Your photographs, front and center."
             color: Theme.muted
             font.pixelSize: Theme.textTitle
@@ -265,9 +392,12 @@ ApplicationWindow {
         }
         UiButton {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.gapLg
+            Layout.topMargin: emptyState.compactContent ? 0 : Theme.gapLg
+            Layout.maximumWidth: emptyState.width
+            Layout.minimumWidth: 0
             variant: "primary"
-            text: "Open a photo"
+            text: emptyState.compactContent ? "Open" : "Open a photo"
+            Accessible.name: "Open a photo"
             tip: "Open a photo" + app.shortcutHint("open")
             onClicked: app.invoke("open")
         }
@@ -275,6 +405,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.topMargin: Theme.gapSm
             horizontalAlignment: Text.AlignHCenter
+            visible: !emptyState.compactContent
             text: "or drop a JPEG or PNG here. Arrow keys browse the folder."
             color: Theme.muted
             font.pixelSize: Theme.textSmall
@@ -284,10 +415,10 @@ ApplicationWindow {
     }
     Rectangle {
         id: topPanel
-        anchors { left: parent.left; right: parent.right; top: parent.top }
-        height: Theme.barHeight
+        x: app.paneRect("topbar").x; y: app.paneRect("topbar").y
+        width: app.paneRect("topbar").width; height: app.paneRect("topbar").height
         color: Theme.surface
-        visible: app.gridMode || app.hudVisible || app.frameless
+        visible: width > 0 && height > 0
         HoverHandler { id: topBar }
         MouseArea { anchors.fill: parent; enabled: app.frameless; onPressed: app.startSystemMove(); onDoubleClicked: app.visibility === Window.Maximized ? app.showNormal() : app.showMaximized() }
         Rectangle { // edge against the canvas when no filmstrip sits below
@@ -296,10 +427,20 @@ ApplicationWindow {
             color: Theme.border
             visible: !filmstripPanel.visible
         }
-        RowLayout {
+        ScrollView {
+            id: topbarScroll
             anchors.fill: parent
-            anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
-            spacing: Theme.gapXs
+            clip: true
+            contentWidth: availableWidth
+            contentHeight: barGridtopbar.implicitHeight
+            ScrollBar.vertical: UiScrollBar {}
+        GridLayout {
+            id: barGridtopbar
+            columns: app.paneState("topbar").region === "left" || app.paneState("topbar").region === "right" ? 1 : children.length
+            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
+            width: topbarScroll.availableWidth-2*Theme.gapMd
+            x: Theme.gapMd
+            y: Math.max(0,(topbarScroll.availableHeight-implicitHeight)/2)
             Image {
                 Layout.preferredWidth: 24; Layout.preferredHeight: 24
                 Layout.rightMargin: Theme.gapXs
@@ -347,6 +488,15 @@ ApplicationWindow {
                 color: viewer.fileName ? Theme.text : Theme.muted
                 font.pixelSize: Theme.textBody
             }
+            UiButton { // lock state stays visible outside Settings; activating it unlocks
+                objectName: "layoutLockIndicator"
+                visible: paneLayout.locked
+                iconName: "lock"
+                text: "Layout locked"
+                tip: "Workspace layout is locked. Select to unlock" + app.shortcutHint("layout-lock")
+                Accessible.name: "Workspace layout locked. Unlock layout"
+                onClicked: app.invoke("layout-lock")
+            }
             UiButton {
                 objectName: "settingsButton"
                 text: "Settings"
@@ -357,36 +507,38 @@ ApplicationWindow {
             UiButton { text: "Show frame"; visible: app.frameless; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
             UiButton { text: "Close window"; iconName: "close"; iconOnly: true; visible: app.frameless; onClicked: app.close() }
         }
+        }
     }
     Filmstrip {
         id: filmstripPanel
         objectName: "filmstrip"
         compact: app.height < 480
-        anchors { left: parent.left; right: parent.right; top: topPanel.bottom }
-        visible: !app.gridMode && (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
+        x: app.paneRect("filmstrip").x; y: app.paneRect("filmstrip").y
+        width: app.paneRect("filmstrip").width; height: app.paneRect("filmstrip").height
+        vertical: app.paneState("filmstrip").region === "left" || app.paneState("filmstrip").region === "right"
+        visible: width > 0 && height > 0
         onItemActivated: canvas.forceActiveFocus()
     }
     FolderTree {
         id: treePanel
         objectName: "folderTree"
         compact: app.width < 720 || app.height < 480
-        anchors {
-            left: parent.left
-            top: filmstripPanel.visible ? filmstripPanel.bottom : topPanel.bottom
-            bottom: bottomPanel.visible ? bottomPanel.top : parent.bottom
-        }
-        width: implicitWidth
+        x: app.paneRect("tree").x; y: app.paneRect("tree").y
+        width: app.paneRect("tree").width; height: app.paneRect("tree").height
         maximumWidth: Math.max(200, Math.round(app.width * 0.45))
-        visible: viewer.treeVisible && (viewer.treePinned || app.hudVisible || app.frameless)
-        onDismissed: app.focusContent()
+        layoutFrozen: true
+        arrangementMode: app.layoutEditing
+        onResizeCommitted: extent => paneLayout.resize("tree", extent)
+        visible: width > 0 && height > 0
+        onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
     }
     Rectangle {
         id: bottomPanel
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: Theme.barHeight
-        visible: app.gridMode || app.hudVisible
+        x: app.paneRect("statusbar").x; y: app.paneRect("statusbar").y
+        width: app.paneRect("statusbar").width; height: app.paneRect("statusbar").height
+        visible: width > 0 && height > 0
         color: Theme.surface
         HoverHandler { id: bottomHover }
         Rectangle {
@@ -394,10 +546,20 @@ ApplicationWindow {
             height: Theme.borderWidth
             color: Theme.border
         }
-        RowLayout {
+        ScrollView {
+            id: statusbarScroll
             anchors.fill: parent
-            anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
-            spacing: Theme.gapXs
+            clip: true
+            contentWidth: availableWidth
+            contentHeight: barGridstatusbar.implicitHeight
+            ScrollBar.vertical: UiScrollBar {}
+        GridLayout {
+            id: barGridstatusbar
+            columns: app.paneState("statusbar").region === "left" || app.paneState("statusbar").region === "right" ? 1 : children.length
+            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
+            width: statusbarScroll.availableWidth-2*Theme.gapMd
+            x: Theme.gapMd
+            y: Math.max(0,(statusbarScroll.availableHeight-implicitHeight)/2)
             UiButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
             BarLabel {
                 visible: !app.gridMode
@@ -434,11 +596,13 @@ ApplicationWindow {
             UiButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
             UiButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
         }
+        }
     }
     Rectangle { // status toast, centred on the part of the canvas no panel covers
         objectName: "statusToast"
-        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: app.canvasCover / 2; bottom: parent.bottom; bottomMargin: Theme.barHeight + Theme.gapLg }
-        width: Math.min(app.width - app.canvasCover - 2 * Theme.gapXl, statusText.implicitWidth + 2 * Theme.gapLg)
+        x: app.workspace._clear.x+(app.workspace._clear.width-width)/2
+        y: app.workspace._clear.y+app.workspace._clear.height-height-Theme.gapLg
+        width: Math.max(0,Math.min(app.workspace._clear.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
         height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
         radius: Theme.radiusCard
         color: Theme.surface
