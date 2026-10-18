@@ -158,22 +158,22 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: done
     memory_action: act_mvd97xa4_cd00e0d8466c
     depends: [REVIEW-ALL-01]
     outcome: Folders button works before opening a photo; logical roots and mounted folders browse independently of traversal root
     acceptance: Click and Ctrl+B parity; lazy bounded enumeration; empty/missing folder recovery; cross-root selection; explicit Parent control; current-folder reveal after location reset
-    evidence: docs/verification/DOCKER-BROWSER.md; author Windows 8/8; independent regressions in progress
+    evidence: docs/verification/DOCKER-BROWSER.md; independent review of 57ab21e approved (later 89279f0 retry cap and wording not re-reviewed); integrated 89279f0 build.ps1 -Test 8/8 Windows and 8/8 Linux image. Tree-row click, Enter/Space and mid-load browse paths have no automated test; Folders button and Ctrl+B parity is tested
   - id: DOCKER-BROWSER-01
     requirements: [SYS-04, SYS-05, SYS-02]
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: done
     depends: [TREE-START-01]
     outcome: Linux amd64 Qt 6.8.3 desktop streamed to a browser via authenticated noVNC/TigerVNC
     acceptance: Full Linux tests; authenticated browser interaction; read-only mounted photo decode; persistent configuration; graceful stop/resume; no cloud requirement
-    evidence: docs/DOCKER.md; Docker runtime build and verification in progress
+    evidence: docs/DOCKER.md; docs/verification/DOCKER-BROWSER.md; integrated 89279f0 image built with 8/8 Linux tests; healthy container, only VNC password auth offered, read-only /photos decode, settings persisted, docker stop 0.65 s exit 0, kill then start recovers. Unverified - pixel-level browser clicks, docker compose run, Unraid, ARM, GPU
   - id: PLATFORM-01
     requirements: [SYS-04, SYS-05, PERF-01, VIEW-04, COLOR-01]
     milestone: M3
