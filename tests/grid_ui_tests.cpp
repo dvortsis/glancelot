@@ -92,7 +92,10 @@ private slots:
         Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("broken.png"));
         QTRY_COMPARE(h.viewer.fileCount(),1); QTRY_VERIFY(!h.viewer.loading());
         QVERIFY(!h.viewer.status().isEmpty());
+        // Force identical spelling: Windows normally mixes slash forms and bypasses the no-op branch.
+        auto snapshot=h.viewer.snapshot(); snapshot.files={std::filesystem::path(h.viewer.filePath().toStdWString())}; snapshot.current=snapshot.files.front(); h.model.sync(snapshot);
         h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(),0);
+        QCOMPARE(h.model.pathAt(0),h.viewer.filePath());
         QVERIFY(QMetaObject::invokeMethod(h.grid(),"activate"));
         QVERIFY2(h.viewer.loading(),"Grid activation must retry a failed current path");
         QTRY_VERIFY(!h.viewer.loading());
@@ -297,6 +300,7 @@ private:
 
 QTEST_MAIN(GridUiTests)
 #include "grid_ui_tests.moc"
+
 
 
 
