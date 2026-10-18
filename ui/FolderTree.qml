@@ -144,7 +144,8 @@ Rectangle {
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
                     const cell = itemAtIndex(row)
-                    if (cell && !cell.isCurrent) viewer.openFolder(folderTree.pathAt(row))
+                    if (cell && cell.depth === 0 && cell.expandable) folderTree.toggle(row)
+                    else if (cell && !cell.isCurrent) viewer.openFolder(folderTree.pathAt(row))
                     event.accepted = true
                 }
             }
@@ -188,7 +189,9 @@ Rectangle {
                         if (row.expandable && disclosure.contains(local)) return
                         list.currentIndex = row.index
                         list.forceActiveFocus(Qt.MouseFocusReason)
-                        if (!row.isCurrent) viewer.openFolder(row.path)
+                        // A drive or "/" would become the traversal root and let navigation walk the whole volume.
+                        if (row.depth === 0 && row.expandable) folderTree.toggle(row.index)
+                        else if (!row.isCurrent) viewer.openFolder(row.path)
                     }
                 }
                 Item { // disclosure

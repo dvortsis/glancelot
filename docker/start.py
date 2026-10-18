@@ -43,6 +43,9 @@ try:
     password = runtime / 'vnc-passwd'
     password.write_bytes(subprocess.run(['tigervncpasswd', '-f'], input=secret.encode(), check=True, capture_output=True).stdout)
     password.chmod(0o600)
+    # A killed container restarts on the same filesystem; stale X locks would block the new display.
+    for stale in ('/tmp/.X0-lock', '/tmp/.X11-unix/X0'):
+        pathlib.Path(stale).unlink(missing_ok=True)
     launch(['Xtigervnc', ':0', '-geometry', size, '-depth', '24', '-rfbport', '5900', '-localhost', 'yes', '-SecurityTypes', 'VncAuth', '-PasswordFile', str(password), '-AlwaysShared', '-desktop', 'Glancelot'])
     for _ in range(100):
         if stopping or children[0].poll() is not None:

@@ -72,7 +72,10 @@ SettingsStatus readSettings(QJsonObject& out) {
     // commits; retry only that case (a damaged file is not transient and must not stall startup).
     for (int attempt = 0; attempt < 8; ++attempt) {
         status = parseExisting(path, out);
-        if (status.code != SettingsStatus::Unreadable) break;
+        // A schema-1 file is never empty, so ok-and-empty means "absent". Once a writer has used this directory
+        // (its lock file exists) absence can be the instant of a concurrent replacement on Linux; look again.
+        const bool vanished = status.ok() && out.isEmpty() && QFileInfo::exists(path + ".lock");
+        if (status.code != SettingsStatus::Unreadable && !vanished) break;
         QThread::msleep(10);
     }
     if (status.code == SettingsStatus::Corrupt) {

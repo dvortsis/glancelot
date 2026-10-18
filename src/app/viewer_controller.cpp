@@ -561,7 +561,8 @@ void ViewerController::raiseRoot(){
     copy.setCancellation(cancellation);
     d->submitNavigation({d->generation,++d->navigationGeneration,true,[copy,parent]() mutable {
         copy.setRoot(parent);
-        return Private::NavigationResult{std::move(copy),std::nullopt};
+        // The tree lists the whole computer, so state the widened traversal root where the user can see it.
+        return Private::NavigationResult{std::move(copy),std::nullopt,"Navigation now covers "+displayPath(parent)};
     }});
 }
 bool ViewerController::filmstripVisible() const{return d->filmstrip;}

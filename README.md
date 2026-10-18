@@ -19,3 +19,5 @@ Preferences: normal OS application-config directory, or `GLANCELOT_CONFIG_DIR` f
 See [current capabilities](docs/SUPPORTED-CAPABILITIES.md), [BUILDING.md](BUILDING.md), [execution plan](docs/AGENT-BUILD-PLAN.md), [work queue](docs/WORK-QUEUE.yaml), and [full requirements](docs/REQUIREMENTS.md). The full roadmap remains in progress. RAW, XMP culling, comparison, archive reading, HDR, calibrated monitor output and complete input-matrix support are not delivered by this alpha. Native Linux desktop/GPU behavior remains unqualified; Linux core tests run in WSL.
 
 No telemetry, cloud, mandatory catalog or automatic updates. Source under GPL-3.0-or-later; see LICENSE and THIRD_PARTY_NOTICES.md. Brand assets were supplied by the project owner; their provenance is preserved in assets/brand.
+
+Browser access from a Docker server: see [Docker setup](docs/DOCKER.md). The Folders button works before a photo is open and lists available filesystem locations.

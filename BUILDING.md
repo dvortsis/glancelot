@@ -35,3 +35,7 @@ Core-only CI needs no Qt: pass `-DGLANCELOT_BUILD_VIEWER=OFF`. Native Wayland/X1
 ## Local evidence
 
 `glancelot image.png --quit-after 3000 --screenshot capture.png --report report.json` runs a timed viewer and records local evidence. `GLANCELOT_CONFIG_DIR` redirects preferences for disposable tests. No network requests are made by the application.
+
+## Docker browser desktop
+
+See [docs/DOCKER.md](docs/DOCKER.md) for the Linux amd64 Qt 6.8.3 multi-stage build, authenticated browser desktop and read-only photo mounts. The Docker build runs the full CTest suite.

@@ -146,7 +146,7 @@ Spawn workers lazily/concurrently with UI startup, and measure the IPC/shared-me
 
 ### Tree ordering
 
-The user selects a traversal root; a shell-opened file initially uses its containing directory. Expanding to a parent root is an explicit command. Never unexpectedly traverse an entire drive or cross into a new mounted volume.
+The user selects a traversal root; a shell-opened file initially uses its containing directory. Expanding to a parent root is an explicit command. The folder browser independently exposes filesystem locations before any photo is open; explicitly selecting a folder outside the traversal root establishes that folder as the new traversal root. Mounted folders may be listed for explicit selection without permitting automatic traversal across volumes. Never unexpectedly traverse an entire drive or cross into a new mounted volume.
 
 Order directories by a documented natural-name comparator: numeric runs compare numerically, nonnumeric portions use a pinned Unicode/case policy, and raw-name identity provides a stable final tie-break. Retain filesystem-native paths, including non-UTF-8 Linux names; normalized display text is not a file identifier. Folder ordering is independent of the active file ordering.
 
