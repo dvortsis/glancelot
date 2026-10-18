@@ -292,7 +292,7 @@ ApplicationWindow {
         x: app.workspace._content.x+Theme.gapSm
         y: app.workspace._content.y+Theme.gapSm
         width: Math.max(0,app.workspace._content.width-2*Theme.gapSm)
-        text: "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
+        text: app.workspace._content.width < 280 ? "Layout adapted. Reset in Settings." : "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
         wrapMode: Text.Wrap
         color: Theme.text
         padding: Theme.gapSm
@@ -314,12 +314,14 @@ ApplicationWindow {
     }
     ColumnLayout { // empty state: one message, one action
         id: emptyState
+        readonly property bool compactContent: app.workspace._content.width < 280 || app.workspace._content.height < 320
         x: app.workspace._content.x+(app.workspace._content.width-width)/2
         y: app.workspace._content.y+(app.workspace._content.height-height)/2
         spacing: Theme.gapSm
         visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
         width: Math.max(0,Math.min(440,app.workspace._content.width-2*Theme.gapMd))
         Image {
+            visible: !emptyState.compactContent
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: app.height < 480 ? 96 : 144
             Layout.preferredHeight: Layout.preferredWidth
@@ -329,6 +331,7 @@ ApplicationWindow {
             Accessible.ignored: true
         }
         Label {
+            visible: !emptyState.compactContent
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.gapSm
             text: "Glancelot"
@@ -342,6 +345,7 @@ ApplicationWindow {
         Label {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
+            visible: !emptyState.compactContent
             text: "Your photographs, front and center."
             color: Theme.muted
             font.pixelSize: Theme.textTitle
@@ -349,9 +353,12 @@ ApplicationWindow {
         }
         UiButton {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.gapLg
+            Layout.topMargin: emptyState.compactContent ? 0 : Theme.gapLg
+            Layout.maximumWidth: emptyState.width
+            Layout.minimumWidth: 0
             variant: "primary"
-            text: "Open a photo"
+            text: emptyState.compactContent ? "Open" : "Open a photo"
+            Accessible.name: "Open a photo"
             tip: "Open a photo" + app.shortcutHint("open")
             onClicked: app.invoke("open")
         }
@@ -359,6 +366,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.topMargin: Theme.gapSm
             horizontalAlignment: Text.AlignHCenter
+            visible: !emptyState.compactContent
             text: "or drop a JPEG or PNG here. Arrow keys browse the folder."
             color: Theme.muted
             font.pixelSize: Theme.textSmall
