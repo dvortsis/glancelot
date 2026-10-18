@@ -219,12 +219,31 @@ private slots:
         QTRY_VERIFY(canvas->height()<780);const qreal reserved=canvas->height();
         h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();QCOMPARE(canvas->height(),reserved);
         h.layout.reset();
+        const auto rectOf=[](const QVariant& v){const auto m=v.toMap();return QRectF(m["x"].toDouble(),m["y"].toDouble(),m["width"].toDouble(),m["height"].toDouble());};
+        // Notices and toasts use the unobstructed area, which excludes the visible overlaid bars.
+        h.window->setProperty("hudVisible",true);QCoreApplication::processEvents();
+        auto ws=h.window->property("workspace").toMap();
+        QVERIFY(!rectOf(ws["_clear"]).intersects(rectOf(ws["statusbar"])));QVERIFY(!rectOf(ws["_clear"]).intersects(rectOf(ws["topbar"])));
+        // A docked tree inside auto-hiding vertical bars keeps its place and never covers the canvas.
+        h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.move("statusbar","right",0));QCoreApplication::processEvents();
+        auto* tree=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(tree);QTRY_VERIFY(tree->isVisible());
+        const qreal treeX=tree->x();QVERIFY(tree->x()+tree->width()<=canvas->x()+0.1);
+        h.window->setProperty("hudVisible",false);QCoreApplication::processEvents();
+        QCOMPARE(tree->x(),treeX);QVERIFY(tree->x()+tree->width()<=canvas->x()+0.1);
+        h.layout.reset();h.viewer.setTreePinned(false);h.viewer.setTreeVisible(false);
     }
     void recoveredLayoutIsNotEditableAndKeepsPreferences() {
         Harness h;QVERIFY(h.window);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
         QVERIFY(h.layout.move("tree","right",0));QVERIFY(h.layout.resize("tree",400));
         QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.move("statusbar","right",1));
         h.window->resize(540,360);QTRY_VERIFY(h.window->property("workspace").toMap().value("_recovered").toBool());
+        {   // The recovery notice never covers a toolbar.
+            auto* notice=h.window->findChild<QQuickItem*>("layoutRecoveryNotice");QVERIFY(notice);QTRY_VERIFY(notice->isVisible());
+            const auto top=h.window->property("workspace").toMap()["topbar"].toMap();
+            const QRectF bar(top["x"].toDouble(),top["y"].toDouble(),top["width"].toDouble(),top["height"].toDouble());
+            QVERIFY(!QRectF(notice->x(),notice->y(),notice->width(),notice->height()).intersects(bar));
+        }
         h.window->requestActivate();h.window->setProperty("layoutEditing",true);
         QQuickItem* grip=nullptr;QList<QQuickItem*> pending{h.window->contentItem()};
         while(!pending.isEmpty()){auto* item=pending.takeFirst();if(item->objectName()=="paneGrip-tree"){grip=item;break;}pending<<item->childItems();}
