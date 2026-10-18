@@ -8,6 +8,9 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 
 namespace fs = std::filesystem;
 using namespace glancelot;
@@ -288,6 +291,18 @@ void childFoldersAndSubtreeSearch() {
     const bool denied = !childFolders(f.root / "locked").accessible;
     fs::permissions(f.root / "locked", fs::perms::owner_all);
     std::cout << "child-folder permission-denial enforcement=" << denied << '\n';
+#endif
+
+#ifndef _WIN32
+    struct stat rootDevice {}, procDevice {};
+    if (::stat("/", &rootDevice)==0 && ::stat("/proc", &procDevice)==0 && rootDevice.st_dev!=procDevice.st_dev) {
+        const auto automatic=childFolders("/");
+        const auto explicitBrowser=childFolders("/",{},20000,true);
+        auto hasProc=[](const FolderListing& result){return std::find(result.folders.begin(),result.folders.end(),fs::path("/proc"))!=result.folders.end();};
+        require(!hasProc(automatic),"automatic traversal crossed /proc mount boundary");
+        require(hasProc(explicitBrowser),"explicit folder browser omitted a mounted location");
+        std::cout << "explicit browser mount opt-in verified=1\n";
+    }
 #endif
 
     // Subtree search: preorder (own files, then children in natural order), budgeted and cancellable.
