@@ -33,9 +33,13 @@ UiDialog {
     }
     function focusSection() { const button = nav.itemAtIndex(sectionIndex); if (button) button.forceActiveFocus(Qt.TabFocusReason) }
     // Settings is already open, so its own row is listed for remapping but is not runnable.
-    function commandRunnable(id) { return id !== "settings" && (!host.gridMode || host.gridAllowsCommand(id)) }
+    function commandRunnable(id) { return id !== "settings" && !(id === "arrange-panes" && paneLayout.locked) && (!host.gridMode || host.gridAllowsCommand(id)) }
     // Why a command cannot run right now, shown in visible text on its row (empty when it can run).
-    function unavailableReason(id) { return id === "settings" ? "Open now" : (commandRunnable(id) ? "" : "Not in grid view") }
+    function unavailableReason(id) {
+        if (id === "settings") return "Open now"
+        if (id === "arrange-panes" && paneLayout.locked) return "Layout locked"
+        return commandRunnable(id) ? "" : "Not in grid view"
+    }
     function run(id) {
         if (!commandRunnable(id)) return
         if (id === "palette") { openSection("controls", true); return }

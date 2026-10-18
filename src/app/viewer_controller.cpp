@@ -85,7 +85,10 @@ const std::vector<Command> registry {
     {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
     {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"}, {"quit","Quit","Ctrl+Q"}
+    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
+    // Layout commands start unbound so existing users' shortcuts never collide.
+    {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
+    {"quit","Quit","Ctrl+Q"}
 };
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
 bool insideRoot(const QString& root, const QString& folder) {

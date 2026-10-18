@@ -149,6 +149,49 @@ private slots:
         QTest::keyClick(h.window,Qt::Key_Space);QVERIFY(!h.layout.pane("tree")["frozen"].toBool());
         QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
     }
+    void paneCommandsLockIndicatorAndDragCancellation() {
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        h.window->requestActivate();
+        const auto find=[&](const QString& name)->QQuickItem* {
+            QList<QQuickItem*> pending{h.window->contentItem()};
+            while(!pending.isEmpty()){auto* item=pending.takeFirst();if(item->objectName()==name)return item;pending<<item->childItems();}
+            return nullptr;
+        };
+        QStringList ids;for(const auto& row:h.viewer.commands())ids<<row.toMap()["id"].toString();
+        for(const auto& id:{"arrange-panes","layout-lock","layout-reset"}){QVERIFY(ids.contains(id));QVERIFY(h.viewer.bindingFor(id).isEmpty());}
+        auto* indicator=find("layoutLockIndicator");QVERIFY(indicator);QVERIFY(!indicator->isVisible());
+        h.viewer.trigger("layout-lock");QTRY_VERIFY(h.layout.locked());QTRY_VERIFY(indicator->isVisible());
+        if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE"))for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.theme.setMode(mode);QTest::qWait(50);QDir().mkpath(".cache/panes-ui");
+            QVERIFY(h.window->grabWindow().save(".cache/panes-ui/locked-"+mode+".png"));
+        }
+        h.viewer.trigger("arrange-panes");QCoreApplication::processEvents();
+        QVERIFY(!h.window->property("layoutEditing").toBool()); // locked layouts cannot enter arrangement
+        QMetaObject::invokeMethod(indicator,"clicked");QTRY_VERIFY(!h.layout.locked());QTRY_VERIFY(!indicator->isVisible());
+        QVERIFY(h.layout.resize("tree",360));h.viewer.trigger("layout-reset");QTRY_COMPARE(h.layout.pane("tree")["extent"].toInt(),280);
+        h.viewer.trigger("arrange-panes");QTRY_VERIFY(h.window->property("layoutEditing").toBool());
+        auto* grip=find("paneGrip-tree");QVERIFY(grip);QTRY_VERIFY(grip->isVisible());
+        const auto origin=grip->mapToScene(QPointF(grip->width()/2,grip->height()/2)).toPoint();
+        const QPoint target(int(h.window->width()*0.85),h.window->height()/2);
+        // Escape mid-drag leaves arrangement and discards the drop.
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);QTest::mouseMove(h.window,target,30);
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+        QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("left"));
+        // Locking mid-drag cancels the gesture.
+        h.window->setProperty("layoutEditing",true);QTRY_VERIFY(grip->isVisible());
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);QTest::mouseMove(h.window,target,30);
+        h.layout.setLocked(true);QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("left"));
+        h.layout.setLocked(false);
+        // A completed drag commits exactly once.
+        QSignalSpy changes(&h.layout,&PaneLayout::changed);
+        QTest::mousePress(h.window,Qt::LeftButton,Qt::NoModifier,origin);QTest::mouseMove(h.window,target,30);
+        QTest::mouseRelease(h.window,Qt::LeftButton,Qt::NoModifier,target);
+        QTRY_COMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));QCOMPARE(changes.count(),1);
+        QVERIFY(grip->hasActiveFocus());
+        h.layout.reset();h.window->setProperty("layoutEditing",false);
+    }
     void paneArrangementBoundsAndGestures() {
         Harness h;QVERIFY(h.window);h.window->resize(540,360);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
         for(const auto& id:{"tree","topbar","statusbar","filmstrip"}) {

@@ -127,7 +127,7 @@ ApplicationWindow {
     function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
     function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
     function gridAllowsCommand(id) {
-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse"].indexOf(id) >= 0
+        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -156,6 +156,9 @@ ApplicationWindow {
         else if (id === "rotate") canvas.rotateClockwise()
         else if (id === "background") canvas.cycleBackground()
         else if (id === "frameless") { frameless = !frameless; wakeHud() }
+        else if (id === "arrange-panes") { if (!paneLayout.locked) layoutEditing = true }
+        else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
+        else if (id === "layout-reset") paneLayout.reset()
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -452,6 +455,15 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 color: viewer.fileName ? Theme.text : Theme.muted
                 font.pixelSize: Theme.textBody
+            }
+            UiButton { // lock state stays visible outside Settings; activating it unlocks
+                objectName: "layoutLockIndicator"
+                visible: paneLayout.locked
+                iconName: "lock"
+                text: "Layout locked"
+                tip: "Workspace layout is locked. Select to unlock" + app.shortcutHint("layout-lock")
+                Accessible.name: "Workspace layout locked. Unlock layout"
+                onClicked: app.invoke("layout-lock")
             }
             UiButton {
                 objectName: "settingsButton"

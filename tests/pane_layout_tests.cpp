@@ -57,6 +57,17 @@ private slots:
         PaneLayout untouched;untouched.setSlot(4);QCOMPARE(untouched.pane("tree")["extent"].toInt(),280);
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
+    void corruptSettingsFileFallsBackWithFeedback() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QDir().mkpath(QFileInfo(glancelot::settingsFilePath()).absolutePath());
+        QFile file(glancelot::settingsFilePath());QVERIFY(file.open(QIODevice::WriteOnly));file.write("{not json");file.close();
+        PaneLayout model;model.setSlot(2);QVERIFY(!model.feedback().isEmpty());
+        QCOMPARE(model.pane("tree")["region"].toString(),QString("left"));QVERIFY(!model.locked());
+        QVERIFY(model.move("tree","right",0)); // the session stays usable
+        QCOMPARE(model.pane("tree")["region"].toString(),QString("right"));QVERIFY(!model.feedback().isEmpty());
+        QVERIFY(file.open(QIODevice::ReadOnly));QCOMPARE(file.readAll(),QByteArray("{not json")); // never overwritten
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
     void invalidAndUnknownFields() {
         QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         QVERIFY(glancelot::updateSettings([](QJsonObject& s) {
