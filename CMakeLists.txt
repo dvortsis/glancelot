@@ -26,6 +26,7 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
     src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp src/app/thumbnail_id.hpp
     src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
+    src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
@@ -82,6 +83,7 @@ if(GLANCELOT_BUILD_VIEWER)
     qt_add_executable(grid_ui_tests tests/grid_ui_tests.cpp
       src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
       src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
       src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
       src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp

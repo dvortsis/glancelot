@@ -23,12 +23,27 @@ private slots:
         PaneLayout sameSlot;sameSlot.setSlot(3);QCOMPARE(sameSlot.pane("tree")["extent"].toInt(),352);
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
+    void newerVersionsCorruptionAndNoOps() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout session;QSignalSpy changes(&session,&PaneLayout::changed);
+        QVERIFY(session.resize("tree",280));QCOMPARE(changes.count(),0);
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s){s["layouts"]=QJsonObject{{"2","broken"},{"4",QJsonObject{{"version",9},{"marker",123}}}};}).ok());
+        PaneLayout malformed;malformed.setSlot(2);QVERIFY(!malformed.feedback().isEmpty());
+        PaneLayout future;future.setSlot(4);QVERIFY(!future.feedback().isEmpty());
+        QVERIFY(future.resize("tree",400));QVERIFY(!future.feedback().isEmpty());
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        QCOMPARE(saved["layouts"].toObject()["4"].toObject()["version"].toInt(),9);
+        QCOMPARE(saved["layouts"].toObject()["4"].toObject()["marker"].toInt(),123);
+        PaneLayout other;other.setSlot(5);QVERIFY(other.resize("tree",420));
+        PaneLayout untouched;untouched.setSlot(4);QCOMPARE(untouched.pane("tree")["extent"].toInt(),280);
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
     void invalidAndUnknownFields() {
         QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         QVERIFY(glancelot::updateSettings([](QJsonObject& s) {
             s["unrelated"]=7;
             s["layouts"]=QJsonObject{{"1",QJsonObject{{"version",1},{"future",true},{"panes",QJsonObject{
-                {"tree",QJsonObject{{"region","bad"},{"extent",-3},{"order",1.5},{"frozen",true}}},
+                {"tree",QJsonObject{{"region","bad"},{"extent",-3},{"order",1.5},{"frozen",true},{"futureField",17}}},
                 {"future-pane",QJsonObject{{"custom",42}}}}}}}};
         }).ok());
         PaneLayout model;model.setSlot(1);QCOMPARE(model.pane("tree")["extent"].toInt(),280);
@@ -37,6 +52,7 @@ private slots:
         QVERIFY(!model.move("missing","left",0));model.reset();
         QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());QCOMPARE(saved["unrelated"].toInt(),7);
         const auto layout=saved["layouts"].toObject()["1"].toObject();
+        QCOMPARE(layout["panes"].toObject()["tree"].toObject()["futureField"].toInt(),17);
         QVERIFY(layout["future"].toBool());QCOMPARE(layout["panes"].toObject()["future-pane"].toObject()["custom"].toInt(),42);
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }

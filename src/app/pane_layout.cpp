@@ -35,7 +35,11 @@ void PaneLayout::load() {
         QJsonObject settings;
         if(!glancelot::readSettings(settings).ok())feedback_="Layout settings could not be read; defaults are active.";
         else {
-            const auto saved=settings.value("layouts").toObject().value(QString::number(slot_)).toObject();
+            const auto layoutsValue=settings.value("layouts");
+            const auto savedValue=layoutsValue.toObject().value(QString::number(slot_));
+            const auto saved=savedValue.toObject();
+            if((!layoutsValue.isUndefined()&&!layoutsValue.isObject())||(!savedValue.isUndefined()&&!savedValue.isObject()))
+                feedback_="Layout settings are invalid; defaults are active.";
             if(!saved.isEmpty()&&saved.value("version").toInt()!=1)feedback_="Unsupported layout version; defaults are active.";
             else {
                 locked_=saved.value("locked").toBool(false);
@@ -59,7 +63,11 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
         else {
             auto stored=layout.value("panes").toObject();
             if(reset) {
-                for(const auto& key:panes_.keys())stored[key]=panes_[key];
+                for(const auto& key:panes_.keys()) {
+                    auto entry=stored.value(key).toObject();const auto replacement=panes_.value(key).toObject();
+                    for(auto it=replacement.begin();it!=replacement.end();++it)entry[it.key()]=it.value();
+                    stored[key]=entry;
+                }
                 layout["locked"]=false;
             } else {
                 auto entry=stored.value(id).toObject();

@@ -1,3 +1,4 @@
+#include "glancelot/pane_layout.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
 #include "glancelot/theme_manager.hpp"
@@ -65,6 +66,8 @@ int main(int argc,char** argv) {
         QObject::connect(&slotRetry,&QTimer::timeout,&app,[&]{if(windowSlot->claim(0)){viewer.setWindowSlot(windowSlot->number());viewer.restoreWindow();slotRetry.stop();}else if(++slotAttempts>=8)slotRetry.stop();});
         slotRetry.start();
     }
+    PaneLayout paneLayout;paneLayout.setSlot(viewer.windowSlot());
+    QObject::connect(&viewer,&ViewerController::stateChanged,&paneLayout,[&]{paneLayout.setSlot(viewer.windowSlot());});
     ThemeManager theme;
     if(parser.isSet("theme"))theme.setFamily(parser.value("theme"));
     if(parser.isSet("theme-mode"))theme.setMode(parser.value("theme-mode"));
@@ -89,6 +92,7 @@ int main(int argc,char** argv) {
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
+    engine.rootContext()->setContextProperty("paneLayout",&paneLayout);
     engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
     engine.rootContext()->setContextProperty("folderTree",&folderTree);
     engine.rootContext()->setContextProperty("theme",&theme);

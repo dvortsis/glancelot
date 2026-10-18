@@ -1,3 +1,4 @@
+#include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/settings_file.hpp"
@@ -39,6 +40,7 @@ struct Harness {
     ThemeManager theme;
     FilmstripModel model;
     FolderTreeModel folders;
+    PaneLayout layout;
     QQmlApplicationEngine engine;
     PreviewProvider* provider = new PreviewProvider;
     QQuickWindow* window{};
@@ -49,6 +51,7 @@ struct Harness {
         engine.setImportPathList(imports);
         engine.addImageProvider("thumb", provider);
         engine.rootContext()->setContextProperty("viewer", &viewer);
+        engine.rootContext()->setContextProperty("paneLayout", &layout);
         engine.rootContext()->setContextProperty("theme", &theme);
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);
