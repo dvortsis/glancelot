@@ -245,6 +245,13 @@ bool FolderTreeModel::canRaiseRoot() const { return d->canRaise; }
 int FolderTreeModel::pendingLoads() const { return d->inFlight; }
 void FolderTreeModel::setLister(Lister lister) { d->lister = std::move(lister); }
 QString FolderTreeModel::pathAt(int row) const { return row >= 0 && row < count() ? d->rows[std::size_t(row)].path : QString{}; }
+QVariantMap FolderTreeModel::rowInfo(int row) const {
+    if(row<0 || row>=count()) return {};
+    const auto& node=d->rows[std::size_t(row)];
+    return {{"path",node.path},{"depth",node.depth},{"expanded",node.expanded},
+            {"loading",node.loading},{"isCurrent",row==d->current},
+            {"expandable",node.state!=Empty && node.state!=Inaccessible}};
+}
 int FolderTreeModel::parentRow(int row) const {
     if (row <= 0 || row >= count()) return -1;
     const int depth = d->rows[std::size_t(row)].depth;

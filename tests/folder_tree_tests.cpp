@@ -612,7 +612,18 @@ void FolderTreeTests::reviewExplicitFolderDefinesTraversalRoot() {
     QVERIFY2(same(viewer.snapshot().root,album),"Selecting an album before the first photo narrowed traversal to its first descendant");
     viewer.nextFolder();
     QTRY_VERIFY_WITH_TIMEOUT(same(viewer.snapshot().current,second),15000);
+    bool publishedChild=false, inconsistentChild=false;
+    const auto connection=QObject::connect(&viewer,&ViewerController::stateChanged,&viewer,[&] {
+        if(viewer.filePath()!=first)return;
+        publishedChild=true;
+        const auto state=viewer.snapshot();
+        if(!same(state.current,first)||!same(state.directory,media.filePath("album/a")))
+            inconsistentChild=true;
+    });
     viewer.openFolder(media.filePath("album/a"));
+    QTRY_VERIFY_WITH_TIMEOUT(publishedChild,15000);
+    QVERIFY2(!inconsistentChild,"Child image was published with another folder's navigation snapshot");
+    QObject::disconnect(connection);
     QTRY_VERIFY_WITH_TIMEOUT(same(viewer.snapshot().current,first),15000);
     QVERIFY2(same(viewer.snapshot().root,album),"Selecting a child folder discarded the selected album traversal root");
     qunsetenv("GLANCELOT_CONFIG_DIR");

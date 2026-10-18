@@ -557,10 +557,14 @@ void ViewerController::openFolder(const QString& value){
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,directory=nativePath(folder),cancellation]() mutable {
         // Bounded preorder search (500 folders): a huge or hostile tree cannot occupy the navigation thread.
         const auto found=firstImageInSubtree(directory,cancellation);
-        if(found.image && !insideRoot(displayPath(copy.snapshot().root),displayPath(directory))) {
-            // Explicit browsing across roots (or selecting an ancestor) establishes the chosen traversal root.
+        if(found.image) {
+            const auto previousRoot=copy.snapshot().root;
+            const bool preserveRoot=insideRoot(displayPath(previousRoot),displayPath(directory));
+            // Publish the destination and its navigation snapshot together, including child-folder visits.
             std::error_code error;
-            if(copy.open(*found.image,error))copy.setRoot(directory);
+            if(!copy.open(*found.image,error))
+                return Private::NavigationResult{std::move(copy),std::nullopt,"Folder contents changed or cannot be read. Try opening the folder again."};
+            copy.setRoot(preserveRoot ? previousRoot : directory);
         }
         Private::NavigationResult result{std::move(copy),found.image,{}};
         if(!found.image) {
