@@ -79,7 +79,8 @@ struct Harness {
     QQmlApplicationEngine engine;
     PreviewProvider* provider = new PreviewProvider;
     QQuickWindow* window{};
-    explicit Harness(bool live = false) {
+    explicit Harness(bool live = false, int slot = 0) {
+        if (slot > 0) layout.setSlot(slot); // as app/main.cpp: the slot's layout is loaded before the UI
         // Load the UI from source: drop the executable's directory so a build-tree "Glancelot" module cannot shadow it.
         QStringList imports = engine.importPathList();
         imports.removeAll(QCoreApplication::applicationDirPath());
@@ -207,10 +208,9 @@ private slots:
         for(const QSize size:{QSize(540,360),QSize(1180,780)})for(const auto& mode:{QString("dark"),QString("light")}) {
             h.window->resize(size);h.theme.setMode(mode);
             for(const auto& id:{QString("tree"),QString("preview"),QString("grid"),QString("filmstrip"),QString("topbar"),QString("statusbar")}) {
-                h.window->setProperty("gridMode",id=="grid");
                 for(const auto& region:{QString("left"),QString("right"),QString("top"),QString("bottom"),QString("center")}) {
                     if(region=="center"&&id!="preview"&&id!="grid")continue;
-                    h.layout.reset();QVERIFY(h.layout.move(id,region,0));
+                    h.layout.reset();QVERIFY(h.layout.move(id,region,0));h.window->setProperty("gridMode",id=="grid"); // reset restores preview
                     h.window->setProperty("hudVisible",true); // auto-hide must not race the assertions or captures
                     QCoreApplication::processEvents();
                     const auto layout=h.window->property("workspace").toMap();
@@ -1283,6 +1283,412 @@ private slots:
         QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTRY_VERIFY(h.view()->hasActiveFocus());
         QTest::keyClick(h.window, Qt::Key_Return); QTRY_VERIFY(named(h.window->contentItem(), "gridNotice")->isVisible()); QTest::qWait(200);
         QVERIFY(h.window->grabWindow().save(".cache/file-grid/notice-light-1180.png"));
+        h.provider->succeed = false;
+    }
+public: // ---- GRID-PREVIEW-01 helpers (not test functions)
+    // Generated folder: one subfolder, six real photos a..f.png and an unsupported notes.txt (rows: Album, a..f, notes).
+    struct CombinedFolder {
+        QTemporaryDir root; QString path;
+        explicit CombinedFolder(QSize edge = QSize(64, 48)) {
+            path = root.filePath("Combined");
+            QDir().mkpath(path + "/Album");
+            const char* names[]{"a.png", "b.png", "c.png", "d.png", "e.png", "f.png"};
+            for (int i = 0; i < 6; ++i) {
+                QImage image(edge, QImage::Format_RGB32); image.fill(QColor::fromHsv(i * 55, 120, 190));
+                for (int x = 0; x < edge.width(); x += 8) for (int y = 0; y < edge.height(); ++y) image.setPixelColor(x, y, Qt::white);
+                image.save(path + "/" + names[i]);
+            }
+            QFile notes(path + "/notes.txt"); if (notes.open(QIODevice::WriteOnly)) notes.write("not a photo");
+        }
+        QString file(const QString& name) const { return path + "/" + name; }
+    };
+    static QRectF paneRect(Harness& h, const QString& id) {
+        const auto m = h.window->property("workspace").toMap().value(id).toMap();
+        return QRectF(m["x"].toDouble(), m["y"].toDouble(), m["width"].toDouble(), m["height"].toDouble());
+    }
+    static QVariantMap split(Harness& h) { return h.window->property("workspace").toMap().value("_split").toMap(); }
+    static QString previewState(Harness& h) { return h.window->property("previewState").toString(); }
+    static QQuickItem* canvasItem(Harness& h) { return h.window->findChild<QQuickItem*>("canvas"); }
+    // Opens `first` in a live harness, switches to the combined view and waits for the listing and the cursor.
+    static bool enterCombined(Harness& h, const CombinedFolder& media, const QString& first = "a.png") {
+        h.window->resize(1180, 780); h.window->requestActivate();
+        h.viewer.open(media.file(first));
+        if (!QTest::qWaitFor([&] { return h.viewer.imageReady(); }, 15000)) return false;
+        h.viewer.trigger("view-combined");
+        return QTest::qWaitFor([&] { return h.window->property("combinedMode").toBool() && h.view()->hasActiveFocus()
+            && !h.fileGrid.loading() && h.fileGrid.count() == 8 && h.selected() == h.fileGrid.rowOf(media.file(first)); }, 10000);
+    }
+    // Counts decodes actually issued: rising edges of the controller's loading flag.
+    struct DecodeCounter {
+        int count = 0; bool last = false; QMetaObject::Connection connection;
+        explicit DecodeCounter(ViewerController& viewer) : last(viewer.loading()) {
+            connection = QObject::connect(&viewer, &ViewerController::stateChanged, [this, &viewer] { if (viewer.loading() && !last) ++count; last = viewer.loading(); });
+        }
+        ~DecodeCounter() { QObject::disconnect(connection); }
+    };
+private slots:
+    void combinedModesSwitchByCommandAndPointer() {
+        CombinedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window);
+        QStringList ids; for (const auto& row : h.viewer.commands()) ids << row.toMap()["id"].toString();
+        for (const char* id : {"view-preview", "view-grid", "view-combined", "combined-orientation"}) QVERIFY2(ids.contains(id), id);
+        QCOMPARE(h.viewer.bindingFor("view-combined"), QString("Ctrl+Shift+G"));
+        QVERIFY(h.viewer.bindingFor("view-preview").isEmpty() && h.viewer.bindingFor("combined-orientation").isEmpty());
+        QVERIFY(enterCombined(h, media));
+        auto* canvas = canvasItem(h); QVERIFY(canvas);
+        QCOMPARE(h.layout.contentMode(), QString("combined")); QVERIFY(!h.window->property("gridMode").toBool());
+        QVERIFY(h.grid()->isVisible() && canvas->isVisible());
+        const QRectF grid = paneRect(h, "grid"), preview = paneRect(h, "preview");
+        QVERIFY(grid.width() > 280 && preview.width() > 240); QVERIFY(grid.right() <= preview.left() + 0.5); // side by side, grid leading
+        QVERIFY(!h.window->findChild<QQuickItem*>("filmstrip")->isVisible());
+        // Commands
+        h.viewer.trigger("view-grid"); QTRY_VERIFY(h.window->property("gridMode").toBool()); QTRY_VERIFY(!canvas->isVisible());
+        QCOMPARE(h.layout.contentMode(), QString("grid"));
+        h.viewer.trigger("view-preview"); QTRY_VERIFY(!h.grid()->isVisible()); QVERIFY(canvas->isVisible());
+        QTRY_COMPARE(h.fileGrid.count(), 0); // preview-only deactivates the grid model
+        QTRY_VERIFY(canvas->hasActiveFocus());
+        // The grid toggle keeps grid-only versus preview-only, including from the combined view.
+        h.viewer.trigger("view-combined"); QTRY_VERIFY(h.window->property("combinedMode").toBool());
+        h.viewer.trigger("grid"); QTRY_VERIFY(h.window->property("gridMode").toBool());
+        h.viewer.trigger("grid"); QTRY_COMPARE(h.layout.contentMode(), QString("preview"));
+        QTest::keyClick(h.window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier);
+        QTRY_COMPARE(h.layout.contentMode(), QString("combined"));
+        // Pointer: the wide segmented control, then the compact menu.
+        auto* segments = named(h.window->contentItem(), "contentModeSegments"); QVERIFY(segments); QTRY_VERIFY(segments->isVisible());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(named(segments, "contentMode-grid")));
+        QTRY_COMPARE(h.layout.contentMode(), QString("grid"));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(named(segments, "contentMode-combined")));
+        QTRY_COMPARE(h.layout.contentMode(), QString("combined"));
+        QVERIFY(named(segments, "contentMode-combined")->property("selected").toBool());
+        h.window->resize(540, 360);
+        auto* menuButton = named(h.window->contentItem(), "contentModeMenu"); QVERIFY(menuButton);
+        QTRY_VERIFY(menuButton->isVisible()); QTRY_VERIFY(!segments->isVisible());
+        QCOMPARE(menuButton->property("text").toString(), QString("Both"));
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(menuButton));
+        QQuickItem* item = nullptr;
+        QTRY_VERIFY((item = h.window->findChild<QQuickItem*>("contentModeItem-preview")) && item->isVisible());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(item));
+        QTRY_COMPARE(h.layout.contentMode(), QString("preview"));
+        QTRY_COMPARE(menuButton->property("text").toString(), QString("Photo"));
+    }
+    void combinedShortcutYieldsToSavedBinding() {
+        {   ViewerController fresh; QCOMPARE(fresh.bindingFor("view-combined"), QString("Ctrl+Shift+G")); }
+        // A user who already put Ctrl+Shift+G on another command keeps it; the new command starts unassigned.
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s) { s["bindings"] = QJsonObject{{"rotate", "Ctrl+Shift+G"}}; }).ok());
+        ViewerController saved;
+        QCOMPARE(saved.bindingFor("rotate"), QString("Ctrl+Shift+G")); QVERIFY(saved.bindingFor("view-combined").isEmpty());
+        QVERIFY(!saved.setBinding("view-combined", "Ctrl+Shift+G")); // conflicts are refused, not silently shared
+    }
+    void cursorMoveUpdatesPreviewAfterDebounceAndNewestWins() {
+        CombinedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media));
+        QObject* debounce = h.window->findChild<QObject*>("previewDebounce"); QVERIFY(debounce);
+        QSignalSpy fires(debounce, SIGNAL(triggered()));
+        DecodeCounter decodes(h.viewer);
+        QCOMPARE(previewState(h), QString(""));
+        QTest::keyClick(h.window, Qt::Key_Right); QCOMPARE(h.selected(), h.fileGrid.rowOf(media.file("b.png")));
+        QTest::qWait(60);
+        QVERIFY2(h.viewer.filePath().endsWith("a.png"), "the preview must wait for the debounce");
+        QCOMPARE(previewState(h), QString("loading"));
+        QTRY_VERIFY(h.viewer.filePath().endsWith("b.png") && h.viewer.imageReady());
+        QTRY_COMPARE(previewState(h), QString(""));
+        QVERIFY(h.view()->hasActiveFocus()); QVERIFY(h.window->property("combinedMode").toBool()); // the grid keeps focus
+        QCOMPARE(fires.count(), 1); QCOMPARE(decodes.count, 1);
+        // A held key: four steps 30 ms apart issue one decode, for the item the cursor stops on.
+        fires.clear(); decodes.count = 0;
+        for (int i = 0; i < 4; ++i) { QTest::keyClick(h.window, Qt::Key_Right); QTest::qWait(30); }
+        QCOMPARE(h.selected(), h.fileGrid.rowOf(media.file("f.png")));
+        QTRY_VERIFY(h.viewer.filePath().endsWith("f.png") && h.viewer.imageReady());
+        QTest::qWait(200);
+        qInfo() << "rapid moves: debounce fires" << fires.count() << "decodes" << decodes.count;
+        QVERIFY(fires.count() <= 2); QVERIFY(decodes.count >= 1 && decodes.count <= 2);
+        QVERIFY(h.viewer.filePath().endsWith("f.png"));
+        // The opened photo is the preview's ("Viewing"); the cursor and the selection are separate keys.
+        QCOMPARE(QFileInfo(h.fileGrid.currentImage()).fileName(), QString("f.png"));
+        // Enter on a photo moves keys to the preview and stays combined; Tab/F6 move between the panes.
+        auto* canvas = canvasItem(h);
+        QTest::keyClick(h.window, Qt::Key_Return); QTRY_VERIFY(canvas->hasActiveFocus());
+        QVERIFY(h.window->property("combinedMode").toBool()); QCOMPARE(h.window->property("focusedPane").toString(), QString("preview"));
+        auto* ring = named(h.window->contentItem(), "paneFocusRing-preview"); QVERIFY(ring); QTRY_VERIFY(ring->isVisible());
+        auto* handle = named(h.window->contentItem(), "contentSplitHandle"); QVERIFY(handle);
+        QTest::keyClick(h.window, Qt::Key_Tab); QTRY_VERIFY(handle->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Tab); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QVERIFY(named(h.window->contentItem(), "paneFocusRing-grid")->isVisible()); QVERIFY(!ring->isVisible());
+        QTest::keyClick(h.window, Qt::Key_Tab); QTRY_VERIFY(canvas->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_F6); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_F6); QTRY_VERIFY(canvas->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(h.view()->hasActiveFocus()); // Escape returns to the grid
+        QVERIFY(h.window->property("combinedMode").toBool());
+        // Arrow keys on the preview step through photos; the preview then shows the viewer's photo, not the cursor.
+        QTest::keyClick(h.window, Qt::Key_F6); QTRY_VERIFY(canvas->hasActiveFocus());
+        const int cursor = h.selected();
+        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(h.viewer.filePath().endsWith("e.png") && h.viewer.imageReady());
+        QCOMPARE(h.selected(), cursor); QTRY_COMPARE(previewState(h), QString(""));
+    }
+    void folderAndUnsupportedCursorShowStatesAndNeverDecode() {
+        CombinedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media, "c.png"));
+        DecodeCounter decodes(h.viewer);
+        auto* panel = named(h.window->contentItem(), "previewState"); QVERIFY(panel); QVERIFY(!panel->isVisible());
+        QTest::keyClick(h.window, Qt::Key_Home); QCOMPARE(h.fileGrid.kindAt(h.selected()), QString("folder"));
+        QTRY_COMPARE(previewState(h), QString("folder")); QTRY_VERIFY(panel->isVisible());
+        QCOMPARE(named(panel, "previewStateTitle")->property("text").toString(), QString("Album"));
+        QVERIFY(named(panel, "previewStateHint")->isVisible());
+        QTest::qWait(250);
+        QCOMPARE(decodes.count, 0); QVERIFY(h.viewer.filePath().endsWith("c.png")); // the last photo is not shown as the folder's
+        QTest::keyClick(h.window, Qt::Key_End); QCOMPARE(h.fileGrid.kindAt(h.selected()), QString("file"));
+        QTRY_COMPARE(previewState(h), QString("unsupported"));
+        QCOMPARE(named(panel, "previewStateTitle")->property("text").toString(), QString("notes.txt"));
+        QCOMPARE(named(panel, "previewExtension")->property("text").toString(), QString("TXT"));
+        QVERIFY(named(panel, "previewStateDetail")->property("text").toString().contains("can't preview"));
+        QTest::qWait(250);
+        QCOMPARE(decodes.count, 0); QVERIFY(!h.viewer.loading());
+        for (const auto& requested : h.provider->requested()) QVERIFY2(!requested.endsWith(".txt"), qPrintable(requested));
+        // Enter on a folder enters it; the combined view stays, with an explicit state for the new cursor.
+        QTest::keyClick(h.window, Qt::Key_Home); QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.file("Album")));
+        QVERIFY(h.window->property("combinedMode").toBool());
+        QTRY_COMPARE(previewState(h), QString("empty"));
+        QTRY_VERIFY(panel->isVisible());
+    }
+    void multiSelectionDoesNotChangePreview() {
+        CombinedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media, "c.png"));
+        DecodeCounter decodes(h.viewer);
+        QTest::keyClick(h.window, Qt::Key_A, Qt::ControlModifier); QCOMPARE(h.fileGrid.selectedCount(), 8);
+        QTest::keyClick(h.window, Qt::Key_Space, Qt::ControlModifier); QCOMPARE(h.fileGrid.selectedCount(), 7);
+        QTest::qWait(250);
+        QCOMPARE(decodes.count, 0); QVERIFY(h.viewer.filePath().endsWith("c.png")); QCOMPARE(previewState(h), QString(""));
+        QTest::keyClick(h.window, Qt::Key_Escape); QCOMPARE(h.fileGrid.selectedCount(), 0); // clears the multi-selection only
+        QTest::qWait(250);
+        QCOMPARE(decodes.count, 0); QVERIFY(h.view()->hasActiveFocus()); QVERIFY(h.window->property("combinedMode").toBool());
+        // Extending the selection moves the cursor, and the cursor (not the selection) drives the preview.
+        QTest::keyClick(h.window, Qt::Key_Right, Qt::ShiftModifier);
+        QTRY_VERIFY(h.viewer.filePath().endsWith("d.png")); QVERIFY(h.fileGrid.selectedCount() >= 1);
+    }
+    void combinedCommandPrecedenceModalTextAndFocus() {
+        CombinedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media, "c.png"));
+        auto* canvas = h.window->findChild<ImageCanvas*>("canvas"); QVERIFY(canvas);
+        // Grid focus: canvas shortcuts do not apply; explicit routes still do.
+        QTest::keyClick(h.window, Qt::Key_R); QTest::qWait(30); QCOMPARE(canvas->rotation(), 0);
+        QVERIFY(QMetaObject::invokeMethod(h.window, "invoke", Q_ARG(QVariant, QVariant("rotate")))); QTRY_COMPARE(canvas->rotation(), 90);
+        // Preview focus: the same key acts on the canvas.
+        QTest::keyClick(h.window, Qt::Key_F6); QTRY_VERIFY(canvas->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_R); QTRY_COMPARE(canvas->rotation(), 180);
+        QTest::keyClick(h.window, Qt::Key_F6); QTRY_VERIFY(h.view()->hasActiveFocus());
+        // A modal wins over the focused pane.
+        const int cursor = h.selected();
+        h.viewer.trigger("settings"); QTRY_VERIFY(h.window->property("modalOpen").toBool());
+        QTest::keyClick(h.window, Qt::Key_Right); QTest::keyClick(h.window, Qt::Key_F6);
+        QTest::keyClick(h.window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier);
+        QCOMPARE(h.selected(), cursor); QCOMPARE(h.layout.contentMode(), QString("combined"));
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+        QTRY_VERIFY(h.view()->hasActiveFocus()); QVERIFY(h.window->property("combinedMode").toBool());
+        QCOMPARE(canvas->rotation(), 180);
+        // Text focus wins too: typing in the address field neither moves the cursor nor switches modes.
+        h.viewer.setTreeVisible(true);
+        auto* list = h.window->findChild<QQuickItem*>("folderList"); QVERIFY(list); QTRY_VERIFY(list->hasActiveFocus()); // treeShown focuses it
+        auto* field = h.window->findChild<QQuickItem*>("folderAddress"); QVERIFY(field); QTRY_VERIFY(field->isVisible());
+        field->forceActiveFocus(); QTRY_VERIFY(field->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_G, Qt::ControlModifier | Qt::ShiftModifier); QTest::keyClick(h.window, Qt::Key_F6);
+        QTest::keyClick(h.window, Qt::Key_R);
+        QCOMPARE(h.layout.contentMode(), QString("combined")); QCOMPARE(h.selected(), cursor); QCOMPARE(canvas->rotation(), 180);
+        QVERIFY(field->hasActiveFocus());
+    }
+    void splitOrientationDragAndKeyboard() {
+        CombinedFolder media; QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media));
+        auto* handle = named(h.window->contentItem(), "contentSplitHandle"); QVERIFY(handle); QTRY_VERIFY(handle->isVisible());
+        QCOMPARE(split(h)["orientation"].toString(), QString("horizontal"));
+        QVERIFY(qAbs(paneRect(h, "grid").width() - paneRect(h, "preview").width()) <= 1);
+        // Vertical: stacked, grid on top.
+        h.viewer.trigger("combined-orientation");
+        QTRY_COMPARE(h.layout.centerSplit()["orientation"].toString(), QString("vertical"));
+        QTRY_COMPARE(split(h)["orientation"].toString(), QString("vertical"));
+        QVERIFY(paneRect(h, "grid").bottom() <= paneRect(h, "preview").top() + 0.5);
+        QCOMPARE(paneRect(h, "grid").width(), paneRect(h, "preview").width());
+        h.viewer.trigger("combined-orientation"); QTRY_COMPARE(split(h)["orientation"].toString(), QString("horizontal"));
+        // Drag: the layout changes once, on release, and the ratio is the grid's displayed share.
+        QSignalSpy changes(&h.layout, &PaneLayout::changed);
+        const QPoint origin = centre(handle), target = origin + QPoint(150, 0);
+        QTest::mousePress(h.window, Qt::LeftButton, Qt::NoModifier, origin);
+        QTest::mouseMove(h.window, origin + QPoint(60, 0), 20); QTest::mouseMove(h.window, target, 20);
+        QTRY_VERIFY(paneRect(h, "grid").width() > paneRect(h, "preview").width() + 200);
+        QCOMPARE(changes.count(), 0); QCOMPARE(h.layout.centerSplit()["ratio"].toDouble(), 0.5);
+        QTest::mouseRelease(h.window, Qt::LeftButton, Qt::NoModifier, target);
+        QTRY_COMPARE(changes.count(), 1);
+        const double dragged = h.layout.centerSplit()["ratio"].toDouble();
+        qInfo() << "dragged ratio" << dragged;
+        QVERIFY(dragged > 0.6 && dragged < 0.7);
+        // Keyboard equivalent on the focused handle.
+        handle->forceActiveFocus(Qt::TabFocusReason); QTRY_VERIFY(handle->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Left);
+        QTRY_VERIFY(qAbs(h.layout.centerSplit()["ratio"].toDouble() - (dragged - 0.05)) < 0.01);
+        QCOMPARE(h.selected(), h.fileGrid.rowOf(media.file("a.png"))); QVERIFY(h.viewer.filePath().endsWith("a.png")); // no window shortcut ran
+        QTest::keyClick(h.window, Qt::Key_Home); QTRY_COMPARE(h.layout.centerSplit()["ratio"].toDouble(), 0.5);
+        // The grid's saved edge decides its side; its share stays the same.
+        QVERIFY(h.layout.setCenterRatio(0.35)); QVERIFY(h.layout.move("grid", "right", 0));
+        QTRY_VERIFY(paneRect(h, "grid").left() >= paneRect(h, "preview").right() - 0.5);
+        QVERIFY(qAbs(paneRect(h, "grid").width() / (paneRect(h, "grid").width() + paneRect(h, "preview").width()) - 0.35) < 0.01);
+        QVERIFY(h.layout.move("grid", "center", 1));
+        // Locked: the mode may change, the split may not, and the reason is shown.
+        h.layout.setLocked(true); QTRY_VERIFY(!handle->property("editable").toBool());
+        changes.clear();
+        QTest::mousePress(h.window, Qt::LeftButton, Qt::NoModifier, centre(handle));
+        QTest::mouseMove(h.window, centre(handle) + QPoint(100, 0), 20);
+        QTest::mouseRelease(h.window, Qt::LeftButton, Qt::NoModifier, centre(handle) + QPoint(100, 0));
+        QCOMPARE(h.layout.centerSplit()["ratio"].toDouble(), 0.35);
+        handle->forceActiveFocus(Qt::TabFocusReason); QTest::keyClick(h.window, Qt::Key_Right);
+        QCOMPARE(h.layout.centerSplit()["ratio"].toDouble(), 0.35);
+        auto* notice = named(h.window->contentItem(), "combinedNotice"); QVERIFY(notice);
+        QTRY_VERIFY(notice->isVisible()); QVERIFY(notice->property("text").toString().contains("Unlock"));
+        h.viewer.trigger("combined-orientation"); QCOMPARE(h.layout.centerSplit()["orientation"].toString(), QString("horizontal"));
+        h.viewer.trigger("view-grid"); QTRY_COMPARE(h.layout.contentMode(), QString("grid")); // a view preference, allowed while locked
+        h.layout.setLocked(false);
+    }
+    void folderChangeDiscardsPendingPreview() {
+        QTemporaryDir root; QVERIFY(root.isValid());
+        QDir().mkpath(root.filePath("first")); QDir().mkpath(root.filePath("second"));
+        QImage small(32, 24, QImage::Format_RGB32); small.fill(Qt::darkGreen);
+        QVERIFY(small.save(root.filePath("first/a.png"))); QVERIFY(small.save(root.filePath("second/y.png")));
+        QImage big(6000, 4000, QImage::Format_RGB32); // slow enough to decode that the folder change lands first
+        for (int y = 0; y < big.height(); ++y) { auto* line = reinterpret_cast<QRgb*>(big.scanLine(y)); for (int x = 0; x < big.width(); ++x) line[x] = qRgb(x & 255, y & 255, (x ^ y) & 255); }
+        QVERIFY(big.save(root.filePath("first/big.png"), nullptr, 90));
+        Harness h(true); QVERIFY(h.window); h.window->resize(1180, 780); h.window->requestActivate();
+        h.viewer.open(root.filePath("first/a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.viewer.trigger("view-combined");
+        QTRY_VERIFY(h.view()->hasActiveFocus() && !h.fileGrid.loading() && h.fileGrid.count() == 2);
+        QTRY_COMPARE(h.selected(), 0);
+        bool requested = false, staleShown = false;
+        const auto watch = QObject::connect(&h.viewer, &ViewerController::imageChanged, [&] {
+            if (requested && h.viewer.imageWidth() == 6000 && h.window->property("previewState").toString().isEmpty()) staleShown = true;
+        });
+        QTest::keyClick(h.window, Qt::Key_Right); QCOMPARE(h.fileGrid.pathAt(h.selected()), root.filePath("first/big.png"));
+        QTRY_VERIFY(h.viewer.loading() && h.viewer.filePath().endsWith("big.png"));
+        requested = true;
+        h.viewer.navigateDirectory(root.filePath("second"));
+        QTRY_COMPARE(previewState(h).left(7), QString("loading")); // never the old cursor's photo
+        QTRY_COMPARE_WITH_TIMEOUT(gridKey(h.fileGrid.directory()), gridKey(root.filePath("second")), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading() && h.viewer.imageReady(), 15000);
+        QTRY_COMPARE(previewState(h), QString(""));
+        QTest::qWait(300);
+        QObject::disconnect(watch);
+        QVERIFY(h.viewer.filePath().endsWith("y.png")); QCOMPARE(h.viewer.imageWidth(), 32);
+        QVERIFY2(!staleShown, "the superseded decode was presented as the preview");
+    }
+    void restartRestoresContentMode() {
+        {
+            Harness h(false, 11); QVERIFY(h.window);
+            QCOMPARE(h.window->property("combinedMode").toBool(), false);
+            h.viewer.trigger("view-combined"); QTRY_VERIFY(h.window->property("combinedMode").toBool());
+            h.viewer.trigger("combined-orientation"); QTRY_COMPARE(h.layout.centerSplit()["orientation"].toString(), QString("vertical"));
+            QVERIFY(h.layout.setCenterRatio(0.4));
+        }
+        {   // Restart: combined, vertical, 0.4; with no folder, the grid's no-folder state beside an empty preview.
+            Harness h(false, 11); QVERIFY(h.window); h.window->resize(1180, 780);
+            QCOMPARE(h.layout.contentMode(), QString("combined"));
+            QTRY_VERIFY(h.window->property("combinedMode").toBool()); QVERIFY(!h.window->property("gridMode").toBool());
+            QTRY_COMPARE(split(h)["orientation"].toString(), QString("vertical"));
+            QTRY_VERIFY(h.grid()->isVisible());
+            auto* state = named(h.window->contentItem(), "gridState"); QVERIFY(state);
+            QTRY_COMPARE(state->property("stateName").toString(), QString("none"));
+            QCOMPARE(previewState(h), QString("no-folder"));
+            QVERIFY(!named(h.window->contentItem(), "statusToast")->isVisible());
+            QVERIFY(qAbs(paneRect(h, "grid").height() / (paneRect(h, "grid").height() + paneRect(h, "preview").height()) - 0.4) < 0.01);
+            h.viewer.trigger("view-grid");
+        }
+        {   Harness h(false, 11); QVERIFY(h.window); QTRY_VERIFY(h.window->property("gridMode").toBool()); }
+        {   Harness other(false, 12); QVERIFY(other.window); QCOMPARE(other.layout.contentMode(), QString("preview")); }
+    }
+    void compactRecoveryDoesNotPersist() {
+        Harness h(false, 13); QVERIFY(h.window); h.window->resize(1180, 780); h.fill(30, 0); h.window->requestActivate();
+        h.viewer.trigger("view-combined"); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTRY_COMPARE(split(h)["fallback"].toString(), QString(""));
+        QVERIFY(h.layout.setCenterOrientation("vertical"));
+        QJsonObject before; QVERIFY(glancelot::readSettings(before).ok());
+        QSignalSpy changes(&h.layout, &PaneLayout::changed);
+        // The minimum window cannot stack the panes: shown side by side instead, saved as vertical.
+        h.window->resize(540, 360);
+        QTRY_COMPARE(split(h)["fallback"].toString(), QString("reoriented"));
+        QCOMPARE(split(h)["orientation"].toString(), QString("horizontal"));
+        auto* notice = named(h.window->contentItem(), "combinedNotice"); QVERIFY(notice); QTRY_VERIFY(notice->isVisible());
+        QVERIFY(!named(h.window->contentItem(), "contentSplitHandle")->property("editable").toBool());
+        // A docked vertical toolbar leaves room for one pane only: the focused one, with a notice, and Tab switches.
+        QVERIFY(h.layout.move("topbar", "left", 0)); changes.clear();
+        QTRY_COMPARE(split(h)["fallback"].toString(), QString("single"));
+        QTRY_VERIFY(h.grid()->isVisible()); QVERIFY(!canvasItem(h)->isVisible());
+        QTRY_VERIFY(notice->isVisible()); QVERIFY(notice->property("text").toString().contains("grid"));
+        QTRY_VERIFY(h.view()->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Tab);
+        QTRY_VERIFY(canvasItem(h)->isVisible() && canvasItem(h)->hasActiveFocus()); QTRY_VERIFY(!h.grid()->isVisible());
+        QTRY_VERIFY(notice->property("text").toString().contains("photo"));
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            QDir().mkpath(".cache/grid-preview"); QTest::qWait(150);
+            QVERIFY(h.window->grabWindow().save(".cache/grid-preview/fallback-single-preview-540.png"));
+        }
+        QTest::keyClick(h.window, Qt::Key_Tab); QTRY_VERIFY(h.grid()->isVisible()); QTRY_VERIFY(h.view()->hasActiveFocus());
+        QCOMPARE(changes.count(), 0); // display fallbacks never write the layout
+        QCOMPARE(h.layout.centerSplit()["orientation"].toString(), QString("vertical")); QCOMPARE(h.layout.contentMode(), QString("combined"));
+        QJsonObject after; QVERIFY(glancelot::readSettings(after).ok());
+        auto centerOf = [](const QJsonObject& s) { return s["layouts"].toObject()["13"].toObject()["center"].toObject(); };
+        QCOMPARE(centerOf(after), centerOf(before));
+        h.layout.reset(); h.window->resize(1180, 780);
+    }
+    void fitAndPhysicalZoomSurviveSplitResize() {
+        CombinedFolder media(QSize(1600, 1200)); QVERIFY(media.root.isValid());
+        Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media));
+        auto* canvas = h.window->findChild<ImageCanvas*>("canvas"); QVERIFY(canvas);
+        DecodeCounter decodes(h.viewer);
+        QCOMPARE(canvas->fitMode(), QString("shrink"));
+        const qreal width = canvas->width(), fitted = canvas->zoom();
+        QVERIFY(h.layout.setCenterRatio(0.3));
+        QTRY_VERIFY(canvas->width() > width + 100);
+        QCOMPARE(canvas->fitMode(), QString("shrink")); QVERIFY(canvas->zoom() > fitted); // fit follows the new size
+        canvas->actualSize(); const qreal physical = canvas->zoom();
+        QVERIFY(h.layout.setCenterRatio(0.6)); QTRY_VERIFY(canvas->width() < width);
+        QCOMPARE(canvas->fitMode(), QString("actual")); QCOMPARE(canvas->zoom(), physical);
+        canvas->zoomAt(1.25, 10, 10); const qreal custom = canvas->zoom(); QVERIFY(canvas->fitMode().isEmpty());
+        QVERIFY(h.layout.setCenterOrientation("vertical")); QTRY_COMPARE(split(h)["orientation"].toString(), QString("vertical"));
+        QCOMPARE(canvas->zoom(), custom); // a zoom the user chose is kept
+        QTest::qWait(100); QCOMPARE(decodes.count, 0); // resizing never decodes
+    }
+    void reviewCapturesCombined() {
+        if (!qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) QSKIP("Set GLANCELOT_REVIEW_CAPTURE to write review captures");
+        CombinedFolder media(QSize(960, 640)); QVERIFY(media.root.isValid());
+        for (int i = 0; i < 14; ++i) { QImage image(48, 32, QImage::Format_RGB32); image.fill(Qt::gray); image.save(media.file(QString("IMG_%1.png").arg(1000 + i))); }
+        Harness h(true); QVERIFY(h.window); h.provider->succeed = true; h.window->resize(1180, 780); h.window->requestActivate();
+        h.viewer.open(media.file("c.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.viewer.trigger("view-combined"); QTRY_VERIFY(h.view()->hasActiveFocus() && h.fileGrid.count() == 22);
+        QDir().mkpath(".cache/grid-preview");
+        const auto shot = [&](const QString& name) { QTest::qWait(250); return h.window->grabWindow().save(".cache/grid-preview/" + name + ".png"); };
+        for (const QString orientation : {"horizontal", "vertical"}) for (const QSize size : {QSize(1180, 780), QSize(540, 360)})
+            for (const QString mode : {"dark", "light"}) {
+                h.layout.setCenterOrientation(orientation); h.window->resize(size); h.theme.setMode(mode);
+                h.viewer.setTreeVisible(size.width() > 1000); h.viewer.setTreePinned(true);
+                QMetaObject::invokeMethod(h.grid(), "focusGrid");
+                QVERIFY(shot(QString("combined-%1-%2-%3").arg(orientation, mode).arg(size.width())));
+            }
+        h.layout.setCenterOrientation("horizontal"); h.window->resize(1180, 780); h.viewer.setTreeVisible(false);
+        for (const QString mode : {"dark", "light"}) {
+            h.theme.setMode(mode);
+            QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTRY_VERIFY(h.view()->hasActiveFocus());
+            QTest::keyClick(h.window, Qt::Key_Home); QTRY_COMPARE(previewState(h), QString("folder")); QVERIFY(shot("state-folder-" + mode));
+            QTest::keyClick(h.window, Qt::Key_End); QTRY_COMPARE(previewState(h), QString("unsupported")); QVERIFY(shot("state-unsupported-" + mode));
+            h.fileGrid.clearSelection();
+            QTest::keyClick(h.window, Qt::Key_Home); QTest::keyClick(h.window, Qt::Key_Right); QTest::keyClick(h.window, Qt::Key_Right);
+            QTRY_VERIFY(h.viewer.imageReady() && h.viewer.filePath().endsWith("b.png"));
+            auto* handle = named(h.window->contentItem(), "contentSplitHandle"); handle->forceActiveFocus(Qt::TabFocusReason);
+            QVERIFY(shot("handle-focus-" + mode));
+        }
+        h.window->resize(760, 520); QVERIFY(shot("combined-light-760"));
+        h.window->resize(759, 520); QVERIFY(shot("combined-light-759"));
+        h.window->resize(540, 360);
+        auto* menuButton = named(h.window->contentItem(), "contentModeMenu");
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(menuButton)); QVERIFY(shot("mode-menu-light-540"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        h.theme.setMode("dark"); QMetaObject::invokeMethod(h.grid(), "focusGrid"); QTest::keyClick(h.window, Qt::Key_Home);
+        QVERIFY(shot("state-folder-dark-540"));
         h.provider->succeed = false;
     }
 private:
