@@ -1,4 +1,5 @@
 #include "glancelot/directory_entry_model.hpp"
+#include "glancelot/navigation.hpp"
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -30,6 +31,19 @@ private slots:
         QCOMPARE(model.count(), 0); QCOMPARE(model.selectedCount(), 0); QCOMPARE(model.cursorRow(), -1);
         QVERIFY(model.thumbnailSource(0, 128).isEmpty());
         QVERIFY(!model.loading());
+    }
+    void shuffleSeedMatchesTraversalOrder() {
+        QTemporaryDir dir; for (int i = 0; i < 12; ++i) touch(dir.filePath(QString("p%1.png").arg(i)));
+        touch(dir.filePath("notes.txt"));
+        glancelot::SortSpec spec; spec.key = glancelot::SortKey::Shuffle; spec.seed = 987654321;
+        QStringList expected;
+        for (const auto& path : glancelot::sortedImageFiles(dir.path().toStdWString(), spec))
+            expected << QString::fromStdWString(path.filename().wstring());
+        DirectoryEntryModel model; model.setActive(true); model.setSort("shuffle", false, spec.seed); model.setDirectory(dir.path());
+        QVERIFY(settle(model));
+        QStringList images;
+        for (int i = 0; i < model.count(); ++i) if (model.kindAt(i) == "image") images << model.data(model.index(i), DirectoryEntryModel::NameRole).toString();
+        QCOMPARE(images, expected);
     }
     void inactiveByDefaultDoesNoWork() {
         QTemporaryDir dir; touch(dir.filePath("a.png"));

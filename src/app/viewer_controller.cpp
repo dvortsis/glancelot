@@ -661,6 +661,7 @@ const NavigationSnapshot& ViewerController::snapshot() const{return d->nav.snaps
 void ViewerController::setFilmstripVisible(bool value){if(d->filmstrip==value)return;d->filmstrip=value;if(!d->save({"filmstrip"}))d->status="Filmstrip setting changed; settings could not be saved.";emit stateChanged();}
 QString ViewerController::sortKey() const{return sortKeyName(d->sortSpec.key);}
 bool ViewerController::sortDescending() const{return d->sortSpec.descending;}
+quint64 ViewerController::sortSeed() const{return d->sortSpec.seed;}
 void ViewerController::setSortKey(const QString& key){
     auto next=d->sortSpec;
     if(key=="name")next.key=glancelot::SortKey::Name;

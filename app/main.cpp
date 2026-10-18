@@ -99,7 +99,7 @@ int main(int argc,char** argv) {
             k=k.toCaseFolded();
 #endif
             return k;};
-        fileGrid.setSort(viewer.sortKey(),viewer.sortDescending());
+        fileGrid.setSort(viewer.sortKey(),viewer.sortDescending(),viewer.sortSeed());
         if(key(viewer.directory())!=key(fileGrid.directory()))fileGrid.setDirectory(viewer.directory());
         fileGrid.setCurrentImage(viewer.filePath());
     };

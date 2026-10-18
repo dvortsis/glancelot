@@ -40,8 +40,9 @@ public:
     Q_INVOKABLE void refresh();
     // Inactive: cancel work and release the listing (grid hidden). Reactivating relists.
     Q_INVOKABLE void setActive(bool active);
-    // "name" | "modified" | "size" | "shuffle"; folders stay first in natural order regardless.
-    Q_INVOKABLE void setSort(const QString& key, bool descending);
+    // "name" | "modified" | "size" | "shuffle"; folders stay first in natural order regardless. `seed` is the
+    // controller's shuffle seed (ViewerController::sortSeed) so the grid's shuffle matches traversal.
+    Q_INVOKABLE void setSort(const QString& key, bool descending, quint64 seed = 1);
     Q_INVOKABLE void setIncludeHidden(bool include);
 
     // Selection by row (rows are only addresses for the current listing).

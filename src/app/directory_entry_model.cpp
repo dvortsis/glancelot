@@ -288,9 +288,9 @@ void DirectoryEntryModel::setActive(bool active) {
     d->setLoading(false);
     d->release(); // keys (selection/cursor) are kept and re-filtered against the next listing
 }
-void DirectoryEntryModel::setSort(const QString& key, bool descending) {
+void DirectoryEntryModel::setSort(const QString& key, bool descending, quint64 seed) {
     auto next = sortSpec(key, descending);
-    next.seed = d->sort.seed;
+    next.seed = seed;
     if (next == d->sort) return;
     d->sort = next;
     d->request();

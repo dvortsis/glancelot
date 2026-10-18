@@ -101,7 +101,7 @@ struct Harness {
         if (live) {
             QObject::connect(&viewer, &ViewerController::stateChanged, &model, [&] { model.sync(viewer.snapshot()); });
             QObject::connect(&viewer, &ViewerController::stateChanged, &fileGrid, [&] {
-                fileGrid.setSort(viewer.sortKey(), viewer.sortDescending());
+                fileGrid.setSort(viewer.sortKey(), viewer.sortDescending(), viewer.sortSeed());
                 if (gridKey(viewer.directory()) != gridKey(fileGrid.directory())) fileGrid.setDirectory(viewer.directory());
                 fileGrid.setCurrentImage(viewer.filePath());
             });
