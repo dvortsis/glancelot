@@ -80,8 +80,9 @@ tasks:
     milestone: M2.1
     priority: 9
     owner: lead
-    state: integration
-    evidence: docs/verification/WINDOW-SESSIONS.md; independent review approved; worktree 7/7 CTest and five process checks passed; integrated checks pending
+    state: done
+    commit: b38051f
+    evidence: docs/verification/WINDOW-SESSIONS.md; independent review approved; integrated 85336a4 build.ps1 -Test -Package 7/7; b38051f process checks 5/5; portable native cleanPATH open/resume passed; Windows scope
     memory_action: act_mvcxj3ch_d14c97220e5d
     depends: [ALPHA-PACKAGE]
     outcome: Stable numbered window-opening-order slots and coordinated per-slot persistence
@@ -95,8 +96,9 @@ tasks:
     milestone: M2.1
     priority: 9
     owner: lead
-    state: integration
-    evidence: docs/verification/WINDOW-SESSIONS.md; independent review approved; worktree 7/7 CTest and five process checks passed; integrated checks pending
+    state: done
+    commit: b38051f
+    evidence: docs/verification/WINDOW-SESSIONS.md; independent review approved; integrated 85336a4 build.ps1 -Test -Package 7/7; b38051f process checks 5/5; portable native cleanPATH open/resume passed; Windows scope
     memory_action: act_mvd22gx9_d31a0cef7c3c
     depends: [WINDOW-SLOTS-01]
     outcome: Each window restores its own last folder and image after complete application exit
@@ -107,7 +109,7 @@ tasks:
     handoff: Commit, actual test evidence, platform coverage and remaining limitations
 next_milestone: M2.1
 priority_order: [TREE-01, WINDOW-SLOTS-01, WINDOW-RESUME-01]
-priority_note: Finish the already-started BROWSE-01 integration; prioritize the tree before additional M3 features
+priority_note: M2.1 tree and window-session tasks complete on Windows; remaining M3 browsing and platform qualification follow
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation
   - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)
