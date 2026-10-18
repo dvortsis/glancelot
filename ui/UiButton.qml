@@ -4,7 +4,8 @@ import QtQuick.Layouts
 import Glancelot
 
 // The canonical button. Variants: "quiet" (toolbar and list actions, the default), "primary" (one per decision
-// area) and "outline" (secondary actions in content). The "on" state (checked toggles, or `selected` for an item that
+// area), "outline" (secondary actions in content) and "danger" (a quiet action that fills with the danger role while
+// hovered or pressed, such as closing the window; its glyph then uses the background role). The "on" state (checked toggles, or `selected` for an item that
 // marks the current choice without toggling) shows a selection fill plus a primary marker bar, so it never relies on
 // a faint fill alone: a leading bar on left-aligned items, an underline on centred ones.
 // An icon-only button keeps `text` as its accessible name and tooltip.
@@ -17,7 +18,8 @@ Button {
     property int alignment: Qt.AlignHCenter
     property bool selected: false
     readonly property bool isOn: checked || selected
-    property color foreground: variant === "primary" ? Theme.textOnPrimary : Theme.text
+    readonly property bool dangerFilled: variant === "danger" && (hovered || down)
+    property color foreground: variant === "primary" ? Theme.textOnPrimary : (dangerFilled ? Theme.background : Theme.text)
 
     implicitHeight: Theme.controlHeight
     implicitWidth: iconOnly ? Theme.controlHeight : Math.max(Theme.controlHeight, implicitContentWidth + leftPadding + rightPadding)
@@ -64,6 +66,7 @@ Button {
     background: Rectangle {
         radius: Theme.radiusControl
         color: control.variant === "primary" ? Theme.primary
+               : control.dangerFilled ? Theme.danger
                : (control.down ? Theme.pressed : (control.isOn ? Theme.selection : (control.hovered ? Theme.hover : "transparent")))
         border.width: control.visualFocus ? Theme.focusWidth : (control.variant === "outline" ? Theme.borderWidth : 0)
         border.color: control.visualFocus ? Theme.focusRing : Theme.border
@@ -71,8 +74,9 @@ Button {
         Rectangle { // primary hover/press feedback, drawn in the button's own foreground so it works in every family
             anchors.fill: parent
             radius: parent.radius
-            visible: control.variant === "primary"
-            color: Qt.alpha(Theme.textOnPrimary, control.down ? 0.16 : (control.hovered ? 0.08 : 0))
+            visible: control.variant === "primary" || control.dangerFilled
+            color: control.variant === "primary" ? Qt.alpha(Theme.textOnPrimary, control.down ? 0.16 : (control.hovered ? 0.08 : 0))
+                                                 : Qt.alpha(Theme.background, control.down ? 0.16 : 0)
         }
         Rectangle { // "on" marker; primary keeps >= 3:1 against selection, hover and surface in every catalog variant
             visible: control.isOn && control.variant !== "primary"

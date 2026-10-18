@@ -29,7 +29,7 @@ ApplicationWindow {
         // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
         // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
         const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
-            topbar:state.topbar.visible, statusbar:state.statusbar.visible,
+            topbar:state.topbar.visible||frameless, statusbar:state.statusbar.visible,
             filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
             preview:!gridMode,grid:gridMode}
         const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
@@ -237,6 +237,15 @@ ApplicationWindow {
         font.features: { "tnum": 1 }
         verticalAlignment: Text.AlignVCenter
     }
+    // Window controls for the application-drawn title bar (frameless or full screen). Glyphs follow the active state
+    // like a native caption: text when the window is active, muted when it is not.
+    component WindowControl: UiButton {
+        iconOnly: true
+        foreground: dangerFilled ? Theme.background : (app.active ? Theme.text : Theme.muted)
+    }
+    // The application owns the title bar when there is no system one: frameless mode, or full screen.
+    readonly property bool ownsTitleBar: frameless || visibility === Window.FullScreen
+    function toggleMaximized() { if (visibility === Window.Maximized) showNormal(); else showMaximized() }
     component BarDivider: Rectangle {
         implicitWidth: Theme.borderWidth
         implicitHeight: Theme.iconSize + Theme.gapXs
@@ -415,13 +424,14 @@ ApplicationWindow {
     }
     Rectangle {
         id: topPanel
+        objectName: "topBar"
         x: app.paneRect("topbar").x; y: app.paneRect("topbar").y
         width: app.paneRect("topbar").width; height: app.paneRect("topbar").height
         color: Theme.surface
         visible: width > 0 && height > 0
         HoverHandler { id: topBar }
-        MouseArea { anchors.fill: parent; enabled: app.frameless; onPressed: app.startSystemMove(); onDoubleClicked: app.visibility === Window.Maximized ? app.showNormal() : app.showMaximized() }
         Rectangle { // edge against the canvas when no filmstrip sits below
+            objectName: "topBarEdge"
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
             height: Theme.borderWidth
             color: Theme.border
@@ -434,6 +444,14 @@ ApplicationWindow {
             contentWidth: availableWidth
             contentHeight: barGridtopbar.implicitHeight
             ScrollBar.vertical: UiScrollBar {}
+        Item { // in the frameless mode, empty bar space is the title bar: drag moves, double-click maximizes
+            objectName: "titleBarDragArea"
+            width: topbarScroll.availableWidth
+            height: Math.max(topbarScroll.availableHeight, barGridtopbar.implicitHeight)
+            enabled: app.frameless
+            DragHandler { target: null; onActiveChanged: if (active) app.startSystemMove() }
+            TapHandler { onDoubleTapped: app.toggleMaximized() }
+        }
         GridLayout {
             id: barGridtopbar
             columns: app.paneState("topbar").region === "left" || app.paneState("topbar").region === "right" ? 1 : children.length
@@ -442,6 +460,7 @@ ApplicationWindow {
             x: Theme.gapMd
             y: Math.max(0,(topbarScroll.availableHeight-implicitHeight)/2)
             Image {
+                objectName: "brandMark"
                 Layout.preferredWidth: 24; Layout.preferredHeight: 24
                 Layout.rightMargin: Theme.gapXs
                 source: "qrc:/brand/icons/app/" + (Theme.dark ? "dark" : "light") + "/glancelot-64.png"
@@ -480,12 +499,14 @@ ApplicationWindow {
                 Accessible.name: "File order: " + ({ name: "name", modified: "date modified", size: "size", shuffle: "shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? ", descending" : ", ascending")
                 Accessible.description: "Changes the order of photos inside folders, not the folder order"
             }
-            BarDivider {}
+            BarDivider { objectName: "topBarDivider" }
             Label {
+                objectName: "topBarTitle"
                 text: viewer.fileName || "No photo open"
                 elide: Text.ElideMiddle
                 Layout.fillWidth: true
-                color: viewer.fileName ? Theme.text : Theme.muted
+                // Like a native caption, an inactive window shows its title in the muted role (still >= 4.5:1).
+                color: viewer.fileName && app.active ? Theme.text : Theme.muted
                 font.pixelSize: Theme.textBody
             }
             UiButton { // lock state stays visible outside Settings; activating it unlocks
@@ -504,8 +525,20 @@ ApplicationWindow {
                 onClicked: app.invoke("settings")
             }
             UiButton { text: "Exit full screen"; visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
-            UiButton { text: "Show frame"; visible: app.frameless; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
-            UiButton { text: "Close window"; iconName: "close"; iconOnly: true; visible: app.frameless; onClicked: app.close() }
+            // Window controls must never be pushed out of a narrow bar, so "Show frame" yields its room there; the
+            // command stays in Settings and command search, with its shortcut.
+            UiButton { objectName: "showFrameButton"; text: "Show frame"; visible: app.frameless && (topPanel.width >= 720 || barGridtopbar.columns === 1); tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
+            BarDivider { visible: app.ownsTitleBar }
+            WindowControl { objectName: "minimizeButton"; text: "Minimize"; iconName: "minimize"; visible: app.ownsTitleBar; onClicked: app.showMinimized() }
+            WindowControl {
+                objectName: "maximizeButton"
+                readonly property bool maximized: app.visibility === Window.Maximized
+                text: maximized ? "Restore" : "Maximize"
+                iconName: maximized ? "restore" : "maximize"
+                visible: app.frameless && app.visibility !== Window.FullScreen
+                onClicked: app.toggleMaximized()
+            }
+            WindowControl { objectName: "closeButton"; variant: "danger"; text: "Close window"; iconName: "close"; visible: app.ownsTitleBar; onClicked: app.close() }
         }
         }
     }
