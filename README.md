@@ -2,6 +2,10 @@
 
 A native, local-first photo viewer for Windows and Linux. Built with C++20, Qt Quick and a dedicated GPU canvas. Early alpha: JPEG and PNG, deterministic depth-first folder navigation, fit/pan/zoom, physical-pixel actual size, hold loupe, remappable keyboard commands, palette and preferences, worker-backed filmstrip, lazy folder tree, and independent per-window location resume.
 
+## Try the current build
+
+On Windows, double-click **Test Glancelot.cmd** to build, run tests, package and open this checkout. Afterward, **Open Last Test Build.cmd** reopens that tested build immediately. Test preferences are separate from normal settings. See [testing instructions](docs/TESTING.md) for version details and command-line options.
+
 ## Run
 
 Windows portable package: extract `dist/Glancelot.zip` and run `bin/glancelot.exe`. Keep `glancelot-decoder.exe` beside it. Open with Ctrl+O or drop a JPEG/PNG. Right/Left browse; Page Down/Up jump folders; F fits; 1 shows actual size; R rotates the view; F11 fullscreen; Ctrl+, opens Settings; Ctrl+Shift+P finds a command (Settings → Controls). Drag to pan, Ctrl+wheel zooms, right-button hold shows the loupe. Settings → Controls lists every command: search it, run one with Enter, and remap or clear its shortcut. Settings also hold wheel, folder-boundary, file-order and panel behavior. S cycles file order (name, modified, size, shuffle); Shift+S reverses it. T toggles the filmstrip; Ctrl+B shows the folder tree. Each window remembers its own last successfully opened photo by opening order; explicit file arguments override resume.

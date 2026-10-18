@@ -9,6 +9,17 @@ planning_documents:
   memory_action: act_mvdequdw_19da3d2f17b4
   scope: Proposal inventory and implementation strategy; preserve the eight approved workspace priorities and existing acceptance; promote candidates through requirement/task packets before coding
 tasks:
+  - id: TEST-LAUNCHER-01
+    requirements: [SYS-04, SYS-05]
+    owner: lead
+    state: integration
+    branch: agent/test-launcher
+    worktree: .worktrees/test-launcher
+    build: build-manual-testing
+    memory_action: act_mve9mha5_70b627fc45b4
+    outcome: Double-click native Windows build-test-package launcher and fast last-tested-build shortcut with isolated preferences and commit evidence
+    acceptance: Full tests before default launch; stop on failure; explicit last-build reuse; version and executable-hash record; independent review and integrated checks
+    evidence: docs/verification/TEST-LAUNCHER.md
   - id: PATH-BAR-01
     requirements: [UX-13, UX-03, IN-01, SYS-02]
     milestone: M3
@@ -110,7 +121,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: review
+    state: integration
     depends: [REVIEW-ALL-01]
     branch: agent/titlebar-finish
     worktree: .worktrees/titlebar-finish

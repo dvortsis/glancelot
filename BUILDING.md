@@ -4,6 +4,8 @@ Baseline: C++20, Qt 6.8.3 (Core, Gui, Quick, QuickControls2, Concurrent, Test an
 
 ## Windows
 
+For routine manual testing after setup, double-click **Test Glancelot.cmd**. It runs the build/test/package workflow below and opens the result with isolated test preferences. **Open Last Test Build.cmd** skips rebuilding. See [docs/TESTING.md](docs/TESTING.md).
+
 Install Visual Studio 2022 C++ Build Tools (MSVC x64 and Windows SDK). The implementation environment uses an existing installation. All additional dependencies are workspace-local:
 
 ```powershell
