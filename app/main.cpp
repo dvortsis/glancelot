@@ -37,6 +37,7 @@ int main(int argc,char** argv) {
     parser.addOption({"report","Write local JSON startup/render evidence before timed exit.","path"});
     parser.addOption({"theme","Select a built-in family (saved preference).","id"});
     parser.addOption({"theme-mode","Select system, dark, or light (saved preference).","mode"});
+    parser.addOption({"show-grid","Open the folder grid at startup (test automation)."});
     parser.addOption({"show-settings","Open settings at startup (test automation)."});
     parser.addOption({"show-themes","Open the theme picker at startup (test automation)."});
     parser.addOption({"reset-settings","Set a damaged or incompatible settings.json aside (renamed, never deleted) and start with defaults."});
@@ -89,6 +90,7 @@ int main(int argc,char** argv) {
     if(engine.rootObjects().isEmpty())return 2;
     if(parser.isSet("show-themes"))QTimer::singleShot(100,engine.rootObjects().first(),[&]{QMetaObject::invokeMethod(engine.rootObjects().first(),"openThemes");});
     if(parser.isSet("show-settings"))QTimer::singleShot(100,&viewer,[&]{viewer.trigger("settings");});
+    if(parser.isSet("show-grid"))QTimer::singleShot(100,&viewer,[&]{viewer.trigger("grid");});
     auto* window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
     if(window&&parser.isSet("window-size")) { const auto dimensions=parser.value("window-size").split('x'); if(dimensions.size()==2)window->resize(qMax(540,dimensions[0].toInt()),qMax(360,dimensions[1].toInt())); }
     qint64 firstImage=-1,firstFrame=-1; int frames=0;

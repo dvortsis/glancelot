@@ -126,6 +126,7 @@ private slots:
     void misbehavingWorkersFailTheJobOnly();
     void shutdownLeavesNoProcesses();
     void filmstripModelKeepsRowsWhileStepping();
+    void sameCountReplacementAndReorderKeepListing();
     void thumbnailIdRoundTripsAwkwardPaths();
     void providerDeliversAndCancels();
 };
@@ -371,6 +372,29 @@ void ThumbnailTests::shutdownLeavesNoProcesses() {
     QVERIFY(service.findChildren<QProcess*>().isEmpty());
     QCOMPARE(service.pending(), 0); QCOMPARE(service.active(), 0);
     // The temporary media can now be removed on Windows without a lingering worker handle.
+}
+
+void ThumbnailTests::sameCountReplacementAndReorderKeepListing() {
+    FilmstripModel model;
+    glancelot::NavigationSnapshot snapshot;
+    snapshot.directory="photos";
+    snapshot.files={"photos/a.png","photos/b.png","photos/c.png"};
+    snapshot.current=snapshot.files[1];
+    model.sync(snapshot);
+    QSignalSpy reset(&model,&QAbstractItemModel::modelReset);
+    QSignalSpy count(&model,&FilmstripModel::countChanged);
+    snapshot.files[0]="photos/replaced.png";
+    model.sync(snapshot);
+    QCOMPARE(model.count(),3); QCOMPARE(model.pathAt(0),QString("photos/replaced.png"));
+    QCOMPARE(model.currentRow(),1); QCOMPARE(reset.count(),1); QCOMPARE(count.count(),0);
+    std::swap(snapshot.files[0],snapshot.files[1]);
+    model.sync(snapshot);
+    QCOMPARE(model.count(),3); QCOMPARE(model.currentRow(),0); QCOMPARE(reset.count(),2);
+    QCOMPARE(model.pathAt(1),QString("photos/replaced.png"));
+    model.sync(snapshot); QCOMPARE(reset.count(),2);
+    snapshot.files={"photos/d.png","photos/e.png","photos/f.png"};
+    model.sync(snapshot); QCOMPARE(model.count(),3); QCOMPARE(model.currentRow(),-1);
+    QCOMPARE(model.pathAt(2),QString("photos/f.png"));
 }
 
 void ThumbnailTests::filmstripModelKeepsRowsWhileStepping() {

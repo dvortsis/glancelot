@@ -107,8 +107,23 @@ tasks:
     acceptance: Persist successful locations during browsing and flush on close/exit; restore slots as windows open; explicit files override resume; missing/empty/inaccessible sources do not clobber saved slots
     verification: Distinct locations in multiple windows across full restart, unopened-slot retention, sort changes, deleted paths, disconnected source and explicit shell-open override; bindings/themes preserved
     handoff: Commit, actual test evidence, platform coverage and remaining limitations
-next_milestone: M2.1
-priority_order: [TREE-01, WINDOW-SLOTS-01, WINDOW-RESUME-01]
+  - id: GRID-01
+    requirements: [IN-02, UX-02, PERF-05, SYS-02]
+    milestone: M3
+    priority: 10
+    owner: grid-ui
+    state: implementing
+    memory_action: act_mvd2jba0_ebb2f6d14794
+    base_commit: a10eb08
+    depends: [BROWSE-01, TREE-01, WINDOW-RESUME-01]
+    outcome: Virtualized folder grid with keyboard cursor and explicit photo activation
+    files: [ui/PhotoGrid.qml, ui/Main.qml, tests/grid_ui_tests.cpp]
+    interfaces: Existing filmstrip model and thumbnail provider; remappable grid command emits viewCommand; transient QML grid mode; shared header APIs unchanged
+    acceptance: Bounded delegates and thumbnail requests; hidden-grid cancellation; keyboard selection distinct from opened image; Enter/double-click activation; grid/canvas/modal command precedence; current item reveal; responsive dark/light UI
+    verification: 10000-row virtualization, empty/error states, stale/reset listing, keyboard and modal behavior, compact/wide screenshots, independent review and integrated build tests
+    handoff: Commit, actual test output, platform scope and remaining performance limitations
+next_milestone: M3
+priority_order: [GRID-01]
 priority_note: M2.1 tree and window-session tasks complete on Windows; remaining M3 browsing and platform qualification follow
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation

@@ -47,7 +47,8 @@ void FilmstripModel::sync(const glancelot::NavigationSnapshot& snapshot) {
     // stepping through a 10,000-image folder from rebuilding the model for every image.
     if (same) {
         for (std::size_t i = 0; i < snapshot.files.size() && same; ++i) same = displayPath(snapshot.files[i]) == paths_.at(int(i));
-    } else {
+    }
+    if (!same) {
         incoming.reserve(int(snapshot.files.size()));
         for (const auto& file : snapshot.files) incoming.append(displayPath(file));
     }
