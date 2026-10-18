@@ -10,7 +10,7 @@ Independent Bugbot-style review found and verified fixes for early address cance
 - Independent Windows `7067365`: 8/8 passed, 69.93s; native editing test 3/3 in 1.044s; controller tests 3/3 in 1.008s. Final `e0bca53` changes only optional screenshot export.
 - Final Linux generated core navigation tests passed. Controller exact-directory/error/cancellation/persistence/race regression: 3/3 in 820ms. Native-QML keyboard/clipboard regression: 3/3 in 959ms using offscreen software scenegraph. This verifies interaction logic, not GPU output; QRhi warnings are expected in that backend.
 - Independent native compact/wide dark/light screenshots reviewed: address field and Copy control fit; no blocking path-bar visual defect.
-- Integrated main checks are running; task remains integration until their evidence is recorded.
+- Integrated main checks passed 8/8 in 60.04s using scripts/build.ps1 -BuildDir build -Test. Task is done after independent review and integrated checks.
 
 Tests cover Unicode/spaces, empty and image folders, invalid/missing/file targets, no navigation merely on paste, exact folder scope, stale visits, first-signal coherence, early image-open cancellation/failure, previous-folder races, Escape, copy and text command precedence. Existing natural ordering and folder traversal tests remain green.
 

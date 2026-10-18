@@ -14,7 +14,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: done
     depends: [TREE-START-01]
     branch: agent/path-bar
     worktree: .worktrees/path-bar
@@ -28,8 +28,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: ready
+    state: implementing
     depends: [TREE-START-01, GRID-01, WINDOW-SLOTS-01]
+    branch: agent/panes
+    worktree: .worktrees/panes
+    plan: docs/PANES-PLAN.md
     outcome: Resizable movable primary panes with individual freeze and global layout lock
     interfaces: Lead freezes pane IDs, layout state and per-window persistence before implementation; use native Qt/QML and the existing GPU canvas
     acceptance: Tree, image preview, grid, filmstrip and HUD regions support resizing and moving/re-docking; future metadata panes use the same contract; freeze locks position and size while content remains interactive; global lock, visible lock state, keyboard alternatives, reset layout and persistent per-slot layouts
