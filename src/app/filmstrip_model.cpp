@@ -59,6 +59,10 @@ void FilmstripModel::sync(const glancelot::NavigationSnapshot& snapshot) {
         row = int(list.indexOf(current));
     }
     if (!same) {
+        // A folder may have changed while it was not watched. Never reuse its old path-only
+        // thumbnail cache entries when returning from another location. Ordinary stepping
+        // and sort changes within the same folder keep their cache.
+        if (directory != directory_) invalidate();
         const int oldCount = int(paths_.size());
         beginResetModel();
         directory_ = directory; paths_ = std::move(incoming); current_ = row;

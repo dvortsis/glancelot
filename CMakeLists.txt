@@ -86,6 +86,10 @@ if(GLANCELOT_BUILD_VIEWER)
     target_compile_definitions(grid_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(grid_ui_tests PRIVATE glancelot_core Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
     qt_add_resources(grid_ui_tests grid_theme_catalog PREFIX "/" BASE assets FILES assets/themes/catalog.json ${ui_fonts})
+    qt_add_resources(grid_ui_tests grid_brand_assets PREFIX "/" BASE assets FILES
+      assets/brand/icons/app/dark/glancelot-64.png assets/brand/icons/app/light/glancelot-64.png
+      assets/brand/mascots/transparent/01_mascot_standing.png)
+    qt_add_shaders(grid_ui_tests "grid_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
     add_dependencies(grid_ui_tests glancelot-decoder)
     add_test(NAME folder_grid COMMAND grid_ui_tests -o -,txt)
     set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 180)

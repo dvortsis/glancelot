@@ -181,8 +181,8 @@ UiDialog {
                 }
                 SettingRow {
                     label: "Canvas backdrop"
-                    description: "Steps through the backdrop colours behind the photo" + (viewer.bindingFor("background").length ? " (" + viewer.bindingFor("background") + ")." : ".")
-                    UiButton { text: "Next backdrop"; variant: "outline"; onClicked: dialog.host.invoke("background") }
+                    description: dialog.host.gridMode ? "Switch to photo view to change the canvas backdrop." : "Steps through the backdrop colours behind the photo" + (viewer.bindingFor("background").length ? " (" + viewer.bindingFor("background") + ")." : ".")
+                    UiButton { text: "Next backdrop"; variant: "outline"; enabled: !dialog.host.gridMode; onClicked: dialog.host.invoke("background") }
                 }
                 UiSwitch {
                     Layout.fillWidth: true

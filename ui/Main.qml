@@ -47,6 +47,11 @@ ApplicationWindow {
     palette.link: Theme.primary
 
     function wakeHud() { hudVisible = true; hideHud.restart() }
+    function focusWithin(item) {
+        for (let focused = activeFocusItem; focused; focused = focused.parent)
+            if (focused === item) return true
+        return false
+    }
     function invoke(id) { if (gridMode && !gridAllowsCommand(id)) return; viewer.trigger(id); wakeHud() }
     function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
     function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
@@ -114,7 +119,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (!app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+            if (!app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -188,7 +193,7 @@ ApplicationWindow {
             app.wakeHud()
             let delta=wheel.angleDelta.y || wheel.angleDelta.x
             let pixel=wheel.pixelDelta.y || wheel.pixelDelta.x
-            if ((wheel.modifiers & Qt.ControlModifier) || viewer.wheelMode === "zoom") {
+            if ((wheel.modifiers & Qt.ControlModifier) || (!(wheel.modifiers & Qt.ShiftModifier) && viewer.wheelMode === "zoom")) {
                 canvas.zoomAt(Math.pow(1.0015, pixel !== 0 ? pixel*3 : delta), wheel.x, wheel.y)
             } else if ((wheel.modifiers & Qt.ShiftModifier) || viewer.wheelMode === "pan") {
                 let amount=pixel !== 0 ? pixel : delta/3

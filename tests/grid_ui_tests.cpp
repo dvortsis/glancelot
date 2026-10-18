@@ -15,6 +15,7 @@
 #include <QQmlContext>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QWheelEvent>
 #include <QtTest>
 #include <atomic>
 
@@ -405,6 +406,125 @@ private slots:
                 }
             }
         }
+    }
+    void paletteKeyboardCursorStaysInViewport() {
+        Harness h; QVERIFY(h.window); h.window->resize(540,360); h.window->requestActivate();
+        QObject* dialog=h.window->findChild<QObject*>("settingsDialog"); QVERIFY(dialog);
+        QVERIFY(QMetaObject::invokeMethod(dialog,"openSection",Q_ARG(QVariant,QString("appearance")),Q_ARG(QVariant,false)));
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        auto* palettes=h.window->findChild<QQuickItem*>("paletteGrid"); QVERIFY(palettes);
+        QTest::qWait(200); // let the dialog's deferred initial section focus settle
+        palettes->forceActiveFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(palettes->hasActiveFocus());
+        for(int i=0;i<16;++i) QTest::keyClick(h.window,Qt::Key_Down);
+        QTRY_VERIFY(palettes->property("currentIndex").toInt()>15);
+        auto* current=qvariant_cast<QQuickItem*>(palettes->property("currentItem")); QVERIFY(current);
+        QTRY_VERIFY2([&] {
+            for(auto* ancestor=palettes->parentItem();ancestor;ancestor=ancestor->parentItem()) {
+                if(!ancestor->clip())continue;
+                const auto point=current->mapToItem(ancestor,QPointF(current->width()/2,current->height()/2));
+                if(point.y()<0 || point.y()>ancestor->height()) return false;
+            }
+            return true;
+        }(),"Keyboard palette cursor is outside its scroll viewport");
+    }
+    void wheelModifiersOverrideBaseMode() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(1600,1200,QImage::Format_RGB32); image.fill(Qt::red); QVERIFY(image.save(media.filePath("wheel.png")));
+        Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("wheel.png")); QTRY_VERIFY(h.viewer.imageReady());
+        auto* canvas=h.window->findChild<ImageCanvas*>("canvas"); QVERIFY(canvas); canvas->actualSize();
+        h.viewer.setWheelMode("zoom");
+        const QPointF point(500,400); const auto before=canvas->zoom();
+        QWheelEvent shift(point,h.window->mapToGlobal(point.toPoint()),QPoint(),QPoint(0,120),Qt::NoButton,Qt::ShiftModifier,Qt::NoScrollPhase,false);
+        QCoreApplication::sendEvent(h.window,&shift);
+        QCOMPARE(canvas->zoom(),before);
+        h.viewer.setWheelMode("pan");
+        QWheelEvent control(point,h.window->mapToGlobal(point.toPoint()),QPoint(),QPoint(0,120),Qt::NoButton,Qt::ControlModifier,Qt::NoScrollPhase,false);
+        QCoreApplication::sendEvent(h.window,&control);
+        QVERIFY(canvas->zoom()>before);
+    }
+    void keyboardFocusedToolbarStaysVisible() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(16,16,QImage::Format_RGB32); image.fill(Qt::red); QVERIFY(image.save(media.filePath("focus.png")));
+        Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("focus.png"));
+        QTRY_VERIFY(h.viewer.imageReady());
+        h.viewer.setFilmstripVisible(false); h.viewer.setTreeVisible(false);
+        h.window->requestActivate(); QTest::mouseMove(h.window,QPoint(500,400));
+        auto* settings=h.window->findChild<QQuickItem*>("settingsButton"); QVERIFY(settings);
+        settings->forceActiveFocus(Qt::TabFocusReason); QTRY_VERIFY(settings->hasActiveFocus());
+        QVERIFY(QMetaObject::invokeMethod(h.window,"wakeHud"));
+        QTest::qWait(2600);
+        QVERIFY(settings->hasActiveFocus()); QVERIFY(settings->isVisible());
+        QVERIFY(h.window->property("hudVisible").toBool());
+    }
+    void auditEverySettingsPageAndChoiceMenu() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(48, 32, QImage::Format_RGB32); image.fill(Qt::cyan);
+        const QString source = media.filePath("audit-photo.png"); QVERIFY(image.save(source));
+        QFile original(source); QVERIFY(original.open(QIODevice::ReadOnly)); const QByteArray bytes = original.readAll(); original.close();
+        Harness h(true); QVERIFY(h.window);
+        h.viewer.open(source); QTRY_VERIFY(h.viewer.imageReady());
+        QObject* dialog = h.window->findChild<QObject*>("settingsDialog"); QVERIFY(dialog);
+        const bool capture = qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE");
+        if (capture) QVERIFY(QDir().mkpath(".cache/phase1-ui"));
+        auto shot = [&](const QString& name) {
+            if (!capture) return true;
+            return h.window->grabWindow().save(".cache/phase1-ui/" + name + ".png");
+        };
+        for (const QSize size : {QSize(540, 360), QSize(1180, 780)}) {
+            h.window->resize(size); h.window->requestActivate();
+            for (const char* mode : {"dark", "light"}) {
+                h.theme.setMode(mode);
+                const QString suffix = QString("-%1-%2").arg(mode).arg(size.width());
+                QTest::qWait(200);
+                QVERIFY(shot("canvas" + suffix));
+                h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+                h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
+                QTest::qWait(200); QVERIFY(shot("tree" + suffix));
+                h.showGrid(); QTest::qWait(200); QVERIFY(shot("grid" + suffix));
+                h.viewer.trigger("grid"); h.viewer.setTreeVisible(false);
+                int choices = 0;
+                for (const char* section : {"appearance", "viewing", "browsing", "controls", "about"}) {
+                    QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString(section)), Q_ARG(QVariant, false)));
+                    QTRY_VERIFY(dialog->property("opened").toBool());
+                    QTest::qWait(200);
+                    QVERIFY(shot(QString("settings-%1").arg(section) + suffix));
+                    QList<QQuickItem*> controls;
+                    for (auto* item : descendants(h.window->contentItem())) {
+                        if (item->isVisible() && item->isEnabled() && item->property("popup").isValid()
+                            && item->property("currentIndex").isValid()) controls << item;
+                    }
+                    for (auto* control : controls) {
+                        // Bring clipped settings rows into view before testing their actual menu.
+                        for (auto* ancestor = control->parentItem(); ancestor; ancestor = ancestor->parentItem()) {
+                            if (!ancestor->property("contentY").isValid()) continue;
+                            auto* content = qvariant_cast<QQuickItem*>(ancestor->property("contentItem"));
+                            if (!content) continue;
+                            const qreal y = control->mapToItem(content, QPointF()).y();
+                            const qreal maximum = qMax<qreal>(0, ancestor->property("contentHeight").toReal() - ancestor->height());
+                            ancestor->setProperty("contentY", qBound<qreal>(0, y - ancestor->height() / 3, maximum));
+                            break;
+                        }
+                        control->forceActiveFocus(Qt::TabFocusReason); QTest::qWait(30);
+                        auto* popup = qvariant_cast<QObject*>(control->property("popup")); QVERIFY(popup);
+                        const int before = control->property("currentIndex").toInt();
+                        QTest::keyClick(h.window, Qt::Key_Space);
+                        QTRY_VERIFY(popup->property("visible").toBool());
+                        QTest::qWait(160);
+                        QVERIFY(shot(QString("menu-%1-%2").arg(section).arg(choices) + suffix));
+                        QTest::keyClick(h.window, Qt::Key_Escape);
+                        QTRY_VERIFY(!popup->property("visible").toBool());
+                        QCOMPARE(control->property("currentIndex").toInt(), before);
+                        QVERIFY(dialog->property("opened").toBool());
+                        ++choices;
+                    }
+                    QMetaObject::invokeMethod(dialog, "close");
+                    QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+                }
+                QCOMPARE(choices, 5); // appearance mode; fit/wheel; file order/folder boundary
+            }
+        }
+        QVERIFY(original.open(QIODevice::ReadOnly)); QCOMPARE(original.readAll(), bytes);
     }
     void startupStatusAndEmptyState() {
         {   // Fresh start: the empty state carries the "how to begin" hint, so the toast stays hidden.

@@ -127,10 +127,33 @@ private slots:
     void misbehavingWorkersFailTheJobOnly();
     void shutdownLeavesNoProcesses();
     void filmstripModelKeepsRowsWhileStepping();
+    void revisitingFolderDropsUnwatchedThumbnails();
     void sameCountReplacementAndReorderKeepListing();
     void thumbnailIdRoundTripsAwkwardPaths();
     void providerDeliversAndCancels();
 };
+
+void ThumbnailTests::revisitingFolderDropsUnwatchedThumbnails() {
+    QTemporaryDir media; QVERIFY(media.isValid());
+    QImage image(32, 24, QImage::Format_RGBA8888); image.fill(Qt::red);
+    const QString path=media.filePath("changed.png"); QVERIFY(image.save(path));
+    ThumbnailService service(decoder()); Collector got(service);
+    FilmstripModel model;
+    QObject::connect(&model,&FilmstripModel::epochChanged,&service,[&]{service.setEpoch(model.epoch());});
+    glancelot::NavigationSnapshot a; a.directory=media.path().toStdString(); a.files={path.toStdString()}; a.current=a.files.front();
+    model.sync(a);
+    const auto first=service.request(path,64,model.epoch()); QVERIFY(first);
+    QTRY_VERIFY_WITH_TIMEOUT(got.ready.contains(first),10000);
+    QCOMPARE(got.ready[first].pixelColor(0,0),QColor(Qt::red));
+    const auto epoch=model.epoch(); model.sync(a); QCOMPARE(model.epoch(),epoch);
+    glancelot::NavigationSnapshot b; b.directory=media.filePath("other").toStdString(); model.sync(b);
+    image.fill(Qt::blue); QVERIFY(image.save(path));
+    model.sync(a); QVERIFY(model.epoch()>epoch);
+    const auto second=service.request(path,64,model.epoch()); QVERIFY(second);
+    QTRY_VERIFY_WITH_TIMEOUT(got.ready.contains(second),10000);
+    QCOMPARE(got.ready[second].pixelColor(0,0),QColor(Qt::blue));
+    service.shutdown();
+}
 
 void ThumbnailTests::oversizedWorkerRequestIsRejectedBeforeParsing() {
     QProcess worker;

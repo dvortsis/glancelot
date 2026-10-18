@@ -35,6 +35,28 @@
 
 using namespace glancelot;
 namespace {
+bool usableShortcut(const QKeySequence& sequence) {
+    for (int i=0; i<sequence.count(); ++i) {
+        const auto key=sequence[i];
+        if (key.key()==Qt::Key_unknown || key==QKeyCombination(Qt::NoModifier,Qt::Key_Escape)) return false;
+    }
+    return true;
+}
+bool shortcutOverlap(const QKeySequence& left,const QKeySequence& right) {
+    return !left.isEmpty() && !right.isEmpty()
+        && (left.matches(right)!=QKeySequence::NoMatch || right.matches(left)!=QKeySequence::NoMatch);
+}
+bool usableBindings(const QJsonObject& bindings) {
+    QList<QKeySequence> seen;
+    for (const auto& value:bindings) {
+        const auto text=value.toString();
+        const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
+        if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
+        for (const auto& other:seen) if (shortcutOverlap(sequence,other)) return false;
+        seen.append(sequence);
+    }
+    return true;
+}
 void trace(const char* event) {
     const auto path=qEnvironmentVariable("GLANCELOT_TRACE_FILE");
     if(path.isEmpty())return;
@@ -194,13 +216,11 @@ struct ViewerController::Private {
         for (auto it=candidate.begin();it!=candidate.end();++it) {
             if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
             for (auto other=stored.begin();other!=stored.end();++other) {
-                if (other.key()!=it.key() && candidate.contains(other.key()) && candidate.value(other.key()).toString().compare(it.value().toString(),Qt::CaseInsensitive)==0) { it.value()=QString(); break; }
+                if (other.key()!=it.key() && candidate.contains(other.key()) && shortcutOverlap(QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
             }
         }
-        QStringList seen;
-        bool valid=true;
-        for (const auto& value:candidate) { const auto sequence=value.toString(); if (!sequence.isEmpty()&&seen.contains(sequence,Qt::CaseInsensitive)) { valid=false; break; } seen.append(sequence); }
-        if (valid) bindings=candidate;
+        if (usableBindings(candidate)) bindings=candidate;
+        else status="Saved shortcuts conflict or use reserved Escape; default shortcuts are active. Reset shortcuts in Settings to repair them.";
         const auto savedBoundary=object.value("boundary").toString();
         if (savedBoundary=="continue" || savedBoundary=="stop" || savedBoundary=="loop") boundary=savedBoundary;
         const auto savedWheel=object.value("wheel").toString();
@@ -497,8 +517,8 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     if(!d->bindings.contains(id))return false;
     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
     const QString normalized=parsed.toString(QKeySequence::PortableText);
-    if(!sequence.trimmed().isEmpty()&&(normalized.isEmpty()||parsed[0].key()==Qt::Key_unknown)){d->status="That shortcut is not valid.";emit stateChanged();return false;}
-    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&!normalized.isEmpty()&&it.value().toString().compare(normalized,Qt::CaseInsensitive)==0){d->status="Shortcut already assigned to "+it.key()+". Clear it first.";emit stateChanged();return false;}}
+    if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
+    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
     QJsonObject merged=d->bindings;
     merged[id]=normalized;
     QString conflict;
@@ -509,7 +529,8 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
         for(auto it=stored.begin();it!=stored.end();++it)
             if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
         for(auto it=merged.begin();it!=merged.end();++it)
-            if(it.key()!=id&&!normalized.isEmpty()&&it.value().toString().compare(normalized,Qt::CaseInsensitive)==0){conflict=it.key();return;}
+            if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
+        if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
     });
     if(!conflict.isEmpty()){d->status="Shortcut already assigned to "+conflict+" in another window. Clear it first.";emit stateChanged();return false;}

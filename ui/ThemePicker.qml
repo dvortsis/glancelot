@@ -12,6 +12,22 @@ ColumnLayout {
     readonly property var shown: theme.families.filter(family => family.name.toLowerCase().indexOf(search.text.trim().toLowerCase()) >= 0)
     spacing: Theme.gapMd
 
+    function revealCurrent() {
+        if (!cards.currentItem) return
+        // The gallery expands to all its rows; its enclosing settings page owns scrolling.
+        // GridView cannot reveal its keyboard cursor inside that outer viewport by itself.
+        for (let ancestor = parent; ancestor; ancestor = ancestor.parent) {
+            if (typeof ancestor.contentY !== "number" || !ancestor.contentItem) continue
+            const top = cards.currentItem.mapToItem(ancestor.contentItem, 0, 0).y
+            const bottom = top + cards.currentItem.height
+            let offset = ancestor.contentY
+            if (top < offset) offset = top
+            else if (bottom > offset + ancestor.height) offset = bottom - ancestor.height
+            ancestor.contentY = Math.max(0, Math.min(offset, Math.max(0, ancestor.contentHeight - ancestor.height)))
+            break
+        }
+    }
+
     UiTextField {
         id: search
         Layout.fillWidth: true
@@ -33,6 +49,8 @@ ColumnLayout {
         cellHeight: 88 + Theme.gapSm
         model: picker.shown
         currentIndex: Math.max(0, picker.shown.findIndex(family => family.id === theme.family))
+        onCurrentIndexChanged: if (activeFocus) Qt.callLater(picker.revealCurrent)
+        onActiveFocusChanged: if (activeFocus) Qt.callLater(picker.revealCurrent)
         Accessible.role: Accessible.List
         Accessible.name: "Palettes"
         Keys.onReturnPressed: if (currentItem) currentItem.apply()

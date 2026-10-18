@@ -1,5 +1,6 @@
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/navigation.hpp"
+#include "glancelot/settings_file.hpp"
 #include <functional>
 #include <QColorSpace>
 #include <QFile>
@@ -59,6 +60,7 @@ private slots:
     void newestOpenWins();
     void explicitOpenDoesNotReuseSameSizeTimestampPixels();
     void duplicateBindingRejectedAndSettingsPersist();
+    void escapeAndChordPrefixesCannotDisableCommands();
     void stopAndLoopBoundaries();
     void boundaryChangeWhileScanPending();
     void consecutiveNavigationPreservesStepCount();
@@ -208,6 +210,33 @@ void AcceptanceTests::duplicateBindingRejectedAndSettingsPersist() {
     QCOMPARE(restored.boundaryMode(),QString("stop"));
     QCOMPARE(restored.wheelMode(),QString("zoom"));
     restored.resetBindings(); restored.setBoundaryMode("continue"); restored.setWheelMode("navigate");
+}
+
+void AcceptanceTests::escapeAndChordPrefixesCannotDisableCommands() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    const auto previous=qgetenv("GLANCELOT_CONFIG_DIR");
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    {
+        ViewerController first; first.resetBindings();
+        ViewerController stale;
+        QVERIFY(!first.setBinding("fullscreen","Escape"));
+        QVERIFY(!first.setBinding("fullscreen","Ctrl+O, Ctrl+K"));
+        QCOMPARE(first.bindingFor("open"),QString("Ctrl+O"));
+        QVERIFY(first.setBinding("fullscreen","Ctrl+Alt+K, Ctrl+Alt+F8"));
+        QVERIFY(!first.setBinding("rotate","Ctrl+Alt+K"));
+        QVERIFY(!stale.setBinding("rotate","Ctrl+Alt+K")); // persisted map, not stale local copy
+        QCOMPARE(stale.bindingFor("rotate"),QString("R"));
+    }
+    for (const QString bad:{QString("Escape"),QString("Ctrl+O, Ctrl+K")}) {
+        QVERIFY(glancelot::updateSettings([&](QJsonObject& object) {
+            object["bindings"]=QJsonObject{{"fullscreen",bad},{"open",QString("Ctrl+O")}};
+        }).ok());
+        ViewerController reopened;
+        QCOMPARE(reopened.bindingFor("fullscreen"),QString("F11"));
+        QCOMPARE(reopened.bindingFor("open"),QString("Ctrl+O"));
+        QVERIFY(reopened.status().contains("default shortcuts"));
+    }
+    qputenv("GLANCELOT_CONFIG_DIR",previous);
 }
 
 void AcceptanceTests::stopAndLoopBoundaries() {
