@@ -68,7 +68,9 @@ def main():
         root = Path(temp)
         config = root / 'config'
         config.mkdir()
-        first, second, explicit = (root / name for name in ('one.png', 'two.png', 'explicit.png'))
+        media_dir = root / 'media'
+        media_dir.mkdir()
+        first, second, explicit = (media_dir / name for name in ('one.png', 'two.png', 'explicit.png'))
         for path, size in ((first, (16, 10)), (second, (24, 18)), (explicit, (32, 20))):
             png(path, *size)
         source_bytes = {path: path.read_bytes() for path in (first, second, explicit)}
@@ -78,14 +80,17 @@ def main():
             args = [executable, '--quit-after', str(duration), '--report', str(report), *extra]
             if image:
                 args.append(str(image))
-            process = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=0x08000000 if os.name == 'nt' else 0)
+            process_env = dict(env, GLANCELOT_TRACE_FILE=str(root / (name + '.trace')))
+            process = subprocess.Popen(args, env=process_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=0x08000000 if os.name == 'nt' else 0)
             children.append(process)
             return process, report
         def finish(run, slot, image):
             process, report = run
             out, err = process.communicate(timeout=20)
-            assert process.returncode == 0, (process.returncode, out, err)
             data = read(report)
+            trace_path = report.with_suffix('.trace')
+            trace = trace_path.read_text() if trace_path.exists() else ''
+            assert process.returncode == 0, (process.returncode, out, err, data, trace[-3000:])
             assert data.get('window_slot') == slot, data
             assert Path(data['image_path']) == image, data
             assert data['width'] > 0 and data['decoded_ms'] >= 0 and not data['loading'], data
@@ -110,11 +115,11 @@ def main():
             print('PASS: explicit file overrides resume and unopened slot is retained', flush=True)
             with locked(config / 'sessions.json.lock'):
                 delayed = start('delayed-restore', duration=6000)
-                time.sleep(.5)
+                until(lambda: (root / 'delayed-restore.trace').exists() and 'controller:settings-loaded' in (root / 'delayed-restore.trace').read_text())
             finish(delayed, 1, explicit)
             with locked(config / 'sessions.json.lock'):
                 delayed = start('delayed-explicit', first, 6000)
-                time.sleep(.5)
+                until(lambda: (root / 'delayed-explicit.trace').exists() and (root / 'delayed-explicit.trace').read_text().count('decode:message') >= 2)
             finish(delayed, 1, first)
             assert Path(read(config / 'settings.json')['windows']['1']['image']) == first
             print('PASS: real retry timer restores a saved image and remembers an explicit image decoded before claim', flush=True)

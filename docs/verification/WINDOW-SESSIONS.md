@@ -68,7 +68,17 @@ Native Windows 540x360 settings screenshots were inspected in dark/light themes 
 
 ## Integration gate
 
-Pending integrated-commit build/test/package and process rerun. Tasks remain in integration until those checks pass.
+Runtime fixes integrated on main at `85336a4`. `scripts/build.ps1 -Test -Package` passed:
+
+```text
+navigation 1.44s; viewer_acceptance 4.16s; thumbnails 5.51s;
+folder_tree 4.84s; window_slots 17.12s; viewport 0.04s; themes 0.10s
+100% tests passed out of 7; total 33.50s
+```
+
+The portable package opened and resumed a generated 13x9 PNG with Qt development paths removed, native Windows rendering, exit 0, and empty stderr. Package SHA256: `B16F349E5CD5F840E7BEB323EB85E1D6F2A7D69F50FC01E150423701D261E56D`.
+
+An integrated process run exposed a fixture interaction: report files were written beside watched media, so another viewer's report could trigger hot reload near timed exit. The harness now isolates media from reports/traces and observes startup progress before releasing the claim lock. All five checks passed against the integrated binary with that isolation. The harness-only follow-up awaits its final integrated rerun. Logs: `.cache/session-review/integrated-build.log`, `integrated-process.log`, and `portable-smoke.log`.
 
 ## Limits
 
