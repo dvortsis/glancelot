@@ -195,6 +195,30 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void pageKeysJumpFoldersFromEmptyCanvas() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QVERIFY(QDir().mkpath(media.filePath("child")));
+        QImage image(16,12,QImage::Format_RGB32); image.fill(Qt::blue);
+        const auto first=media.filePath("child/2.png"), last=media.filePath("child/10.png");
+        QVERIFY(image.save(first)); QVERIFY(image.save(last));
+        Harness h(true); QVERIFY(h.window);
+        h.viewer.navigateDirectory(media.path());
+        QTRY_VERIFY(!h.viewer.directoryPending() && QDir::cleanPath(h.viewer.directory())==media.path());
+        auto* canvas=h.window->findChild<QQuickItem*>("canvas"); QVERIFY(canvas);
+        h.window->requestActivate(); canvas->forceActiveFocus();
+        QTRY_VERIFY(h.window->isActive() && canvas->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_PageDown);
+        QTRY_COMPARE(h.viewer.filePath(),first);
+        QTRY_VERIFY(h.viewer.imageReady());
+        // PageUp from a child returns to the preceding image-bearing parent.
+        const auto parent=media.filePath("parent.png"); QVERIFY(image.save(parent));
+        QTest::keyClick(h.window,Qt::Key_PageUp);
+        QTRY_COMPARE(h.viewer.filePath(),parent);
+        QTRY_VERIFY(h.viewer.imageReady());
+        QTest::keyClick(h.window,Qt::Key_PageDown);
+        QTRY_COMPARE(h.viewer.filePath(),first);
+        QTRY_VERIFY(h.viewer.imageReady());
+    }
     void everyPaneDockRegionStaysInWindow() {
         QTemporaryDir media;QVERIFY(media.isValid());
         QImage image(64,48,QImage::Format_RGB32);image.fill(QColor(56,130,190));

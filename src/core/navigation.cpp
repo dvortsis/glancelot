@@ -344,7 +344,7 @@ bool Navigator::openDirectory(const fs::path& directory, std::error_code& error)
     return true;
 }
 bool Navigator::setRoot(const fs::path& root) {
-    if (state_.current.empty() || cancel_.stop_requested()) return false;
+    if (state_.directory.empty() || cancel_.stop_requested()) return false;
     std::error_code ec;
     const auto path = absolutePath(root, ec);
     if (ec || !inside(path, state_.root) || !safePath(path, cancel_) || !fs::is_directory(path, ec) || ec || cancel_.stop_requested()) return false;
@@ -383,18 +383,21 @@ std::optional<fs::path> Navigator::step(int direction) {
 }
 std::optional<fs::path> Navigator::folder(int direction) { return enterFolder(direction, false); }
 std::optional<fs::path> Navigator::enterFolder(int direction, bool sortedLanding) {
-    if (state_.current.empty() || cancel_.stop_requested()) return std::nullopt;
+    if (state_.directory.empty() || cancel_.stop_requested()) return std::nullopt;
     const auto destination = adjacentFolderImage(state_.root, state_.directory, direction, cancel_);
     if (!destination) return std::nullopt;
     std::vector<fs::path> files; std::vector<FileMeta> meta;
     list(destination->parent_path(), files, meta);
     if (cancel_.stop_requested()) return std::nullopt;
-    state_.directory = destination->parent_path();
     // An explicit folder jump lands on the natural endpoint chosen by traversal, whatever the file sort (NAV-02).
     // Crossing a folder boundary while stepping continues the visible order instead, so no image is skipped.
     fs::path landing = *destination;
     if (sortedLanding && !files.empty()) landing = direction > 0 ? files.front() : files.back();
     const auto at = std::find(files.begin(), files.end(), landing);
+    // The candidate can disappear between traversal and the final listing. Never
+    // publish a current image that is absent from its accompanying snapshot.
+    if (at == files.end() || cancel_.stop_requested()) return std::nullopt;
+    state_.directory = destination->parent_path();
     anchor_ = at == files.end() ? FileMeta{} : meta[std::size_t(at - files.begin())];
     state_.files = std::move(files);
     meta_ = std::move(meta);

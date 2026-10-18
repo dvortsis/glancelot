@@ -64,6 +64,7 @@ private slots:
     void stopAndLoopBoundaries();
     void boundaryChangeWhileScanPending();
     void consecutiveNavigationPreservesStepCount();
+    void folderJumpsAfterExactEmptyVisits();
 };
 
 void AcceptanceTests::generatedTreeReverseOracle() {
@@ -294,6 +295,52 @@ void AcceptanceTests::consecutiveNavigationPreservesStepCount() {
     QTRY_COMPARE_WITH_TIMEOUT(QFileInfo(controller.filePath()).fileName(),QString("n2.png"),10000);
     QTRY_VERIFY_WITH_TIMEOUT(!controller.loading(),10000);
     controller.setBoundaryMode("continue");
+}
+void AcceptanceTests::folderJumpsAfterExactEmptyVisits() {
+    QTemporaryDir media; QVERIFY(media.isValid());
+    for (const auto* name : {"1-before", "2-empty", "3-after"}) QVERIFY(QDir().mkpath(media.filePath(name)));
+    const auto first=writePng(media.filePath("1-before"),"2.png",Qt::red);
+    const auto last=writePng(media.filePath("1-before"),"10.png",Qt::green);
+    const auto after=writePng(media.filePath("3-after"),"2.png",Qt::blue);
+    QVERIFY(!first.isEmpty() && !last.isEmpty() && !after.isEmpty());
+    ViewerController viewer; viewer.setBoundaryMode("stop");
+    QCOMPARE(viewer.bindingFor("next-folder"),QString("PgDown"));
+    QCOMPARE(viewer.bindingFor("previous-folder"),QString("PgUp"));
+    viewer.navigateDirectory(media.path());
+    QTRY_VERIFY(!viewer.directoryPending() && QDir::cleanPath(viewer.directory())==media.path());
+    QVERIFY(viewer.filePath().isEmpty());
+    viewer.trigger("next-folder");
+    QTRY_COMPARE(viewer.filePath(),first);
+    QTRY_VERIFY(!viewer.loading());
+    // Exact visits within a traversal scope must keep it, including image-less folders.
+    viewer.navigateDirectory(media.filePath("2-empty"));
+    QTRY_VERIFY(!viewer.directoryPending() && QDir::cleanPath(viewer.directory())==media.filePath("2-empty"));
+    QCOMPARE(QDir::cleanPath(QString::fromStdU16String(viewer.snapshot().root.u16string())),media.path());
+    QVERIFY(viewer.filePath().isEmpty());
+    viewer.trigger("previous-folder");
+    QTRY_COMPARE(viewer.filePath(),last);
+    QTRY_VERIFY(!viewer.loading());
+    viewer.navigateDirectory(media.filePath("2-empty"));
+    QTRY_VERIFY(!viewer.directoryPending() && viewer.filePath().isEmpty());
+    viewer.trigger("next-folder");
+    QTRY_COMPARE(viewer.filePath(),after);
+    QTRY_VERIFY(!viewer.loading());
+    // An explicit jump ignores Stop/Loop, but still cannot wrap the traversal root.
+    viewer.setBoundaryMode("loop");
+    QSignalSpy changed(&viewer,&ViewerController::stateChanged);
+    viewer.trigger("next-folder");
+    QTRY_VERIFY(changed.count()>0);
+    QCOMPARE(viewer.filePath(),after);
+    viewer.navigateDirectory(media.filePath("1-before"));
+    QTRY_VERIFY(!viewer.directoryPending() && viewer.filePath()==first);
+    QCOMPARE(QDir::cleanPath(QString::fromStdU16String(viewer.snapshot().root.u16string())),media.path());
+    QTemporaryDir outside; QVERIFY(outside.isValid());
+    viewer.navigateDirectory(outside.path());
+    QTRY_VERIFY(!viewer.directoryPending() && QDir::cleanPath(viewer.directory())==outside.path());
+    QCOMPARE(QDir::cleanPath(QString::fromStdU16String(viewer.snapshot().root.u16string())),outside.path());
+    // Widening from an empty exact visit uses the same worker-only root command.
+    viewer.raiseRoot();
+    QTRY_VERIFY(viewer.snapshot().root==std::filesystem::path(outside.path().toStdWString()).parent_path());
 }
 int main(int argc,char** argv) {
     QTemporaryDir preferences;
