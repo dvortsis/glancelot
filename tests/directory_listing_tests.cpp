@@ -43,7 +43,9 @@ struct Fixture {
     ~Fixture() { std::error_code ec; fs::remove_all(root, ec); }
     fs::path dir(const std::string& name) { auto p = root / name; fs::create_directories(p); return p; }
 };
+#ifdef _WIN32
 int run(const std::string& command) { return std::system(command.c_str()); }
+#endif
 }
 
 int main() {

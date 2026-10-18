@@ -912,11 +912,16 @@ public: // helpers (moc treats everything under private slots as test functions)
         QString file(const QString& name) const { return path + "/" + name; }
     };
     QQuickItem* gridCell(Harness& h, const QString& path) {
-        const int row = h.fileGrid.rowOf(path);
-        if (row < 0) return nullptr;
-        QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, row), Q_ARG(int, 4 /* Contain */));
-        QTest::qWait(30);
-        return h.cell(row);
+        // Polls: after a relisting the delegate for `path` may not exist yet. Callers QVERIFY the result.
+        for (int attempt = 0; attempt < 100; ++attempt) {
+            const int row = h.fileGrid.loading() ? -1 : h.fileGrid.rowOf(path);
+            if (row >= 0) {
+                QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, row), Q_ARG(int, 4 /* Contain */));
+                QTest::qWait(30);
+                if (QQuickItem* cell = h.cell(row)) return cell;
+            } else QTest::qWait(20);
+        }
+        return nullptr;
     }
 private slots:
     void mixedTilesFolderEntryAndParentNavigation() {
@@ -977,7 +982,8 @@ private slots:
         QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.root.path()));
         // A directory link is listed but is never entered: the controller refuses it and the grid explains why.
         if (media.link) {
-            QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(gridCell(h, media.path)));
+            QQuickItem* again = gridCell(h, media.path); QVERIFY(again);
+            QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, centre(again));
             QTRY_COMPARE(gridKey(h.fileGrid.directory()), gridKey(media.path));
             QTRY_COMPARE(h.fileGrid.count(), total);
             h.fileGrid.select(h.fileGrid.rowOf(media.file("Shortcut to elsewhere")));
@@ -1069,20 +1075,24 @@ private slots:
         h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() >= 8); // rowOf is -1 until the listing lands
         QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("beach.png")));
-        h.fileGrid.select(h.fileGrid.rowOf(media.file("notes.txt")));
+        // The cursor item (notes.txt) is deleted below; the surviving selected item must stay selected.
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("sunset.jpg")));
         h.fileGrid.select(h.fileGrid.rowOf(media.file("README")), DirectoryEntryModel::Toggle);
-        h.fileGrid.select(h.fileGrid.rowOf(media.file("sunset.jpg")), DirectoryEntryModel::Toggle);
+        h.fileGrid.select(h.fileGrid.rowOf(media.file("notes.txt")), DirectoryEntryModel::Toggle);
         QCOMPARE(h.fileGrid.selectedCount(), 3);
         QVERIFY(QFile::rename(media.file("README"), media.file("README.md")));
         QVERIFY(QFile::remove(media.file("itinerary.pdf")));
+        QVERIFY(QFile::remove(media.file("notes.txt")));
         { QFile added(media.file("added.txt")); QVERIFY(added.open(QIODevice::WriteOnly)); }
         // The controller's folder watcher invalidates; the grid relists in place.
         QTRY_VERIFY_WITH_TIMEOUT(h.fileGrid.rowOf(media.file("added.txt")) >= 0, 10000);
         QTRY_COMPARE(h.fileGrid.rowOf(media.file("itinerary.pdf")), -1);
         QCOMPARE(h.fileGrid.rowOf(media.file("README")), -1);
         QVERIFY(h.fileGrid.rowOf(media.file("README.md")) >= 0);
-        QCOMPARE(h.fileGrid.selectedPaths(), (QStringList{media.file("notes.txt"), media.file("sunset.jpg")}));
-        QCOMPARE(h.selected(), h.fileGrid.rowOf(media.file("sunset.jpg")));
+        QTRY_COMPARE(h.fileGrid.rowOf(media.file("notes.txt")), -1);
+        QTest::qWait(150); // past the grid's post-listing cursor placement
+        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.file("sunset.jpg")});
+        QCOMPARE(h.selected(), -1); // the cursor's file is gone; nothing else was selected in its place
         QVERIFY(h.window->property("gridMode").toBool());
     }
     void emptyInaccessibleAndNoFolderStates() {

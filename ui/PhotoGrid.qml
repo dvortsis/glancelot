@@ -14,6 +14,7 @@ Rectangle {
     readonly property int selectedCount: fileGrid.selectedCount
     property string entryCurrentPath: ""
     property string revealPath: ""
+    property bool placeCursor: false
     property bool inputEnabled: true
     property int liveDelegateCount: 0
     property string noticeText: ""
@@ -68,12 +69,16 @@ Rectangle {
         // Re-entering keeps the browsing cursor unless the viewed photo changed meanwhile.
         if (current !== entryCurrentPath) revealPath = current
         entryCurrentPath = current
+        placeCursor = true
         reveal()
         focusGrid()
     }
     // Places the cursor once a listing has landed: on the revealed photo, else keeps it, else the first entry.
+    // Runs once per grid entry or folder change; an ordinary refresh (external change) never moves the cursor,
+    // replaces the selection or scrolls the view.
     function reveal() {
-        if (!visible || fileGrid.loading) return
+        if (!visible || fileGrid.loading || !placeCursor) return
+        placeCursor = false
         if (revealPath.length) {
             const row = fileGrid.rowOf(revealPath)
             revealPath = ""
@@ -127,6 +132,7 @@ Rectangle {
         else noticeText = ""
     }
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
+    onFolderPathChanged: placeCursor = true
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }

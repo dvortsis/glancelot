@@ -45,7 +45,10 @@ qint64 modifiedMs(const glancelot::FileMeta& meta) {
     if (!meta.known) return -1;
     using namespace std::chrono;
     const auto stamp = fs::file_time_type(fs::file_time_type::duration(meta.modified));
-    return duration_cast<milliseconds>(clock_cast<system_clock>(stamp).time_since_epoch()).count();
+    // Portable conversion (no clock_cast/to_sys, which older standard libraries lack): offset by "now" on both
+    // clocks. Display-only, so the microsecond skew between the two now() calls is irrelevant.
+    const auto system = system_clock::now() + duration_cast<system_clock::duration>(stamp - fs::file_time_type::clock::now());
+    return duration_cast<milliseconds>(system.time_since_epoch()).count();
 }
 glancelot::SortSpec sortSpec(const QString& key, bool descending) {
     glancelot::SortSpec spec;
