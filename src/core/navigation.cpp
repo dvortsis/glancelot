@@ -206,13 +206,17 @@ bool sortBefore(const SortSpec& sort, const fs::path& a, const FileMeta& ma, con
     return naturalLess(a, b);
 }
 }
+bool fileSortBefore(const SortSpec& sort, const fs::path& a, const FileMeta& ma, const fs::path& b, const FileMeta& mb) { return sortBefore(sort, a, ma, b, mb); }
 std::vector<fs::path> sortedImageFiles(const fs::path& directory, const SortSpec& sort, std::stop_token cancel, std::vector<FileMeta>* meta) {
     MetaMap map;
-    const bool needMeta = sort.key == SortKey::Modified || sort.key == SortKey::Size || meta;
+    const bool needMeta = sort.key == SortKey::Modified || sort.key == SortKey::Size;
     auto files = entries(directory, false, cancel, static_cast<std::size_t>(-1), nullptr, needMeta ? &map : nullptr);
     if (cancel.stop_requested()) return {};
     const auto lookup = [&](const fs::path& path) { const auto found = map.find(path.native()); return found == map.end() ? FileMeta{} : found->second; };
-    if (sort.key != SortKey::Name || sort.descending) {
+    if (sort.key == SortKey::Name) {
+        // entries() already returns natural order, a strict total order, so descending is exactly its reverse.
+        if (sort.descending) std::reverse(files.begin(), files.end());
+    } else {
         try {
             std::sort(files.begin(), files.end(), [&](const fs::path& a, const fs::path& b) {
                 if (cancel.stop_requested()) throw ScanCancelled{};
@@ -348,7 +352,7 @@ std::optional<fs::path> Navigator::step(int direction) {
     } else if (found != files.begin()) destination = *--found;
     if (!destination && state_.boundary == BoundaryMode::LoopFolder && !files.empty())
         destination = direction > 0 ? files.front() : files.back();
-    if (!destination && state_.boundary == BoundaryMode::ContinueTree) return folder(direction);
+    if (!destination && state_.boundary == BoundaryMode::ContinueTree) return enterFolder(direction, true);
     if (cancel_.stop_requested()) return std::nullopt;
     if (destination) {
         state_.current = *destination;
@@ -358,7 +362,8 @@ std::optional<fs::path> Navigator::step(int direction) {
     }
     return destination;
 }
-std::optional<fs::path> Navigator::folder(int direction) {
+std::optional<fs::path> Navigator::folder(int direction) { return enterFolder(direction, false); }
+std::optional<fs::path> Navigator::enterFolder(int direction, bool sortedLanding) {
     if (state_.current.empty() || cancel_.stop_requested()) return std::nullopt;
     const auto destination = adjacentFolderImage(state_.root, state_.directory, direction, cancel_);
     if (!destination) return std::nullopt;
@@ -366,14 +371,17 @@ std::optional<fs::path> Navigator::folder(int direction) {
     list(destination->parent_path(), files, meta);
     if (cancel_.stop_requested()) return std::nullopt;
     state_.directory = destination->parent_path();
-    // Landing is the natural endpoint chosen by traversal, whatever the file sort (NAV-02); only the list order follows it.
-    const auto at = std::find(files.begin(), files.end(), *destination);
+    // An explicit folder jump lands on the natural endpoint chosen by traversal, whatever the file sort (NAV-02).
+    // Crossing a folder boundary while stepping continues the visible order instead, so no image is skipped.
+    fs::path landing = *destination;
+    if (sortedLanding && !files.empty()) landing = direction > 0 ? files.front() : files.back();
+    const auto at = std::find(files.begin(), files.end(), landing);
     anchor_ = at == files.end() ? FileMeta{} : meta[std::size_t(at - files.begin())];
     state_.files = std::move(files);
     meta_ = std::move(meta);
-    state_.current = *destination;
+    state_.current = landing;
     ++state_.generation;
-    return destination;
+    return landing;
 }
 void Navigator::refresh() {
     if (state_.directory.empty() || cancel_.stop_requested()) return;

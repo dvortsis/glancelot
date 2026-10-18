@@ -211,11 +211,46 @@ private slots:
             QTRY_VERIFY(h.viewer.filePath().endsWith("c.png"));
             QTRY_VERIFY(!h.viewer.loading());
         }
+        {   // A persisted order is applied to the first listing of a new run, with no extra command.
+            Harness h(true); QVERIFY(h.window); h.viewer.open(media.filePath("a.png"));
+            QTRY_COMPARE(h.viewer.fileCount(), 3);
+            QCOMPARE(h.viewer.sortKey(), QString("size"));
+            QTRY_VERIFY(h.model.pathAt(0).endsWith("a.png"));   // size descending: a (largest) first
+            QVERIFY(h.model.pathAt(2).endsWith("b.png"));
+        }
         QJsonObject stored; QVERIFY(glancelot::readSettings(stored).ok());
         QCOMPARE(stored.value("sort").toObject().value("key").toString(), QString("size"));
         QVERIFY(stored.value("sort").toObject().value("descending").toBool());
         ViewerController restarted;   // a new run starts in the saved order
         QCOMPARE(restarted.sortKey(), QString("size")); QVERIFY(restarted.sortDescending());
+    }
+    void sortChangesRacingOpensKeepTheAcceptedFolder() {
+        QTemporaryDir one, two; QVERIFY(one.isValid() && two.isValid());
+        const struct { const char* name; int edge; } shapes[]{{"a.png", 96}, {"b.png", 8}, {"c.png", 40}};
+        for (const auto& shape : shapes) for (QTemporaryDir* dir : {&one, &two}) {
+            QImage image(shape.edge, shape.edge, QImage::Format_RGB32);
+            for (int y = 0; y < shape.edge; ++y) for (int x = 0; x < shape.edge; ++x) image.setPixel(x, y, qRgb((x * 7) & 255, (y * 13) & 255, (x * y) & 255));
+            QVERIFY(image.save(dir->filePath(shape.name)));
+        }
+        QImage extra(4, 4, QImage::Format_RGB32); extra.fill(Qt::red);
+        QVERIFY(extra.save(two.filePath("d.png"))); QVERIFY(extra.save(two.filePath("e.png")));
+        Harness h(true); QVERIFY(h.window);
+        // Sort changed while the very first scan is in flight: the folder is kept and ends up in the new order.
+        h.viewer.open(one.filePath("c.png")); h.viewer.setSortKey("size");
+        QTRY_COMPARE(h.viewer.fileCount(), 3);
+        QTRY_VERIFY(h.model.pathAt(0).endsWith("b.png"));
+        QVERIFY(h.model.pathAt(2).endsWith("a.png"));
+        QVERIFY(h.viewer.filePath().endsWith("c.png"));
+        // Opening another folder and changing the order before its scan lands must not resurrect the old folder.
+        h.viewer.open(two.filePath("a.png")); h.viewer.setSortDescending(true);
+        QTRY_COMPARE(h.viewer.fileCount(), 5);
+        QTRY_VERIFY(h.model.pathAt(0).endsWith("a.png"));   // size descending
+        QVERIFY(h.viewer.filePath().startsWith(two.path()));
+        QTRY_VERIFY(!h.viewer.loading());
+        h.viewer.next();
+        QTRY_VERIFY(h.viewer.filePath().startsWith(two.path()) && !h.viewer.filePath().endsWith("a.png"));
+        QCOMPARE(h.viewer.fileCount(), 5);
+        QVERIFY(h.viewer.sortDescending() && h.viewer.sortKey() == "size");
     }
     void resizeTreeAndEmpty() {
         Harness h; QVERIFY(h.window); h.fill(50); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());

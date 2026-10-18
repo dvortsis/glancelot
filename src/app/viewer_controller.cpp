@@ -208,7 +208,7 @@ struct ViewerController::Private {
             else if (key=="size") sortSpec.key=glancelot::SortKey::Size;
             else if (key=="shuffle") sortSpec.key=glancelot::SortKey::Shuffle;
             if (savedSort.value("descending").isBool()) sortSpec.descending=savedSort.value("descending").toBool();
-            if (savedSort.value("seed").isDouble() && savedSort.value("seed").toDouble()>=1) sortSpec.seed=quint64(savedSort.value("seed").toDouble());
+            if (savedSort.value("seed").isDouble() && savedSort.value("seed").toDouble()>=1 && savedSort.value("seed").toDouble()<9007199254740992.0) sortSpec.seed=quint64(savedSort.value("seed").toDouble());
         }
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
@@ -330,11 +330,12 @@ struct ViewerController::Private {
             trace("navigation:finished");
             auto result=future->result(); future->deleteLater(); navigationBusy=false;
             if (token==generation && sequence==navigationGeneration) {
-                nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary)); nav.setSort(sortSpec);
+                nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
                 else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
+                if(!result.destination && !pendingNavigation && needsResort()) startResort();
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
@@ -342,22 +343,28 @@ struct ViewerController::Private {
         future->setFuture(QtConcurrent::run(&navigationPool,std::move(job.work)));
     }
     // Applies a new file order on the navigation worker (never the GUI thread); the current image stays current.
-    void changeSort(const glancelot::SortSpec& next) {
-        if (next==sortSpec) return;
-        sortSpec=next;
-        if (!save({"sort"})) status="Sort order changed; settings could not be saved.";
-        if (nav.snapshot().current.empty()) { emit q->stateChanged(); return; }
-        status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
+    // The navigator the UI shows can be older than a job that is still in flight, so a re-sort is only ever built
+    // from an accepted navigator: immediately when idle, otherwise by the completion of the job already running.
+    bool needsResort() const { return !nav.snapshot().current.empty() && !(nav.sort()==sortSpec); }
+    void startResort() {
         navigationReady=false;
-        navigationStop.request_stop(); navigationStop=std::stop_source{};
         Navigator copy=nav;
         copy.setCancellation(navigationStop.get_token());
-        emit q->stateChanged();
+        const auto next=sortSpec;
         const QString done=QString("Sorted by %1%2.").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
         submitNavigation({generation,++navigationGeneration,true,[copy,next,done]() mutable {
             copy.setSort(next);
             return NavigationResult{std::move(copy),std::nullopt,done};
         }});
+    }
+    void changeSort(const glancelot::SortSpec& next) {
+        if (next==sortSpec) return;
+        sortSpec=next;
+        save({"sort"}); // a failed save keeps the order for this run; the next successful settings write stores it
+        if (nav.snapshot().current.empty()) { emit q->stateChanged(); return; }
+        status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
+        emit q->stateChanged();
+        if (!navigationBusy && navigationReady && !pendingNavigation) startResort();
     }
     void scan(const QString& file,quint64 token) {
         navigationReady=false;
@@ -529,7 +536,7 @@ void ViewerController::setSortKey(const QString& key){
     if(key=="name")next.key=glancelot::SortKey::Name;
     else if(key=="modified")next.key=glancelot::SortKey::Modified;
     else if(key=="size")next.key=glancelot::SortKey::Size;
-    else if(key=="shuffle"){next.key=glancelot::SortKey::Shuffle;next.seed=quint64(QDateTime::currentMSecsSinceEpoch())|1;}
+    else if(key=="shuffle"){if(next.key==glancelot::SortKey::Shuffle)return;next.key=glancelot::SortKey::Shuffle;next.seed=quint64(QDateTime::currentMSecsSinceEpoch())|1;}
     else return;
     d->changeSort(next);
 }
