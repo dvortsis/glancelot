@@ -63,6 +63,17 @@ const std::vector<Command> registry {
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
     {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"}, {"quit","Quit","Ctrl+Q"}
 };
+// True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
+bool insideRoot(const QString& root, const QString& folder) {
+    auto key=[](const QString& path){ auto value=QDir::cleanPath(QDir::fromNativeSeparators(path));
+#ifdef Q_OS_WIN
+        value=value.toLower();
+#endif
+        return value; };
+    const QString r=key(root),f=key(folder);
+    if(r.isEmpty()||f.isEmpty())return false;
+    return f==r||(f.startsWith(r)&&(r.endsWith(QLatin1Char('/'))||f.at(r.size())==QLatin1Char('/')));
+}
 QString configDirectory() {
     const QString override = qEnvironmentVariable("GLANCELOT_CONFIG_DIR");
     return override.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) : override;
@@ -525,6 +536,11 @@ void ViewerController::openFolder(const QString& value){
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,directory=nativePath(folder),cancellation]() mutable {
         // Bounded preorder search (500 folders): a huge or hostile tree cannot occupy the navigation thread.
         const auto found=firstImageInSubtree(directory,cancellation);
+        if(found.image && !insideRoot(displayPath(copy.snapshot().root),displayPath(directory))) {
+            // Explicit browsing across roots (or selecting an ancestor) establishes the chosen traversal root.
+            std::error_code error;
+            if(copy.open(*found.image,error))copy.setRoot(directory);
+        }
         Private::NavigationResult result{std::move(copy),found.image,{}};
         if(!found.image) {
             if(!found.accessible) result.message="That folder cannot be read (missing or no access).";
@@ -532,6 +548,10 @@ void ViewerController::openFolder(const QString& value){
         }
         return result;
     },"No supported images in that folder or its subfolders."});
+}
+bool ViewerController::canRaiseRoot() const {
+    const auto root=d->nav.snapshot().root; const auto parent=root.parent_path();
+    return !root.empty() && !parent.empty() && parent!=root;
 }
 void ViewerController::raiseRoot(){
     const auto root=d->nav.snapshot().root;const auto parent=root.parent_path();

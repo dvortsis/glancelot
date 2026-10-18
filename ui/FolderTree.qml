@@ -55,18 +55,18 @@ Rectangle {
                 Accessible.role: Accessible.Heading
             }
             ToolButton {
-                text: "Locations"
-                enabled: true
+                text: "Parent"
+                enabled: viewer.canRaiseRoot
                 focusPolicy: Qt.StrongFocus
                 onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
                 Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
                 implicitHeight: 32
-                Accessible.name: "Show filesystem locations"
-                Accessible.description: "Browse available drives and folders"
+                Accessible.name: "Show parent folder"
+                Accessible.description: "Widen the browsing root to the parent folder"
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
-                ToolTip.text: "Browse available drives and folders"
-                onClicked: folderTree.browseComputer()
+                ToolTip.text: "Widen the browsing root to the parent folder"
+                onClicked: viewer.raiseRoot()
                 background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
             }
             ToolButton {
@@ -84,6 +84,20 @@ Rectangle {
                 onToggled: viewer.treePinned = checked
                 background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus || parent.checked ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
             }
+        }
+
+        ToolButton {
+            objectName: "allLocations"
+            text: "All locations"
+            Layout.fillWidth: true
+            Layout.leftMargin: 8; Layout.rightMargin: 8
+            implicitHeight: 32
+            focusPolicy: Qt.StrongFocus
+            onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
+            Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
+            Accessible.name: "Browse all filesystem locations"
+            onClicked: { folderTree.browseComputer(); panel.focusList() }
+            background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
         }
 
         ListView {
