@@ -92,6 +92,9 @@ Rectangle {
     }
     function showNotice(text) { noticeText = text; noticeTimer.restart() }
     function rememberViewport() {
+        // A failed or empty relisting of the same folder keeps the viewport saved before it, so a transient error
+        // followed by recovery returns to the browsed position.
+        if (fileGrid.count === 0 && resetViewport && resetViewport.directory === folderPath) return
         resetViewport = null
         if (!visible || placeCursor || fileGrid.count === 0) return
         const offset = Math.max(0, grid.contentY - grid.originY)
@@ -279,9 +282,12 @@ Rectangle {
         cellWidth: width / panel.columns
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
-        cellHeight: Math.max(panel.compact ? 112 : 160,
-                             panel.compact ? Math.min(160, cellWidth * 0.6 + 40) : Math.min(220, cellWidth * 0.75 + 46),
-                             Math.ceil(height / Math.max(1, Math.floor(160 / panel.columns) - 4)))
+        // Compact panes snap to whole rows (two when they fit at 100 px or more) so no filename is half clipped.
+        cellHeight: panel.compact
+                    ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(160, cellWidth * 0.6 + 40))))
+                                     : Math.max(100, height))
+                    : Math.max(160, Math.min(220, cellWidth * 0.75 + 46),
+                               Math.ceil(height / Math.max(1, Math.floor(160 / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
@@ -503,14 +509,24 @@ Rectangle {
             wrapMode: Text.Wrap
             lineHeight: 1.4
         }
-        UiButton {
+        RowLayout {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.gapXs
-            visible: (panel.stateName === "empty" || panel.stateName === "inaccessible") && panel.parentPath.length > 0
-            variant: "outline"
-            iconName: "corner-up"
-            text: "Up one folder"
-            onClicked: panel.goUp()
+            spacing: Theme.gapSm
+            UiButton { // a share or permission error may be transient
+                objectName: "gridRetry"
+                visible: panel.stateName === "inaccessible"
+                variant: "outline"
+                text: "Try again"
+                onClicked: fileGrid.refresh()
+            }
+            UiButton {
+                visible: (panel.stateName === "empty" || panel.stateName === "inaccessible") && panel.parentPath.length > 0
+                variant: "outline"
+                iconName: "corner-up"
+                text: "Up one folder"
+                onClicked: panel.goUp()
+            }
         }
     }
     Rectangle { // inline explanation (unsupported file, folder that could not be entered)

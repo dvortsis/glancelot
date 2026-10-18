@@ -12,9 +12,18 @@ if ($IsWindows -or $env:OS -eq 'Windows_NT') {
     if ($LASTEXITCODE -ne 0) { throw 'MSVC environment initialization failed.' }
     foreach ($entry in $devEnvironment) { if ($entry -match '^([^=]+)=(.*)$') { [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process') } }
 }
-$localTools = Join-Path $repoRoot '.tools\python\Scripts'
+# Project-local tools live in the main checkout; agent worktrees under .worktrees share them.
+$toolsRoot = Join-Path $repoRoot '.tools'
+if (-not (Test-Path -LiteralPath $toolsRoot)) {
+    $commonDir = git -C $repoRoot rev-parse --path-format=absolute --git-common-dir 2>$null
+    if ($LASTEXITCODE -eq 0 -and $commonDir) {
+        $mainTools = Join-Path (Split-Path $commonDir -Parent) '.tools'
+        if (Test-Path -LiteralPath $mainTools) { $toolsRoot = $mainTools }
+    }
+}
+$localTools = Join-Path $toolsRoot 'python\Scripts'
 if (Test-Path -LiteralPath $localTools) { $env:PATH = "$localTools;$env:PATH" }
-if (-not $QtRoot) { $QtRoot = Join-Path $repoRoot '.tools\Qt\6.8.3\msvc2022_64' }
+if (-not $QtRoot) { $QtRoot = Join-Path $toolsRoot 'Qt\6.8.3\msvc2022_64' }
 $configureArgs = @('-S', '.', '-B', $BuildDir, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_TESTING=ON')
 if ($CoreOnly) { $configureArgs += '-DGLANCELOT_BUILD_VIEWER=OFF' }
 else { $configureArgs += @('-DGLANCELOT_BUILD_VIEWER=ON', "-DCMAKE_PREFIX_PATH=$QtRoot"); $env:PATH = "$(Join-Path $QtRoot 'bin');$env:PATH" }

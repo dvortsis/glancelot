@@ -134,7 +134,7 @@ Real-application smoke run with a scratch `GLANCELOT_CONFIG_DIR` and generated P
 ## Limits
 
 - Windows directory and file symlinks could not be created without Developer Mode or elevation. Those cases are reported UNVERIFIED; the junction case ran.
-- On Linux, the POSIX symlink, dangling-link and `chmod 000` cases passed in WSL. On Linux, only the core was compiled. The Qt model, QML and UI tests have not been built on Linux, so the Docker functional run is still pending.
+- On Linux, the POSIX symlink, dangling-link and `chmod 000` cases passed in WSL. The Docker image later built and ran the Qt model, QML and UI tests (see Continuation fixes); physical Linux windowing remains unverified.
 - On Windows, every reparse point counts as a link, as in `Navigator`. OneDrive Files-On-Demand placeholders may carry a cloud reparse tag. If they do, such photos appear as linked non-photo files. The filmstrip already excludes them, so this is not a regression, but the grid makes it visible. Classifying them as photos is a traversal-policy decision for the lead. One option is to badge only `IO_REPARSE_TAG_SYMLINK` and `IO_REPARSE_TAG_MOUNT_POINT`. Not verified on a OneDrive folder.
 - Truncation at the real 100,000-entry limit is tested only in the core (small limit). The UI banner was not exercised with 100,001 generated files.
 - Shuffle order in the grid uses `SortSpec`'s default seed. The controller's per-session shuffle seed is not reachable through the frozen interfaces, so with "Shuffle" the grid's file order differs from the filmstrip and canvas. Proposed lead change: expose the seed (for example `ViewerController::sortSeed()`, or a seed argument to `DirectoryEntryModel::setSort`).
@@ -169,3 +169,14 @@ Total Test time (real) =  55.47 sec
 ```
 
 The Linux container now builds and passes the Qt model, QML and UI tests (`directory_model`, `folder_grid`). This replaces the earlier limit that only the core had been compiled on Linux. Under Docker the UI tests run on the offscreen platform; physical Linux windowing remains unverified.
+
+## Integration
+
+- Independent fix re-check of `b63e931..8db4014`: APPROVED. Only Low findings remain:
+  - A grid viewport under 100 px still shows a half-clipped row. This predates the change.
+  - There are no adopted tests for compact row snapping or for Try again. The reviewer's own versions of those tests passed.
+  - The capture fix is a fixed `qWait(150)`.
+  - `selectedCount` stays non-zero while the grid is inactive. This also predates the change.
+- Integrated on `main` as `de63efb`:
+  - `./scripts/build.ps1 -BuildDir build -Test` gave `100% tests passed out of 11`, `Total Test time (real) = 103.55 sec`.
+  - `docker build -t glancelot-browser:main .` gave `100% tests passed, 0 tests failed out of 11`, `Total Test time (real) = 65.52 sec`.
