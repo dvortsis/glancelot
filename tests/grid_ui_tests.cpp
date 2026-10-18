@@ -150,7 +150,8 @@ private slots:
         QVERIFY(bar && edge && divider && title && brand && settings && grid && minimize && close);
         QTRY_VERIFY(minimize->isVisible() && close->isVisible());
         QVERIFY(!grid->isEnabled()); // no folder: the disabled state is the shared disabled opacity
-        int variants = 0; double pressedMarkerMin = 100; QStringList pressedMarkerLow;
+        auto* marker = settings->findChild<QQuickItem*>("selectionMarker"); QVERIFY(marker);
+        int variants = 0;
         for (const auto& entry : h.theme.families()) {
             const auto id = entry.toMap().value("id").toString();
             for (bool dark : {true, false}) {
@@ -175,15 +176,20 @@ private slots:
                 QVERIFY2(contrastRatio(role("text"), selection) >= 4.5, qPrintable(context + " text/selection"));
                 QVERIFY2(contrastRatio(token("focusRing"), role("surface")) >= 3, qPrintable(context + " focus ring"));
                 QVERIFY2(contrastRatio(role("primary"), selection) >= 3, qPrintable(context + " on-marker/selection"));
-                // Not asserted: a checked button held down shows its marker on pressed only for the press (recorded).
-                pressedMarkerMin = std::min(pressedMarkerMin, contrastRatio(role("primary"), pressed));
-                if (contrastRatio(role("primary"), pressed) < 3) pressedMarkerLow << context;
+                // Exercise the actual shared button marker; the pressed fill must not erase its selected state.
+                settings->setProperty("selected", true); settings->setProperty("down", true);
+                QTRY_COMPARE(itemColor(buttonBackground(settings)), pressed);
+                QVERIFY(marker->isVisible());
+                QVERIFY2(contrastRatio(itemColor(marker), itemColor(buttonBackground(settings))) >= 3,
+                         qPrintable(context + " on-marker/pressed"));
+                settings->setProperty("down", false);
+                QCOMPARE(itemColor(marker), role("primary"));
+                settings->setProperty("selected", false);
                 QVERIFY2(contrastRatio(role("background"), role("danger")) >= 3, qPrintable(context + " close glyph"));
                 ++variants;
             }
         }
         QCOMPARE(variants, 80);
-        qInfo("on-marker/pressed minimum %.2f; below 3:1 in: %s", pressedMarkerMin, qPrintable(pressedMarkerLow.join(", ")));
     }
     // Hover, pressed, focus and danger-hover backgrounds follow a live theme change while the state is held.
     void topBarStatesFollowLiveThemeChanges() {
@@ -249,8 +255,18 @@ private slots:
         QTRY_VERIFY(!showFrame->isVisible());
         QTRY_VERIFY(rightEdge(close) <= bar->width() - 8 && rightEdge(minimize) < rightEdge(maximize));
         QVERIFY(namedItem(h.window, "topBarTitle")->width() > 0); // the title keeps some room
+        // The lock indicator joins the bar at the minimum size: it collapses to its icon so the controls still fit.
+        auto* lock = namedItem(h.window, "layoutLockIndicator"); QVERIFY(lock);
+        h.layout.setLocked(true);
+        QTRY_VERIFY(lock->isVisible());
+        QTRY_VERIFY(lock->property("iconOnly").toBool());
+        QTRY_VERIFY(rightEdge(close) <= bar->width() - 8 && rightEdge(lock) <= close->mapToItem(bar, QPointF()).x());
+        QVERIFY(namedItem(h.window, "topBarTitle")->width() > 0);
         h.window->resize(1180, 780);
         QTRY_VERIFY(showFrame->isVisible());
+        QTRY_VERIFY(!lock->property("iconOnly").toBool()); // a wide bar names the state in words
+        h.layout.setLocked(false);
+        QTRY_VERIFY(!lock->isVisible());
         QTRY_VERIFY(maximize->x() + maximize->width() <= close->x());
         const auto centre = [](QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); };
         QCOMPARE(maximize->property("text").toString(), QString("Maximize"));

@@ -78,9 +78,10 @@ Button {
             color: control.variant === "primary" ? Qt.alpha(Theme.textOnPrimary, control.down ? 0.16 : (control.hovered ? 0.08 : 0))
                                                  : Qt.alpha(Theme.background, control.down ? 0.16 : 0)
         }
-        Rectangle { // "on" marker; primary keeps >= 3:1 against selection, hover and surface in every catalog variant
+        Rectangle { // Keep the selected marker legible when the pressed fill replaces the selection fill.
+            objectName: "selectionMarker"
             visible: control.isOn && control.variant !== "primary"
-            color: Theme.primary
+            color: control.down ? Theme.text : Theme.primary
             radius: 1.5
             readonly property bool leading: control.alignment === Qt.AlignLeft
             width: leading ? 3 : Math.min(parent.width - 2 * Theme.gapSm, 2 * Theme.iconSize)

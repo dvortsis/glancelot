@@ -513,6 +513,9 @@ ApplicationWindow {
                 objectName: "layoutLockIndicator"
                 visible: paneLayout.locked
                 iconName: "lock"
+                // In a narrow horizontal bar the label yields so the window controls keep their room; the name stays
+                // the tooltip and accessible name.
+                iconOnly: barGridtopbar.columns !== 1 && topPanel.width < 720
                 text: "Layout locked"
                 tip: "Workspace layout is locked. Select to unlock" + app.shortcutHint("layout-lock")
                 Accessible.name: "Workspace layout locked. Unlock layout"
