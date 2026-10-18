@@ -28,11 +28,13 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: done
     depends: [TREE-START-01, GRID-01, WINDOW-SLOTS-01]
     branch: agent/panes
     worktree: .worktrees/panes
     plan: docs/PANES-PLAN.md
+    commit: 5f49363
+    evidence: docs/verification/PANES-01.md; independent review APPROVED at 7a25436 after three rounds; integrated Windows 9/9 69.93s and Linux container 9/9 50.12s
     outcome: Resizable movable primary panes with individual freeze and global layout lock
     interfaces: Lead freezes pane IDs, layout state and per-window persistence before implementation; use native Qt/QML and the existing GPU canvas
     acceptance: Tree, image preview, grid, filmstrip and HUD regions support resizing and moving/re-docking; future metadata panes use the same contract; freeze locks position and size while content remains interactive; global lock, visible lock state, keyboard alternatives, reset layout and persistent per-slot layouts
@@ -53,8 +55,11 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: ready
+    state: review
     depends: [GRID-01, SORT-01, TREE-START-01, PATH-BAR-01]
+    branch: agent/file-grid
+    worktree: .worktrees/file-grid
+    plan: docs/FILE-GRID-PLAN.md
     outcome: File-manager-style grid of folders and all regular files with image thumbnails and multiselection
     interfaces: Lead freezes mixed-entry identity/type/revision model and selection contracts; image traversal and filmstrip retain eligible-image semantics
     acceptance: Folder tiles, image thumbnails and generic unsupported-file icons; Enter/double-click enters folders or opens supported images; unsupported items never enter the decoder or execute automatically; parent navigation and tree/path synchronization; folders-first natural ordering with file sort choices; Ctrl/Shift selection, keyboard ranges, select-all and clear with visible selection count

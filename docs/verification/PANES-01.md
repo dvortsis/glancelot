@@ -1,6 +1,6 @@
 # PANES-01 verification
 
-Branch `agent/panes`, worktree `.worktrees/panes`, build `build-panes`. State: implementation complete; Linux checks passed; independent review pending. Contract: docs/PANES-PLAN.md.
+Branch `agent/panes`, worktree `.worktrees/panes`, build `build-panes`. State: done. Independent review APPROVED at `7a25436` after three rounds; merged into main at `5f49363`. Contract: docs/PANES-PLAN.md.
 
 Adds the validated `PaneLayout` model (six pane IDs, dock region/order/extent/visible/frozen, center split, global lock) with per-slot persistence via field-level merges under the settings writer lock. It also adds native region hosts with responsive recovery that never persists, pointer and keyboard arrangement, Settings controls, and the remappable commands Arrange panes, Lock or unlock workspace layout, and Reset workspace layout. These commands start unbound so they cannot collide with stored shortcuts, and they are discoverable through command search. While locked, the top bar shows a "Layout locked" indicator that unlocks when activated. Command search marks Arrange panes "Layout locked" while the layout is locked.
 
@@ -40,6 +40,39 @@ Adds the validated `PaneLayout` model (six pane IDs, dock region/order/extent/vi
 | I8: timing-dependent captures | Matrix keeps the HUD awake; native capture run passes | native run below |
 
 Polish items left for UI-SETTINGS-01: Settings layout section grouping, "Center" offered for edge panes, preferred size committing only on Enter, vertical toolbar alignment, vertical filmstrip insets, toast wrapping in narrow content, and per-keypress synchronous settings writes.
+
+## Review rounds 2 and 3
+
+Round 2 at `52e10e0` confirmed every round-1 fix natively and found three regressions from the two-pass workspace:
+
+- R1: the status toast covered the status bar.
+- R2: the recovery notice covered the top toolbar.
+- R3: a pinned tree inside auto-hiding vertical bars overlapped the canvas and shifted with the HUD.
+
+`7a25436` fixed all three:
+
+- Notices and toasts use a new `_clear` area: the live bounds minus any overlay tree.
+- Docked panes stack outermost.
+- The arrangement center frame uses `_clear`.
+
+Round 3 APPROVED with no blocking findings. The reviewer's evidence:
+
+- Clean full suite: 9/9 in 84.12s.
+- Native capture run: 30 passed, 1 skipped; 104 matrix and 8 UI captures.
+- Native review experiments: 9/9 UI and 9/9 model.
+- Spot-checks of grid, frameless and frozen modes.
+
+Accepted trade-off: a docked (frozen) pane sits outside an auto-hiding pane in the same region regardless of saved order. For example, freezing only the filmstrip puts it above the auto-hiding top toolbar. Deferred to UI-SETTINGS-01:
+
+- In arrangement mode at 540 px in recovery, the centered grip overlaps the recovery notice.
+- Ctrl+Arrow steps from the saved extent.
+- At the 120 px content minimum, the centered grip overlaps the adjacent resize handle.
+- The single content pane has no hint that an edge placement only applies to the combined view.
+
+## Integrated checks (main `5f49363`)
+
+- Windows: `scripts/build.ps1 -Test` passed 9/9 in 69.93s.
+- Linux: `docker build -t glancelot-browser:main .` (WSL Ubuntu, Qt 6.8.3, full CTest during the image build) passed 9/9 in 50.12s.
 
 ## Evidence
 
