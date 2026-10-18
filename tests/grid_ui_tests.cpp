@@ -1596,6 +1596,15 @@ private slots:
             QCOMPARE(previewState(h), QString("no-folder"));
             QVERIFY(!named(h.window->contentItem(), "statusToast")->isVisible());
             QVERIFY(qAbs(paneRect(h, "grid").height() / (paneRect(h, "grid").height() + paneRect(h, "preview").height()) - 0.4) < 0.01);
+        }
+        {   // A grid that starts visible lists the folder of the photo opened at start-up (app/main.cpp order).
+            CombinedFolder media; QVERIFY(media.root.isValid());
+            Harness h(true, 11); QVERIFY(h.window); h.window->resize(1180, 780);
+            QTRY_VERIFY(h.window->property("combinedMode").toBool());
+            h.viewer.open(media.file("b.png"));
+            QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == 8, 10000);
+            QTRY_COMPARE(h.selected(), h.fileGrid.rowOf(media.file("b.png")));
+            QTRY_COMPARE(previewState(h), QString(""));
             h.viewer.trigger("view-grid");
         }
         {   Harness h(false, 11); QVERIFY(h.window); QTRY_VERIFY(h.window->property("gridMode").toBool()); }

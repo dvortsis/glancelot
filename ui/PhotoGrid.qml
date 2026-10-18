@@ -76,15 +76,19 @@ Rectangle {
         if (current !== entryCurrentPath) revealPath = current
         entryCurrentPath = current
         placeCursor = true
+        entering = true
         reveal()
         focusGrid()
     }
+    // True from entering the grid until its first listing places the cursor: a photo opened meanwhile (the grid
+    // restored visible at start-up, before the start-up photo opens) becomes the cursor's target.
+    property bool entering: false
     // Places the cursor once a listing has landed: on the revealed photo, else keeps it, else the first entry.
     // Runs once per grid entry or folder change; an ordinary refresh (external change) never moves the cursor,
     // replaces the selection or scrolls the view.
     function reveal() {
-        if (!visible || fileGrid.loading || !placeCursor) return
-        placeCursor = false
+        if (!visible || fileGrid.loading || !placeCursor || folderPath.length === 0) return
+        placeCursor = false; entering = false
         if (revealPath.length) {
             const row = fileGrid.rowOf(revealPath)
             revealPath = ""
@@ -162,6 +166,8 @@ Rectangle {
         if (visible) Qt.callLater(enter)
         else noticeText = ""
     }
+    // A grid restored as visible at start-up (a saved grid or combined mode) never sees a visibility change.
+    Component.onCompleted: if (visible) { fileGrid.setActive(true); Qt.callLater(enter) }
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
     onFolderPathChanged: placeCursor = true
     Connections {
@@ -169,6 +175,7 @@ Rectangle {
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
         function onModelAboutToBeReset() { panel.rememberViewport() }
         function onModelReset() { Qt.callLater(panel.restoreViewport, panel.resetViewport) }
+        function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
