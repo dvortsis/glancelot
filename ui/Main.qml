@@ -20,21 +20,140 @@ ApplicationWindow {
     property bool gridMode: false
     property bool layoutEditing: false
     property var resizePreview: ({})
+    // ---- GRID-PREVIEW-01 content modes. `gridMode` keeps meaning "grid only" and mirrors paneLayout.contentMode,
+    // so the existing grid toggle, Escape and tests keep their behaviour; combined mode shows grid and preview.
+    readonly property bool combinedMode: paneLayout.contentMode === "combined" && !gridMode
+    property string focusedPane: "grid"        // combined mode: the content pane that owns keys
+    property real splitDrag: -1                // transient split ratio while the handle is dragged (never persisted)
+    property bool previewFollowsCursor: false  // false: the preview shows what the viewer itself navigated to
+    property string cursorKey: ""
+    property string splitMessage: ""
+    readonly property bool modeCompact: width < 760 || !topPanel.horizontalBar || topPanel.modeSpace < modeSelector.implicitWidth + barGridtopbar.columnSpacing
+    readonly property var contentModes: [
+        { id: "preview", command: "view-preview", label: "Photo", icon: "image", tip: "Photo only" },
+        { id: "grid", command: "view-grid", label: "Grid", icon: "grid", tip: "Folder grid only" },
+        { id: "combined", command: "view-combined", label: "Both", icon: "split", tip: "Grid and photo together" }
+    ]
+    // Explicit state of the combined preview: "" shows the decoded photo; "loading" keeps the canvas under a delayed
+    // indicator; every other state covers the canvas so a stale photo is never presented as the cursor's item.
+    readonly property string previewState: {
+        if (!combinedMode) return ""
+        const follow = previewFollowsCursor && workspace._gridShown
+        if (follow) {
+            if (viewer.directoryPending) return "loading-folder"
+            if (fileGrid.directory.length === 0) return "no-folder"
+            const grid = photoGrid.stateName
+            if (grid === "loading") return "loading-folder"
+            if (grid === "inaccessible" || grid === "empty") return grid
+            const row = fileGrid.cursorRow, count = fileGrid.count
+            if (row < 0 || row >= count) return "none"
+            const kind = fileGrid.kindAt(row)
+            if (kind === "folder") return "folder"
+            if (kind !== "image") return "unsupported"
+            if (pathKey(viewer.filePath) !== pathKey(fileGrid.pathAt(row)) || viewer.loading) return "loading"
+            return viewer.imageReady ? "" : "failed"
+        }
+        if (viewer.filePath.length === 0) return viewer.directory.length === 0 && fileGrid.directory.length === 0 ? "no-folder" : "none"
+        if (viewer.loading) return "loading"
+        return viewer.imageReady ? "" : "failed"
+    }
+    readonly property string previewSubject: previewFollowsCursor && workspace._gridShown && fileGrid.cursorRow >= 0 ? fileGrid.pathAt(fileGrid.cursorRow) : viewer.filePath
+    function pathKey(path) { const p = String(path).replace(/\\/g, "/"); return Qt.platform.os === "windows" ? p.toLowerCase() : p }
+    function leafName(path) { const p = String(path).replace(/\\/g, "/").replace(/\/+$/, ""); return p.slice(p.lastIndexOf("/") + 1) }
+    function syncMode() { gridMode = paneLayout.contentMode === "grid" }
+    onGridModeChanged: if (gridMode !== (paneLayout.contentMode === "grid")) paneLayout.setContentMode(gridMode ? "grid" : "preview")
+    onCombinedModeChanged: {
+        previewDebounce.stop(); splitDrag = -1
+        if (combinedMode) { previewFollowsCursor = false; focusedPane = "grid" }
+    }
+    Component.onCompleted: syncMode()
+    Connections {
+        target: paneLayout
+        function onChanged() { app.syncMode(); if (paneLayout.locked) app.splitDrag = -1 }
+    }
+    function setContentMode(mode) {
+        canvas.endLoupe()
+        paneLayout.setContentMode(mode); syncMode(); wakeHud()
+        Qt.callLater(focusContent)
+    }
+    function toggleOrientation() {
+        const next = paneLayout.centerSplit.orientation === "vertical" ? "horizontal" : "vertical"
+        if (!paneLayout.setCenterOrientation(next)) showSplitMessage(paneLayout.feedback)
+        else if (!combinedMode) showSplitMessage(next === "vertical" ? "Grid and photo will be stacked in the Both view." : "Grid and photo will sit side by side in the Both view.")
+    }
+    function showSplitMessage(text) { splitMessage = text; splitMessageTimer.restart() }
+    // Moves keys between the grid and the preview. A pane revealed by the single-pane fallback becomes visible
+    // with the binding update, so focus is retried once on the next turn.
+    function focusPane(name) {
+        focusedPane = name
+        const go = () => { if (!app.combinedMode) return; if (name === "grid") photoGrid.focusGrid(); else canvas.forceActiveFocus(Qt.TabFocusReason) }
+        go(); Qt.callLater(go)
+    }
+    onActiveFocusItemChanged: {
+        if (!combinedMode || !activeFocusItem) return
+        if (focusWithin(photoGrid)) focusedPane = "grid"
+        else if (activeFocusItem === canvas) focusedPane = "preview"
+    }
+    // A cursor move made in the grid (keys, pointer, entering a folder) drives the preview; a relisting while the
+    // preview has focus does not. Multi-selection changes that leave the cursor in place never reach the preview.
+    function cursorMaybeMoved() {
+        const key = fileGrid.cursorRow >= 0 ? pathKey(fileGrid.pathAt(fileGrid.cursorRow)) : ""
+        if (key === cursorKey) return
+        cursorKey = key
+        if (!combinedMode || !focusWithin(photoGrid)) return
+        previewFollowsCursor = true
+        schedulePreview()
+    }
+    // Debounced so a held arrow key issues one decode for the item it stops on; the controller's generation drops
+    // any result that a newer open has replaced.
+    function cursorImage() {
+        const row = fileGrid.cursorRow
+        return combinedMode && previewFollowsCursor && workspace._gridShown && !viewer.directoryPending && row >= 0
+            && row < fileGrid.count && fileGrid.kindAt(row) === "image" ? fileGrid.pathAt(row) : ""
+    }
+    function schedulePreview() {
+        const path = cursorImage()
+        if (path.length && !(pathKey(viewer.filePath) === pathKey(path) && (viewer.loading || viewer.imageReady))) previewDebounce.restart()
+        else previewDebounce.stop()
+    }
+    Connections {
+        target: fileGrid
+        function onSelectionChanged() { Qt.callLater(app.cursorMaybeMoved) }
+    }
+    Connections {
+        target: viewer
+        function onStateChanged() { if (viewer.directoryPending) previewDebounce.stop() } // a folder change discards a pending preview
+    }
+    Timer {
+        id: previewDebounce
+        objectName: "previewDebounce"
+        interval: 120
+        onTriggered: {
+            const path = app.cursorImage()
+            if (path.length && !(app.pathKey(viewer.filePath) === app.pathKey(path) && (viewer.loading || viewer.imageReady))) viewer.open(path)
+        }
+    }
+    Timer { id: splitMessageTimer; interval: 5000; onTriggered: app.splitMessage = "" }
+    property bool previewLoadingShown: false
+    onPreviewStateChanged: { previewLoadingShown = false; if (previewState === "loading") previewLoadingDelay.restart(); else previewLoadingDelay.stop() }
+    Timer { id: previewLoadingDelay; interval: 200; onTriggered: app.previewLoadingShown = true }
+    // ---- end GRID-PREVIEW-01 state
     readonly property var workspace: {
         const state=JSON.parse(JSON.stringify(paneLayout.panes))
-        // Only one content pane shows until GRID-PREVIEW-01, so it fills the center wherever it is saved
-        // (its saved edge placement is kept for the combined view).
-        state[gridMode?"grid":"preview"].region="center"
+        // Content panes fill the center wherever they are saved. In the combined view the grid's saved edge decides
+        // which side (left/top) or end (right/bottom) of the split it takes.
+        const gridEdge=state.grid.region,gridOn=gridMode||combinedMode,previewOn=!gridMode
+        state.grid.region="center";state.preview.region="center"
         const all=["topbar","statusbar","filmstrip","tree","preview","grid"]
         // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
         // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
         const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
             topbar:state.topbar.visible||frameless, statusbar:state.statusbar.visible,
-            filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
-            preview:!gridMode,grid:gridMode}
+            filmstrip:state.filmstrip.visible&&!gridOn&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
+            preview:previewOn,grid:gridOn}
         const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
-            topbar:shown.topbar&&(gridMode||state.topbar.frozen),
-            statusbar:shown.statusbar&&(gridMode||state.statusbar.frozen),
+            topbar:shown.topbar&&(gridOn||state.topbar.frozen),
+            statusbar:shown.statusbar&&(gridOn||state.statusbar.frozen),
             filmstrip:shown.filmstrip&&state.filmstrip.frozen,
             preview:shown.preview,grid:shown.grid}
         const active={tree:shown.tree&&(docked.tree||hudVisible||frameless),
@@ -93,9 +212,35 @@ ApplicationWindow {
         const live=place(ids),bounds=place(all.filter(id=>docked[id])).bounds
         const result=live.rects
         for(const id of ids.filter(id=>state[id].region==="center"))result[id]=Object.assign({},bounds)
+        // Combined view (GRID-PREVIEW-01): split the center using the saved orientation and ratio (the grid's share).
+        // Minimum extents win; a center too small for the saved orientation tries the other one, then shows
+        // only the focused pane. These fallbacks are display-only and are never persisted.
+        const split={fallback:"",orientation:"",gridFirst:gridEdge!=="right"&&gridEdge!=="bottom",origin:0,lead:0,total:0,gridShare:0.5,
+            handle:{x:0,y:0,width:0,height:0}}
+        if(combinedMode&&result.grid&&result.preview) {
+            const mins={grid:{width:280,height:200},preview:{width:240,height:160}}
+            const fits=o=>o==="horizontal"?bounds.width>=mins.grid.width+mins.preview.width&&bounds.height>=mins.grid.height
+                :bounds.height>=mins.grid.height+mins.preview.height&&bounds.width>=mins.grid.width
+            let o=paneLayout.centerSplit.orientation==="vertical"?"vertical":"horizontal"
+            if(!fits(o)) { const other=o==="horizontal"?"vertical":"horizontal"; o=fits(other)?other:""; split.fallback=o.length?"reoriented":"single" }
+            if(o.length) {
+                const h=o==="horizontal",first=split.gridFirst?"grid":"preview",second=split.gridFirst?"preview":"grid"
+                const total=h?bounds.width:bounds.height,gridMin=h?mins.grid.width:mins.grid.height,previewMin=h?mins.preview.width:mins.preview.height
+                // `ratio` is the grid's share, so moving the grid to the other edge keeps its size.
+                const share=split.fallback===""&&splitDrag>=0?splitDrag:paneLayout.centerSplit.ratio
+                const gridExtent=Math.round(Math.max(gridMin,Math.min(total-previewMin,total*share)))
+                const lead=split.gridFirst?gridExtent:total-gridExtent
+                split.gridShare=gridExtent/total
+                result[first]=h?{x:bounds.x,y:bounds.y,width:lead,height:bounds.height}:{x:bounds.x,y:bounds.y,width:bounds.width,height:lead}
+                result[second]=h?{x:bounds.x+lead,y:bounds.y,width:total-lead,height:bounds.height}:{x:bounds.x,y:bounds.y+lead,width:bounds.width,height:total-lead}
+                split.handle=h?{x:bounds.x+lead-4,y:bounds.y,width:8,height:bounds.height}:{x:bounds.x,y:bounds.y+lead-4,width:bounds.width,height:8}
+                split.orientation=o;split.origin=h?bounds.x:bounds.y;split.lead=lead;split.total=total
+            } else result[focusedPane==="preview"?"grid":"preview"]={x:0,y:0,width:0,height:0}
+        }
         // content: the canvas area minus an overlay tree. clear: what is unobstructed right now (also minus the
         // auto-hiding bars that are visible), for notices and toasts that must not cover controls.
-        let content=Object.assign({},result[gridMode?"grid":"preview"]||bounds),clear=Object.assign({},live.bounds)
+        const contentId=gridMode||(combinedMode&&result.preview&&result.preview.width===0)?"grid":"preview"
+        let content=Object.assign({},result[contentId]||bounds),clear=Object.assign({},live.bounds)
         function uncover(area,cover) {
             const intersection=Math.max(0,Math.min(area.x+area.width,cover.x+cover.width)-Math.max(area.x,cover.x))
             if(cover.y<area.y+area.height && cover.y+cover.height>area.y && intersection>0) {
@@ -110,7 +255,9 @@ ApplicationWindow {
             uncover(content,result[id]);uncover(clear,result[id])
         }
         for(const id of Object.keys(active))if(!active[id])result[id]={x:0,y:0,width:0,height:0}
-        result._state=state;result._recovered=recovered;result._content=content;result._clear=clear
+        result._state=state;result._recovered=recovered;result._content=content;result._clear=clear;result._split=split
+        result._gridShown=gridOn&&result.grid.width>0&&result.grid.height>0
+        result._previewShown=previewOn&&result.preview.width>0&&result.preview.height>0
         return result
     }
     function paneRect(id) { return workspace[id]||{x:0,y:0,width:0,height:0} }
@@ -154,11 +301,22 @@ ApplicationWindow {
             if (focused === item) return true
         return false
     }
-    function invoke(id) { if (gridMode && !gridAllowsCommand(id)) return; viewer.trigger(id); wakeHud() }
-    function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
-    function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
+    // Explicit routes (toolbar, command search) run canvas commands in the combined view whatever pane has focus;
+    // window shortcuts follow the focused pane (`gridScope`).
+    function invoke(id) {
+        if (gridMode && !gridAllowsCommand(id)) return
+        if (combinedMode && ["next", "previous", "next-folder", "previous-folder"].indexOf(id) >= 0) previewFollowsCursor = false
+        viewer.trigger(id); wakeHud()
+    }
+    readonly property bool gridScope: gridMode || (combinedMode && focusedPane === "grid")
+    function focusContent() { if (gridMode || (combinedMode && focusedPane === "grid")) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
+    function showCanvas() {
+        if (combinedMode) { previewFollowsCursor = false; focusPane("preview"); wakeHud(); return } // an explicit open
+        gridMode = false; canvas.forceActiveFocus(); wakeHud()
+    }
     function gridAllowsCommand(id) {
-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset"].indexOf(id) >= 0
+        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
+                "view-preview", "view-grid", "view-combined", "combined-orientation"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -190,6 +348,8 @@ ApplicationWindow {
         else if (id === "arrange-panes") layoutEditing = true // a locked layout explains itself inside arrangement
         else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
         else if (id === "layout-reset") paneLayout.reset()
+        else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
+        else if (id === "combined-orientation") toggleOrientation()
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -205,7 +365,7 @@ ApplicationWindow {
             required property var modelData
             sequence: modelData.binding
             context: Qt.WindowShortcut
-            enabled: !app.modalOpen && !app.editingText && modelData.binding.length > 0 && (!app.gridMode || app.gridAllowsCommand(modelData.id))
+            enabled: !app.modalOpen && !app.editingText && modelData.binding.length > 0 && (!app.gridScope || app.gridAllowsCommand(modelData.id))
             onActivated: app.invoke(modelData.id)
         }
     }
@@ -217,6 +377,7 @@ ApplicationWindow {
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
             if (app.gridMode) app.showCanvas()
+            else if (app.combinedMode && app.focusedPane === "preview" && app.visibility !== Window.FullScreen) app.focusPane("grid")
             else if (app.visibility === Window.FullScreen) app.showNormal()
             else app.wakeHud()
         }
@@ -226,7 +387,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (!app.layoutEditing && !app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+            if (!app.layoutEditing && !app.gridMode && !app.combinedMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -246,6 +407,33 @@ ApplicationWindow {
     // The application owns the title bar when there is no system one: frameless mode, or full screen.
     readonly property bool ownsTitleBar: frameless || visibility === Window.FullScreen
     function toggleMaximized() { if (visibility === Window.Maximized) showNormal(); else showMaximized() }
+    component ModeMenuItem: MenuItem { // compact content-mode menu row: check, icon, name and its shortcut
+        id: modeItem
+        required property var mode
+        readonly property bool current: paneLayout.contentMode === mode.id
+        objectName: "contentModeItem-" + mode.id
+        implicitHeight: Theme.controlHeight
+        leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+        text: mode.tip
+        indicator: null
+        Accessible.role: Accessible.MenuItem
+        Accessible.checked: current
+        onTriggered: app.invoke(mode.command)
+        contentItem: RowLayout {
+            spacing: Theme.gapSm
+            UiIcon { name: "check"; color: Theme.primary; opacity: modeItem.current ? 1 : 0 }
+            UiIcon { name: modeItem.mode.icon; color: Theme.text }
+            Label { Layout.fillWidth: true; text: modeItem.mode.tip; color: Theme.text; font.pixelSize: Theme.textBody; elide: Text.ElideRight }
+            Label {
+                visible: text.length > 0
+                text: (viewer.commands, viewer.bindingFor(modeItem.mode.command)) // re-read when bindings change
+                color: Theme.muted
+                font.family: Theme.monoFamily
+                font.pixelSize: Theme.textSmall
+            }
+        }
+        background: Rectangle { radius: Theme.radiusSmall; color: modeItem.highlighted || modeItem.hovered ? Theme.hover : "transparent" }
+    }
     component BarDivider: Rectangle {
         implicitWidth: Theme.borderWidth
         implicitHeight: Theme.iconSize + Theme.gapXs
@@ -266,7 +454,7 @@ ApplicationWindow {
         image: viewer.image
         background: "#191919" // photo backdrop, deliberately independent of the interface palette
         focus: !app.gridMode
-        visible: !app.gridMode
+        visible: app.workspace._previewShown
         // Keyboard route into the auto-hiding filmstrip: Tab wakes the HUD and focuses the current photo's cell.
         // Shift+Tab: keyboard route into the folder tree (shows it when hidden).
         Keys.onBacktabPressed: event => {
@@ -274,7 +462,13 @@ ApplicationWindow {
             else { app.hudVisible = true; hideHud.restart(); Qt.callLater(treePanel.focusList) }
             event.accepted = true
         }
+        // Combined view: F6 returns to the grid; Tab continues to the split handle (its keyboard resize), then the grid.
+        Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true } }
         Keys.onTabPressed: event => {
+            if (app.combinedMode) {
+                if (splitHandle.visible) splitHandle.forceActiveFocus(Qt.TabFocusReason); else app.focusPane("grid")
+                event.accepted = true; return
+            }
             if (viewer.filmstripVisible && filmstrip.count > 0) {
                 app.hudVisible = true; hideHud.restart()
                 Qt.callLater(filmstripPanel.focusCurrent)
@@ -286,7 +480,7 @@ ApplicationWindow {
     }
     MouseArea {
         id: interaction
-        visible: !app.gridMode
+        visible: app.workspace._previewShown
         anchors.fill: canvas
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         hoverEnabled: true
@@ -317,6 +511,7 @@ ApplicationWindow {
                 canvas.panBy((wheel.modifiers & Qt.ShiftModifier) ? amount : wheel.pixelDelta.x, (wheel.modifiers & Qt.ShiftModifier) ? 0 : amount)
             } else {
                 app.wheelRemainder += pixel !== 0 ? pixel*2 : delta
+                if (Math.abs(app.wheelRemainder) >= 120) app.previewFollowsCursor = false
                 while (app.wheelRemainder >= 120) { viewer.previous(); app.wheelRemainder-=120 }
                 while (app.wheelRemainder <= -120) { viewer.next(); app.wheelRemainder+=120 }
             }
@@ -328,12 +523,252 @@ ApplicationWindow {
         objectName: "photoGrid"
         x: app.paneRect("grid").x; y: app.paneRect("grid").y
         width: app.paneRect("grid").width; height: app.paneRect("grid").height
-        visible: app.gridMode
+        visible: app.workspace._gridShown
         inputEnabled: !app.modalOpen
-        onItemActivated: app.showCanvas()
-        onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else app.showCanvas() }
+        // Combined view: Enter on a photo moves keys to the preview and stays combined; Escape does the same.
+        onItemActivated: { previewDebounce.stop(); if (app.combinedMode) app.focusPane("preview"); else app.showCanvas() }
+        onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else if(app.combinedMode)app.focusPane("preview");else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
+        tabHandler: app.combinedMode ? (() => app.focusPane("preview")) : null
+        Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("preview"); event.accepted = true } }
     }
+    // ---- GRID-PREVIEW-01 combined view: split handle, explicit preview states, pane focus rings and notices.
+    Item {
+        id: splitHandle
+        objectName: "contentSplitHandle"
+        readonly property var split: app.workspace._split
+        readonly property bool horizontal: split.orientation === "horizontal"
+        // The split is geometry: locked layouts and frozen center panes keep it; display fallbacks never persist it.
+        readonly property bool editable: !paneLayout.locked && !paneLayout.panes.preview.frozen && !paneLayout.panes.grid.frozen && split.fallback === ""
+        readonly property real ratio: split.gridShare // the grid's share of the split, as shown
+        // Pointer and arrow keys move the divider; converted to the grid's share whichever side the grid takes.
+        function shareAt(leadShare) { return split.gridFirst ? leadShare : 1 - leadShare }
+        x: split.handle.x; y: split.handle.y; width: split.handle.width; height: split.handle.height
+        visible: app.combinedMode && split.orientation.length > 0
+        z: 6
+        Accessible.role: Accessible.Separator
+        Accessible.name: "Resize grid and photo"
+        Accessible.description: editable ? (horizontal ? "Left and Right arrows" : "Up and Down arrows") + " move the divider. Home centres it." : "The layout is locked or the window is too small to resize the split."
+        function commit(value) {
+            app.splitDrag = -1
+            const next = Math.round(Math.max(0.1, Math.min(0.9, value)) * 1000) / 1000
+            if (!paneLayout.setCenterRatio(next)) app.showSplitMessage(paneLayout.feedback)
+        }
+        Keys.onShortcutOverride: event => {
+            if ([Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_Escape].indexOf(event.key) >= 0) event.accepted = true
+        }
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_Escape) { if (splitMouse.pressed) app.splitDrag = -1; else app.focusPane(app.focusedPane); event.accepted = true; return }
+            if (event.key === Qt.Key_F6) { app.focusPane(app.focusedPane === "grid" ? "preview" : "grid"); event.accepted = true; return }
+            const step = { [Qt.Key_Left]: -0.05, [Qt.Key_Up]: -0.05, [Qt.Key_Right]: 0.05, [Qt.Key_Down]: 0.05 }[event.key]
+            if (event.key === Qt.Key_Home) { commit(0.5); event.accepted = true }
+            else if (step !== undefined) { commit(ratio + (split.gridFirst ? step : -step)); event.accepted = true }
+        }
+        Keys.onTabPressed: event => { app.focusPane("grid"); event.accepted = true }
+        Keys.onBacktabPressed: event => { app.focusPane("preview"); event.accepted = true }
+        Rectangle { // the divider itself; a grip and the focus ring appear when it can be used
+            x: splitHandle.horizontal ? (parent.width - width) / 2 : 0
+            y: splitHandle.horizontal ? 0 : (parent.height - height) / 2
+            width: splitHandle.horizontal ? Theme.borderWidth : parent.width
+            height: splitHandle.horizontal ? parent.height : Theme.borderWidth
+            color: splitMouse.pressed || splitHandle.activeFocus ? Theme.primary : Theme.border
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            visible: splitHandle.editable && (splitMouse.containsMouse || splitMouse.pressed || splitHandle.activeFocus)
+            // Keyboard focus enlarges the grip and draws it in the focus colour so the active divider is unmistakable.
+            readonly property int length: splitHandle.activeFocus ? 3 * Theme.iconSize : 2 * Theme.iconSize
+            readonly property int thickness: splitHandle.activeFocus ? Theme.gapXs + Theme.gapXxs : Theme.gapXs
+            width: splitHandle.horizontal ? thickness : length
+            height: splitHandle.horizontal ? length : thickness
+            radius: thickness / 2
+            color: splitHandle.activeFocus ? Theme.focusRing : splitMouse.pressed ? Theme.primary : Theme.muted
+        }
+        MouseArea {
+            id: splitMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            enabled: splitHandle.editable
+            cursorShape: splitHandle.horizontal ? Qt.SplitHCursor : Qt.SplitVCursor
+            property bool moved: false
+            onPressed: moved = false
+            onPositionChanged: mouse => {
+                if (!pressed) return
+                const point = mapToItem(null, mouse.x, mouse.y), split = splitHandle.split
+                moved = true
+                app.splitDrag = Math.max(0.1, Math.min(0.9, splitHandle.shareAt(((splitHandle.horizontal ? point.x : point.y) - split.origin) / Math.max(1, split.total))))
+            }
+            // Persisted once, on release, as the ratio actually shown (minimum extents may have clamped it).
+            onReleased: { if (moved && app.splitDrag >= 0) splitHandle.commit(splitHandle.ratio); else app.splitDrag = -1 }
+            onCanceled: app.splitDrag = -1
+            onDoubleClicked: splitHandle.commit(0.5)
+        }
+        ToolTip.visible: splitMouse.containsMouse && !splitMouse.pressed
+        ToolTip.delay: 600
+        ToolTip.text: editable ? "Drag to resize. Double-click to centre." : paneLayout.locked ? "Unlock the layout to resize the split" : "Unfreeze the grid and photo panes to resize the split"
+    }
+    Rectangle { // explicit preview states: folder, unsupported file, no selection, empty/inaccessible/no folder, failure
+        id: previewStatePanel
+        objectName: "previewState"
+        readonly property string stateName: app.previewState
+        readonly property string subjectName: app.leafName(app.previewSubject)
+        readonly property string extension: {
+            const dot = subjectName.lastIndexOf(".")
+            return dot > 0 && dot < subjectName.length - 1 ? subjectName.slice(dot + 1).toUpperCase().slice(0, 5) : ""
+        }
+        x: app.paneRect("preview").x; y: app.paneRect("preview").y
+        width: app.paneRect("preview").width; height: app.paneRect("preview").height
+        visible: app.combinedMode && app.workspace._previewShown && stateName.length > 0 && stateName !== "loading"
+        color: Theme.background
+        z: 1
+        Accessible.role: Accessible.StaticText
+        Accessible.name: stateTitle.text + (stateDetail.text.length ? ". " + stateDetail.text : "")
+        MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton; onPressed: app.focusPane("preview") }
+        ColumnLayout {
+            anchors.centerIn: parent
+            width: Math.max(0, Math.min(360, parent.width - 2 * Theme.gapXl))
+            spacing: Theme.gapSm
+            Column {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: Theme.gapXs
+                UiIcon {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    readonly property int glyph: previewStatePanel.height < 260 ? 32 : 48
+                    name: ({ folder: "folder", unsupported: "file", failed: "file", inaccessible: "lock", empty: "folder",
+                             "loading-folder": "spinner" })[previewStatePanel.stateName] || "image"
+                    size: glyph
+                    lineWidth: 1.5 * 22 / glyph
+                    color: previewStatePanel.stateName === "folder" ? Theme.text : Theme.muted
+                }
+                Label {
+                    objectName: "previewExtension"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: previewStatePanel.stateName === "unsupported" && previewStatePanel.extension.length > 0
+                    text: previewStatePanel.extension
+                    color: Theme.muted
+                    font.pixelSize: Theme.textCaption
+                    font.weight: Font.Medium
+                    font.letterSpacing: 0.4
+                }
+            }
+            Label {
+                id: stateTitle
+                objectName: "previewStateTitle"
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideMiddle
+                text: ({ folder: previewStatePanel.subjectName, unsupported: previewStatePanel.subjectName, failed: previewStatePanel.subjectName,
+                         none: "Nothing selected", empty: "Nothing to preview", inaccessible: "Nothing to preview",
+                         "loading-folder": "Loading folder…", "no-folder": "Nothing to preview" })[previewStatePanel.stateName] || ""
+                color: previewStatePanel.stateName === "no-folder" ? Theme.muted : Theme.text
+                font.pixelSize: Theme.textTitle
+                font.weight: Font.Medium
+                Accessible.role: Accessible.Heading
+            }
+            Label {
+                id: stateDetail
+                objectName: "previewStateDetail"
+                Layout.fillWidth: true
+                visible: text.length > 0
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                lineHeight: 1.4
+                text: ({ folder: "Folder", unsupported: "Glancelot can't preview this file type",
+                         failed: viewer.status.length && !viewer.loading ? viewer.status : "This photo could not be shown.",
+                         none: "Select a photo in the grid to preview it here.", empty: "This folder is empty.",
+                         inaccessible: "This folder can't be opened." })[previewStatePanel.stateName] || ""
+                color: Theme.muted
+                font.pixelSize: Theme.textSmall
+            }
+            Label { // the one action a folder offers, worded as its key
+                objectName: "previewStateHint"
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: Theme.gapXs
+                visible: previewStatePanel.stateName === "folder"
+                text: "Press Enter to open"
+                leftPadding: Theme.gapSm; rightPadding: Theme.gapSm; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
+                color: Theme.text
+                font.pixelSize: Theme.textSmall
+                background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.border }
+            }
+        }
+    }
+    Rectangle { // a pending photo keeps the previous one only behind a delayed scrim, so quick steps never flash
+        objectName: "previewLoading"
+        x: app.paneRect("preview").x; y: app.paneRect("preview").y
+        width: app.paneRect("preview").width; height: app.paneRect("preview").height
+        visible: app.combinedMode && app.workspace._previewShown && app.previewState === "loading" && app.previewLoadingShown
+        color: Qt.alpha(Theme.background, viewer.imageWidth > 0 ? 0.55 : 1)
+        z: 1
+        Rectangle {
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Theme.gapLg }
+            width: Math.min(parent.width - 2 * Theme.gapMd, loadingRow.implicitWidth + 2 * Theme.gapMd)
+            height: Theme.controlHeight
+            radius: Theme.radiusControl
+            color: Theme.surface
+            border.width: Theme.borderWidth
+            border.color: Theme.border
+            RowLayout {
+                id: loadingRow
+                anchors.centerIn: parent
+                width: Math.min(implicitWidth, parent.width - 2 * Theme.gapMd)
+                spacing: Theme.gapSm
+                UiIcon { name: "spinner"; color: Theme.muted }
+                Label {
+                    Layout.fillWidth: true
+                    text: "Loading " + app.leafName(app.previewSubject) + "…"
+                    elide: Text.ElideMiddle
+                    color: Theme.text
+                    font.pixelSize: Theme.textSmall
+                    Accessible.role: Accessible.AlertMessage
+                }
+            }
+        }
+    }
+    Repeater { // the pane that owns keys in the combined view carries the focus ring
+        model: ["grid", "preview"]
+        delegate: Rectangle {
+            required property string modelData
+            objectName: "paneFocusRing-" + modelData
+            readonly property var rect: app.paneRect(modelData)
+            x: rect.x + 1; y: rect.y + 1; width: Math.max(0, rect.width - 2); height: Math.max(0, rect.height - 2)
+            visible: app.combinedMode && app.focusedPane === modelData && rect.width > 0
+                     && (modelData === "grid" ? app.focusWithin(photoGrid) : app.activeFocusItem === canvas)
+            color: "transparent"
+            border.width: Theme.focusWidth
+            border.color: Theme.focusRing
+            z: 5
+        }
+    }
+    Label {
+        objectName: "combinedNotice"
+        readonly property var split: app.workspace._split
+        readonly property var area: app.workspace._content
+        // A fallback is announced when it starts or the shown pane changes, then gets out of the way.
+        readonly property string fallbackKey: app.combinedMode && split.fallback.length ? split.fallback + "/" + split.orientation + "/" + app.focusedPane : ""
+        onFallbackKeyChanged: if (fallbackKey.length) fallbackNoticeTimer.restart(); else fallbackNoticeTimer.stop()
+        Timer { id: fallbackNoticeTimer; interval: 5000 }
+        text: app.splitMessage.length ? app.splitMessage
+            : !fallbackNoticeTimer.running ? ""
+            : split.fallback === "single" ? (area.width < 320 ? "Showing the " + (app.focusedPane === "grid" ? "grid" : "photo") + ". Tab switches."
+                : "Grid and photo don't both fit this window. Showing the " + (app.focusedPane === "grid" ? "grid" : "photo") + "; press Tab to switch.")
+            : split.fallback === "reoriented" ? (split.orientation === "vertical" ? "Stacked to fit this window." : "Placed side by side to fit this window.")
+            : ""
+        visible: text.length > 0 && !app.layoutEditing && !app.modalOpen
+        x: area.x + (area.width - width) / 2
+        y: area.y + area.height - height - Theme.gapLg
+        width: Math.max(0, Math.min(implicitWidth, area.width - 2 * Theme.gapMd))
+        wrapMode: Text.Wrap
+        color: Theme.text
+        font.pixelSize: Theme.textSmall
+        padding: Theme.gapSm
+        leftPadding: Theme.gapMd; rightPadding: Theme.gapMd
+        background: Rectangle { color: Theme.surface; radius: Theme.radiusCard; border.width: Theme.borderWidth; border.color: Theme.border }
+        z: 15
+        Accessible.role: Accessible.AlertMessage
+        Accessible.name: text
+    }
+    // ---- end GRID-PREVIEW-01 combined view
     Label {
         objectName: "layoutRecoveryNotice"
         visible: app.workspace._recovered
@@ -366,7 +801,7 @@ ApplicationWindow {
         x: app.workspace._content.x+(app.workspace._content.width-width)/2
         y: app.workspace._content.y+(app.workspace._content.height-height)/2
         spacing: Theme.gapSm
-        visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
+        visible: !app.gridMode && !app.combinedMode && viewer.fileCount === 0 && !viewer.loading
         width: Math.max(0,Math.min(440,app.workspace._content.width-2*Theme.gapMd))
         Image {
             visible: !emptyState.compactContent
@@ -435,10 +870,10 @@ ApplicationWindow {
         // label first, then "Show frame", then Sort. Implicit widths do not depend on visibility, so no binding loop.
         readonly property bool horizontalBar: barGridtopbar.columns !== 1
         readonly property real titleMinimum: 72
-        readonly property real fitBudget: {
+        readonly property real modeSpace: {
             const gap = barGridtopbar.columnSpacing
             let need = 2 * Theme.gapMd + brandMark.Layout.preferredWidth + brandMark.Layout.rightMargin + gap
-            for (const item of [openButton, foldersButton, gridButton, settingsButton])
+            for (const item of [openButton, foldersButton, settingsButton])
                 need += item.implicitWidth + gap
             const divider = Theme.borderWidth + 2 * Theme.gapXs + gap // BarDivider carries its own side margins
             need += divider + titleMinimum + gap
@@ -450,6 +885,7 @@ ApplicationWindow {
             if (paneLayout.locked) need += Theme.controlHeight + gap
             return topbarScroll.availableWidth - need
         }
+        readonly property real fitBudget: modeSpace - (app.modeCompact ? modeMenuButton.implicitWidth : modeSelector.implicitWidth) - barGridtopbar.columnSpacing
         readonly property bool fitSort: !horizontalBar || fitBudget >= sortButton.implicitWidth + barGridtopbar.columnSpacing
         readonly property real afterSort: fitBudget - (fitSort ? sortButton.implicitWidth + barGridtopbar.columnSpacing : 0)
         readonly property bool fitShowFrame: !horizontalBar || afterSort >= showFrameButton.implicitWidth + barGridtopbar.columnSpacing
@@ -506,16 +942,70 @@ ApplicationWindow {
                 Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree"
                 onClicked: { checked = Qt.binding(() => viewer.treeVisible); app.invoke("tree") }
             }
+            Rectangle { // content mode: one segmented choice (GRID-PREVIEW-01); a menu in narrow windows
+                objectName: "contentModeSegments"
+                visible: !app.modeCompact
+                implicitWidth: modeRow.implicitWidth + 2 * Theme.gapXxs
+                implicitHeight: Theme.controlHeight
+                radius: Theme.radiusControl
+                color: "transparent"
+                border.width: Theme.borderWidth
+                border.color: Theme.border
+                Accessible.role: Accessible.Grouping
+                Accessible.name: "View"
+                Row {
+                    id: modeRow
+                    x: Theme.gapXxs
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.gapXxs
+                    Repeater {
+                        model: app.contentModes
+                        delegate: UiButton {
+                            required property var modelData
+                            objectName: "contentMode-" + modelData.id
+                            implicitHeight: Theme.controlHeight - 2 * Theme.gapXxs
+                            cornerRadius: Theme.radiusControl - Theme.gapXxs // concentric with the group outline
+                            iconName: modelData.icon
+                            text: modelData.label
+                            selected: paneLayout.contentMode === modelData.id
+                            tip: modelData.tip + app.shortcutHint(modelData.command)
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.checked: selected
+                            Accessible.name: modelData.tip
+                            onClicked: app.invoke(modelData.command)
+                        }
+                    }
+                }
+            }
             UiButton {
-                id: gridButton
-                objectName: "gridToggle"
-                text: "Grid"
-                checkable: true
-                checked: app.gridMode
-                enabled: viewer.directory.length > 0
-                tip: (app.gridMode ? "Return to the photo" : "Browse the folder as a grid") + app.shortcutHint("grid")
-                Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid"
-                onClicked: { checked = Qt.binding(() => app.gridMode); app.invoke("grid") }
+                id: modeMenuButton
+                objectName: "contentModeMenu"
+                visible: app.modeCompact
+                readonly property var current: app.contentModes.find(mode => mode.id === paneLayout.contentMode) || app.contentModes[0]
+                iconName: current.icon
+                text: current.label
+                tip: modeMenu.visible ? "" : "Change view: photo, grid or both"
+                Accessible.role: Accessible.ButtonMenu
+                Accessible.name: "View: " + current.tip + ". Change view"
+                onClicked: modeMenu.opened ? modeMenu.close() : modeMenu.open()
+                Menu {
+                    id: modeMenu
+                    objectName: "contentModeMenuPopup"
+                    y: parent.height + Theme.gapXs
+                    margins: Theme.gapSm // kept inside narrow windows
+                    padding: Theme.gapXs
+                    background: Rectangle {
+                        implicitWidth: 344 // the longest row (name and shortcut) never elides
+                        radius: Theme.radiusControl
+                        color: Theme.surface
+                        border.width: Theme.borderWidth
+                        border.color: Theme.border
+                    }
+                    ModeMenuItem { mode: app.contentModes[0] }
+                    ModeMenuItem { mode: app.contentModes[1] }
+                    ModeMenuItem { mode: app.contentModes[2] }
+                }
+
             }
             UiButton {
                 id: sortButton
@@ -628,23 +1118,23 @@ ApplicationWindow {
             width: statusbarScroll.availableWidth-2*Theme.gapMd
             x: Theme.gapMd
             y: Math.max(0,(statusbarScroll.availableHeight-implicitHeight)/2)
-            UiButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
+            UiButton { text: "Previous"; visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
             BarLabel {
-                visible: !app.gridMode
+                visible: !app.gridMode && !app.combinedMode
                 text: viewer.fileCount > 0 ? viewer.currentIndex + " of " + viewer.fileCount : "No photo"
                 Layout.leftMargin: Theme.gapXs; Layout.rightMargin: Theme.gapXs
             }
-            UiButton { text: "Next"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
+            UiButton { text: "Next"; visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
             BarLabel {
-                visible: app.gridMode
+                visible: app.workspace._gridShown
                 font.features: { "tnum": 1 }
                 text: photoGrid.selectedCount > 1 ? photoGrid.selectedCount + " selected"
                     : photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " of " + fileGrid.count : "No selection"
                 Layout.leftMargin: Theme.gapXs
             }
             BarLabel {
-                visible: app.gridMode && app.width > 680
-                Layout.maximumWidth: Math.max(120, app.width - 520)
+                visible: app.workspace._gridShown && app.width > 680
+                Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
                 text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
@@ -652,7 +1142,7 @@ ApplicationWindow {
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }
-            UiButton { objectName: "gridOpenSelected"; visible: app.gridMode; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
+            UiButton { objectName: "gridOpenSelected"; visible: app.workspace._gridShown; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
             BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; Layout.rightMargin: Theme.gapSm }
             UiButton {
                 visible: !app.gridMode
@@ -670,9 +1160,11 @@ ApplicationWindow {
     }
     Rectangle { // status toast, centred on the part of the canvas no panel covers
         objectName: "statusToast"
-        x: app.workspace._clear.x+(app.workspace._clear.width-width)/2
-        y: app.workspace._clear.y+app.workspace._clear.height-height-Theme.gapLg
-        width: Math.max(0,Math.min(app.workspace._clear.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
+        // In the combined view only a renderer failure shows here, over the preview; the status bar carries the rest.
+        readonly property var area: app.combinedMode ? app.paneRect("preview") : app.workspace._clear
+        x: area.x+(area.width-width)/2
+        y: area.y+area.height-height-Theme.gapLg
+        width: Math.max(0,Math.min(area.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
         height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
         radius: Theme.radiusCard
         color: Theme.surface
@@ -681,7 +1173,7 @@ ApplicationWindow {
         // Only the controller's default "how to begin" hint is suppressed while the empty state says the same thing.
         // Every other status, including settings-load errors present at start-up, still shows (tested).
         readonly property bool defaultHint: viewer.status === "Open a JPEG or PNG to begin."
-        visible: !app.gridMode && (viewer.loading || canvas.rendererError.length > 0
+        visible: (app.combinedMode && app.workspace._previewShown && canvas.rendererError.length > 0) || !app.gridMode && !app.combinedMode && (viewer.loading || canvas.rendererError.length > 0
                  || (viewer.status.length > 0 && app.hudVisible && !(emptyState.visible && defaultHint)))
         Label {
             id: statusText

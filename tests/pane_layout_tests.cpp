@@ -84,6 +84,75 @@ private slots:
         QCOMPARE(disk.pane("topbar")["region"].toString(),QString("left"));
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
+    // GRID-PREVIEW-01: content mode is a per-slot view preference stored in the center object.
+    void contentModeRoundTripsPerSlot() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout one,two;one.setSlot(1);two.setSlot(2);
+        QCOMPARE(one.contentMode(),QString("preview"));
+        QSignalSpy changes(&one,&PaneLayout::changed);
+        QVERIFY(one.setContentMode("combined"));QCOMPARE(changes.count(),1);
+        QVERIFY(one.setContentMode("combined"));QCOMPARE(changes.count(),1); // no-op when equal
+        QVERIFY(!one.setContentMode("both"));QVERIFY(!one.setContentMode(""));QCOMPARE(one.contentMode(),QString("combined"));
+        QVERIFY(two.setContentMode("grid"));
+        PaneLayout restoredOne,restoredTwo,fresh;restoredOne.setSlot(1);restoredTwo.setSlot(2);fresh.setSlot(3);
+        QCOMPARE(restoredOne.contentMode(),QString("combined"));QCOMPARE(restoredTwo.contentMode(),QString("grid"));
+        QCOMPARE(fresh.contentMode(),QString("preview"));
+        // Slot 0 keeps the mode for the session only and never writes it.
+        PaneLayout session;QVERIFY(session.setContentMode("grid"));QCOMPARE(session.contentMode(),QString("grid"));
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        QVERIFY(!saved["layouts"].toObject().contains("0"));
+        QCOMPARE(saved["layouts"].toObject()["1"].toObject()["center"].toObject()["mode"].toString(),QString("combined"));
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    void unknownContentModeFallsBackIndividually() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s) {
+            s["layouts"]=QJsonObject{{"1",QJsonObject{{"version",1},{"center",QJsonObject{{"mode","sideways"},{"orientation","vertical"},{"ratio",0.3}}}}},
+                                     {"2",QJsonObject{{"version",1},{"center",QJsonObject{{"mode",7},{"ratio",0.65}}}}}};
+        }).ok());
+        PaneLayout model;model.setSlot(1);
+        QCOMPARE(model.contentMode(),QString("preview"));
+        QCOMPARE(model.centerSplit()["orientation"].toString(),QString("vertical"));
+        QCOMPARE(model.centerSplit()["ratio"].toDouble(),0.3);
+        QVERIFY(model.feedback().isEmpty());
+        PaneLayout numeric;numeric.setSlot(2);
+        QCOMPARE(numeric.contentMode(),QString("preview"));QCOMPARE(numeric.centerSplit()["ratio"].toDouble(),0.65);
+        // Choosing a valid mode replaces only that field.
+        QVERIFY(model.setContentMode("combined"));
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        const auto center=saved["layouts"].toObject()["1"].toObject()["center"].toObject();
+        QCOMPARE(center["mode"].toString(),QString("combined"));QCOMPARE(center["orientation"].toString(),QString("vertical"));
+        QCOMPARE(center["ratio"].toDouble(),0.3);
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    void contentModeAllowedUnderLockAndFreeze() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout model;model.setSlot(1);
+        model.setLocked(true);
+        QVERIFY(model.setContentMode("combined"));QCOMPARE(model.contentMode(),QString("combined"));
+        QVERIFY(!model.setCenterRatio(0.7));QVERIFY(!model.setCenterOrientation("vertical"));
+        QCOMPARE(model.centerSplit()["ratio"].toDouble(),0.5);
+        model.setLocked(false);QVERIFY(model.freeze("grid",true));
+        QVERIFY(model.setContentMode("grid"));QVERIFY(!model.setCenterRatio(0.7));
+        PaneLayout restored;restored.setSlot(1);QCOMPARE(restored.contentMode(),QString("grid"));
+        QCOMPARE(restored.centerSplit()["ratio"].toDouble(),0.5);
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    void resetRestoresPreviewAndMergesKeepOtherWindowsMode() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout first,stale;first.setSlot(4);stale.setSlot(4); // two windows that loaded the same slot
+        QVERIFY(first.setContentMode("combined"));
+        QVERIFY(stale.setCenterRatio(0.35));QVERIFY(stale.resize("tree",320)); // from an old snapshot
+        PaneLayout disk;disk.setSlot(4);
+        QCOMPARE(disk.contentMode(),QString("combined"));QCOMPARE(disk.centerSplit()["ratio"].toDouble(),0.35);
+        QCOMPARE(disk.pane("tree")["extent"].toInt(),320);
+        PaneLayout other;other.setSlot(5);QVERIFY(other.setContentMode("grid"));
+        first.reset();QCOMPARE(first.contentMode(),QString("preview"));
+        PaneLayout afterReset,otherSlot;afterReset.setSlot(4);otherSlot.setSlot(5);
+        QCOMPARE(afterReset.contentMode(),QString("preview"));QCOMPARE(afterReset.centerSplit()["ratio"].toDouble(),0.5);
+        QCOMPARE(otherSlot.contentMode(),QString("grid")); // reset touches only this slot
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
     void invalidAndUnknownFields() {
         QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         QVERIFY(glancelot::updateSettings([](QJsonObject& s) {

@@ -19,10 +19,13 @@ Rectangle {
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
+    // A host that pairs the grid with another pane takes Tab (GRID-PREVIEW-01); null keeps the focus chain.
+    property var tabHandler: null
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
     // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
-    readonly property int columns: Math.max(1, Math.min(12, Math.floor((grid.width - 24) / (compact ? 136 : 176))))
+    // Measured on the full view width so a half-width combined pane (about 360 px) still gets two columns.
+    readonly property int columns: Math.max(1, Math.min(12, Math.floor(grid.width / (compact ? 136 : 176))))
     readonly property int count: grid.count
     readonly property int thumbEdge: 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
@@ -73,15 +76,19 @@ Rectangle {
         if (current !== entryCurrentPath) revealPath = current
         entryCurrentPath = current
         placeCursor = true
+        entering = true
         reveal()
         focusGrid()
     }
+    // True from entering the grid until its first listing places the cursor: a photo opened meanwhile (the grid
+    // restored visible at start-up, before the start-up photo opens) becomes the cursor's target.
+    property bool entering: false
     // Places the cursor once a listing has landed: on the revealed photo, else keeps it, else the first entry.
     // Runs once per grid entry or folder change; an ordinary refresh (external change) never moves the cursor,
     // replaces the selection or scrolls the view.
     function reveal() {
-        if (!visible || fileGrid.loading || !placeCursor) return
-        placeCursor = false
+        if (!visible || fileGrid.loading || !placeCursor || folderPath.length === 0) return
+        placeCursor = false; entering = false
         if (revealPath.length) {
             const row = fileGrid.rowOf(revealPath)
             revealPath = ""
@@ -159,6 +166,8 @@ Rectangle {
         if (visible) Qt.callLater(enter)
         else noticeText = ""
     }
+    // A grid restored as visible at start-up (a saved grid or combined mode) never sees a visibility change.
+    Component.onCompleted: if (visible) { fileGrid.setActive(true); Qt.callLater(enter) }
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
     onFolderPathChanged: placeCursor = true
     Connections {
@@ -166,6 +175,7 @@ Rectangle {
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
         function onModelAboutToBeReset() { panel.rememberViewport() }
         function onModelReset() { Qt.callLater(panel.restoreViewport, panel.resetViewport) }
+        function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
@@ -329,6 +339,7 @@ Rectangle {
             panel.select(next, action === "extend" ? panel.modeRange : panel.modeReplace)
         }
         Keys.onBacktabPressed: event => { panel.foldersRequested(); event.accepted = true }
+        Keys.onTabPressed: event => { if (panel.tabHandler) panel.tabHandler(); event.accepted = panel.tabHandler !== null }
         delegate: ItemDelegate {
             id: cell
             required property int index

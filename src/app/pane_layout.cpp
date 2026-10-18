@@ -12,6 +12,7 @@ bool newerVersion(const QJsonObject& layout) {
 }
 bool currentVersion(const QJsonObject& layout){return layout.value("version").isDouble()&&layout.value("version").toDouble()==1;}
 const QStringList& stableOrder() {static const QStringList ids{"topbar","statusbar","filmstrip","tree","preview","grid"};return ids;}
+bool modeValid(const QString& value){return value=="preview"||value=="grid"||value=="combined";}
 bool regionValid(const QString& value) {
     return QStringList{"left","right","top","bottom","center"}.contains(value);
 }
@@ -38,7 +39,7 @@ QVariantMap PaneLayout::panes() const{return panes_.toVariantMap();}
 QVariantMap PaneLayout::pane(const QString& id) const{return panes_.value(id).toObject().toVariantMap();}
 void PaneLayout::setSlot(int slot) {if(slot<0||slot==slot_)return;slot_=slot;load();}
 void PaneLayout::load() {
-    panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};locked_=false;feedback_.clear();
+    panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};mode_="preview";locked_=false;feedback_.clear();
     if(slot_>0) {
         QJsonObject settings;
         if(!glancelot::readSettings(settings).ok())feedback_="Layout settings could not be read; defaults are active.";
@@ -57,6 +58,9 @@ void PaneLayout::load() {
                 const double ratio=center.value("ratio").toDouble(-1);
                 if(orientation=="horizontal"||orientation=="vertical")center_["orientation"]=orientation;
                 if(std::isfinite(ratio)&&ratio>=0.1&&ratio<=0.9)center_["ratio"]=ratio;
+                // A view preference, validated on its own: an unknown mode falls back without touching the split.
+                const auto mode=center.value("mode").toString();
+                if(modeValid(mode))mode_=mode;
                 const auto stored=saved.value("panes").toObject();
                 for(const auto& id:panes_.keys())panes_[id]=validPane(stored.value(id).toObject(),panes_.value(id).toObject());
             }
@@ -90,6 +94,7 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
                 layout["locked"]=false;
                 auto center=layout.value("center").toObject();
                 for(auto it=center_.begin();it!=center_.end();++it)center[it.key()]=it.value();
+                center["mode"]=mode_;
                 layout["center"]=center;
             } else if(id=="_panes") { // several panes at once: {paneId: {field: value}}
                 for(auto pane=fields.begin();pane!=fields.end();++pane) {
@@ -160,7 +165,7 @@ bool PaneLayout::setVisible(const QString& id,bool visible){return edit(id,{{"vi
 void PaneLayout::setLocked(bool locked) {
     if(locked_==locked)return;locked_=locked;feedback_.clear();persist({}, {},false,true);emit changed();
 }
-void PaneLayout::reset(){panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};locked_=false;feedback_.clear();persist({}, {},true);emit changed();}
+void PaneLayout::reset(){panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};mode_="preview";locked_=false;feedback_.clear();persist({}, {},true);emit changed();}
 
 bool PaneLayout::editCenter(const QJsonObject& fields) {
     if(locked_||panes_.value("preview").toObject().value("frozen").toBool()||panes_.value("grid").toObject().value("frozen").toBool()) {
@@ -177,4 +182,11 @@ bool PaneLayout::setCenterOrientation(const QString& orientation) {
 bool PaneLayout::setCenterRatio(double ratio) {
     if(!std::isfinite(ratio)||ratio<0.1||ratio>0.9)return false;
     return editCenter({{"ratio",ratio}});
+}
+QString PaneLayout::contentMode() const{return mode_;}
+// A view preference, not geometry: allowed under the global lock and with frozen center panes.
+bool PaneLayout::setContentMode(const QString& mode) {
+    if(!modeValid(mode))return false;
+    if(mode==mode_)return true;
+    mode_=mode;persist("_center",{{"mode",mode}});emit changed();return true;
 }

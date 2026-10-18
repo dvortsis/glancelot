@@ -88,6 +88,9 @@ const std::vector<Command> registry {
     {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
     // Layout commands start unbound so existing users' shortcuts never collide.
     {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
+    // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
+    {"view-preview","Show photo preview only",""}, {"view-grid","Show folder grid only",""},
+    {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
     {"quit","Quit","Ctrl+Q"}
 };
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
