@@ -79,7 +79,9 @@ bool safePath(const fs::path& p, std::stop_token cancel = {}) {
     for (const auto& part : p) {
         if (cancel.stop_requested()) return false;
         prefix /= part;
-        if (prefix == p.root_name()) continue;
+        // A UNC server root (\\server\) is not a listable share. Validate from the
+        // complete share component onward, rather than rejecting all UNC paths here.
+        if (prefix == p.root_name() || (p.has_root_name() && prefix == p.root_path())) continue;
         if (link(prefix)) return false;
     }
     return true;
@@ -247,6 +249,7 @@ SubtreeImage firstImageInSubtree(const fs::path& directory, std::stop_token canc
     { fs::directory_iterator probe(directory, ec); if (ec) { result.accessible = false; return result; } }
     std::vector<fs::path> pending{directory};
     std::size_t visited = 0;
+    bool budgetPruned=false;
     while (!pending.empty()) {
         if (cancel.stop_requested()) return SubtreeImage{};
         if (visited++ >= maxFolders) { result.exhausted = true; return result; }
@@ -257,9 +260,18 @@ SubtreeImage firstImageInSubtree(const fs::path& directory, std::stop_token canc
         if (!files.empty()) { result.image = files.front(); return result; }
         const auto children = entries(current, true, cancel, 20000);
         if (cancel.stop_requested()) return SubtreeImage{};
-        // Reversed so the natural-order first child is visited first (preorder).
-        for (auto child = children.rbegin(); child != children.rend(); ++child) pending.push_back(*child);
+        // Only the remaining DFS prefix can ever be visited under this budget. Keep
+        // pending storage bounded too, even in a deeply nested high-fanout tree.
+        const auto room=maxFolders-visited;
+        const auto take=std::min(children.size(),room);
+        budgetPruned=budgetPruned || take<children.size();
+        for(auto i=take;i>0;--i)pending.push_back(children[i-1]);
+        if(pending.size()>room){
+            budgetPruned=true;
+            pending.erase(pending.begin(),pending.begin()+(pending.size()-room));
+        }
     }
+    result.exhausted=budgetPruned;
     return result;
 }
 std::optional<fs::path> adjacentFolderImage(const fs::path& rootPath, const fs::path& directory, int direction, std::stop_token cancel) {

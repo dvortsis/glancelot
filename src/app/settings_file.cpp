@@ -20,13 +20,16 @@ bool interactiveThread() {
     return app && QThread::currentThread() == app->thread();
 }
 
-SettingsStatus parseExisting(const QString& path, QJsonObject& out) {
+SettingsStatus parseExisting(const QString& path, QJsonObject& out, QByteArray* original = nullptr) {
     out = {};
     QFile file(path);
     if (!file.exists()) return {};
     if (!file.open(QIODevice::ReadOnly) || file.size() > kMaxSettingsBytes) return {SettingsStatus::Unreadable};
     QJsonParseError error;
-    const auto document = QJsonDocument::fromJson(file.readAll(), &error);
+    const auto bytes=file.read(kMaxSettingsBytes+1);
+    if(file.error()!=QFileDevice::NoError || bytes.size()>kMaxSettingsBytes) return {SettingsStatus::Unreadable};
+    if(original)*original=bytes;
+    const auto document = QJsonDocument::fromJson(bytes, &error);
     if (error.error != QJsonParseError::NoError || !document.isObject()) return {SettingsStatus::Corrupt};
     const auto object = document.object();
     if (object.value("schema").toInt() != 1) return {SettingsStatus::Unsupported};
@@ -86,21 +89,24 @@ SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit, boo
     FileLock lock(path + ".lock");
     if (!lock.acquire(retry ? 4000 : 0)) return {lock.contended() ? SettingsStatus::Busy : SettingsStatus::WriteFailed};
     QJsonObject root;
-    auto status = parseExisting(path, root);
+    QByteArray primaryBytes;
+    auto status = parseExisting(path, root, &primaryBytes);
     bool recovered = false, primaryGood = status.ok();
     if (status.code == SettingsStatus::Corrupt && validBackup(path, root)) {
-        // Keep the damaged bytes for inspection, then continue from the last known good settings.
-        QFile::remove(path + ".damaged");
-        QFile::copy(path, path + ".damaged");
+        // Preserve the damaged bytes atomically before replacing the primary.
         recovered = true; primaryGood = false; status = {};
     }
     if (!status.ok()) return status;
     const bool existed = QFileInfo::exists(path);
     edit(root);
     root["schema"] = 1;
-    // Only a verified-good file becomes the last-known-good copy; a damaged one never overwrites it.
-    if (existed && primaryGood) { QFile::remove(path + ".bak"); QFile::copy(path, path + ".bak"); }
     const auto bytes = QJsonDocument(root).toJson(QJsonDocument::Indented);
+    // Never write a settings file that our own bounded reader cannot reopen.
+    if(bytes.size()>kMaxSettingsBytes) return {SettingsStatus::WriteFailed};
+    // Backup and recovery evidence have the same atomic replacement guarantee as the primary.
+    // A failed backup must not silently discard the only recoverable copy.
+    if(existed && primaryGood && !replaceFile(path+".bak",primaryBytes,retry)) return {SettingsStatus::WriteFailed};
+    if(recovered && !replaceFile(path+".damaged",primaryBytes,retry)) return {SettingsStatus::WriteFailed};
     if (!replaceFile(path, bytes, retry)) return {SettingsStatus::WriteFailed};
     return {SettingsStatus::Ok, recovered};
 }

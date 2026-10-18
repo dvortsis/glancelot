@@ -126,6 +126,10 @@ class WindowSlotTests final : public QObject {
 private slots:
     void init() { QTest::failOnWarning(QRegularExpression("QProcess: Destroyed while process.*still running.*")); }
     void cleanup() { qunsetenv("GLANCELOT_CONFIG_DIR"); }
+    void contendedSortReportsSessionOnly();
+    void failedBackupAndOversizedEditsPreservePrimary();
+    void staleSessionCounterCannotReuseLiveSlot();
+    void unreadableSessionStateCannotClaimSlot();
     void lateSlotClaimRemembersOnlySuccessfulImages();
     void conflictingEditsFromDifferentWindowsAreRejected();
     void contendedPositionSaveRetriesWithoutBlocking();
@@ -151,6 +155,70 @@ private slots:
     void explicitOpenOverridesRestore();
     void positionFlushesOnDestructionAndDisabledSlotWritesNothing();
 };
+
+void WindowSlotTests::contendedSortReportsSessionOnly() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    ViewerController viewer;
+    QVERIFY(QDir().mkpath(config.path()));
+    FileLock lock(config.filePath("settings.json.lock")); QVERIFY(lock.acquire(0));
+    viewer.setSortKey("size");
+    QCOMPARE(viewer.sortKey(),QString("size"));
+    QVERIFY(viewer.status().contains("for this session"));
+    QVERIFY(!QFile::exists(config.filePath("settings.json")));
+}
+
+void WindowSlotTests::failedBackupAndOversizedEditsPreservePrimary() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    const auto path=config.filePath("settings.json");
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["keep"]="original";}).ok());
+    const auto before=readFile(path);
+    // A directory at the backup path deterministically prevents replacing the backup.
+    QVERIFY(QDir().mkpath(path+".bak"));
+    QCOMPARE(glancelot::updateSettings([](QJsonObject& root){root["keep"]="lost";}).code,glancelot::SettingsStatus::WriteFailed);
+    QCOMPARE(readFile(path),before);
+    QVERIFY(QDir().rmdir(path+".bak"));
+    QCOMPARE(glancelot::updateSettings([](QJsonObject& root){root["oversized"]=QString(1024*1024,'x');}).code,glancelot::SettingsStatus::WriteFailed);
+    QCOMPARE(readFile(path),before);
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["after"]=1;}).ok());
+    QCOMPARE(readFile(path+".bak"),before);
+    const QByteArray damaged="{ damaged";
+    QVERIFY(writeFile(path,damaged));
+    QVERIFY(QDir().mkpath(path+".damaged"));
+    QCOMPARE(glancelot::updateSettings([](QJsonObject& root){root["recovered"]=1;}).code,glancelot::SettingsStatus::WriteFailed);
+    QCOMPARE(readFile(path),damaged);QCOMPARE(readFile(path+".bak"),before);
+    QVERIFY(QDir().rmdir(path+".damaged"));
+    const auto recovered=glancelot::updateSettings([](QJsonObject& root){root["recovered"]=1;});
+    QVERIFY(recovered.ok()&&recovered.recovered);QCOMPARE(readFile(path+".damaged"),damaged);
+}
+
+void WindowSlotTests::staleSessionCounterCannotReuseLiveSlot() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    WindowSlot first(config.path()); QCOMPARE(first.number(),1);
+    const auto path=config.filePath("sessions.json");
+    auto state=QJsonDocument::fromJson(readFile(path)).object();
+    state["counter"]=0;
+    QVERIFY(writeFile(path,QJsonDocument(state).toJson()));
+    WindowSlot second(config.path()); QCOMPARE(second.number(),2);
+}
+
+void WindowSlotTests::unreadableSessionStateCannotClaimSlot() {
+#ifdef Q_OS_WIN
+    QTemporaryDir config; QVERIFY(config.isValid());
+    WindowSlot first(config.path()); QCOMPARE(first.number(),1);
+    const auto path=config.filePath("sessions.json");
+    const auto before=readFile(path);
+    // Deny other readers while allowing atomic replacement: this exposes destructive read-failure fallback.
+    HANDLE handle=CreateFileW(reinterpret_cast<LPCWSTR>(path.utf16()),GENERIC_READ,
+        FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+    QVERIFY(handle!=INVALID_HANDLE_VALUE);
+    const auto close=qScopeGuard([&]{CloseHandle(handle);});
+    WindowSlot refused(config.path(),0); QCOMPARE(refused.number(),0);
+#else
+    QSKIP("Windows read-sharing fixture");
+#endif
+}
 
 void WindowSlotTests::lateSlotClaimRemembersOnlySuccessfulImages() {
     QTemporaryDir files, config; QVERIFY(files.isValid() && config.isValid());
@@ -434,11 +502,14 @@ void WindowSlotTests::sessionStateOfAnotherSchemaIsNeverRewritten() {
         QCOMPARE(slot.number(), 0);
     }
     QCOMPARE(readFile(path), future);
-    // Oversized or unparseable bookkeeping is disposable and restarts empty.
+    // Damaged bookkeeping cannot prove that an existing slot is free: refuse and retain it.
     QVERIFY(writeFile(path, "{ nope"));
-    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 1); }
-    QVERIFY(writeFile(path, QByteArray(70 * 1024, '{')));
-    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 1); }
+    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 0); }
+    QCOMPARE(readFile(path),QByteArray("{ nope"));
+    const auto oversized=QByteArray(70*1024,'{');
+    QVERIFY(writeFile(path,oversized));
+    { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 0); }
+    QCOMPARE(readFile(path),oversized);
     // Unknown keys of a valid schema-1 file travel through unchanged.
     QVERIFY(writeFile(path, R"({"schema":1,"counter":0,"live":[],"extra":{"k":[1,2]}})"));
     { WindowSlot slot(dir.path()); QCOMPARE(slot.number(), 1); QJsonObject root = QJsonDocument::fromJson(readFile(path)).object(); QCOMPARE(root.value("extra").toObject().value("k").toArray().size(), 2); }

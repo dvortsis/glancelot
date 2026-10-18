@@ -13,6 +13,8 @@
 //    is still expanded and belongs to the current root epoch.
 //  * At most kMaxChildren folders per parent and kMaxRows rows overall are materialized; a trimmed parent reports
 //    NodeState::Truncated. Collapsing discards the children (nothing stale is retained).
+//  * At most kMaxConcurrentLoads jobs/futures exist, even when canceled OS calls do not finish.
+//    Waiting loads have one entry per materialized node; cancel/root reset removes them before submission.
 //  * sync() follows the viewer: it (re)roots at snapshot.root, marks snapshot.directory current and reveals it by
 //    expanding its ancestors one level at a time. It never scans more than the levels on that path.
 //  * Selecting a folder is not this model's job: the UI calls ViewerController::openFolder(path).
@@ -27,6 +29,7 @@ public:
     // Unknown: not listed yet (shown as expandable). Empty: listed, no subfolders. Inaccessible: cannot be listed.
     enum NodeState { Unknown, HasChildren, Empty, Inaccessible, Truncated };
     Q_ENUM(NodeState)
+    static constexpr int kMaxConcurrentLoads = 2;
     static constexpr int kMaxChildren = 2000;
     static constexpr int kMaxRows = 20000;
     using Lister = std::function<glancelot::FolderListing(const std::filesystem::path&, std::stop_token)>;

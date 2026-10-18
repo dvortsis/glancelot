@@ -95,7 +95,7 @@ struct ViewerController::Private {
     ViewerController* q;
     QImage image;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
-    bool loading{}, filmstrip{true}, tree{}, treePin{};
+    bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
     QJsonObject bindings;
@@ -115,6 +115,7 @@ struct ViewerController::Private {
     std::optional<NavigationJob> pendingNavigation;
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
+    bool sortSaved{true};
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
@@ -243,7 +244,7 @@ struct ViewerController::Private {
         }
         transfer.reset(); admittedPixelBytes=0; output.clear();
     }
-    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(); loading=false; status=message; emit q->stateChanged(); }
+    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
     void observe() {
         if (!watcher.files().isEmpty()) watcher.removePaths(watcher.files());
         if (!watcher.directories().isEmpty()) watcher.removePaths(watcher.directories());
@@ -260,6 +261,7 @@ struct ViewerController::Private {
         program+=".exe";
 #endif
         worker=new QProcess(q);
+        worker->setStandardErrorFile(QProcess::nullDevice()); // bound memory even if a codec floods diagnostics
         auto* process=worker;
         QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key]{
             trace("decode:message");
@@ -295,12 +297,13 @@ struct ViewerController::Private {
                     if (!transfer || width<=0 || height<=0 || width>32768 || height>32768 || stride!=width*4 || qint64(stride)*height!=admittedPixelBytes || admittedPixelBytes>transfer->size()) { fail("Decoder returned invalid image geometry."); return; }
                     if (!transfer->lock()) { fail("Cannot read decoded pixels."); return; }
                     QImage result(static_cast<const uchar*>(transfer->constData()),width,height,stride,QImage::Format_RGBA8888);
-                    image=result.copy(); transfer->unlock();
-                    if (image.isNull()) { fail("Cannot allocate the current image."); return; }
+                    QImage owned=result.copy(); transfer->unlock();
+                    if (owned.isNull()) { fail("Cannot allocate the current image."); return; }
+                    image=std::move(owned);
                     image.setColorSpace(QColorSpace::SRgb);
                     const int cost=int((image.sizeInBytes()+1023)/1024);
                     if (cost<=cache.maxCost()) cache.insert(key,new QImage(image),cost);
-                    loading=false; deadline.stop();
+                    loading=false; imageReady=true; deadline.stop();
                     status=message.value("color").toString()+" · display profile not yet managed";
                     notePosition(path);
                     process->write("ok\n");
@@ -351,7 +354,7 @@ struct ViewerController::Private {
         Navigator copy=nav;
         copy.setCancellation(navigationStop.get_token());
         const auto next=sortSpec;
-        const QString done=QString("Sorted by %1%2.").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
+        const QString done=QString("Sorted by %1%2%3.").arg(sortKeyName(next.key),next.descending?" (reversed)":"",sortSaved?"":" for this session; settings could not be saved");
         submitNavigation({generation,++navigationGeneration,true,[copy,next,done]() mutable {
             copy.setSort(next);
             return NavigationResult{std::move(copy),std::nullopt,done};
@@ -360,8 +363,11 @@ struct ViewerController::Private {
     void changeSort(const glancelot::SortSpec& next) {
         if (next==sortSpec) return;
         sortSpec=next;
-        save({"sort"}); // a failed save keeps the order for this run; the next successful settings write stores it
-        if (nav.snapshot().current.empty()) { emit q->stateChanged(); return; }
+        sortSaved=save({"sort"});
+        if (nav.snapshot().current.empty()) {
+            status=sortSaved?"File order saved.":"File order changed for this session; settings could not be saved.";
+            emit q->stateChanged(); return;
+        }
         status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
         emit q->stateChanged();
         if (!navigationBusy && navigationReady && !pendingNavigation) startResort();
@@ -437,6 +443,17 @@ QString ViewerController::fileName() const{return QFileInfo(d->path).fileName();
 QString ViewerController::directory() const{return QFileInfo(d->path).absolutePath();}
 QString ViewerController::status() const{return d->status;}
 bool ViewerController::loading() const{return d->loading;}
+bool ViewerController::imageReady() const{return d->imageReady;}
+bool ViewerController::isCurrentImage(const QString& path) const {
+    auto key=[](const QString& value){
+        auto clean=QDir::cleanPath(QDir::fromNativeSeparators(value));
+#ifdef Q_OS_WIN
+        clean=clean.toCaseFolded();
+#endif
+        return clean;
+    };
+    return d->imageReady && key(path)==key(d->path);
+}
 int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); const auto it=std::find(s.files.begin(),s.files.end(),s.current); return it==s.files.end()?0:int(std::distance(s.files.begin(),it))+1;}
 int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
 int ViewerController::imageWidth() const{return d->image.width();}
@@ -449,7 +466,7 @@ void ViewerController::open(const QString& value){
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(!d->navigationOpen)d->navigationIntents.clear();
     ++d->generation; d->cancel(); d->reload.stop();
-    d->path=path;d->loading=true;d->status="Opening "+QFileInfo(path).fileName()+"…";
+    d->path=path;d->loading=true;d->imageReady=false;d->status="Opening "+QFileInfo(path).fileName()+"…";
     emit stateChanged(); d->scan(path,d->generation); d->decode(path,d->generation);
 }
 void ViewerController::next(){d->navigate(1,false);}void ViewerController::previous(){d->navigate(-1,false);}

@@ -310,6 +310,15 @@ void childFoldersAndSubtreeSearch() {
     const auto bounded = firstImageInSubtree(wide.root);
     require(!bounded.image && bounded.exhausted, "default 500-folder budget not enforced");
     require(firstImageInSubtree(wide.root, {}, 1000).image == end, "larger budget should find the image");
+    // A tight pending-work budget must keep the preorder prefix, including deep children
+    // ahead of queued ancestor siblings, and report unexplored branches honestly.
+    Fixture prefix;
+    fs::create_directories(prefix.root/"a/aa");
+    const auto prefixImage=prefix.file("a/aa/first.jpg");prefix.file("b/later.jpg");
+    require(firstImageInSubtree(prefix.root,{},3).image==prefixImage,"bounded pending stack changed preorder prefix");
+    fs::remove(prefixImage);
+    const auto pruned=firstImageInSubtree(prefix.root,{},3);
+    require(!pruned.image&&pruned.exhausted,"pruned sibling not reported as budget exhaustion");
     Fixture bare; fs::create_directories(bare.root / "x/y");
     const auto none = firstImageInSubtree(bare.root);
     require(!none.image && !none.exhausted && none.accessible, "image-less subtree misreported");

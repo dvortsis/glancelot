@@ -57,17 +57,23 @@ enum class Loaded { Ok, Refuse };
 
 QString statePath(const QString& directory) { return QDir(directory).filePath("sessions.json"); }
 
-// A missing, oversized or unparseable file is only liveness bookkeeping, so it restarts empty. A file of another
-// schema belongs to a different version of the program: it is never rewritten (the caller gets no slot).
+// Only a missing file starts empty. Unreadable, damaged or oversized bookkeeping cannot
+// prove that existing slots are free, so it must never be rewritten by a new claimant.
 Loaded load(const QString& directory, Session& session) {
     session = {};
     QFile file(statePath(directory));
-    if (!file.exists() || !file.open(QIODevice::ReadOnly) || file.size() > 64 * 1024) return Loaded::Ok;
+    if (!file.exists()) return Loaded::Ok;
+    if (!file.open(QIODevice::ReadOnly)) return Loaded::Refuse;
+    if (file.size() > 64 * 1024) return Loaded::Refuse;
+    const auto bytes=file.read(64*1024+1);
+    if(file.error()!=QFileDevice::NoError) return Loaded::Refuse;
+    if(bytes.size()>64*1024) return Loaded::Refuse;
     QJsonParseError error;
-    const auto document = QJsonDocument::fromJson(file.readAll(), &error);
-    if (error.error != QJsonParseError::NoError || !document.isObject()) return Loaded::Ok;
+    const auto document = QJsonDocument::fromJson(bytes, &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) return Loaded::Refuse;
     const auto root = document.object();
-    if (root.value("schema").toInt() != 1) return Loaded::Refuse;
+    if (root.value("schema").toInt() != 1 || !root.value("live").isArray()
+        || !root.value("counter").isDouble()) return Loaded::Refuse;
     session.extra = root;
     session.counter = std::clamp(root.value("counter").toInt(), 0, kMaxCounter);
     session.live = root.value("live").toArray();
@@ -80,6 +86,7 @@ bool store(const QString& directory, const Session& session, bool retry) {
     root["counter"] = session.counter;
     root["live"] = session.live;
     const auto bytes = QJsonDocument(root).toJson(QJsonDocument::Compact);
+    if(bytes.size()>64*1024) return false; // never exceed the coordination reader's own bound
     for (int attempt = 0; attempt < (retry ? 8 : 1); ++attempt) {
         QSaveFile file(statePath(directory));
         if (file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit()) return true;
@@ -112,13 +119,19 @@ bool WindowSlot::claim(int timeoutMs) {
     int claimed = 0;
     const bool ok = locked(directory_, timeoutMs, [&](Session& session) {
         QJsonArray alive;
+        int highestLiveSlot=0;
         for (const auto& entry : std::as_const(session.live)) {
             const auto object = entry.toObject();
             const qint64 stampNow = processStamp(object.value("pid").toInteger());
-            if (stampNow != 0 && stampNow == object.value("stamp").toInteger()) alive.append(object);
+            const int liveSlot=object.value("slot").toInt();
+            if (stampNow != 0 && stampNow == object.value("stamp").toInteger() && liveSlot>0 && liveSlot<=kMaxCounter) {
+                alive.append(object);
+                highestLiveSlot=std::max(highestLiveSlot,liveSlot);
+            }
         }
         session.live = alive;
         if (session.live.isEmpty()) session.counter = 0; // a new session
+        else session.counter=std::max(session.counter,highestLiveSlot);
         if (session.counter >= kMaxCounter) return false; // never reuse a live session's slots
         claimed = ++session.counter;
         session.live.append(QJsonObject{{"slot", claimed}, {"pid", pid}, {"stamp", stamp}});

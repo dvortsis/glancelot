@@ -86,6 +86,20 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void auditReadyCurrentPhotoDoesNotReopen() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(8,8,QImage::Format_RGB32);image.fill(Qt::red);QVERIFY(image.save(media.filePath("ready.png")));
+        Harness h(true);QVERIFY(h.window);h.viewer.open(media.filePath("ready.png"));
+        QTRY_COMPARE(h.viewer.fileCount(),1);QTRY_VERIFY(h.viewer.imageReady());
+        h.showGrid();QTRY_VERIFY(h.view()->hasActiveFocus());
+        QVERIFY(h.viewer.isCurrentImage(h.model.pathAt(0)));
+#ifdef Q_OS_WIN
+        QVERIFY(h.viewer.isCurrentImage(QDir::toNativeSeparators(h.viewer.filePath()).toUpper()));
+#endif
+        QSignalSpy changed(&h.viewer,&ViewerController::imageChanged);
+        QVERIFY(QMetaObject::invokeMethod(h.grid(),"activate"));
+        QVERIFY(!h.viewer.loading());QTest::qWait(80);QCOMPARE(changed.count(),0);
+    }
     void auditFailedCurrentPhotoCanBeRetriedFromGrid() {
         QTemporaryDir media; QVERIFY(media.isValid());
         QFile broken(media.filePath("broken.png")); QVERIFY(broken.open(QIODevice::WriteOnly)); broken.write("not a png"); broken.close();

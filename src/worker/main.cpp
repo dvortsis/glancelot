@@ -50,8 +50,8 @@ bool readRequestLine(QByteArray& line) {
     char chunk[4096];
     while (std::fgets(chunk, sizeof(chunk), stdin)) {
         line += chunk;
-        if (line.endsWith('\n')) return true;
         if (size_t(line.size()) > kMaxRequestBytes) return false;
+        if (line.endsWith('\n')) return true;
     }
     return false;
 }

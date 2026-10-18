@@ -13,6 +13,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString directory READ directory NOTIFY stateChanged)
     Q_PROPERTY(QString status READ status NOTIFY stateChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY stateChanged)
+    Q_PROPERTY(bool imageReady READ imageReady NOTIFY stateChanged)
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY stateChanged)
     Q_PROPERTY(int fileCount READ fileCount NOTIFY stateChanged)
     Q_PROPERTY(int imageWidth READ imageWidth NOTIFY imageChanged)
@@ -31,6 +32,10 @@ public:
     ~ViewerController() override;
     QImage image() const;
     QString filePath() const; QString fileName() const; QString directory() const; QString status() const;
+    // True only when the currently requested file decoded successfully; a retained old image is not a success.
+    bool imageReady() const;
+    // Pure path comparison, including Windows separators/case; never stats the filesystem.
+    Q_INVOKABLE bool isCurrentImage(const QString& path) const;
     bool loading() const; int currentIndex() const; int fileCount() const;
     int imageWidth() const; int imageHeight() const;
     QVariantList commands() const;

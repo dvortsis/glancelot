@@ -11,9 +11,9 @@
 //  * Coordination state lives in sessions.json beside settings.json under a cross-process lock; entries of dead
 //    processes (checked by pid plus process start time, so pid reuse cannot keep a slot alive) are pruned.
 //  * number() == 0 means coordination was unavailable (lock contended past its timeout, unwritable folder, or a
-//    sessions.json from another schema that is never rewritten); the window then runs without position memory
-//    and claim() may be retried later. A missing, oversized or unparseable sessions.json is only liveness
-//    bookkeeping and simply restarts empty.
+//    sessions.json that is unreadable/damaged/oversized/from another schema); the window runs without position
+//    memory and claim() may be retried later. Only a missing file starts empty; damaged bookkeeping cannot prove
+//    that another window's slot is free and is preserved for explicit recovery with all viewer processes closed.
 //  * Saved positions are stored by the settings writer (keyed by slot) and are not removed when a window closes.
 class WindowSlot {
 public:

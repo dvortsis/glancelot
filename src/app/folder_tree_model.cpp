@@ -48,7 +48,7 @@ struct FolderTreeModel::Private {
         NodeState state{Unknown};
         quint64 seq{};
     };
-    struct Load { std::stop_source stop; quint64 seq{}; };
+    struct Load { std::stop_source stop; quint64 seq{}; bool started{}; };
 
     FolderTreeModel* q;
     std::vector<Node> rows;
@@ -63,7 +63,7 @@ struct FolderTreeModel::Private {
     QHash<QString, Load> loads;
 
     // Two workers: one wedged listing (e.g. a dead network share) must not stall every other expansion.
-    explicit Private(FolderTreeModel* owner) : q(owner) { pool->setMaxThreadCount(2); }
+    explicit Private(FolderTreeModel* owner) : q(owner) { pool->setMaxThreadCount(kMaxConcurrentLoads); }
     ~Private() {
         for (auto& load : loads) load.stop.request_stop();
         if (pool->waitForDone(1000)) delete pool;
@@ -118,20 +118,34 @@ struct FolderTreeModel::Private {
         node.expanded = true; node.loading = true;
         node.seq = nextSeq++;
         Load load; load.seq = node.seq;
-        const auto token = load.stop.get_token();
-        loads.insert(node.key, load);
+        loads.insert(node.key, load); // one pending entry per visible node, bounded by kMaxRows
         changed(row, {ExpandedRole, LoadingRole});
-        auto* watcher = new QFutureWatcher<glancelot::FolderListing>(q);
-        const QString key = node.key;
-        const quint64 seq = node.seq, startEpoch = epoch;
-        ++inFlight;
-        QObject::connect(watcher, &QFutureWatcher<glancelot::FolderListing>::finished, q, [this, watcher, key, seq, startEpoch] {
-            auto listing = watcher->result();
-            watcher->deleteLater();
-            --inFlight;
-            applyListing(key, seq, startEpoch, std::move(listing));
-        });
-        watcher->setFuture(QtConcurrent::run(pool, [lister = lister, path = nativePath(node.path), token] { return lister(path, token); }));
+        pumpLoads();
+    }
+    void pumpLoads() {
+        // Canceled OS calls still occupy their slot until completion. Do not create a future,
+        // watcher or QThreadPool job for a waiting node; newest current work goes first.
+        while(inFlight<kMaxConcurrentLoads) {
+            auto selected=loads.end();
+            for(auto it=loads.begin();it!=loads.end();++it)
+                if(!it->started && (selected==loads.end() || it->seq>selected->seq))selected=it;
+            if(selected==loads.end())return;
+            const QString key=selected.key();
+            const int row=indexOfKey(key);
+            if(row<0){loads.erase(selected);continue;}
+            selected->started=true;
+            const auto token=selected->stop.get_token();
+            const quint64 seq=selected->seq,startEpoch=epoch;
+            const auto path=nativePath(rows[std::size_t(row)].path);
+            auto* watcher=new QFutureWatcher<glancelot::FolderListing>(q);
+            ++inFlight;
+            QObject::connect(watcher,&QFutureWatcher<glancelot::FolderListing>::finished,q,[this,watcher,key,seq,startEpoch]{
+                auto listing=watcher->result();watcher->deleteLater();--inFlight;
+                applyListing(key,seq,startEpoch,std::move(listing));
+                pumpLoads();
+            });
+            watcher->setFuture(QtConcurrent::run(pool,[lister=lister,path,token]{return lister(path,token);}));
+        }
     }
     void applyListing(const QString& key, quint64 seq, quint64 startEpoch, glancelot::FolderListing listing) {
         QString finishedPath;
@@ -261,9 +275,10 @@ QHash<int, QByteArray> FolderTreeModel::roleNames() const {
 void FolderTreeModel::sync(const glancelot::NavigationSnapshot& snapshot) {
     const QString root = snapshot.root.empty() ? QString{} : displayPath(snapshot.root);
     const QString rootKey = keyFor(root);
-    if (rootKey != d->rootKey) d->resetRoot(snapshot.root);
+    const bool rootChanged=rootKey!=d->rootKey;
+    if (rootChanged) d->resetRoot(snapshot.root);
     const QString directory = snapshot.directory.empty() ? QString{} : keyFor(displayPath(snapshot.directory));
-    if (directory != d->currentKey) {
+    if (rootChanged || directory != d->currentKey) {
         d->currentKey = directory;
         d->revealKey = directory;
         d->refreshCurrent();
