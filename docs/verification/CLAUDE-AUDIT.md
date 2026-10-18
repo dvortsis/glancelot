@@ -18,6 +18,8 @@ The existing implementation is a useful Windows JPEG/PNG alpha. The earlier plan
 6. **Activating a failed current path could not retry it.** The previous no-op checked the requested path rather than successful decode state. The controller now tracks whether the current attempt succeeded and provides a separator/case-aware path comparison without filesystem access. Failed images retry; a valid current image avoids reopening, including Windows slash/case aliases.
 7. **Sort persistence failure was hidden by a success message.** Session-only ordering is now reported when the shared settings writer is busy or unavailable. Sort worker generations, natural folder order/explicit landing, deleted anchors, stable ties, missing metadata and visible-order stepping are covered by core/controller tests.
 
+8. **Concurrent sort edits could revert another window's preferences.** A stale window changing only direction replaced the entire sort object, resetting the sort key and dropping unknown nested fields. Sort updates now merge only edited fields under the shared writer lock. Independent regression and verification are required before closing this final finding.
+
 Additional hardening: decoder stderr is discarded instead of accumulating; a failed pixel copy no longer destroys the previous good image; worker request limits are checked before accepting a newline; subtree-search pending storage is bounded as well as visited work; viewer teardown has a one-second navigation cancellation grace instead of waiting indefinitely on a blocked filesystem call. Incomplete UNC server-root validation was corrected, but actual SMB behavior remains unverified.
 
 ## Verification evidence

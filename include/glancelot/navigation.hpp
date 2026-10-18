@@ -8,7 +8,8 @@ namespace glancelot {
 bool naturalLess(const std::filesystem::path& a, const std::filesystem::path& b);
 bool isSupportedImage(const std::filesystem::path& path);
 std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& directory, std::stop_token cancel = {});
-// File order inside one folder. Folder order and cross-folder landing always stay natural (NAV-06).
+// File order inside one folder. Folder order and explicit folder-jump landing stay natural (NAV-02/NAV-06).
+// Stepping across a boundary starts at the target folder's visible sorted endpoint to avoid skipping images.
 // Ties break by natural name; entries whose metadata cannot be read sort last in both directions. Shuffle is a
 // deterministic permutation of (file name, seed): it does not change when files are added or removed elsewhere.
 enum class SortKey { Name, Modified, Size, Shuffle };
