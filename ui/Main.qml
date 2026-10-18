@@ -74,7 +74,9 @@ ApplicationWindow {
                 for(const id of members)extents[id]=minimum(id)+(preferred(id)-minimum(id))*scale
             }
             const bounds={x:0,y:0,width:width,height:height},rects={}
-            const ordered=list.slice().sort((a,b)=>state[a].order-state[b].order||all.indexOf(a)-all.indexOf(b))
+            // Docked panes stack outermost so they keep the place the canvas reserved for them while auto-hiding
+            // bars come and go; within each group, saved order then the stable id order.
+            const ordered=list.slice().sort((a,b)=>(docked[a]?0:1)-(docked[b]?0:1)||state[a].order-state[b].order||all.indexOf(a)-all.indexOf(b))
             for(const region of ["top","bottom","left","right"]) {
                 for(const id of ordered.filter(id=>state[id].region===region&&!overlay(id))) {
                     const h=horizontal(id),extent=extents[id]
@@ -91,20 +93,24 @@ ApplicationWindow {
         const live=place(ids),bounds=place(all.filter(id=>docked[id])).bounds
         const result=live.rects
         for(const id of ids.filter(id=>state[id].region==="center"))result[id]=Object.assign({},bounds)
-        let content=Object.assign({},result[gridMode?"grid":"preview"]||bounds)
+        // content: the canvas area minus an overlay tree. clear: what is unobstructed right now (also minus the
+        // auto-hiding bars that are visible), for notices and toasts that must not cover controls.
+        let content=Object.assign({},result[gridMode?"grid":"preview"]||bounds),clear=Object.assign({},live.bounds)
+        function uncover(area,cover) {
+            const intersection=Math.max(0,Math.min(area.x+area.width,cover.x+cover.width)-Math.max(area.x,cover.x))
+            if(cover.y<area.y+area.height && cover.y+cover.height>area.y && intersection>0) {
+                if(cover.x<=area.x)area.x+=intersection
+                area.width-=intersection
+            }
+        }
         for(const id of ids.filter(id=>overlay(id))) {
             // Overlays sit beside the bars that are visible now, not only the docked ones.
             const area=live.bounds,extent=Math.min(preferred(id),Math.max(0,area.width-120))
             result[id]={x:state[id].region==="right"?area.x+area.width-extent:area.x,y:area.y,width:extent,height:area.height}
-            const cover=result[id]
-            const intersection=Math.max(0,Math.min(content.x+content.width,cover.x+cover.width)-Math.max(content.x,cover.x))
-            if(cover.y<content.y+content.height && cover.y+cover.height>content.y && intersection>0) {
-                if(cover.x<=content.x)content.x+=intersection
-                content.width-=intersection
-            }
+            uncover(content,result[id]);uncover(clear,result[id])
         }
         for(const id of Object.keys(active))if(!active[id])result[id]={x:0,y:0,width:0,height:0}
-        result._state=state;result._recovered=recovered;result._content=content
+        result._state=state;result._recovered=recovered;result._content=content;result._clear=clear
         return result
     }
     function paneRect(id) { return workspace[id]||{x:0,y:0,width:0,height:0} }
@@ -322,10 +328,10 @@ ApplicationWindow {
     Label {
         objectName: "layoutRecoveryNotice"
         visible: app.workspace._recovered
-        x: app.workspace._content.x+Theme.gapSm
-        y: app.workspace._content.y+Theme.gapSm
-        width: Math.max(0,app.workspace._content.width-2*Theme.gapSm)
-        text: app.workspace._content.width < 280 ? "Layout adapted. Reset in Settings." : "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
+        x: app.workspace._clear.x+Theme.gapSm
+        y: app.workspace._clear.y+Theme.gapSm
+        width: Math.max(0,app.workspace._clear.width-2*Theme.gapSm)
+        text: app.workspace._clear.width < 280 ? "Layout adapted. Reset in Settings." : "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
         wrapMode: Text.Wrap
         color: Theme.text
         padding: Theme.gapSm
@@ -596,9 +602,9 @@ ApplicationWindow {
     }
     Rectangle { // status toast, centred on the part of the canvas no panel covers
         objectName: "statusToast"
-        x: app.workspace._content.x+(app.workspace._content.width-width)/2
-        y: app.workspace._content.y+app.workspace._content.height-height-Theme.gapLg
-        width: Math.max(0,Math.min(app.workspace._content.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
+        x: app.workspace._clear.x+(app.workspace._clear.width-width)/2
+        y: app.workspace._clear.y+app.workspace._clear.height-height-Theme.gapLg
+        width: Math.max(0,Math.min(app.workspace._clear.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
         height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
         radius: Theme.radiusCard
         color: Theme.surface

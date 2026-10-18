@@ -49,7 +49,9 @@ Item {
             required property string modelData
             readonly property var state: arrangement.host.paneState(modelData)   // displayed
             readonly property var saved: paneLayout.panes[modelData]             // preferred; every edit starts here
-            readonly property var rect: arrangement.host.paneRect(modelData)
+            // The content pane's frame shows the unobstructed area, not the canvas under the overlaid bars.
+            readonly property var rect: state.region === "center" && arrangement.host.paneRect(modelData).width > 0
+                ? arrangement.host.workspace._clear : arrangement.host.paneRect(modelData)
             readonly property bool horizontalEdge: state.region === "top" || state.region === "bottom"
             readonly property bool immutable: paneLayout.locked || state.frozen || arrangement.recovered
             readonly property bool centered: state.region === "center"
