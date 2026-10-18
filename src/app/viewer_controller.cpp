@@ -231,7 +231,6 @@ struct ViewerController::Private {
                 else if (name=="boundary") object[name]=boundary;
                 else if (name=="wheel") object[name]=wheel;
                 else if (name=="filmstrip") object[name]=filmstrip;
-                else if (name=="sort") object[name]=QJsonObject{{"key",sortKeyName(sortSpec.key)},{"descending",sortSpec.descending},{"seed",double(sortSpec.seed)}};
                 else if (name=="tree") object[name]=tree;
                 else if (name=="treePinned") object[name]=treePin;
             }
@@ -367,8 +366,17 @@ struct ViewerController::Private {
     }
     void changeSort(const glancelot::SortSpec& next) {
         if (next==sortSpec) return;
+        const auto previous=sortSpec;
         sortSpec=next;
-        sortSaved=save({"sort"});
+        sortSaved=updateSettings([&](QJsonObject& object){
+            // A stale window changes only the fields the user edited; other windows'
+            // key/direction/seed choices and unknown nested preferences survive.
+            auto stored=object.value("sort").toObject();
+            if(next.key!=previous.key)stored["key"]=sortKeyName(next.key);
+            if(next.descending!=previous.descending)stored["descending"]=next.descending;
+            if(next.seed!=previous.seed)stored["seed"]=double(next.seed);
+            object["sort"]=stored;
+        }).ok();
         if (nav.snapshot().current.empty()) {
             status=sortSaved?"File order saved.":"File order changed for this session; settings could not be saved.";
             emit q->stateChanged(); return;

@@ -133,7 +133,7 @@ tasks:
     base_commit: 6f14dcc
     depends: [GRID-01]
     outcome: File sort modes (name, modified, size, seeded shuffle; ascending/descending) shared by next/previous, filmstrip and grid
-    boundaries: Dimension/capture-date sorts need metadata parsing and stay later; folder order and cross-folder landing stay natural and independent of file sort
+    boundaries: Dimension/capture-date sorts need metadata parsing and stay later; folder order and explicit folder-jump landing stay natural and independent of file sort
     interfaces: Lead-frozen core API SortKey/SortSpec/sortedImageFiles and Navigator::setSort; remappable sort and sort-reverse commands; sort settings persisted per user
     acceptance: Stable ties and missing metadata sort last; deleted-current anchor keeps next/previous deterministic; sort change keeps current image; folder order unchanged by sort; settings persisted
     verification: Core tests (all keys, both directions, ties, missing metadata, deleted anchor, cancellation, folder order invariance), controller/filmstrip order test, independent review and integrated build
