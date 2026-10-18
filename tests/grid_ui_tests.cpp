@@ -224,6 +224,112 @@ private slots:
         qInfo() << "top before" << before << "after" << topPath();
         QCOMPARE(topPath(), before);
     }
+    // REVIEWER (topbar-review): compact cells snap to whole rows for every pane size; delegates stay bounded.
+    void reviewCompactCellsSnapToWholeRows() {
+        QTest::failOnWarning(QRegularExpression("[Bb]inding loop"));
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.fill(500); h.showGrid();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 500);
+        QQuickItem* panel = h.grid(); QQuickItem* view = h.view(); QVERIFY(panel && view);
+        int worstDelegates = 0; QStringList partial;
+        for (int w = 300; w <= 2000; w += 100) for (int ph = 60; ph <= 460; ph += 10) {
+            panel->setWidth(w); panel->setHeight(ph); QCoreApplication::processEvents(); QCoreApplication::processEvents();
+            const bool compact = panel->property("compact").toBool();
+            const qreal gh = view->height(), cell = view->property("cellHeight").toReal();
+            const int columns = panel->property("columns").toInt(), live = panel->property("liveDelegateCount").toInt();
+            QVERIFY2(cell > 0 && std::isfinite(cell), qPrintable(QString("w %1 h %2 cell %3").arg(w).arg(ph).arg(cell)));
+            worstDelegates = std::max(worstDelegates, live);
+            QVERIFY2(live <= columns * 8, qPrintable(QString("w %1 h %2 delegates %3 columns %4").arg(w).arg(ph).arg(live).arg(columns)));
+            if (!compact) continue;
+            const int rows = int(gh / cell);
+            const qreal leftover = gh - rows * cell;
+            if (gh < cell) { partial << QString("%1x%2(grid %3, cell %4)").arg(w).arg(ph).arg(gh).arg(cell); continue; }
+            QVERIFY2(leftover <= rows + 0.5, qPrintable(QString("w %1 h %2 grid %3 cell %4 rows %5 leftover %6").arg(w).arg(ph).arg(gh).arg(cell).arg(rows).arg(leftover)));
+        }
+        qInfo() << "max live delegates" << worstDelegates << "panes with less than one whole row:" << partial.size() << partial.mid(0, 4);
+    }
+    // REVIEWER: an inaccessible relisting keeps the browsed viewport and Try again recovers to it.
+    void reviewRetryRestoresViewportAfterFailure() {
+        QTemporaryDir root; QVERIFY(root.isValid()); QVERIFY(QDir(root.path()).mkpath("album"));
+        const QString album = root.filePath("album"), away = root.filePath("away");
+        for (int i = 0; i < 300; ++i) { QFile f(album + QString("/f-%1.txt").arg(i, 4, 10, QLatin1Char('0'))); QVERIFY(f.open(QIODevice::WriteOnly)); }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.fileGrid.setDirectory(album); h.showGrid();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 300);
+        QTest::qWait(150);
+        QVERIFY(QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, 200), Q_ARG(int, 0)));
+        QTest::qWait(100);
+        const qreal before = h.view()->property("contentY").toReal();
+        QVERIFY(before > 500);
+        QVERIFY(QDir().rename(album, away));
+        h.fileGrid.refresh(); QTRY_VERIFY(!h.fileGrid.loading() && !h.fileGrid.accessible());
+        auto* retry = namedItem(h.window, "gridRetry"); QVERIFY(retry); QTRY_VERIFY(retry->isVisible());
+        QCOMPARE(h.grid()->property("selectedCount").toInt(), 0);
+        QVERIFY(QDir().rename(away, album));
+        QVERIFY(QMetaObject::invokeMethod(retry, "clicked"));
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.accessible() && h.fileGrid.count() == 300);
+        QTest::qWait(150);
+        const qreal after = h.view()->property("contentY").toReal();
+        qInfo() << "viewport before" << before << "after retry" << after;
+        QVERIFY(!retry->isVisible());
+        QVERIFY2(std::abs(after - before) < 1, "Try again lost the browsed viewport");
+    }
+    // REVIEWER: the frameless bar keeps every window control inside it at every width, locked or not.
+    void reviewFramelessBarFitsAtEveryWidth() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        QImage image(64, 48, QImage::Format_RGB32); image.fill(Qt::darkCyan);
+        const QString name = media.filePath("A rather long photograph name from the harbour at dusk 2026-10-18.png");
+        QVERIFY(image.save(name));
+        Harness h(true); QVERIFY(h.window);
+        h.viewer.open(name); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        h.window->setProperty("frameless", true);
+        auto* bar = namedItem(h.window, "topBar"); auto* close = namedItem(h.window, "closeButton");
+        auto* maximize = namedItem(h.window, "maximizeButton"); auto* lock = namedItem(h.window, "layoutLockIndicator");
+        auto* title = namedItem(h.window, "topBarTitle"); auto* settings = namedItem(h.window, "settingsButton");
+        QVERIFY(bar && close && maximize && lock && title && settings);
+        const auto left = [&](QQuickItem* i) { return i->mapToItem(bar, QPointF()).x(); };
+        const auto right = [&](QQuickItem* i) { return i->mapToItem(bar, QPointF(i->width(), 0)).x(); };
+        QStringList clipped;
+        for (bool locked : {true, false}) {
+            h.layout.setLocked(locked);
+            for (int w = 540; w <= 1200; w += 10) {
+                h.window->resize(w, 600); QTRY_COMPARE(bar->width(), qreal(w));
+                QCoreApplication::processEvents();
+                QVERIFY2(close->isVisible() && maximize->isVisible() && lock->isVisible() == locked, qPrintable(QString::number(w)));
+                if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE") && locked && (w == 730 || w == 780)) {
+                    QTest::qWait(100); QDir().mkpath(".cache/topbar-review");
+                    QVERIFY(h.window->grabWindow().save(QString(".cache/topbar-review/locked-frameless-%1.png").arg(w)));
+                }
+                const bool overlap = locked && (right(title) > left(lock) + 0.5 || right(lock) > left(settings) + 0.5);
+                if (right(close) > bar->width() - 8 + 0.5 || overlap)
+                    clipped << QString("%1%2: close right %3 title %4").arg(locked ? "locked " : "").arg(w).arg(right(close)).arg(title->width());
+            }
+        }
+        qInfo() << "clipped widths:" << clipped.size() << clipped;
+        QVERIFY2(clipped.isEmpty(), qPrintable(clipped.join("; ")));
+    }
+    // REVIEWER: contrast of states the top-bar tests do not assert: pressed Close and inactive glyphs on pressed.
+    void reviewUnassertedStateContrast() {
+        Harness h; QVERIFY(h.window);
+        QObject* tokens = h.engine.singletonInstance<QObject*>("Glancelot", "Theme"); QVERIFY(tokens);
+        const auto token = [&](const char* n) { return tokens->property(n).value<QColor>(); };
+        double closePressedMin = 100, mutedPressedMin = 100, textPressedMin = 100; QStringList low;
+        for (const auto& entry : h.theme.families()) for (bool dark : {true, false}) {
+            const auto id = entry.toMap().value("id").toString();
+            h.theme.setFamily(id); h.theme.setMode(dark ? "dark" : "light"); QCoreApplication::processEvents();
+            QColor veil = token("background"); veil.setAlphaF(0.16);
+            const QColor pressedClose = over(veil, token("danger"));
+            const double c = contrastRatio(token("background"), pressedClose);
+            const double m = contrastRatio(token("muted"), over(token("pressed"), token("surface")));
+            closePressedMin = std::min(closePressedMin, c); mutedPressedMin = std::min(mutedPressedMin, m);
+            textPressedMin = std::min(textPressedMin, contrastRatio(token("text"), over(token("pressed"), token("surface"))));
+            if (c < 3) low << id + (dark ? " dark close-pressed " : " light close-pressed ") + QString::number(c, 'f', 2);
+            if (m < 3) low << id + (dark ? " dark muted-pressed " : " light muted-pressed ") + QString::number(m, 'f', 2);
+        }
+        qInfo("close glyph on pressed danger min %.2f; muted glyph on pressed min %.2f; text on pressed min %.2f",
+              closePressedMin, mutedPressedMin, textPressedMin);
+        QVERIFY2(low.isEmpty(), qPrintable(low.join("; ")));
+    }
     void cleanupTestCase() { listingFixture(-1); }
     void init() {
         config = std::make_unique<QTemporaryDir>();

@@ -64,8 +64,13 @@ inline TitleBarResult applyNativeTitleBar(quintptr handle, const TitleBarColors&
     const BOOL dark=colors.dark ? TRUE : FALSE;
     result.darkMode=SUCCEEDED(DwmSetWindowAttribute(hwnd, 20, &dark, sizeof dark))
                     || SUCCEEDED(DwmSetWindowAttribute(hwnd, 19, &dark, sizeof dark));
+    // Windows high contrast owns caption colors, and a missing role must not become black: both restore the
+    // system default (DWMWA_COLOR_DEFAULT) rather than applying a theme color.
+    HIGHCONTRASTW contrast{sizeof contrast};
+    const bool highContrast=SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof contrast, &contrast, 0)
+                            && (contrast.dwFlags & HCF_HIGHCONTRASTON);
     const auto set=[&](DWORD attribute, const QColor& color) {
-        const COLORREF value=toColorRef(color);
+        const COLORREF value=highContrast || !color.isValid() ? COLORREF(0xFFFFFFFF) : toColorRef(color);
         return SUCCEEDED(DwmSetWindowAttribute(hwnd, attribute, &value, sizeof value));
     };
     result.border=set(34, colors.border);

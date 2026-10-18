@@ -70,7 +70,9 @@ Button {
                : (control.down ? Theme.pressed : (control.isOn ? Theme.selection : (control.hovered ? Theme.hover : "transparent")))
         border.width: control.visualFocus ? Theme.focusWidth : (control.variant === "outline" ? Theme.borderWidth : 0)
         border.color: control.visualFocus ? Theme.focusRing : Theme.border
-        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+        // The danger fill switches together with its glyph (background role), as a native caption button does;
+        // fading it in would leave the glyph nearly invisible on a transparent fill for the transition.
+        Behavior on color { enabled: control.variant !== "danger"; ColorAnimation { duration: Theme.durationFast } }
         Rectangle { // primary hover/press feedback, drawn in the button's own foreground so it works in every family
             anchors.fill: parent
             radius: parent.radius

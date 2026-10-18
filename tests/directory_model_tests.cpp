@@ -228,6 +228,37 @@ private slots:
         QVERIFY(model.accessible()); QCOMPARE(model.count(), 3);
         QCOMPARE(model.selectedCount(), 2); QCOMPARE(model.cursorRow(), 2);
     }
+    // REVIEWER (topbar-review): kept keys must not leak across a folder change, deactivation or a deleted entry.
+    void reviewTransientFailureKeysDoNotLeak() {
+        QTemporaryDir root; QVERIFY(QDir(root.path()).mkpath("album")); QVERIFY(QDir(root.path()).mkpath("other"));
+        const QString album = root.filePath("album"), away = root.filePath("away"), other = root.filePath("other");
+        for (const char* n : {"a.png", "b.png", "c.txt", "d.png"}) touch(album + "/" + n);
+        touch(other + "/a.png");
+        DirectoryEntryModel model; model.setActive(true); model.setDirectory(album); QVERIFY(settle(model));
+        // 1) failure -> a different folder: nothing carries over.
+        model.select(0); model.select(3, DirectoryEntryModel::Range); QCOMPARE(model.selectedCount(), 4);
+        QVERIFY(QDir().rename(album, away)); model.refresh(); QVERIFY(settle(model)); QVERIFY(!model.accessible());
+        model.selectAll(); QCOMPARE(model.selectedCount(), 0); // no rows: select-all is a no-op
+        model.setDirectory(other); QVERIFY(settle(model)); QVERIFY(model.accessible());
+        QCOMPARE(model.selectedCount(), 0); QCOMPARE(model.cursorRow(), -1);
+        QVERIFY(QDir().rename(away, album));
+        model.setDirectory(album); QVERIFY(settle(model)); QCOMPARE(model.selectedCount(), 0);
+        // 2) failure -> deactivate -> recover with one selected entry deleted meanwhile: survivors only.
+        model.select(1); model.select(3, DirectoryEntryModel::Range); QCOMPARE(model.selectedCount(), 3);
+        QVERIFY(QDir().rename(album, away)); model.refresh(); QVERIFY(settle(model)); QVERIFY(!model.accessible());
+        model.setActive(false);
+        qInfo() << "inactive after failure: selectedCount" << model.selectedCount() << "paths" << model.selectedPaths().size();
+        QVERIFY(QFile::remove(away + "/c.txt")); QVERIFY(QDir().rename(away, album));
+        model.setActive(true); QVERIFY(settle(model)); QVERIFY(model.accessible()); QCOMPARE(model.count(), 3);
+        QCOMPARE(model.selectedCount(), 2); QCOMPARE(model.selectedPaths().size(), 2);
+        // The kept anchor (b.png) still drives a range after recovery.
+        model.select(0, DirectoryEntryModel::Range); QCOMPARE(model.selectedCount(), 2); // a..b
+        QVERIFY(model.selectedPaths().first().endsWith("a.png") && model.selectedPaths().last().endsWith("b.png"));
+        // 3) clearing during a failure is honoured on recovery.
+        QVERIFY(QDir().rename(album, away)); model.refresh(); QVERIFY(settle(model));
+        model.clearSelection(); QVERIFY(QDir().rename(away, album)); model.refresh(); QVERIFY(settle(model));
+        QCOMPARE(model.selectedCount(), 0);
+    }
     void currentImageRole() {
         QTemporaryDir dir; for (const char* n : {"a.png", "b.png"}) touch(dir.filePath(n));
         DirectoryEntryModel model; model.setActive(true); model.setDirectory(dir.path()); QVERIFY(settle(model));
