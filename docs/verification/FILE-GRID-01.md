@@ -147,3 +147,25 @@ Real-application smoke run with a scratch `GLANCELOT_CONFIG_DIR` and generated P
 
 - Shuffle seed: accepted. `ViewerController::sortSeed()` and a `seed` argument on `DirectoryEntryModel::setSort` (default 1) make the grid's shuffle order match traversal. Regression test: `directory_model_tests::shuffleSeedMatchesTraversalOrder`.
 - Windows reparse points, including OneDrive Files-On-Demand cloud placeholders: keep the traversal policy for now. Every reparse point is listed as a linked non-photo file and is never decoded. Opening a cloud placeholder hydrates (downloads) it, and browsing must not trigger that silently. Treating placeholders as photos, with explicit download feedback, is a separate policy task that must be verified on a real OneDrive folder before it changes. Until then this is a known limitation; it is not a regression, since the filmstrip already excludes these files.
+
+## Continuation fixes (`agent/continuation`, `5f01e4d`)
+
+`agent/continuation` merges `agent/file-grid` (`bf7e6c6`) with `main` (`ef34492`), so it includes PANES-01. On top of that merge, `5f01e4d` adds the following changes:
+
+- **Fail-closed listings.** A Windows `FindNextFileW` error other than `ERROR_NO_MORE_FILES`, or a POSIX `directory_iterator::increment` error, now makes the listing inaccessible. Before, the entries read so far were kept and published as if complete. The only early exit that may publish a partial result is still the intentional entry limit, which sets `truncated`. Cancellation is checked first and still returns `cancelled`.
+- **Viewport kept across refresh.** A background model reset (an external rename or delete) now restores the item that was visible before the refresh. Before, it scrolled to the keyboard cursor even when the cursor was offscreen. If the cursor was visible before the reset, it stays in view. Regression test: `grid_ui_tests::resetRetainsScrolledViewport`. This test was first written by the independent reviewer against `bf7e6c6`, where it failed.
+- **Compact grid.** Panes shorter than 420 px use a shorter header and smaller tiles (column pitch 136 instead of 176, minimum cell height 112), so more than one row shows.
+- **Notices.** The notice timeout is now 4 s instead of 6 s. The truncation banner no longer says "the first" items, because the limit follows enumeration order, not display order.
+
+Commands and actual output:
+
+```text
+./scripts/build.ps1 -BuildDir build-continuation -Test
+100% tests passed out of 11
+Total Test time (real) = 102.82 sec
+docker build (Linux amd64, Qt 6.8.3, full CTest)
+100% tests passed, 0 tests failed out of 11
+Total Test time (real) =  55.47 sec
+```
+
+The Linux container now builds and passes the Qt model, QML and UI tests (`directory_model`, `folder_grid`). This replaces the earlier limit that only the core had been compiled on Linux. Under Docker the UI tests run on the offscreen platform; physical Linux windowing remains unverified.
