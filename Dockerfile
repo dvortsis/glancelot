@@ -26,6 +26,7 @@ COPY --from=qt /opt/Qt/6.8.3/gcc_64 /opt/Qt
 COPY --from=build /build/glancelot /build/glancelot-decoder /opt/glancelot/
 COPY docker/start.py /opt/glancelot/start.py
 COPY LICENSE THIRD_PARTY_NOTICES.md README.md /opt/glancelot/
+COPY assets/fonts/geist/OFL.txt /opt/glancelot/Geist-OFL.txt
 RUN printf '[Paths]\nPrefix=/opt/Qt\n' > /opt/glancelot/qt.conf && cp /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 ENV PATH=/opt/Qt/bin:$PATH LD_LIBRARY_PATH=/opt/Qt/lib DISPLAY=:0 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 GLANCELOT_CONFIG_DIR=/config HOME=/home/viewer
 RUN ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot-decoder | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/Qt/plugins/platforms/libqxcb.so | grep -q "not found"

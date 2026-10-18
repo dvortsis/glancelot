@@ -379,19 +379,60 @@ private slots:
         QVERIFY(h.window->property("modalOpen").toBool());
         QTest::keyClick(h.window, Qt::Key_Escape);
         QTRY_VERIFY(h.view()->hasActiveFocus());
-        // Review captures of every section, wide and compact, both modes.
-        QDir().mkpath(".cache/review");
-        for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) {
-            h.window->resize(size);
-            for (const char* mode : {"dark", "light"}) {
-                h.theme.setMode(mode);
-                for (const char* section : {"appearance", "viewing", "browsing", "controls", "about"}) {
-                    QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString(section)), Q_ARG(QVariant, false)));
-                    QTest::qWait(60);
-                    QVERIFY(h.window->grabWindow().save(QString(".cache/review/settings-%1-%2-%3.png").arg(section, mode).arg(size.width())));
+        // Clicking the current section keeps it marked (section items select, they do not toggle).
+        h.viewer.trigger("settings"); QTRY_VERIFY(h.window->property("modalOpen").toBool());
+        auto* nav = h.window->findChild<QQuickItem*>("settingsNav"); QVERIFY(nav);
+        QQuickItem* current = nullptr;
+        QTRY_VERIFY([&] { for (QQuickItem* item : descendants(nav)) if (item->property("selected").toBool()) { current = item; return true; } return false; }());
+        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, current->mapToScene(QPointF(current->width() / 2, current->height() / 2)).toPoint());
+        QTest::qWait(30);
+        QVERIFY(current->property("selected").toBool());
+        QCOMPARE(dialog->property("section").toString(), QString("controls"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+        // Optional review captures of every section, wide and compact, both modes (set GLANCELOT_REVIEW_CAPTURE).
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+            QDir().mkpath(".cache/review");
+            for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) {
+                h.window->resize(size);
+                for (const char* mode : {"dark", "light"}) {
+                    h.theme.setMode(mode);
+                    for (const char* section : {"appearance", "viewing", "browsing", "controls", "about"}) {
+                        QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString(section)), Q_ARG(QVariant, false)));
+                        QTest::qWait(300); // past the 150-200 ms state transitions
+                        QVERIFY(h.window->grabWindow().save(QString(".cache/review/settings-%1-%2-%3.png").arg(section, mode).arg(size.width())));
+                    }
                 }
             }
         }
+    }
+    void startupStatusAndEmptyState() {
+        {   // Fresh start: the empty state carries the "how to begin" hint, so the toast stays hidden.
+            Harness h; QVERIFY(h.window);
+            auto* toast = h.window->findChild<QQuickItem*>("statusToast"); QVERIFY(toast);
+            QCOMPARE(h.viewer.status(), QString("Open a JPEG or PNG to begin.")); // Main.qml suppresses exactly this text
+            QTest::qWait(50); QVERIFY(!toast->isVisible());
+        }
+        {   // A settings file from a newer version is reported at start-up, even though the empty state is showing.
+            QFile settings(QDir(qEnvironmentVariable("GLANCELOT_CONFIG_DIR")).filePath("settings.json"));
+            QVERIFY(settings.open(QIODevice::WriteOnly)); settings.write("{\"schema\":99}"); settings.close();
+            Harness h; QVERIFY(h.window);
+            auto* toast = h.window->findChild<QQuickItem*>("statusToast"); QVERIFY(toast);
+            QVERIFY(h.viewer.status() != "Open a JPEG or PNG to begin.");
+            QTRY_VERIFY(toast->isVisible());
+        }
+    }
+    void pinButtonAnswersEnter() {
+        Harness h; QVERIFY(h.window);
+        h.window->resize(1180, 780); h.viewer.setTreeVisible(true); h.window->requestActivate();
+        auto* pin = h.window->findChild<QQuickItem*>("treePin"); QVERIFY(pin);
+        QTRY_VERIFY(pin->isVisible());
+        QVERIFY(!h.viewer.treePinned());
+        pin->forceActiveFocus(Qt::TabFocusReason);
+        QTest::keyClick(h.window, Qt::Key_Return);
+        QTRY_VERIFY(h.viewer.treePinned());
+        h.viewer.setTreePinned(false); // a change made elsewhere (Settings) is reflected on the button
+        QTRY_VERIFY(!pin->property("checked").toBool());
     }
     void treeRowClickEnterAndChevron() {
         QTemporaryDir media; QVERIFY(media.isValid());
@@ -440,12 +481,21 @@ private slots:
         list->setProperty("currentIndex", rowFor(media.path())->property("index"));
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(h.viewer.filePath().endsWith("top.png"));
-        // Double-click on a non-root row toggles it once (the second click does not re-open or re-toggle).
+        // Double-click on a non-root row, as in Explorer's navigation pane: the first click opens the folder,
+        // the double-click toggles its expansion exactly once.
         QTRY_VERIFY(rowFor(media.filePath("album")));
         album = reveal(media.filePath("album"));
         const bool wasExpanded = album->property("expanded").toBool();
         QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, album->mapToScene(QPointF(album->width() - 24, album->height() / 2)).toPoint());
+        QTRY_VERIFY(h.viewer.filePath().endsWith("inner.png"));
         QTRY_VERIFY(rowFor(media.filePath("album")) && rowFor(media.filePath("album"))->property("expanded").toBool() != wasExpanded);
+        // Double-clicking the chevron toggles once too, instead of collapsing and relisting the folder.
+        QTest::qWait(400); // past the double-click interval
+        album = reveal(media.filePath("album"));
+        const bool beforeChevron = album->property("expanded").toBool();
+        QTest::mouseDClick(h.window, Qt::LeftButton, Qt::NoModifier, album->mapToScene(QPointF(album->property("levelX").toReal() + 6, album->height() / 2)).toPoint());
+        QTest::qWait(100);
+        QTRY_VERIFY(rowFor(media.filePath("album")) && rowFor(media.filePath("album"))->property("expanded").toBool() != beforeChevron);
     }
     void resizeTreeAndEmpty() {
         Harness h; QVERIFY(h.window); h.fill(50); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());

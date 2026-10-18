@@ -101,7 +101,7 @@ Rectangle {
                 checkable: true
                 checked: viewer.treePinned
                 tip: viewer.treePinned ? "Unpin: let the panel hide with the other controls" : "Pin: keep the panel open and make room for the photo"
-                onToggled: viewer.treePinned = checked
+                onToggled: { viewer.treePinned = checked; checked = Qt.binding(() => viewer.treePinned) } // stays in sync with Settings
             }
         }
 
@@ -191,7 +191,7 @@ Rectangle {
                 height: Theme.rowHeight
                 Accessible.role: Accessible.TreeItem
                 Accessible.name: name + (isCurrent ? ", current folder" : "") + (nodeState === 3 ? ", no access" : "")
-                Accessible.description: expandable ? (expanded ? "Expanded" : "Collapsed") : ""
+                Accessible.description: expandable ? (expanded ? "Expanded" : "Collapsed") : "" // state in words: Qt 6.8 QML has no expandable/expanded accessibility properties
                 Accessible.selected: isCurrent
 
                 Repeater { // indent guides: one hairline per ancestor level, centred under that level's chevron
@@ -236,12 +236,12 @@ Rectangle {
                 }
                 Item { // disclosure: generous hit area, 16px glyph
                     id: disclosure
-                    x: row.levelX - Theme.gapXs
-                    width: panel.indent + Theme.gapXs
+                    x: row.levelX - Theme.gapXs - Theme.gapXxs
+                    width: 22 // >= 22px target even with the compact 12px indent
                     height: parent.height
                     UiIcon {
                         anchors.centerIn: parent
-                        anchors.horizontalCenterOffset: Theme.gapXs / 2
+                        anchors.horizontalCenterOffset: 1 // glyph centre stays on the indent guide column
                         visible: row.expandable && !row.loading
                         name: "chevron-right"
                         color: Theme.muted
@@ -250,7 +250,7 @@ Rectangle {
                     }
                     UiIcon {
                         anchors.centerIn: parent
-                        anchors.horizontalCenterOffset: Theme.gapXs / 2
+                        anchors.horizontalCenterOffset: 1 // glyph centre stays on the indent guide column
                         visible: row.loading
                         name: "spinner"
                         color: Theme.muted
@@ -258,7 +258,7 @@ Rectangle {
                     TapHandler {
                         enabled: row.expandable
                         gesturePolicy: TapHandler.WithinBounds
-                        onTapped: { list.currentIndex = row.index; folderTree.toggle(row.index) }
+                        onTapped: { if (tapCount > 1) return; list.currentIndex = row.index; folderTree.toggle(row.index) } // a double-click must not collapse and relist
                     }
                 }
                 UiIcon {

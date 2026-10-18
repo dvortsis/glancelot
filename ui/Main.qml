@@ -135,6 +135,8 @@ ApplicationWindow {
 
     // A pinned folder panel makes room instead of covering the photo, except in narrow windows.
     readonly property int treeInset: treePanel.visible && viewer.treePinned && app.width >= 720 ? treePanel.width : 0
+    // Width of the canvas hidden by the folder panel, pinned or overlaid; centred overlays avoid it.
+    readonly property int canvasCover: treePanel.visible ? treePanel.width : 0
     ImageCanvas {
         id: canvas
         objectName: "canvas"
@@ -223,10 +225,10 @@ ApplicationWindow {
     ColumnLayout { // empty state: one message, one action
         id: emptyState
         anchors.centerIn: parent
-        anchors.horizontalCenterOffset: app.treeInset / 2
+        anchors.horizontalCenterOffset: app.canvasCover / 2
         spacing: Theme.gapSm
         visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
-        width: Math.min(440, app.width - app.treeInset - 2 * Theme.gapXxl)
+        width: Math.min(440, app.width - app.canvasCover - 2 * Theme.gapXxl)
         Image {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: app.height < 480 ? 96 : 144
@@ -428,20 +430,19 @@ ApplicationWindow {
         }
     }
     Rectangle { // status toast, centred on the part of the canvas no panel covers
-        readonly property int covered: treePanel.visible ? treePanel.width : 0
-        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: covered / 2; bottom: parent.bottom; bottomMargin: Theme.barHeight + Theme.gapLg }
-        width: Math.min(app.width - covered - 2 * Theme.gapXl, statusText.implicitWidth + 2 * Theme.gapLg)
+        objectName: "statusToast"
+        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: app.canvasCover / 2; bottom: parent.bottom; bottomMargin: Theme.barHeight + Theme.gapLg }
+        width: Math.min(app.width - app.canvasCover - 2 * Theme.gapXl, statusText.implicitWidth + 2 * Theme.gapLg)
         height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
         radius: Theme.radiusCard
         color: Theme.surface
         border.width: Theme.borderWidth
         border.color: canvas.rendererError ? Theme.danger : Theme.border
-        // The empty state already explains how to begin, so the unchanged start-up status is not repeated here;
-        // any later status (an open error, a settings problem) still shows.
-        property string startupStatus
-        Component.onCompleted: startupStatus = viewer.status
+        // Only the controller's default "how to begin" hint is suppressed while the empty state says the same thing.
+        // Every other status, including settings-load errors present at start-up, still shows (tested).
+        readonly property bool defaultHint: viewer.status === "Open a JPEG or PNG to begin."
         visible: !app.gridMode && (viewer.loading || canvas.rendererError.length > 0
-                 || (viewer.status.length > 0 && app.hudVisible && !(emptyState.visible && viewer.status === startupStatus)))
+                 || (viewer.status.length > 0 && app.hudVisible && !(emptyState.visible && defaultHint)))
         Label {
             id: statusText
             anchors.centerIn: parent

@@ -32,16 +32,19 @@ UiDialog {
         else Qt.callLater(focusSection)
     }
     function focusSection() { const button = nav.itemAtIndex(sectionIndex); if (button) button.forceActiveFocus(Qt.TabFocusReason) }
-    function commandAvailable(id) { return !host.gridMode || host.gridAllowsCommand(id) }
+    // Settings is already open, so its own row is listed for remapping but is not runnable.
+    function commandRunnable(id) { return id !== "settings" && (!host.gridMode || host.gridAllowsCommand(id)) }
+    // Why a command cannot run right now, shown in visible text on its row (empty when it can run).
+    function unavailableReason(id) { return id === "settings" ? "Open now" : (commandRunnable(id) ? "" : "Not in grid view") }
     function run(id) {
-        if (!commandAvailable(id) || id === "settings") return
+        if (!commandRunnable(id)) return
         if (id === "palette") { openSection("controls", true); return }
         close()
         host.invoke(id)
     }
     function runFirstMatch() {
         for (const command of viewer.commands)
-            if (host.fuzzyMatch(command.label, commandSearch.text) && commandAvailable(command.id)) { run(command.id); return }
+            if (host.fuzzyMatch(command.label, commandSearch.text) && commandRunnable(command.id)) { run(command.id); return }
     }
     onClosed: { commandSearch.text = ""; bindingMessage = "" }
 
@@ -112,11 +115,10 @@ UiDialog {
                 width: dialog.wide ? ListView.view.width : implicitWidth
                 text: modelData.label
                 iconName: dialog.wide ? modelData.icon : "" // the narrow strip keeps every section label visible
-                alignment: Qt.AlignLeft
-                checkable: true
-                checked: dialog.section === modelData.id
+                alignment: dialog.wide ? Qt.AlignLeft : Qt.AlignHCenter // leading bar in the sidebar, underline in the strip
+                selected: dialog.section === modelData.id // not checkable: clicking the current section must not clear it
                 Accessible.role: Accessible.PageTab
-                Accessible.selected: checked
+                Accessible.selected: selected
                 onClicked: dialog.section = modelData.id
                 // Up/Down (sidebar) or Left/Right (strip) move between sections, like a tab list.
                 Keys.onUpPressed: if (dialog.wide && index > 0) { dialog.section = dialog.sections[index - 1].id; dialog.focusSection() }
@@ -156,7 +158,7 @@ UiDialog {
                 heading: "Viewing"
                 SettingRow {
                     label: "Fit current photo"
-                    description: "Each newly opened photo starts at Shrink only."
+                    description: viewer.imageWidth > 0 ? "Each newly opened photo starts at Shrink only." : "Open a photo to change how it fits."
                     UiComboBox {
                         readonly property var modes: ["shrink", "fit", "fill", "width", "height", "actual"]
                         model: ["Shrink only", "Fit", "Fill", "Fit width", "Fit height", "Actual size"]
@@ -284,21 +286,29 @@ UiDialog {
                         delegate: RowLayout {
                             id: commandRow
                             required property var modelData
-                            readonly property bool available: dialog.commandAvailable(modelData.id)
+                            readonly property string reason: dialog.unavailableReason(modelData.id)
                             property alias runButton: runButton
                             Layout.fillWidth: true
                             spacing: Theme.gapSm
                             visible: dialog.host.fuzzyMatch(modelData.label, commandSearch.text)
+                            // Unavailable rows stay focusable so keyboard and screen-reader users reach the reason;
+                            // run() refuses them.
                             UiButton {
                                 id: runButton
                                 Layout.fillWidth: true
                                 alignment: Qt.AlignLeft
                                 text: commandRow.modelData.label
-                                enabled: commandRow.available && commandRow.modelData.id !== "settings"
-                                tip: !commandRow.available ? "Not available in the grid view" : (commandRow.modelData.id === "settings" ? "You are here" : "")
-                                Accessible.name: "Run " + commandRow.modelData.label
-                                Accessible.description: commandRow.available ? "" : "Not available in the grid view"
+                                opacity: commandRow.reason.length ? 0.6 : 1
+                                Accessible.name: (commandRow.reason.length ? "" : "Run ") + commandRow.modelData.label
+                                Accessible.description: commandRow.reason
                                 onClicked: dialog.run(commandRow.modelData.id)
+                            }
+                            Label {
+                                visible: commandRow.reason.length > 0
+                                text: commandRow.reason
+                                color: Theme.muted
+                                font.pixelSize: Theme.textSmall
+                                Accessible.ignored: true // already the button's description
                             }
                             UiTextField {
                                 Layout.preferredWidth: 148
