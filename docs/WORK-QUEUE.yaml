@@ -14,7 +14,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: integration
     depends: [TREE-START-01]
     branch: agent/path-bar
     worktree: .worktrees/path-bar
