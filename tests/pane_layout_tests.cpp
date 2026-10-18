@@ -1,6 +1,7 @@
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/settings_file.hpp"
 #include <QTemporaryDir>
+#include "file_lock.hpp"
 #include <QtTest>
 #include <limits>
 class PaneLayoutTests:public QObject {
@@ -21,6 +22,24 @@ private slots:
         restored.setLocked(false);QVERIFY(restored.move("tree","left",0));
         PaneLayout session;QVERIFY(session.resize("tree",512));
         PaneLayout sameSlot;sameSlot.setSlot(3);QCOMPARE(sameSlot.pane("tree")["extent"].toInt(),352);
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    void centerContractAndWriteFailure() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout first,stale;first.setSlot(1);stale.setSlot(1);
+        QVERIFY(first.setCenterOrientation("vertical"));QVERIFY(stale.setCenterRatio(0.7));
+        PaneLayout restored;restored.setSlot(1);
+        QCOMPARE(restored.centerSplit()["orientation"].toString(),QString("vertical"));
+        QCOMPARE(restored.centerSplit()["ratio"].toDouble(),0.7);
+        QVERIFY(!restored.setCenterRatio(std::numeric_limits<double>::quiet_NaN()));
+        QVERIFY(!restored.setCenterRatio(0.99));QVERIFY(!restored.setCenterOrientation("other"));
+        QVERIFY(restored.freeze("preview",true));QVERIFY(!restored.setCenterRatio(0.6));
+        restored.reset();QCOMPARE(restored.centerSplit()["ratio"].toDouble(),0.5);
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        QVERIFY(restored.resize("tree",400));QVERIFY(!restored.feedback().isEmpty());
+        QCOMPARE(restored.pane("tree")["extent"].toInt(),400);lock.release();
+        PaneLayout disk;disk.setSlot(1);QCOMPARE(disk.pane("tree")["extent"].toInt(),280);
+        QVERIFY(disk.setVisible("tree",false));QVERIFY(disk.freeze("tree",true));QVERIFY(disk.pane("tree")["visible"].toBool());
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
     void newerVersionsCorruptionAndNoOps() {

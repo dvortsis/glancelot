@@ -30,7 +30,7 @@ QVariantMap PaneLayout::panes() const{return panes_.toVariantMap();}
 QVariantMap PaneLayout::pane(const QString& id) const{return panes_.value(id).toObject().toVariantMap();}
 void PaneLayout::setSlot(int slot) {if(slot<0||slot==slot_)return;slot_=slot;load();}
 void PaneLayout::load() {
-    panes_=defaults();locked_=false;feedback_.clear();
+    panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};locked_=false;feedback_.clear();
     if(slot_>0) {
         QJsonObject settings;
         if(!glancelot::readSettings(settings).ok())feedback_="Layout settings could not be read; defaults are active.";
@@ -43,6 +43,11 @@ void PaneLayout::load() {
             if(!saved.isEmpty()&&saved.value("version").toInt()!=1)feedback_="Unsupported layout version; defaults are active.";
             else {
                 locked_=saved.value("locked").toBool(false);
+                const auto center=saved.value("center").toObject();
+                const auto orientation=center.value("orientation").toString();
+                const double ratio=center.value("ratio").toDouble(-1);
+                if(orientation=="horizontal"||orientation=="vertical")center_["orientation"]=orientation;
+                if(std::isfinite(ratio)&&ratio>=0.1&&ratio<=0.9)center_["ratio"]=ratio;
                 const auto stored=saved.value("panes").toObject();
                 for(const auto& id:panes_.keys())panes_[id]=validPane(stored.value(id).toObject(),panes_.value(id).toObject());
             }
@@ -60,7 +65,11 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
         if(!layout.isEmpty()&&layout.value("version").toInt()!=1){unsupported=true;return;}
         layout["version"]=1;
         if(lockOnly)layout["locked"]=locked_;
-        else {
+        else if(id=="_center") {
+            auto center=layout.value("center").toObject();
+            for(auto it=fields.begin();it!=fields.end();++it)center[it.key()]=it.value();
+            layout["center"]=center;
+        } else {
             auto stored=layout.value("panes").toObject();
             if(reset) {
                 for(const auto& key:panes_.keys()) {
@@ -69,6 +78,9 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
                     stored[key]=entry;
                 }
                 layout["locked"]=false;
+                auto center=layout.value("center").toObject();
+                for(auto it=center_.begin();it!=center_.end();++it)center[it.key()]=it.value();
+                layout["center"]=center;
             } else {
                 auto entry=stored.value(id).toObject();
                 for(auto it=fields.begin();it!=fields.end();++it)entry[it.key()]=it.value();
@@ -103,9 +115,26 @@ bool PaneLayout::resize(const QString& id,double extent) {
     if(!std::isfinite(extent)||extent<32||extent>4096)return false;
     return edit(id,{{"extent",extent}},true);
 }
-bool PaneLayout::freeze(const QString& id,bool frozen){return edit(id,{{"frozen",frozen}},false);}
+bool PaneLayout::freeze(const QString& id,bool frozen){return edit(id,frozen?QJsonObject{{"frozen",true},{"visible",true}}:QJsonObject{{"frozen",false}},false);}
 bool PaneLayout::setVisible(const QString& id,bool visible){return edit(id,{{"visible",visible}},true);}
 void PaneLayout::setLocked(bool locked) {
     if(locked_==locked)return;locked_=locked;feedback_.clear();persist({}, {},false,true);emit changed();
 }
-void PaneLayout::reset(){panes_=defaults();locked_=false;feedback_.clear();persist({}, {},true);emit changed();}
+void PaneLayout::reset(){panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};locked_=false;feedback_.clear();persist({}, {},true);emit changed();}
+
+bool PaneLayout::editCenter(const QJsonObject& fields) {
+    if(locked_||panes_.value("preview").toObject().value("frozen").toBool()||panes_.value("grid").toObject().value("frozen").toBool()) {
+        feedback_="Unlock the layout and unfreeze the center panes before changing the split.";emit changed();return false;
+    }
+    auto next=center_;for(auto it=fields.begin();it!=fields.end();++it)next[it.key()]=it.value();
+    if(next==center_)return true;
+    center_=next;feedback_.clear();persist("_center",fields);emit changed();return true;
+}
+bool PaneLayout::setCenterOrientation(const QString& orientation) {
+    if(orientation!="horizontal"&&orientation!="vertical")return false;
+    return editCenter({{"orientation",orientation}});
+}
+bool PaneLayout::setCenterRatio(double ratio) {
+    if(!std::isfinite(ratio)||ratio<0.1||ratio>0.9)return false;
+    return editCenter({{"ratio",ratio}});
+}

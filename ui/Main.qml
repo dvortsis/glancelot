@@ -68,12 +68,16 @@ ApplicationWindow {
             }
         }
         for(const id of ids.filter(id=>state[id].region==="center"))result[id]=Object.assign({},bounds)
-        let content=Object.assign({},bounds)
+        let content=Object.assign({},result[gridMode?"grid":"preview"]||bounds)
         for(const id of ids.filter(id=>overlay(id))) {
             const extent=Math.min(preferred(id),Math.max(0,bounds.width-120))
             result[id]={x:state[id].region==="right"?bounds.x+bounds.width-extent:bounds.x,y:bounds.y,width:extent,height:bounds.height}
-            if(state[id].region==="left")content.x+=extent
-            content.width-=extent
+            const cover=result[id]
+            const intersection=Math.max(0,Math.min(content.x+content.width,cover.x+cover.width)-Math.max(content.x,cover.x))
+            if(cover.y<content.y+content.height && cover.y+cover.height>content.y && intersection>0) {
+                if(cover.x<=content.x)content.x+=intersection
+                content.width-=intersection
+            }
         }
         for(const id of Object.keys(active))if(!active[id])result[id]={x:0,y:0,width:0,height:0}
         result._state=state;result._recovered=recovered;result._content=content

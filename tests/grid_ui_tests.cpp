@@ -100,6 +100,34 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void everyPaneDockRegionStaysInWindow() {
+        Harness h;QVERIFY(h.window);h.fill(8);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
+        int placements=0;
+        for(const QSize size:{QSize(540,360),QSize(1180,780)})for(const auto& mode:{QString("dark"),QString("light")}) {
+            h.window->resize(size);h.theme.setMode(mode);
+            for(const auto& id:{QString("tree"),QString("preview"),QString("grid"),QString("filmstrip"),QString("topbar"),QString("statusbar")}) {
+                h.window->setProperty("gridMode",id=="grid");
+                for(const auto& region:{QString("left"),QString("right"),QString("top"),QString("bottom"),QString("center")}) {
+                    if(region=="center"&&id!="preview"&&id!="grid")continue;
+                    h.layout.reset();QVERIFY(h.layout.move(id,region,0));
+                    QCoreApplication::processEvents();
+                    const auto layout=h.window->property("workspace").toMap();
+                    const auto rect=layout.value(id).toMap();
+                    QVERIFY2(rect.value("width").toDouble()>0,qPrintable(id+"/"+region));
+                    QVERIFY(rect.value("height").toDouble()>0);
+                    QVERIFY(rect.value("x").toDouble()>=-0.1);QVERIFY(rect.value("y").toDouble()>=-0.1);
+                    QVERIFY(rect.value("x").toDouble()+rect.value("width").toDouble()<=size.width()+0.1);
+                    QVERIFY(rect.value("y").toDouble()+rect.value("height").toDouble()<=size.height()+0.1);
+                    if(qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) {
+                        QTest::qWait(50);QDir().mkpath(".cache/panes-matrix");
+                        QVERIFY(h.window->grabWindow().save(QString(".cache/panes-matrix/%1-%2-%3-%4.png").arg(id,region,mode).arg(size.width())));
+                    }
+                    ++placements;
+                }
+            }
+        }
+        QCOMPARE(placements,104);
+    }
     void paneArrangementKeyboardCommands() {
         Harness h;QVERIFY(h.window);h.viewer.setTreeVisible(true);h.window->requestActivate();
         h.window->setProperty("layoutEditing",true);
