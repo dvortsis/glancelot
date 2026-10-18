@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import Glancelot
 
 // Virtualized strip for the current folder. Thumbnails are produced by the decoder worker process via
 // image://thumb; delegates only exist near the viewport, so scrolling cancels work for items that left it.
@@ -28,11 +29,11 @@ Rectangle {
     onVisibleChanged: if (visible) Qt.callLater(centerCurrent)
     Rectangle { // edge against the canvas; surface-on-surface alone is too faint
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: 1
-        color: theme.colors.border
+        height: Theme.borderWidth
+        color: Theme.border
     }
     implicitHeight: compact ? 68 : 92
-    color: theme.colors.surface
+    color: Theme.surface
     Accessible.role: Accessible.Pane
     Accessible.name: "Filmstrip"
     HoverHandler { id: hover }
@@ -46,12 +47,12 @@ Rectangle {
         id: list
         objectName: "filmstripList"
         anchors.fill: parent
-        leftMargin: 12 // content starts on the top bar's leading edge but scrolls to the window edge
-        rightMargin: 12
-        anchors.topMargin: 6
-        anchors.bottomMargin: 6
+        leftMargin: Theme.gapMd // content starts on the top bar's leading edge but scrolls to the window edge
+        rightMargin: Theme.gapMd
+        anchors.topMargin: Theme.gapXs + Theme.gapXxs
+        anchors.bottomMargin: Theme.gapXs + Theme.gapXxs
         orientation: ListView.Horizontal
-        spacing: 6
+        spacing: Theme.gapXs + Theme.gapXxs
         clip: true
         // A hidden strip must not decode: with no model there are no delegates, so no thumbnail requests.
         model: strip.visible ? filmstrip : null
@@ -101,23 +102,23 @@ Rectangle {
             Keys.onReturnPressed: clicked()
             Keys.onEnterPressed: clicked()
             background: Rectangle {
-                radius: 4
-                color: cell.hovered || cell.visualFocus ? theme.colors.hover : "transparent"
+                radius: Theme.radiusControl
+                color: cell.hovered || cell.visualFocus ? Theme.hover : "transparent"
                 // Current photo = inner primary ring; keyboard focus = outer text-colored ring (different geometry and color).
-                border.width: cell.isCurrent ? 2 : 0
-                border.color: theme.colors.primary
+                border.width: cell.isCurrent ? Theme.focusWidth : 0
+                border.color: Theme.primary
                 Rectangle { // keyboard focus: a separate outset ring, so it reads even on the current photo
                     anchors.fill: parent; anchors.margins: -3
-                    radius: 6; color: "transparent"
-                    border.width: 2; border.color: theme.colors.text
+                    radius: Theme.radiusControl + 3; color: "transparent"
+                    border.width: Theme.focusWidth; border.color: Theme.focusRing
                     visible: cell.visualFocus
                 }
             }
             contentItem: Item {
                 Rectangle { // reserved space while loading, so cells never jump
-                    anchors.fill: parent; anchors.margins: 2; radius: 2
+                    anchors.fill: parent; anchors.margins: 2; radius: Theme.radiusSmall
                     visible: thumb.status !== Image.Ready
-                    color: theme.colors.hover
+                    color: Theme.hover
                 }
                 Image {
                     id: thumb
@@ -127,15 +128,15 @@ Rectangle {
                     asynchronous: true
                     source: filmstrip.thumbnailSource(cell.path, strip.thumbEdge, filmstrip.epoch)
                     opacity: status === Image.Ready ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.durationFast; easing.type: Easing.OutCubic } }
                 }
                 Label {
                     anchors.fill: parent
                     anchors.margins: 4
                     visible: thumb.status !== Image.Ready
                     text: thumb.status === Image.Error ? cell.name : ""
-                    color: theme.colors.muted
-                    font.pixelSize: 11
+                    color: Theme.muted
+                    font.pixelSize: Theme.textCaption
                     wrapMode: Text.WrapAnywhere
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter

@@ -1,82 +1,109 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Glancelot
 
-Dialog {
+// Palette gallery for Settings > Appearance. It does not scroll by itself: the settings page scrolls.
+// Arrow keys move between cards, Enter or Space applies one; a click applies immediately.
+ColumnLayout {
     id: picker
-    title: "Appearance"
-    modal: true
-    width: Math.min(780, parent.width - 40)
-    height: Math.min(660, parent.height - 48)
-    standardButtons: Dialog.Close
-    readonly property bool compact: height < 450
-    onOpened: search.forceActiveFocus()
-    ColumnLayout {
-        anchors.fill: parent
-        spacing: picker.compact ? 6 : 14
-        RowLayout {
-            Layout.fillWidth: true
-            ColumnLayout {
-                spacing: picker.compact ? 0 : 4
-                Layout.fillWidth: true
-                Label { text: picker.compact ? "Palette" : "Choose your palette"; font.pixelSize: picker.compact ? 14 : 20; font.weight: Font.DemiBold; Layout.fillWidth: true; elide: Text.ElideRight }
-                Label { visible: !picker.compact; text: "40 palettes · light and dark"; color: theme.colors.muted; font.pixelSize: 12 }
-            }
-            Item { Layout.fillWidth: true }
-            ComboBox {
-                id: modeSelect
-                model: ["Follow system", "Dark", "Light"]
-                currentIndex: ["system", "dark", "light"].indexOf(theme.mode)
-                onActivated: theme.mode = ["system", "dark", "light"][currentIndex]
-                Accessible.name: "Theme appearance mode"
-            }
-        }
-        TextField { id: search; Layout.fillWidth: true; placeholderText: "Search themes…"; Accessible.name: "Search themes" }
-        ScrollView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
-            contentWidth: availableWidth
-            Flow {
-                width: parent.width
-                spacing: 10
-                Repeater {
-                    model: theme.families
-                    delegate: ItemDelegate {
-                        id: card
-                        required property var modelData
-                        property var preview: theme.dark ? modelData.dark : modelData.light
-                        visible: modelData.name.toLowerCase().indexOf(search.text.toLowerCase()) >= 0
-                        width: (picker.availableWidth - (picker.availableWidth >= 600 ? 20 : 10)) / (picker.availableWidth >= 600 ? 3 : 2)
-                        height: picker.compact ? 76 : 106
-                        checked: theme.family === modelData.id
-                        Accessible.name: modelData.name + (checked ? ", selected" : "")
-                        onClicked: theme.family = modelData.id
-                        background: Rectangle {
-                            color: card.preview.background
-                            radius: 6
-                            border.width: card.checked || card.visualFocus ? 2 : 1
-                            border.color: card.checked || card.visualFocus ? theme.colors.primary : card.preview.border
+    property alias searchField: search
+    readonly property int columns: width >= 600 ? 4 : (width >= 420 ? 3 : 2)
+    readonly property var shown: theme.families.filter(family => family.name.toLowerCase().indexOf(search.text.trim().toLowerCase()) >= 0)
+    spacing: Theme.gapMd
+
+    UiTextField {
+        id: search
+        Layout.fillWidth: true
+        searchIcon: true
+        placeholderText: "Search " + theme.families.length + " palettes"
+        Accessible.name: "Search palettes"
+        Keys.onDownPressed: cards.forceActiveFocus(Qt.TabFocusReason)
+    }
+    GridView {
+        id: cards
+        objectName: "paletteGrid"
+        Layout.fillWidth: true
+        Layout.rightMargin: -Theme.gapSm // each cell carries a trailing gutter; the last one falls outside so edges align
+        Layout.preferredHeight: contentHeight
+        interactive: false
+        activeFocusOnTab: true
+        keyNavigationEnabled: true
+        cellWidth: width / picker.columns
+        cellHeight: 88 + Theme.gapSm
+        model: picker.shown
+        currentIndex: Math.max(0, picker.shown.findIndex(family => family.id === theme.family))
+        Accessible.role: Accessible.List
+        Accessible.name: "Palettes"
+        Keys.onReturnPressed: if (currentItem) currentItem.apply()
+        Keys.onEnterPressed: if (currentItem) currentItem.apply()
+        Keys.onSpacePressed: if (currentItem) currentItem.apply()
+        delegate: Item {
+            id: card
+            required property int index
+            required property var modelData
+            readonly property var preview: Theme.dark ? modelData.dark : modelData.light
+            readonly property bool selected: theme.family === modelData.id
+            readonly property bool cursor: GridView.isCurrentItem && cards.activeFocus
+            function apply() { theme.family = modelData.id }
+            width: cards.cellWidth
+            height: cards.cellHeight
+            Accessible.role: Accessible.ListItem
+            Accessible.name: modelData.name + (selected ? ", selected" : "")
+            Accessible.selected: selected
+            Accessible.onPressAction: apply()
+            Rectangle {
+                anchors { fill: parent; rightMargin: Theme.gapSm; bottomMargin: Theme.gapSm }
+                radius: Theme.radiusCard
+                color: card.preview.background
+                border.width: card.selected || card.cursor ? Theme.focusWidth : Theme.borderWidth
+                border.color: card.cursor ? Theme.focusRing : (card.selected ? Theme.primary : card.preview.border)
+                HoverHandler { id: cardHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: { cards.currentIndex = card.index; card.apply() } }
+                ColumnLayout {
+                    anchors { fill: parent; margins: Theme.gapMd }
+                    spacing: Theme.gapSm
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.gapXs
+                        Label {
+                            text: card.modelData.name
+                            color: card.preview.text
+                            font.pixelSize: Theme.textBody
+                            font.weight: Font.Medium
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
-                        contentItem: ColumnLayout {
-                            spacing: 10
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Label { text: card.modelData.name; color: card.preview.text; font.weight: Font.Medium; Layout.fillWidth: true }
-                                Label { text: card.checked ? "✓" : ""; color: card.preview.primary }
-                            }
-                            Row {
-                                spacing: 5
-                                Repeater {
-                                    model: [card.preview.surface, card.preview.text, card.preview.primary, card.preview.accent, card.preview.border]
-                                    delegate: Rectangle { required property string modelData; width: 23; height: 23; radius: 4; color: modelData; border.color: card.preview.border }
-                                }
+                        UiIcon { visible: card.selected; name: "check"; color: card.preview.primary }
+                    }
+                    Item { Layout.fillHeight: true }
+                    Row {
+                        spacing: Theme.gapXs
+                        Repeater {
+                            model: [card.preview.surface, card.preview.text, card.preview.primary, card.preview.accent, card.preview.muted]
+                            delegate: Rectangle {
+                                required property string modelData
+                                width: 20; height: 20
+                                radius: Theme.radiusSmall
+                                color: modelData
+                                border.width: Theme.borderWidth
+                                border.color: card.preview.border
                             }
                         }
                     }
                 }
+                Rectangle { // hover wash in the card's own text colour, legible on any palette
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: Qt.alpha(card.preview.text, cardHover.hovered ? 0.06 : 0)
+                }
             }
         }
-        Label { visible: !picker.compact || theme.error.length > 0; Layout.fillWidth: true; text: theme.error || "Theme changes apply immediately and are saved. Photo pixel colors stay unchanged."; color: theme.error ? theme.colors.danger : theme.colors.muted; wrapMode: Text.Wrap }
+    }
+    Label {
+        visible: picker.shown.length === 0
+        text: "No palettes match “" + search.text.trim() + "”."
+        color: Theme.muted
+        font.pixelSize: Theme.textSmall
     }
 }

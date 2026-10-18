@@ -14,31 +14,37 @@ ApplicationWindow {
     minimumHeight: 360
     visible: true
     title: viewer.fileName ? viewer.fileName + " — Glancelot" : "Glancelot"
-    color: theme.colors.background
+    color: Theme.background
     property bool frameless: false
     property bool hudVisible: true
     property bool gridMode: false
-    property bool modalOpen: paletteDialog.opened || settingsDialog.opened || themePicker.opened || openDialog.visible
+    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
-    property string bindingMessage: ""
-    readonly property color surface: theme.colors.surface
-    readonly property color muted: theme.colors.muted
-    readonly property color primaryColor: theme.colors.primary
     flags: Qt.Window | (frameless ? Qt.FramelessWindowHint : 0)
-    font.family: Qt.platform.os === "windows" ? "Segoe UI" : "Noto Sans"
-    font.pixelSize: 13
-    palette.window: theme.colors.surface
-    palette.windowText: theme.colors.text
-    palette.base: theme.colors.background
-    palette.text: theme.colors.text
-    palette.button: theme.colors.surface
-    palette.buttonText: theme.colors.text
-    palette.highlight: theme.colors.primary
-    palette.highlightedText: theme.colors.onPrimary
-    palette.mid: theme.colors.border
-    palette.placeholderText: theme.colors.muted
+    font.family: Theme.fontFamily
+    font.pixelSize: Theme.textBody
+    // Basic-style controls that are not restyled individually (tool tips, busy states) read these roles.
+    palette.window: Theme.surface
+    palette.windowText: Theme.text
+    palette.base: Theme.background
+    palette.alternateBase: Theme.surface
+    palette.text: Theme.text
+    palette.button: Theme.surface
+    palette.buttonText: Theme.text
+    palette.brightText: Theme.textOnPrimary
+    palette.highlight: Theme.primary
+    palette.highlightedText: Theme.textOnPrimary
+    palette.light: Theme.hover
+    palette.midlight: Theme.hover
+    palette.mid: Theme.border
+    palette.dark: Theme.muted
+    palette.shadow: Theme.scrim
+    palette.placeholderText: Theme.muted
+    palette.toolTipBase: Theme.text
+    palette.toolTipText: Theme.background
+    palette.link: Theme.primary
 
     function wakeHud() { hudVisible = true; hideHud.restart() }
     function invoke(id) { if (gridMode && !gridAllowsCommand(id)) return; viewer.trigger(id); wakeHud() }
@@ -57,13 +63,16 @@ ApplicationWindow {
         }
         return true
     }
+    function shortcutHint(id) { const binding = viewer.bindingFor(id); return binding.length ? " (" + binding + ")" : "" }
+    // Kept for --show-themes: appearance now lives in Settings.
+    function openThemes() { settingsDialog.openSection("appearance", false) }
     function handleViewCommand(id) {
         canvas.endLoupe()
         if (id === "grid") { gridMode = !gridMode; wakeHud(); if (!gridMode) canvas.forceActiveFocus() }
         else if (id === "open") openDialog.open()
         else if (id === "fullscreen") visibility = visibility === Window.FullScreen ? Window.Windowed : Window.FullScreen
-        else if (id === "palette") { paletteDialog.open(); commandSearch.forceActiveFocus() }
-        else if (id === "settings") settingsDialog.open()
+        else if (id === "palette") settingsDialog.openSection("controls", true)
+        else if (id === "settings") settingsDialog.openSection(settingsDialog.section, false)
         else if (id === "fit") canvas.fit("shrink")
         else if (id === "actual") canvas.actualSize()
         else if (id === "zoom-in") canvas.zoomAt(1.25, pointerX, pointerY)
@@ -110,17 +119,20 @@ ApplicationWindow {
             else restart()
         }
     }
-    component ActionButton: ToolButton {
-        implicitHeight: 36
-        horizontalPadding: 12
-        focusPolicy: Qt.StrongFocus
-        Accessible.name: text
-        background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
-        ToolTip.visible: hovered && ToolTip.text.length > 0
-        ToolTip.delay: 600
+    component BarLabel: Label {
+        color: Theme.muted
+        font.pixelSize: Theme.textSmall
+        font.features: { "tnum": 1 }
+        verticalAlignment: Text.AlignVCenter
     }
-    ThemePicker { id: themePicker; anchors.centerIn: parent; onClosed: app.focusContent() }
-    function openThemes() { themePicker.open() }
+    component BarDivider: Rectangle {
+        implicitWidth: Theme.borderWidth
+        implicitHeight: Theme.iconSize + Theme.gapXs
+        color: Theme.border
+        Layout.leftMargin: Theme.gapXs
+        Layout.rightMargin: Theme.gapXs
+    }
+
     // A pinned folder panel makes room instead of covering the photo, except in narrow windows.
     readonly property int treeInset: treePanel.visible && viewer.treePinned && app.width >= 720 ? treePanel.width : 0
     ImageCanvas {
@@ -128,7 +140,7 @@ ApplicationWindow {
         objectName: "canvas"
         anchors { fill: parent; leftMargin: app.treeInset }
         image: viewer.image
-        background: "#191919"
+        background: "#191919" // photo backdrop, deliberately independent of the interface palette
         focus: !app.gridMode
         visible: !app.gridMode
         // Keyboard route into the auto-hiding filmstrip: Tab wakes the HUD and focuses the current photo's cell.
@@ -201,53 +213,141 @@ ApplicationWindow {
         anchors.fill: parent
         onEntered: drag => { drag.accepted = drag.hasUrls }
         onDropped: drop => { if (drop.hasUrls && drop.urls.length) { viewer.open(drop.urls[0].toString()); app.showCanvas(); drop.acceptProposedAction() } }
-        Rectangle { anchors.fill: parent; visible: parent.containsDrag; color: Qt.rgba(app.primaryColor.r, app.primaryColor.g, app.primaryColor.b, 0.15); border.width: 2; border.color: theme.colors.primary }
+        Rectangle { anchors.fill: parent; visible: parent.containsDrag; color: Qt.alpha(Theme.primary, 0.15); border.width: Theme.focusWidth; border.color: Theme.primary }
     }
-    Column {
+    Rectangle { // with no photo there is nothing to protect, so the empty state sits on the interface background
+        anchors.fill: canvas
+        visible: emptyState.visible
+        color: Theme.background
+    }
+    ColumnLayout { // empty state: one message, one action
+        id: emptyState
         anchors.centerIn: parent
-        spacing: 16
+        anchors.horizontalCenterOffset: app.treeInset / 2
+        spacing: Theme.gapSm
         visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
-        width: Math.min(460, app.width-64)
-        Image { anchors.horizontalCenter: parent.horizontalCenter; width: 160; height: 160; source: "qrc:/brand/mascots/transparent/01_mascot_standing.png"; fillMode: Image.PreserveAspectFit; sourceSize.width: 320; sourceSize.height: 320 }
-        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Glancelot"; color: theme.colors.text; font.pixelSize: 38; font.weight: Font.Light }
-        Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Your photographs, front and center."; color: app.muted; font.pixelSize: 14; wrapMode: Text.Wrap }
-        ActionButton { anchors.horizontalCenter: parent.horizontalCenter; text: "Open a photo"; onClicked: app.invoke("open"); background: Rectangle { radius: 4; color: theme.colors.primary } palette.buttonText: theme.colors.onPrimary }
-        Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Drop a JPEG or PNG here\nBrowse the folder with the arrow keys"; color: theme.colors.muted; font.pixelSize: 12; lineHeight: 1.6 }
+        width: Math.min(440, app.width - app.treeInset - 2 * Theme.gapXxl)
+        Image {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: app.height < 480 ? 96 : 144
+            Layout.preferredHeight: Layout.preferredWidth
+            source: "qrc:/brand/mascots/transparent/01_mascot_standing.png"
+            fillMode: Image.PreserveAspectFit
+            sourceSize.width: 288; sourceSize.height: 288
+            Accessible.ignored: true
+        }
+        Label {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: Theme.gapSm
+            text: "Glancelot"
+            color: Theme.text
+            font.pixelSize: Theme.textDisplay
+            font.weight: Font.Light
+            font.letterSpacing: -0.02 * Theme.textDisplay
+            lineHeight: 1.1
+            Accessible.role: Accessible.Heading
+        }
+        Label {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: "Your photographs, front and center."
+            color: Theme.muted
+            font.pixelSize: Theme.textTitle
+            wrapMode: Text.Wrap
+        }
+        UiButton {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: Theme.gapLg
+            variant: "primary"
+            text: "Open a photo"
+            tip: "Open a photo" + app.shortcutHint("open")
+            onClicked: app.invoke("open")
+        }
+        Label {
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.gapSm
+            horizontalAlignment: Text.AlignHCenter
+            text: "or drop a JPEG or PNG here. Arrow keys browse the folder."
+            color: Theme.muted
+            font.pixelSize: Theme.textSmall
+            wrapMode: Text.Wrap
+            lineHeight: 1.4
+        }
     }
     Rectangle {
         id: topPanel
         anchors { left: parent.left; right: parent.right; top: parent.top }
-        height: 52
-        color: theme.colors.surface
+        height: Theme.barHeight
+        color: Theme.surface
         visible: app.gridMode || app.hudVisible || app.frameless
         HoverHandler { id: topBar }
         MouseArea { anchors.fill: parent; enabled: app.frameless; onPressed: app.startSystemMove(); onDoubleClicked: app.visibility === Window.Maximized ? app.showNormal() : app.showMaximized() }
+        Rectangle { // edge against the canvas when no filmstrip sits below
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+            height: Theme.borderWidth
+            color: Theme.border
+            visible: !filmstripPanel.visible
+        }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 12; anchors.rightMargin: 12
-            spacing: 4
-            Image { Layout.preferredWidth: 28; Layout.preferredHeight: 28; source: "qrc:/brand/icons/app/" + (theme.dark ? "dark" : "light") + "/glancelot-64.png"; fillMode: Image.PreserveAspectFit }
-            ActionButton { text: "Open"; onClicked: app.invoke("open"); ToolTip.text: viewer.bindingFor("open") }
-            ActionButton { objectName: "foldersToggle"; text: "Folders"; onClicked: app.invoke("tree"); ToolTip.text: viewer.bindingFor("tree"); Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree" }
-            ActionButton { objectName: "gridToggle"; text: app.gridMode ? "Photo" : "Grid"; enabled: viewer.fileCount > 0; onClicked: app.invoke("grid"); ToolTip.text: viewer.bindingFor("grid"); Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid" }
-            ActionButton {
+            anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
+            spacing: Theme.gapXs
+            Image {
+                Layout.preferredWidth: 24; Layout.preferredHeight: 24
+                Layout.rightMargin: Theme.gapXs
+                source: "qrc:/brand/icons/app/" + (Theme.dark ? "dark" : "light") + "/glancelot-64.png"
+                sourceSize.width: 48; sourceSize.height: 48
+                fillMode: Image.PreserveAspectFit
+                Accessible.ignored: true
+            }
+            UiButton { text: "Open"; tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
+            UiButton {
+                objectName: "foldersToggle"
+                text: "Folders"
+                checkable: true
+                checked: viewer.treeVisible
+                tip: (viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree") + app.shortcutHint("tree")
+                Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree"
+                onClicked: { checked = Qt.binding(() => viewer.treeVisible); app.invoke("tree") }
+            }
+            UiButton {
+                objectName: "gridToggle"
+                text: "Grid"
+                checkable: true
+                checked: app.gridMode
+                enabled: viewer.fileCount > 0
+                tip: (app.gridMode ? "Return to the photo" : "Browse the folder as a grid") + app.shortcutHint("grid")
+                Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid"
+                onClicked: { checked = Qt.binding(() => app.gridMode); app.invoke("grid") }
+            }
+            UiButton {
                 objectName: "sortButton"
                 visible: app.width >= 760
-                text: "Sort: " + ({ name: "Name", modified: "Date", size: "Size", shuffle: "Shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? " ↓" : " ↑")
+                iconName: viewer.sortDescending ? "arrow-down" : "arrow-up"
+                text: ({ name: "Name", modified: "Date", size: "Size", shuffle: "Shuffle" }[viewer.sortKey])
                 enabled: viewer.fileCount > 0
                 onClicked: app.invoke("sort")
-                ToolTip.text: "Cycle file order" + (viewer.bindingFor("sort").length ? " (" + viewer.bindingFor("sort") + ")" : "") + (viewer.bindingFor("sort-reverse").length ? "; reverse with " + viewer.bindingFor("sort-reverse") : "")
+                tip: "Cycle file order" + app.shortcutHint("sort") + (viewer.bindingFor("sort-reverse").length ? "; reverse with " + viewer.bindingFor("sort-reverse") : "")
                 Accessible.name: "File order: " + ({ name: "name", modified: "date modified", size: "size", shuffle: "shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? ", descending" : ", ascending")
                 Accessible.description: "Changes the order of photos inside folders, not the folder order"
             }
-            Label { text: " / "; color: theme.colors.border }
-            Label { text: viewer.fileName || "Glancelot"; elide: Text.ElideMiddle; Layout.fillWidth: true; color: theme.colors.text }
-            ActionButton { text: app.width > 720 ? "Commands" : "Menu"; onClicked: app.invoke("palette"); ToolTip.text: viewer.bindingFor("palette") }
-            ActionButton { visible: app.width >= 640; text: "Themes"; onClicked: app.openThemes(); ToolTip.text: "Choose from 80 theme variants" }
-            ActionButton { text: "Settings"; onClicked: app.invoke("settings"); ToolTip.text: viewer.bindingFor("settings") }
-            ActionButton { text: "Exit fullscreen"; visible: app.visibility === Window.FullScreen; onClicked: app.invoke("fullscreen") }
-            ActionButton { text: "Decorate"; visible: app.frameless; onClicked: app.invoke("frameless") }
-            ActionButton { text: "Close"; visible: app.frameless; onClicked: app.close() }
+            BarDivider {}
+            Label {
+                text: viewer.fileName || "No photo open"
+                elide: Text.ElideMiddle
+                Layout.fillWidth: true
+                color: viewer.fileName ? Theme.text : Theme.muted
+                font.pixelSize: Theme.textBody
+            }
+            UiButton {
+                objectName: "settingsButton"
+                text: "Settings"
+                tip: "Settings, palettes and shortcuts" + app.shortcutHint("settings") + (viewer.bindingFor("palette").length ? ". Find a command: " + viewer.bindingFor("palette") : "")
+                onClicked: app.invoke("settings")
+            }
+            UiButton { text: "Exit full screen"; visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
+            UiButton { text: "Show frame"; visible: app.frameless; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
+            UiButton { text: "Close window"; iconName: "close"; iconOnly: true; visible: app.frameless; onClicked: app.close() }
         }
     }
     Filmstrip {
@@ -268,6 +368,7 @@ ApplicationWindow {
             bottom: bottomPanel.visible ? bottomPanel.top : parent.bottom
         }
         width: implicitWidth
+        maximumWidth: Math.max(200, Math.round(app.width * 0.45))
         visible: viewer.treeVisible && (viewer.treePinned || app.hudVisible || app.frameless)
         onDismissed: app.focusContent()
         // Hiding a focused panel must not strand keyboard input on an invisible item.
@@ -276,43 +377,81 @@ ApplicationWindow {
     Rectangle {
         id: bottomPanel
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: 58
+        height: Theme.barHeight
         visible: app.gridMode || app.hudVisible
-        color: theme.colors.surface
+        color: Theme.surface
         HoverHandler { id: bottomHover }
+        Rectangle {
+            anchors { left: parent.left; right: parent.right; top: parent.top }
+            height: Theme.borderWidth
+            color: Theme.border
+        }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 14; anchors.rightMargin: 14
-            spacing: 8
-            ActionButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; onClicked: app.invoke("previous"); ToolTip.text: viewer.bindingFor("previous") }
-            Label { visible: !app.gridMode; text: viewer.fileCount > 0 ? viewer.currentIndex + " / " + viewer.fileCount : "No photo"; color: app.muted; font.pixelSize: 12 }
-            ActionButton { text: "Next"; visible: !app.gridMode; enabled: viewer.fileCount > 0; onClicked: app.invoke("next"); ToolTip.text: viewer.bindingFor("next") }
-            Label { visible: app.gridMode; text: photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " / " + filmstrip.count + " selected" : "No selection"; color: app.muted; font.pixelSize: 12 }
-            Label {
+            anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
+            spacing: Theme.gapXs
+            UiButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
+            BarLabel {
+                visible: !app.gridMode
+                text: viewer.fileCount > 0 ? viewer.currentIndex + " of " + viewer.fileCount : "No photo"
+                Layout.leftMargin: Theme.gapXs; Layout.rightMargin: Theme.gapXs
+            }
+            UiButton { text: "Next"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
+            BarLabel {
+                visible: app.gridMode
+                text: photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " of " + filmstrip.count + " selected" : "No selection"
+                Layout.leftMargin: Theme.gapXs
+            }
+            BarLabel {
                 visible: app.gridMode && app.width > 680
                 Layout.maximumWidth: Math.max(120, app.width - 520)
+                Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrows select · Enter opens"
-                color: viewer.status.length > 0 ? theme.colors.text : app.muted
-                font.pixelSize: 12
+                text: viewer.status.length > 0 ? viewer.status : "Arrow keys select · Enter opens"
+                color: viewer.status.length > 0 ? Theme.text : Theme.muted
             }
-            ActionButton { visible: app.gridMode; text: "Open selected"; enabled: photoGrid.selectedIndex >= 0; onClicked: photoGrid.activate() }
-            ActionButton { visible: app.gridMode; text: "Back to photo"; onClicked: app.showCanvas() }
             Item { Layout.fillWidth: true }
-            Label { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; color: app.muted; font.pixelSize: 12 }
-            ActionButton { visible: !app.gridMode; text: Math.round(canvas.zoom*100) + "%"; enabled: viewer.imageWidth > 0; onClicked: app.invoke("actual"); ToolTip.text: "Actual size · one image pixel per display pixel" }
-            ActionButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); ToolTip.text: "Fit without enlarging" }
-            ActionButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate") }
+            UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }
+            UiButton { visible: app.gridMode; variant: "primary"; text: "Open selected"; enabled: photoGrid.selectedIndex >= 0; tip: "Open selected (Enter)"; onClicked: photoGrid.activate() }
+            BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; Layout.rightMargin: Theme.gapSm }
+            UiButton {
+                visible: !app.gridMode
+                text: Math.round(canvas.zoom*100) + "%"
+                font.features: { "tnum": 1 }
+                enabled: viewer.imageWidth > 0
+                onClicked: app.invoke("actual")
+                tip: "Actual size: one image pixel per display pixel" + app.shortcutHint("actual")
+                Accessible.name: "Zoom " + Math.round(canvas.zoom*100) + " percent. Show actual size"
+            }
+            UiButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
+            UiButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
         }
     }
-    Rectangle {
-        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: app.treeInset / 2; bottom: parent.bottom; bottomMargin: 78 }
-        width: Math.min(app.width-app.treeInset-48, statusText.implicitWidth+32)
-        height: statusText.implicitHeight+20
-        radius: 4
-        color: theme.colors.surface
-        visible: !app.gridMode && (viewer.loading || canvas.rendererError.length > 0 || (viewer.status.length > 0 && app.hudVisible))
-        Text { id: statusText; anchors.centerIn: parent; width: Math.min(implicitWidth,app.width-app.treeInset-80); text: canvas.rendererError || viewer.status; color: canvas.rendererError ? theme.colors.danger : theme.colors.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
+    Rectangle { // status toast, centred on the part of the canvas no panel covers
+        readonly property int covered: treePanel.visible ? treePanel.width : 0
+        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: covered / 2; bottom: parent.bottom; bottomMargin: Theme.barHeight + Theme.gapLg }
+        width: Math.min(app.width - covered - 2 * Theme.gapXl, statusText.implicitWidth + 2 * Theme.gapLg)
+        height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
+        radius: Theme.radiusCard
+        color: Theme.surface
+        border.width: Theme.borderWidth
+        border.color: canvas.rendererError ? Theme.danger : Theme.border
+        // The empty state already explains how to begin, so the unchanged start-up status is not repeated here;
+        // any later status (an open error, a settings problem) still shows.
+        property string startupStatus
+        Component.onCompleted: startupStatus = viewer.status
+        visible: !app.gridMode && (viewer.loading || canvas.rendererError.length > 0
+                 || (viewer.status.length > 0 && app.hudVisible && !(emptyState.visible && viewer.status === startupStatus)))
+        Label {
+            id: statusText
+            anchors.centerIn: parent
+            width: Math.min(implicitWidth, parent.width - 2 * Theme.gapLg)
+            text: canvas.rendererError || viewer.status
+            color: canvas.rendererError ? Theme.danger : Theme.text
+            wrapMode: Text.Wrap
+            font.pixelSize: Theme.textSmall
+            Accessible.role: Accessible.AlertMessage
+        }
     }
     FileDialog {
         id: openDialog
@@ -321,130 +460,14 @@ ApplicationWindow {
         onAccepted: { viewer.open(selectedFile.toString()); app.showCanvas() }
         onRejected: app.focusContent()
     }
-    Dialog {
-        id: paletteDialog
-        title: "Commands"
-        anchors.centerIn: parent
-        width: Math.min(600,app.width-40)
-        height: Math.min(570,app.height-60)
-        modal: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        onClosed: { commandSearch.text=""; app.focusContent() }
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 12
-            TextField { id: commandSearch; Layout.fillWidth: true; placeholderText: "Find a command…"; Accessible.name: "Find a command"; onAccepted: {
-                for (let i=0; i<viewer.commands.length; ++i) {
-                    let command=viewer.commands[i]
-                    if (app.fuzzyMatch(command.label,text)) { paletteDialog.close(); app.invoke(command.id); break }
-                }
-            } }
-            ListView {
-                id: commandList
-                Layout.fillWidth: true; Layout.fillHeight: true
-                clip: true
-                model: viewer.commands
-                spacing: 2
-                ScrollBar.vertical: ScrollBar {}
-                delegate: ItemDelegate {
-                    required property var modelData
-                    width: ListView.view.width
-                    height: visible ? 42 : 0
-                    visible: app.fuzzyMatch(modelData.label,commandSearch.text)
-                    text: modelData.label
-                    Accessible.name: modelData.label + (modelData.binding ? ", " + modelData.binding : "")
-                    rightPadding: 150
-                    Label { anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: modelData.binding || "Unassigned"; color: app.muted; font.pixelSize: 12 }
-                    onClicked: { paletteDialog.close(); app.invoke(modelData.id) }
-                }
-            }
-            Label { text: "Remap any command in Settings → Controls"; color: app.muted; font.pixelSize: 12 }
-        }
-    }
-    Dialog {
+    SettingsDialog {
         id: settingsDialog
-        title: "Settings"
+        host: app
+        photoCanvas: canvas
         anchors.centerIn: parent
-        width: Math.min(660,app.width-32)
-        height: Math.min(680,app.height-48)
-        modal: true
-        standardButtons: Dialog.Close
+        width: Math.min(800, app.width - 2 * Theme.gapLg)
+        height: Math.min(640, app.height - 2 * Theme.gapLg)
         onClosed: app.focusContent()
-        ScrollView {
-            anchors.fill: parent
-            clip: true
-            contentWidth: availableWidth
-            ColumnLayout {
-                width: parent.width
-                spacing: 14
-                ActionButton { text: "Appearance · 40 theme families"; onClicked: { settingsDialog.close(); app.openThemes() } }
-                Label { text: "THIS WINDOW"; color: app.muted; font.pixelSize: 11; font.letterSpacing: 1.2 }
-                Label {
-                    Layout.fillWidth: true
-                    text: viewer.windowSlot > 0 ? "Window " + viewer.windowSlot + " remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file."
-                                                : "Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch."
-                    color: app.muted; wrapMode: Text.Wrap; font.pixelSize: 12
-                }
-                Label { text: "VIEWING"; color: app.muted; font.pixelSize: 11; font.letterSpacing: 1.2 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: "Fit mode"; Layout.fillWidth: true }
-                    ComboBox { model: ["Shrink only", "Fit", "Fill", "Fit width", "Fit height"]; onActivated: canvas.fit(["shrink","fit","fill","width","height"][currentIndex]); Accessible.name: "Fit mode" }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: "Mouse wheel"; Layout.fillWidth: true }
-                    ComboBox { model: ["Navigate", "Zoom", "Pan"]; currentIndex: ["navigate","zoom","pan"].indexOf(viewer.wheelMode); onActivated: viewer.wheelMode=["navigate","zoom","pan"][currentIndex]; Accessible.name: "Mouse wheel mode" }
-                }
-                Label { Layout.fillWidth: true; text: "Ctrl + wheel zooms at the pointer. Shift + wheel pans horizontally. Drag to pan; hold the right mouse button for a 100% loupe."; color: app.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: "Folder boundary"; Layout.fillWidth: true }
-                    ComboBox { model: ["Stop", "Loop current folder", "Continue through tree"]; currentIndex: ["stop","loop","continue"].indexOf(viewer.boundaryMode); onActivated: viewer.boundaryMode=["stop","loop","continue"][currentIndex]; Accessible.name: "Folder boundary mode" }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: "File order in a folder"; Layout.fillWidth: true }
-                    ComboBox { model: ["Name", "Date modified", "Size", "Shuffle"]; currentIndex: ["name","modified","size","shuffle"].indexOf(viewer.sortKey); onActivated: viewer.sortKey=["name","modified","size","shuffle"][currentIndex]; Accessible.name: "File order" }
-                    CheckBox { text: "Reverse"; checked: viewer.sortDescending; onToggled: viewer.sortDescending=checked; Accessible.name: "Reverse file order" }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: "Background"; Layout.fillWidth: true }
-                    ActionButton { text: "Cycle background"; onClicked: app.invoke("background") }
-                }
-                CheckBox { text: "Nearest-neighbor sampling for pixel inspection"; checked: canvas.nearest; onToggled: canvas.nearest=checked }
-                CheckBox { text: "Pin folder tree open"; checked: viewer.treePinned; onToggled: viewer.treePinned=checked }
-                CheckBox { text: "Show filmstrip"; checked: viewer.filmstripVisible; onToggled: viewer.filmstripVisible=checked }
-                CheckBox { text: "Frameless window"; checked: app.frameless; onToggled: app.frameless=checked }
-                Rectangle { Layout.fillWidth: true; height: 1; color: theme.colors.border }
-                Label { text: "CONTROLS"; color: app.muted; font.pixelSize: 11; font.letterSpacing: 1.2 }
-                Label { Layout.fillWidth: true; text: "Use portable key names such as Ctrl+O or Shift+Right. Clear a field to unassign it. Duplicate or invalid bindings are rejected."; color: app.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
-                Label { text: app.bindingMessage; visible: text.length > 0; color: theme.colors.primary; Layout.fillWidth: true; wrapMode: Text.Wrap }
-                Repeater {
-                    model: viewer.commands
-                    delegate: RowLayout {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Label { text: modelData.label; Layout.fillWidth: true }
-                        TextField {
-                            Layout.preferredWidth: 170
-                            text: modelData.binding
-                            Accessible.name: "Binding for " + modelData.label
-                            onEditingFinished: {
-                                if (text !== modelData.binding) {
-                                    const ok=viewer.setBinding(modelData.id,text)
-                                    app.bindingMessage=viewer.status
-                                    if (!ok) text=modelData.binding
-                                }
-                            }
-                        }
-                    }
-                }
-                ActionButton { text: "Restore default bindings"; onClicked: { viewer.resetBindings(); app.bindingMessage="Default bindings restored." } }
-                Label { Layout.fillWidth: true; text: "Early alpha · JPEG and PNG · SDR/sRGB output\nMonitor profile calibration and native HDR are not yet qualified."; color: theme.colors.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
-            }
-        }
     }
     // Native system resizing remains available even in the optional frameless mode.
     Repeater {
@@ -465,7 +488,3 @@ ApplicationWindow {
         }
     }
 }
-
-
-
-
