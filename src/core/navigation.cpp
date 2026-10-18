@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string_view>
+#include <unordered_map>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -84,8 +85,9 @@ bool safePath(const fs::path& p, std::stop_token cancel = {}) {
     return true;
 }
 struct ScanCancelled {};
+using MetaMap = std::unordered_map<fs::path::string_type, FileMeta>;
 std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel,
-                              std::size_t limit = static_cast<std::size_t>(-1), bool* truncated = nullptr) {
+                              std::size_t limit = static_cast<std::size_t>(-1), bool* truncated = nullptr, MetaMap* meta = nullptr) {
     std::vector<fs::path> result;
     if (cancel.stop_requested() || !safePath(directory, cancel)) return result;
     std::error_code ec;
@@ -106,6 +108,14 @@ std::vector<fs::path> entries(const fs::path& directory, bool directories, std::
             (fs::is_regular_file(status) && isSupportedImage(path)))) {
             if (result.size() >= limit) { if (truncated) *truncated = true; break; }
             result.push_back(path);
+            if (meta && !directories) {
+                // Directory iteration usually carries these already (Windows), so this is not a second pass of stats.
+                std::error_code sizeError, timeError;
+                const auto size = it->file_size(sizeError);
+                const auto time = it->last_write_time(timeError);
+                (*meta)[path.native()] = FileMeta{sizeError || timeError ? 0 : std::int64_t(time.time_since_epoch().count()),
+                                                  sizeError ? 0 : size, !sizeError && !timeError};
+            }
         }
         ec.clear();
         it.increment(ec);
@@ -169,6 +179,51 @@ bool isSupportedImage(const fs::path& path) {
         || extension == fs::path(".png").native();
 }
 std::vector<fs::path> imageFiles(const fs::path& directory, std::stop_token cancel) { return entries(directory, false, cancel); }
+namespace {
+std::uint64_t shuffleHash(const fs::path& path, std::uint64_t seed) {
+    std::uint64_t value = 1469598103934665603ULL ^ seed; // FNV-1a over the file name, then a splitmix64 finalizer
+    const auto name = path.filename(); // keep the temporary alive for the loop
+    for (const auto unit : name.native()) { value ^= std::uint64_t(unit); value *= 1099511628211ULL; }
+    value += seed * 0x9E3779B97F4A7C15ULL;
+    value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    value = (value ^ (value >> 27)) * 0x94D049BB133111EBULL;
+    return value ^ (value >> 31);
+}
+bool sortBefore(const SortSpec& sort, const fs::path& a, const FileMeta& ma, const fs::path& b, const FileMeta& mb) {
+    if (sort.key == SortKey::Name) return sort.descending ? naturalLess(b, a) : naturalLess(a, b);
+    int order = 0;
+    if (sort.key == SortKey::Shuffle) {
+        const auto ha = shuffleHash(a, sort.seed), hb = shuffleHash(b, sort.seed);
+        order = ha < hb ? -1 : ha > hb ? 1 : 0;
+    } else {
+        if (ma.known != mb.known) return ma.known; // unreadable metadata is last in both directions
+        if (ma.known) {
+            if (sort.key == SortKey::Modified) order = ma.modified < mb.modified ? -1 : ma.modified > mb.modified ? 1 : 0;
+            else order = ma.size < mb.size ? -1 : ma.size > mb.size ? 1 : 0;
+        }
+    }
+    if (order != 0) return sort.descending ? order > 0 : order < 0;
+    return naturalLess(a, b);
+}
+}
+std::vector<fs::path> sortedImageFiles(const fs::path& directory, const SortSpec& sort, std::stop_token cancel, std::vector<FileMeta>* meta) {
+    MetaMap map;
+    const bool needMeta = sort.key == SortKey::Modified || sort.key == SortKey::Size || meta;
+    auto files = entries(directory, false, cancel, static_cast<std::size_t>(-1), nullptr, needMeta ? &map : nullptr);
+    if (cancel.stop_requested()) return {};
+    const auto lookup = [&](const fs::path& path) { const auto found = map.find(path.native()); return found == map.end() ? FileMeta{} : found->second; };
+    if (sort.key != SortKey::Name || sort.descending) {
+        try {
+            std::sort(files.begin(), files.end(), [&](const fs::path& a, const fs::path& b) {
+                if (cancel.stop_requested()) throw ScanCancelled{};
+                return sortBefore(sort, a, lookup(a), b, lookup(b));
+            });
+        } catch (const ScanCancelled&) { return {}; }
+    }
+    if (cancel.stop_requested()) return {};
+    if (meta) { meta->clear(); meta->reserve(files.size()); for (const auto& file : files) meta->push_back(lookup(file)); }
+    return files;
+}
 FolderListing childFolders(const fs::path& directory, std::stop_token cancel, std::size_t limit) {
     FolderListing listing;
     if (cancel.stop_requested()) { listing.cancelled = true; return listing; }
@@ -246,7 +301,8 @@ bool Navigator::open(const fs::path& file, std::error_code& error) {
     std::ifstream readable(path, std::ios::binary);
     if (cancelled()) return false;
     if (!readable) { error = std::make_error_code(std::errc::permission_denied); return false; }
-    auto files = imageFiles(path.parent_path(), cancel_);
+    std::vector<fs::path> files; std::vector<FileMeta> meta;
+    list(path.parent_path(), files, meta);
     if (cancelled()) return false;
     const auto selected = std::find_if(files.begin(), files.end(), [&](const fs::path& candidate) {
         return cancel_.stop_requested() || sameComponent(candidate.filename(), path.filename());
@@ -258,7 +314,9 @@ bool Navigator::open(const fs::path& file, std::error_code& error) {
     if (cancelled()) return false;
     state_.root = state_.directory = path.parent_path();
     state_.current = *selected;
+    anchor_ = meta[std::size_t(selected - files.begin())];
     state_.files = std::move(files);
+    meta_ = std::move(meta);
     ++state_.generation;
     return true;
 }
@@ -277,7 +335,12 @@ std::optional<fs::path> Navigator::step(int direction) {
     refresh();
     if (cancel_.stop_requested()) return std::nullopt;
     const auto& files = state_.files;
-    auto found = std::lower_bound(files.begin(), files.end(), state_.current, naturalLess);
+    // The current image, or, when it was deleted, the position its remembered sort key would have had.
+    auto found = std::find(files.begin(), files.end(), state_.current);
+    if (found == files.end())
+        found = std::partition_point(files.begin(), files.end(), [&](const fs::path& file) {
+            return sortBefore(sort_, file, meta_[std::size_t(&file - files.data())], state_.current, anchor_);
+        });
     std::optional<fs::path> destination;
     if (direction > 0) {
         if (found != files.end() && *found == state_.current) ++found;
@@ -287,27 +350,49 @@ std::optional<fs::path> Navigator::step(int direction) {
         destination = direction > 0 ? files.front() : files.back();
     if (!destination && state_.boundary == BoundaryMode::ContinueTree) return folder(direction);
     if (cancel_.stop_requested()) return std::nullopt;
-    if (destination) { state_.current = *destination; ++state_.generation; }
+    if (destination) {
+        state_.current = *destination;
+        const auto at = std::find(files.begin(), files.end(), *destination);
+        if (at != files.end()) anchor_ = meta_[std::size_t(at - files.begin())];
+        ++state_.generation;
+    }
     return destination;
 }
 std::optional<fs::path> Navigator::folder(int direction) {
     if (state_.current.empty() || cancel_.stop_requested()) return std::nullopt;
     const auto destination = adjacentFolderImage(state_.root, state_.directory, direction, cancel_);
     if (!destination) return std::nullopt;
-    auto files = imageFiles(destination->parent_path(), cancel_);
+    std::vector<fs::path> files; std::vector<FileMeta> meta;
+    list(destination->parent_path(), files, meta);
     if (cancel_.stop_requested()) return std::nullopt;
     state_.directory = destination->parent_path();
+    // Landing is the natural endpoint chosen by traversal, whatever the file sort (NAV-02); only the list order follows it.
+    const auto at = std::find(files.begin(), files.end(), *destination);
+    anchor_ = at == files.end() ? FileMeta{} : meta[std::size_t(at - files.begin())];
     state_.files = std::move(files);
+    meta_ = std::move(meta);
     state_.current = *destination;
     ++state_.generation;
     return destination;
 }
 void Navigator::refresh() {
     if (state_.directory.empty() || cancel_.stop_requested()) return;
-    auto files = imageFiles(state_.directory, cancel_);
+    std::vector<fs::path> files; std::vector<FileMeta> meta;
+    list(state_.directory, files, meta);
     if (cancel_.stop_requested()) return;
+    // A deleted current keeps its last known sort key as the anchor for deterministic next/previous.
+    const auto at = std::find(files.begin(), files.end(), state_.current);
+    if (at != files.end()) anchor_ = meta[std::size_t(at - files.begin())];
     state_.files = std::move(files);
-    // Preserve a deleted current name as an anchor for deterministic next/previous.
+    meta_ = std::move(meta);
     ++state_.generation;
+}
+void Navigator::list(const fs::path& directory, std::vector<fs::path>& files, std::vector<FileMeta>& meta) {
+    files = sortedImageFiles(directory, sort_, cancel_, &meta);
+}
+void Navigator::setSort(const SortSpec& sort) {
+    if (sort == sort_) return;
+    sort_ = sort;
+    refresh();
 }
 }

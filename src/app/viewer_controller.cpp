@@ -61,7 +61,7 @@ const std::vector<Command> registry {
     {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
     {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"quit","Quit","Ctrl+Q"}
+    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"}, {"quit","Quit","Ctrl+Q"}
 };
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
 bool insideRoot(const QString& root, const QString& folder) {
@@ -77,6 +77,14 @@ bool insideRoot(const QString& root, const QString& folder) {
 QString configDirectory() {
     const QString override = qEnvironmentVariable("GLANCELOT_CONFIG_DIR");
     return override.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) : override;
+}
+QString sortKeyName(glancelot::SortKey key) {
+    switch (key) {
+    case glancelot::SortKey::Modified: return "modified";
+    case glancelot::SortKey::Size: return "size";
+    case glancelot::SortKey::Shuffle: return "shuffle";
+    default: return "name";
+    }
 }
 BoundaryMode boundaryValue(const QString& value) {
     return value == "stop" ? BoundaryMode::Stop : value == "loop" ? BoundaryMode::LoopFolder : BoundaryMode::ContinueTree;
@@ -106,6 +114,7 @@ struct ViewerController::Private {
     bool navigationOpen{};
     std::optional<NavigationJob> pendingNavigation;
     std::stop_source navigationStop;
+    glancelot::SortSpec sortSpec;
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
@@ -191,6 +200,16 @@ struct ViewerController::Private {
         const auto savedWheel=object.value("wheel").toString();
         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
+        const auto savedSort=object.value("sort").toObject();
+        {
+            const auto key=savedSort.value("key").toString();
+            if (key=="name") sortSpec.key=glancelot::SortKey::Name;
+            else if (key=="modified") sortSpec.key=glancelot::SortKey::Modified;
+            else if (key=="size") sortSpec.key=glancelot::SortKey::Size;
+            else if (key=="shuffle") sortSpec.key=glancelot::SortKey::Shuffle;
+            if (savedSort.value("descending").isBool()) sortSpec.descending=savedSort.value("descending").toBool();
+            if (savedSort.value("seed").isDouble() && savedSort.value("seed").toDouble()>=1) sortSpec.seed=quint64(savedSort.value("seed").toDouble());
+        }
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
     }
@@ -206,6 +225,7 @@ struct ViewerController::Private {
                 else if (name=="boundary") object[name]=boundary;
                 else if (name=="wheel") object[name]=wheel;
                 else if (name=="filmstrip") object[name]=filmstrip;
+                else if (name=="sort") object[name]=QJsonObject{{"key",sortKeyName(sortSpec.key)},{"descending",sortSpec.descending},{"seed",double(sortSpec.seed)}};
                 else if (name=="tree") object[name]=tree;
                 else if (name=="treePinned") object[name]=treePin;
             }
@@ -310,9 +330,10 @@ struct ViewerController::Private {
             trace("navigation:finished");
             auto result=future->result(); future->deleteLater(); navigationBusy=false;
             if (token==generation && sequence==navigationGeneration) {
-                nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
+                nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary)); nav.setSort(sortSpec);
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
+                else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
                 else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
             }
@@ -320,14 +341,33 @@ struct ViewerController::Private {
         });
         future->setFuture(QtConcurrent::run(&navigationPool,std::move(job.work)));
     }
+    // Applies a new file order on the navigation worker (never the GUI thread); the current image stays current.
+    void changeSort(const glancelot::SortSpec& next) {
+        if (next==sortSpec) return;
+        sortSpec=next;
+        if (!save({"sort"})) status="Sort order changed; settings could not be saved.";
+        if (nav.snapshot().current.empty()) { emit q->stateChanged(); return; }
+        status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
+        navigationReady=false;
+        navigationStop.request_stop(); navigationStop=std::stop_source{};
+        Navigator copy=nav;
+        copy.setCancellation(navigationStop.get_token());
+        emit q->stateChanged();
+        const QString done=QString("Sorted by %1%2.").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
+        submitNavigation({generation,++navigationGeneration,true,[copy,next,done]() mutable {
+            copy.setSort(next);
+            return NavigationResult{std::move(copy),std::nullopt,done};
+        }});
+    }
     void scan(const QString& file,quint64 token) {
         navigationReady=false;
         const auto oldRoot=nav.snapshot().root;
         navigationStop.request_stop(); navigationStop=std::stop_source{};
         const auto cancellation=navigationStop.get_token();
-        submitNavigation({token,++navigationGeneration,true,[file,oldRoot,cancellation]{
+        submitNavigation({token,++navigationGeneration,true,[file,oldRoot,cancellation,spec=sortSpec]{
             Navigator result; std::error_code error;
             result.setCancellation(cancellation);
+            result.setSort(spec); // nothing is listed yet, so this is free
             if (result.open(nativePath(file),error) && !oldRoot.empty()) result.setRoot(oldRoot);
             return NavigationResult{std::move(result),std::nullopt};
         }});
@@ -410,6 +450,8 @@ void ViewerController::nextFolder(){d->navigate(1,true);}void ViewerController::
 void ViewerController::trigger(const QString& id){
     if(id=="next")next();else if(id=="previous")previous();else if(id=="next-folder")nextFolder();else if(id=="previous-folder")previousFolder();
     else if(id=="filmstrip")setFilmstripVisible(!d->filmstrip);
+    else if(id=="sort"){const char* cycle[]={"name","modified","size","shuffle"};int at=0;for(int i=0;i<4;++i)if(sortKey()==cycle[i])at=i;setSortKey(cycle[(at+1)%4]);}
+    else if(id=="sort-reverse")setSortDescending(!d->sortSpec.descending);
     else if(id=="tree")setTreeVisible(!d->tree);
     else if(id=="quit")QCoreApplication::quit();else if(d->bindings.contains(id))emit viewCommand(id);
 }
@@ -480,5 +522,17 @@ void ViewerController::raiseRoot(){
 bool ViewerController::filmstripVisible() const{return d->filmstrip;}
 const NavigationSnapshot& ViewerController::snapshot() const{return d->nav.snapshot();}
 void ViewerController::setFilmstripVisible(bool value){if(d->filmstrip==value)return;d->filmstrip=value;if(!d->save({"filmstrip"}))d->status="Filmstrip setting changed; settings could not be saved.";emit stateChanged();}
+QString ViewerController::sortKey() const{return sortKeyName(d->sortSpec.key);}
+bool ViewerController::sortDescending() const{return d->sortSpec.descending;}
+void ViewerController::setSortKey(const QString& key){
+    auto next=d->sortSpec;
+    if(key=="name")next.key=glancelot::SortKey::Name;
+    else if(key=="modified")next.key=glancelot::SortKey::Modified;
+    else if(key=="size")next.key=glancelot::SortKey::Size;
+    else if(key=="shuffle"){next.key=glancelot::SortKey::Shuffle;next.seed=quint64(QDateTime::currentMSecsSinceEpoch())|1;}
+    else return;
+    d->changeSort(next);
+}
+void ViewerController::setSortDescending(bool descending){auto next=d->sortSpec;next.descending=descending;d->changeSort(next);}
 void ViewerController::setBoundaryMode(const QString& value){if(value!="continue"&&value!="stop"&&value!="loop")return;d->boundary=value;d->nav.setBoundary(boundaryValue(value));if(!d->save({"boundary"}))d->status="Boundary mode changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::setWheelMode(const QString& value){if(value!="navigate"&&value!="zoom"&&value!="pan")return;d->wheel=value;if(!d->save({"wheel"}))d->status="Wheel behavior changed; settings could not be saved.";emit stateChanged();}

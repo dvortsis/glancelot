@@ -8,6 +8,20 @@ namespace glancelot {
 bool naturalLess(const std::filesystem::path& a, const std::filesystem::path& b);
 bool isSupportedImage(const std::filesystem::path& path);
 std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& directory, std::stop_token cancel = {});
+// File order inside one folder. Folder order and cross-folder landing always stay natural (NAV-06).
+// Ties break by natural name; entries whose metadata cannot be read sort last in both directions. Shuffle is a
+// deterministic permutation of (file name, seed): it does not change when files are added or removed elsewhere.
+enum class SortKey { Name, Modified, Size, Shuffle };
+struct SortSpec {
+    SortKey key{SortKey::Name};
+    bool descending{false};
+    std::uint64_t seed{1};
+    bool operator==(const SortSpec&) const = default;
+};
+struct FileMeta { std::int64_t modified{}; std::uintmax_t size{}; bool known{}; };
+// `meta`, when given, receives one entry per returned file (same order).
+std::vector<std::filesystem::path> sortedImageFiles(const std::filesystem::path& directory, const SortSpec& sort,
+    std::stop_token cancel = {}, std::vector<FileMeta>* meta = nullptr);
 // Immediate child directories for the folder tree, in the same natural order and with the same link/volume
 // policy as traversal. `accessible` is false when the directory cannot be listed (denied, missing, or reached
 // through a link); `cancelled` results carry no folders. Only one directory level is read.
@@ -30,13 +44,20 @@ public:
     bool open(const std::filesystem::path& file, std::error_code& error);
     bool setRoot(const std::filesystem::path& root);
     void setBoundary(BoundaryMode mode);
+    // Re-lists the current folder in the new order; the current image stays current.
+    void setSort(const SortSpec& sort);
+    const SortSpec& sort() const { return sort_; }
     void setCancellation(std::stop_token cancel) { cancel_ = cancel; }
     std::optional<std::filesystem::path> step(int direction);
     std::optional<std::filesystem::path> folder(int direction);
     void refresh();
     const NavigationSnapshot& snapshot() const { return state_; }
 private:
+    void list(const std::filesystem::path& directory, std::vector<std::filesystem::path>& files, std::vector<FileMeta>& meta);
     NavigationSnapshot state_;
+    SortSpec sort_;
+    std::vector<FileMeta> meta_;   // parallel to state_.files
+    FileMeta anchor_;              // sort key of `current`, kept so a deleted current still has an order position
     std::stop_token cancel_;
 };
 }

@@ -24,6 +24,8 @@ class ViewerController : public QObject {
     Q_PROPERTY(bool treeVisible READ treeVisible WRITE setTreeVisible NOTIFY stateChanged)
     Q_PROPERTY(bool treePinned READ treePinned WRITE setTreePinned NOTIFY stateChanged)
     Q_PROPERTY(int windowSlot READ windowSlot NOTIFY stateChanged)
+    Q_PROPERTY(QString sortKey READ sortKey WRITE setSortKey NOTIFY stateChanged)
+    Q_PROPERTY(bool sortDescending READ sortDescending WRITE setSortDescending NOTIFY stateChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -44,6 +46,10 @@ public:
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
     bool treeVisible() const; void setTreeVisible(bool visible);
     bool treePinned() const; void setTreePinned(bool pinned);
+    // File order within a folder: "name", "modified", "size" or "shuffle". Folder order never changes. A change
+    // re-lists the current folder on the navigation worker and keeps the current image.
+    QString sortKey() const; void setSortKey(const QString& key);
+    bool sortDescending() const; void setSortDescending(bool descending);
     // Folder selection from the tree: opens the first eligible image of `folder`, or of the first subfolder (in
     // traversal order) that has one. Asynchronous; the newest request wins. Reports a status when nothing is found.
     Q_INVOKABLE void openFolder(const QString& folder);
