@@ -86,6 +86,29 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void reviewAllLocationsAtMinimumSize() {
+        Harness h; QVERIFY(h.window);
+        h.folders.setLister([](const std::filesystem::path&,std::stop_token){return glancelot::FolderListing{};});
+        h.folders.browseComputer();
+        h.window->resize(540,360); h.viewer.setTreeVisible(true);
+        h.window->requestActivate();
+        auto* panel=h.window->findChild<QQuickItem*>("folderTree"); QVERIFY(panel);
+        auto* button=h.window->findChild<QQuickItem*>("allLocations"); QVERIFY(button);
+        auto* list=h.window->findChild<QQuickItem*>("folderList"); QVERIFY(list);
+        QTRY_VERIFY(panel->isVisible()&&button->isVisible());
+        const QPointF local=button->mapToItem(panel,QPointF(0,0));
+        QVERIFY(local.x()>=0&&local.y()>=0);
+        QVERIFY(local.x()+button->width()<=panel->width());
+        QVERIFY(local.y()+button->height()<panel->height());
+        QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,button->mapToScene(QPointF(button->width()/2,button->height()/2)).toPoint());
+        QTRY_VERIFY(list->hasActiveFocus());
+        QVERIFY(h.folders.count()>0);
+        QDir().mkpath(".cache/review");
+        h.theme.setMode("dark"); QTest::qWait(200);
+        QVERIFY(h.window->grabWindow().save(".cache/review/tree-compact-dark.png"));
+        h.theme.setMode("light"); QTest::qWait(200);
+        QVERIFY(h.window->grabWindow().save(".cache/review/tree-compact-light.png"));
+    }
     void foldersButtonWorksWithoutPhoto() {
         Harness h; QVERIFY(h.window);
         auto* button=h.window->findChild<QQuickItem*>("foldersToggle"); QVERIFY(button);
