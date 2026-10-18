@@ -12,7 +12,7 @@ tasks:
   - id: TEST-LAUNCHER-01
     requirements: [SYS-04, SYS-05]
     owner: lead
-    state: integration
+    state: done
     branch: agent/test-launcher
     worktree: .worktrees/test-launcher
     build: build-manual-testing

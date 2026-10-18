@@ -42,3 +42,21 @@ Actual CMD invocation from PowerShell 7 revealed that its inherited PSModulePath
 Build logs: `.cache/test-launcher-build.log` and `.cache/test-launcher-integrated.log` (ignored local evidence).
 
 Physical monitor/color accuracy, clean-machine deployment and Linux are outside this launcher-only verification. Docker deployment is unchanged.
+
+## Final current-version integration
+
+A concurrent pending folder-jump merge conflicted only at the additive work-queue entries. Both task entries and the preexisting staged folder-jump implementation were preserved in merge `3e06e78`, together with the reviewed launcher wrapper fix. No other task was marked complete.
+
+The complete default launcher was rerun on this clean integrated commit:
+
+```text
+100% tests passed out of 11
+Total Test time (real) = 185.41 sec
+Test build: main @ 3e06e787054e1a4565152581f332e23075f9610c
+Local changes: False
+process exit=0
+Final CMD fast shortcut exit=0
+Final smoke: exit=0, size=96x64, loading=False
+```
+
+Final build log: `.cache/test-launcher-final-integrated.log`; packaged runtime report: `.cache/manual-testing/final-report.json`. The final completion commit changes only verification and this task's work-queue state. The portable package remains the successfully tested `3e06e78` runtime.
