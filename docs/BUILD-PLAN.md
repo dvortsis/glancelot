@@ -318,7 +318,7 @@ Input precedence: modal/shortcut capture, text entry, focused control, active vi
 
 Support keyboard keys, modifiers, mouse buttons 1-5, wheel axes, double-clicks, supported gestures, chords with a visible pending state, and hold begin/end commands. Handle layout-sensitive characters separately from physical key codes. Normalize high-resolution wheel deltas and distinguish discrete wheel navigation from continuous trackpad pan/pinch. Avoid accidental dozens-of-images skips from one touchpad gesture.
 
-Expose the scroll matrix as a small dedicated settings page: base wheel behavior plus modifier overrides. Context presets: Viewer, FastStone-inspired, and custom. Defaults are editable; provide per-action, per-context, and complete reset. Suggested defaults: arrows for previous/next, wheel navigation over the canvas, Ctrl+wheel cursor zoom, Space session tag, 1-5 ratings, Escape dismiss/exit immersive mode, Ctrl+Shift+P palette. Grid wheel scrolls the grid. Validate double-click/fullscreen and hold/loupe arbitration so they do not fight.
+Expose the scroll matrix as a small dedicated settings page: base wheel behavior plus modifier overrides. Context presets: Viewer, Folder navigation, and custom. Defaults are editable; provide per-action, per-context, and complete reset. Suggested defaults: arrows for previous/next, wheel navigation over the canvas, Ctrl+wheel cursor zoom, Space session tag, 1-5 ratings, Escape dismiss/exit immersive mode, Ctrl+Shift+P palette. Grid wheel scrolls the grid. Validate double-click/fullscreen and hold/loupe arbitration so they do not fight.
 
 ### Configuration and settings
 

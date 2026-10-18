@@ -605,6 +605,9 @@ void ViewerController::navigateDirectory(const QString& value) {
         std::error_code error;
         if(empty||!target.openDirectory(nativePath(folder),error))
             return Private::NavigationResult{std::move(copy),std::nullopt,"Cannot open that folder. Check the path and access permissions.",true,true};
+        // Keep an explicitly widened traversal scope for visits inside it. Visits
+        // outside it still start a bounded scope at the requested directory.
+        if (!copy.snapshot().root.empty()) target.setRoot(copy.snapshot().root);
         const auto current=target.snapshot().current;
         return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
     },"No supported images in this folder."});

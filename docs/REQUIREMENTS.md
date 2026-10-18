@@ -117,7 +117,7 @@ The broader [feature opportunity inventory](FEATURE-OPPORTUNITIES.md) and [platf
 | META-03 | GPS map-provider handoff | M4 | Valid coordinates and explicit browser invocation; malformed/missing GPS handled; no automatic external request. |
 | META-04 | Non-exclusive file access and hot reload | M3 | External overwrite/rename/delete during viewing on Windows/Linux; validated replacement swap; local reaction target measured. |
 | META-05 | 1-5 stars, pick/reject and color labels via `.xmp` sidecars | M4 | Per-property Lightroom/Capture One/darktable fixture matrix, sidecar naming collisions, preserved unknown XML, save conflicts and errors. |
-| META-06 | FastStone-style temporary tagging and tagged-only filter | M4 | Space/Insert remappable, cross-directory tags stable, temporary filter reset follows NAV-05, selection distinct from ratings. |
+| META-06 | Temporary tagging and tagged-only filter | M4 | Space/Insert remappable, cross-directory tags stable, temporary filter reset follows NAV-05, selection distinct from ratings. |
 | META-07 | Tagged batch copy/move/delete/path copy | M3 explicit deletion subset via FS-01; remainder M4 | Stable target snapshot, paired-file policy, collisions, cross-volume verify, trash fallback confirmation, cancellation/partial-failure recovery. |
 | META-08 | Lossless JPEG rotation/flips | M5 | Separate from view rotation; EXIF and perfect MCU cases, edge dimensions, orientation normalization, metadata preservation and recovery tested. |
 | META-09 | Bitmap/file-object/path/Base64 clipboard choices | M4 bitmap/file/path; M5 Base64 | Native Windows and Linux transfer formats; encoded/rendered color semantics documented; resource limits/cancellation tested. |

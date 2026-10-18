@@ -19,7 +19,7 @@ Hardcoded shortcuts are an anti-pattern. Every internal function, toggle, User I
 | **Chord & Hold Support** | Support both two-step key chords (such as `G` then `F` to jump to the first file) and spring-loaded hold actions (hold a key to toggle a diagnostic overlay, release to restore the normal view). |
 | **Portable Configuration** | Store all keybindings, UI layouts, and preferences in a single, human-readable JavaScript Object Notation (JSON) or Initialization (INI) file for instant backup, version control, and deployment across machines. |
 
-### FastStone-Style Depth-First Directory Traversal
+### Depth-First Directory Traversal
 
 The application must treat the file system as a continuous, navigable tree without forcing the user to back out to a folder browser.
 
@@ -52,7 +52,7 @@ A viewer fails its primary purpose if it stutters on 60-megapixel files or stall
 The interface must remain invisible during standard viewing, dedicating 100% of screen real estate to the image canvas.
 
 * **Zero-Chrome Frameless Mode (qView Style):** Launch with zero title bar, zero menu bar, and zero window borders. Option to make the window geometry dynamically snap to the exact aspect ratio and dimensions of the active image.
-* **Edge-Triggered Auto-Hide HUDs (FastStone Style):** In fullscreen or frameless mode, moving the cursor to the four screen edges summons modular, translucent Heads-Up Display (HUD) overlays with configurable trigger delays (in milliseconds):
+* **Edge-Triggered Auto-Hide HUDs:** In fullscreen or frameless mode, moving the cursor to the four screen edges summons modular, translucent Heads-Up Display (HUD) overlays with configurable trigger delays (in milliseconds):
 * **Top Edge:** Scrubbable horizontal thumbnail filmstrip, quick filter bar, and sort order selector.
 * **Left Edge:** Collapsible live directory tree and favorite folders bookmark list.
 * **Right Edge:** EXIF metadata inspector, live histogram, and International Color Consortium (ICC) profile status.
@@ -137,7 +137,7 @@ While strictly not an editor, a viewer must excel at rapid file triaging and pas
 * **Zero-Lock File Handle Architecture:** Never maintain an exclusive OS file lock on the currently viewed image. External scripts, compilers, or image editors must be able to overwrite, rename, or delete the active file on disk. The viewer must watch the file system descriptor and automatically hot-reload the canvas within 50 milliseconds if the file is modified externally, or advance to the next image if deleted.
 * **Fast Culling & XMP Sidecar Interop:**
 * Single-key rating (`1` to `5` stars), Pick/Reject flags, and Color Labels that read and write directly to industry-standard non-destructive `.xmp` sidecar files (ensuring 100% compatibility with Adobe Lightroom, Capture One, and Darktable).
-* FastStone-style **Session Tagging**: Press `Space` or `Insert` to mark files into a temporary virtual selection list, then filter by tagged files or execute batch Copy, Move, Delete, or Path-Copy operations on the tagged set.
+* **Session Tagging**: Press `Space` or `Insert` to mark files into a temporary virtual selection list, then filter by tagged files or execute batch Copy, Move, Delete, or Path-Copy operations on the tagged set.
 
 
 * **Lossless Orientation Transforms:** Support true lossless 90-degree rotation and horizontal/vertical flipping for JPEGs via EXIF orientation tag updates or lossless Minimum Coded Unit (MCU) block rearrangement without re-encoding or generational quality loss.

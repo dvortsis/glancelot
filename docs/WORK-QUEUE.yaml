@@ -9,6 +9,20 @@ planning_documents:
   memory_action: act_mvdequdw_19da3d2f17b4
   scope: Proposal inventory and implementation strategy; preserve the eight approved workspace priorities and existing acceptance; promote candidates through requirement/task packets before coding
 tasks:
+  - id: FOLDER-JUMP-01
+    requirements: [NAV-01, NAV-02, NAV-03, NAV-04, NAV-06, NAV-08, UX-13]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: review
+    branch: fix/folder-jump
+    base_commit: 85a468e
+    memory_action: act_mve823bx_51ecdb7a6932
+    evidence: docs/verification/FOLDER-JUMP.md; independent review approved; Windows scripts/build.ps1 -Test 9/9 (72.30s); main integration pending
+    outcome: Folder jumps work from empty folders and retain an explicitly widened scope across exact visits
+    boundaries: PgUp/PgDown retained by user request; bounded roots and existing NAV contracts preserved; external viewer parity unverified
+    acceptance: Bidirectional empty anchors, scope preservation/reset, sort-independent jump endpoints, root stops, cancellation and native page-key routes
+    integration: Separate branch requested; main integration and its checks remain pending
   - id: PATH-BAR-01
     requirements: [UX-13, UX-03, IN-01, SYS-02]
     milestone: M3

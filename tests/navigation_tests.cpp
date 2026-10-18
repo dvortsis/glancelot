@@ -461,6 +461,36 @@ void fileSorting() {
     require(names(tree.snapshot().files) == "3.jpg 2.jpg 1.jpg ", "list in new folder did not follow the sort");
     const auto back = tree.folder(-1);
     require(back && *back == t.root / "a" / "3.jpg", "backward landing depended on file sort");
+    for (const auto key : {SortKey::Name, SortKey::Modified, SortKey::Size, SortKey::Shuffle})
+        for (const bool descending : {false, true})
+            for (const auto boundary : {BoundaryMode::Stop, BoundaryMode::LoopFolder, BoundaryMode::ContinueTree}) {
+                Navigator jump; jump.setSort({key, descending, 47}); jump.setBoundary(boundary);
+                require(jump.open(t.root / "a/2.jpg", error) && jump.setRoot(t.root), "jump matrix setup");
+                require(jump.folder(1) == t.root / "b/1.jpg", "forward jump matrix endpoint");
+                const auto endGeneration=jump.snapshot().generation;
+                require(!jump.folder(1) && jump.snapshot().generation==endGeneration, "explicit jump wrapped or changed boundary snapshot");
+                require(jump.folder(-1) == t.root / "a/3.jpg", "reverse jump matrix endpoint");
+                require(!jump.folder(-1), "reverse jump escaped traversal root");
+            }
+}
+void emptyDirectoryFolderJumps() {
+    Fixture f;
+    const auto before = f.file("1-before/2.png");
+    f.file("1-before/10.png");
+    fs::create_directories(f.root / "2-empty");
+    const auto after = f.file("3-after/2.png");
+    Navigator nav; std::error_code error;
+    require(nav.openDirectory(f.root, error), "open empty traversal root");
+    require(nav.folder(1) == before, "cannot jump from an image-less root to its first child");
+    require(nav.openDirectory(f.root / "2-empty", error), "open empty anchor");
+    require(nav.setRoot(f.root), "cannot widen root from empty folder");
+    const auto generation = nav.snapshot().generation;
+    require(!nav.folder(0) && nav.snapshot().generation == generation, "zero jump changed empty snapshot");
+    require(nav.folder(1) == after, "forward jump from empty anchor failed");
+    require(nav.openDirectory(f.root / "2-empty", error) && nav.setRoot(f.root), "reset empty anchor");
+    require(nav.folder(-1) == f.root / "1-before/10.png", "backward jump from empty anchor must land last");
+    Navigator unopened;
+    require(!unopened.setRoot(f.root) && !unopened.folder(1), "unopened navigator accepted traversal");
 }
 void exactDirectoryNavigation() {
     Fixture f;
@@ -484,7 +514,7 @@ void exactDirectoryNavigation() {
 }
 int main() {
     try {
-        exactDirectoryNavigation(); naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch(); fileSorting();
+        emptyDirectoryFolderJumps(); exactDirectoryNavigation(); naturalOrdering(); traversal(); rootAndBoundaries(); filesystemMutation(); generatedOracle(); permissionBypass(); cancellation(); linksAndLaziness(); childFoldersAndSubtreeSearch(); fileSorting();
         std::cout << "navigation: all generated fixture tests passed\n";
         return 0;
     } catch (const std::exception& error) {
