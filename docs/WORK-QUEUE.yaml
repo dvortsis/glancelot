@@ -18,7 +18,7 @@ tasks:
     branch: fix/folder-jump
     base_commit: 85a468e
     memory_action: act_mve823bx_51ecdb7a6932
-    evidence: docs/verification/FOLDER-JUMP.md; independent review approved; Windows scripts/build.ps1 -Test 9/9 (72.30s); main integration pending
+    evidence: docs/verification/FOLDER-JUMP.md; independent review approved; Windows scripts/build.ps1 -Test 9/9 (72.30s); Linux Docker Qt 9/9 (53.24s), non-root WSL traversal and packaged X11 OpenGL page-key checks passed; main integration pending
     outcome: Folder jumps work from empty folders and retain an explicitly widened scope across exact visits
     boundaries: PgUp/PgDown retained by user request; bounded roots and existing NAV contracts preserved; external viewer parity unverified
     acceptance: Bidirectional empty anchors, scope preservation/reset, sort-independent jump endpoints, root stops, cancellation and native page-key routes
