@@ -121,7 +121,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: review
     depends: [REVIEW-ALL-01]
     branch: agent/titlebar-finish
     worktree: .worktrees/titlebar-finish
