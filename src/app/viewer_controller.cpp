@@ -61,7 +61,7 @@ const std::vector<Command> registry {
     {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
     {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"quit","Quit","Ctrl+Q"}
+    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"quit","Quit","Ctrl+Q"}
 };
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
 bool insideRoot(const QString& root, const QString& folder) {
