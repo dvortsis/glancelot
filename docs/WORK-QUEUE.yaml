@@ -294,7 +294,7 @@ tasks:
     state: ready
     depends: [MONITOR-OUTPUT-01, UI-SETTINGS-01]
     outcome: Display picker, named presentation presets and independent output customization
-    acceptance: Identify/swap/move/disable output and recovery commands; fullscreen/windowed, fit/actual size, linked or independent viewports, background, overlays and cursor policy; persist per slot; missing displays recover controls onscreen
+    acceptance: Identify/swap/move/disable output and recovery commands; detach/re-dock tree, grid, preview and metadata panes across displays with per-pane freeze, global layout lock and named workspace presets; fullscreen/windowed, fit/actual size, linked or independent viewports, background, overlays and cursor policy; persist per slot; missing displays recover controls onscreen
     verification: All controls and presets by keyboard/pointer/palette, themes and compact layouts; concurrent settings, missing displays, identity reuse, unplug/replug; independent native UI design-review
   - id: MONITOR-VERIFY-01
     requirements: [UX-10, UX-11, COLOR-01, VIEW-04, SYS-05]

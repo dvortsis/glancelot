@@ -5,6 +5,7 @@ Approved roadmap addition: October 18, 2026. Implements the existing UX-10 requi
 ## Workflows and controls
 
 - Keep the tree, grid, metadata, selection and Settings on a controller display while presenting a clean image on a chosen second display.
+- Extend the pane contract to detachable/re-dockable tree, grid, preview and metadata panes across displays. Offer per-pane freeze and a global layout lock, named workspace presets, keyboard move-to-display commands and a reset-to-controller recovery action. Preserve each pane's selection and focus when re-docking; this extends PANES-01's initial in-window layout.
 - Choose mirror-current-image, pinned reference image, or comparison output. Selection and playback synchronization are explicit; pinned output stays unchanged until replaced or unpinned.
 - Choose target display by a stable identity where available, with a readable name, resolution, scale and connection status. Offer Identify displays, Swap controller/output, Move output, Enable/disable output and an always-reachable recovery command.
 - Customize output fullscreen/windowed mode, fit/fill/actual-size, independent or linked zoom/pan/rotation, background/checker, guides, image information and cursor/overlay visibility. A clean presentation preset hides controller menus and notifications by default.
@@ -22,7 +23,7 @@ On unplug, suspend, resolution/DPI change, compositor restart or GPU loss, prese
 ## Delivery packets
 
 1. **MONITOR-OUTPUT-01:** output-window lifecycle, capability enumeration, explicit routing and clean rendering. Depends on GRID-PREVIEW-01, PLATFORM-01 and CACHE-01.
-2. **MONITOR-CUSTOM-01:** display picker, presets, output appearance/viewport synchronization and recovery commands. Depends on MONITOR-OUTPUT-01 and UI-SETTINGS-01.
+2. **MONITOR-CUSTOM-01:** display picker, detachable pane routing, freeze/lock and workspace presets, output appearance/viewport synchronization and recovery commands. Depends on MONITOR-OUTPUT-01 and UI-SETTINGS-01.
 3. **MONITOR-VERIFY-01:** independent native UI/UX, resource, hotplug and physical output qualification. Depends on both implementation packets. Only the declared tested platforms/capabilities become supported.
 
 ## Acceptance and verification matrix
