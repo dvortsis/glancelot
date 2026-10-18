@@ -21,41 +21,66 @@ ApplicationWindow {
     property bool layoutEditing: false
     property var resizePreview: ({})
     readonly property var workspace: {
-        const state = paneLayout.panes
-        const active = {tree: (viewer.treeVisible || state.tree.frozen) && state.tree.visible && (viewer.treePinned || state.tree.frozen || hudVisible || frameless),
-            topbar: state.topbar.visible && (gridMode || hudVisible || frameless || state.topbar.frozen),
-            statusbar: state.statusbar.visible && (gridMode || hudVisible || state.statusbar.frozen),
-            filmstrip: state.filmstrip.visible && !gridMode && (viewer.filmstripVisible || state.filmstrip.frozen) && filmstrip.count > 0 && (hudVisible || frameless || state.filmstrip.frozen),
-            preview: !gridMode, grid: gridMode}
-        let bounds = {x:0,y:0,width:width,height:height}, result = {}
-        const ids = ["topbar","statusbar","filmstrip","tree","preview","grid"].filter(id => active[id])
-        ids.sort((a,b) => state[a].order-state[b].order)
-        function preferred(id) { return resizePreview[id] !== undefined ? resizePreview[id] : state[id].extent }
-        function overlay(id) { return id === "tree" && (width < 720 || !viewer.treePinned) && ["left","right"].indexOf(state[id].region) >= 0 }
-        const horizontalIds=ids.filter(id => ["top","bottom"].indexOf(state[id].region)>=0)
-        const verticalIds=ids.filter(id => ["left","right"].indexOf(state[id].region)>=0 && !overlay(id))
-        const totalHorizontal=horizontalIds.reduce((total,id)=>total+preferred(id),0)
-        const totalVertical=verticalIds.reduce((total,id)=>total+preferred(id),0)
-        const horizontalScale=Math.min(1,Math.max(0,height-120)/Math.max(1,totalHorizontal))
-        const verticalScale=Math.min(1,Math.max(0,width-120)/Math.max(1,totalVertical))
-        for (const region of ["top","bottom","left","right"]) {
-            for (const id of ids.filter(id => state[id].region === region)) {
-                const horizontal = region === "top" || region === "bottom"
-                const extent = overlay(id) ? Math.min(preferred(id),Math.max(0,bounds.width-120)) : preferred(id)*(horizontal?horizontalScale:verticalScale)
-                const rect = {x:bounds.x,y:bounds.y,width:horizontal?bounds.width:extent,height:horizontal?extent:bounds.height}
-                if(region === "bottom")rect.y += bounds.height-extent
-                if(region === "right")rect.x += bounds.width-extent
-                result[id] = rect
-                if(overlay(id))continue
-                if(horizontal) { if(region === "top")bounds.y += extent;bounds.height -= extent }
-                else { if(region === "left")bounds.x += extent;bounds.width -= extent }
+        const state=JSON.parse(JSON.stringify(paneLayout.panes))
+        const active={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible&&(viewer.treePinned||state.tree.frozen||hudVisible||frameless),
+            topbar:state.topbar.visible&&(gridMode||hudVisible||frameless||state.topbar.frozen),
+            statusbar:state.statusbar.visible&&(gridMode||hudVisible||state.statusbar.frozen),
+            filmstrip:state.filmstrip.visible&&!gridMode&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0&&(hudVisible||frameless||state.filmstrip.frozen),
+            preview:!gridMode,grid:gridMode}
+        const ids=["topbar","statusbar","filmstrip","tree","preview","grid"].filter(id=>active[id])
+        function horizontal(id) { return ["top","bottom"].indexOf(state[id].region)>=0 }
+        function overlay(id) { return id==="tree"&&(width<720||!viewer.treePinned)&&["left","right"].indexOf(state[id].region)>=0 }
+        function minimum(id) {
+            if(id==="topbar"||id==="statusbar")return horizontal(id)?48:200
+            if(id==="tree")return 200
+            if(id==="filmstrip")return horizontal(id)?68:100
+            return 120
+        }
+        function group(horizontalAxis) { return ids.filter(id=>state[id].region!=="center"&&!overlay(id)&&horizontal(id)===horizontalAxis) }
+        const reservedCenter=ids.some(id=>overlay(id))?320:120
+        let recovered=group(true).reduce((n,id)=>n+minimum(id),0)>height-120 || group(false).reduce((n,id)=>n+minimum(id),0)>width-reservedCenter
+        if(recovered) {
+            const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640]}
+            for(const id of Object.keys(defaults)) {
+                state[id].region=defaults[id][0];state[id].order=defaults[id][1];state[id].extent=defaults[id][2]
             }
         }
-        for(const id of ids.filter(id => state[id].region === "center"))result[id] = bounds
+        function preferred(id) { return Math.max(minimum(id),!recovered&&resizePreview[id]!==undefined?resizePreview[id]:state[id].extent) }
+        const extents={}
+        for(const axis of [true,false]) {
+            const members=group(axis),budget=axis?height-120:width-(ids.some(id=>overlay(id))?320:120)
+            const base=members.reduce((n,id)=>n+minimum(id),0)
+            const extra=members.reduce((n,id)=>n+preferred(id)-minimum(id),0)
+            const scale=Math.min(1,Math.max(0,budget-base)/Math.max(1,extra))
+            for(const id of members)extents[id]=minimum(id)+(preferred(id)-minimum(id))*scale
+        }
+        let bounds={x:0,y:0,width:width,height:height},result={}
+        ids.sort((a,b)=>state[a].order-state[b].order)
+        for(const region of ["top","bottom","left","right"]) {
+            for(const id of ids.filter(id=>state[id].region===region&&!overlay(id))) {
+                const h=horizontal(id),extent=extents[id]
+                const rect={x:bounds.x,y:bounds.y,width:h?bounds.width:extent,height:h?extent:bounds.height}
+                if(region==="bottom")rect.y+=bounds.height-extent
+                if(region==="right")rect.x+=bounds.width-extent
+                result[id]=rect
+                if(h){if(region==="top")bounds.y+=extent;bounds.height-=extent}
+                else{if(region==="left")bounds.x+=extent;bounds.width-=extent}
+            }
+        }
+        for(const id of ids.filter(id=>state[id].region==="center"))result[id]=Object.assign({},bounds)
+        let content=Object.assign({},bounds)
+        for(const id of ids.filter(id=>overlay(id))) {
+            const extent=Math.min(preferred(id),Math.max(0,bounds.width-120))
+            result[id]={x:state[id].region==="right"?bounds.x+bounds.width-extent:bounds.x,y:bounds.y,width:extent,height:bounds.height}
+            if(state[id].region==="left")content.x+=extent
+            content.width-=extent
+        }
         for(const id of Object.keys(active))if(!active[id])result[id]={x:0,y:0,width:0,height:0}
+        result._state=state;result._recovered=recovered;result._content=content
         return result
     }
-    function paneRect(id) { return workspace[id] || {x:0,y:0,width:0,height:0} }
+    function paneRect(id) { return workspace[id]||{x:0,y:0,width:0,height:0} }
+    function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
     property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible
@@ -258,8 +283,22 @@ ApplicationWindow {
         visible: app.gridMode
         inputEnabled: !app.modalOpen
         onItemActivated: app.showCanvas()
-        onDismissed: app.showCanvas()
+        onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
+    }
+    Label {
+        objectName: "layoutRecoveryNotice"
+        visible: app.workspace._recovered
+        x: app.workspace._content.x+Theme.gapSm
+        y: app.workspace._content.y+Theme.gapSm
+        width: Math.max(0,app.workspace._content.width-2*Theme.gapSm)
+        text: "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
+        wrapMode: Text.Wrap
+        color: Theme.text
+        padding: Theme.gapSm
+        background: Rectangle { color: Theme.surface;radius: Theme.radiusControl }
+        z: 15
+        Accessible.name: text
     }
     PaneArrangement { anchors.fill: parent; host: app; visible: app.layoutEditing; z: 20 }
     DropArea {
@@ -275,10 +314,11 @@ ApplicationWindow {
     }
     ColumnLayout { // empty state: one message, one action
         id: emptyState
-        anchors.centerIn: canvas
+        x: app.workspace._content.x+(app.workspace._content.width-width)/2
+        y: app.workspace._content.y+(app.workspace._content.height-height)/2
         spacing: Theme.gapSm
         visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
-        width: Math.max(0,Math.min(440,canvas.width-2*Theme.gapMd))
+        width: Math.max(0,Math.min(440,app.workspace._content.width-2*Theme.gapMd))
         Image {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: app.height < 480 ? 96 : 144
@@ -340,11 +380,20 @@ ApplicationWindow {
             color: Theme.border
             visible: !filmstripPanel.visible
         }
-        GridLayout {
-            columns: paneLayout.panes.topbar.region === "left" || paneLayout.panes.topbar.region === "right" ? 1 : children.length
-            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
+        ScrollView {
+            id: topbarScroll
             anchors.fill: parent
-            anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
+            clip: true
+            contentWidth: availableWidth
+            contentHeight: barGridtopbar.implicitHeight
+            ScrollBar.vertical: UiScrollBar {}
+        GridLayout {
+            id: barGridtopbar
+            columns: app.paneState("topbar").region === "left" || app.paneState("topbar").region === "right" ? 1 : children.length
+            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
+            width: topbarScroll.availableWidth-2*Theme.gapMd
+            x: Theme.gapMd
+            y: Math.max(0,(topbarScroll.availableHeight-implicitHeight)/2)
             Image {
                 Layout.preferredWidth: 24; Layout.preferredHeight: 24
                 Layout.rightMargin: Theme.gapXs
@@ -402,6 +451,7 @@ ApplicationWindow {
             UiButton { text: "Show frame"; visible: app.frameless; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
             UiButton { text: "Close window"; iconName: "close"; iconOnly: true; visible: app.frameless; onClicked: app.close() }
         }
+        }
     }
     Filmstrip {
         id: filmstripPanel
@@ -409,7 +459,7 @@ ApplicationWindow {
         compact: app.height < 480
         x: app.paneRect("filmstrip").x; y: app.paneRect("filmstrip").y
         width: app.paneRect("filmstrip").width; height: app.paneRect("filmstrip").height
-        vertical: paneLayout.panes.filmstrip.region === "left" || paneLayout.panes.filmstrip.region === "right"
+        vertical: app.paneState("filmstrip").region === "left" || app.paneState("filmstrip").region === "right"
         visible: width > 0 && height > 0
         onItemActivated: canvas.forceActiveFocus()
     }
@@ -421,9 +471,10 @@ ApplicationWindow {
         width: app.paneRect("tree").width; height: app.paneRect("tree").height
         maximumWidth: Math.max(200, Math.round(app.width * 0.45))
         layoutFrozen: true
+        arrangementMode: app.layoutEditing
         onResizeCommitted: extent => paneLayout.resize("tree", extent)
         visible: width > 0 && height > 0
-        onDismissed: app.focusContent()
+        onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
     }
@@ -439,11 +490,20 @@ ApplicationWindow {
             height: Theme.borderWidth
             color: Theme.border
         }
-        GridLayout {
-            columns: paneLayout.panes.statusbar.region === "left" || paneLayout.panes.statusbar.region === "right" ? 1 : children.length
-            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
+        ScrollView {
+            id: statusbarScroll
             anchors.fill: parent
-            anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
+            clip: true
+            contentWidth: availableWidth
+            contentHeight: barGridstatusbar.implicitHeight
+            ScrollBar.vertical: UiScrollBar {}
+        GridLayout {
+            id: barGridstatusbar
+            columns: app.paneState("statusbar").region === "left" || app.paneState("statusbar").region === "right" ? 1 : children.length
+            rowSpacing: Theme.gapXs; columnSpacing: Theme.gapXs
+            width: statusbarScroll.availableWidth-2*Theme.gapMd
+            x: Theme.gapMd
+            y: Math.max(0,(statusbarScroll.availableHeight-implicitHeight)/2)
             UiButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
             BarLabel {
                 visible: !app.gridMode
@@ -480,12 +540,13 @@ ApplicationWindow {
             UiButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
             UiButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
         }
+        }
     }
     Rectangle { // status toast, centred on the part of the canvas no panel covers
         objectName: "statusToast"
-        x: canvas.x + (canvas.width-width)/2
-        y: canvas.y + canvas.height-height-Theme.gapLg
-        width: Math.max(0,Math.min(canvas.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
+        x: app.workspace._content.x+(app.workspace._content.width-width)/2
+        y: app.workspace._content.y+app.workspace._content.height-height-Theme.gapLg
+        width: Math.max(0,Math.min(app.workspace._content.width-2*Theme.gapMd,statusText.implicitWidth+2*Theme.gapLg))
         height: statusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
         radius: Theme.radiusCard
         color: Theme.surface

@@ -100,6 +100,21 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void paneArrangementKeyboardCommands() {
+        Harness h;QVERIFY(h.window);h.viewer.setTreeVisible(true);h.window->requestActivate();
+        h.window->setProperty("layoutEditing",true);
+        QQuickItem* grip=nullptr;QList<QQuickItem*> pending{h.window->contentItem()};
+        while(!pending.isEmpty()) {
+            auto* item=pending.takeFirst();if(item->objectName()=="paneGrip-tree"){grip=item;break;}
+            pending<<item->childItems();
+        }
+        QVERIFY(grip);QTest::qWait(100);grip->forceActiveFocus();QTRY_VERIFY(grip->hasActiveFocus());
+        QTest::keyClick(h.window,Qt::Key_Right);QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("right"));
+        QTest::keyClick(h.window,Qt::Key_Right,Qt::ControlModifier);QCOMPARE(h.layout.pane("tree")["extent"].toInt(),296);
+        QTest::keyClick(h.window,Qt::Key_Space);QVERIFY(h.layout.pane("tree")["frozen"].toBool());
+        QTest::keyClick(h.window,Qt::Key_Space);QVERIFY(!h.layout.pane("tree")["frozen"].toBool());
+        QTest::keyClick(h.window,Qt::Key_Escape);QTRY_VERIFY(!h.window->property("layoutEditing").toBool());
+    }
     void paneArrangementBoundsAndGestures() {
         Harness h;QVERIFY(h.window);h.window->resize(540,360);h.viewer.setTreeVisible(true);h.viewer.setTreePinned(true);
         for(const auto& id:{"tree","topbar","statusbar","filmstrip"}) {
@@ -107,6 +122,21 @@ private slots:
         }
         auto* canvas=h.window->findChild<QQuickItem*>("canvas");QVERIFY(canvas);
         QTRY_VERIFY(canvas->height()>=119);QVERIFY(canvas->y()+canvas->height()<=h.window->height()+0.1);
+        QCOMPARE(h.layout.pane("tree")["region"].toString(),QString("top"));
+        QCOMPARE(h.layout.pane("tree")["extent"].toInt(),4096); // responsive recovery never persists
+        h.layout.reset();
+        QVERIFY(h.layout.move("topbar","left",0));QVERIFY(h.layout.resize("topbar",32));
+        QVERIFY(h.layout.resize("tree",4096));
+        auto* treeBefore=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(treeBefore);
+        const auto workspace=h.window->property("workspace").toMap();
+        const auto toolbarRect=workspace.value("topbar").toMap();
+        QTRY_VERIFY(treeBefore->x()>=toolbarRect.value("x").toDouble()+toolbarRect.value("width").toDouble()-0.1);
+        QVERIFY(toolbarRect.value("width").toDouble()>=200);
+        QVERIFY(h.layout.move("statusbar","right",0));
+        QTRY_VERIFY(treeBefore->width()>=200);
+        const auto adapted=h.window->property("workspace").toMap();
+        QVERIFY(adapted.value("_recovered").toBool());
+        QCOMPARE(h.layout.pane("statusbar")["region"].toString(),QString("right"));
         h.layout.reset();h.window->resize(1180,780);h.window->requestActivate();h.window->setProperty("layoutEditing",true);
         QQuickItem* handle=nullptr;
         QList<QQuickItem*> pending{h.window->contentItem()};

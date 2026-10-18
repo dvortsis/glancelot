@@ -37,7 +37,7 @@ Item {
         delegate: Item {
             id: frame
             required property string modelData
-            readonly property var state: paneLayout.panes[modelData]
+            readonly property var state: arrangement.host.paneState(modelData)
             readonly property var rect: arrangement.host.paneRect(modelData)
             readonly property bool horizontalEdge: state.region === "top" || state.region === "bottom"
             readonly property bool immutable: paneLayout.locked || state.frozen
@@ -45,6 +45,34 @@ Item {
             visible: width>0 && height>0
             Rectangle { anchors.fill: parent; color: "transparent";border.color: frame.immutable ? Theme.muted : Theme.primary; border.width: Theme.focusWidth }
             Rectangle {
+                id: grip
+                objectName: "paneGrip-"+frame.modelData
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: "Arrange "+frame.modelData
+                Accessible.description: "Arrow keys move to an edge. Control and arrow keys resize. Shift and arrow keys change order. Space freezes or unfreezes. Home returns image or grid to the center. Escape exits arrangement."
+                Accessible.onPressAction: if(!paneLayout.locked)paneLayout.freeze(frame.modelData,!frame.state.frozen)
+                border.width: activeFocus ? Theme.focusWidth : 0
+                border.color: Theme.focusRing
+                Keys.onShortcutOverride: event => {
+                    if([Qt.Key_Left,Qt.Key_Right,Qt.Key_Up,Qt.Key_Down,Qt.Key_Space,Qt.Key_Home,Qt.Key_Escape].indexOf(event.key)>=0)event.accepted=true
+                }
+                Keys.onPressed: event => {
+                    if(event.key===Qt.Key_Escape){arrangement.host.layoutEditing=false;event.accepted=true;return}
+                    if(event.key===Qt.Key_Space && !paneLayout.locked){paneLayout.freeze(frame.modelData,!frame.state.frozen);event.accepted=true;return}
+                    if(frame.immutable)return
+                    if(event.key===Qt.Key_Home&&(frame.modelData==="preview"||frame.modelData==="grid")) {
+                        paneLayout.move(frame.modelData,"center",frame.state.order);event.accepted=true;return
+                    }
+                    const directions={}
+                    directions[Qt.Key_Left]="left";directions[Qt.Key_Right]="right";directions[Qt.Key_Up]="top";directions[Qt.Key_Down]="bottom"
+                    if(directions[event.key]===undefined)return
+                    const delta=event.key===Qt.Key_Left||event.key===Qt.Key_Up?-1:1
+                    if(event.modifiers & Qt.ControlModifier)paneLayout.resize(frame.modelData,Math.max(32,Math.min(4096,frame.state.extent+delta*16)))
+                    else if(event.modifiers & Qt.ShiftModifier)paneLayout.move(frame.modelData,frame.state.region,Math.max(0,Math.min(99,frame.state.order+delta)))
+                    else paneLayout.move(frame.modelData,directions[event.key],frame.state.order)
+                    event.accepted=true
+                }
                 width: Math.min(parent.width,164);height: Theme.controlHeight
                 color: Theme.surface;z: 3
                 Label { anchors.centerIn: parent; text: frame.modelData + (frame.immutable ? " · locked" : " · move");color: Theme.text;font.pixelSize: Theme.textSmall }
@@ -56,7 +84,7 @@ Item {
                     cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                     property point origin
                     property bool moved: false
-                    onPressed: mouse => { origin=mapToItem(arrangement,mouse.x,mouse.y);moved=false }
+                    onPressed: mouse => { grip.forceActiveFocus();origin=mapToItem(arrangement,mouse.x,mouse.y);moved=false }
                     onPositionChanged: mouse => {
                         if(!pressed)return
                         const point=mapToItem(arrangement,mouse.x,mouse.y)
@@ -85,6 +113,7 @@ Item {
                 property real initialExtent
                 property real pendingExtent
                 onPressed: mouse => {
+                    grip.forceActiveFocus()
                     origin=mapToItem(arrangement,mouse.x,mouse.y)
                     initialExtent=frame.state.extent;pendingExtent=initialExtent
                 }
