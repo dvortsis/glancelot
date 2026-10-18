@@ -583,7 +583,7 @@ void ViewerController::cancelDirectoryNavigation() {
     if(d->directoryPending) {
         d->navigationStop.request_stop();d->navigationStop=std::stop_source{};
         ++d->navigationGeneration;d->pendingNavigation.reset();d->navigationIntents.clear();
-        if(!d->navigationReady&&!d->path.isEmpty())d->scan(d->path,d->generation);
+        if(!d->path.isEmpty())d->scan(d->path,d->generation);
     }
     d->directoryPending=false;d->directoryError.clear();emit stateChanged();
 }
