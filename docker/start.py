@@ -31,8 +31,8 @@ try:
     if not re.fullmatch(r'[1-9][0-9]{2,3}x[1-9][0-9]{2,3}', size):
         raise ValueError('DESKTOP_SIZE must be WIDTHxHEIGHT')
     width, height = map(int, size.split('x'))
-    if not (540 <= width <= 3840 and 360 <= height <= 2160):
-        raise ValueError('DESKTOP_SIZE must be between 540x360 and 3840x2160')
+    if not (560 <= width <= 3840 and 400 <= height <= 2160):
+        raise ValueError('DESKTOP_SIZE must be between 560x400 and 3840x2160')
     secret = pathlib.Path(os.environ['VNC_PASSWORD_FILE']).read_text().rstrip('\r\n')
     # VNC authentication uses exactly the first eight bytes. Reject misleading passwords.
     if len(secret) != 8 or not secret.isascii() or any(c.isspace() for c in secret):
@@ -53,7 +53,7 @@ try:
     else:
         raise RuntimeError('Display startup timed out')
     launch(['openbox'])
-    launch(['/opt/glancelot/glancelot', '--window-size', f'{width}x{max(360,height-40)}'])
+    launch(['/opt/glancelot/glancelot', '--window-size', f'{max(540,width-4)}x{max(360,height-40)}'])
     launch(['websockify', '--web=/usr/share/novnc', '6080', '127.0.0.1:5900'])
     while not stopping and all(child.poll() is None for child in children):
         time.sleep(0.2)

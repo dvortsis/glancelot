@@ -9,3 +9,5 @@ Microsoft Visual C++ runtime files are distributed by Qt's deployment tooling un
 Slate & Ice icons, palette and mascot artwork were provided by the project owner in glancelot-slate-ice-assets-v1.zip. Original package README, asset manifest and checksums are retained in assets/brand. No external artwork-generation script is executed. The supplied package does not state a separate explicit redistribution license for artwork; public-release licensing of brand artwork remains a release prerequisite. Other theme palettes are locally generated project data, not imports of third-party named themes.
 
 This is a local development package. Public-release source bundles, exact dependency notices and artwork licensing must be completed before external distribution.
+
+The optional Docker browser image also contains Ubuntu-packaged TigerVNC, noVNC, websockify, Openbox, Mesa and tini. Distribution-provided package copyright/license notices remain under `/usr/share/doc` in that image; Qt manifests remain under `/opt/Qt/sbom`. These desktop-streaming components are not bundled into the Windows portable viewer.

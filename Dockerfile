@@ -21,12 +21,16 @@ RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
 FROM ubuntu:24.04 AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates novnc websockify tigervnc-standalone-server tigervnc-tools openbox wmctrl tini fonts-noto-core libgl1-mesa-dri libegl1 libgl1 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libasound2t64 && rm -rf /var/lib/apt/lists/* && userdel -r ubuntu && useradd --create-home --uid 1000 viewer && mkdir -p /config /photos && chown viewer:viewer /config
+RUN apt-get update && apt-get install -y --no-install-recommends libopengl0 && rm -rf /var/lib/apt/lists/*
 COPY --from=qt /opt/Qt/6.8.3/gcc_64 /opt/Qt
 COPY --from=build /build/glancelot /build/glancelot-decoder /opt/glancelot/
 COPY docker/start.py /opt/glancelot/start.py
+COPY LICENSE THIRD_PARTY_NOTICES.md README.md /opt/glancelot/
 RUN printf '[Paths]\nPrefix=/opt/Qt\n' > /opt/glancelot/qt.conf && cp /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 ENV PATH=/opt/Qt/bin:$PATH LD_LIBRARY_PATH=/opt/Qt/lib DISPLAY=:0 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 GLANCELOT_CONFIG_DIR=/config HOME=/home/viewer
+RUN ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot-decoder | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/Qt/plugins/platforms/libqxcb.so | grep -q "not found"
 USER viewer
 WORKDIR /photos
 EXPOSE 6080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6080/vnc.html', timeout=2).read(1)"
 ENTRYPOINT ["/usr/bin/tini", "--", "python3", "/opt/glancelot/start.py"]
