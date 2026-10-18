@@ -1,6 +1,6 @@
 # Agent-led execution
 
-The product baseline is BUILD-PLAN.md and the 88 rows in REQUIREMENTS.md (87 original requirements plus approved UX-12). This document records implementation authority from the user's accepted agent-led plan and subsequent roadmap amendments.
+The product baseline is BUILD-PLAN.md and the 96 rows in REQUIREMENTS.md (87 original requirements, approved UX-12, and eight workspace/file-manager additions). This document records implementation authority from the user's accepted agent-led plan and subsequent roadmap amendments.
 
 Four slots: lead/integrator; two scoped implementation agents; independent reviewer. Each implementation uses a branch/worktree/build directory. The lead alone changes contracts, shared build configuration and WORK-QUEUE.yaml, and integrates sequentially. Reviewer must not approve their own implementation. All async work has generation/revision validation and memory admission.
 
@@ -20,13 +20,17 @@ M2.1 exit requires independent tests for keyboard/tree behavior, dark/light/comp
 
 Author tests -> independent review/acceptance -> serial integration -> integrated checks -> done. Your feedback is advisory and not a routine gate. Agents continue ready tasks, preserving evidence of infrastructure blocks. Public publishing, paid services and new external access are separate actions. Forecast from first ten integrated tasks, not agent-count multiplication. Sessions checkpoint work; agents do not promise execution after the session ends.
 
-## Current continuation: M3 browsing
+## Current continuation: M3 workspace and file-manager priority
+
+Use [FEATURE-OPPORTUNITIES.md](FEATURE-OPPORTUNITIES.md) for the broader candidate inventory and [PERFORMANCE-STRATEGY.md](PERFORMANCE-STRATEGY.md) for platform-specific implementation packets. They are planning references: preserve the eight approved priorities, map enhancements onto existing requirements/tasks, and promote new scope explicitly rather than treating every proposal as ready work. Performance tuning begins with reproducible measurement and retains all source-safety and platform-evidence gates.
+
+The October 17, 2026 user amendment puts PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, UI-SETTINGS-01 and TOPBAR-THEME-01 first, in that order subject to their dependencies. All are planned, ready tasks; this planning change authorizes no completion claim. Use the live queue for acceptance, contracts and verification. Pane freeze locks layout rather than content; deletion uses explicit target snapshots and Trash/Recycle Bin with no silent permanent fallback. Only this explicit deletion slice advances from M4. Assign worktrees/branches/build directories before implementation, freeze shared contracts with the lead, and include relevant ui-design-skills plus native design-review in UI task packets.
 
 M2.1 is implemented and independently verified on Windows; see WORK-QUEUE.yaml and verification/WINDOW-SESSIONS.md. Physical-display qualification and Linux GUI delivery remain open gates, not inferred from Windows or WSL results.
 
 GRID-01 and SORT-01 are implemented and independently reviewed on Windows. REVIEW-ALL-01 corrected persistence, scheduling, reveal, grid-retry and concurrent-sort defects and closed the previously missing independent grid rerun. See verification/CLAUDE-AUDIT.md for integrated checks and remaining platform limits.
 
-After audit closure, execute the ready tasks recorded in WORK-QUEUE.yaml. Prioritize PLATFORM-01 qualification and CACHE-01 / IO-01 resource foundations, followed by favorites, filters, metadata HUDs, input contexts, and qualified format expansion. A task marked done certifies only its declared slice/platform; it never closes every requirement ID it references. In particular PERF-04/PERF-05, full IN-02, and SYS-02 still have substantial unfinished acceptance work.
+After audit closure, execute the ready tasks recorded in WORK-QUEUE.yaml. After the priority workspace/file-manager tasks, continue PLATFORM-01 qualification and CACHE-01 / IO-01 resource foundations, followed by favorites, filters, metadata HUDs, input contexts, and qualified format expansion. A task marked done certifies only its declared slice/platform; it never closes every requirement ID it references. In particular PERF-04/PERF-05, full IN-02, and SYS-02 still have substantial unfinished acceptance work.
 
 Use generated media, source hashes and actual command output. UI semantics may be tested with offscreen/software Qt Quick; GPU, physical displays and native file-dialog timing require separate evidence. Run the required Windows integrated build/test/package and core Linux checks where available. Do not claim Linux Qt delivery from WSL core-only tests.
 

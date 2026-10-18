@@ -1,8 +1,12 @@
 # Glancelot requirements and acceptance matrix
 
-Baseline: October 17, 2026. Rows describe target acceptance, not blanket implementation claims; consult the work queue and verification records for actual delivered evidence. The phase is the intended first complete delivery; prototypes may appear earlier. M0-M6, including the approved M2.1 priority milestone, form the proposed v1; E1-E3 are expansion milestones defined in [the build plan](BUILD-PLAN.md). “Conditional” means a dependency/platform/format feasibility gate must pass before the feature can be promised. Approved amendment: core folder tree moves from M3 to the next milestone M2.1; UX-12 adds persistent numbered-window browsing locations. There are now 88 requirement rows.
+Baseline: October 17, 2026. Rows describe target acceptance, not blanket implementation claims; consult the work queue and verification records for actual delivered evidence. The phase is the intended first complete delivery; prototypes may appear earlier. M0-M6, including the approved M2.1 priority milestone, form the proposed v1; E1-E3 are expansion milestones defined in [the build plan](BUILD-PLAN.md). “Conditional” means a dependency/platform/format feasibility gate must pass before the feature can be promised. Approved amendment: core folder tree moves from M3 to the next milestone M2.1; UX-12 adds persistent numbered-window browsing locations. There are now 96 requirement rows including the workspace amendment below.
+
+Approved workspace amendment, October 17, 2026: add UX-13 through UX-18 and FS-01/FS-02, bringing the target inventory to 96 rows. These eight new requirements take priority within M3 per WORK-QUEUE.yaml. Advance only explicit file/folder deletion and its safety gates from the M4 file-operation scope; tagged copy/move, XMP and other culling remain M4. Existing acceptance criteria remain in force; this amendment is planning, not delivery evidence.
 
 Each implementation issue should reference these IDs and record the exact tests, platform coverage, screenshots/traces where useful, and remaining limitations. Preserve the [original input](original-feature-specification.txt) when requirements change; record amendments explicitly.
+
+The broader [feature opportunity inventory](FEATURE-OPPORTUNITIES.md) and [platform performance strategy](PERFORMANCE-STRATEGY.md) are planning companions. Their proposals do not add requirement rows, change acceptance, or claim completed capabilities until promoted through the change-control process below.
 
 ## 1. Inputs and traversal
 
@@ -47,9 +51,20 @@ Each implementation issue should reference these IDs and record the exact tests,
 | UX-07 | Black/dark gray/middle gray/white/custom/ambient/checker backgrounds | M3 presets; M5 ambient | Single command cycles chosen presets; checker alpha correct; ambient bounded and optional; hex values persisted. |
 | UX-08 | Single-instance reuse versus independent windows | M3 | Shell-open races, IPC startup, failed recipient recovery, per-window state and shared-config writes tested. |
 | UX-09 | Always-on-top reference, 20-100% opacity and click-through | M5 conditional per platform | Actual capability detected; reliable recovery outside click-through canvas; unsupported controls disabled with reasons. |
-| UX-10 | Controller plus clean second-monitor presentation | M5 | Controller UI never appears on output; output-specific color/scale; monitor unplug and focus changes recover. |
+| UX-10 | Controller plus clean second-monitor presentation | M5 | Controller UI never appears on output; output-specific color/scale; monitor unplug and focus changes recover. Explicit display choice, mirror/pinned-reference/comparison routing, clean fullscreen/windowed output, linked or independent viewports, backgrounds/overlays/cursor customization, named presets, per-slot persistence and always-reachable recovery; missing display identities never restore the only controls offscreen. Qualify mixed DPI/refresh, low memory, stale results, output close, suspend and GPU loss per SECOND-MONITOR-PLAN.md; Docker/browser multi-output remains conditional. |
 | UX-11 | Modern minimal visual system and accessibility | M0 designs; M6 gate | Cohesive controls/icons/text, screen-reader names, keyboard routes, text scaling/contrast, five-workflow usability record. |
 | UX-12 | Persist last folder/image independently for each window-opening-order slot | M2.1 | First/second/etc windows retain stable slots; close order does not change ownership. After complete app exit, reopen windows one by one and restore each slot's own folder/image. Retain unopened slots; save atomically during browsing and on close/exit; coordinate independent processes. Explicit file opens take precedence. Test sort changes, missing image/folder, inaccessible/empty sources and write interruption without cross-slot or theme/binding data loss. |
+
+### Priority workspace additions (October 17, 2026)
+
+| ID | Requirement | Phase | Acceptance evidence |
+| --- | --- | --- | --- |
+| UX-13 | View, copy, edit and paste a folder path above the tree | M3 priority | Full path selectable/copyable; Enter navigates a typed/pasted path, Escape cancels; validation preserves prior location on failure; tree/grid synchronize; Unicode, long, drive/UNC/Linux paths and stale/cancelled navigation tested without UI-thread scans. |
+| UX-14 | Resize, move and freeze all primary UI panes | M3 priority | Tree, preview, grid, filmstrip and HUD regions resize and re-dock within the window; extensible to future metadata panes. Per-pane freeze and global lock preserve size/position while content stays usable; distinguish lock from pin/auto-hide. Keyboard controls, minimum sizes, reset, per-slot persistence, DPI and compact layouts tested. Detached floating windows are a separate extension. |
+| UX-15 | Show grid and preview together | M3 priority | Grid-only, preview-only and combined horizontal/vertical split modes; selection updates preview while keeping grid visible; selection set, focus and opened image remain distinct. Explicit folder/unsupported-item preview states, correct scoped commands, fit/physical zoom on resize, bounded resources and stale-result rejection. Depends on UX-14. |
+| UX-16 | File-manager-style grid with files, folders and multiselection | M3 priority | Folder tiles, supported-image thumbnails and generic other-file icons; folder activation navigates; unsupported files never execute automatically. Ctrl/Shift, ranges, keyboard select-all/clear, stable identity across sort/filter changes, selection count, parent navigation and path/tree synchronization. Large/empty/inaccessible mixed folders and external changes tested; image traversal remains image-only. |
+| UX-17 | Advanced UI customization and settings | M3 priority | Searchable pane/layout/preset controls, freeze/pin/auto-hide, thumbnail size/density/labels, folders-first/hidden items, preview placement, toolbar actions, text scale, themes/backgrounds, reduced motion and shortcuts. Live preview with revert, section/full UI reset, validated portable import/export, global/per-window scopes and atomic migration preserving unknown fields; native keyboard/theme/compact design review. Depends on UX-14/15/16 and FS-02. |
+| UX-18 | Theme-matched top toolbar and application-controlled title bar | M3 priority | Existing semantic tokens update live across surfaces, labels, icons, borders and interactive states; supplied branding preserved. All built-in variants checked for token/contrast coverage; native dark/light compact/wide and active/inactive checks. Window controls and drag/resize remain usable; OS-decoration limits recorded. |
 
 ## 4. Zoom, pan and resampling
 
@@ -103,10 +118,17 @@ Each implementation issue should reference these IDs and record the exact tests,
 | META-04 | Non-exclusive file access and hot reload | M3 | External overwrite/rename/delete during viewing on Windows/Linux; validated replacement swap; local reaction target measured. |
 | META-05 | 1-5 stars, pick/reject and color labels via `.xmp` sidecars | M4 | Per-property Lightroom/Capture One/darktable fixture matrix, sidecar naming collisions, preserved unknown XML, save conflicts and errors. |
 | META-06 | FastStone-style temporary tagging and tagged-only filter | M4 | Space/Insert remappable, cross-directory tags stable, temporary filter reset follows NAV-05, selection distinct from ratings. |
-| META-07 | Tagged batch copy/move/delete/path copy | M4 | Stable target snapshot, paired-file policy, collisions, cross-volume verify, trash fallback confirmation, cancellation/partial-failure recovery. |
+| META-07 | Tagged batch copy/move/delete/path copy | M3 explicit deletion subset via FS-01; remainder M4 | Stable target snapshot, paired-file policy, collisions, cross-volume verify, trash fallback confirmation, cancellation/partial-failure recovery. |
 | META-08 | Lossless JPEG rotation/flips | M5 | Separate from view rotation; EXIF and perfect MCU cases, edge dimensions, orientation normalization, metadata preservation and recovery tested. |
 | META-09 | Bitmap/file-object/path/Base64 clipboard choices | M4 bitmap/file/path; M5 Base64 | Native Windows and Linux transfer formats; encoded/rendered color semantics documented; resource limits/cancellation tested. |
 | META-10 | Nine external-tool slots, single/tagged arguments | M4 | Argument arrays, Unicode/spaces/metacharacters, missing tools, working directory and command-length limits; no shell interpolation. |
+
+### Priority file and folder deletion (October 17, 2026)
+
+| ID | Requirement | Phase | Acceptance evidence |
+| --- | --- | --- | --- |
+| FS-01 | Delete selected files/folders from the grid and folders from the tree | M3 priority | Depends on UX-16. Shared asynchronous Trash/Recycle Bin service with explicit target/contents confirmation, identity/revision revalidation, ancestor/descendant deduplication, link-safe targeting, root protection and paired-file policy. No silent permanent-delete fallback. Test disposable fixtures for read-only/locked/missing/replaced targets, unavailable trash, cancellation, disconnect and partial success; reconcile navigation, preview, caches and sessions across windows. Viewing never writes sources. |
+| FS-02 | Shortcuts to delete current file and current folder | M3 priority | Depends on FS-01. Separate discoverable/remappable selection, current-opened-file and current-browsing-folder commands; target snapshot shown before mutation. Proposed Delete, Ctrl+Delete and Ctrl+Shift+Delete bindings checked for conflicts and focus scope. Text/modals take precedence; tree selection cannot silently change current-folder target; held-key repeats cannot cause a deletion cascade. |
 
 ## 8. Complete requested extension inventory
 
@@ -137,7 +159,7 @@ Each row is a target inventory, not a support claim. The package's generated cap
 | SYS-03 | Portable configuration without destructive migration | M1-M6 | Atomic save, schema migration/future schema fallback, last-good backup, multi-instance conflicts and safe-mode recovery. |
 | SYS-04 | Windows/Linux packaging and contributor build | M1 skeleton; M6 release | Fresh-machine install/open/upgrade/uninstall, desktop associations, local codecs, documented reproducible build inputs and notices. |
 | SYS-05 | Regression and performance evidence | M0-M6 | Exact benchmark hardware/workloads, p50/p95/p99 results, CI coverage, 30-minute memory soak, physical display validation. |
-| SYS-06 | Source-file and metadata safety | M4-M6 | No implicit writes while viewing; every mutation has explicit targets, conflict handling and honest recovery limits. |
+| SYS-06 | Source-file and metadata safety | M3 deletion gate; M4-M6 remaining mutations | No implicit writes while viewing; every mutation has explicit targets, conflict handling and honest recovery limits. |
 
 ## Change-control rule
 

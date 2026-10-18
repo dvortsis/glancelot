@@ -4,6 +4,10 @@ Planning baseline: October 17, 2026. This is the living product roadmap. The arc
 
 Approved roadmap amendment, October 17, 2026: the approved sequence inserted **M2.1: folder tree and window resume** before M3. Prioritize the collapsible folder navigation tree before the remaining M3 browsing features. Add persistent last-folder/last-image positions for window slots 1, 2, 3, and so on, assigned in window-opening order and restored across complete application exits. This amendment supersedes the earlier M3 scheduling of the core tree and the optional treatment of browsing-position persistence; the original supplied feature specification remains unchanged.
 
+Approved workspace amendment, October 17, 2026: prioritize PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, UI-SETTINGS-01 and TOPBAR-THEME-01 ahead of the remaining M3 queue. Add a copyable/editable folder address above the tree; resize/move/freeze primary panes; show grid and preview together; browse and multiselect files/folders; explicitly delete grid entries and tree folders with separate current-file/current-folder shortcuts; expose advanced customization; match the top bar to the selected theme. See UX-13 through UX-18 and FS-01/FS-02 in REQUIREMENTS.md for acceptance and WORK-QUEUE.yaml for dependencies.
+
+Freeze means locking a pane's position and size while keeping its content interactive; movement initially means rearrangement/re-docking within the application window. Trash/Recycle Bin is the deletion default with explicit targets, cancellation/partial-failure handling and no silent permanent fallback. This advances only the explicit deletion slice and its SYS-06 safety gate into M3; tagged copy/move and other M4 workflows keep their existing scope. UI settings extend the existing portable configuration, preserving themes, bindings and window slots. Platform, resource, source-safety and independent-review gates remain required; this amendment does not claim any implementation.
+
 Build a native, local-first Windows/Linux photo viewer whose distinguishing strengths are predictable folder traversal, fully configurable interaction, accurate image display, and a quiet interface. Make those strengths dependable before pursuing the entire format and diagnostics wishlist.
 
 The original planning task began in an empty workspace. The repository now contains a C++20 / Qt 6.8.3 Windows alpha, local toolchain, GPL-3.0-or-later license, tests, and portable packaging. Treat that earlier planning baseline as history rather than a statement of current delivery.
@@ -15,6 +19,9 @@ Companion documents:
 - [Original specification](original-feature-specification.txt): unchanged user-provided input.
 - [Requirements and acceptance matrix](REQUIREMENTS.md): feature-by-feature scope, milestone, and verification requirements.
 - [First implementation backlog](FIRST-MILESTONE.md): concrete feasibility experiments and initial implementation sequence.
+- [Feature opportunities and UX strategy](FEATURE-OPPORTUNITIES.md): 80 evaluated candidates, their value, dependencies, acceptance and recommended promotion sequence; existing priorities remain first.
+- [Platform performance strategy](PERFORMANCE-STRATEGY.md): measured pipeline optimization, Windows/Linux/Docker/Unraid/WSL plans, resource budgets, proposed work packets and qualification evidence.
+- [Second-monitor support and customization](SECOND-MONITOR-PLAN.md): approved UX-10 delivery packets for clean output, display routing, presets, independent viewports and hotplug recovery in M5.
 
 ## 1. Product boundaries and assumptions
 
@@ -382,6 +389,8 @@ Continuous strip virtualizes offscreen images and predicts dimensions without fu
 
 ## 11. Performance contracts and measurement
 
+The detailed [performance strategy](PERFORMANCE-STRATEGY.md) expands these contracts into shared admission, profiling, storage/cache/decode/render work, platform-specific experiments and release gates. Its additional budgets and configuration profiles are proposals to validate, not measured results or replacements for the contracts below.
+
 All figures below are proposed acceptance budgets, not measured performance claims. M0 records exact hardware, drivers, OS, power policy, build flags, and fixtures, then confirms or revises budgets with reasons.
 
 Reference tiers: R1 modern 16 GiB/NVMe/integrated-GPU SDR machine; R2 8 GiB constrained machine with HDD or throttled storage; R3 discrete GPU plus mixed-DPI SDR/HDR displays; R4 controlled SMB source with documented RTT/throughput. Run Windows and Linux on comparable physical hardware where practical. Hosted CI is not the source of high-refresh or monitor-color claims.
@@ -439,7 +448,7 @@ Effort estimates assume a senior full-time maintainer and are planning ranges, n
 | M1: foundation | 2-3 | Reproducible builds/CI, command registry, versioned config, source/asset contracts, worker IPC/resource limits, initial package skeleton and fixture corpus. |
 | M2: daily viewer alpha | 5-7 | Shell-open JPEG/PNG; correct orientation/color baseline; full traversal/boundaries; fit/pan/zoom/loupe; basic remapping/palette; bounded cache; frameless/fullscreen; both-platform installable alpha. |
 | M2.1: folder tree and window resume | Re-estimate from scoped agent tasks | Collapsible lazy folder tree with keyboard/toggle/pin behavior; stable first/second/etc window slots; last folder/image restored after full exit; multi-process coordination and missing-source recovery verified. |
-| M3: browsing and performance beta | 6-9; re-estimate after M2.1 | Complete the remaining HUDs, favorites, filters/sorts, chord/hold/wheel settings, common raster expansion, RAW preview, hot reload, cache/I/O tuning; benchmark gates on reference hardware. Core folder tree/window resume and initial filmstrip/grid are implemented on Windows; remaining platform and hardware gates stay open. |
+| M3: browsing and performance beta | Re-estimate after workspace amendment; earlier 6-9 weeks excludes added scope | First deliver the priority workspace/file-manager amendment above, including safe explicit deletion and advanced settings; then remaining HUDs, favorites, filters/sorts, chord/hold/wheel settings, common raster expansion, RAW preview, hot reload, cache/I/O tuning and benchmark gates. Core folder tree/window resume and initial filmstrip/grid are implemented on Windows; remaining platform and hardware gates stay open. |
 | M4: culling and workflow beta | 7-10 | 2-up/4-up, zoom lock, tags, tested XMP profiles, safe copy/move/trash, clipboard/external tools, metadata inspector, monitor-aware SDR validation, accessibility review. |
 | M5: release feature completion | 5-8 | AVIF/JXL stills and conditional HEIF, basic animation/TIFF pages, selected diagnostics, reference/presentation capabilities, JPEG transform safety, documented format matrix. |
 | M6: stable v1 hardening | 5-7 | Cross-platform soak, fault/fuzz findings addressed, UX retest, signed/package-tested releases, contributor documentation, no unresolved release-blocking defects. |

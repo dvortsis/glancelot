@@ -2,7 +2,100 @@ schema: 1
 project: glancelot
 integration_branch: main
 memory_action: act_mvcridmt_bdf1947ea9e7
+planning_documents:
+  feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
+  performance_strategy: docs/PERFORMANCE-STRATEGY.md
+  second_monitor: docs/SECOND-MONITOR-PLAN.md
+  memory_action: act_mvdequdw_19da3d2f17b4
+  scope: Proposal inventory and implementation strategy; preserve the eight approved workspace priorities and existing acceptance; promote candidates through requirement/task packets before coding
 tasks:
+  - id: PATH-BAR-01
+    requirements: [UX-13, UX-03, IN-01, SYS-02]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [TREE-START-01]
+    outcome: Selectable editable current-folder path above the tree with copy and paste-to-navigate
+    acceptance: Full path is available even when visually clipped; copy button and native text shortcuts; pasted or typed path navigates on Enter; Escape restores current path; tree and grid stay synchronized; invalid or inaccessible paths retain the prior location with inline feedback
+    boundaries: Folder-address navigation and text clipboard only; no file copy or move operation; no navigation just from pasting
+    verification: Unicode, spaces, long paths, Windows drive/UNC and Linux paths, empty folders, disconnected shares, cancellation and rapid navigation; text fields retain shortcut precedence
+  - id: PANES-01
+    requirements: [UX-14, UX-06, UX-11, IN-06, SYS-03]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [TREE-START-01, GRID-01, WINDOW-SLOTS-01]
+    outcome: Resizable movable primary panes with individual freeze and global layout lock
+    interfaces: Lead freezes pane IDs, layout state and per-window persistence before implementation; use native Qt/QML and the existing GPU canvas
+    acceptance: Tree, image preview, grid, filmstrip and HUD regions support resizing and moving/re-docking; future metadata panes use the same contract; freeze locks position and size while content remains interactive; global lock, visible lock state, keyboard alternatives, reset layout and persistent per-slot layouts
+    boundaries: Freeze differs from pin/auto-hide; locked panes remain visible until explicitly unlocked for layout changes; initial movement is within the application window, with detached floating windows a separate extension
+    verification: Minimum sizes, narrow/wide windows, fractional DPI, keyboard focus, drag cancellation, reduced motion, restart, corrupt layout recovery and simultaneous-window saves; independent native UI design-review
+  - id: GRID-PREVIEW-01
+    requirements: [UX-15, IN-02, PERF-04, SYS-02]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [PANES-01, FILE-GRID-01]
+    outcome: Show grid and image preview simultaneously with adjustable horizontal or vertical split
+    acceptance: Grid-only, preview-only and combined modes are discoverable and remappable; selecting an image in combined mode updates preview without closing the grid; grid focus, multiselection and opened image are distinct; folder or unsupported-file selection has an explicit preview state; preserve canvas fit and physical zoom during resize
+    verification: Rapid selection and folder changes discard stale previews; modal/text/focused-pane command precedence; bounded combined thumbnail and decode work; compact/wide layouts, theme variants and mode restoration
+  - id: FILE-GRID-01
+    requirements: [UX-16, NAV-06, NAV-08, PERF-05, SYS-02]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [GRID-01, SORT-01, TREE-START-01, PATH-BAR-01]
+    outcome: File-manager-style grid of folders and all regular files with image thumbnails and multiselection
+    interfaces: Lead freezes mixed-entry identity/type/revision model and selection contracts; image traversal and filmstrip retain eligible-image semantics
+    acceptance: Folder tiles, image thumbnails and generic unsupported-file icons; Enter/double-click enters folders or opens supported images; unsupported items never enter the decoder or execute automatically; parent navigation and tree/path synchronization; folders-first natural ordering with file sort choices; Ctrl/Shift selection, keyboard ranges, select-all and clear with visible selection count
+    verification: Folder-only and empty directories, mixed supported/unsupported files, links, permission errors, 10000-plus entries, cancellation, sort/filter/reset and external rename/delete; stable selection identities rather than row indices; bounded lazy enumeration and thumbnails
+  - id: DELETE-01
+    requirements: [FS-01, META-07, NAV-08, SYS-06, SYS-02]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [FILE-GRID-01]
+    outcome: Delete selected files and folders from the grid and delete a selected folder from the tree
+    interfaces: Lead freezes explicit mutation targets, revision checks, operation results and cancellation contract before file-operation implementation
+    acceptance: Shared asynchronous operation service; Trash/Recycle Bin by default; confirmation names targets and folder-content scope; snapshot and revalidate targets; collapse ancestor/descendant duplicates; never follow directory links into targets; block filesystem roots; no silent permanent-delete fallback; explicit paired-file policy; per-target success/failure and honest recovery limits
+    boundaries: User-initiated deletion only; viewing remains read-only; tagged batch copy/move and broader culling stay M4; read-only mounts disable deletion with a reason
+    verification: Disposable generated files/folders only; cancel before and during batch, partial failure, permissions, locked files, trash unavailable, source replacement, disconnect and multiple windows; reconcile tree/grid/preview/cache/session after success without stale results restoring removed entries
+  - id: DELETE-KEYS-01
+    requirements: [FS-02, IN-01, IN-02, IN-04, SYS-06]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [DELETE-01]
+    outcome: Separate remappable shortcuts for deleting the current file and current folder
+    acceptance: Discoverable commands for Delete selection, Delete current file and Delete current folder; current file means the opened preview image, current folder means the displayed browsing directory; proposed defaults are Delete for focused grid/tree selection or canvas file, Ctrl+Delete for current file and Ctrl+Shift+Delete for current folder; check conflicts before binding; show exact targets and reuse deletion confirmation/service
+    verification: Text editing, modal dialogs, grid versus preview focus, empty selection, no opened image, focused tree folder versus browsing directory, held-key repeats and rapid navigation; captured targets cannot change while confirmation is open
+  - id: UI-SETTINGS-01
+    requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-KEYS-01]
+    outcome: Advanced searchable UI customization and settings using existing theme and preference infrastructure
+    acceptance: Pane visibility, placement, sizes, freeze, pin/auto-hide timing and layout presets; grid thumbnail size, density, labels, folders-first and hidden-file visibility; preview placement, toolbar actions, UI text scale, backgrounds, theme selection, reduced motion and shortcut editing; per-section reset plus full UI reset; portable import/export with validation and explicit global versus per-window scope
+    boundaries: Expose implemented controls with clear labels and discoverable defaults; retain unknown settings and existing themes/bindings/window slots; no arbitrary plugins or scripts
+    verification: Keyboard-only use, live preview and cancel/revert, search, invalid imports, schema migration, atomic write failures, concurrent windows and restart; long labels and text scaling; independent native UI design-review
+  - id: TOPBAR-THEME-01
+    requirements: [UX-18, UX-01, UX-11]
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: ready
+    depends: [REVIEW-ALL-01]
+    outcome: Top toolbar and application-controlled title bar consistently match the selected theme
+    acceptance: Existing semantic tokens drive surfaces, text, icons, separators and hover/pressed/focus/disabled states; live theme changes leave no stale colors; retain supplied branding and accessible contrast; native OS-decorated title-bar limitations are explicit
+    verification: All built-in theme variants for token/contrast checks; representative dark/light compact/wide native screenshots and active/inactive window states; preserve drag, resize, minimize, maximize, close and fullscreen behavior
   - id: BOOT-01
     requirements: [SYS-04, SYS-05]
     owner: lead
@@ -183,6 +276,36 @@ tasks:
     depends: [REVIEW-ALL-01]
     outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
+  - id: MONITOR-OUTPUT-01
+    requirements: [UX-10, COLOR-01, VIEW-04, PERF-04, SYS-02]
+    milestone: M5
+    priority: 7
+    owner: lead
+    state: ready
+    depends: [GRID-PREVIEW-01, PLATFORM-01, CACHE-01]
+    outcome: Explicit second-display output lifecycle and clean image routing
+    acceptance: Native display capabilities and stable-identity fallback; mirror, pinned reference and comparison output; output-specific viewport/color/scale; shared decode and bounded aggregate CPU/GPU ownership; closing output leaves controller usable
+    verification: SECOND-MONITOR-PLAN.md; stale selection, failed decode, repeated open/close, low memory, disconnect, suspend and GPU loss; physical accuracy remains unverified without hardware
+  - id: MONITOR-CUSTOM-01
+    requirements: [UX-10, UX-17, IN-01, SYS-03]
+    milestone: M5
+    priority: 7
+    owner: lead
+    state: ready
+    depends: [MONITOR-OUTPUT-01, UI-SETTINGS-01]
+    outcome: Display picker, named presentation presets and independent output customization
+    acceptance: Identify/swap/move/disable output and recovery commands; fullscreen/windowed, fit/actual size, linked or independent viewports, background, overlays and cursor policy; persist per slot; missing displays recover controls onscreen
+    verification: All controls and presets by keyboard/pointer/palette, themes and compact layouts; concurrent settings, missing displays, identity reuse, unplug/replug; independent native UI design-review
+  - id: MONITOR-VERIFY-01
+    requirements: [UX-10, UX-11, COLOR-01, VIEW-04, SYS-05]
+    milestone: M5
+    priority: 7
+    owner: reviewer
+    state: ready
+    depends: [MONITOR-OUTPUT-01, MONITOR-CUSTOM-01]
+    outcome: Independent Windows and Linux second-monitor qualification matrix
+    acceptance: Exact platform and hardware evidence for mixed DPI/refresh, per-monitor color, focus, hotplug, restore, customization and bounded resources; unsupported compositor or browser capabilities clearly identified
+    verification: SECOND-MONITOR-PLAN.md matrix, generated fixtures, actual command output and integrated build tests; no headless-to-physical inference
   - id: CACHE-01
     requirements: [PERF-04, NAV-07, SYS-02]
     milestone: M3
@@ -247,8 +370,13 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
-priority_note: Audit and independent grid/sort gates are closed; proceed with platform qualification and resource foundations while preserving Windows-only scope and remaining acceptance
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
+priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
+priority_amendment:
+  date: '2026-10-17'
+  memory_action: act_mvdeiww0_6c757fbdc70c
+  scope: Path bar, configurable panes, simultaneous grid/preview, mixed file/folder grid, explicit deletion and shortcuts, advanced settings and themed top bar
+  implementation_gate: Assign isolated branch/worktree/build directory and freeze shared contracts before coding; use relevant ui-design-skills adapted to Qt/QML; independent review and integrated scripts/build.ps1 -Test with actual evidence required before done
 unverified:
   - Physical Linux windowing, display profiles, HDR and high-refresh presentation
   - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)
