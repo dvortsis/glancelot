@@ -58,11 +58,12 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: review
+    state: done
     depends: [GRID-01, SORT-01, TREE-START-01, PATH-BAR-01]
     branch: agent/continuation
     worktree: .worktrees/continuation
-    review: independent review APPROVED b63e931 (agent/file-grid-final-review); review fixes 8db4014 Windows 11/11 138.50s; fix re-check pending in agent/topbar-review
+    commit: de63efb
+    evidence: docs/verification/FILE-GRID-01.md; independent review APPROVED b63e931 and fix re-check APPROVED 8db4014 (Low findings only); integrated de63efb Windows build.ps1 -Test 11/11 103.55s and Linux container 11/11 65.52s
     plan: docs/FILE-GRID-PLAN.md
     outcome: File-manager-style grid of folders and all regular files with image thumbnails and multiselection
     interfaces: Lead freezes mixed-entry identity/type/revision model and selection contracts; image traversal and filmstrip retain eligible-image semantics

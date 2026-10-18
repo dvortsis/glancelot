@@ -169,3 +169,14 @@ Total Test time (real) =  55.47 sec
 ```
 
 The Linux container now builds and passes the Qt model, QML and UI tests (`directory_model`, `folder_grid`). This replaces the earlier limit that only the core had been compiled on Linux. Under Docker the UI tests run on the offscreen platform; physical Linux windowing remains unverified.
+
+## Integration
+
+- Independent fix re-check of `b63e931..8db4014`: APPROVED. Only Low findings remain:
+  - A grid viewport under 100 px still shows a half-clipped row. This predates the change.
+  - There are no adopted tests for compact row snapping or for Try again. The reviewer's own versions of those tests passed.
+  - The capture fix is a fixed `qWait(150)`.
+  - `selectedCount` stays non-zero while the grid is inactive. This also predates the change.
+- Integrated on `main` as `de63efb`:
+  - `./scripts/build.ps1 -BuildDir build -Test` gave `100% tests passed out of 11`, `Total Test time (real) = 103.55 sec`.
+  - `docker build -t glancelot-browser:main .` gave `100% tests passed, 0 tests failed out of 11`, `Total Test time (real) = 65.52 sec`.
