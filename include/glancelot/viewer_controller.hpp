@@ -59,6 +59,8 @@ public:
     // re-lists the current folder on the navigation worker and keeps the current image.
     QString sortKey() const; void setSortKey(const QString& key);
     bool sortDescending() const; void setSortDescending(bool descending);
+    // Shuffle permutation seed; other views of the folder pass it on so their shuffle order matches traversal.
+    quint64 sortSeed() const;
     // Folder selection from the tree: opens the first eligible image of `folder`, or of the first subfolder (in
     // traversal order) that has one. Asynchronous; the newest request wins. Reports a status when nothing is found.
     Q_INVOKABLE void openFolder(const QString& folder);
