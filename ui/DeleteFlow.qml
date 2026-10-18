@@ -281,7 +281,7 @@ Item {
                             id: bar
                             Layout.fillWidth: true
                             from: 0; to: Math.max(1, flow.total); value: flow.done
-                            Accessible.name: "Moved " + flow.done + " of " + flow.total
+                            Accessible.name: "Processed " + flow.done + " of " + flow.total
                             background: Rectangle { implicitHeight: 6; radius: 3; color: Theme.hover }
                             contentItem: Item {
                                 implicitHeight: 6
@@ -289,7 +289,7 @@ Item {
                             }
                         }
                         Label {
-                            text: flow.stopping ? "Stopping after the current item…" : "Moved " + flow.done.toLocaleString(Qt.locale(), "f", 0) + " of " + flow.total.toLocaleString(Qt.locale(), "f", 0)
+                            text: flow.stopping ? "Stopping after the current item…" : "Processed " + flow.done.toLocaleString(Qt.locale(), "f", 0) + " of " + flow.total.toLocaleString(Qt.locale(), "f", 0)
                             color: Theme.text
                             font.pixelSize: Theme.textBody
                             font.features: { "tnum": 1 }

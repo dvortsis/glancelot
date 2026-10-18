@@ -15,6 +15,8 @@
 #define NOMINMAX
 #include <windows.h>
 #include <shobjidl.h>
+#else
+#include <unistd.h>
 #endif
 
 // DELETE-01 service tests. Every file is generated under a QTemporaryDir. The injected backend renames into a folder
@@ -216,6 +218,42 @@ private slots:
         QVERIFY(QFile::exists(data.filePath("Trash/info/" + name + ".trashinfo")));
 #else
         qInfo() << "RECORD: generated item left in the Recycle Bin:" << name;
+#endif
+    }
+    // POSIX: a generated file on another mount (GLANCELOT_OTHER_MOUNT, e.g. a Docker tmpfs) while the home trash is on
+    // a different device. Qt then uses the volume's .Trash-$uid; it never copies across devices. Either way the file
+    // is never lost: it is in that trash, or reported unavailable and still in place.
+    void realTrashOtherMount() {
+#ifdef Q_OS_WIN
+        QSKIP("POSIX only (Windows volumes have their own Recycle Bin; see substDriveRefusesWithoutDeleting)");
+#else
+        const QString mount = qEnvironmentVariable("GLANCELOT_OTHER_MOUNT");
+        if (mount.isEmpty()) QSKIP("UNVERIFIED: set GLANCELOT_OTHER_MOUNT to a writable folder on another filesystem");
+        QTemporaryDir data; QVERIFY(data.isValid());
+        const QByteArray previous = qgetenv("XDG_DATA_HOME");
+        qputenv("XDG_DATA_HOME", data.path().toUtf8());
+        const auto restore = qScopeGuard([&] { if (previous.isEmpty()) qunsetenv("XDG_DATA_HOME"); else qputenv("XDG_DATA_HOME", previous); });
+        QTemporaryDir dir(mount + "/glancelot-XXXXXX"); QVERIFY(dir.isValid());
+        const QString name = "other-mount-" + QUuid::createUuid().toString(QUuid::WithoutBraces) + ".txt";
+        const QString file = touch(dir, name);
+        FileOperationService service;
+        QSignalSpy readySpy(&service, &FileOperationService::planReady), doneSpy(&service, &FileOperationService::finished);
+        const quint64 id = service.plan({file}, "command");
+        QTRY_COMPARE(readySpy.count(), 1);
+        QVERIFY(service.confirm(id));
+        QTRY_COMPARE_WITH_TIMEOUT(doneSpy.count(), 1, 30000);
+        const auto result = doneSpy[0][1].toList()[0].toMap();
+        qInfo() << "other-mount trash result" << result["outcome"].toString() << result["message"].toString();
+        if (result["outcome"].toString() == "trashed") {
+            QVERIFY(!QFile::exists(file));
+            bool found = false;
+            for (const auto& trash : QDir(mount).entryList({".Trash*"}, QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot))
+                found = found || QFile::exists(mount + "/" + trash + "/files/" + name) || QFile::exists(mount + "/" + trash + "/" + QString::number(getuid()) + "/files/" + name);
+            QVERIFY2(found, "trashed file is not in the volume's trash");
+        } else {
+            QCOMPARE(result["outcome"].toString(), QString("trashUnavailable"));
+            QVERIFY(QFile::exists(file));
+        }
 #endif
     }
     // A locked file is reported InUse and stays in place (Windows; a failed recycle leaves nothing in the bin).

@@ -125,8 +125,14 @@ int main() {
 #endif
         std::cout << "rejections ok\n";
     }
-    {   // Read-only volume rejection needs a read-only mount, which an unprivileged test cannot create.
-        std::cout << "UNVERIFIED: read-only volume rejection (no read-only volume can be created unprivileged)\n";
+    {   // Read-only volume rejection needs a read-only mount, which an unprivileged test cannot create. A harness can
+        // supply an existing file on one (e.g. a Docker ":ro" bind mount of generated files).
+        if (const char* file = std::getenv("GLANCELOT_READONLY_FILE")) {
+            const auto plan = planDeletion({fs::path(file)});
+            check(plan.targets.empty() && plan.rejected.size() == 1 && plan.rejected[0].reason == PlanRejection::ReadOnlyVolume,
+                  "file on a read-only volume is rejected as ReadOnlyVolume");
+            std::cout << "read-only volume rejection verified on " << file << "\n";
+        } else std::cout << "UNVERIFIED: read-only volume rejection (set GLANCELOT_READONLY_FILE to a file on a read-only mount)\n";
     }
     {   // A link is a target in its own right: the link is trashed, its target survives; it is never counted through.
         const auto elsewhere = fx.dir("links/elsewhere");
