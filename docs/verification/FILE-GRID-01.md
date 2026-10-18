@@ -142,3 +142,8 @@ Real-application smoke run with a scratch `GLANCELOT_CONFIG_DIR` and generated P
 - Network-share latency, a wedged share, and storage-aware concurrency (PERF-05) are bounded by design but not measured on SMB/HDD hardware: two workers, cancellation, a pool abandoned at teardown.
 - Hidden-file display has no setting yet (UI-SETTINGS-01). Ctrl+arrow cursor-only movement is not provided.
 - Live assistive technology, high-DPI and touch input are unverified.
+
+## Lead decisions
+
+- Shuffle seed: accepted. `ViewerController::sortSeed()` and a `seed` argument on `DirectoryEntryModel::setSort` (default 1) make the grid's shuffle order match traversal. Regression test: `directory_model_tests::shuffleSeedMatchesTraversalOrder`.
+- Windows reparse points, including OneDrive Files-On-Demand cloud placeholders: keep the traversal policy for now. Every reparse point is listed as a linked non-photo file and is never decoded. Opening a cloud placeholder hydrates (downloads) it, and browsing must not trigger that silently. Treating placeholders as photos, with explicit download feedback, is a separate policy task that must be verified on a real OneDrive folder before it changes. Until then this is a known limitation; it is not a regression, since the filmstrip already excludes these files.
