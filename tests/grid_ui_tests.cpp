@@ -1735,13 +1735,13 @@ public: // ---- GRID-PREVIEW-01 helpers (not test functions)
     static QString previewState(Harness& h) { return h.window->property("previewState").toString(); }
     static QQuickItem* canvasItem(Harness& h) { return h.window->findChild<QQuickItem*>("canvas"); }
     // Opens `first` in a live harness, switches to the combined view and waits for the listing and the cursor.
-    static bool enterCombined(Harness& h, const CombinedFolder& media, const QString& first = "a.png") {
+    static bool enterCombined(Harness& h, const CombinedFolder& media, const QString& first = "a.png", int count = 8) {
         h.window->resize(1180, 780); h.window->requestActivate();
         h.viewer.open(media.file(first));
         if (!QTest::qWaitFor([&] { return h.viewer.imageReady(); }, 15000)) return false;
         h.viewer.trigger("view-combined");
         return QTest::qWaitFor([&] { return h.window->property("combinedMode").toBool() && h.view()->hasActiveFocus()
-            && !h.fileGrid.loading() && h.fileGrid.count() == 8 && h.selected() == h.fileGrid.rowOf(media.file(first)); }, 10000);
+            && !h.fileGrid.loading() && h.fileGrid.count() == count && h.selected() == h.fileGrid.rowOf(media.file(first)); }, 10000);
     }
     // Counts decodes actually issued: rising edges of the controller's loading flag.
     struct DecodeCounter {
@@ -1812,16 +1812,18 @@ private slots:
         DecodeCounter decodes(h.viewer);
         QCOMPARE(previewState(h), QString(""));
         QTest::keyClick(h.window, Qt::Key_Right); QCOMPARE(h.selected(), h.fileGrid.rowOf(media.file("b.png")));
-        QTest::qWait(60);
+        QCoreApplication::processEvents(); // the queued cursor check runs; the 120 ms debounce is now pending
+        QVERIFY(debounce->property("running").toBool());
         QVERIFY2(h.viewer.filePath().endsWith("a.png"), "the preview must wait for the debounce");
         QCOMPARE(previewState(h), QString("loading"));
         QTRY_VERIFY(h.viewer.filePath().endsWith("b.png") && h.viewer.imageReady());
         QTRY_COMPARE(previewState(h), QString(""));
         QVERIFY(h.view()->hasActiveFocus()); QVERIFY(h.window->property("combinedMode").toBool()); // the grid keeps focus
         QCOMPARE(fires.count(), 1); QCOMPARE(decodes.count, 1);
-        // A held key: four steps 30 ms apart issue one decode, for the item the cursor stops on.
+        // A held key: four steps, each fully processed (autorepeat is ~30 ms, well inside the debounce), issue one
+        // decode, for the item the cursor stops on.
         fires.clear(); decodes.count = 0;
-        for (int i = 0; i < 4; ++i) { QTest::keyClick(h.window, Qt::Key_Right); QTest::qWait(30); }
+        for (int i = 0; i < 4; ++i) { QTest::keyClick(h.window, Qt::Key_Right); QCoreApplication::processEvents(); QVERIFY(debounce->property("running").toBool()); }
         QCOMPARE(h.selected(), h.fileGrid.rowOf(media.file("f.png")));
         QTRY_VERIFY(h.viewer.filePath().endsWith("f.png") && h.viewer.imageReady());
         QTest::qWait(200);
@@ -1875,6 +1877,28 @@ private slots:
         QVERIFY(h.window->property("combinedMode").toBool());
         QTRY_COMPARE(previewState(h), QString("empty"));
         QTRY_VERIFY(panel->isVisible());
+    }
+    void failedAndInaccessiblePreviewStates() {
+        {   // A photo that fails to decode is reported as such, covering the canvas, with the controller's reason.
+            CombinedFolder media; QVERIFY(media.root.isValid());
+            QFile broken(media.file("zz-broken.png")); QVERIFY(broken.open(QIODevice::WriteOnly)); broken.write("not a png"); broken.close();
+            Harness h(true); QVERIFY(h.window); QVERIFY(enterCombined(h, media, "f.png", 9));
+            QTest::keyClick(h.window, Qt::Key_End); QCOMPARE(h.fileGrid.pathAt(h.selected()), media.file("zz-broken.png"));
+            QTRY_COMPARE_WITH_TIMEOUT(previewState(h), QString("failed"), 15000);
+            auto* panel = named(h.window->contentItem(), "previewState"); QVERIFY(panel); QTRY_VERIFY(panel->isVisible());
+            QCOMPARE(named(panel, "previewStateTitle")->property("text").toString(), QString("zz-broken.png"));
+            QVERIFY(!h.viewer.status().isEmpty());
+            QCOMPARE(named(panel, "previewStateDetail")->property("text").toString(), h.viewer.status());
+        }
+        {   // The browsed folder becomes inaccessible: the preview says so instead of keeping the last photo.
+            QTemporaryDir missing; QVERIFY(missing.isValid());
+            Harness h; QVERIFY(h.window); h.window->resize(1180, 780); h.fill(10, 0); h.window->requestActivate();
+            h.viewer.trigger("view-combined"); QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(), 0);
+            QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(h.window->property("previewFollowsCursor").toBool());
+            h.fileGrid.setDirectory(missing.filePath("gone"));
+            QTRY_COMPARE(previewState(h), QString("inaccessible"));
+            QTRY_VERIFY(named(h.window->contentItem(), "previewState")->isVisible());
+        }
     }
     void multiSelectionDoesNotChangePreview() {
         CombinedFolder media; QVERIFY(media.root.isValid());
