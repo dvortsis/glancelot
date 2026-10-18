@@ -70,6 +70,9 @@ private slots:
     void auditRootRaiseKeepsMarker();
     void auditQueueIsBounded();
     void computerRootsExistBeforePhoto();
+    void reviewLocationsRetainCurrentFolder();
+    void reviewUnmappedUncRemainsAvailable();
+    void reviewExplicitFolderDefinesTraversalRoot();
     void childFoldersUsesNaturalOrderAndOneLevel();
     void lazyListingExpandsOneLevelAtATime();
     void collapseDiscardsChildrenAndReexpandRelists();
@@ -546,4 +549,71 @@ void FolderTreeTests::computerRootsExistBeforePhoto() {
     model.sync({}); QCOMPARE(model.pathAt(0),root);
     QVERIFY(!model.canRaiseRoot());
     QVERIFY(model.pendingLoads()<=FolderTreeModel::kMaxConcurrentLoads);
+}
+
+void FolderTreeTests::reviewLocationsRetainCurrentFolder() {
+    const QString root=QDir::rootPath();
+    const QString parent=QDir(root).filePath("__review_generated__");
+    const QString current=QDir(parent).filePath("photos");
+    FolderTreeModel model;
+    model.setLister([root,parent,current](const fs::path& path,std::stop_token) {
+        glancelot::FolderListing listing;
+        const auto key=QDir::cleanPath(displayPath(path));
+        if(key==QDir::cleanPath(root))listing.folders.push_back(nativePath(parent));
+        else if(key==QDir::cleanPath(parent))listing.folders.push_back(nativePath(current));
+        return listing;
+    });
+    model.browseComputer();
+    model.sync(snapshot(parent,current));
+    QTRY_VERIFY(model.currentRow()>=0);
+    QCOMPARE(QDir::cleanPath(model.pathAt(model.currentRow())),QDir::cleanPath(current));
+    model.browseComputer(); // Direct Locations action: no controller signal or extra sync follows.
+    QTRY_VERIFY(model.currentRow()>=0);
+    QCOMPARE(QDir::cleanPath(model.pathAt(model.currentRow())),QDir::cleanPath(current));
+    QTRY_COMPARE(model.pendingLoads(),0);
+}
+void FolderTreeTests::reviewUnmappedUncRemainsAvailable() {
+#ifndef Q_OS_WIN
+    QSKIP("UNC roots are a Windows-specific syntax; no network share is used by this test.");
+#else
+    const QString root="//review-generated-server/share";
+    const QString current=root+"/photos";
+    FolderTreeModel model;
+    model.setLister([root,current](const fs::path& path,std::stop_token) {
+        glancelot::FolderListing listing;
+        if(QDir::cleanPath(QDir::fromNativeSeparators(displayPath(path)))==root)
+            listing.folders.push_back(nativePath(current));
+        return listing;
+    });
+    model.browseComputer();
+    model.sync(snapshot(root,current));
+    QTRY_VERIFY(model.currentRow()>=0);
+    QCOMPARE(QDir::fromNativeSeparators(model.pathAt(model.currentRow())),current);
+    for(int i=0;i<3;++i) {
+        model.browseComputer();
+        QTRY_VERIFY(model.currentRow()>=0);
+        QCOMPARE(QDir::fromNativeSeparators(model.pathAt(model.currentRow())),current);
+    }
+    QTRY_COMPARE(model.pendingLoads(),0);
+#endif
+}
+
+void FolderTreeTests::reviewExplicitFolderDefinesTraversalRoot() {
+    QTemporaryDir media,config; QVERIFY(media.isValid()&&config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    const QString album=make(media,"album");
+    const QString first=writePng(make(media,"album/a"),"first.png");
+    const QString second=writePng(make(media,"album/b"),"second.png");
+    QVERIFY(!first.isEmpty()&&!second.isEmpty());
+    ViewerController viewer;
+    viewer.openFolder(album);
+    QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.snapshot().current.empty(),15000);
+    QVERIFY(same(viewer.snapshot().current,first));
+    QVERIFY2(same(viewer.snapshot().root,album),"Selecting an album before the first photo narrowed traversal to its first descendant");
+    viewer.nextFolder();
+    QTRY_VERIFY_WITH_TIMEOUT(same(viewer.snapshot().current,second),15000);
+    viewer.openFolder(media.filePath("album/a"));
+    QTRY_VERIFY_WITH_TIMEOUT(same(viewer.snapshot().current,first),15000);
+    QVERIFY2(same(viewer.snapshot().root,album),"Selecting a child folder discarded the selected album traversal root");
+    qunsetenv("GLANCELOT_CONFIG_DIR");
 }
