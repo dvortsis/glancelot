@@ -73,7 +73,13 @@ DirectoryListing listDirectory(const fs::path& directory, const SortSpec& sort, 
                               std::uintmax_t((std::uint64_t(data.nFileSizeHigh) << 32) | data.nFileSizeLow), true};
         if (!admit(std::move(entry))) break;
     } while (FindNextFileW(find, &data));
+    const DWORD enumerationError = GetLastError();
     FindClose(find);
+    // A disconnect or read failure after some entries is not a complete folder listing.
+    // The intentional limit is the only early exit that may publish a partial result.
+    if (!result.truncated && enumerationError != ERROR_NO_MORE_FILES) {
+        result.entries.clear(); result.accessible = false; return result;
+    }
 #else
     std::error_code ec;
     // No skip_permission_denied: an inaccessible folder must not look empty.
@@ -103,7 +109,7 @@ DirectoryListing listDirectory(const fs::path& directory, const SortSpec& sort, 
             if (!admit(std::move(entry))) break;
         }
         it.increment(ec);
-        if (ec) break; // an entry vanished mid-listing or the directory went away: keep what was read
+        if (ec) { result.entries.clear(); result.accessible = false; return result; }
     }
 #endif
     if (!finish(entries, sort, cancel)) return cancelled();

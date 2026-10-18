@@ -125,12 +125,14 @@ int main() {
         fs::create_symlink(d / "real.png", d / "filelink.png", ec);
         if (!ec) {
             anyLink = true;
-            const auto* entry = find(listDirectory(d, {}), "filelink.png");
+            const auto linkedListing = listDirectory(d, {});
+            const auto* entry = find(linkedListing, "filelink.png");
             check(entry && entry->kind == EntryKind::File && entry->link, "a linked .png is a File, never an Image");
             ec.clear();
             fs::create_symlink(d / "gone.png", d / "dangling.png", ec);
             if (!ec) {
-                const auto* dangling = find(listDirectory(d, {}), "dangling.png");
+                const auto danglingListing = listDirectory(d, {});
+                const auto* dangling = find(danglingListing, "dangling.png");
                 check(dangling && dangling->kind == EntryKind::File && dangling->link, "a dangling link stays visible as a linked File");
             }
             std::cout << "file symlink ok\n";

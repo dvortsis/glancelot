@@ -18,8 +18,11 @@ Rectangle {
     property bool inputEnabled: true
     property int liveDelegateCount: 0
     property string noticeText: ""
+    property var resetViewport: null
+    // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
+    readonly property bool compact: height < 420
     // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
-    readonly property int columns: Math.max(1, Math.min(12, Math.floor((grid.width - 24) / 176)))
+    readonly property int columns: Math.max(1, Math.min(12, Math.floor((grid.width - 24) / (compact ? 136 : 176))))
     readonly property int count: grid.count
     readonly property int thumbEdge: 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
@@ -88,6 +91,28 @@ Rectangle {
         else grid.positionViewAtIndex(fileGrid.cursorRow, GridView.Contain)
     }
     function showNotice(text) { noticeText = text; noticeTimer.restart() }
+    function rememberViewport() {
+        resetViewport = null
+        if (!visible || placeCursor || fileGrid.count === 0) return
+        const offset = Math.max(0, grid.contentY - grid.originY)
+        const first = Math.min(fileGrid.count - 1, Math.floor(offset / grid.cellHeight) * columns)
+        const cursorTop = Math.floor(fileGrid.cursorRow / columns) * grid.cellHeight
+        resetViewport = { directory: folderPath, path: fileGrid.pathAt(first), offset: offset % grid.cellHeight,
+                          scroll: offset, cursorVisible: fileGrid.cursorRow >= 0 && cursorTop < offset + grid.height
+                          && cursorTop + grid.cellHeight > offset }
+    }
+    function restoreViewport(saved) {
+        if (!saved || !visible || placeCursor || saved.directory !== folderPath) return
+        if (saved.cursorVisible && fileGrid.cursorRow >= 0) {
+            grid.positionViewAtIndex(fileGrid.cursorRow, GridView.Contain)
+            return
+        }
+        // Mouse-wheel browsing need not move the keyboard cursor. Preserve the visible item when a
+        // scattered refresh resets the model, rather than pulling the viewport back to that cursor.
+        const row = fileGrid.rowOf(saved.path)
+        const offset = row >= 0 ? Math.floor(row / columns) * grid.cellHeight + saved.offset : saved.scroll
+        grid.contentY = grid.originY + Math.max(0, Math.min(offset, grid.contentHeight - grid.height))
+    }
     function activate() {
         const row = fileGrid.cursorRow
         if (!inputEnabled || row < 0) return
@@ -136,8 +161,10 @@ Rectangle {
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
+        function onModelAboutToBeReset() { panel.rememberViewport() }
+        function onModelReset() { Qt.callLater(panel.restoreViewport, panel.resetViewport) }
     }
-    Timer { id: noticeTimer; interval: 6000; onTriggered: panel.noticeText = "" }
+    Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
 
     // Location header: parent route, folder name, item count and multi-selection count.
@@ -145,7 +172,7 @@ Rectangle {
         id: header
         anchors { left: parent.left; right: parent.right; top: parent.top }
         anchors.leftMargin: Theme.gapMd; anchors.rightMargin: Theme.gapMd
-        height: Theme.barHeight
+        height: panel.compact ? Theme.controlHeight + 2 * Theme.gapXs : Theme.barHeight
         RowLayout {
             anchors.fill: parent
             spacing: Theme.gapSm
@@ -233,7 +260,8 @@ Rectangle {
         Label {
             id: truncatedText
             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Theme.gapMd }
-            text: "Showing the first 100,000 items. Open a subfolder to see fewer at a time."
+            // The limit keeps enumeration order, not display order, so this must not claim "the first" items.
+            text: "Showing 100,000 items. This folder has more that are not listed here."
             wrapMode: Text.Wrap
             color: Theme.text
             font.pixelSize: Theme.textSmall
@@ -251,7 +279,8 @@ Rectangle {
         cellWidth: width / panel.columns
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
-        cellHeight: Math.max(160, Math.min(220, cellWidth * 0.75 + 46),
+        cellHeight: Math.max(panel.compact ? 112 : 160,
+                             panel.compact ? Math.min(160, cellWidth * 0.6 + 40) : Math.min(220, cellWidth * 0.75 + 46),
                              Math.ceil(height / Math.max(1, Math.floor(160 / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds

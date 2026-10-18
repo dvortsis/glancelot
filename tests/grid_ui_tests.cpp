@@ -136,6 +136,30 @@ private slots:
         // The source-loaded UI has no generated qmldir, so the token singleton is registered as the app module does.
         qmlRegisterSingletonType(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Theme.qml")), "Glancelot", 1, 0, "Theme");
     }
+    void resetRetainsScrolledViewport() {
+        QTemporaryDir media; QVERIFY(media.isValid());
+        for (int i = 0; i < 400; ++i) {
+            QFile file(media.filePath(QString("file-%1.txt").arg(i, 4, 10, QLatin1Char('0'))));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+        }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.fileGrid.setDirectory(media.path()); h.showGrid();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 400);
+        QTRY_COMPARE(h.selected(), 0);
+        QVERIFY(QMetaObject::invokeMethod(h.view(), "positionViewAtIndex", Q_ARG(int, 200), Q_ARG(int, 0)));
+        QTest::qWait(100);
+        const qreal before = h.view()->property("contentY").toReal(); QVERIFY(before > 1000);
+        QSignalSpy resets(&h.fileGrid, &QAbstractItemModel::modelReset);
+        for (int i = 1; i < 80; i += 2)
+            QVERIFY(QFile::remove(media.filePath(QString("file-%1.txt").arg(i, 4, 10, QLatin1Char('0')))));
+        h.fileGrid.refresh();
+        QTRY_VERIFY(!h.fileGrid.loading() && h.fileGrid.count() == 360);
+        QTest::qWait(100);
+        QCOMPARE(resets.count(), 1); QCOMPARE(h.selected(), 0);
+        const qreal after = h.view()->property("contentY").toReal();
+        qInfo() << "reset viewport before=" << before << "after=" << after;
+        QVERIFY2(after > 1000, "A background reset jumped to an offscreen cursor instead of preserving the browsed viewport");
+    }
     void cleanupTestCase() { listingFixture(-1); }
     void init() {
         config = std::make_unique<QTemporaryDir>();
