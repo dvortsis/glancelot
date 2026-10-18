@@ -151,24 +151,22 @@ Rectangle {
                 if (event.key === Qt.Key_Escape) { panel.dismissed(); event.accepted = true; return }
                 if (currentIndex < 0 || currentIndex >= count) return
                 const row = currentIndex
+                const cell = folderTree.rowInfo(row)
                 const page = Math.max(1, Math.floor(height / Theme.rowHeight) - 1)
                 if (event.key === Qt.Key_Home) { currentIndex = 0; event.accepted = true }
                 else if (event.key === Qt.Key_End) { currentIndex = count - 1; event.accepted = true }
                 else if (event.key === Qt.Key_PageUp) { currentIndex = Math.max(0, row - page); event.accepted = true }
                 else if (event.key === Qt.Key_PageDown) { currentIndex = Math.min(count - 1, row + page); event.accepted = true }
                 else if (event.key === Qt.Key_Right) {
-                    const cell = itemAtIndex(row)
-                    if (cell && cell.expandable && !cell.expanded) folderTree.expand(row)
-                    else if (cell && cell.expanded && row + 1 < count) currentIndex = row + 1
+                    if (cell.expandable && !cell.expanded) folderTree.expand(row)
+                    else if (cell.expanded && row + 1 < count) currentIndex = row + 1
                     event.accepted = true
                 } else if (event.key === Qt.Key_Left) {
-                    const cell = itemAtIndex(row)
-                    if (cell && (cell.expanded || cell.loading)) folderTree.collapse(row)
+                    if (cell.expanded || cell.loading) folderTree.collapse(row)
                     else { const parent = folderTree.parentRow(row); if (parent >= 0) currentIndex = parent }
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                    const cell = itemAtIndex(row)
-                    if (cell) panel.activate(row, cell.depth, cell.expandable, cell.isCurrent, cell.path)
+                    panel.activate(row, cell.depth, cell.expandable, cell.isCurrent, cell.path)
                     event.accepted = true
                 }
             }

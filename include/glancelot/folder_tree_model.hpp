@@ -51,6 +51,8 @@ public:
     Q_INVOKABLE void expand(int row);
     Q_INVOKABLE void collapse(int row);
     Q_INVOKABLE QString pathAt(int row) const;
+    // Read-only keyboard snapshot; actions must not depend on a virtualized delegate existing.
+    Q_INVOKABLE QVariantMap rowInfo(int row) const;
     Q_INVOKABLE int parentRow(int row) const;
     // Test seams: listings in flight, and an injectable lister (default: glancelot::childFolders).
     int pendingLoads() const;
