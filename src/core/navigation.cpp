@@ -89,7 +89,7 @@ bool safePath(const fs::path& p, std::stop_token cancel = {}) {
 struct ScanCancelled {};
 using MetaMap = std::unordered_map<fs::path::string_type, FileMeta>;
 std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel,
-                              std::size_t limit = static_cast<std::size_t>(-1), bool* truncated = nullptr, MetaMap* meta = nullptr) {
+                              std::size_t limit = static_cast<std::size_t>(-1), bool* truncated = nullptr, MetaMap* meta = nullptr, bool includeMountedFolders = false) {
     std::vector<fs::path> result;
     if (cancel.stop_requested() || !safePath(directory, cancel)) return result;
     std::error_code ec;
@@ -100,7 +100,7 @@ std::vector<fs::path> entries(const fs::path& directory, bool directories, std::
         const auto status = it->symlink_status(ec);
         bool sameVolume = true;
 #ifndef _WIN32
-        if (directories && !ec && fs::is_directory(status)) {
+        if (directories && !includeMountedFolders && !ec && fs::is_directory(status)) {
             struct stat parentDevice {}, childDevice {};
             sameVolume = ::stat(directory.c_str(), &parentDevice) == 0
                 && ::stat(path.c_str(), &childDevice) == 0 && parentDevice.st_dev == childDevice.st_dev;
@@ -230,14 +230,14 @@ std::vector<fs::path> sortedImageFiles(const fs::path& directory, const SortSpec
     if (meta) { meta->clear(); meta->reserve(files.size()); for (const auto& file : files) meta->push_back(lookup(file)); }
     return files;
 }
-FolderListing childFolders(const fs::path& directory, std::stop_token cancel, std::size_t limit) {
+FolderListing childFolders(const fs::path& directory, std::stop_token cancel, std::size_t limit, bool includeMountedFolders) {
     FolderListing listing;
     if (cancel.stop_requested()) { listing.cancelled = true; return listing; }
     std::error_code ec;
     // A separate probe without skip_permission_denied distinguishes "cannot list" from "no subfolders".
     if (!safePath(directory, cancel)) { listing.cancelled = cancel.stop_requested(); listing.accessible = false; return listing; }
     { fs::directory_iterator probe(directory, ec); if (ec) { listing.accessible = false; return listing; } }
-    listing.folders = entries(directory, true, cancel, limit, &listing.truncated);
+    listing.folders = entries(directory, true, cancel, limit, &listing.truncated, nullptr, includeMountedFolders);
     if (cancel.stop_requested()) { listing.folders.clear(); listing.cancelled = true; listing.truncated = false; }
     return listing;
 }

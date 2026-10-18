@@ -44,6 +44,9 @@ public:
     int currentRow() const;
     int count() const;
     void sync(const glancelot::NavigationSnapshot& snapshot);
+    // Browser mode exposes filesystem roots independently of the current photo.
+    // sync then marks/reveals the current folder without replacing these roots.
+    Q_INVOKABLE void browseComputer();
     Q_INVOKABLE void toggle(int row);
     Q_INVOKABLE void expand(int row);
     Q_INVOKABLE void collapse(int row);

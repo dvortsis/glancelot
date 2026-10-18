@@ -228,7 +228,7 @@ ApplicationWindow {
             spacing: 4
             Image { Layout.preferredWidth: 28; Layout.preferredHeight: 28; source: "qrc:/brand/icons/app/" + (theme.dark ? "dark" : "light") + "/glancelot-64.png"; fillMode: Image.PreserveAspectFit }
             ActionButton { text: "Open"; onClicked: app.invoke("open"); ToolTip.text: viewer.bindingFor("open") }
-            ActionButton { text: "Folders"; enabled: viewer.fileCount > 0; onClicked: app.invoke("tree"); ToolTip.text: viewer.bindingFor("tree"); Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree" }
+            ActionButton { objectName: "foldersToggle"; text: "Folders"; onClicked: app.invoke("tree"); ToolTip.text: viewer.bindingFor("tree"); Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree" }
             ActionButton { objectName: "gridToggle"; text: app.gridMode ? "Photo" : "Grid"; enabled: viewer.fileCount > 0; onClicked: app.invoke("grid"); ToolTip.text: viewer.bindingFor("grid"); Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid" }
             ActionButton {
                 objectName: "sortButton"

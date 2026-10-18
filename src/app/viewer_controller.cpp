@@ -63,17 +63,6 @@ const std::vector<Command> registry {
     {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
     {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"}, {"quit","Quit","Ctrl+Q"}
 };
-// True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
-bool insideRoot(const QString& root, const QString& folder) {
-    auto key=[](const QString& path){ auto value=QDir::cleanPath(QDir::fromNativeSeparators(path));
-#ifdef Q_OS_WIN
-        value=value.toLower();
-#endif
-        return value; };
-    const QString r=key(root),f=key(folder);
-    if(r.isEmpty()||f.isEmpty())return false;
-    return f==r||(f.startsWith(r)&&(r.endsWith(QLatin1Char('/'))||f.at(r.size())==QLatin1Char('/')));
-}
 QString configDirectory() {
     const QString override = qEnvironmentVariable("GLANCELOT_CONFIG_DIR");
     return override.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) : override;
@@ -525,8 +514,7 @@ void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tr
 void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save({"treePinned"}))d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::openFolder(const QString& value){
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
-    if(folder.isEmpty()||d->nav.snapshot().current.empty())return;
-    if(!insideRoot(displayPath(d->nav.snapshot().root),folder)){d->status="That folder is outside the current browsing root. Use the parent folder control first.";emit stateChanged();return;}
+    if(value.trimmed().isEmpty()||folder.isEmpty())return;
     d->navigationIntents.clear();
     // Newest folder request wins: stop whatever search or step is still running and start from a fresh token.
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};

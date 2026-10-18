@@ -69,6 +69,7 @@ private slots:
     void init() { QTest::failOnWarning(QRegularExpression("QProcess: Destroyed while process.*still running.*")); }
     void auditRootRaiseKeepsMarker();
     void auditQueueIsBounded();
+    void computerRootsExistBeforePhoto();
     void childFoldersUsesNaturalOrderAndOneLevel();
     void lazyListingExpandsOneLevelAtATime();
     void collapseDiscardsChildrenAndReexpandRelists();
@@ -424,18 +425,18 @@ void FolderTreeTests::openFolderWithoutImagesReportsAndKeepsSelection() {
     viewer.openFolder(files.filePath("does-not-exist"));
     QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("cannot be read"), 15000);
     QVERIFY(same(viewer.snapshot().current, start));
-    viewer.openFolder(QFileInfo(files.path()).absoluteDir().absolutePath());   // above the root: never followed
-    QVERIFY(viewer.status().contains("outside the current browsing root"));
-    QVERIFY(same(viewer.snapshot().current, start));
     // A hostile or huge empty tree ends in a bounded search with an honest message, not a hang.
     viewer.openFolder(files.filePath("wide"));
     QTRY_VERIFY2_WITH_TIMEOUT(viewer.status().contains("first 500 folders"), qPrintable(viewer.status()), 30000);
     QVERIFY(same(viewer.snapshot().current, start));
     viewer.openFolder(QString{});                    // ignored
     ViewerController fresh;
-    fresh.openFolder(files.path());                  // nothing is open yet: a folder request cannot invent a root
-    QTest::qWait(100);
-    QVERIFY(fresh.snapshot().current.empty());
+    fresh.openFolder(files.path());                  // folder-first browsing creates a navigation root
+    QTRY_VERIFY_WITH_TIMEOUT(same(fresh.snapshot().current,start) && fresh.imageReady(),15000);
+    QTemporaryDir elsewhere; QVERIFY(elsewhere.isValid());
+    const auto next=writePng(elsewhere.path(), "other.png");
+    fresh.openFolder(elsewhere.path());
+    QTRY_VERIFY_WITH_TIMEOUT(same(fresh.snapshot().current,next) && fresh.imageReady(),15000);
     qunsetenv("GLANCELOT_CONFIG_DIR");
 }
 
@@ -532,3 +533,13 @@ QTEST_MAIN(FolderTreeTests)
 #include "folder_tree_tests.moc"
 
 
+
+void FolderTreeTests::computerRootsExistBeforePhoto() {
+    FolderTreeModel model;
+    model.browseComputer();
+    QVERIFY(model.count()>0);
+    const QString root=model.pathAt(0); QVERIFY(!root.isEmpty());
+    model.sync({}); QCOMPARE(model.pathAt(0),root);
+    QVERIFY(!model.canRaiseRoot());
+    QVERIFY(model.pendingLoads()<=FolderTreeModel::kMaxConcurrentLoads);
+}

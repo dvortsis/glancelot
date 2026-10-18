@@ -55,8 +55,8 @@ struct FolderTreeModel::Private {
     QString rootKey, currentKey, revealKey, rootText;
     quint64 epoch{1}, nextSeq{1};
     int current{-1}, inFlight{};
-    bool canRaise{};
-    Lister lister{[](const fs::path& path, std::stop_token cancel) { return glancelot::childFolders(path, cancel); }};
+    bool canRaise{}, computer{};
+    Lister lister{[](const fs::path& path, std::stop_token cancel) { return glancelot::childFolders(path, cancel, kMaxChildren, true); }};
     // Heap-allocated so a listing that ignores cancellation (dead network share) can be abandoned at teardown
     // instead of freezing the GUI thread; the leaked pool and its thread hold only by-value captures.
     QThreadPool* pool = new QThreadPool;
@@ -222,7 +222,7 @@ struct FolderTreeModel::Private {
     // Expand ancestors of the revealed folder one listed level at a time; stop when the path cannot be followed.
     void processReveal() {
         if (revealKey.isEmpty()) return;
-        if (!isSameOrUnder(revealKey, rootKey)) { revealKey.clear(); return; }
+        if (!computer && !isSameOrUnder(revealKey, rootKey)) { revealKey.clear(); return; }
         int best = -1;
         for (int i = 0; i < int(rows.size()); ++i)
             if (isSameOrUnder(revealKey, rows[std::size_t(i)].key) && (best < 0 || rows[std::size_t(i)].depth > rows[std::size_t(best)].depth)) best = i;
@@ -272,12 +272,41 @@ QHash<int, QByteArray> FolderTreeModel::roleNames() const {
             {LoadingRole, "loading"}, {StateRole, "nodeState"}, {IsCurrentRole, "isCurrent"}};
 }
 
+void FolderTreeModel::browseComputer() {
+    d->computer = true;
+    d->cancelAll(); ++d->epoch;
+    std::vector<Private::Node> explicitRoots;
+    for(const auto& node:d->rows) if(node.depth==0 && node.key.startsWith("//")) {
+        Private::Node root; root.path=node.path; root.key=node.key; root.name=node.name; explicitRoots.push_back(std::move(root));
+    }
+    beginResetModel(); d->rows.clear(); d->current = -1; d->revealKey=d->currentKey;
+    // QDir::drives enumerates logical drive names, without listing their contents.
+    for (const auto& drive : QDir::drives()) {
+        Private::Node node; node.path = drive.absoluteFilePath(); node.key = keyFor(node.path);
+        node.name = QDir::toNativeSeparators(node.path); d->rows.push_back(std::move(node));
+    }
+    for(auto& root:explicitRoots)d->rows.push_back(std::move(root));
+    d->rootKey.clear(); d->canRaise = false;
+    endResetModel(); emit countChanged(); emit rootChanged(); emit currentRowChanged();
+    if (d->rows.size() == 1) d->startLoad(0);
+    d->refreshCurrent(); d->processReveal();
+}
+
 void FolderTreeModel::sync(const glancelot::NavigationSnapshot& snapshot) {
     const QString root = snapshot.root.empty() ? QString{} : displayPath(snapshot.root);
     const QString rootKey = keyFor(root);
-    const bool rootChanged=rootKey!=d->rootKey;
-    if (rootChanged) d->resetRoot(snapshot.root);
+    const bool rootChanged=!d->computer && rootKey!=d->rootKey;
+    if (rootChanged && !d->computer) d->resetRoot(snapshot.root);
     const QString directory = snapshot.directory.empty() ? QString{} : keyFor(displayPath(snapshot.directory));
+    if (d->computer && !directory.isEmpty()) {
+        bool covered=false;
+        for (const auto& node:d->rows) if(node.depth==0 && isSameOrUnder(directory,node.key)) { covered=true; break; }
+        // An explicitly opened UNC share may not have a mapped drive letter. Retain it as a location.
+        if(!covered && !snapshot.root.empty() && count()<kMaxRows) {
+            Private::Node node; node.path=displayPath(snapshot.root); node.key=keyFor(node.path); node.name=node.path;
+            beginInsertRows({},count(),count()); d->rows.push_back(std::move(node)); endInsertRows(); emit countChanged();
+        }
+    }
     if (rootChanged || directory != d->currentKey) {
         d->currentKey = directory;
         d->revealKey = directory;

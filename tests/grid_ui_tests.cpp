@@ -86,6 +86,19 @@ private slots:
         QVERIFY(config->isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8());
     }
+    void foldersButtonWorksWithoutPhoto() {
+        Harness h; QVERIFY(h.window);
+        auto* button=h.window->findChild<QQuickItem*>("foldersToggle"); QVERIFY(button);
+        QVERIFY(button->isEnabled()); QVERIFY(!h.viewer.treeVisible());
+        const auto point=button->mapToScene(QPointF(button->width()/2,button->height()/2)).toPoint();
+        QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,point);
+        QTRY_VERIFY(h.viewer.treeVisible());
+        auto* panel=h.window->findChild<QQuickItem*>("folderTree");QVERIFY(panel);QTRY_VERIFY(panel->isVisible());
+        QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,point);
+        QTRY_VERIFY(!h.viewer.treeVisible());
+        QTest::keyClick(h.window,Qt::Key_B,Qt::ControlModifier);
+        QTRY_VERIFY(h.viewer.treeVisible());
+    }
     void auditReadyCurrentPhotoDoesNotReopen() {
         QTemporaryDir media; QVERIFY(media.isValid());
         QImage image(8,8,QImage::Format_RGB32);image.fill(Qt::red);QVERIFY(image.save(media.filePath("ready.png")));

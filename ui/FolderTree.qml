@@ -55,18 +55,18 @@ Rectangle {
                 Accessible.role: Accessible.Heading
             }
             ToolButton {
-                text: "Parent"
-                enabled: folderTree.canRaiseRoot
+                text: "Locations"
+                enabled: true
                 focusPolicy: Qt.StrongFocus
                 onActiveFocusChanged: panel.focusedControls += activeFocus ? 1 : -1
                 Component.onDestruction: if (activeFocus) panel.focusedControls -= 1
                 implicitHeight: 32
-                Accessible.name: "Show parent folder"
-                Accessible.description: "Widen the browsing root to the parent folder"
+                Accessible.name: "Show filesystem locations"
+                Accessible.description: "Browse available drives and folders"
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
-                ToolTip.text: "Widen the browsing root to the parent folder"
-                onClicked: viewer.raiseRoot()
+                ToolTip.text: "Browse available drives and folders"
+                onClicked: folderTree.browseComputer()
                 background: Rectangle { radius: 4; color: parent.down || parent.hovered || parent.visualFocus ? theme.colors.hover : "transparent"; border.color: parent.visualFocus ? theme.colors.primary : "transparent" }
             }
             ToolButton {
@@ -237,7 +237,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
                 visible: folderTree.count === 0
-                text: "Open a photo to browse its folders."
+                text: "No filesystem locations are available."
                 color: theme.colors.muted
                 font.pixelSize: 12
             }

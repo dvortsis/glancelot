@@ -1,0 +1,12 @@
+.git
+.worktrees
+.tools
+.cache
+build*
+dist
+__pycache__
+*.user
+.env
+secrets
+
+.secrets

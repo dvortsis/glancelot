@@ -29,10 +29,11 @@ std::vector<std::filesystem::path> sortedImageFiles(const std::filesystem::path&
 // Immediate child directories for the folder tree, in the same natural order and with the same link/volume
 // policy as traversal. `accessible` is false when the directory cannot be listed (denied, missing, or reached
 // through a link); `cancelled` results carry no folders. Only one directory level is read.
+// The folder browser may explicitly include mount points; automatic traversal retains its volume boundary.
 // `truncated` means more than `limit` folders exist; the returned folders are then an unordered-source subset
 // (still naturally sorted) so a huge directory cannot make the worker allocate without bound.
 struct FolderListing { std::vector<std::filesystem::path> folders; bool accessible{true}, cancelled{false}, truncated{false}; };
-FolderListing childFolders(const std::filesystem::path& directory, std::stop_token cancel = {}, std::size_t limit = 20000);
+FolderListing childFolders(const std::filesystem::path& directory, std::stop_token cancel = {}, std::size_t limit = 20000, bool includeMountedFolders = false);
 // First eligible image in `directory` or, failing that, in its subfolders in traversal (preorder, natural) order,
 // looking at no more than `maxFolders` directories. `exhausted` means the budget ended the search; `accessible`
 // is false when `directory` itself cannot be read; a cancelled search returns nothing.

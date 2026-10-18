@@ -77,7 +77,9 @@ int main(int argc,char** argv) {
     QObject::connect(&viewer,&ViewerController::filesInvalidated,&filmstrip,[&]{filmstrip.invalidate();});
     // The tree only follows navigation while it is wanted, so a hidden tree never lists folders.
     FolderTreeModel folderTree;
-    QObject::connect(&viewer,&ViewerController::stateChanged,&folderTree,[&]{if(viewer.treeVisible())folderTree.sync(viewer.snapshot());});
+    // Root enumeration does not list contents. Defer listings until the panel is wanted.
+    QObject::connect(&viewer,&ViewerController::stateChanged,&folderTree,[&]{if(viewer.treeVisible()){if(folderTree.count()==0)folderTree.browseComputer();folderTree.sync(viewer.snapshot());}});
+    if(viewer.treeVisible())folderTree.browseComputer();
     QObject::connect(&filmstrip,&FilmstripModel::epochChanged,&thumbnails,[&]{thumbnails.setEpoch(filmstrip.epoch());});
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
