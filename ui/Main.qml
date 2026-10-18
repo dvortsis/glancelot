@@ -17,6 +17,7 @@ ApplicationWindow {
     color: theme.colors.background
     property bool frameless: false
     property bool hudVisible: true
+    property bool gridMode: false
     property bool modalOpen: paletteDialog.opened || settingsDialog.opened || themePicker.opened || openDialog.visible
     property real pointerX: width / 2
     property real pointerY: height / 2
@@ -41,6 +42,11 @@ ApplicationWindow {
 
     function wakeHud() { hudVisible = true; hideHud.restart() }
     function invoke(id) { viewer.trigger(id); wakeHud() }
+    function focusContent() { if (gridMode) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
+    function showCanvas() { gridMode = false; canvas.forceActiveFocus(); wakeHud() }
+    function gridAllowsCommand(id) {
+        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless"].indexOf(id) >= 0
+    }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
         let offset = 0
@@ -53,7 +59,8 @@ ApplicationWindow {
     }
     function handleViewCommand(id) {
         canvas.endLoupe()
-        if (id === "open") openDialog.open()
+        if (id === "grid") { gridMode = !gridMode; wakeHud(); if (!gridMode) canvas.forceActiveFocus() }
+        else if (id === "open") openDialog.open()
         else if (id === "fullscreen") visibility = visibility === Window.FullScreen ? Window.Windowed : Window.FullScreen
         else if (id === "palette") { paletteDialog.open(); commandSearch.forceActiveFocus() }
         else if (id === "settings") settingsDialog.open()
@@ -79,7 +86,7 @@ ApplicationWindow {
             required property var modelData
             sequence: modelData.binding
             context: Qt.WindowShortcut
-            enabled: !app.modalOpen && modelData.binding.length > 0
+            enabled: !app.modalOpen && modelData.binding.length > 0 && (!app.gridMode || app.gridAllowsCommand(modelData.id))
             onActivated: app.invoke(modelData.id)
         }
     }
@@ -88,7 +95,8 @@ ApplicationWindow {
         enabled: !app.modalOpen
         onActivated: {
             canvas.endLoupe()
-            if (app.visibility === Window.FullScreen) app.showNormal()
+            if (app.gridMode) app.showCanvas()
+            else if (app.visibility === Window.FullScreen) app.showNormal()
             else app.wakeHud()
         }
     }
@@ -97,7 +105,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+            if (!app.gridMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -111,7 +119,7 @@ ApplicationWindow {
         ToolTip.visible: hovered && ToolTip.text.length > 0
         ToolTip.delay: 600
     }
-    ThemePicker { id: themePicker; anchors.centerIn: parent; onClosed: canvas.forceActiveFocus() }
+    ThemePicker { id: themePicker; anchors.centerIn: parent; onClosed: app.focusContent() }
     function openThemes() { themePicker.open() }
     // A pinned folder panel makes room instead of covering the photo, except in narrow windows.
     readonly property int treeInset: treePanel.visible && viewer.treePinned && app.width >= 720 ? treePanel.width : 0
@@ -121,7 +129,8 @@ ApplicationWindow {
         anchors { fill: parent; leftMargin: app.treeInset }
         image: viewer.image
         background: "#191919"
-        focus: true
+        focus: !app.gridMode
+        visible: !app.gridMode
         // Keyboard route into the auto-hiding filmstrip: Tab wakes the HUD and focuses the current photo's cell.
         // Shift+Tab: keyboard route into the folder tree (shows it when hidden).
         Keys.onBacktabPressed: event => {
@@ -141,6 +150,7 @@ ApplicationWindow {
     }
     MouseArea {
         id: interaction
+        visible: !app.gridMode
         anchors.fill: canvas
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         hoverEnabled: true
@@ -177,16 +187,26 @@ ApplicationWindow {
             wheel.accepted=true
         }
     }
+    PhotoGrid {
+        id: photoGrid
+        objectName: "photoGrid"
+        anchors { left: parent.left; right: parent.right; top: topPanel.bottom; bottom: bottomPanel.top; leftMargin: app.treeInset }
+        visible: app.gridMode
+        inputEnabled: !app.modalOpen
+        onItemActivated: app.showCanvas()
+        onDismissed: app.showCanvas()
+        onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
+    }
     DropArea {
         anchors.fill: parent
         onEntered: drag => { drag.accepted = drag.hasUrls }
-        onDropped: drop => { if (drop.hasUrls && drop.urls.length) { viewer.open(drop.urls[0].toString()); drop.acceptProposedAction() } }
+        onDropped: drop => { if (drop.hasUrls && drop.urls.length) { viewer.open(drop.urls[0].toString()); app.showCanvas(); drop.acceptProposedAction() } }
         Rectangle { anchors.fill: parent; visible: parent.containsDrag; color: Qt.rgba(app.primaryColor.r, app.primaryColor.g, app.primaryColor.b, 0.15); border.width: 2; border.color: theme.colors.primary }
     }
     Column {
         anchors.centerIn: parent
         spacing: 16
-        visible: viewer.fileCount === 0 && !viewer.loading
+        visible: !app.gridMode && viewer.fileCount === 0 && !viewer.loading
         width: Math.min(460, app.width-64)
         Image { anchors.horizontalCenter: parent.horizontalCenter; width: 160; height: 160; source: "qrc:/brand/mascots/transparent/01_mascot_standing.png"; fillMode: Image.PreserveAspectFit; sourceSize.width: 320; sourceSize.height: 320 }
         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Glancelot"; color: theme.colors.text; font.pixelSize: 38; font.weight: Font.Light }
@@ -199,7 +219,7 @@ ApplicationWindow {
         anchors { left: parent.left; right: parent.right; top: parent.top }
         height: 52
         color: theme.colors.surface
-        visible: app.hudVisible || app.frameless
+        visible: app.gridMode || app.hudVisible || app.frameless
         HoverHandler { id: topBar }
         MouseArea { anchors.fill: parent; enabled: app.frameless; onPressed: app.startSystemMove(); onDoubleClicked: app.visibility === Window.Maximized ? app.showNormal() : app.showMaximized() }
         RowLayout {
@@ -209,10 +229,11 @@ ApplicationWindow {
             Image { Layout.preferredWidth: 28; Layout.preferredHeight: 28; source: "qrc:/brand/icons/app/" + (theme.dark ? "dark" : "light") + "/glancelot-64.png"; fillMode: Image.PreserveAspectFit }
             ActionButton { text: "Open"; onClicked: app.invoke("open"); ToolTip.text: viewer.bindingFor("open") }
             ActionButton { text: "Folders"; enabled: viewer.fileCount > 0; onClicked: app.invoke("tree"); ToolTip.text: viewer.bindingFor("tree"); Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree" }
+            ActionButton { objectName: "gridToggle"; text: app.gridMode ? "Photo" : "Grid"; enabled: viewer.fileCount > 0; onClicked: app.invoke("grid"); ToolTip.text: viewer.bindingFor("grid"); Accessible.description: app.gridMode ? "Return to photo canvas" : "Browse folder as a grid" }
             Label { text: " / "; color: theme.colors.border }
             Label { text: viewer.fileName || "Glancelot"; elide: Text.ElideMiddle; Layout.fillWidth: true; color: theme.colors.text }
             ActionButton { text: app.width > 720 ? "Commands" : "Menu"; onClicked: app.invoke("palette"); ToolTip.text: viewer.bindingFor("palette") }
-            ActionButton { text: "Themes"; onClicked: app.openThemes(); ToolTip.text: "Choose from 80 theme variants" }
+            ActionButton { visible: app.width >= 640; text: "Themes"; onClicked: app.openThemes(); ToolTip.text: "Choose from 80 theme variants" }
             ActionButton { text: "Settings"; onClicked: app.invoke("settings"); ToolTip.text: viewer.bindingFor("settings") }
             ActionButton { text: "Exit fullscreen"; visible: app.visibility === Window.FullScreen; onClicked: app.invoke("fullscreen") }
             ActionButton { text: "Decorate"; visible: app.frameless; onClicked: app.invoke("frameless") }
@@ -224,7 +245,7 @@ ApplicationWindow {
         objectName: "filmstrip"
         compact: app.height < 480
         anchors { left: parent.left; right: parent.right; top: topPanel.bottom }
-        visible: (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
+        visible: !app.gridMode && (app.hudVisible || app.frameless) && viewer.filmstripVisible && filmstrip.count > 0
         onItemActivated: canvas.forceActiveFocus()
     }
     FolderTree {
@@ -238,27 +259,31 @@ ApplicationWindow {
         }
         width: implicitWidth
         visible: viewer.treeVisible && (viewer.treePinned || app.hudVisible || app.frameless)
-        onDismissed: canvas.forceActiveFocus()
+        onDismissed: app.focusContent()
     }
     Rectangle {
         id: bottomPanel
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         height: 58
-        visible: app.hudVisible
+        visible: app.gridMode || app.hudVisible
         color: theme.colors.surface
         HoverHandler { id: bottomHover }
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 14; anchors.rightMargin: 14
             spacing: 8
-            ActionButton { text: "Previous"; enabled: viewer.fileCount > 0; onClicked: app.invoke("previous"); ToolTip.text: viewer.bindingFor("previous") }
-            Label { text: viewer.fileCount > 0 ? viewer.currentIndex + " / " + viewer.fileCount : "No photo"; color: app.muted; font.pixelSize: 12 }
-            ActionButton { text: "Next"; enabled: viewer.fileCount > 0; onClicked: app.invoke("next"); ToolTip.text: viewer.bindingFor("next") }
+            ActionButton { text: "Previous"; visible: !app.gridMode; enabled: viewer.fileCount > 0; onClicked: app.invoke("previous"); ToolTip.text: viewer.bindingFor("previous") }
+            Label { visible: !app.gridMode; text: viewer.fileCount > 0 ? viewer.currentIndex + " / " + viewer.fileCount : "No photo"; color: app.muted; font.pixelSize: 12 }
+            ActionButton { text: "Next"; visible: !app.gridMode; enabled: viewer.fileCount > 0; onClicked: app.invoke("next"); ToolTip.text: viewer.bindingFor("next") }
+            Label { visible: app.gridMode; text: photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " / " + filmstrip.count + " selected" : "No selection"; color: app.muted; font.pixelSize: 12 }
+            Label { visible: app.gridMode && app.width > 680; text: "Arrows select · Enter opens"; color: app.muted; font.pixelSize: 12 }
+            ActionButton { visible: app.gridMode; text: "Open selected"; enabled: photoGrid.selectedIndex >= 0; onClicked: photoGrid.activate() }
+            ActionButton { visible: app.gridMode; text: "Back to photo"; onClicked: app.showCanvas() }
             Item { Layout.fillWidth: true }
-            Label { visible: app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; color: app.muted; font.pixelSize: 12 }
-            ActionButton { text: Math.round(canvas.zoom*100) + "%"; enabled: viewer.imageWidth > 0; onClicked: app.invoke("actual"); ToolTip.text: "Actual size · one image pixel per display pixel" }
-            ActionButton { text: "Fit"; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); ToolTip.text: "Fit without enlarging" }
-            ActionButton { text: "Rotate"; visible: app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate") }
+            Label { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; color: app.muted; font.pixelSize: 12 }
+            ActionButton { visible: !app.gridMode; text: Math.round(canvas.zoom*100) + "%"; enabled: viewer.imageWidth > 0; onClicked: app.invoke("actual"); ToolTip.text: "Actual size · one image pixel per display pixel" }
+            ActionButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); ToolTip.text: "Fit without enlarging" }
+            ActionButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate") }
         }
     }
     Rectangle {
@@ -267,15 +292,15 @@ ApplicationWindow {
         height: statusText.implicitHeight+20
         radius: 4
         color: theme.colors.surface
-        visible: viewer.loading || canvas.rendererError.length > 0 || (viewer.status.length > 0 && app.hudVisible)
+        visible: !app.gridMode && (viewer.loading || canvas.rendererError.length > 0 || (viewer.status.length > 0 && app.hudVisible))
         Text { id: statusText; anchors.centerIn: parent; width: Math.min(implicitWidth,app.width-app.treeInset-80); text: canvas.rendererError || viewer.status; color: canvas.rendererError ? theme.colors.danger : theme.colors.muted; wrapMode: Text.Wrap; font.pixelSize: 12 }
     }
     FileDialog {
         id: openDialog
         title: "Open a photo"
         nameFilters: ["Photographs (*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG)", "All files (*)"]
-        onAccepted: { viewer.open(selectedFile.toString()); canvas.forceActiveFocus() }
-        onRejected: canvas.forceActiveFocus()
+        onAccepted: { viewer.open(selectedFile.toString()); app.showCanvas() }
+        onRejected: app.focusContent()
     }
     Dialog {
         id: paletteDialog
@@ -285,7 +310,7 @@ ApplicationWindow {
         height: Math.min(570,app.height-60)
         modal: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        onClosed: { commandSearch.text=""; canvas.forceActiveFocus() }
+        onClosed: { commandSearch.text=""; app.focusContent() }
         ColumnLayout {
             anchors.fill: parent
             spacing: 12
@@ -325,7 +350,7 @@ ApplicationWindow {
         height: Math.min(680,app.height-48)
         modal: true
         standardButtons: Dialog.Close
-        onClosed: canvas.forceActiveFocus()
+        onClosed: app.focusContent()
         ScrollView {
             anchors.fill: parent
             clip: true
