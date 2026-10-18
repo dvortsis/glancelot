@@ -109,6 +109,7 @@ class ThumbnailTests final : public QObject {
     static QString decoder() { return QString::fromUtf8(GLANCELOT_DECODER_PATH); }
 private slots:
     void init() { QTest::failOnWarning(QRegularExpression("QProcess: Destroyed while process.*still running.*")); }
+    void oversizedWorkerRequestIsRejectedBeforeParsing();
     void validJpegAndPngAreBoundedAndKeepAspect();
     void smallImagesAreNotUpscaled();
     void exifOrientationAffectsThumbnailAspect_data();
@@ -130,6 +131,18 @@ private slots:
     void thumbnailIdRoundTripsAwkwardPaths();
     void providerDeliversAndCancels();
 };
+
+void ThumbnailTests::oversizedWorkerRequestIsRejectedBeforeParsing() {
+    QProcess worker;
+    worker.start(decoder(),{"--thumbnail-server"});QVERIFY(worker.waitForStarted(10000));
+    // Place the newline in the same final read chunk that crosses the 128KiB bound.
+    QByteArray request="{\"id\":0,\"path\":\"\",\"edge\":16,\"padding\":\"";
+    request+=QByteArray(131100-request.size()-3,'x');request+="\"}\n";
+    QCOMPARE(request.size(),131100);
+    QCOMPARE(worker.write(request),qint64(request.size()));worker.closeWriteChannel();
+    QVERIFY(worker.waitForFinished(10000));
+    QVERIFY2(worker.readAllStandardOutput().isEmpty(),"oversized request reached JSON parsing instead of being rejected");
+}
 
 void ThumbnailTests::validJpegAndPngAreBoundedAndKeepAspect() {
     QTemporaryDir dir; QVERIFY(dir.isValid());
