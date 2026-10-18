@@ -148,7 +148,7 @@ ApplicationWindow {
     }
     Shortcut {
         sequence: "Escape"
-        enabled: !app.modalOpen && !app.editingText
+        enabled: !app.modalOpen && (app.layoutEditing || !app.editingText)
         onActivated: {
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
