@@ -111,6 +111,8 @@ const std::vector<Command> registry {
     // FOLDER-HISTORY-01 (F001)
     {"navigate-back", "Go back to previous folder", "Alt+Left"},
     {"navigate-forward", "Go forward to next folder", "Alt+Right"},
+    // SHORTCUTS-HELP-01 (F056)
+    {"shortcuts-help", "Keyboard shortcuts cheat sheet", "F1"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
