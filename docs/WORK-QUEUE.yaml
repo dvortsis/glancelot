@@ -2,7 +2,10 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock:
+  holder: codex-lead
+  branch: codex/fs-watch-01
+  started: 2026-10-19T15:11:48.188555+00:00
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -540,7 +543,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: ready
+    state: implementing
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
