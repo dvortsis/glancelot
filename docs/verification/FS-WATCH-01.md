@@ -157,3 +157,20 @@ not claimed to pinpoint a mid-copy kill; the independent host supplies that proo
 The earlier full gates above precede this prerequisite and new regression. Full
 Windows and Docker checks must run again on the resulting source; no new pass is
 claimed yet.
+
+## New-source native attempt stopped for serialization
+
+Source b9fa03b (reviewed worker prerequisite plus whole-controller regression)
+built successfully. Its required full Windows run passed tests1-9, then was
+intentionally stopped during folder_grid after process inventory confirmed a
+concurrent Claude F014 full CTest/grid suite. Both use the system clipboard; this
+partial attempt cannot qualify a native gate. Only the owned FS-WATCH CTest tree
+was terminated, and follow-up inventory found no owned test remaining. Other lanes
+were not stopped or edited. Logs .cache/fs-watch-worker-windows.log and
+fs-watch-worker-windows-cancel-reason.txt preserve the attempt.
+
+The imported worker's actual SHA256 matches the independently compiled candidate
+df2390c99477a005240cb14d3c1fa3f075e17df8b9e1e027ccf2f1bfa0c9c650.
+Wait for a verified free native slot before a fresh full Windows gate; rerun Docker
+on this new source too. These gates, whole-controller cancellation result and
+independent Claude FS-WATCH review remain pending. The goal and packet stay open.
