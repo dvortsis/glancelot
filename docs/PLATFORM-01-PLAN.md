@@ -111,3 +111,46 @@ repeated-artifact comparisons and explicit hardware limitations in
 integrates under the queue lock and reruns full checks on the integrated commit.
 A package smoke in a clean container qualifies only that environment. Physical
 CANVAS-UI/DECODE-01 gates stay open until their real-hardware evidence is measured.
+
+## Frozen Windows qualification-fixture prerequisite, October19
+
+Lead freezes the test-only prerequisite assessed by independent Claude64f0af0.
+That review supports the design, not unimplemented code or a passing gate; the
+Windows250ms oracle remains failed and unchanged. Implement within the current
+FS-WATCH worktree as a shared qualification prerequisite, not a second active
+Codex implementation. Product src/app/platform_integration.cpp and public headers
+remain byte-unchanged; no Gemini adapter feature is taken over.
+
+Permitted files: tests/platform_integration_tests.cpp,
+tests/platform_integration_test_adapter.cpp, tests/platform_launcher_stub.cpp,
+tests/native_platform_fixture.hpp, and evidence/docs. The lead owns prepared
+cmake/PlatformTestFixtures.cmake and its root CMake inclusion. Enable it under
+lock on the feature branch only after real source files exist. Windows must use
+the exact production CPP in the private test TU, after Windows/Shell headers and
+a typed substitution of only SHOpenFolderAndSelectItems. Do not also link the
+production object in that test. Linux keeps its current real-library/test path.
+
+The GUI-subsystem stub has no QCoreApplication/event loop/window and captures
+actual UTF16 argv, cwd, its module path and pid into bounded per-invocation JSON.
+Do not install it. Fake explorer/wt/PowerShell executables may exist only in a
+unique temporary test application directory, never the normal product/build dir.
+A copied test runner in that private directory addresses application-directory
+search precedence; copied helpers find the actual project Qt DLLs through a
+process-only environment. Verify canary self/module paths before positive calls.
+Restore CWD/environment and bound child lifetime below the existing30s CTest
+deadline, including parent-abort cleanup. Preserve the30s test timeout.
+
+Capture Shell PIDLs by semantic path/equality, not raw bytes; validate folder/child
+and flags, successful selection and native failure/Explorer fallback, balanced
+known STA initialization, directory and file-to-parent targets, wt/PowerShell
+fallback, Unicode/non-BMP/spaces/single quotes and missing-launcher failure. Check
+actual captured argv, not reconstructed command strings. A missing helper must not
+accidentally launch a real system program; validate native search results first.
+Assert owned helpers exit before cleanup. Global new-process counts alone do not
+prove test ownership and must not authorize stopping unrelated apps.
+
+No source/performance assertion is skipped or relaxed. A captured request is not
+proof of visible Explorer selection or terminal presentation. Independently review
+and execute the implemented fixture, then rerun required full Windows/Docker gates
+and integrated checks. This fixes future desktop side effects; it does not establish
+the cause of the independent responsiveness noise floor.
