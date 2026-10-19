@@ -39,11 +39,13 @@ lead/Gemini owner resolution. Do not omit the test to claim a green gate. A loca
 ignored replay-only Dockerfile produces the runtime separately from that failed gate.
 Latest full Windows check 14/15: platform passes, grid 180s timeout under concurrent
 lane builds. A targeted diagnostic also timed out at 180s during overlapping lane tests.
-The final rebuilt full suite is running; no timeout was raised.
+The rebuilt full suite also timed out at 180s (14/15, 330.43s). A subsequent
+file-logged grid diagnostic passed 73/0 with 4 skips in 154.937s under the same
+180-second bound. No timeout or assertion was changed.
 
 Linux 50-capture replay passed (16,527 spans, zero drops, source hashes unchanged).
 The rebuilt Windows full suite remains 14/15 due to grid 180s timeout; the changed
-deletion/Stop test passes 3/3 in 1927ms. Remaining: grid diagnosis and full gates,
+deletion/Stop test passes 3/3 in 1927ms. Remaining: integrated full gates,
 stage-boundary review, full gates, independent approval, serial integration, then
 checks on the integrated commit. PLATFORM-01 proposal is separate and cannot become
 implementation until the lead freezes its packet and queue entry.

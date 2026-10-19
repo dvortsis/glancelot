@@ -345,7 +345,24 @@ grid_ui_tests.exe deleteBatchProgressStopAndPartialFailureResults -o [local-log]
 Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 1927ms
 ```
 
-A full grid diagnostic retains per-case file output with the same 180-second bound;
-its result is pending. The full-matrix native workflow has passed its action/trace
+The full grid diagnostic completed with per-case file output under the same
+180-second bound: 73 passed, 0 failed, 4 skipped, 154937ms. It used the rebuilt
+candidate, offscreen/software rendering and no assertion/timeout changes. This is
+a separate diagnostic pass, not a relabelled passing scripts/build.ps1 full run. The full-matrix native workflow has passed its action/trace
 checks and is completing the post-run source-hash verification. Full-matrix strict
 manifest verification is also pending. These live jobs have not been restarted.
+
+
+The grid diagnostic used Python subprocess.run(timeout=180) around the actual
+QtTest executable with -v1 -o [local-file],txt because Windows GUI-subsystem test
+stdout was unavailable in CTest. Its original relative executable path failed to
+launch; the corrected diagnostic resolved the existing executable path absolutely.
+Only the successful launched test run above is counted as evidence. The four skips
+are retained; this does not qualify GPU canvas output or opt-in captures.
+
+For the platform owner: a deterministic Linux process-launch harness could use
+disposable child executables that record exact argument vectors/working directories,
+then assert directory-vs-file targets, Unicode/space paths, fallback selection and
+launch failures. Such tests must verify actual captured requests, rather than merely
+returning success. Native desktop integration still needs separate real-desktop
+checks. This is a proposed owner-controlled fix, not implemented in the PERF lane.
