@@ -502,6 +502,39 @@ Rectangle {
                             font.letterSpacing: 0.4
                         }
                     }
+                    // F014 badges from data the grid already has: the photo type, and a failed preview. Words, not colour
+                    // alone; they sit on the left edge so the link badge (right) and the "Viewing" tag (bottom) stay clear.
+                    Rectangle {
+                        objectName: "gridTypeBadge"
+                        visible: cell.image && cell.extension.length > 0 && preview.width >= 96
+                        anchors { left: parent.left; top: parent.top; margins: Theme.gapXs }
+                        width: typeLabel.implicitWidth + 2 * Theme.gapXs
+                        height: Theme.iconSize + Theme.gapXs
+                        radius: Theme.radiusSmall
+                        color: Theme.surface
+                        border.width: Theme.borderWidth
+                        border.color: Theme.border
+                        Accessible.ignored: true // the extension is already in the cell's description
+                        Label { id: typeLabel; anchors.centerIn: parent; text: cell.extension; color: Theme.text; font.pixelSize: Theme.textCaption; font.weight: Font.Medium; font.letterSpacing: 0.4 }
+                    }
+                    Rectangle {
+                        objectName: "gridErrorBadge"
+                        visible: cell.previewFailed
+                        anchors { left: parent.left; bottom: parent.bottom; margins: Theme.gapXs }
+                        width: errorRow.implicitWidth + 2 * Theme.gapXs
+                        height: Theme.iconSize + Theme.gapXs
+                        radius: Theme.radiusSmall
+                        color: Theme.surface
+                        border.width: Theme.borderWidth
+                        border.color: Theme.danger
+                        RowLayout {
+                            id: errorRow
+                            anchors.centerIn: parent
+                            spacing: Theme.gapXxs
+                            UiIcon { name: "alert"; size: 12; lineWidth: 2; color: Theme.danger }
+                            Label { text: "No preview"; visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
+                        }
+                    }
                     Rectangle { // link badge
                         objectName: "gridLinkBadge"
                         visible: cell.isLink

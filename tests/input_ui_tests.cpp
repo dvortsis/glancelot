@@ -372,6 +372,33 @@ private slots:
         QTRY_VERIFY(!namedAll(h.window, "gridThumb0").isEmpty());
     }
 
+    // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
+    void gridBadgesAreLabelledAndDoNotOverlap() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 2);
+        QTRY_VERIFY(!namedAll(h.window, "gridTypeBadge").isEmpty());
+        for (auto* badge : namedAll(h.window, "gridTypeBadge")) {
+            QVERIFY(badge->isVisible());
+            auto* label = badge->findChild<QQuickItem*>(QString(), Qt::FindChildrenRecursively);
+            QVERIFY(label);
+            QCOMPARE(label->property("text").toString(), QString("PNG"));
+        }
+        for (auto* badge : namedAll(h.window, "gridErrorBadge")) QVERIFY(!badge->isVisible()); // previews load here
+        QQuickItem* cell = nullptr;
+        for (auto* c : namedAll(h.window, "photoGridCell")) if (c->property("index").toInt() == 0) cell = c;
+        QVERIFY(cell);
+        cell->setProperty("previewFailed", true);
+        QTRY_VERIFY(!cell->findChildren<QQuickItem*>("gridErrorBadge").isEmpty() && cell->findChildren<QQuickItem*>("gridErrorBadge").first()->isVisible());
+        // The badges stack on the left edge: the error badge never overlaps the type badge above it.
+        auto* error = cell->findChildren<QQuickItem*>("gridErrorBadge").first();
+        auto* type = cell->findChildren<QQuickItem*>("gridTypeBadge").first();
+        const QRectF e(error->mapToScene(QPointF(0, 0)), QSizeF(error->width(), error->height()));
+        const QRectF t(type->mapToScene(QPointF(0, 0)), QSizeF(type->width(), type->height()));
+        QVERIFY2(!e.intersects(t), "badges overlap");
+        cell->setProperty("previewFailed", false);
+    }
+
     // F049: focus mode hides every bar and panel for the session, leaves the saved layout alone, and Escape returns them.
     void focusModeHidesChromeAndEscapeRestoresIt() {
         Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
