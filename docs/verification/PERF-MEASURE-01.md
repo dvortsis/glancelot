@@ -1,6 +1,6 @@
 # PERF-MEASURE-01 implementation evidence
 
-Status: **review candidate**, not approved, not integrated. Branch `codex/perf-measure`,
+Status: **independently approved candidate 8e2b1fd**, not integrated. Branch `codex/perf-measure`,
 worktree `.worktrees/codex-perf-measure`, build `build-codex-perf-measure`.
 Contract base: main `76da49e`; public `perf_trace.hpp` is unchanged.
 Authoritative full scope: `docs/AGENT-LANES-PLAN.md` and `docs/PERF-MEASURE-PLAN.md`.
@@ -45,6 +45,17 @@ and decode use their request generations. No cross-process clock origins are sub
 not mean a cold filesystem, NAS, shader or OS cache. A cache miss remains distinct
 from a cold run. Full-image explicit opens deliberately bypass the retained cache;
 only real thumbnail memory-cache hits set CacheHit. Replay must exercise both.
+
+Independent Claude review found that the current `cache_lookup` stage also wraps
+the viewer's `cacheKey(file)` source stat and revision-key construction. That path
+never reads the retained full-image cache, so those non-hit samples are not actual
+cache searches. The combined stage's miss count, percentiles and totals must not
+be used as a cache hit-rate or pure lookup-latency measurement. Only the hit count
+denotes real ThumbnailService cache hits; the miss split mixes thumbnail misses
+with viewer key preparation. This applies to every baseline table below. The
+requested caveat is recorded here and in tools/perf/README.md; cache policy and
+the frozen Stage enum are unchanged. See the independently authored
+PERF-MEASURE-01-CLAUDE-REVIEW.md for exact checks, conditions and limitations.
 
 ## Windows evidence
 

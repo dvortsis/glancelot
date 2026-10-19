@@ -1,7 +1,7 @@
 # Local performance measurement tools
 
-This is PERF-MEASURE-01 tooling. The packet remains implementing until replay,
-worker-phase evidence, cross-lane review and integrated checks are complete.
+This is PERF-MEASURE-01 tooling. Candidate 8e2b1fd has independent Claude review
+approval; integration and checks on the integrated commit remain required.
 Nothing uploads data or changes the viewer cache/scheduler policy.
 
 ## Build and generate fixtures
@@ -65,6 +65,16 @@ physical display latency. Startup ends at a Qt image frame-swap notification, no
 proof of calibrated/physically correct presentation. A hidden/unexposed window may
 successfully decode without any upload or frame-swap spans. Cold currently denotes
 process-first full decode/startup, not a cold filesystem/server/shader cache.
+
+The current cache_lookup stage mixes two operations: ThumbnailService performs
+real memory-cache lookups, while explicit full-image opens only stat the source
+and build a revision key inside that span. The viewer never reads its retained
+image cache on this path. Only real thumbnail hits set CacheHit, but the miss
+split includes viewer key preparation as well as real thumbnail misses. Therefore
+the combined count, miss count, percentiles and totals cannot establish a cache
+hit rate or pure cache-lookup latency. Interpret existing baseline cache_lookup
+tables with this limitation; do not use them to claim cache effectiveness.
+This caveat changes no cache policy (CACHE-01 remains Gemini-owned).
 
 ```powershell
 ./build-codex-perf-measure/perf_trace_tests.exe
