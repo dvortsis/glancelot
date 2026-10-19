@@ -155,7 +155,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: review
     branch: agent/clipboard-ops
     worktree: .worktrees/clipboard-ops
     build: build-clipboard-ops
