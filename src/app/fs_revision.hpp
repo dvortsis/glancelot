@@ -122,7 +122,10 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
         readable=readable&&revision.known;
         result.entries.insert(key(name),Entry{name,revision});
     }
-    result.complete=readable&&!error&&!stop.stop_requested();
+    // A membership change during enumeration makes rename/deletion inference
+    // unsafe even when every individual probe succeeded.
+    const auto finalRevision=probe(path);
+    result.complete=readable&&finalRevision==result.revision&&!error&&!stop.stop_requested();
     result.cancelled=stop.stop_requested();
     return result;
 }

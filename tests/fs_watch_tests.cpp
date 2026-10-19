@@ -56,6 +56,29 @@ private slots:
         for(const auto& value:accepted)QCOMPARE(value.scope,newest);
         QVERIFY(monitor.stats().snapshots<=4);QVERIFY(monitor.stats().maxHandles<=3);
     }
+    void deferredBaselineRetainsOriginalRenameIdentity() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());
+        const auto a=dir.filePath("a.png"),b=dir.filePath("b.png"),c=dir.filePath("c.png");
+        QVERIFY(write(a,"generated original"));
+        const auto identity=fs_watch::probe(fs_watch::native(a)).identity();
+        fs_watch::MonitorOptions options;options.manualBaseline=true;
+        QVector<fs_watch::Observation> values;
+        fs_watch::Monitor monitor(this,[&](auto value){values.push_back(std::move(value));},options);
+        monitor.setScope(dir.path(),a);
+        QTRY_VERIFY_WITH_TIMEOUT(!values.isEmpty()&&values.last().after->complete,5000);
+        monitor.acknowledge(values.last());
+        QVERIFY(QFile::rename(a,b));monitor.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(values.last().after->entries.contains(fs_watch::key(b)),5000);
+        if(!identity.isEmpty())QCOMPARE(values.last().renamedImage,b);
+        // Simulate a controller busy with navigation: this delivery is not yet
+        // reconciled, so the next worker result must still match from a.
+        QVERIFY(QFile::rename(b,c));monitor.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(values.last().after->entries.contains(fs_watch::key(c)),5000);
+        QVERIFY(values.last().before);
+        QVERIFY(values.last().before->entries.contains(fs_watch::key(a)));
+        if(!identity.isEmpty())QCOMPARE(values.last().renamedImage,c);
+        monitor.acknowledge(values.last());QVERIFY(monitor.stats().maxHandles<=3);
+    }
     void establishedWatchLossAndRearm() {
         QTemporaryDir dir;QVERIFY(dir.isValid());
         auto gate=std::make_shared<std::atomic_bool>(true);
@@ -140,6 +163,23 @@ private slots:
             QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()!=a||!viewer.directoryError().isEmpty(),10000);
         }
     }
+    void renamedDirectorySurvivesOldPathReuse() {
+        QTemporaryDir root;QVERIFY(root.isValid());QVERIFY(QDir(root.path()).mkdir("album"));
+        const auto album=root.filePath("album"),moved=root.filePath("moved");
+        const auto source=album+"/photo.png";QVERIFY(png(source,Qt::red));
+        const auto identity=fs_watch::probe(fs_watch::native(album)).identity();
+        const auto original=hash(source);
+        ViewerController viewer;viewer.open(source);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),10000);QTest::qWait(250);
+        QVERIFY(QDir().rename(album,moved));QVERIFY(QDir(root.path()).mkdir("album"));
+        QVERIFY(png(source,Qt::blue));
+        if(!identity.isEmpty()) {
+            QTRY_COMPARE_WITH_TIMEOUT(viewer.filePath(),moved+"/photo.png",10000);
+            QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),10000);
+            QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));
+        }
+        QCOMPARE(hash(moved+"/photo.png"),original);
+    }
     void selectedNoncurrentRenameAndCurrentRename() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto a=dir.filePath("a.png"),b=dir.filePath("b.png"),c=dir.filePath("c.png");
         QVERIFY(png(a,Qt::red));QVERIFY(png(b,Qt::blue));
@@ -154,6 +194,27 @@ private slots:
         const auto moved=dir.filePath("renamed-current.png");const auto original=hash(a);
         const auto currentIdentity=fs_watch::probe(fs_watch::native(a)).identity();QVERIFY(QFile::rename(a,moved));
         if(!currentIdentity.isEmpty())QTRY_COMPARE_WITH_TIMEOUT(viewer.filePath(),moved,10000);
+        QCOMPARE(hash(moved),original);
+    }
+    void renamedCurrentSurvivesOldPathReuse() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());
+        const auto source=dir.filePath("current.png"),moved=dir.filePath("renamed.png");
+        QVERIFY(png(source,Qt::red));
+        const auto identity=fs_watch::probe(fs_watch::native(source)).identity();
+        ViewerController viewer;DirectoryEntryModel grid;
+        file_grid_wiring::followViewer(viewer,grid);grid.setActive(true);viewer.open(source);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!grid.loading()&&grid.count()==1,10000);
+        grid.select(grid.rowOf(source));QTest::qWait(250);
+        const auto original=hash(source);
+        QVERIFY(QFile::rename(source,moved));QVERIFY(png(source,Qt::blue));
+        if(!identity.isEmpty()) {
+            QTRY_COMPARE_WITH_TIMEOUT(viewer.filePath(),moved,10000);
+            QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!grid.loading()&&grid.count()==2,10000);
+            QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));
+            QCOMPARE(grid.selectedPaths(),QStringList{moved});
+        } else {
+            QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,10000);
+        }
         QCOMPARE(hash(moved),original);
     }
     void currentCaseOnlyRenameRetainsNavigation() {

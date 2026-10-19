@@ -82,6 +82,7 @@ struct Listing {
 Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, bool hidden, std::stop_token cancel, std::size_t limit,
                      const fs_watch::Snapshot& prior) {
     Listing result;
+    const auto directoryRevision=fs_watch::probe(nativePath(directory));
     auto listing = glancelot::listDirectory(nativePath(directory), sort, hidden, cancel, limit);
     result.accessible = listing.accessible; result.cancelled = listing.cancelled; result.truncated = listing.truncated;
     if (listing.cancelled || cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
@@ -90,8 +91,9 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     result.rows.reserve(listing.entries.size());
     result.index.reserve(qsizetype(listing.entries.size()));
     result.identities.directory=directory;
-    result.identities.revision=fs_watch::probe(nativePath(directory));
-    result.identities.complete=listing.accessible&&!listing.truncated;
+    result.identities.revision=directoryRevision;
+    result.identities.complete=listing.accessible&&!listing.truncated&&directoryRevision.known&&
+        directoryRevision.directory&&!directoryRevision.link;
     std::size_t identityBytes=0;
     for (const auto& entry : listing.entries) {
         if (cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
@@ -112,6 +114,8 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
         result.index.insert(row.key, int(result.rows.size()));
         result.rows.push_back(std::move(row));
     }
+    result.identities.complete=result.identities.complete&&
+        fs_watch::probe(nativePath(directory))==directoryRevision;
     const auto directoryIdentity=result.identities.revision.identity();
     result.renamedDirectory=keyFor(prior.directory)!=keyFor(directory)&&!directoryIdentity.isEmpty()&&
         directoryIdentity==prior.revision.identity();

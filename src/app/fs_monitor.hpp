@@ -19,9 +19,11 @@ struct Observation {
     std::shared_ptr<const Snapshot> before,after,parentBefore,parentAfter;
     bool fileEvent{}, forced{}, coverage{};
     Revision imageBefore,imageAfter;
+    QString renamedImage,renamedDirectory;
 };
 struct MonitorOptions {
     bool registerNative{true};
+    bool manualBaseline{};
     std::shared_ptr<std::atomic_bool> registrationGate;
     std::function<Snapshot(const QString&,std::stop_token)> read=[](const QString& path,std::stop_token stop){return snapshot(path,stop);};
 };
@@ -115,15 +117,29 @@ class Monitor {
                 // scan cannot turn periodic recovery into a continuously busy loop.
                 lastProbe=clock.elapsed();
                 retryDelay=coverage&&current->complete?2000:std::min<qint64>(30000,retryDelay*2);
+                std::shared_ptr<const Snapshot> before,parentBefore;
+                Revision imageBefore;
+                {
+                    std::lock_guard guard(state->mutex);
+                    if(state->closed)return;
+                    if(state->acceptedScope==scope.scope) {
+                        before=state->accepted;parentBefore=state->acceptedParent;imageBefore=state->acceptedImage;
+                    }
+                }
+                Observation result{scope.scope,++revision,scope.directory,scope.image,
+                    before,current,parentBefore,currentParent,fileEvent,forced,coverage};
+                result.imageBefore=imageBefore;result.imageAfter=currentImage;
+                // Identity matching is worker work too. Retain only the two paths
+                // needed by the controller, not another unbounded history/map.
+                if(before&&!scope.image.isEmpty())
+                    result.renamedImage=renames(*before,*current).value(key(scope.image));
+                if(parentBefore)
+                    result.renamedDirectory=renames(*parentBefore,*currentParent).value(key(scope.directory));
+                fileEvent=forced=false;
                 std::lock_guard guard(state->mutex);
                 if(state->closed)return;
                 ++state->stats.snapshots;
                 state->stats.maxHandles=std::max(state->stats.maxHandles,int(registered.size()));
-                const bool same=state->acceptedScope==scope.scope;
-                Observation result{scope.scope,++revision,scope.directory,scope.image,
-                    same?state->accepted:nullptr,current,same?state->acceptedParent:nullptr,currentParent,fileEvent,forced,coverage};
-                result.imageBefore=same?state->acceptedImage:Revision{};result.imageAfter=currentImage;
-                fileEvent=forced=false;
                 if(state->publication&&state->publication->scope==scope.scope) {
                     result.fileEvent=result.fileEvent||state->publication->fileEvent;
                     result.forced=result.forced||state->publication->forced;
@@ -139,9 +155,11 @@ class Monitor {
                             value=std::move(shared->publication);shared->publication.reset();shared->publicationQueued=false;
                             if(value) {
                                 ++shared->stats.publications;
-                                shared->accepted=value->after;shared->acceptedParent=value->parentAfter;
-                                shared->acceptedScope=value->scope;
-                                shared->acceptedImage=value->imageAfter;
+                                if(!shared->options.manualBaseline) {
+                                    shared->accepted=value->after;shared->acceptedParent=value->parentAfter;
+                                    shared->acceptedScope=value->scope;
+                                    shared->acceptedImage=value->imageAfter;
+                                }
                             }
                         }
                         if(value)shared->accept(std::move(*value));
@@ -180,6 +198,14 @@ public:
     }
     void refresh() {
         std::lock_guard guard(state->mutex);state->request={directory,image,scope,true};state->changed=true;
+    }
+    // A busy controller acknowledges only after reconciliation. Later worker
+    // matches then still use the earliest unprocessed identity baseline.
+    void acknowledge(const Observation& value) {
+        std::lock_guard guard(state->mutex);
+        if(state->closed||value.scope!=scope)return;
+        state->accepted=value.after;state->acceptedParent=value.parentAfter;
+        state->acceptedScope=value.scope;state->acceptedImage=value.imageAfter;
     }
     quint64 generation() const{return scope;}
     MonitorStats stats()const{std::lock_guard guard(state->mutex);return state->stats;}

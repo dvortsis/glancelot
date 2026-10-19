@@ -241,7 +241,7 @@ struct ViewerController::Private {
             }
             pendingObservation=std::move(value);
             reconcileObservation();
-        });
+        },fs_watch::MonitorOptions{.manualBaseline=true});
     }
     ~Private() {
         monitor.reset();writePosition(true);navigationStop.request_stop();cancel();
@@ -365,17 +365,19 @@ struct ViewerController::Private {
         if(!pendingObservation||navigationBusy||pendingNavigation||!navigationIntents.empty())return;
         auto value=std::move(*pendingObservation);pendingObservation.reset();
         if(value.scope!=monitor->generation())return;
+        monitor->acknowledge(value);
         const auto& current=*value.after;
+        // A proven original identity wins even when a new object already reused
+        // its former pathname. Matching was performed on the monitor worker.
+        if(!value.renamedDirectory.isEmpty()) {
+            if(path.isEmpty())q->navigateDirectory(value.renamedDirectory);
+            else q->open(QDir(value.renamedDirectory).filePath(QFileInfo(path).fileName()));
+            return;
+        }
         if(!current.complete) {
             // A parent identity match can prove a renamed directory even when its
             // previous spelling is now missing. Unknown/incomplete evidence cannot.
             if(current.missing&&value.parentBefore&&value.parentAfter) {
-                const auto moved=fs_watch::renames(*value.parentBefore,*value.parentAfter).value(fs_watch::key(value.directory));
-                if(!moved.isEmpty()) {
-                    if(path.isEmpty())q->navigateDirectory(moved);
-                    else q->open(QDir(moved).filePath(QFileInfo(path).fileName()));
-                    return;
-                }
                 if(value.before&&value.before->complete&&value.parentAfter->complete&&
                    !value.parentAfter->entries.contains(fs_watch::key(value.directory))) {
                     if(!removedCovers(value.directory))q->reconcileRemovedPaths({value.directory});
@@ -402,12 +404,10 @@ struct ViewerController::Private {
         if(removedCovers(path)||removedCovers(path.isEmpty()?value.directory:QString{}))return;
         if(!path.isEmpty()) {
             const auto oldKey=fs_watch::key(path);
+            if(!value.renamedImage.isEmpty()) {q->open(value.renamedImage);return;}
             const auto at=current.entries.constFind(oldKey);
             if(at==current.entries.cend()) {
-                const auto moved=value.before?fs_watch::renames(*value.before,current).value(oldKey):QString{};
-                if(!moved.isEmpty())q->open(moved);
-                else q->reconcileRemovedPaths({path});
-                return;
+                q->reconcileRemovedPaths({path});return;
             }
             // Windows case-only renames keep the same lookup key. Publish the
             // directory's actual spelling so navigation still finds the current row.

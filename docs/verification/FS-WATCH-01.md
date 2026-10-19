@@ -75,14 +75,33 @@ A Windows compile caught Win32 small macro leakage from a native probe helper
 included in an older UI test. The old tests now use QFileInfo birth-time capability;
 the native helper remains private to implementation and the new feature tests.
 
-## Pending route contract and final gates
+## Routing contract and identity race checks
 
-Inspection found ui/Main.qml::gridAllowsCommand is an explicit allow-list, so the
-initial frozen assumption that generic routing alone handles F5 was incomplete.
-The lead will freeze a narrow packet-owned refresh allow-list exception and the
-new required fs_watch_ui target under the next FS lock. No product QML change has
-been made before that amendment. The real-QML test checks F5 in preview/grid/combined,
-text editing and modal precedence. Full workspace F5 is not claimed yet.
+Lead froze the narrow routing correction and mandatory real-QML target on main
+525336d, merged into this branch707331f. Product QML5812d75 adds only refresh to
+gridAllowsCommand; no second dispatcher or precedence change. Windows build passed,
+then ctest --test-dir build-codex-fs-watch-01 -R '^fs_watch(_ui)?$'
+--output-on-failure passed2/2 in35.20s (backend31.79s, UI3.33s). The real-QML
+harness pressed F5 in preview/grid/combined and checked text/settings suppression.
+Logs: .cache/fs-watch-routing-{build,tests}.log. These checks precede the following
+identity changes and do not constitute final-candidate gates.
+
+A new generated-media regression reproduced a proven rename immediately followed
+by old-path reuse: the viewer stayed on current.png instead of renamed.png,
+2 passed/1 failed in37.736s, .cache/fs-watch-path-reuse-before.txt. Reconciliation
+now follows the original identity even if another file/directory reuses its name.
+The same test passed3/3 in0.865s after the fix, with original red pixels, selected
+identity and source hash retained (.cache/fs-watch-path-reuse-after.txt).
+
+Rename matching now runs on the monitor worker, outside the publication mutex.
+Only the two needed destination paths are published. A controller acknowledges its
+baseline after processing, preserving the original identity while navigation defers
+multiple observations. Separate new tests cover this deferred acknowledgement and
+a renamed directory whose old pathname is reused. Directory membership snapshots
+and model identity scans compare directory revisions around enumeration; a change
+makes identity inference incomplete. These new cases await the full gates below.
+
+## Remaining gates
 
 Final Windows build.ps1 -Test, full root Docker build, actual Windows/Linux events,
 failure/cancellation outputs, independent Claude review and integrated-commit checks
@@ -94,3 +113,5 @@ fails and preserves an intact widened root during the non-anchored recovery path
 A new generated-media test covers failed source plus F5 recovery under that root.
 These changes are pending final-source checks alongside the byte/backoff/case-only
 changes; no additional pass is claimed.
+
+Current required native command: scripts/build.ps1 -BuildDir build-codex-fs-watch-01 -Test; log .cache/fs-watch-final-windows.log. It is running, not yet a pass.
