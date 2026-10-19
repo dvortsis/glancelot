@@ -2,10 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock:
-  holder: codex-lead
-  branch: codex/fs-watch-01
-  started: 2026-10-19T15:11:48.188555+00:00
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -551,6 +548,7 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
+    test_target_wiring: Lead enabled required target and Docker cmake source copy on feature commit caf5030 under serial lock; implementation checks pending
     start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
     acceptance: Replacement, rename, delete and watcher-overflow recovery; selected identities survive where possible; changed revisions invalidate caches; no watcher per delegate
