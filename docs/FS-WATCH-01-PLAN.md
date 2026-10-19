@@ -16,13 +16,18 @@ No shared public C++ header change is required. Use the existing
 ViewerController::trigger, filesInvalidated and state/error signals, and existing
 model refresh/invalidation entry points. Add command refresh (label Refresh,
 default F5, workspace scope) in a per-task FS-WATCH-01 command-table block. The
-existing generic shortcut route handles it. Any need to change a shared header
+generic shortcut route handles it in preview. The October 19 routing amendment
+assigns Codex the sole narrow Main.qml change of adding refresh to
+gridAllowsCommand, so the same workspace command reaches grid/combined focus.
+No second dispatcher or precedence change is permitted. Any need to change a shared header
 returns to the lead before implementation.
 
 Private watcher/revision helpers may live under src/app or src/core. Models and
 controller may use private source identity to reconcile renames; no stable plugin
-ABI is introduced. Do not modify ui/Main.qml or other product QML, bindings/input
-precedence owned by INPUT-02, Gemini's platform adapter, or cache/scheduler policy.
+ABI is introduced. The only product QML edit permitted is the refresh allow-list
+entry above; all other Main.qml and product QML behavior remains with its UI lane
+owner. Do not change bindings/input precedence owned by INPUT-02, Gemini's
+platform adapter, or cache/scheduler policy.
 Read the required native UI skills if implementation or review reaches UI behavior;
 apply them to Qt/QML and preserve existing branding/tokens without web frameworks.
 
@@ -92,7 +97,9 @@ handle/queue bounds and command results; do not rely only on manual screenshots.
 
 Before review: the lead enables the frozen fs_watch target in root CMake under
 the lock, then run scripts/build.ps1 -Test on Windows and the full Docker build.
-The full test list must include fs_watch; skipped assertions do not establish
+The full test list must include fs_watch and the required real-QML fs_watch_ui
+target. The latter exercises actual F5 in preview/grid/combined modes and
+text-input/settings-modal precedence using the existing dispatcher. Skipped assertions do not establish
 acceptance. Record commands, terminal output, failure/cancel cases, source hashes
 and limitations in docs/verification/FS-WATCH-01.md.
 

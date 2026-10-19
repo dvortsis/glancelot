@@ -502,6 +502,8 @@ tasks:
     worktree: .worktrees/claude-input-02
     plan: docs/INPUT-02-PLAN.md
     scope_addition: F055 context menus with command-route parity
+    review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
+    review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01
@@ -552,7 +554,7 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
-    test_target_wiring: Lead enabled required target and Docker cmake source copy on feature commit caf5030 under serial lock; implementation checks pending
+    test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
     start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
     acceptance: Replacement, rename, delete and watcher-overflow recovery; selected identities survive where possible; changed revisions invalidate caches; no watcher per delegate
