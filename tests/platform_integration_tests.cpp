@@ -2,6 +2,7 @@
 #include <QTest>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QStandardPaths>
 
 class PlatformIntegrationTests : public QObject {
     Q_OBJECT
@@ -17,6 +18,11 @@ private slots:
     }
 
     void revealValidTempDirReturnsTrue() {
+#ifndef Q_OS_WIN
+        if (QStandardPaths::findExecutable("xdg-open").isEmpty()) {
+            QSKIP("No file manager (xdg-open) available in this environment.");
+        }
+#endif
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
         QVERIFY(QFileInfo(tempDir.path()).isDir());
@@ -24,12 +30,28 @@ private slots:
     }
 
     void openTerminalRootDirectoryReturnsTrue() {
+#ifndef Q_OS_WIN
+        bool hasTerminal = !qEnvironmentVariable("TERMINAL").isEmpty();
+        if (!hasTerminal) {
+            for (const QString& candidate : {"x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"}) {
+                if (!QStandardPaths::findExecutable(candidate).isEmpty()) { hasTerminal = true; break; }
+            }
+        }
+        if (!hasTerminal) {
+            QSKIP("No terminal emulator available in this environment.");
+        }
+#endif
         const QString root = QDir::rootPath();
         QVERIFY(QFileInfo::exists(root));
         QVERIFY(glancelot::PlatformIntegration::openTerminal(root));
     }
 
     void revealDirectoryVsFileBehaviors() {
+#ifndef Q_OS_WIN
+        if (QStandardPaths::findExecutable("xdg-open").isEmpty()) {
+            QSKIP("No file manager (xdg-open) available in this environment.");
+        }
+#endif
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
         const QString dirPath = tempDir.path();
@@ -45,6 +67,11 @@ private slots:
     }
 
     void pathsWithSpacesAndUnicodeValidation() {
+#ifndef Q_OS_WIN
+        if (QStandardPaths::findExecutable("xdg-open").isEmpty()) {
+            QSKIP("No file manager (xdg-open) available in this environment.");
+        }
+#endif
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
         QDir dir(tempDir.path());
