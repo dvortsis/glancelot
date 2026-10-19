@@ -409,6 +409,11 @@ struct ViewerController::Private {
                 else q->reconcileRemovedPaths({path});
                 return;
             }
+            // Windows case-only renames keep the same lookup key. Publish the
+            // directory's actual spelling so navigation still finds the current row.
+            if(path!=at->path&&fs_watch::key(path)==fs_watch::key(at->path)) {
+                q->open(at->path);return;
+            }
             const bool revisionChanged=value.before&&value.before->entries.contains(oldKey)&&
                 !(value.before->entries[oldKey].revision==at->revision);
             if(revisionChanged||value.fileEvent||value.forced) {

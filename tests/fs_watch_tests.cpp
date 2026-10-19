@@ -67,7 +67,7 @@ private slots:
         const auto file=dir.filePath("missed-event.png");QVERIFY(write(file,"disposable"));
         QTRY_VERIFY_WITH_TIMEOUT(values.last().after->entries.contains(fs_watch::key(file)),5000);
         QVERIFY(!values.last().fileEvent);QVERIFY(!values.last().coverage);
-        gate->store(true);QTRY_VERIFY_WITH_TIMEOUT(values.last().coverage,5000);
+        gate->store(true);QTRY_VERIFY_WITH_TIMEOUT(values.last().coverage,10000);
         QVERIFY(monitor.stats().maxHandles<=3);
     }
     void continuousNativeChangesCannotStarvePublication() {
@@ -156,6 +156,14 @@ private slots:
         if(!currentIdentity.isEmpty())QTRY_COMPARE_WITH_TIMEOUT(viewer.filePath(),moved,10000);
         QCOMPARE(hash(moved),original);
     }
+    void currentCaseOnlyRenameRetainsNavigation() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());const auto source=dir.filePath("photo.png"),target=dir.filePath("PHOTO.png");
+        QVERIFY(png(source,Qt::red));const auto original=hash(source);
+        ViewerController viewer;viewer.open(source);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),10000);QTest::qWait(250);
+        std::error_code error;std::filesystem::rename(fs_watch::native(source),fs_watch::native(target),error);QVERIFY2(!error,error.message().c_str());
+        QTRY_COMPARE_WITH_TIMEOUT(viewer.filePath(),target,10000);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&viewer.currentIndex()>=0,10000);QCOMPARE(hash(target),original);
+    }
     void localDeleteDoesNotAdvanceTwiceAndRefreshCommand() {
         QTemporaryDir dir;QVERIFY(dir.isValid());
         const auto a=dir.filePath("a.png"),b=dir.filePath("b.png"),c=dir.filePath("c.png");
@@ -223,6 +231,7 @@ private slots:
         for(int i=0;i<5;++i)QVERIFY(write(dir.filePath(QString::number(i)+".png"),"generated"));
         const auto complete=fs_watch::snapshot(dir.path());QVERIFY(complete.complete);QCOMPARE(complete.entries.size(),5);
         const auto limited=fs_watch::snapshot(dir.path(),{},2);QVERIFY(!limited.complete);QCOMPARE(limited.entries.size(),2);
+        const auto byteLimited=fs_watch::snapshot(dir.path(),{},20000,128);QVERIFY(!byteLimited.complete);QVERIFY(byteLimited.entries.isEmpty());
         QVERIFY(fs_watch::renames(complete,limited).isEmpty());
         std::stop_source cancel;cancel.request_stop();
         const auto stopped=fs_watch::snapshot(dir.path(),cancel.get_token());QVERIFY(stopped.cancelled);QVERIFY(!stopped.complete);

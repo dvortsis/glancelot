@@ -86,6 +86,11 @@ inline Revision probe(const std::filesystem::path& path) {
     return result;
 }
 struct Entry { QString path; Revision revision; bool operator==(const Entry&) const = default; };
+inline constexpr std::size_t IdentityByteBudget=16*1024*1024;
+inline std::size_t entryBytes(const QString& path) {
+    // Both UTF-16 path/key spellings plus conservative node/string allocator cost.
+    return std::size_t(path.size())*4+sizeof(Entry)+128;
+}
 struct Snapshot {
     QString directory;
     Revision revision;
@@ -94,19 +99,23 @@ struct Snapshot {
 };
 // A partial/unreadable snapshot is never evidence that an entry was deleted.
 // Limit counts all directory entries, including unsupported files and links.
-inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std::size_t limit=20000) {
+inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std::size_t limit=20000,
+                         std::size_t byteLimit=IdentityByteBudget) {
     Snapshot result;result.directory=directory;
+    if(stop.stop_requested()){result.cancelled=true;return result;}
     const auto path=native(directory);result.revision=probe(path);
     std::error_code error;
     std::filesystem::directory_iterator it(path,error),end;
     if(error) {result.missing=error==std::errc::no_such_file_or_directory;return result;}
     bool readable=result.revision.known&&result.revision.directory&&!result.revision.link;
-    std::size_t count=0;
+    std::size_t count=0,bytes=0;
     for(;it!=end;it.increment(error)) {
         if(error)return result;
         if(stop.stop_requested()){result.cancelled=true;return result;}
         if(count++==limit)return result;
-        const auto name=display(it->path());const auto revision=probe(it->path());
+        const auto name=display(it->path());const auto cost=entryBytes(name);
+        if(cost>byteLimit-bytes)return result;
+        bytes+=cost;const auto revision=probe(it->path());
         readable=readable&&revision.known;
         result.entries.insert(key(name),Entry{name,revision});
     }

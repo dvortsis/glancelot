@@ -92,15 +92,20 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     result.identities.directory=directory;
     result.identities.revision=fs_watch::probe(nativePath(directory));
     result.identities.complete=listing.accessible&&!listing.truncated;
+    std::size_t identityBytes=0;
     for (const auto& entry : listing.entries) {
         if (cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
         Row row;
         row.name = displayPath(entry.path.filename());
         row.path = base + row.name;
         row.key = keyFor(row.path);
-        const auto revision=fs_watch::probe(entry.path);
-        result.identities.complete=result.identities.complete&&revision.known;
-        result.identities.entries.insert(row.key,{row.path,revision});
+        const auto identityCost=fs_watch::entryBytes(row.path);
+        if(identityCost>fs_watch::IdentityByteBudget-identityBytes)result.identities.complete=false;
+        if(result.identities.complete) {
+            const auto revision=fs_watch::probe(entry.path);
+            result.identities.complete=revision.known;identityBytes+=identityCost;
+            result.identities.entries.insert(row.key,{row.path,revision});
+        }
         row.kind = entry.kind; row.link = entry.link; row.hidden = entry.hidden;
         if (entry.meta.known && entry.kind != glancelot::EntryKind::Folder) row.size = qint64(entry.meta.size);
         row.modified = modifiedMs(entry.meta);

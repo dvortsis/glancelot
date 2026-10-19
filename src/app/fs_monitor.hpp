@@ -53,7 +53,7 @@ class Monitor {
             QObject context;QFileSystemWatcher watcher;QTimer poll;
             QElapsedTimer clock;clock.start();
             Request scope;
-            bool dirty{},fileEvent{},forced{};qint64 firstDirty{},lastDirty{},lastProbe=-2000;
+            bool dirty{},fileEvent{},forced{};qint64 firstDirty{},lastDirty{},lastProbe=-2000,retryDelay=2000;
             quint64 revision{};
             const auto mark=[&](bool file) {
                 const auto now=clock.elapsed();if(!dirty)firstDirty=now;
@@ -72,6 +72,7 @@ class Monitor {
                     const bool newScope=latest.scope!=scope.scope;
                     if(newScope) {
                         scope=latest;fileEvent=false;
+                        retryDelay=2000;
                         if(!watcher.files().isEmpty())watcher.removePaths(watcher.files());
                         if(!watcher.directories().isEmpty())watcher.removePaths(watcher.directories());
                     }
@@ -81,7 +82,7 @@ class Monitor {
                 }
                 if(scope.directory.isEmpty())return;
                 const auto now=clock.elapsed();
-                if(!dirty&&now-lastProbe>=2000)mark(false);
+                if(!dirty&&now-lastProbe>=retryDelay)mark(false);
                 if(!dirty||(!forced&&now-lastDirty<120&&now-firstDirty<500))return;
                 dirty=false;lastProbe=now;
                 const auto cancellation=state->stop.get_token();
@@ -106,6 +107,10 @@ class Monitor {
                 registered=watcher.files()+watcher.directories();
                 bool coverage=current->revision.known&&current->revision.directory&&!wanted.isEmpty();
                 for(const auto& path:wanted)coverage=coverage&&registered.contains(path);
+                // Delay is measured from completion, so an expensive/stalled
+                // scan cannot turn periodic recovery into a continuously busy loop.
+                lastProbe=clock.elapsed();
+                retryDelay=coverage&&current->complete?2000:std::min<qint64>(30000,retryDelay*2);
                 std::lock_guard guard(state->mutex);
                 if(state->closed)return;
                 ++state->stats.snapshots;
