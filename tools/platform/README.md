@@ -1,6 +1,7 @@
 # Offline package tools
 
-PLATFORM-01 is implementing. See docs/PLATFORM-01-PLAN.md and
+PLATFORM-01 candidate c35ec60 is independently approved by Claude (cfba419);
+serial integration checks are pending. See docs/PLATFORM-01-PLAN.md and
 docs/verification/PLATFORM-01.md for scope and measured results.
 
 artifacts.py uses Python's standard library. It seals

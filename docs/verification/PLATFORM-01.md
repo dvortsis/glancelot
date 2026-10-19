@@ -1,6 +1,7 @@
 # PLATFORM-01 implementation evidence
 
-Status: implementing, not independently approved or integrated. Frozen contract
+Status: independently approved by Claude cfba419 for candidate c35ec60; serial
+integration checks pending. Frozen contract
 444f896; branch codex/platform-01, worktree .worktrees/codex-platform-01,
 build build-codex-platform-01. F080 / PERF-BUILD basics are included. Physical
 CANVAS-UI, COLOR-01 and DECODE-01 gates remain open.
@@ -74,8 +75,9 @@ API 4 and DPR 1. Tiny-fixture observations are not controlled performance or phy
 color evidence. The corrected ZIP was independently extracted, then its matrix was
 rechecked against both actual archives.
 
-The final default Windows wrapper check after verifier hardening is pending at this
-evidence freeze. Earlier results above are scoped to their exact builds.
+The final default Windows wrapper at 7c1e5a2 and independent reviewer default wrapper
+at c35ec60 passed, as recorded below and in the unchanged Claude review report.
+Earlier reproducibility results above remain scoped to their exact builds.
 
 ## Linux measurements
 
@@ -177,8 +179,7 @@ measurement. With this setup the full strict smoke passed; no frame oracle was
 relaxed and no product rendering source changed. This establishes a controlled
 visible-window test, not physical display latency or a definitive driver diagnosis.
 
-Pending: independent Claude PLATFORM review,
-serial integration and checks on the integrated commit. Physical DPI/refresh/ICC/HDR,
+Pending: serial integration and checks on the integrated commit. Physical DPI/refresh/ICC/HDR,
 native Linux desktop/Wayland, separately provisioned clean Windows, large-MP decode,
 HDD/SMB and R1-R4 results remain unverified. No original media, credentials, telemetry,
 publishing or machine-wide configuration is involved.
