@@ -62,7 +62,7 @@ Earlier source b4c9b04 passed Docker20/20,139.50s and Windows feature targets2/2
 platform-launch timeout). Exact diagnostics are preserved; no skips or relaxed
 250ms limits. Current new-source build passed; an overlapping Windows full suite
 was intentionally cancelled during folder_grid to preserve clipboard serialization.
-A fresh serialized Windows gate is now running; do not infer its result.
+The subsequent serialized run failed18/20 in506.81s. A fixture-corrected full run was cancelled when another lane grid test overlapped; no current full Windows pass is claimed.
 
 The independent decoder host checked every64MiB RGBA byte and normal ack/exit,
 then five post-stop witnessed partial-copy cancellations detached in13-17ms. The
@@ -99,3 +99,21 @@ feature .cache/native-suite-running markers identify an active lead gate. A mark
 alone is not proof of a live process: verify the holder and actual test processes.
 No concurrent full Windows suites; do not stop another owner's job. Docker does
 not qualify Windows behavior or physical display/network/filesystem coverage.
+
+## Current review readiness, October19
+
+FS product source remains b9fa03b. Test-only PLATFORM prerequisite source is
+cd25573 plus earlier fixture commits through038d1b5. Exact frozen fixture changes
+were independently statically reviewed by Claude8594e86; no blocking defect found,
+conditional on runtime, with diagnostic polish supplied for final review. The
+PLATFORM-only reviewer candidate is b4fa53e; its independent runtime is pending.
+Author platform CTest passed1/1,0.70s; direct nine cases672ms. Strict directory
+model direct20/20,26.040s with gaps31/33/11ms passed after environment changed.
+These narrow results do not establish a full or integrated Windows gate.
+
+Private saved Explorer location inventories are excluded from review payloads.
+Only generated test evidence may be copied from ignored cache. The old Linux
+20/20 image precedes this test-only prerequisite; current full Docker must run.
+When a full FS-WATCH review is authorized, use a fixed detached candidate with its
+own named branch/worktree/build, not the independently scoped PLATFORM tree. Do
+not treat PLATFORM fixture review or decoder approval as FS-WATCH approval.
