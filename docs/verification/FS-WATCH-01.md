@@ -114,4 +114,22 @@ A new generated-media test covers failed source plus F5 recovery under that root
 These changes are pending final-source checks alongside the byte/backoff/case-only
 changes; no additional pass is claimed.
 
-Current required native command: scripts/build.ps1 -BuildDir build-codex-fs-watch-01 -Test; log .cache/fs-watch-final-windows.log. It is running, not yet a pass.
+Required native command scripts/build.ps1 -BuildDir build-codex-fs-watch-01 -Test
+on source b4c9b04 FAILED18/20,346.02s. fs_watch passed33.44s, including the
+old-file/directory-path reuse and deferred-baseline cases; fs_watch_ui passed2.13s.
+The unchanged folder_grid regression suite passed177.00s. directory_model failed
+33.23s without Qt assertions in CTest output; platform_integration timed out30.06s.
+Log: .cache/fs-watch-final-windows.log. No disabled test, relaxed threshold or
+passing full native gate is claimed.
+
+Bounded direct diagnostic reruns captured explicit Qt logs, with the same built
+source and unchanged assertions. directory_model failed18 passed/2 failed23.437s:
+interleaved refresh gap889ms and large-folder gap330ms against250ms, consistent
+with the unresolved integrated PLATFORM gate but not proof of an identical cause.
+platform_integration passed8/8 in22.761s after its earlier30s timeout; cause remains
+unestablished. Logs .cache/fs-watch-{directory_model,platform_integration}-diagnostic.txt
+and fs-watch-native-diagnostic-summary.txt. Other lanes' builds/native suites were
+observed during this interval; do not call it an isolated performance run.
+
+The required docker build -t glancelot-browser:main . is running from this worktree
+through WSL Ubuntu, log .cache/fs-watch-final-docker.log. Its result remains pending.
