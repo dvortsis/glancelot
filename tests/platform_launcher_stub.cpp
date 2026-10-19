@@ -16,9 +16,12 @@ int main(int,char**) {
     const QString module=modulePath();
     if(!samePath(QFileInfo(module).absolutePath(),sandbox) || !samePath(QFileInfo(destination).absolutePath(),QDir(sandbox).filePath("captures")) ||
        QFileInfo::exists(destination) || environment(L"GLANCELOT_NATIVE_TOKEN").isEmpty()) return 93;
+    FILETIME created{},exited{},kernel{},user{};
+    if(!GetProcessTimes(GetCurrentProcess(),&created,&exited,&kernel,&user)) return 96;
+    const quint64 started=(quint64(created.dwHighDateTime)<<32)|created.dwLowDateTime;
     int windows=0;EnumWindows(countWindow,reinterpret_cast<LPARAM>(&windows));
     const auto bytes=QJsonDocument(QJsonObject{{"arguments",QJsonArray::fromStringList(args)},{"cwd",QString::fromWCharArray(cwd,int(used))},
-        {"module",module},{"module_sha256",hash(module)},{"pid",qint64(GetCurrentProcessId())},{"console",GetConsoleWindow()!=nullptr},
+        {"module",module},{"module_sha256",hash(module)},{"pid",qint64(GetCurrentProcessId())},{"started",QString::number(started)},{"console",GetConsoleWindow()!=nullptr},
         {"window_count",windows},{"token",environment(L"GLANCELOT_NATIVE_TOKEN")}}).toJson(QJsonDocument::Compact);
     if(bytes.size()>256*1024)return 94;
     QSaveFile output(destination);return output.open(QIODevice::WriteOnly) && output.write(bytes)==bytes.size() && output.commit()?0:95;

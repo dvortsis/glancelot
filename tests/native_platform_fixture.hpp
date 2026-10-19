@@ -117,11 +117,13 @@ public:
         const DWORD pid=DWORD(record.value("pid").toInteger()); if(!pid){error="missing helper pid";return false;}
         HANDLE process=OpenProcess(SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,pid);
         if(process) {
-            wchar_t path[32768]{};DWORD length=32768;
-            const bool own=QueryFullProcessImageNameW(process,0,path,&length) && samePath(QString::fromWCharArray(path,int(length)),module);
+            FILETIME created{},ended{},kernel{},user{};
+            const bool times=GetProcessTimes(process,&created,&ended,&kernel,&user);
+            const quint64 started=(quint64(created.dwHighDateTime)<<32)|created.dwLowDateTime;
+            const bool own=times && record.value("started").toString()==QString::number(started);
             const DWORD wait=own?WaitForSingleObject(process,1500):WAIT_FAILED;DWORD exitCode=STILL_ACTIVE;
             const bool exited=GetExitCodeProcess(process,&exitCode) && exitCode==0;CloseHandle(process);
-            if(!own || wait!=WAIT_OBJECT_0 || !exited) {error="owned helper did not exit or pid identity changed";return false;}
+            if(!own || wait!=WAIT_OBJECT_0 || !exited) {error=QString("owned helper identity=%1 wait=%2 exit=%3").arg(own).arg(wait).arg(exitCode);return false;}
         } else if(GetLastError()!=ERROR_INVALID_PARAMETER) {error="cannot verify helper termination";return false;}
         return QFile::remove(capture);
     }
