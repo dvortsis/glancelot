@@ -45,7 +45,7 @@ struct Revision {
     bool known{}, directory{}, link{};
     bool operator==(const Revision&) const = default;
     QString identity() const {
-        if(!known || !born || link || (!directory && links!=1))return {};
+        if(!known || !object || !born || link || (!directory && links!=1))return {};
         return QString::number(volume,16)+':'+QString::number(object,16)+':'+QString::number(born,16);
     }
 };

@@ -9,6 +9,8 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <algorithm>
+#include <atomic>
 
 namespace fs_watch {
 struct Observation {
@@ -16,7 +18,14 @@ struct Observation {
     QString directory,image;
     std::shared_ptr<const Snapshot> before,after,parentBefore,parentAfter;
     bool fileEvent{}, forced{}, coverage{};
+    Revision imageBefore,imageAfter;
 };
+struct MonitorOptions {
+    bool registerNative{true};
+    std::shared_ptr<std::atomic_bool> registrationGate;
+    std::function<Snapshot(const QString&,std::stop_token)> read=[](const QString& path,std::stop_token stop){return snapshot(path,stop);};
+};
+struct MonitorStats {quint64 snapshots{},publications{};int maxHandles{};};
 // One worker, one latest scope/request and one coalesced publication. No filesystem
 // calls on the GUI thread, even registration and watch rearming. Timed fallback is
 // necessary because QFileSystemWatcher cannot report every native queue overflow.
@@ -27,9 +36,14 @@ class Monitor {
         Request request;
         bool changed{},closed{},publicationQueued{};
         std::optional<Observation> publication;
+        std::shared_ptr<const Snapshot> accepted,acceptedParent;
+        quint64 acceptedScope{};
+        Revision acceptedImage;
         QObject* receiver{};
         std::function<void(Observation)> accept;
         std::stop_source stop;
+        MonitorOptions options;
+        MonitorStats stats;
     };
     class Worker final : public QThread {
         std::shared_ptr<State> state;
@@ -38,7 +52,7 @@ class Monitor {
         void run() override {
             QObject context;QFileSystemWatcher watcher;QTimer poll;
             QElapsedTimer clock;clock.start();
-            Request scope;std::shared_ptr<const Snapshot> previous,parent;
+            Request scope;
             bool dirty{},fileEvent{},forced{};qint64 firstDirty{},lastDirty{},lastProbe=-2000;
             quint64 revision{};
             const auto mark=[&](bool file) {
@@ -55,14 +69,15 @@ class Monitor {
                     if(state->changed){latest=state->request;state->request.force=false;state->changed=false;changed=true;}
                 }
                 if(changed) {
-                    if(latest.scope!=scope.scope) {
-                        scope=latest;previous.reset();parent.reset();fileEvent=false;
+                    const bool newScope=latest.scope!=scope.scope;
+                    if(newScope) {
+                        scope=latest;fileEvent=false;
                         if(!watcher.files().isEmpty())watcher.removePaths(watcher.files());
                         if(!watcher.directories().isEmpty())watcher.removePaths(watcher.directories());
                     }
                     forced=forced||latest.force;mark(false);
                     // A new scope needs its baseline immediately, before ordinary events.
-                    if(!previous)firstDirty=lastDirty=clock.elapsed()-500;
+                    if(newScope)firstDirty=lastDirty=clock.elapsed()-500;
                 }
                 if(scope.directory.isEmpty())return;
                 const auto now=clock.elapsed();
@@ -70,8 +85,8 @@ class Monitor {
                 if(!dirty||(!forced&&now-lastDirty<120&&now-firstDirty<500))return;
                 dirty=false;lastProbe=now;
                 const auto cancellation=state->stop.get_token();
-                auto current=std::make_shared<Snapshot>(snapshot(scope.directory,cancellation));
-                auto currentParent=std::make_shared<Snapshot>(snapshot(QDir(scope.directory).absolutePath()+"/..",cancellation));
+                auto current=std::make_shared<Snapshot>(state->options.read(scope.directory,cancellation));
+                auto currentParent=std::make_shared<Snapshot>(state->options.read(QDir(scope.directory).absolutePath()+"/..",cancellation));
                 if(cancellation.stop_requested())return;
                 // At most directory, its parent and current image. Remove obsolete native
                 // registrations, then rearm names dropped after an atomic replace.
@@ -79,19 +94,31 @@ class Monitor {
                 if(current->revision.known&&current->revision.directory)wanted<<scope.directory;
                 const auto parentPath=QDir::cleanPath(QDir(scope.directory).absolutePath()+"/..");
                 if(currentParent->revision.known&&currentParent->revision.directory)wanted<<parentPath;
-                if(!scope.image.isEmpty()&&probe(native(scope.image)).known)wanted<<scope.image;
+                const auto currentImage=scope.image.isEmpty()?Revision{}:probe(native(scope.image));
+                if(currentImage.known)wanted<<scope.image;
                 wanted.removeDuplicates();
+                const bool nativeEnabled=state->options.registerNative&&
+                    (!state->options.registrationGate||state->options.registrationGate->load());
                 auto registered=watcher.files()+watcher.directories();
-                for(const auto& path:registered)if(!wanted.contains(path))watcher.removePath(path);
+                for(const auto& path:registered)if(!nativeEnabled||!wanted.contains(path))watcher.removePath(path);
                 registered=watcher.files()+watcher.directories();
-                for(const auto& path:wanted)if(!registered.contains(path))watcher.addPath(path);
+                if(nativeEnabled)for(const auto& path:wanted)if(!registered.contains(path))watcher.addPath(path);
                 registered=watcher.files()+watcher.directories();
                 bool coverage=current->revision.known&&current->revision.directory&&!wanted.isEmpty();
                 for(const auto& path:wanted)coverage=coverage&&registered.contains(path);
-                Observation result{scope.scope,++revision,scope.directory,scope.image,previous,current,parent,currentParent,fileEvent,forced,coverage};
-                previous=current;parent=currentParent;fileEvent=forced=false;
                 std::lock_guard guard(state->mutex);
                 if(state->closed)return;
+                ++state->stats.snapshots;
+                state->stats.maxHandles=std::max(state->stats.maxHandles,int(registered.size()));
+                const bool same=state->acceptedScope==scope.scope;
+                Observation result{scope.scope,++revision,scope.directory,scope.image,
+                    same?state->accepted:nullptr,current,same?state->acceptedParent:nullptr,currentParent,fileEvent,forced,coverage};
+                result.imageBefore=same?state->acceptedImage:Revision{};result.imageAfter=currentImage;
+                fileEvent=forced=false;
+                if(state->publication&&state->publication->scope==scope.scope) {
+                    result.fileEvent=result.fileEvent||state->publication->fileEvent;
+                    result.forced=result.forced||state->publication->forced;
+                }
                 state->publication=std::move(result);
                 if(!state->publicationQueued) {
                     state->publicationQueued=true;
@@ -101,6 +128,12 @@ class Monitor {
                             std::lock_guard guard(shared->mutex);
                             if(shared->closed)return;
                             value=std::move(shared->publication);shared->publication.reset();shared->publicationQueued=false;
+                            if(value) {
+                                ++shared->stats.publications;
+                                shared->accepted=value->after;shared->acceptedParent=value->parentAfter;
+                                shared->acceptedScope=value->scope;
+                                shared->acceptedImage=value->imageAfter;
+                            }
                         }
                         if(value)shared->accept(std::move(*value));
                     },Qt::QueuedConnection);
@@ -113,8 +146,9 @@ class Monitor {
     Worker* worker{};
     QString directory,image;quint64 scope{};
 public:
-    Monitor(QObject* receiver,std::function<void(Observation)> accept) {
+    Monitor(QObject* receiver,std::function<void(Observation)> accept,MonitorOptions options={}) {
         state->receiver=receiver;state->accept=std::move(accept);
+        state->options=std::move(options);
         worker=new Worker(state);
         QObject::connect(worker,&QThread::finished,worker,&QObject::deleteLater);
         worker->start();
@@ -129,8 +163,8 @@ public:
         // retain the controller or force unbounded GUI shutdown waiting.
         if(worker->wait(250))delete worker;
     }
-    quint64 setScope(const QString& folder,const QString& file) {
-        if(key(folder)==key(directory)&&key(file)==key(image))return scope;
+    quint64 setScope(const QString& folder,const QString& file,bool restart=false) {
+        if(!restart&&key(folder)==key(directory)&&key(file)==key(image))return scope;
         directory=folder;image=file;++scope;
         std::lock_guard guard(state->mutex);state->request={folder,file,scope,false};state->changed=true;
         return scope;
@@ -139,5 +173,6 @@ public:
         std::lock_guard guard(state->mutex);state->request={directory,image,scope,true};state->changed=true;
     }
     quint64 generation() const{return scope;}
+    MonitorStats stats()const{std::lock_guard guard(state->mutex);return state->stats;}
 };
 }

@@ -3,6 +3,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/directory_listing.hpp"
 #include "thumbnail_id.hpp"
+#include "fs_revision.hpp"
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -74,8 +75,12 @@ struct Listing {
     std::vector<Row> rows;
     QHash<QString, int> index;
     bool accessible{true}, cancelled{}, truncated{};
+    fs_watch::Snapshot identities;
+    QHash<QString,QString> renamed;
+    bool renamedDirectory{};
 };
-Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, bool hidden, std::stop_token cancel, std::size_t limit) {
+Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, bool hidden, std::stop_token cancel, std::size_t limit,
+                     const fs_watch::Snapshot& prior) {
     Listing result;
     auto listing = glancelot::listDirectory(nativePath(directory), sort, hidden, cancel, limit);
     result.accessible = listing.accessible; result.cancelled = listing.cancelled; result.truncated = listing.truncated;
@@ -84,18 +89,29 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     if (!base.endsWith('/')) base += '/';
     result.rows.reserve(listing.entries.size());
     result.index.reserve(qsizetype(listing.entries.size()));
+    result.identities.directory=directory;
+    result.identities.revision=fs_watch::probe(nativePath(directory));
+    result.identities.complete=listing.accessible&&!listing.truncated;
     for (const auto& entry : listing.entries) {
         if (cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
         Row row;
         row.name = displayPath(entry.path.filename());
         row.path = base + row.name;
         row.key = keyFor(row.path);
+        const auto revision=fs_watch::probe(entry.path);
+        result.identities.complete=result.identities.complete&&revision.known;
+        result.identities.entries.insert(row.key,{row.path,revision});
         row.kind = entry.kind; row.link = entry.link; row.hidden = entry.hidden;
         if (entry.meta.known && entry.kind != glancelot::EntryKind::Folder) row.size = qint64(entry.meta.size);
         row.modified = modifiedMs(entry.meta);
         result.index.insert(row.key, int(result.rows.size()));
         result.rows.push_back(std::move(row));
     }
+    const auto directoryIdentity=result.identities.revision.identity();
+    result.renamedDirectory=keyFor(prior.directory)!=keyFor(directory)&&!directoryIdentity.isEmpty()&&
+        directoryIdentity==prior.revision.identity();
+    if(keyFor(prior.directory)==keyFor(directory)||result.renamedDirectory)
+        result.renamed=fs_watch::renames(prior,result.identities);
     return result;
 }
 }
@@ -106,6 +122,9 @@ struct DirectoryEntryModel::Private {
     std::vector<Row> rows;
     QHash<QString, int> index;
     QSet<QString> selected;
+    QSet<QString> previousSelection;
+    QString previousAnchor,previousCursor;
+    fs_watch::Snapshot identities;
     QString anchorKey, cursorKey;
     glancelot::SortSpec sort;
     bool includeHidden{}, active{}, loading{}, accessible{true}, truncated{}, wanted{};
@@ -147,22 +166,37 @@ struct DirectoryEntryModel::Private {
             else { if (!listing.accessible) publication.setFlags(glancelot::perf::Failed); apply(std::move(listing)); } }
             pump();
         });
-        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token] {
+        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token, prior=identities] {
             glancelot::perf::detail::GenerationContext context(token);
-            return buildListing(directory, sort, hidden, cancel, kMaxEntries);
+            return buildListing(directory, sort, hidden, cancel, kMaxEntries,prior);
         }));
     }
     void apply(Listing listing) {
         const bool wasAccessible = accessible, wasTruncated = truncated;
         const int oldCount = int(rows.size());
         accessible = listing.accessible; truncated = listing.truncated;
-        merge(std::move(listing));
+        // Identity matching was bounded and performed on the listing worker. Keep
+        // selection/cursor/anchor on a proven renamed object, including noncurrent rows.
+        if(listing.identities.complete) {
+            if(listing.renamedDirectory) {
+                selected=previousSelection;anchorKey=previousAnchor;cursorKey=previousCursor;
+            }
+            QSet<QString> renamedSelection;
+            for(const auto& value:selected)renamedSelection.insert(listing.renamed.contains(value)?keyFor(listing.renamed[value]):value);
+            selected=std::move(renamedSelection);
+            if(listing.renamed.contains(anchorKey))anchorKey=keyFor(listing.renamed[anchorKey]);
+            if(listing.renamed.contains(cursorKey))cursorKey=keyFor(listing.renamed[cursorKey]);
+            previousSelection.clear();previousAnchor.clear();previousCursor.clear();
+        }
+        if(accessible&&!truncated)identities=listing.identities;
+        // Failed/partial refreshes cannot prove disappearance of existing rows.
+        if(!truncated||rows.empty())merge(std::move(listing));
         // Selection, anchor and cursor are keys: keep those that still exist, drop the rest. A failed listing of the
         // same folder (a transient share or permission error) proves nothing about which entries exist, so the keys
         // are kept for the next successful listing, as setActive(false) does. They are not counted meanwhile.
-        if (accessible) for (auto it = selected.begin(); it != selected.end();) { if (index.contains(*it)) ++it; else it = selected.erase(it); }
-        if (accessible && !index.contains(anchorKey)) anchorKey.clear();
-        if (accessible && !index.contains(cursorKey)) cursorKey.clear();
+        if (accessible&&!truncated) for (auto it = selected.begin(); it != selected.end();) { if (index.contains(*it)) ++it; else it = selected.erase(it); }
+        if (accessible&&!truncated && !index.contains(anchorKey)) anchorKey.clear();
+        if (accessible&&!truncated && !index.contains(cursorKey)) cursorKey.clear();
         setLoading(false);
         if (int(rows.size()) != oldCount) emit q->countChanged();
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
@@ -286,6 +320,9 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     const QString key = keyFor(directory);
     if (key == d->directoryKey) { refresh(); return; }
     const QString previous = d->directoryKey;
+    // Only a worker-proven renamed directory may restore these values. Ordinary
+    // navigation continues to start with a new selection.
+    d->previousSelection=d->selected;d->previousAnchor=d->anchorKey;d->previousCursor=d->cursorKey;
     d->stop.request_stop(); ++d->generation; d->wanted = false;
     d->directory = directory; d->directoryKey = key;
     d->accessible = true; d->truncated = false;
