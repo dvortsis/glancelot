@@ -83,3 +83,60 @@ I could not run anything, and the project-local Qt source is not in this worktre
 4. Keep the 30 s CTest timeout and the 250 ms oracle unchanged.
 
 Re-review will be static first, then run only after the author releases the native slot.
+
+---
+
+# Re-review of `6b7109e` (author source `038d1b5`), static only
+
+Baseline `ae8bd92`. Prior report commit `56d27cb` is an ancestor of `6b7109e`. Only this report was edited. I ran no build, test, process stop or window close. The native slot belongs to the root `directory_model` diagnostic.
+
+## Verdict: CONDITIONAL STATIC APPROVAL
+This is not a runtime approval and not a gate pass.
+- **Static:** I found no blocking defect. F1–F4 of my first review are addressed. Remaining items are non-blocking (R1–R5).
+- **Runtime:** no independent run exists. The author's 9/9 and CTest 0.70 s results are author-reported evidence only.
+- **Still unresolved:** the full native gate and the strict 250 ms `directory_model` oracle stay failed/unresolved. Docker is not run. FS-WATCH and INPUT UI are not approved.
+
+## Checked
+- `git diff --quiet ae8bd92 6b7109e -- src include` exits 0, so the production adapter and headers are unchanged.
+- Changes since `90b4e68` are limited to `tests/native_platform_fixture.hpp`, `tests/platform_integration_tests.cpp` and `tests/platform_launcher_stub.cpp`. CMake and the adapter are untouched.
+
+### Prior findings
+- **F1 (`wt.exe` lookup):**
+  - `shortDirectory()` takes the `GetShortPathNameW` result and rejects it if any character is above U+007F. It also opens the original and the alias and compares volume serial and file index. It returns empty otherwise, and `bootstrap` fails closed with code 110.
+  - The same Unicode sandbox stays the CWD, module and target; only `PATH` carries the alias. `prepare()` re-checks `PATH == shortDirectory(sandbox);qtDir`.
+  - `samePath` now compares volume and file ID, so Qt's non-expanded 8.3 strings compare correctly. This also covers `resolves()` and the stub's own-directory check.
+  - Non-BMP coverage is retained: the module path, CWD, `directory`, `photo` and argv are all non-BMP.
+  - Your cited Qt 6.8.3 `qstandardpaths.cpp` (default lookup via `qgetenv` and `fromLocal8Bit`) is consistent with the earlier hypothesis.
+- **F2 (Qt directory):** `qtDirectory()` tries `Qt6Core.dll`, then `Qt6Cored.dll`, and returns empty rather than the EXE directory. `bootstrap` fails closed with 110. All bootstrap failures now go through `failure(code, reason)` to stderr.
+- **F3 (existing STA):** the `Balance` object is scoped in a block, then `verifyApartmentUninitialized()` runs in the same test.
+- **F4:** the job-accounting poll is bounded at 1 s. The helper exit code is checked in `verify()`. The stub records its `GetProcessTimes` creation time as `started`, and the verifier compares it with the pid's creation time, which catches pid reuse. The `QueryFullProcessImageName` approach failed with 31 on an exited helper, and the creation-time check replaces it correctly.
+- **Default QtTest logger and error mode:**
+  - When there is no `-o`, `bootstrap` adds `-o test-output.txt,txt` (relative, in the unchanged Unicode CWD). Explicit `-o` values are still made absolute.
+  - After `CloseHandle(job)` it replays the log to the parent's stdout.
+  - `qExec(&tests, app.arguments())` is used on Windows only; Linux is unchanged.
+  - `SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX)` runs after the bootstrap branch. It is inherited by the helpers and explains the earlier 22 s timeout from the deliberate invalid image.
+- **Author evidence read:** `.cache/author-platform-detail.txt` shows 9 passed in 672 ms (Qt 6.8.3, MSVC 2022). `.cache/author-platform-ctest.log` shows `Passed 0.70 sec`, total 0.75 s. I could not independently reproduce them. The logs do not record a commit SHA, and the CTest log's build directory is the author's other worktree (`codex-fs-watch-01`). Their linkage to `6b7109e` is by the author's statement only.
+
+## Remaining items (non-blocking; fix or accept explicitly)
+- **R1 (diagnostic message in `initTestCase`):**
+  - The long `QVERIFY2` message is built eagerly, so it calls `findExecutable` three times and formats `PATH` on every run, pass or fail.
+  - Build the message only on failure (`if(!ok) QFAIL(...)`), or drop `QtPATH`/`nativePATH`.
+- **R2 (log replay):**
+  - A log over 256 KiB is not replayed at all, and only a passing result is turned into 111. A failing run with a large log hides its diagnostics.
+  - Replay the first 256 KiB and note truncation.
+  - `fwrite` in stdout text mode doubles CR in an already-CRLF log (`\r\r\n`). This is cosmetic. Set binary mode or strip CR.
+- **R3 (misleading final message):**
+  - `if(result) failure(result,"copied runner failed, timed out or retained owned processes")` also fires for an ordinary QtTest failure count. It prints a stale `GetLastError`.
+  - Print this only for codes 106–111, or say "child exit code N".
+- **R4 (exit-code check is weaker than it looks):** `QProcess::startDetached` closes its handles. For a quick helper, `OpenProcess` usually fails with `ERROR_INVALID_PARAMETER`. The code accepts that branch, with no exit-code or creation-time check. In that case the helper's exit is inferred from the capture file having been committed (the stub returns 0 right after a successful commit). The creation-time and exit-code checks run only while the process object still exists. This is acceptable if documented. Do not describe it as an exit-code proof in handoffs.
+- **R5 (environmental precondition):** the test needs 8.3 short names on the sandbox volume. Without them the run fails closed with 110 rather than skipping. That is the right behavior. Record the precondition in the handoff, and say the 110 message should mention 8.3.
+
+## Limitations to document (explicit)
+- **Missing-launcher coverage:** this remains the invalid-executable `powershell.exe` substitute and does not prove "system PowerShell absent". No source/product seam outside the contract is required. Whether `CreateProcess` continues its search after a bad image was not observed by me.
+- **Parent kill and TEMP files:** if the bootstrap parent is killed (for example by a CTest timeout), `KILL_ON_JOB_CLOSE` terminates the owned process tree, but the private `%TEMP%\glancelot native 🧪 space-*` directory is not removed. It may leave inert private copied files. I do not require a glob sweep because ownership of other such directories is unknown.
+- **Bad Image dialog:** the earlier invalid-image hang suggests a hard-error dialog. I did not verify whether a dialog from the earlier unmitigated run remained open. I did not touch any window.
+
+## Needed before approval
+1. Independent runtime run of `platform_integration` (bounded CTest plus its log) by a reviewer in a free native slot, with an owned-job and pid leak check. Do not use global process counts.
+2. Author decision or fix on R1–R3, and documentation of R4 and R5.
+3. Full native and Docker gates on the integrated commit under the project's integration rules. The strict 250 ms `directory_model` oracle and the 30 s deadline stay unchanged and unrelaxed.
