@@ -185,7 +185,7 @@ Item {
                         visible: flow.phase === "planning"
                         spacing: Theme.gapSm
                         UiIcon { name: "spinner"; color: Theme.muted }
-                        Label { text: "Checking the selected items…"; color: Theme.muted; font.pixelSize: Theme.textBody; Layout.fillWidth: true }
+                        Label { text: qsTr("Checking the selected items…"); color: Theme.muted; font.pixelSize: Theme.textBody; Layout.fillWidth: true }
                     }
                     Rectangle { // the named items: up to five (three in short windows), then "and N more"
                         objectName: "deleteTargets"
@@ -216,7 +216,7 @@ Item {
                                         Layout.fillWidth: true
                                         Accessible.name: modelData.name + (modelData.kind === "folder" ? ", folder" : ", file") + (modelData.link ? ", link" : "")
                                     }
-                                    Label { visible: modelData.link; text: "link only"; color: Theme.muted; font.pixelSize: Theme.textCaption }
+                                    Label { visible: modelData.link; text: qsTr("link only"); color: Theme.muted; font.pixelSize: Theme.textCaption }
                                 }
                             }
                             Label {
@@ -391,7 +391,7 @@ Item {
                     text: flow.movedCount > 0 ? "Moved items can be restored from the " + flow.trashName + "." : "Nothing was deleted."
                     Layout.alignment: Qt.AlignVCenter
                 }
-                UiButton { id: closeResults; objectName: "deleteResultsClose"; variant: "primary"; text: "Close"; onClicked: resultsDialog.close() }
+                UiButton { id: closeResults; objectName: "deleteResultsClose"; variant: "primary"; text: qsTr("Close"); onClicked: resultsDialog.close() }
             }
         }
     }

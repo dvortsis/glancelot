@@ -161,7 +161,7 @@ Rectangle {
             Layout.rightMargin: Theme.gapSm
             spacing: Theme.gapXxs
             Label {
-                text: "Folders"
+                text: qsTr("Folders")
                 color: Theme.text
                 font.pixelSize: Theme.textBody
                 font.weight: Font.DemiBold
@@ -170,10 +170,10 @@ Rectangle {
             }
             PanelButton {
                 objectName: "treeParent"
-                text: "Show parent folder"
+                text: qsTr("Show parent folder")
                 iconName: "corner-up"
                 iconOnly: true
-                tip: "Widen the browsing root to the parent folder"
+                tip: qsTr("Widen the browsing root to the parent folder")
                 enabled: viewer.canRaiseRoot
                 onClicked: viewer.raiseRoot()
             }
@@ -191,7 +191,7 @@ Rectangle {
 
         PanelButton {
             objectName: "allLocations"
-            text: "All locations"
+            text: qsTr("All locations")
             iconName: "computer"
             alignment: Qt.AlignLeft
             leftPadding: Theme.gapXs + panel.indent + Theme.gapXxs // icon sits on the same column as the root glyphs
@@ -254,9 +254,9 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 mono: true
-                placeholderText: "Folder path"
+                placeholderText: qsTr("Folder path")
                 Accessible.name: "Current folder path"
-                Accessible.description: "Enter a path and press Enter to navigate. Escape restores the current folder."
+                Accessible.description: qsTr("Enter a path and press Enter to navigate. Escape restores the current folder.")
                 property bool modified: false
                 text: viewer.directory
                 selectByMouse: true
@@ -297,8 +297,8 @@ Rectangle {
             }
             PanelButton {
                 objectName: "copyFolderAddress"
-                text: "Copy"
-                tip: "Copy the full current folder path"
+                text: qsTr("Copy")
+                tip: qsTr("Copy the full current folder path")
                 enabled: viewer.directory.length > 0
                 onClicked: viewer.copyDirectory()
             }
@@ -575,7 +575,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
                 visible: folderTree.count === 0
-                text: "No filesystem locations are available."
+                text: qsTr("No filesystem locations are available.")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
             }

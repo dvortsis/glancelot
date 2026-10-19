@@ -260,8 +260,8 @@ Rectangle {
                 objectName: "gridParent"
                 iconName: "corner-up"
                 iconOnly: true
-                text: "Up one folder"
-                tip: "Up one folder (Backspace or Alt+Up)"
+                text: qsTr("Up one folder")
+                tip: qsTr("Up one folder (Backspace or Alt+Up)")
                 enabled: panel.parentPath.length > 0 && panel.inputEnabled
                 focusPolicy: Qt.NoFocus
                 onClicked: panel.goUp()
@@ -316,8 +316,8 @@ Rectangle {
                         objectName: "gridInvertSelection"
                         iconName: "refresh"
                         iconOnly: true
-                        text: "Invert selection"
-                        tip: "Invert selection (Ctrl+I)"
+                        text: qsTr("Invert selection")
+                        tip: qsTr("Invert selection (Ctrl+I)")
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
@@ -327,8 +327,8 @@ Rectangle {
                         objectName: "gridClearSelection"
                         iconName: "close"
                         iconOnly: true
-                        text: "Clear selection"
-                        tip: "Clear selection (Esc)"
+                        text: qsTr("Clear selection")
+                        tip: qsTr("Clear selection (Esc)")
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
@@ -339,7 +339,7 @@ Rectangle {
             Label { // a known read-only drive: the action stays visible, disabled, with the reason beside it
                 objectName: "gridTrashBlocked"
                 visible: panel.deleteBlocked && fileGrid.selectedCount > 0
-                text: "Read-only drive"
+                text: qsTr("Read-only drive")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
             }
@@ -371,7 +371,7 @@ Rectangle {
             id: truncatedText
             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Theme.gapMd }
             // The limit keeps enumeration order, not display order, so this must not claim "the first" items.
-            text: "Showing 100,000 items. This folder has more that are not listed here."
+            text: qsTr("Showing 100,000 items. This folder has more that are not listed here.")
             wrapMode: Text.Wrap
             color: Theme.text
             font.pixelSize: Theme.textSmall
@@ -402,7 +402,7 @@ Rectangle {
         enabled: panel.inputEnabled
         Accessible.role: Accessible.List
         Accessible.name: "Items in " + panel.folderPath
-        Accessible.description: "Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo."
+        Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo.")
         ScrollBar.vertical: UiScrollBar { }
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier
@@ -687,7 +687,7 @@ Rectangle {
                             anchors.centerIn: parent
                             spacing: Theme.gapXxs
                             UiIcon { name: "alert"; size: 12; lineWidth: 2; color: Theme.danger }
-                            Label { text: "No preview"; visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
+                            Label { text: qsTr("No preview"); visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
                         }
                     }
                     Rectangle { // link badge
@@ -705,13 +705,13 @@ Rectangle {
                             anchors.centerIn: parent
                             spacing: Theme.gapXxs
                             UiIcon { name: "link"; size: 12; lineWidth: 2; color: Theme.text }
-                            Label { text: "Link"; visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
+                            Label { text: qsTr("Link"); visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
                         }
                     }
                     Label { // tag
                         anchors { left: parent.left; bottom: parent.bottom; margins: Theme.gapXs }
                         visible: cell.isCurrent
-                        text: "Viewing"
+                        text: qsTr("Viewing")
                         leftPadding: Theme.gapXs + Theme.gapXxs; rightPadding: leftPadding
                         topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
                         font.pixelSize: Theme.textCaption
@@ -797,14 +797,14 @@ Rectangle {
                 objectName: "gridRetry"
                 visible: panel.stateName === "inaccessible"
                 variant: "outline"
-                text: "Try again"
+                text: qsTr("Try again")
                 onClicked: fileGrid.refresh()
             }
             UiButton {
                 visible: (panel.stateName === "empty" || panel.stateName === "inaccessible") && panel.parentPath.length > 0
                 variant: "outline"
                 iconName: "corner-up"
-                text: "Up one folder"
+                text: qsTr("Up one folder")
                 onClicked: panel.goUp()
             }
         }

@@ -72,7 +72,7 @@ Item {
                 radius: Theme.radiusControl
                 Accessible.role: Accessible.Button
                 Accessible.name: "Arrange "+arrangement.names[frame.modelData]+", "+frame.stateLabel
-                Accessible.description: "Arrow keys move to an edge. Control and arrow keys resize. Shift and arrow keys change order. Space freezes or unfreezes. Home returns image or grid to the center. Escape exits arrangement."
+                Accessible.description: qsTr("Arrow keys move to an edge. Control and arrow keys resize. Shift and arrow keys change order. Space freezes or unfreezes. Home returns image or grid to the center. Escape exits arrangement.")
                 border.width: activeFocus ? Theme.focusWidth : 0
                 border.color: Theme.focusRing
                 Keys.onShortcutOverride: event => {
@@ -192,7 +192,7 @@ Item {
         y: content.y+content.height/2+Theme.controlHeight/2+Theme.gapMd
         z: 10
         variant: "primary"
-        text: "Done arranging · Esc"
+        text: qsTr("Done arranging · Esc")
         onClicked: arrangement.host.layoutEditing=false
         Accessible.name: "Finish arranging panes"
     }

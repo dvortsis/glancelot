@@ -38,9 +38,9 @@ ApplicationWindow {
     property string splitMessage: ""
     readonly property bool modeCompact: width < 760 || !topPanel.horizontalBar || topPanel.modeSpace < modeSelector.implicitWidth + barGridtopbar.columnSpacing
     readonly property var contentModes: [
-        { id: "preview", command: "view-preview", label: "Photo", icon: "image", tip: "Photo only" },
-        { id: "grid", command: "view-grid", label: "Grid", icon: "grid", tip: "Folder grid only" },
-        { id: "combined", command: "view-combined", label: "Both", icon: "split", tip: "Grid and photo together" }
+        { id: "preview", command: "view-preview", label: "Photo", icon: "image", tip: qsTr("Photo only") },
+        { id: "grid", command: "view-grid", label: "Grid", icon: "grid", tip: qsTr("Folder grid only") },
+        { id: "combined", command: "view-combined", label: "Both", icon: "split", tip: qsTr("Grid and photo together") }
     ]
     // Explicit state of the combined preview: "" shows the decoded photo; "loading" keeps the canvas under a delayed
     // indicator; every other state covers the canvas so a stale photo is never presented as the cursor's item.
@@ -837,7 +837,7 @@ ApplicationWindow {
         radius: Theme.radiusSmall
         Accessible.role: Accessible.Pane
         Accessible.name: "Zoom navigator"
-        Accessible.description: "Click or drag to move the visible area of the photo"
+        Accessible.description: qsTr("Click or drag to move the visible area of the photo")
         Rectangle {
             objectName: "navigatorViewport"
             x: Theme.borderWidth + app.navRect.x * navigatorPanel.scaleFactor
@@ -1115,7 +1115,7 @@ ApplicationWindow {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Theme.gapXs
                 visible: previewStatePanel.stateName === "folder"
-                text: "Press Enter to open"
+                text: qsTr("Press Enter to open")
                 leftPadding: Theme.gapSm; rightPadding: Theme.gapSm; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
                 color: Theme.text
                 font.pixelSize: Theme.textSmall
@@ -1251,7 +1251,7 @@ ApplicationWindow {
             visible: !emptyState.compactContent
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.gapSm
-            text: "Glancelot"
+            text: qsTr("Glancelot")
             color: Theme.text
             font.pixelSize: Theme.textDisplay
             font.weight: Font.Light
@@ -1263,7 +1263,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             visible: !emptyState.compactContent
-            text: "Your photographs, front and center."
+            text: qsTr("Your photographs, front and center.")
             color: Theme.muted
             font.pixelSize: Theme.textTitle
             wrapMode: Text.Wrap
@@ -1284,7 +1284,7 @@ ApplicationWindow {
             Layout.topMargin: Theme.gapSm
             horizontalAlignment: Text.AlignHCenter
             visible: !emptyState.compactContent
-            text: "or drop a JPEG or PNG here. Arrow keys browse the folder."
+            text: qsTr("or drop a JPEG or PNG here. Arrow keys browse the folder.")
             color: Theme.muted
             font.pixelSize: Theme.textSmall
             wrapMode: Text.Wrap
@@ -1325,7 +1325,7 @@ ApplicationWindow {
         readonly property bool fitShowFrame: !horizontalBar || afterSort >= showFrameButton.implicitWidth + barGridtopbar.columnSpacing
         readonly property real afterShowFrame: afterSort - (app.frameless && fitShowFrame ? showFrameButton.implicitWidth + barGridtopbar.columnSpacing : 0)
         readonly property bool fitLockLabel: !horizontalBar || afterShowFrame >= lockLabelMeasure.implicitWidth - Theme.controlHeight
-        UiButton { id: lockLabelMeasure; visible: false; iconName: "lock"; text: "Layout locked" } // width of the labelled lock
+        UiButton { id: lockLabelMeasure; visible: false; iconName: "lock"; text: qsTr("Layout locked") } // width of the labelled lock
         Rectangle { // edge against the canvas when no filmstrip sits below
             objectName: "topBarEdge"
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
@@ -1365,11 +1365,11 @@ ApplicationWindow {
                 fillMode: Image.PreserveAspectFit
                 Accessible.ignored: true
             }
-            UiButton { id: openButton; objectName: "openButton"; text: "Open"; tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
+            UiButton { id: openButton; objectName: "openButton"; text: qsTr("Open"); tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
             UiButton {
                 id: foldersButton
                 objectName: "foldersToggle"
-                text: "Folders"
+                text: qsTr("Folders")
                 checkable: true
                 checked: viewer.treeVisible
                 tip: (viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree") + app.shortcutHint("tree")
@@ -1452,7 +1452,7 @@ ApplicationWindow {
                 onClicked: app.invoke("sort")
                 tip: "Cycle file order" + app.shortcutHint("sort") + (viewer.bindingFor("sort-reverse").length ? "; reverse with " + viewer.bindingFor("sort-reverse") : "")
                 Accessible.name: "File order: " + ({ name: "name", modified: "date modified", size: "size", shuffle: "shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? ", descending" : ", ascending")
-                Accessible.description: "Changes the order of photos inside folders, not the folder order"
+                Accessible.description: qsTr("Changes the order of photos inside folders, not the folder order")
             }
             BarDivider { id: topBarDivider; objectName: "topBarDivider" }
             // F015 tab strip: replaces the title while there are two or more tabs. Each tab is a saved location.
@@ -1497,7 +1497,7 @@ ApplicationWindow {
                             }
                         }
                     }
-                    UiButton { objectName: "tabNew"; iconOnly: true; iconName: "folder-open"; text: "New tab"; onClicked: viewer.newTab() }
+                    UiButton { objectName: "tabNew"; iconOnly: true; iconName: "folder-open"; text: qsTr("New tab"); onClicked: viewer.newTab() }
                 }
             }
             Label {
@@ -1517,7 +1517,7 @@ ApplicationWindow {
                 // In a narrow horizontal bar the label yields so the window controls keep their room; the name stays
                 // the tooltip and accessible name.
                 iconOnly: !topPanel.fitLockLabel
-                text: "Layout locked"
+                text: qsTr("Layout locked")
                 tip: "Workspace layout is locked. Select to unlock" + app.shortcutHint("layout-lock")
                 Accessible.name: "Workspace layout locked. Unlock layout"
                 onClicked: app.invoke("layout-lock")
@@ -1525,16 +1525,16 @@ ApplicationWindow {
             UiButton {
                 id: settingsButton
                 objectName: "settingsButton"
-                text: "Settings"
+                text: qsTr("Settings")
                 tip: "Settings, palettes and shortcuts" + app.shortcutHint("settings") + (viewer.bindingFor("palette").length ? ". Find a command: " + viewer.bindingFor("palette") : "")
                 onClicked: app.invoke("settings")
             }
-            UiButton { id: exitFullScreenButton; text: "Exit full screen"; visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
+            UiButton { id: exitFullScreenButton; text: qsTr("Exit full screen"); visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
             // Window controls must never be pushed out of a narrow bar, so "Show frame" yields its room there; the
             // command stays in Settings and command search, with its shortcut.
-            UiButton { id: showFrameButton; objectName: "showFrameButton"; text: "Show frame"; visible: app.frameless && topPanel.fitShowFrame; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
+            UiButton { id: showFrameButton; objectName: "showFrameButton"; text: qsTr("Show frame"); visible: app.frameless && topPanel.fitShowFrame; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
             BarDivider { id: windowDivider; visible: app.ownsTitleBar }
-            WindowControl { id: minimizeButton; objectName: "minimizeButton"; text: "Minimize"; iconName: "minimize"; visible: app.ownsTitleBar; onClicked: app.showMinimized() }
+            WindowControl { id: minimizeButton; objectName: "minimizeButton"; text: qsTr("Minimize"); iconName: "minimize"; visible: app.ownsTitleBar; onClicked: app.showMinimized() }
             WindowControl {
                 id: maximizeButton
                 objectName: "maximizeButton"
@@ -1544,7 +1544,7 @@ ApplicationWindow {
                 visible: app.frameless && app.visibility !== Window.FullScreen
                 onClicked: app.toggleMaximized()
             }
-            WindowControl { id: closeButton; objectName: "closeButton"; variant: "danger-quiet"; text: "Close window"; iconName: "close"; visible: app.ownsTitleBar; onClicked: app.close() }
+            WindowControl { id: closeButton; objectName: "closeButton"; variant: "danger-quiet"; text: qsTr("Close window"); iconName: "close"; visible: app.ownsTitleBar; onClicked: app.close() }
         }
         }
     }
@@ -1609,13 +1609,13 @@ ApplicationWindow {
             width: statusbarScroll.availableWidth-2*Theme.gapMd
             x: Theme.gapMd
             y: Math.max(0,(statusbarScroll.availableHeight-implicitHeight)/2)
-            UiButton { text: "Previous"; visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
+            UiButton { text: qsTr("Previous"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
             BarLabel {
                 visible: !app.gridMode && !app.combinedMode
                 text: viewer.fileCount > 0 ? viewer.currentIndex + " of " + viewer.fileCount : "No photo"
                 Layout.leftMargin: Theme.gapXs; Layout.rightMargin: Theme.gapXs
             }
-            UiButton { text: "Next"; visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
+            UiButton { text: qsTr("Next"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
             BarLabel {
                 visible: app.workspace._gridShown
                 font.features: { "tnum": 1 }
@@ -1653,8 +1653,8 @@ ApplicationWindow {
                 Accessible.name: "Waiting for the next key after " + app.chordFirst + ". Escape cancels."
             }
             Item { Layout.fillWidth: true }
-            UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }
-            UiButton { objectName: "gridOpenSelected"; visible: app.workspace._gridShown; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
+            UiButton { visible: app.gridMode; text: qsTr("Back to photo"); tip: qsTr("Back to photo (Esc)"); onClicked: app.showCanvas() }
+            UiButton { objectName: "gridOpenSelected"; visible: app.workspace._gridShown; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: qsTr("Open the item under the cursor (Enter)"); onClicked: photoGrid.activate() }
             BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; Layout.rightMargin: Theme.gapSm }
             UiButton {
                 visible: !app.gridMode
@@ -1665,8 +1665,8 @@ ApplicationWindow {
                 tip: "Actual size: one image pixel per display pixel" + app.shortcutHint("actual")
                 Accessible.name: "Zoom " + Math.round(canvas.zoom*100) + " percent. Show actual size"
             }
-            UiButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
-            UiButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
+            UiButton { text: qsTr("Fit"); visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
+            UiButton { text: qsTr("Rotate"); visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
         }
         }
     }
@@ -1737,7 +1737,7 @@ ApplicationWindow {
         }
     }    FileDialog {
         id: openDialog
-        title: "Open a photo"
+        title: qsTr("Open a photo")
         nameFilters: ["Photographs (*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG)", "All files (*)"]
         onAccepted: { viewer.open(selectedFile.toString()); app.showCanvas() }
         onRejected: app.focusContent()

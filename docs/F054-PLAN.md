@@ -8,3 +8,9 @@ Lane Claude Code; branch `claude/f051`; reviewer from the Codex lane.
 
 ## Not done
 Wrapping the interface strings in `qsTr()` / `tr()` (hundreds across the QML and the controller, with tests that compare literal English text), the `lupdate`/`lrelease` build step and a first catalog, plural forms, locale-aware number and date formats beyond Qt defaults, and a native-speaker review of any translation. Per-glyph RTL checks (mixed-direction file names, bidi in the path bar, icon mirroring such as chevrons and "up") are unverified; only layout mirroring is tested.
+
+## Update: interface strings wrapped (October 19, 2026)
+
+135 plain QML text literals (`text`, `placeholderText`, `label`, `description`, `heading`, `tip`, `title` assigned a whole string) in `DeleteFlow`, `FolderTree`, `Main`, `PaneArrangement`, `PhotoGrid`, `SettingsDialog` and `UiDialog` are now `qsTr("...")`. With no catalog installed `qsTr` returns the source text, so behaviour and every English-comparing test are unchanged (full suite 20/20 on Windows; Linux Docker 20/20 before this pass).
+
+Still not done, in order: strings built by concatenation or ternaries (for example status messages and "Move N items to the Recycle Bin"), which need `qsTr` with `%1` arguments and plural forms; strings in the controller and models (`status`, command labels in the registry, error messages); the `lupdate` extraction and `lrelease` build step, which cannot run here because the project-local Qt has no Linguist tools (`lupdate.exe` and `lrelease.exe` are absent); a first catalog and native-speaker review.
