@@ -45,7 +45,14 @@ inline QString hash(const QString& path) {
 }
 inline QString canonical(const QString& path) {return QFileInfo(path).canonicalFilePath();}
 inline bool samePath(const QString& a,const QString& b) {
-    return !canonical(a).isEmpty() && canonical(a).compare(canonical(b),Qt::CaseInsensitive)==0;
+    if(a.isEmpty() || b.isEmpty()) return false;
+    HANDLE first=CreateFileW(reinterpret_cast<LPCWSTR>(a.utf16()),0,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+    HANDLE second=CreateFileW(reinterpret_cast<LPCWSTR>(b.utf16()),0,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+    BY_HANDLE_FILE_INFORMATION x{},y{};
+    const bool same=first!=INVALID_HANDLE_VALUE && second!=INVALID_HANDLE_VALUE && GetFileInformationByHandle(first,&x) && GetFileInformationByHandle(second,&y) && x.dwVolumeSerialNumber==y.dwVolumeSerialNumber && x.nFileIndexHigh==y.nFileIndexHigh && x.nFileIndexLow==y.nFileIndexLow;
+    if(first!=INVALID_HANDLE_VALUE) CloseHandle(first);
+    if(second!=INVALID_HANDLE_VALUE) CloseHandle(second);
+    return same;
 }
 inline QString qtDirectory() {
     HMODULE core=GetModuleHandleW(L"Qt6Core.dll");
