@@ -1,3 +1,6 @@
+#ifdef _WIN32
+#include "native_platform_fixture.hpp"
+#endif
 #include "glancelot/platform_integration.hpp"
 #include <QTest>
 #include <QTemporaryDir>
@@ -7,6 +10,92 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QSaveFile>
+
+#ifdef Q_OS_WIN
+class PlatformIntegrationTests : public QObject {
+    Q_OBJECT
+    native_fixture::Fixture fixture;
+    QString directory,photo;
+    QString native(const QString& path) const {return QDir::toNativeSeparators(QFileInfo(path).absoluteFilePath());}
+    bool resolves(const QString& name) {
+        wchar_t found[32768]{};const auto n=SearchPathW(nullptr,reinterpret_cast<LPCWSTR>(name.utf16()),nullptr,32768,found,nullptr);
+        return n>0 && n<32768 && native_fixture::samePath(QString::fromWCharArray(found,int(n)),QDir(fixture.sandbox).filePath(name));
+    }
+    void verify(const QString& launcher,const QStringList& arguments) {
+        QVERIFY2(fixture.verify(launcher,arguments,fixture.sandbox),qPrintable(fixture.error));
+    }
+    void verifyShell() {
+        const auto& capture=native_fixture::shellCapture();QCOMPARE(capture.calls,1);QCOMPARE(capture.count,UINT(1));QCOMPARE(capture.flags,DWORD(0));
+        QVERIFY(native_fixture::samePath(capture.folder,directory));QCOMPARE(capture.children.size(),1);
+        QVERIFY(native_fixture::samePath(capture.children.first(),photo));
+    }
+    void verifyApartmentUninitialized() {
+        const HRESULT result=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        if(SUCCEEDED(result)) CoUninitialize();QCOMPARE(result,HRESULT(S_OK));
+    }
+private slots:
+    void initTestCase() {
+        QVERIFY2(fixture.prepare(),qPrintable(fixture.error));
+        for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"}) QVERIFY(resolves(name));
+        QVERIFY(native_fixture::samePath(QStandardPaths::findExecutable("wt.exe"),QDir(fixture.sandbox).filePath("wt.exe")));
+        // Fail closed on copied runner/helper identity before invoking even a canary bare executable.
+        QVERIFY(fixture.begin());QVERIFY(QProcess::startDetached("explorer.exe",{"--canary",native_fixture::environment(L"GLANCELOT_NATIVE_TOKEN")}));
+        QVERIFY2(fixture.verify("explorer.exe",{"--canary",native_fixture::environment(L"GLANCELOT_NATIVE_TOKEN")},fixture.sandbox),qPrintable(fixture.error));
+        directory=QDir(fixture.sandbox).filePath(QString::fromUtf8("folder ' ; $() \U0001f9ea \u2602 space"));
+        QVERIFY(QDir().mkdir(directory));photo=QDir(directory).filePath(QString::fromUtf8("photo ' ; $() \U0001f642.png"));
+        QFile file(photo);QVERIFY(file.open(QIODevice::WriteOnly));QCOMPARE(file.write("generated"),qint64(9));
+        verifyApartmentUninitialized();
+    }
+    void init() {native_fixture::shellCapture()={};QVERIFY(fixture.begin());}
+    void invalidPathsNeverLaunch() {
+        QVERIFY(!glancelot::PlatformIntegration::revealInFileManager(""));
+        QVERIFY(!glancelot::PlatformIntegration::revealInFileManager(QDir(fixture.sandbox).filePath("missing.png")));
+        QVERIFY(!glancelot::PlatformIntegration::openTerminal(""));
+        QVERIFY(!glancelot::PlatformIntegration::openTerminal(QDir(fixture.sandbox).filePath("missing")));
+        QVERIFY(fixture.noCapture());QCOMPARE(native_fixture::shellCapture().calls,0);
+    }
+    void revealDirectoryCapturesNativeArgument() {
+        QVERIFY(resolves("explorer.exe"));QVERIFY(glancelot::PlatformIntegration::revealInFileManager(directory));
+        verify("explorer.exe",{native(directory)});QCOMPARE(native_fixture::shellCapture().calls,0);
+    }
+    void revealFileNativeSuccessBalancesNewSta() {
+        verifyApartmentUninitialized();QVERIFY(glancelot::PlatformIntegration::revealInFileManager(photo));
+        verifyShell();QVERIFY(fixture.noCapture());verifyApartmentUninitialized();
+    }
+    void revealFileNativeSuccessBalancesExistingSta() {
+        const HRESULT result=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        // Always balance the outer initialization even when a later assertion fails.
+        struct Balance {HRESULT result;~Balance(){if(SUCCEEDED(result))CoUninitialize();}} balance{result};
+        QCOMPARE(result,HRESULT(S_OK));QVERIFY(glancelot::PlatformIntegration::revealInFileManager(photo));verifyShell();QVERIFY(fixture.noCapture());
+        const HRESULT nested=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        if(SUCCEEDED(nested))CoUninitialize();QCOMPARE(nested,HRESULT(S_FALSE));
+    }
+    void revealFileNativeFailureFallsBackToOwnedExplorer() {
+        native_fixture::shellCapture().result=E_FAIL;QVERIFY(resolves("explorer.exe"));
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(photo));verifyShell();
+        verify("explorer.exe",{"/select,",native(photo)});verifyApartmentUninitialized();
+    }
+    void terminalDirectoryAndFileParentCaptureWt() {
+        QVERIFY(glancelot::PlatformIntegration::openTerminal(directory));verify("wt.exe",{"-d",native(directory)});
+        QVERIFY(fixture.begin());QVERIFY(glancelot::PlatformIntegration::openTerminal(photo));verify("wt.exe",{"-d",native(directory)});
+        QVERIFY(fixture.begin());QVERIFY(glancelot::PlatformIntegration::openTerminal(QDir::rootPath()));verify("wt.exe",{"-d",native(QDir::rootPath())});
+    }
+    void terminalPowerShellLiteralFallbackAndControlledFailure() {
+        const QString wt=QDir(fixture.sandbox).filePath("wt.exe"),hidden=wt+".hidden";
+        const QString ps=QDir(fixture.sandbox).filePath("powershell.exe"),saved=ps+".saved";
+        struct Restore {QString wt,hidden,ps,saved;~Restore(){if(QFileInfo::exists(hidden))QFile::rename(hidden,wt);if(QFileInfo::exists(saved)){QFile::remove(ps);QFile::rename(saved,ps);}}} restore{wt,hidden,ps,saved};
+        QVERIFY(QFile::rename(wt,hidden));QVERIFY(QStandardPaths::findExecutable("wt.exe").isEmpty());QVERIFY(resolves("powershell.exe"));
+        QString escaped=native(directory);escaped.replace("'","''");
+        QVERIFY(glancelot::PlatformIntegration::openTerminal(photo));
+        verify("powershell.exe",{"-NoExit","-Command",QString("Set-Location -LiteralPath '%1'").arg(escaped)});
+        QVERIFY(QFile::rename(ps,saved));QFile invalid(ps);QVERIFY(invalid.open(QIODevice::WriteOnly));QCOMPARE(invalid.write("not a PE executable"),qint64(19));invalid.close();
+        // Controlled application-directory invalid image blocks fallback. This does not claim system PowerShell absent.
+        QVERIFY(resolves("powershell.exe"));QVERIFY(QStandardPaths::findExecutable("wt.exe").isEmpty());QVERIFY(fixture.begin());
+        QVERIFY(!glancelot::PlatformIntegration::openTerminal(directory));QVERIFY(fixture.noCapture());
+    }
+    void cleanupTestCase() {QVERIFY2(fixture.prepare(),qPrintable(fixture.error));verifyApartmentUninitialized();}
+};
+#else
 
 class PlatformIntegrationTests : public QObject {
     Q_OBJECT
@@ -158,8 +247,12 @@ private slots:
 #endif
 };
 
+#endif
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
+#ifdef Q_OS_WIN
+    if (native_fixture::environment(L"GLANCELOT_NATIVE_SANDBOX").isEmpty()) return native_fixture::bootstrap(app.arguments());
+#endif
 #ifndef Q_OS_WIN
     const auto name = QFileInfo(QString::fromLocal8Bit(argv[0])).fileName();
     if (name == "xdg-open" || name == "x-terminal-emulator" || name == "custom-terminal") {
