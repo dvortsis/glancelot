@@ -503,3 +503,32 @@ Independent Claude approval, serial main integration and integrated-commit full
 checks remain. The user-appointed lead accepted the coarse existing IPC/render
 semantics in main 91a49d2; this does not substitute for review. PLATFORM-01 may now
 start under its frozen packet, without marking PERF done or merging it unreviewed.
+
+## Serial integration candidate, 2026-10-19
+
+Actual Claude review commit 21be1b8 APPROVED candidate 8e2b1fd with a nonblocking
+cache-lookup interpretation condition. Report is preserved unchanged; ec6bcb3
+adds the requested documentation that combined cache-lookup spans include stat/key
+construction and cannot be interpreted as a pure cache latency/hit-rate measure.
+
+Under the codex-lead integration lock, main 1e75077 was merged into the reviewed
+branch as 7f026a5. Only existing test prerequisites conflicted: retained virtualized
+row positioning and real disposable launcher capture assertions. Product PERF source
+and frozen perf_trace.hpp remained unchanged versus the reviewed candidate.
+
+Required merged-source Windows build: 18/18 passed, 161.59s. Required Docker build:
+18/18 passed, 123.31s; glancelot-browser:main image
+sha256:7247b7881939ff8945a5c0b36ddef95c0124a7c619409965e8e9fa250779c12b.
+The exact merged-source runtime passed standard-v1 software-GL replay with
+RequireRender: six next/previous steps, cache hit/miss, grid, combined, cancellation,
+corrupt decode and recovery; all 316 generated fixture hashes unchanged before/after.
+Logs: .cache/perf-integration-{windows,docker}.log and
+.cache/perf-integration-replay-results/replay-full. An initial replay invocation
+used an abbreviated source SHA and was rejected before execution; the successful
+replay uses the full exact source identity. No failed result was accepted.
+
+The reviewer native zero-frame condition was investigated during PLATFORM checks:
+the desktop was interactive and sessions matched. Restoring/positioning the same
+packaged test window in the primary work area yielded actual swaps; strict Windows
+package smoke subsequently passed. This is a visible-window setup observation,
+not physical presentation timing or hardware qualification.
