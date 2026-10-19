@@ -37,6 +37,13 @@ public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
     QImage image() const;
+    // F040 reference window: a pinned copy of the current photo (shares its pixels, so it costs no decode or memory beyond
+    // the one image) that stays put while the main window browses on. Empty until pinned.
+    Q_PROPERTY(QImage referenceImage READ referenceImage NOTIFY referenceChanged)
+    Q_PROPERTY(QString referenceName READ referenceName NOTIFY referenceChanged)
+    QImage referenceImage() const; QString referenceName() const;
+    Q_INVOKABLE bool pinReference();   // false when no photo has decoded
+    Q_INVOKABLE void clearReference();
     QString filePath() const; QString fileName() const; QString directory() const; QString status() const;
     // True only when the currently requested file decoded successfully; a retained old image is not a success.
     bool imageReady() const;
@@ -98,7 +105,7 @@ public:
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
-    void imageChanged(); void stateChanged(); void bindingsChanged();
+    void imageChanged(); void stateChanged(); void bindingsChanged(); void referenceChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
     // The folder tree was just shown by command; the UI should move keyboard focus into it.

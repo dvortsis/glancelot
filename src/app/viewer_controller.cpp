@@ -100,6 +100,8 @@ const std::vector<Command> registry {
     // F037: presets (physical scale), zoom lock and the navigator overview. Unbound until the user asks.
     {"zoom-50","Zoom to 50%","",false,"canvas"}, {"zoom-200","Zoom to 200%","",false,"canvas"}, {"zoom-400","Zoom to 400%","",false,"canvas"},
     // F031 slideshow: advances only after the current photo has shown; any manual step, Escape, a modal or focus loss ends it.
+    // F040: pin the current photo in its own window to compare against while browsing; pinning again replaces it.
+    {"reference-pin","Pin this photo in a reference window","",false,"canvas"}, {"reference-close","Close the reference window","",false,"global"},
     {"slideshow","Start or stop the slideshow","",false,"canvas"}, {"slideshow-slower","Slideshow: longer per photo","",false,"canvas"},
     {"slideshow-faster","Slideshow: shorter per photo","",false,"canvas"},
     {"zoom-lock","Keep zoom when changing photos","",false,"canvas"}, {"navigator","Show or hide the zoom navigator","",false,"canvas"},
@@ -173,7 +175,8 @@ BoundaryMode boundaryValue(const QString& value) {
 
 struct ViewerController::Private {
     ViewerController* q;
-    QImage image;
+    QImage image, reference;
+    QString referenceLabel;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
     QString directoryError;
     bool directoryPending{};
@@ -578,6 +581,18 @@ void ViewerController::restoreWindow(){
     },""});
 }
 QImage ViewerController::image() const{return d->image;}
+QImage ViewerController::referenceImage() const{return d->reference;}
+QString ViewerController::referenceName() const{return d->referenceLabel;}
+bool ViewerController::pinReference(){
+    if(!d->imageReady||d->image.isNull())return false;
+    d->reference=d->image; // implicitly shared: no pixel copy
+    d->referenceLabel=QFileInfo(d->path).fileName();
+    emit referenceChanged();return true;
+}
+void ViewerController::clearReference(){
+    if(d->reference.isNull())return;
+    d->reference=QImage{};d->referenceLabel.clear();emit referenceChanged();
+}
 QString ViewerController::filePath() const{return d->path;}
 QString ViewerController::fileName() const{return QFileInfo(d->path).fileName();}
 QString ViewerController::directory() const{return d->path.isEmpty()?displayPath(d->nav.snapshot().directory):QFileInfo(d->path).absolutePath();}

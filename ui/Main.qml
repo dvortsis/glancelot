@@ -519,6 +519,9 @@ ApplicationWindow {
                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
             }
         }
+        // F040
+        else if (id === "reference-pin") { if (!viewer.pinReference()) deleteFlow.showNotice("Open a photo first to pin it as a reference.") }
+        else if (id === "reference-close") viewer.clearReference()
         // F031
         else if (id === "slideshow") { if (slideshowOn) stopSlideshow(); else startSlideshow() }
         else if (id === "slideshow-slower") setSlideshowSeconds(slideshowSeconds + (slideshowSeconds >= 10 ? 5 : 1))
@@ -1558,7 +1561,40 @@ ApplicationWindow {
             Accessible.role: Accessible.AlertMessage
         }
     }
-    FileDialog {
+    // F040 reference window: the pinned photo in its own window, with its own view (fit, wheel zoom, drag pan). It never
+    // follows the main window's navigation; closing it, Escape or "Close the reference window" unpins.
+    Window {
+        id: referenceWindow
+        objectName: "referenceWindow"
+        width: 720; height: 520; minimumWidth: 320; minimumHeight: 240
+        visible: viewer.referenceName.length > 0
+        title: "Reference — " + viewer.referenceName
+        color: Theme.background
+        onClosing: viewer.clearReference()
+        ImageCanvas {
+            id: referenceCanvas
+            objectName: "referenceCanvas"
+            anchors.fill: parent
+            image: viewer.referenceImage
+            background: "#191919"
+            focus: true
+            Accessible.name: "Reference photo " + viewer.referenceName
+            Keys.onEscapePressed: viewer.clearReference()
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_F) { fit("shrink"); event.accepted = true }
+                else if (event.key === Qt.Key_1) { actualSize(); event.accepted = true }
+            }
+        }
+        MouseArea {
+            anchors.fill: parent
+            property real lastX: 0
+            property real lastY: 0
+            onPressed: mouse => { referenceCanvas.forceActiveFocus(); lastX = mouse.x; lastY = mouse.y }
+            onPositionChanged: mouse => { if (pressed) referenceCanvas.panBy(mouse.x - lastX, mouse.y - lastY); lastX = mouse.x; lastY = mouse.y }
+            onDoubleClicked: referenceCanvas.fit("shrink")
+            onWheel: wheel => { referenceCanvas.zoomAt(Math.pow(1.0015, wheel.pixelDelta.y !== 0 ? wheel.pixelDelta.y * 3 : wheel.angleDelta.y), wheel.x, wheel.y); wheel.accepted = true }
+        }
+    }    FileDialog {
         id: openDialog
         title: "Open a photo"
         nameFilters: ["Photographs (*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG)", "All files (*)"]

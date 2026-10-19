@@ -323,6 +323,29 @@ private slots:
         QTRY_VERIFY(!nav->isVisible());
     }
 
+    // F040: a pinned reference stays put while the main window browses, and unpins from every route.
+    void referenceWindowKeepsItsPhoto() {
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.trigger("reference-pin"); QTest::qWait(150);
+        QVERIFY(h.viewer.referenceName().isEmpty()); // nothing open: nothing pinned
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        auto* ref = h.window->findChild<QQuickWindow*>("referenceWindow"); QVERIFY(ref);
+        QVERIFY(!ref->isVisible());
+        h.viewer.trigger("reference-pin");
+        QTRY_VERIFY(ref->isVisible());
+        QCOMPARE(h.viewer.referenceName(), QString("p1.png"));
+        QCOMPARE(h.viewer.referenceImage().size(), QSize(320, 200));
+        QVERIFY(ref->title().contains("p1.png"));
+        h.viewer.next(); QTRY_COMPARE(h.viewer.currentIndex(), 2); QTRY_VERIFY(h.viewer.imageReady());
+        QCOMPARE(h.viewer.referenceName(), QString("p1.png")); // browsing never moves it
+        h.viewer.trigger("reference-pin"); QCOMPARE(h.viewer.referenceName(), QString("p2.png")); // pinning again replaces it
+        h.viewer.trigger("reference-close"); QTRY_VERIFY(!ref->isVisible());
+        QVERIFY(h.viewer.referenceName().isEmpty());
+        h.viewer.trigger("reference-pin"); QTRY_VERIFY(ref->isVisible());
+        ref->close(); QTRY_VERIFY(h.viewer.referenceName().isEmpty()); // the window's own close button unpins
+        QTRY_VERIFY(h.viewer.imageReady());
+    }
+
     // F031: the slideshow advances on its own pace, never queues, and ends on manual steps, Escape and a folder boundary.
     void slideshowAdvancesAndEndsCleanly() {
         Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
