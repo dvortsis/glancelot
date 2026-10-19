@@ -233,6 +233,28 @@ private slots:
         }
         QCOMPARE(hash(moved+"/photo.png"),original);
     }
+#ifdef Q_OS_WIN
+    void incompleteIdentityRefreshRetainsLastGoodSelectionBaseline() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());
+        const auto original=dir.filePath("a.png"),renamed=dir.filePath("b.png"),other=dir.filePath("c.png");
+        QVERIFY(png(original,Qt::red));QVERIFY(png(other,Qt::blue));
+        DirectoryEntryModel grid;grid.setDirectory(dir.path());grid.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,5000);
+        grid.select(grid.rowOf(original));QCOMPARE(grid.selectedPaths(),QStringList{original});
+        struct OwnedHandle {HANDLE value=INVALID_HANDLE_VALUE;~OwnedHandle(){if(value!=INVALID_HANDLE_VALUE)CloseHandle(value);}} locked;
+        const auto path=fs_watch::native(original);
+        locked.value=CreateFileW(path.c_str(),GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+        QVERIFY(locked.value!=INVALID_HANDLE_VALUE);
+        QVERIFY(!fs_watch::probe(path).known);
+        grid.refresh();QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,5000);
+        QCOMPARE(grid.selectedPaths(),QStringList{original});
+        CloseHandle(locked.value);locked.value=INVALID_HANDLE_VALUE;
+        QVERIFY(QFile::rename(original,renamed));grid.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(renamed)>=0,5000);
+        QCOMPARE(grid.selectedPaths(),QStringList{renamed});
+        QCOMPARE(grid.pathAt(grid.cursorRow()),renamed);
+    }
+#endif
     void selectedNoncurrentRenameAndCurrentRename() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto a=dir.filePath("a.png"),b=dir.filePath("b.png"),c=dir.filePath("c.png");
         QVERIFY(png(a,Qt::red));QVERIFY(png(b,Qt::blue));
