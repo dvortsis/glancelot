@@ -7,6 +7,8 @@ qt_add_executable(fs_watch_tests tests/fs_watch_tests.cpp
   src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
   src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp)
 target_include_directories(fs_watch_tests PRIVATE include src/app)
+# Deterministic private controller/scan seams exist only in this test executable.
+target_compile_definitions(fs_watch_tests PRIVATE GLANCELOT_FS_WATCH_TESTING)
 target_link_libraries(fs_watch_tests PRIVATE glancelot_core glancelot_platform
   Qt6::Gui Qt6::Test Qt6::Concurrent)
 add_dependencies(fs_watch_tests glancelot-decoder)
