@@ -1,6 +1,7 @@
 # PERF-MEASURE-01 cross-lane review request
 
-Candidate: codex/perf-measure, e68ebd7 (later evidence-only commits may follow).
+Candidate: codex/perf-measure, implementation through d36c587 plus evidence descendants.
+Application binary source is unchanged since e68ebd7; d36c587 tightens fixture tooling.
 Base contract: 76da49e; merged main d8aba16 in 97e084c.
 Reviewer: Claude Code lane, per AGENT-LANES-PLAN.md. This is a request, not approval.
 The queue remains owned by the lead. No main merge or integration lock was taken.
@@ -40,7 +41,9 @@ Latest full Windows check 14/15: platform passes, grid 180s timeout under concur
 lane builds. A targeted diagnostic also timed out at 180s during overlapping lane tests.
 The final rebuilt full suite is running; no timeout was raised.
 
-Remaining: final rebuilt Windows check, Linux software-GL replay and repeated capture,
+Linux 50-capture replay passed (16,527 spans, zero drops, source hashes unchanged).
+The rebuilt Windows full suite remains 14/15 due to grid 180s timeout; the changed
+deletion/Stop test passes 3/3 in 1927ms. Remaining: grid diagnosis and full gates,
 stage-boundary review, full gates, independent approval, serial integration, then
 checks on the integrated commit. PLATFORM-01 proposal is separate and cannot become
 implementation until the lead freezes its packet and queue entry.

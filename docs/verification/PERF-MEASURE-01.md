@@ -295,3 +295,57 @@ Linux repeated baseline's application binary is SHA256-prefix 142e27c0c383f56d,
 source revision dd0820eec0546082fd4d026ea5f7411be2249b52. Its first exploratory
 smoke supplied an incorrect declared commit suffix and is excluded from provenance
 and baseline evidence. The repeated run reads the exact source revision from Git.
+
+## Linux software-GL repeated baseline
+
+The separately labelled replay-only runtime built successfully as image
+26370935b1c5da0f17c99e495635094a73a9358150cfba7244461b4fa4a9adec.
+This does not repair or pass the required Docker full-suite gate.
+
+```
+docker run --rm --network none --entrypoint sh \
+  [read-only source/fixture mount; writable isolated results mount] \
+  glancelot-browser:codex-perf-replay-only \
+  /workspace/tools/perf/container_replay.sh /opt/glancelot/glancelot \
+  /workspace/.cache/perf-fixtures-smoke-a /results/baseline-dd0820e \
+  dd0820eec0546082fd4d026ea5f7411be2249b52 50
+PASS standard-v1 run 0..49 next/previous 6 cache hit/miss, grid, combined,
+  cancellation, corrupt decode and recovery
+PASS fixture ... files 316 ... index_sha256 c87fae45141806538c3ac9c12dbe422356b4c2c8d07c5ec9b312ed0b1529cbea
+PASS schema-1 metrics, splits, redacted context and raw/aggregate counts
+captures 50 spans 16527 dropped 0 source_hashes_unchanged=True
+```
+
+Every capture passed correctness/action counters and required upload, CPU render
+submission and startup spans. Aggregate nearest-rank distributions were recomputed
+from 16,527 raw durations. The min-samples 50 self-comparison passes; this is a pipeline
+check, not an optimization A/B result. Native and Linux conditions differ and must
+not be compared as an equivalent workload/environment pair.
+
+Report context: Ubuntu 24.04, WSL2 kernel 6.18.33.2-microsoft-standard-WSL2,
+Qt 6.8.3 qt-api-3, software OpenGL requested with LIBGL_ALWAYS_SOFTWARE=1,
+1180x780 Slate & Ice dark. Container was nonroot with no published ports, no network,
+a private authenticated display and read-only fixtures. Source files were Windows
+bind-mounted through WSL; this is not native Linux storage performance. Other lane
+checks, bulk fixture verification and native tests overlapped. Power/thermals,
+active driver identity and physical presentation were not qualified.
+
+Useful p95 in milliseconds: enumerate 598.9582; sort 0.0144; publish 87.0282;
+thumbnail_queue 136.0267; thumbnail_decode 51.863; decode_queue 108.8673;
+decode 36.4501; upload 0.0067; present 1.353; cache_lookup 3.6016; startup 1107.6383.
+Mutation has no samples because replay never mutates media. Local evidence:
+.cache/perf-linux-results/baseline-dd0820e and .cache/perf-linux-replay-baseline-50.log.
+
+The final rebuilt Windows command still failed only the grid suite timeout:
+14/15 passed, 330.43 sec; platform_integration passed 7.01 sec. The explicitly changed
+case was then run with QtTest file output:
+
+```
+grid_ui_tests.exe deleteBatchProgressStopAndPartialFailureResults -o [local-log],txt
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 1927ms
+```
+
+A full grid diagnostic retains per-case file output with the same 180-second bound;
+its result is pending. The full-matrix native workflow has passed its action/trace
+checks and is completing the post-run source-hash verification. Full-matrix strict
+manifest verification is also pending. These live jobs have not been restarted.
