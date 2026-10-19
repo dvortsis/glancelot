@@ -23,7 +23,7 @@ RUN python3 tools/platform/stage_linux.py --repo /src --build /build --qt /opt/Q
 # Independent runtime: no Qt SDK/development prefix, compiler, or source checkout.
 FROM ubuntu:24.04 AS smoke
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates tigervnc-standalone-server tigervnc-tools fonts-noto-core libgl1-mesa-dri libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libasound2t64 libglib2.0-0t64 && rm -rf /var/lib/apt/lists/* && userdel -r ubuntu && useradd --create-home --uid 1000 viewer && mkdir /results && chown viewer:viewer /results
+RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates tigervnc-standalone-server tigervnc-tools fonts-noto-core libgl1-mesa-dri libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libasound2t64 libglib2.0-0t64 libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/* && userdel -r ubuntu && useradd --create-home --uid 1000 viewer && mkdir /results && chown viewer:viewer /results
 COPY --from=build /package/Glancelot-linux-x86_64.tar.gz /opt/artifacts/Glancelot-linux-x86_64.tar.gz
 COPY --from=build /package/Glancelot-linux-x86_64.tar.gz.json /opt/artifacts/Glancelot-linux-x86_64.tar.gz.json
 COPY tools/platform /opt/platform-tools
@@ -31,9 +31,13 @@ USER viewer
 RUN --network=none python3 /opt/platform-tools/artifacts.py extract /opt/artifacts/Glancelot-linux-x86_64.tar.gz /results/extracted-package
 RUN --network=none python3 /opt/platform-tools/dependency_audit.py /results/extracted-package /results/dependencies.json
 RUN --network=none sh /opt/platform-tools/linux_smoke.sh /results/extracted-package /results/package-smoke
+RUN --network=none python3 /opt/platform-tools/qualification.py --package /results/extracted-package --smoke /results/package-smoke/smoke.json --dependencies /results/dependencies.json --output /results/matrix.json --case C-CPU
 
 FROM scratch AS artifact
 COPY --from=build /package/ /
 COPY --from=smoke /results/dependencies.json /qualification/dependencies.json
 COPY --from=smoke /results/package-smoke/smoke.json /qualification/smoke.json
 COPY --from=smoke /results/package-smoke/positive/screenshot.png /qualification/screenshot.png
+COPY --from=smoke /results/package-smoke/generated-quadrants.png /qualification/generated-quadrants.png
+COPY --from=smoke /results/package-smoke/generated-smoke.jpg /qualification/generated-smoke.jpg
+COPY --from=smoke /results/matrix.json /qualification/matrix.json

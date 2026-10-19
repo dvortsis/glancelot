@@ -1,12 +1,13 @@
 # Offline package tools
 
-PLATFORM-01 is implementing; this is its artifact-integrity layer. Build/package
-wrappers, real Windows/Linux package evidence, repeat-build experiments and hardware
-qualification scripts remain to be completed. See docs/PLATFORM-01-PLAN.md.
+PLATFORM-01 is implementing. See docs/PLATFORM-01-PLAN.md and
+docs/verification/PLATFORM-01.md for scope and measured results.
 
-artifacts.py uses Python's standard library and never extracts an archive. It seals
+artifacts.py uses Python's standard library. It seals
 a newly generated staging directory, writes deterministic ZIP or tar.gz artifacts,
 independently verifies their actual contents and compares two measured artifacts.
+Its extract command first verifies the archive and writes only validated entries
+into a new directory, with bounded allocation and normalized modes/times.
 No command deletes an existing output or modifies a shipped payload.
 
 The staging directory must contain .glancelot-package-staging with exact bytes
@@ -47,3 +48,36 @@ traversal, changed payloads/modes/timestamps, link/extension entries and digest
 mismatches. Entry count, file/total sizes, manifest size and archive metadata allocation
 are bounded. Tests use disposable generated files and actual archives, including
 corruption and path attacks; they do not require user media or external services.
+
+## Build, smoke and compare
+
+Use the project-local Python on Windows. Outputs must be new. EPOCH is an explicit
+Unix timestamp; use the same value and clean source revision for repeat experiments.
+
+```powershell
+$epoch = [long](git show -s --format=%ct HEAD)
+./tools/platform/windows_package.ps1 -Output .cache/package-windows -Epoch $epoch
+./tools/platform/linux_package.ps1 -Output .cache/package-linux -Epoch $epoch
+python tools/platform/artifacts.py extract .cache/package-windows/Glancelot-windows-x86_64.zip .cache/extracted-windows
+python tools/platform/package_smoke.py .cache/extracted-windows .cache/windows-smoke
+python tools/platform/qualification.py --package .cache/extracted-windows --smoke .cache/windows-smoke/smoke.json --output .cache/windows-matrix.json --case W-NATIVE
+python tools/platform/repeat_build.py --target windows --output .cache/repeat-windows --epoch $epoch
+python tools/platform/repeat_build.py --target linux --output .cache/repeat-linux --epoch $epoch
+```
+
+Windows defaults to scripts/build.ps1 -Test -Package before sealing. Explicit
+-UseExistingDeployment skips that invocation and validates deployment binaries
+against the selected build; it does not create fresh test evidence. Run package
+commands serially because the existing Windows deployment directory is shared
+within this worktree. Linux requires WSL Ubuntu/Docker on Windows, or use
+tools/platform/linux_package.sh --output NEW_OUTPUT --epoch EPOCH on Linux.
+The Qt toolchain image is resolved to its exact Docker ID; its source build and
+full CTest suite precede packaging. Independent runtime extraction, ELF audit,
+software-GL X11 smoke and a qualification matrix must pass before export. No Qt SDK
+or source checkout is present in that runtime. The normal browser image is separate.
+
+Repeat builds require clean Git state, create fresh build directories and force
+two separate Linux compilations. comparison.json records actual archive hashes,
+executable/payload/metadata equality and changed files. Exit 1 reports differing
+archive bytes; it is a measured result, not permission to claim reproducibility.
+Read QUALIFICATION-MATRIX.md for physical gates and evidence reuse checks.

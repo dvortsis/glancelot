@@ -3,6 +3,7 @@ import argparse
 import ctypes
 import json
 import os
+import platform
 import shutil
 import struct
 import subprocess
@@ -10,7 +11,7 @@ import sys
 import time
 import zlib
 from pathlib import Path
-from artifacts import digest_file, encoded, read_limited, require, verify_tree
+from artifacts import MANIFEST, digest_file, encoded, read_limited, require, verify_tree
 
 
 def chunk(kind, data):
@@ -188,10 +189,16 @@ def smoke(package, output):
     require(digest_file(jpeg) == jpeg_original, "generated JPEG source changed")
     verify_tree(package)
     result = {"schema": 1, "passed": True, "source": manifest["source"], "target": manifest["target"],
+              "manifest_sha256": digest_file(package / MANIFEST),
+              "executable_hashes": {row["path"]: row["sha256"] for row in manifest["files"] if row["executable"]},
               "source_media_sha256_unchanged": original, "package_inventory_unchanged": True,
               "generated_jpeg_sha256_unchanged": jpeg_original,
               "positive": positive, "jpeg": jpeg_result, "negative": negative,
               "physical_color_dpi_refresh_qualification": "unverified"}
+    result["environment"] = {"os": platform.system(), "release": platform.release(), "version": platform.version(),
+        "machine": platform.machine(), "python": platform.python_version(), "logical_cpu_count_visible": os.cpu_count(),
+        "cpu_affinity_count": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
+        "power_thermal_state": "uncontrolled", "filesystem_cache_state": "uncontrolled", "active_gpu_identity": "unverified"}
     (output / "smoke.json").write_bytes(encoded(result))
     print("PASS packaged decode/render/source colors, package-only Qt modules, missing-decoder diagnosis and unchanged source/package hashes")
     return result

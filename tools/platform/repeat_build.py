@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from artifacts import compare, encoded, require
+from artifacts import compare, digest_file, encoded, require
 
 
 def source_state(repo):
@@ -21,7 +21,7 @@ def repeat(repo, output, target, epoch):
     require(not output.exists() and not output.is_symlink(), "repeat experiment output must be new")
     require(315532800 <= epoch <= 4354819198, "source epoch outside supported range")
     commit = source_state(repo)
-    label = re.sub(r"[^A-Za-z0-9_.-]", "-", output.name)[:64] + "-" + commit[:12]
+    label = re.sub(r"[^A-Za-z0-9_.-]", "-", output.name)[:40] + "-" + commit[:12]
     builds = [repo / "build-codex-platform-01" / "repeat" / label / name for name in ("a", "b")]
     if target == "windows":
         require(os.name == "nt" and all(not path.exists() for path in builds), "Windows repeat needs two fresh assigned build directories")
@@ -48,6 +48,7 @@ def repeat(repo, output, target, epoch):
     result = compare(*archives)
     result.update(source_commit=commit, source_date_epoch=epoch, target=target,
                   independent_builds=2, status="identical" if result["archive_bytes_equal"] else "different")
+    result["artifacts"] = [{"path": artifact.relative_to(output.resolve()).as_posix(), "sha256": digest_file(artifact)} for artifact in archives]
     require(result["metadata_equal"], "repeat builds used different provenance/conditions")
     (output / "comparison.json").write_bytes(encoded(result))
     print(json.dumps(result, indent=2), flush=True)

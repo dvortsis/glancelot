@@ -16,7 +16,8 @@ was checked in a separate Ubuntu runtime with no development Qt installation.
 Ubuntu runtime dependencies used for that check are libgl1-mesa-dri, libegl1, libgl1,
 libopengl0, libxkbcommon-x11-0, libfontconfig1, libdbus-1-3, libglib2.0-0t64,
 libxcb-cursor0, libxcb-icccm4, libxcb-keysyms1, libxcb-shape0, libxcb-xinerama0,
-libxcb-image0, libxcb-render-util0 and libasound2t64, plus a usable X11 display and fonts.
+libxcb-image0, libxcb-render-util0, libasound2t64 and libgssapi-krb5-2, plus a usable
+X11 display and fonts.
 The launcher never installs packages or changes system configuration. Have the
 machine's administrator provision missing OS dependencies through its normal process.
 
