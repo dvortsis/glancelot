@@ -3,9 +3,9 @@ project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
-  holder: none
-  branch: none
-  started: none
+  holder: gemini
+  branch: agent/grid-density
+  started: '2026-10-19T14:27:00Z'
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -185,10 +185,12 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: integration
     branch: agent/grid-density
     worktree: .worktrees/grid-density
     build: build-grid-density
+    commit: db64e0f
+    evidence: docs/verification/GRID-DENSITY-01.md; independent review approved; Windows build.ps1 -Test 16/16 (226.53s)
     outcome: Thumbnail size zoom buckets, Ctrl+Wheel zoom, and selection commands with summary badge (F010/F011)
     acceptance: Thumbnail size presets/buckets (96px, 128px, 160px default, 220px, 320px); zoom in (Ctrl++ / Ctrl+=), zoom out (Ctrl+-), and reset zoom (Ctrl+0); Ctrl+Wheel over grid zooms between buckets; zoom changes do not lose scroll position or selected item; select all (Ctrl+A); clear selection (Escape / Ctrl+D) when multiple items selected; invert selection (Ctrl+I); status bar / footer selection badge showing 'Selected: N items (X MB)' when selection count > 0; text editing retains shortcut precedence
     verification: Bucket boundary clamping, wheel step direction, zoom reset, select-all count, invert selection parity, clear selection keeps cursor, byte size calculation formatted with KB/MB/GB, empty folder, text field precedence
