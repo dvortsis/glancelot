@@ -19,6 +19,8 @@ Rectangle {
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
+    property string searchQuery: ""
+    property int preSearchRow: -1
     // A host that pairs the grid with another pane takes Tab (GRID-PREVIEW-01); null keeps the focus chain.
     property var tabHandler: null
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
@@ -171,6 +173,9 @@ Rectangle {
         return ""
     }
     onVisibleChanged: {
+        searchQuery = ""
+        preSearchRow = -1
+        searchTimer.stop()
         fileGrid.setActive(visible) // hidden: no listing, no rows, no thumbnail requests
         if (visible) Qt.callLater(enter)
         else noticeText = ""
@@ -178,7 +183,12 @@ Rectangle {
     // A grid restored as visible at start-up (a saved grid or combined mode) never sees a visibility change.
     Component.onCompleted: if (visible) { fileGrid.setActive(true); Qt.callLater(enter) }
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
-    onFolderPathChanged: placeCursor = true
+    onFolderPathChanged: {
+        searchQuery = ""
+        preSearchRow = -1
+        searchTimer.stop()
+        placeCursor = true
+    }
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
@@ -187,6 +197,7 @@ Rectangle {
         function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
+    Timer { id: searchTimer; interval: 3000; onTriggered: { searchQuery = ""; preSearchRow = -1 } }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
 
     // Location header: parent route, folder name, item count and multi-selection count.
@@ -336,8 +347,96 @@ Rectangle {
         Accessible.description: "Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo."
         ScrollBar.vertical: UiScrollBar { }
         // Grid keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
-        Keys.onShortcutOverride: event => { if (panel.keyAction(event).length) event.accepted = true }
+        Keys.onShortcutOverride: event => {
+            if (panel.searchQuery.length > 0) {
+                if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
+                    event.key === Qt.Key_Backspace || event.key === Qt.Key_F3 || event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+                    event.accepted = true
+                    return
+                }
+            }
+            if (event.key === Qt.Key_F3) { event.accepted = true; return }
+            const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
+            if (event.key >= 0x20 && event.key <= 0x7e && !mods) {
+                event.accepted = true
+                return
+            }
+            if (panel.keyAction(event).length) event.accepted = true
+        }
         Keys.onPressed: event => {
+            const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
+
+            // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
+            if (event.key >= 0x20 && event.key <= 0x7e && !mods && event.text.length > 0) {
+                if (panel.searchQuery.length === 0) {
+                    panel.preSearchRow = fileGrid.cursorRow
+                }
+                panel.searchQuery += event.text
+                const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
+                if (match >= 0) {
+                    panel.select(match, panel.modeReplace)
+                    searchTimer.restart()
+                } else {
+                    searchTimer.restart()
+                }
+                event.accepted = true
+                return
+            }
+
+            // F3 or Down/Up while searching
+            if (event.key === Qt.Key_F3 || ((event.key === Qt.Key_Down || event.key === Qt.Key_Up) && panel.searchQuery.length > 0)) {
+                if (panel.searchQuery.length > 0 && fileGrid.count > 0) {
+                    const forward = !(event.modifiers & Qt.ShiftModifier) && event.key !== Qt.Key_Up
+                    const start = forward ? (fileGrid.cursorRow + 1) % fileGrid.count : (fileGrid.cursorRow - 1 + fileGrid.count) % fileGrid.count
+                    const next = fileGrid.findMatch(panel.searchQuery, start, forward)
+                    if (next >= 0) {
+                        panel.select(next, panel.modeReplace)
+                        searchTimer.restart()
+                    }
+                }
+                event.accepted = true
+                return
+            }
+
+            // Backspace while searching
+            if (event.key === Qt.Key_Backspace && panel.searchQuery.length > 0) {
+                panel.searchQuery = panel.searchQuery.slice(0, -1)
+                if (panel.searchQuery.length === 0) {
+                    panel.preSearchRow = -1
+                    searchTimer.stop()
+                } else {
+                    const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
+                    if (match >= 0) {
+                        panel.select(match, panel.modeReplace)
+                    }
+                    searchTimer.restart()
+                }
+                event.accepted = true
+                return
+            }
+
+            // Escape while searching
+            if (event.key === Qt.Key_Escape && panel.searchQuery.length > 0) {
+                if (panel.preSearchRow >= 0 && panel.preSearchRow < fileGrid.count) {
+                    panel.select(panel.preSearchRow, panel.modeReplace)
+                }
+                panel.searchQuery = ""
+                panel.preSearchRow = -1
+                searchTimer.stop()
+                event.accepted = true
+                return
+            }
+
+            // Return / Enter while searching
+            if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && panel.searchQuery.length > 0) {
+                panel.searchQuery = ""
+                panel.preSearchRow = -1
+                searchTimer.stop()
+                panel.activate()
+                event.accepted = true
+                return
+            }
+
             const action = panel.keyAction(event)
             if (!action.length) return
             event.accepted = true
@@ -588,6 +687,68 @@ Rectangle {
             wrapMode: Text.Wrap
             font.pixelSize: Theme.textSmall
             Accessible.role: Accessible.AlertMessage
+        }
+    }
+
+    // Instant search (F004): floating chip overlay showing current query and match position
+    Rectangle {
+        id: searchChip
+        objectName: "gridSearchChip"
+        visible: panel.searchQuery.length > 0
+        anchors {
+            top: grid.top
+            right: grid.right
+            topMargin: Theme.gapMd
+            rightMargin: Theme.gapMd
+        }
+        z: 10
+        height: Theme.controlHeight
+        implicitWidth: searchChipRow.implicitWidth + 2 * Theme.gapSm
+        radius: Theme.radiusControl
+        color: Qt.alpha(Theme.surface, 0.94)
+        border.width: Theme.borderWidth
+        border.color: Theme.border
+        Accessible.role: Accessible.StaticText
+        Accessible.name: panel.searchQuery.length > 0 ? ("Search: " + panel.searchQuery + ", " + searchCountText.text) : ""
+
+        RowLayout {
+            id: searchChipRow
+            anchors.fill: parent
+            anchors.leftMargin: Theme.gapSm
+            anchors.rightMargin: Theme.gapSm
+            spacing: Theme.gapXs
+
+            UiIcon {
+                name: "search"
+                size: Theme.iconSize
+                color: Theme.muted
+            }
+
+            Label {
+                id: searchQueryText
+                objectName: "gridSearchQuery"
+                text: panel.searchQuery
+                color: Theme.text
+                font.pixelSize: Theme.textSmall
+                font.weight: Font.Medium
+            }
+
+            Rectangle {
+                width: 1
+                height: 12
+                color: Theme.border
+            }
+
+            Label {
+                id: searchCountText
+                objectName: "gridSearchCount"
+                text: fileGrid.matchCount(panel.searchQuery) > 0
+                      ? (fileGrid.matchIndex(panel.searchQuery, fileGrid.cursorRow) + " of " + fileGrid.matchCount(panel.searchQuery))
+                      : "No matches"
+                color: fileGrid.matchCount(panel.searchQuery) > 0 ? Theme.muted : Theme.danger
+                font.pixelSize: Theme.textSmall
+                font.features: { "tnum": 1 }
+            }
         }
     }
 }
