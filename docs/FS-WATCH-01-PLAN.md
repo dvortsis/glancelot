@@ -149,3 +149,31 @@ Apply the same scope probing in model listings, without any filesystem work on
 the GUI thread, recursion or extra watch handles. Test generated POSIX directory
 symlinks and Windows junctions, target-file rename/selection and unchanged bytes.
 This adds no public header, user setting, original-media write or cloud access.
+
+## R3 corrective policy and deterministic test seams
+
+Lead decision after actual Claude review ecb9d54: incomplete observations must
+still invalidate derived listings after the first observation (or on explicit
+refresh), using existing debounce/backoff and bounded work. They never prove
+rename/deletion and cannot replace complete identity baselines. Folders beyond
+watch identity limits retain automatic relisting within the model's existing
+limits, while status continues to report degraded inference. No new catalog or
+large-directory completeness claim is introduced.
+
+Permit private scan-boundary callbacks and controller observation/defer hooks
+only under GLANCELOT_FS_WATCH_TESTING, defined exclusively for fs_watch_tests.
+The test executable compiles the actual controller source with these seams;
+viewer, decoder and real-QML feature binaries do not contain them. No public
+header, runtime option, user configuration, extra watch handle or original-media
+write is added. Hooks must use by-value/copied lifetime, restore thread-local
+construction overrides and never leak across tests. Required deterministic cases:
+retarget A-B and A-B-A before final scan validation; first partial then complete
+observations coalesced while controller reconciliation is deferred; delayed first
+baseline with exactly one fresh decode and newer-open cancellation; permanent
+incompleteness still producing automatic invalidations.
+
+Rearm a registered alias when its bound target/entry changes rather than claiming
+coverage from an unchanged string. Explicit navigation through another alias
+spelling of an existing directory resets selection; identity-following is reserved
+for a proven rename where the former spelling no longer denotes that identity.
+Physical/coarse-timestamp/network/reparse variants remain unverified until measured.

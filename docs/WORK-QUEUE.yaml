@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead-platform-native-fixture, branch: codex/platform-native-fixture, started: "2026-10-19T19:35:00Z"}
+integration_lock: {holder: codex-lead-fs-watch-corrective-contract, branch: codex/fs-watch-01, started: "2026-10-19T21:51:00Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -195,10 +195,14 @@ tasks:
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
     priority: 10
-    state: implementing
+    owner: lead
+    state: done
     branch: agent/ui-settings
     worktree: .worktrees/ui-settings
     build: build-ui-settings
+    commit: c43b413
+    evidence: docs/verification/UI-SETTINGS-01.md; independent review approved; Windows scripts/build.ps1 -Test 18/18 (154.64s); Linux Docker Qt 18/18 (112.38s)
+    integrated_evidence: integrated c43b413 Windows scripts/build.ps1 -Test 18/18 (154.64s) and Linux docker build 18/18 (112.38s)
     depends: [PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-KEYS-01]
     outcome: Advanced searchable UI customization and settings using existing theme and preference infrastructure
     acceptance: Pane visibility, placement, sizes, freeze, pin/auto-hide timing and layout presets; grid thumbnail size, density, labels, folders-first and hidden-file visibility; preview placement, toolbar actions, UI text scale, backgrounds, theme selection, reduced motion and shortcut editing; per-section reset plus full UI reset; portable import/export with validation and explicit global versus per-window scope
@@ -397,7 +401,7 @@ tasks:
     priority: 9
     owner: lead
     owner_lane: codex
-    state: integration
+    state: done
     depends: [REVIEW-ALL-01]
     branch: codex/platform-01
     worktree: .worktrees/codex-platform-01
@@ -408,10 +412,12 @@ tasks:
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
     review_candidate: c35ec602f18a1e2bd1e42390fee3bd26e0c9efdd
     review_handoff: docs/handoff/CODEX-PLATFORM-01-REVIEW.md (on codex/platform-01)
-    review_gate: Candidate cfba419 APPROVED; integrated 73fa157 Windows 17/18 FAILED; Claude integration diagnosis 130da47 CHANGES REQUIRED; docs/verification/PLATFORM-01-INTEGRATION-CLAUDE-REVIEW.md
-    integrated_gate: Required Docker command passed cached image; native 219.21s and diagnostic 213.04s failed unchanged 250ms directory responsiveness assertions; no supported fix yet; lock released incomplete
+    review_gate: Software close-out APPROVED91b3e11; candidate cfba419 and fixture8888d41 plus Docker7bb7b80 preserved; earlier failed gates retained as history
+    integrated_gate: Corrective integrated 1d51c17 Windows scripts/build.ps1 -Test passed18/18 176.11s; required Docker command passed cached identical image0ba808df; earlier failed gates retained in verification; final independent software audit91b3e11 approved
     native_fixture_proposal: docs/handoff/CODEX-PLATFORM-01-NATIVE-FIXTURES-PROPOSAL.md
-    native_fixture_status: Lead-frozen test-only prerequisite after Claude64f0af0 proposal assessment; implemented-code review and full gates pending; no production adapter or oracle change
+    native_fixture_evidence: docs/verification/PLATFORM-01-NATIVE-FIXTURE.md
+    native_fixture_status: Independently approved8888d41 plus Docker wiring acceptance7bb7b80; integrated1d51c17 Windows18/18 176.11s and Docker gate passed; no production adapter or oracle change
+    evidence: docs/verification/PLATFORM-01.md; docs/verification/PLATFORM-01-FINAL-CLAUDE-REVIEW.md; docs/verification/platform-01/integrated-gates.json
   - id: MONITOR-OUTPUT-01
     requirements: [UX-10, COLOR-01, VIEW-04, PERF-04, SYS-02]
     milestone: M5
@@ -464,13 +470,35 @@ tasks:
     acceptance: Bounded combined allocations/jobs; current-image priority; manual override; SSD/HDD/SMB evidence rather than fixed-worker claims
   - id: FAVORITES-01
     requirements: [UX-03, SYS-03]
+    feature: F003
     milestone: M3
     priority: 7
     owner: lead
-    state: ready
+    state: done
+    commit: 6758029
+    evidence: docs/verification/FAVORITES-01.md; independent review approved; Windows build.ps1 -Test 19/19 (168.21s); Linux Docker Qt 19/19 (104.11s)
+    integrated_evidence: integrated 6758029 Windows scripts/build.ps1 -Test 19/19 (187.88s) and Linux docker build 19/19 (102.01s)
+    branch: agent/favorites
+    worktree: .worktrees/favorites
+    build: build-favorites
+    plan: docs/FAVORITES-01-PLAN.md
     depends: [REVIEW-ALL-01]
     outcome: Folder favorites in the existing tree with coordinated settings and missing-path recovery
     acceptance: Add/remove/reorder and keyboard routes; no scans while hidden; unknown preference preservation; native UI review
+  - id: FOLDER-HISTORY-01
+    requirements: [NAV-01, NAV-08, UX-13, IN-06]
+    feature: F001
+    milestone: M3
+    priority: 8
+    owner: lead
+    state: implementing
+    branch: agent/folder-history
+    worktree: .worktrees/folder-history
+    build: build-folder-history
+    plan: docs/FOLDER-HISTORY-01-PLAN.md
+    depends: [REVIEW-ALL-01]
+    outcome: Reversible back/forward folder navigation history stack with state preservation (F001)
+    acceptance: Distinguish folder visits from image steps; Alt+Left / Alt+Right and mouse back/forward parity; restore remembered image/selection/scroll; recover from missing mounts; bounded capacity
   - id: FILTER-01
     requirements: [NAV-05, UX-02]
     milestone: M3

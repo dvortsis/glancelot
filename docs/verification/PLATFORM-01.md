@@ -1,7 +1,7 @@
 # PLATFORM-01 implementation evidence
 
-Status: independently approved by Claude cfba419 for candidate c35ec60; serial
-integration checks pending. Frozen contract
+Status: software packet approved by independent Claude91b3e11 after integrated
+Windows/Docker gates on1d51c17. Frozen contract
 444f896; branch codex/platform-01, worktree .worktrees/codex-platform-01,
 build build-codex-platform-01. F080 / PERF-BUILD basics are included. Physical
 CANVAS-UI, COLOR-01 and DECODE-01 gates remain open.
@@ -246,3 +246,38 @@ recording this incomplete attempt; reacquire it before any corrective integratio
 Next evidence must isolate native work, establish the remaining cause or validate
 a supported fix, then pass the required integrated gates. Earlier package approval
 does not override this failed integrated gate. Physical qualifications remain open.
+
+## Corrective integrated software gates, October19
+
+After the independently reviewed native launcher fixture and its Docker source-copy
+repair, integrated1d51c17 passed required Windows18/18,176.11s and the required
+Docker command using cached identical image0ba808df636ddcd1a66115898c9d46cce5f486b5190c956eee6e42f8ce542692.
+The preceding full Linux execution passed18/18,110.41s. See
+PLATFORM-01-NATIVE-FIXTURE.md and the unchanged independent implementation review
+for exact commands, sources, cache scope and limitations. Strict250ms assertions
+and timeouts are unchanged. A Git comparison confirms app/src/include/ui and
+packaging tools are unchanged between earlier integrated73fa157 and1d51c17;
+original package evidence stays scoped to its recorded archives/source commits.
+
+This passing integrated gate supersedes the earlier failed gate status, without
+claiming the stock-Qt stall cause is known or that future flake rate was measured.
+The test-hygiene defect (real persistent Shell UI from unit tests) is fixed and
+independently validated. No machine-wide timer/priority/driver setting changed.
+Final independent software evidence audit91b3e11 APPROVED software closure.
+CANVAS-UI/DECODE-01 and physical display/color/network gates stay unverified as
+recorded; this software package packet does not close them.
+
+## Independent software close-out
+
+Claude91b3e11 approved all six software deliverables after the source/evidence
+audit, preserving the earlier independent runtime reviews and explicit hardware
+limits. The report PLATFORM-01-FINAL-CLAUDE-REVIEW.md is copied unchanged. It ran
+no new runtime checks; the full gates above were run by the integrator. Sanitized
+terminal excerpts, exact source binding and raw-log hashes are committed in
+platform-01/integrated-gates.json, distinguishing the actual Linux execution from
+the later cached integrated command. No package rebuilt at1d51c17 is claimed.
+
+The cause and frequency of historical GUI stalls remain unknown; future native
+gates retain the strict250ms assertions. Linux runtime base images/apt are not
+pinned beyond the recorded toolchain, and Windows byte reproducibility is not
+claimed. Physical CANVAS-UI/COLOR-01/DECODE-01 qualifications stay open. The lead records queue closure under the integration lock; this evidence commit changes no implementation.

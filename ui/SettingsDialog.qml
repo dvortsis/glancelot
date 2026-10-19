@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import Glancelot
 
 // Settings, appearance and the command list in one place. Wide dialogs use a section sidebar; narrow ones
@@ -14,6 +15,7 @@ UiDialog {
     property string section: "appearance"
     property string bindingMessage: ""
     property bool bindingFailed: false
+    property string settingsFeedback: ""
     readonly property bool wide: availableWidth >= 600
     readonly property var sections: [
         { id: "appearance", label: "Appearance", icon: "appearance" },
@@ -24,6 +26,66 @@ UiDialog {
     ]
     readonly property int sectionIndex: Math.max(0, sections.findIndex(item => item.id === section))
     title: "Settings"
+
+    function cleanPath(url) {
+        let path = url.toString()
+        if (path.startsWith("file:///")) {
+            path = path.slice(7)
+            if (Qt.platform.os === "windows" && path.length > 2 && path.charAt(0) === '/' && path.charAt(2) === ':') {
+                path = path.slice(1)
+            }
+        }
+        return path
+    }
+
+    function rowMatches(label, desc) {
+        if (!settingsSearch.text.trim()) return true
+        const q = settingsSearch.text.trim().toLowerCase()
+        if (label && label.toLowerCase().indexOf(q) >= 0) return true
+        if (desc && desc.toLowerCase().indexOf(q) >= 0) return true
+        return host.fuzzyMatch(label || "", q) || (desc ? host.fuzzyMatch(desc, q) : false)
+    }
+
+    function sectionMatches(secId) {
+        if (!settingsSearch.text.trim()) return true
+        const q = settingsSearch.text.trim().toLowerCase()
+        const sec = sections.find(s => s.id === secId)
+        if (sec && (sec.label.toLowerCase().indexOf(q) >= 0 || host.fuzzyMatch(sec.label, q))) return true
+        if (secId === "appearance") {
+            return rowMatches("Mode", "Follow system matches the light or dark setting of your desktop")
+                || rowMatches("Palette", "Palettes colour the interface")
+                || rowMatches("Text size", "Scale interface text and controls")
+                || rowMatches("Reduced motion", "Disables non-essential animations")
+        }
+        if (secId === "viewing") {
+            return rowMatches("Fit current photo", "Each newly opened photo starts at Shrink only")
+                || rowMatches("Mouse wheel", "Ctrl + wheel always zooms at the pointer")
+                || rowMatches("Canvas backdrop", "Steps through the backdrop colours")
+                || rowMatches("Nearest-neighbour sampling", "Shows individual pixels sharply")
+                || rowMatches("Frameless window", "Hides the system title bar")
+        }
+        if (secId === "browsing") {
+            return rowMatches("Workspace layout", "Arrange panes lock")
+                || rowMatches("File order", "Order of photos inside a folder")
+                || rowMatches("Reverse file order", "")
+                || rowMatches("At the end of a folder", "What Next and Previous do")
+                || rowMatches("Show filmstrip", "Thumbnails of the current folder")
+                || rowMatches("Pin folder tree open", "Keeps the folder panel visible")
+        }
+        if (secId === "controls") {
+            for (const c of viewer.commands) {
+                if (host.fuzzyMatch(c.label, q) || c.label.toLowerCase().indexOf(q) >= 0 || c.id.toLowerCase().indexOf(q) >= 0) return true
+            }
+            return false
+        }
+        if (secId === "about") {
+            return rowMatches("About", "Glancelot local-first photo viewer")
+                || rowMatches("Settings management", "Export import backup reset")
+                || rowMatches("Early alpha", "")
+                || rowMatches("Type", "Geist fonts")
+        }
+        return true
+    }
 
     function openSection(id, focusSearch) {
         if (sections.findIndex(item => item.id === id) >= 0) section = id
@@ -46,7 +108,7 @@ UiDialog {
         for (const command of viewer.commands)
             if (host.fuzzyMatch(command.label, commandSearch.text) && commandRunnable(command.id)) { run(command.id); return }
     }
-    onClosed: { commandSearch.text = ""; bindingMessage = "" }
+    onClosed: { settingsSearch.text = ""; commandSearch.text = ""; bindingMessage = ""; settingsFeedback = "" }
 
     component SectionLabel: Label {
         color: Theme.muted
@@ -94,39 +156,67 @@ UiDialog {
         rowSpacing: Theme.gapMd
         columnSpacing: Theme.gapXl
 
-        ListView {
-            id: nav
-            objectName: "settingsNav"
-            orientation: dialog.wide ? ListView.Vertical : ListView.Horizontal
+        ColumnLayout {
+            id: sidebarCol
             Layout.preferredWidth: dialog.wide ? 200 : -1
             Layout.fillWidth: !dialog.wide
             Layout.fillHeight: dialog.wide
-            Layout.preferredHeight: dialog.wide ? -1 : Theme.controlHeight
-            spacing: Theme.gapXxs
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            model: dialog.sections
-            currentIndex: dialog.sectionIndex
-            Accessible.role: Accessible.PageTabList
-            Accessible.name: "Settings sections"
-            delegate: UiButton {
-                required property var modelData
-                required property int index
-                width: dialog.wide ? ListView.view.width : implicitWidth
-                text: modelData.label
-                iconName: dialog.wide ? modelData.icon : "" // the narrow strip keeps every section label visible
-                alignment: dialog.wide ? Qt.AlignLeft : Qt.AlignHCenter // leading bar in the sidebar, underline in the strip
-                selected: dialog.section === modelData.id // not checkable: clicking the current section must not clear it
-                Accessible.role: Accessible.PageTab
-                Accessible.selected: selected
-                onClicked: dialog.section = modelData.id
-                // Up/Down (sidebar) or Left/Right (strip) move between sections, like a tab list.
-                Keys.onUpPressed: if (dialog.wide && index > 0) { dialog.section = dialog.sections[index - 1].id; dialog.focusSection() }
-                Keys.onDownPressed: if (dialog.wide && index < dialog.sections.length - 1) { dialog.section = dialog.sections[index + 1].id; dialog.focusSection() }
-                Keys.onLeftPressed: if (!dialog.wide && index > 0) { dialog.section = dialog.sections[index - 1].id; dialog.focusSection() }
-                Keys.onRightPressed: if (!dialog.wide && index < dialog.sections.length - 1) { dialog.section = dialog.sections[index + 1].id; dialog.focusSection() }
+            spacing: Theme.gapSm
+
+            UiTextField {
+                id: settingsSearch
+                objectName: "settingsSearch"
+                Layout.fillWidth: true
+                searchIcon: true
+                placeholderText: "Search settings..."
+                Accessible.name: "Search settings"
+                Accessible.description: "Filters visible settings across all sections."
+                onTextChanged: {
+                    if (text.trim().length > 0 && !dialog.sectionMatches(dialog.section)) {
+                        for (const sec of dialog.sections) {
+                            if (dialog.sectionMatches(sec.id)) {
+                                dialog.section = sec.id
+                                break
+                            }
+                        }
+                    }
+                }
             }
-            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+
+            ListView {
+                id: nav
+                objectName: "settingsNav"
+                orientation: dialog.wide ? ListView.Vertical : ListView.Horizontal
+                Layout.fillWidth: true
+                Layout.fillHeight: dialog.wide
+                Layout.preferredHeight: dialog.wide ? -1 : Theme.controlHeight
+                spacing: Theme.gapXxs
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: dialog.sections
+                currentIndex: dialog.sectionIndex
+                Accessible.role: Accessible.PageTabList
+                Accessible.name: "Settings sections"
+                delegate: UiButton {
+                    required property var modelData
+                    required property int index
+                    visible: dialog.sectionMatches(modelData.id)
+                    width: dialog.wide ? ListView.view.width : implicitWidth
+                    text: modelData.label
+                    iconName: dialog.wide ? modelData.icon : "" // the narrow strip keeps every section label visible
+                    alignment: dialog.wide ? Qt.AlignLeft : Qt.AlignHCenter // leading bar in the sidebar, underline in the strip
+                    selected: dialog.section === modelData.id // not checkable: clicking the current section must not clear it
+                    Accessible.role: Accessible.PageTab
+                    Accessible.selected: selected
+                    onClicked: dialog.section = modelData.id
+                    // Up/Down (sidebar) or Left/Right (strip) move between sections, like a tab list.
+                    Keys.onUpPressed: if (dialog.wide && index > 0) { dialog.section = dialog.sections[index - 1].id; dialog.focusSection() }
+                    Keys.onDownPressed: if (dialog.wide && index < dialog.sections.length - 1) { dialog.section = dialog.sections[index + 1].id; dialog.focusSection() }
+                    Keys.onLeftPressed: if (!dialog.wide && index > 0) { dialog.section = dialog.sections[index - 1].id; dialog.focusSection() }
+                    Keys.onRightPressed: if (!dialog.wide && index < dialog.sections.length - 1) { dialog.section = dialog.sections[index + 1].id; dialog.focusSection() }
+                }
+                onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+            }
         }
 
         StackLayout {
@@ -139,6 +229,8 @@ UiDialog {
                 SettingRow {
                     label: "Mode"
                     description: "Follow system matches the light or dark setting of your desktop."
+                    visible: dialog.rowMatches(label, description)
+                    modified: theme.mode !== "system"
                     UiComboBox {
                         model: ["Follow system", "Dark", "Light"]
                         currentIndex: ["system", "dark", "light"].indexOf(theme.mode)
@@ -146,11 +238,57 @@ UiDialog {
                         Accessible.name: "Mode"
                     }
                 }
-                SectionLabel { text: "Palette" }
-                ThemePicker { Layout.fillWidth: true }
+                SettingRow {
+                    label: "Text size"
+                    description: "Scale interface text and controls proportionally."
+                    visible: dialog.rowMatches(label, description)
+                    modified: Math.abs(viewer.textScale - 1.0) > 0.01
+                    RowLayout {
+                        spacing: Theme.gapXs
+                        UiButton {
+                            text: "100%"
+                            selected: viewer.textScale < 1.15
+                            onClicked: viewer.textScale = 1.0
+                            Accessible.name: "100% text scale"
+                        }
+                        UiButton {
+                            text: "125%"
+                            selected: viewer.textScale >= 1.15 && viewer.textScale < 1.4
+                            onClicked: viewer.textScale = 1.25
+                            Accessible.name: "125% text scale"
+                        }
+                        UiButton {
+                            text: "150%"
+                            selected: viewer.textScale >= 1.4
+                            onClicked: viewer.textScale = 1.5
+                            Accessible.name: "150% text scale"
+                        }
+                    }
+                }
+                UiSwitch {
+                    Layout.fillWidth: true
+                    text: "Reduced motion"
+                    description: "Disables non-essential animations across the interface."
+                    visible: dialog.rowMatches(text, description)
+                    checked: viewer.reducedMotion
+                    onToggled: viewer.reducedMotion = checked
+                }
+                SectionLabel { text: "Palette"; visible: dialog.rowMatches("Palette", "Themes and color palettes") }
+                ThemePicker { Layout.fillWidth: true; visible: dialog.rowMatches("Palette", "Themes and color palettes") }
                 Note {
                     text: theme.error || "Changes apply immediately and are saved. Palettes colour the interface only; photo pixels and the canvas backdrop are unchanged."
                     color: theme.error ? Theme.danger : Theme.muted
+                    visible: dialog.rowMatches("Palette", text)
+                }
+                UiButton {
+                    text: "Reset appearance to defaults"
+                    variant: "outline"
+                    Layout.topMargin: Theme.gapSm
+                    visible: dialog.rowMatches(text, "Reset appearance settings to default values")
+                    onClicked: {
+                        viewer.resetSection("appearance")
+                        dialog.settingsFeedback = "Appearance reset to defaults."
+                    }
                 }
             }
 
@@ -159,6 +297,7 @@ UiDialog {
                 SettingRow {
                     label: "Fit current photo"
                     description: viewer.imageWidth > 0 ? "Each newly opened photo starts at Shrink only." : "Open a photo to change how it fits."
+                    visible: dialog.rowMatches(label, description)
                     UiComboBox {
                         readonly property var modes: ["shrink", "fit", "fill", "width", "height", "actual"]
                         model: ["Shrink only", "Fit", "Fill", "Fit width", "Fit height", "Actual size"]
@@ -172,6 +311,8 @@ UiDialog {
                 SettingRow {
                     label: "Mouse wheel"
                     description: "Ctrl + wheel always zooms at the pointer; Shift + wheel pans sideways."
+                    visible: dialog.rowMatches(label, description)
+                    modified: viewer.wheelMode !== "navigate"
                     UiComboBox {
                         model: ["Next / previous photo", "Zoom", "Pan"]
                         currentIndex: ["navigate", "zoom", "pan"].indexOf(viewer.wheelMode)
@@ -182,12 +323,14 @@ UiDialog {
                 SettingRow {
                     label: "Canvas backdrop"
                     description: dialog.host.gridMode ? "Switch to photo view to change the canvas backdrop." : "Steps through the backdrop colours behind the photo" + (viewer.bindingFor("background").length ? " (" + viewer.bindingFor("background") + ")." : ".")
+                    visible: dialog.rowMatches(label, description)
                     UiButton { text: "Next backdrop"; variant: "outline"; enabled: !dialog.host.gridMode; onClicked: dialog.host.invoke("background") }
                 }
                 UiSwitch {
                     Layout.fillWidth: true
                     text: "Nearest-neighbour sampling"
                     description: "Shows individual pixels sharply when zoomed in."
+                    visible: dialog.rowMatches(text, description)
                     checked: dialog.photoCanvas.nearest
                     onToggled: dialog.photoCanvas.nearest = checked
                 }
@@ -195,10 +338,24 @@ UiDialog {
                     Layout.fillWidth: true
                     text: "Frameless window"
                     description: "Hides the system title bar. Drag the top bar to move the window."
+                    visible: dialog.rowMatches(text, description)
                     checked: dialog.host.frameless
                     onToggled: dialog.host.frameless = checked
                 }
-                Note { text: "Drag to pan. Hold the right mouse button for a 100% loupe. Double-click toggles full screen." }
+                Note {
+                    text: "Drag to pan. Hold the right mouse button for a 100% loupe. Double-click toggles full screen."
+                    visible: dialog.rowMatches("Viewing controls", text)
+                }
+                UiButton {
+                    text: "Reset viewing to defaults"
+                    variant: "outline"
+                    Layout.topMargin: Theme.gapSm
+                    visible: dialog.rowMatches(text, "Reset viewing settings to default values")
+                    onClicked: {
+                        viewer.resetSection("viewing")
+                        dialog.settingsFeedback = "Viewing settings reset to defaults."
+                    }
+                }
             }
 
             Page {
@@ -289,6 +446,8 @@ UiDialog {
                 SettingRow {
                     label: "File order"
                     description: "Order of photos inside a folder. Folders always keep natural name order."
+                    visible: dialog.rowMatches(label, description)
+                    modified: viewer.sortKey !== "name"
                     UiComboBox {
                         model: ["Name", "Date modified", "Size", "Shuffle"]
                         currentIndex: ["name", "modified", "size", "shuffle"].indexOf(viewer.sortKey)
@@ -299,12 +458,16 @@ UiDialog {
                 UiSwitch {
                     Layout.fillWidth: true
                     text: "Reverse file order"
+                    visible: dialog.rowMatches(text, "")
+                    modified: viewer.sortDescending
                     checked: viewer.sortDescending
                     onToggled: viewer.sortDescending = checked
                 }
                 SettingRow {
                     label: "At the end of a folder"
                     description: "What Next and Previous do after the last or first photo."
+                    visible: dialog.rowMatches(label, description)
+                    modified: viewer.boundaryMode !== "continue"
                     UiComboBox {
                         model: ["Stop", "Loop this folder", "Continue through tree"]
                         currentIndex: ["stop", "loop", "continue"].indexOf(viewer.boundaryMode)
@@ -316,6 +479,8 @@ UiDialog {
                     Layout.fillWidth: true
                     text: "Show filmstrip"
                     description: "Thumbnails of the current folder under the top bar."
+                    visible: dialog.rowMatches(text, description)
+                    modified: !viewer.filmstripVisible
                     checked: viewer.filmstripVisible
                     onToggled: viewer.filmstripVisible = checked
                 }
@@ -323,13 +488,26 @@ UiDialog {
                     Layout.fillWidth: true
                     text: "Pin folder tree open"
                     description: "Keeps the folder panel visible and makes room for the photo in wider windows."
+                    visible: dialog.rowMatches(text, description)
+                    modified: viewer.treePinned
                     checked: viewer.treePinned
                     onToggled: viewer.treePinned = checked
                 }
-                SectionLabel { text: "This window" }
+                SectionLabel { text: "This window"; visible: dialog.rowMatches("This window", "Window position memory") }
                 Note {
                     text: viewer.windowSlot > 0 ? "Window " + viewer.windowSlot + " remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file."
                                                 : "Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch."
+                    visible: dialog.rowMatches("This window", text)
+                }
+                UiButton {
+                    text: "Reset browsing to defaults"
+                    variant: "outline"
+                    Layout.topMargin: Theme.gapSm
+                    visible: dialog.rowMatches(text, "Reset browsing settings to default values")
+                    onClicked: {
+                        viewer.resetSection("browsing")
+                        dialog.settingsFeedback = "Browsing settings reset to defaults."
+                    }
                 }
             }
 
@@ -430,12 +608,131 @@ UiDialog {
                     color: Theme.text
                     font.pixelSize: Theme.textBody
                     font.weight: Font.Medium
+                    visible: dialog.rowMatches("Glancelot", "About")
                 }
-                Note { text: "A local-first photo viewer. Viewing never changes your photos." }
-                SectionLabel { text: "Early alpha" }
-                Note { text: "JPEG and PNG, displayed as SDR in sRGB. Monitor profile calibration and native HDR output are not yet qualified." }
-                SectionLabel { text: "Type" }
-                Note { text: "Interface set in Geist and Geist Mono, under the SIL Open Font License 1.1." }
+                Note {
+                    text: "A local-first photo viewer. Viewing never changes your photos."
+                    visible: dialog.rowMatches("About", text)
+                }
+                SectionLabel {
+                    text: "Settings management"
+                    visible: dialog.rowMatches("Settings management", "Export import backup restore reset")
+                }
+                Note {
+                    text: "Export settings to a portable JSON file for backup or transfer between computers, or import settings to restore them."
+                    visible: dialog.rowMatches("Settings management", text)
+                }
+                RowLayout {
+                    spacing: Theme.gapSm
+                    visible: dialog.rowMatches("Settings management", "Export import backup reset")
+                    UiButton {
+                        text: "Export settings..."
+                        variant: "outline"
+                        onClicked: exportDialog.open()
+                    }
+                    UiButton {
+                        text: "Import settings..."
+                        variant: "outline"
+                        onClicked: importDialog.open()
+                    }
+                }
+                UiButton {
+                    text: "Reset all settings to defaults..."
+                    variant: "danger-quiet"
+                    Layout.topMargin: Theme.gapXs
+                    visible: dialog.rowMatches("Reset all settings to defaults", "Restore default settings")
+                    onClicked: confirmResetDialog.open()
+                }
+                Note {
+                    visible: dialog.settingsFeedback.length > 0
+                    text: dialog.settingsFeedback
+                    color: Theme.accent
+                }
+                SectionLabel {
+                    text: "Early alpha"
+                    visible: dialog.rowMatches("Early alpha", "")
+                }
+                Note {
+                    text: "JPEG and PNG, displayed as SDR in sRGB. Monitor profile calibration and native HDR output are not yet qualified."
+                    visible: dialog.rowMatches("Early alpha", text)
+                }
+                SectionLabel {
+                    text: "Type"
+                    visible: dialog.rowMatches("Type", "Geist fonts")
+                }
+                Note {
+                    text: "Interface set in Geist and Geist Mono, under the SIL Open Font License 1.1."
+                    visible: dialog.rowMatches("Type", text)
+                }
+            }
+        }
+    }
+
+    FileDialog {
+        id: exportDialog
+        title: "Export Settings"
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["JSON settings files (*.json)", "All files (*)"]
+        defaultSuffix: "json"
+        onAccepted: {
+            const path = dialog.cleanPath(selectedFile)
+            if (viewer.exportSettings(path)) {
+                dialog.settingsFeedback = "Settings exported successfully to " + path
+            } else {
+                dialog.settingsFeedback = viewer.status || "Could not export settings."
+            }
+        }
+    }
+
+    FileDialog {
+        id: importDialog
+        title: "Import Settings"
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["JSON settings files (*.json)", "All files (*)"]
+        onAccepted: {
+            const path = dialog.cleanPath(selectedFile)
+            if (viewer.importSettings(path)) {
+                dialog.settingsFeedback = "Settings imported successfully from " + path
+            } else {
+                dialog.settingsFeedback = viewer.status || "Could not import settings."
+            }
+        }
+    }
+
+    UiDialog {
+        id: confirmResetDialog
+        title: "Reset all settings"
+        width: Math.min(480, dialog.width - 2 * Theme.gapLg)
+        ColumnLayout {
+            spacing: Theme.gapMd
+            anchors.fill: parent
+            Label {
+                text: "Restore all settings to their original defaults? This will reset your theme, keyboard shortcuts, workspace layout, and preferences."
+                color: Theme.text
+                font.pixelSize: Theme.textBody
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: Theme.gapSm
+                UiButton {
+                    text: "Cancel"
+                    variant: "outline"
+                    onClicked: confirmResetDialog.close()
+                }
+                UiButton {
+                    text: "Reset everything"
+                    variant: "danger"
+                    onClicked: {
+                        confirmResetDialog.close()
+                        if (viewer.resetAllSettings()) {
+                            dialog.settingsFeedback = "All settings have been reset to defaults."
+                        } else {
+                            dialog.settingsFeedback = viewer.status || "Could not reset settings."
+                        }
+                    }
+                }
             }
         }
     }

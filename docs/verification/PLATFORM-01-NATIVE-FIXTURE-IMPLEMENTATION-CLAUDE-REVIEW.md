@@ -177,3 +177,27 @@ This is not approval of the full Windows gate, Docker, the integrated commit, FS
 - A captured launch request does not prove a visible Explorer selection or terminal.
 - Explorer-missing coverage remains the invalid-executable substitute. Parent-abort inert `%TEMP%` files are accepted.
 - Remaining before done: full Windows `scripts/build.ps1 -Test` and the Docker gate on the integrated commit, with the 250 ms oracle unchanged. The independent responsiveness noise-floor question remains open.
+
+---
+
+# Docker wiring follow-up: `5b03339` (cherry-picked here as `6aff999`), static only
+
+## Verdict: ACCEPTED as a static wiring fix; existing fixture approval at `b4fa53e` still applies
+This is not a Windows or Linux/Docker gate pass. I did not build, test, run Docker or probe anything for this follow-up, and I stopped no process. The root's Docker retry output is the evidence for the Docker gate and has not been seen by me.
+
+## Scope reviewed
+- `git diff 8888d41 HEAD` is exactly one added line in `Dockerfile`: `COPY cmake cmake`, after `COPY CMakeLists.txt ./` in the `build` stage.
+- No change to `src`, `include`, `tests`, `CMakeLists.txt` or `cmake/`. The runtime stage (`FROM ubuntu:24.04 AS runtime`) and the `qt` stage are untouched.
+- The root `CMakeLists.txt:146` has `include(cmake/PlatformTestFixtures.cmake)`. Before this line, the Docker `build` stage copied no `cmake/` directory, so configure would fail there. The omission is real and the one-line fix addresses it.
+- `COPY cmake cmake` is placed before `RUN cmake -S . ...`, so the directory exists at configure time.
+- Tracked `cmake/` content is `FSWatchTests.cmake` and `PlatformTestFixtures.cmake`. `FSWatchTests.cmake` is not included by this root (the grep shows only the platform include), so it is inert here.
+- `.dockerignore` already excludes `.git`, `.worktrees`, `.tools`, `.cache`, `build*`, `dist` and secrets patterns. `cmake/` is not excluded. It copies only the directory's working-tree contents, not `.cache` or user data. If someone adds untracked files under `cmake/`, they would enter the build context, so keep it to tracked fragments.
+
+## Disposition
+- On Linux the fragment takes its `else()` branch (`target_link_libraries(platform_integration_tests PRIVATE glancelot_platform Qt6::Core Qt6::Test)`), which is the former link line, so the Linux path is unchanged. That branch is reviewed statically only. I have not seen it built or run here.
+- My earlier runtime approval covers `b4fa53e` (Windows `platform_integration` only). Commits since then are the merge of `main` and this Dockerfile line, with no product or test-source diff reported to me beyond what is above. I did not re-verify the integration branch `4d964dc` itself.
+
+## Limitations
+- The full Windows `scripts/build.ps1 -Test` gate is still unrecorded as passed (the build was 201/201, the test attempt was cancelled).
+- The Docker `glancelot-browser:main` build and its tests have no recorded outcome yet.
+- The strict 250 ms `directory_model` oracle and the full native timing gate remain failed/unresolved. FS-WATCH and INPUT UI are not approved by this review.
