@@ -525,6 +525,7 @@ private slots:
         QTRY_COMPARE(h.viewer.currentIndex(), 4);
         sendWheel(h, at, {}, QPoint(0, 120), Qt::NoModifier);
         QTRY_COMPARE(h.viewer.currentIndex(), 3);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && !h.viewer.loading(), 15000); // no decode in flight when the harness is torn down
         // The plain wheel still follows the legacy setting.
         h.viewer.setWheelMode("zoom");
         canvas->actualSize(); zoom = canvas->zoom();
