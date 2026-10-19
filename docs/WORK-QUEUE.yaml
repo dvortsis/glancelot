@@ -485,6 +485,20 @@ tasks:
     depends: [REVIEW-ALL-01]
     outcome: Folder favorites in the existing tree with coordinated settings and missing-path recovery
     acceptance: Add/remove/reorder and keyboard routes; no scans while hidden; unknown preference preservation; native UI review
+  - id: FOLDER-HISTORY-01
+    requirements: [NAV-01, NAV-08, UX-13, IN-06]
+    feature: F001
+    milestone: M3
+    priority: 8
+    owner: lead
+    state: implementing
+    branch: agent/folder-history
+    worktree: .worktrees/folder-history
+    build: build-folder-history
+    plan: docs/FOLDER-HISTORY-01-PLAN.md
+    depends: [REVIEW-ALL-01]
+    outcome: Reversible back/forward folder navigation history stack with state preservation (F001)
+    acceptance: Distinguish folder visits from image steps; Alt+Left / Alt+Right and mouse back/forward parity; restore remembered image/selection/scroll; recover from missing mounts; bounded capacity
   - id: FILTER-01
     requirements: [NAV-05, UX-02]
     milestone: M3
