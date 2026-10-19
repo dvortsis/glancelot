@@ -139,7 +139,7 @@ drains. This does not approve the pending FS-WATCH implementation.
 ## Linked-scope clarification after independent FS review
 
 Lead permits a private worker-only directoryProbe helper in fs_revision.hpp.
-For a linked/junction scope directory, resolve the target once per observation
+For a linked/junction scope directory, resolve the target at each membership scan boundary
 and probe that directory for membership revision. Keep requested alias spellings
 in rows, callbacks and watch registrations; never rewrite the user's address.
 Capture the link entry revision too and reject completeness if it or the target
