@@ -582,7 +582,7 @@ struct ViewerController::Private {
             status=sortSaved?"File order saved.":"File order changed for this session; settings could not be saved.";
             emit q->stateChanged(); return;
         }
-        status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
+        status=QCoreApplication::translate("Status","Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?QCoreApplication::translate("Status"," (reversed)"):QString());
         emit q->stateChanged();
         if (!navigationBusy && navigationReady && !pendingNavigation) startResort();
     }
@@ -718,7 +718,7 @@ bool ViewerController::copyFilePath(const QStringList& paths) {
         clipboard->setText(joinedText);
     }
     const int count = nativePaths.size();
-    d->status = count == 1 ? QStringLiteral("Copied path to clipboard.") : QStringLiteral("Copied %1 paths to clipboard.").arg(count);
+    d->status = count == 1 ? QCoreApplication::translate("Status","Copied path to clipboard.") : QCoreApplication::translate("Status","Copied %1 paths to clipboard.").arg(count);
     emit stateChanged();
     return true;
 }
@@ -761,7 +761,7 @@ bool ViewerController::copyFileUrls(const QStringList& paths) {
         clipboard->setMimeData(mime);
     }
     const int count = nativePaths.size();
-    d->status = count == 1 ? QStringLiteral("Copied file to clipboard.") : QStringLiteral("Copied %1 files to clipboard.").arg(count);
+    d->status = count == 1 ? QCoreApplication::translate("Status","Copied file to clipboard.") : QCoreApplication::translate("Status","Copied %1 files to clipboard.").arg(count);
     emit stateChanged();
     return true;
 }
@@ -945,7 +945,7 @@ QString ViewerController::bindingProblem(const QString& id,const QString& sequen
     if(!other.isEmpty()){
         const auto* command=findCommand(other);
         const QString label=command?QString::fromStdString(command->label):other;
-        return QStringLiteral("Already used by “%1”. Clear that shortcut first, or choose another key.").arg(label);
+        return QCoreApplication::translate("Status","Already used by “%1”. Clear that shortcut first, or choose another key.").arg(label);
     }
     return {};
 }QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
@@ -963,7 +963,7 @@ void ViewerController::open(const QString& value){
     if(!d->navigationOpen)d->navigationIntents.clear();
     d->removedPaths.clear();
     ++d->generation; d->cancel(); d->reload.stop();
-    d->path=path;d->loading=true;d->imageReady=false;d->status="Opening "+QFileInfo(path).fileName()+"…";
+    d->path=path;d->loading=true;d->imageReady=false;d->status=QCoreApplication::translate("Status","Opening %1…").arg(QFileInfo(path).fileName());
     emit stateChanged(); d->scan(path,d->generation); d->decode(path,d->generation);
 }
 void ViewerController::next(){d->navigate(1,false);}void ViewerController::previous(){d->navigate(-1,false);}
@@ -999,7 +999,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status=QCoreApplication::translate("Status","That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.");emit stateChanged();return false;}
     if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1){d->status=QCoreApplication::translate("Status","A hold shortcut is a single key: it is released to restore the view.");emit stateChanged();return false;}
-    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status="Shortcut conflicts with "+other+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}
+    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status=QCoreApplication::translate("Status","Shortcut conflicts with %1 (including chord prefixes). Clear it first.").arg(other);emit stateChanged();return false;}
     QJsonObject merged=d->bindings;
     merged[id]=normalized;
     QString conflict;
@@ -1014,7 +1014,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
     });
-    if(!conflict.isEmpty()){d->status="Shortcut already assigned to "+conflict+" in another window. Clear it first.";emit stateChanged();return false;}
+    if(!conflict.isEmpty()){d->status=QCoreApplication::translate("Status","Shortcut already assigned to %1 in another window. Clear it first.").arg(conflict);emit stateChanged();return false;}
     d->bindings=result.ok()?merged:d->bindings;
     d->bindings[id]=normalized;
     d->status=result.ok()?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
@@ -1092,7 +1092,7 @@ void ViewerController::completePath(const QString& text){
     Navigator copy=d->nav;
     const auto cancellation=d->navigationStop.get_token();
     copy.setCancellation(cancellation);
-    d->status="Opening folder "+QFileInfo(folder).fileName()+"…";emit stateChanged();
+    d->status=QCoreApplication::translate("Status","Opening folder %1…").arg(QFileInfo(folder).fileName());emit stateChanged();
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[copy,directory=nativePath(folder),cancellation]() mutable {
         // Bounded preorder search (500 folders): a huge or hostile tree cannot occupy the navigation thread.
         const auto found=firstImageInSubtree(directory,cancellation);
