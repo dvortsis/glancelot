@@ -160,10 +160,10 @@ int main(int argc, char** argv) {
     if (image.isNull() || image.format() != QImage::Format_RGBA8888) return fail("Cannot convert source pixels to the SDR working format.");
     const qint64 bytes = qint64(image.width()) * image.height() * 4;
     if (bytes > transfer.size() || bytes != capacity) return fail("Decoded dimensions exceed the admitted transfer.");
-    if (!transfer.lock()) return fail("Cannot lock pixel transfer buffer.");
+    // No lock: the parent maps the buffer but reads it only after the "decoded" message below, so nothing races. Holding the
+    // system semaphore here let a parent that cancelled (killed this process) mid-copy block forever when it detached.
     auto* output = static_cast<unsigned char*>(transfer.data());
     for (int y=0; y<image.height(); ++y) std::memcpy(output+qint64(y)*image.width()*4, image.constScanLine(y), size_t(image.width())*4);
-    transfer.unlock();
     send({{"phase", "decoded"}, {"width", image.width()}, {"height", image.height()}, {"stride", image.width()*4},
           {"color", tagged ? "Embedded profile converted to sRGB" : "Untagged source assumed sRGB"}});
     // Parent copies the immutable pixels before acknowledging. No original file handle is held here.
