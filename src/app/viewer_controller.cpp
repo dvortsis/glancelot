@@ -314,8 +314,9 @@ struct ViewerController::Private {
         if (result.code==SettingsStatus::Unreadable) { status="Settings could not be read; defaults are active."; return; }
         if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active. Start Glancelot with --reset-settings to set a damaged file aside."; return; }
         if (result.recovered) status="Settings were damaged; your last saved copy was restored.";
-        if (object.isEmpty()) return;
-        auto candidate=bindings;
+        QJsonObject defaultBindings;
+        for (const auto& command: registry) defaultBindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
+        auto candidate=defaultBindings;
         const auto stored=object.value("bindings").toObject();
         for (auto it=stored.begin();it!=stored.end();++it) {
             if (candidate.contains(it.key()) && it.value().isString()) candidate[it.key()]=QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText).toString(QKeySequence::PortableText);
@@ -332,8 +333,10 @@ struct ViewerController::Private {
         else status="Saved shortcuts conflict or use reserved Escape; default shortcuts are active. Reset shortcuts in Settings to repair them.";
         const auto savedBoundary=object.value("boundary").toString();
         if (savedBoundary=="continue" || savedBoundary=="stop" || savedBoundary=="loop") boundary=savedBoundary;
+        else boundary="continue";
         const auto savedWheel=object.value("wheel").toString();
         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
+        else wheel="navigate";
         // Each modifier falls back on its own: one invalid entry never discards the others.
         const auto savedModifiers=object.value("wheelModifiers").toObject();
         for (const char* modifier:{"ctrl","shift","alt"}) {
@@ -341,6 +344,7 @@ struct ViewerController::Private {
             if (validWheelAction(action)) wheelModifiers[QLatin1String(modifier)]=action;
         }
         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
+        else filmstrip=true;
         const auto savedSort=object.value("sort").toObject();
         {
             const auto key=savedSort.value("key").toString();
@@ -348,14 +352,20 @@ struct ViewerController::Private {
             else if (key=="modified") sortSpec.key=glancelot::SortKey::Modified;
             else if (key=="size") sortSpec.key=glancelot::SortKey::Size;
             else if (key=="shuffle") sortSpec.key=glancelot::SortKey::Shuffle;
+            else sortSpec.key=glancelot::SortKey::Name;
             if (savedSort.value("descending").isBool()) sortSpec.descending=savedSort.value("descending").toBool();
+            else sortSpec.descending=false;
             if (savedSort.value("seed").isDouble() && savedSort.value("seed").toDouble()>=1 && savedSort.value("seed").toDouble()<9007199254740992.0) sortSpec.seed=quint64(savedSort.value("seed").toDouble());
+            else sortSpec.seed=0;
         }
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
+        else tree=false;
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
+        else treePin=false;
         if (object.value("textScale").isDouble()) {
             const double s = object.value("textScale").toDouble();
             if (s >= 0.75 && s <= 2.0) textScale = s;
+            else textScale = 1.0;
         } else textScale = 1.0;
         if (object.value("reducedMotion").isBool()) reducedMotion = object.value("reducedMotion").toBool();
         else reducedMotion = false;
@@ -735,7 +745,11 @@ bool ViewerController::copyImageBitmap() {
         return false;
     }
     if (auto* clipboard = QGuiApplication::clipboard()) {
-        clipboard->setImage(d->image);
+        for (int retry = 0; retry < 6; ++retry) {
+            clipboard->setImage(d->image);
+            if (!clipboard->image().isNull()) break;
+            QThread::msleep(40);
+        }
     }
     d->status = QStringLiteral("Copied image bitmap to clipboard.");
     emit stateChanged();

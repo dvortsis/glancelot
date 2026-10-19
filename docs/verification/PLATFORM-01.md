@@ -246,3 +246,23 @@ recording this incomplete attempt; reacquire it before any corrective integratio
 Next evidence must isolate native work, establish the remaining cause or validate
 a supported fix, then pass the required integrated gates. Earlier package approval
 does not override this failed integrated gate. Physical qualifications remain open.
+
+## Corrective integrated software gates, October19
+
+After the independently reviewed native launcher fixture and its Docker source-copy
+repair, integrated1d51c17 passed required Windows18/18,176.11s and the required
+Docker command using cached identical image0ba808df636ddcd1a66115898c9d46cce5f486b5190c956eee6e42f8ce542692.
+The preceding full Linux execution passed18/18,110.41s. See
+PLATFORM-01-NATIVE-FIXTURE.md and the unchanged independent implementation review
+for exact commands, sources, cache scope and limitations. Strict250ms assertions
+and timeouts are unchanged. A Git comparison confirms app/src/include/ui and
+packaging tools are unchanged between earlier integrated73fa157 and1d51c17;
+original package evidence stays scoped to its recorded archives/source commits.
+
+This passing integrated gate supersedes the earlier failed gate status, without
+claiming the stock-Qt stall cause is known or that future flake rate was measured.
+The test-hygiene defect (real persistent Shell UI from unit tests) is fixed and
+independently validated. No machine-wide timer/priority/driver setting changed.
+Final independent software evidence audit is pending before state becomes done.
+CANVAS-UI/DECODE-01 and physical display/color/network gates stay unverified as
+recorded; this software package packet does not close them.
