@@ -46,6 +46,17 @@ class Monitor {
         std::stop_source stop;
         MonitorOptions options;
         MonitorStats stats;
+        // Call only while holding mutex. Never carry an old scope's identities.
+        void establishScope(quint64 value) {
+            if(acceptedScope==value)return;
+            acceptedScope=value;accepted.reset();acceptedParent.reset();acceptedImage={};
+        }
+        void remember(const Observation& value) {
+            establishScope(value.scope);
+            if(value.after&&value.after->complete)accepted=value.after;
+            if(value.parentAfter&&value.parentAfter->complete)acceptedParent=value.parentAfter;
+            acceptedImage=value.imageAfter;
+        }
     };
     class Worker final : public QThread {
         std::shared_ptr<State> state;
@@ -55,7 +66,7 @@ class Monitor {
             QObject context;QFileSystemWatcher watcher;QTimer poll;
             QElapsedTimer clock;clock.start();
             Request scope;
-            bool dirty{},fileEvent{},forced{};qint64 firstDirty{},lastDirty{},lastProbe=-2000,retryDelay=2000;
+            bool dirty{},fileEvent{},forced{},baselinePending{};qint64 firstDirty{},lastDirty{},lastProbe=-2000,retryDelay=2000;
             quint64 revision{};
             const auto mark=[&](bool file) {
                 const auto now=clock.elapsed();if(!dirty)firstDirty=now;
@@ -73,7 +84,7 @@ class Monitor {
                 if(changed) {
                     const bool newScope=latest.scope!=scope.scope;
                     if(newScope) {
-                        scope=latest;fileEvent=false;
+                        scope=latest;fileEvent=false;baselinePending=true;
                         retryDelay=2000;
                         if(!watcher.files().isEmpty())watcher.removePaths(watcher.files());
                         if(!watcher.directories().isEmpty())watcher.removePaths(watcher.directories());
@@ -122,20 +133,18 @@ class Monitor {
                 {
                     std::lock_guard guard(state->mutex);
                     if(state->closed)return;
-                    if(state->acceptedScope==scope.scope) {
-                        before=state->accepted;parentBefore=state->acceptedParent;imageBefore=state->acceptedImage;
-                    } else if(state->options.manualBaseline) {
-                        // The first publication can remain unreconciled while navigation
-                        // is busy. Seed its identity before any later worker scan; only
-                        // subsequent advances require the controller's acknowledgement.
-                        // Keep this first observation's before null for decode startup.
-                        state->accepted=current;state->acceptedParent=currentParent;
-                        state->acceptedScope=scope.scope;state->acceptedImage=currentImage;
-                    }
+                    state->establishScope(scope.scope);
+                    before=state->accepted;parentBefore=state->acceptedParent;imageBefore=state->acceptedImage;
+                    // Seed the first complete identities even if the receiver has not
+                    // consumed a publication. Partial observations never erase them.
+                    if(!state->accepted&&current->complete)state->accepted=current;
+                    if(!state->acceptedParent&&currentParent->complete)state->acceptedParent=currentParent;
+                    if(!state->acceptedImage.known)state->acceptedImage=currentImage;
                 }
                 Observation result{scope.scope,++revision,scope.directory,scope.image,
                     before,current,parentBefore,currentParent,fileEvent,forced,coverage};
                 result.imageBefore=imageBefore;result.imageAfter=currentImage;
+                result.baseline=baselinePending;baselinePending=false;
                 // Identity matching is worker work too. Retain only the two paths
                 // needed by the controller, not another unbounded history/map.
                 if(before&&!scope.image.isEmpty())
@@ -150,6 +159,7 @@ class Monitor {
                 if(state->publication&&state->publication->scope==scope.scope) {
                     result.fileEvent=result.fileEvent||state->publication->fileEvent;
                     result.forced=result.forced||state->publication->forced;
+                    result.baseline=result.baseline||state->publication->baseline;
                 }
                 state->publication=std::move(result);
                 if(!state->publicationQueued) {
@@ -162,11 +172,8 @@ class Monitor {
                             value=std::move(shared->publication);shared->publication.reset();shared->publicationQueued=false;
                             if(value) {
                                 ++shared->stats.publications;
-                                if(!shared->options.manualBaseline) {
-                                    shared->accepted=value->after;shared->acceptedParent=value->parentAfter;
-                                    shared->acceptedScope=value->scope;
-                                    shared->acceptedImage=value->imageAfter;
-                                }
+                                if(!shared->options.manualBaseline&&value->scope==shared->request.scope)
+                                    shared->remember(*value);
                             }
                         }
                         if(value)shared->accept(std::move(*value));
@@ -211,8 +218,7 @@ public:
     void acknowledge(const Observation& value) {
         std::lock_guard guard(state->mutex);
         if(state->closed||value.scope!=scope)return;
-        state->accepted=value.after;state->acceptedParent=value.parentAfter;
-        state->acceptedScope=value.scope;state->acceptedImage=value.imageAfter;
+        state->remember(value);
     }
     quint64 generation() const{return scope;}
     MonitorStats stats()const{std::lock_guard guard(state->mutex);return state->stats;}

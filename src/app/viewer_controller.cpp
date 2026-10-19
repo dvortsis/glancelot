@@ -225,7 +225,7 @@ struct ViewerController::Private {
         monitor=std::make_unique<fs_watch::Monitor>(q,[this](fs_watch::Observation value){
             if(value.scope!=monitor->generation()||value.revision<=observationRevision)return;
             observationRevision=value.revision;
-            if(!path.isEmpty()&&value.image==path&&!value.before) {
+            if(!path.isEmpty()&&value.image==path&&value.baseline) {
                 if(decodeAwaitingBaseline) {
                     decodeStart.stop();decodeAwaitingBaseline=false;decode(path,generation);
                 } else if(decodeStartedWithoutBaseline) {
@@ -237,6 +237,7 @@ struct ViewerController::Private {
                 value.parentBefore=pendingObservation->parentBefore?pendingObservation->parentBefore:pendingObservation->parentAfter;
                 value.fileEvent=value.fileEvent||pendingObservation->fileEvent;
                 value.forced=value.forced||pendingObservation->forced;
+                value.baseline=value.baseline||pendingObservation->baseline;
                 if(pendingObservation->imageBefore.known)value.imageBefore=pendingObservation->imageBefore;
             }
             pendingObservation=std::move(value);

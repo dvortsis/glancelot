@@ -105,7 +105,7 @@ inline std::size_t entryBytes(const QString& path) {
 }
 struct Snapshot {
     QString directory;
-    Revision revision;
+    Revision revision,entryRevision;
     QHash<QString,Entry> entries;
     bool complete{}, missing{}, cancelled{};
 };
@@ -116,7 +116,7 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
     Snapshot result;result.directory=directory;
     if(stop.stop_requested()){result.cancelled=true;return result;}
     const auto path=native(directory);Revision sourceRevision;std::filesystem::path resolved;
-    result.revision=directoryProbe(path,&sourceRevision,&resolved);
+    result.revision=directoryProbe(path,&sourceRevision,&resolved);result.entryRevision=sourceRevision;
     std::error_code error;
     std::filesystem::directory_iterator it(resolved.empty()?path:resolved,error),end;
     if(error) {result.missing=error==std::errc::no_such_file_or_directory;return result;}

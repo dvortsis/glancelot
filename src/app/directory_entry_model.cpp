@@ -92,7 +92,7 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     result.rows.reserve(listing.entries.size());
     result.index.reserve(qsizetype(listing.entries.size()));
     result.identities.directory=directory;
-    result.identities.revision=directoryRevision;
+    result.identities.revision=directoryRevision;result.identities.entryRevision=directoryEntryRevision;
     result.identities.complete=listing.accessible&&!listing.truncated&&directoryRevision.known&&
         directoryRevision.directory&&!directoryRevision.link;
     std::size_t identityBytes=0;
@@ -118,9 +118,9 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     result.identities.complete=result.identities.complete&&
         fs_watch::directoryProbe(nativePath(directory))==directoryRevision&&
         fs_watch::probe(nativePath(directory))==directoryEntryRevision;
-    const auto directoryIdentity=result.identities.revision.identity();
+    const auto directoryIdentity=directoryEntryRevision.identity();
     result.renamedDirectory=keyFor(prior.directory)!=keyFor(directory)&&!directoryIdentity.isEmpty()&&
-        directoryIdentity==prior.revision.identity();
+        directoryIdentity==prior.entryRevision.identity();
     if(keyFor(prior.directory)==keyFor(directory)||result.renamedDirectory)
         result.renamed=fs_watch::renames(prior,result.identities);
     return result;
