@@ -505,6 +505,46 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
     }
 
+    // F053: the high-contrast palette meets WCAG AAA in both modes, the focus ring and borders are strong, and large targets
+    // reach 44 px on real controls and menu rows.
+    void highContrastIsAAAAndLargeTargetsReachFortyFourPixels() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        QObject* tokens = h.engine.singletonInstance<QObject*>("Glancelot", "Theme"); QVERIFY(tokens);
+        auto color = [&](const char* name) { return tokens->property(name).value<QColor>(); };
+        auto lum = [](const QColor& c) {
+            auto ch = [](double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+            return 0.2126 * ch(c.redF()) + 0.7152 * ch(c.greenF()) + 0.0722 * ch(c.blueF());
+        };
+        auto ratio = [&](const QColor& a, const QColor& b) { const double x = lum(a), y = lum(b); return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05); };
+        h.viewer.setHighContrast(true);
+        for (const QString mode : {QString("dark"), QString("light")}) {
+            h.theme.setMode(mode); QTest::qWait(60);
+            QVERIFY(tokens->property("highContrast").toBool());
+            const struct { const char* a; const char* b; double min; } pairs[] = {
+                {"text", "background", 7}, {"text", "surface", 7}, {"muted", "background", 7}, {"muted", "surface", 7},
+                {"textOnPrimary", "primary", 7}, {"primary", "background", 3}, {"border", "background", 7},
+                {"focusRing", "background", 7}, {"danger", "background", 7}, {"danger", "surface", 7}};
+            for (const auto& pair : pairs)
+                QVERIFY2(ratio(color(pair.a), color(pair.b)) >= pair.min, qPrintable(QString("%1: %2 on %3 = %4").arg(mode, pair.a, pair.b).arg(ratio(color(pair.a), color(pair.b)))));
+            QVERIFY(tokens->property("borderWidth").toInt() >= 2 && tokens->property("focusWidth").toInt() >= 3);
+        }
+        h.viewer.setHighContrast(false);
+        QVERIFY(!tokens->property("highContrast").toBool());
+        QCOMPARE(tokens->property("controlHeight").toInt(), 32);
+        h.viewer.setLargeTargets(true);
+        QTRY_COMPARE(tokens->property("controlHeight").toInt(), 44);
+        auto* settings = named(h.window, "settingsButton"); QVERIFY(settings);
+        QTRY_VERIFY(settings->height() >= 44);
+        focusCanvas(h);
+        auto* menu = h.object("canvasContextMenu"); QVERIFY(menu);
+        QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 60), Q_ARG(QVariant, 60)));
+        QTRY_VERIFY(menuOpen(menu));
+        for (auto* row : menuRows(menu)) if (row->isVisible()) QVERIFY2(row->height() >= 44, qPrintable(row->objectName() + QString(" %1").arg(row->height())));
+        closeMenu(menu);
+        h.viewer.setLargeTargets(false);
+        QTRY_COMPARE(tokens->property("controlHeight").toInt(), 32);
+    }
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
         Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);

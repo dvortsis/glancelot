@@ -35,6 +35,9 @@ class ViewerController : public QObject {
     Q_PROPERTY(bool sortDescending READ sortDescending WRITE setSortDescending NOTIFY stateChanged)
     Q_PROPERTY(qreal textScale READ textScale WRITE setTextScale NOTIFY stateChanged)
     Q_PROPERTY(bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY stateChanged)
+    // F053: a high-contrast palette (WCAG AAA text and non-text contrast) and 44 px touch-sized targets. Both persist.
+    Q_PROPERTY(bool highContrast READ highContrast WRITE setHighContrast NOTIFY stateChanged)
+    Q_PROPERTY(bool largeTargets READ largeTargets WRITE setLargeTargets NOTIFY stateChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -101,6 +104,8 @@ public:
     Q_INVOKABLE bool openTerminal(const QString& directory = QString());
     qreal textScale() const; void setTextScale(qreal scale);
     bool reducedMotion() const; void setReducedMotion(bool reduced);
+    bool highContrast() const; void setHighContrast(bool on);
+    bool largeTargets() const; void setLargeTargets(bool on);
     Q_INVOKABLE bool exportSettings(const QString& targetFilePath);
     Q_INVOKABLE bool importSettings(const QString& sourceFilePath);
     Q_INVOKABLE bool resetSection(const QString& sectionName);

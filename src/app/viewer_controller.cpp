@@ -202,6 +202,7 @@ struct ViewerController::Private {
     bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
     qreal textScale{1.0};
     bool reducedMotion{false};
+    bool highContrast{false}, largeTargets{false};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
     QJsonObject bindings;
@@ -369,6 +370,8 @@ struct ViewerController::Private {
         } else textScale = 1.0;
         if (object.value("reducedMotion").isBool()) reducedMotion = object.value("reducedMotion").toBool();
         else reducedMotion = false;
+        highContrast = object.value("highContrast").toBool(false);
+        largeTargets = object.value("largeTargets").toBool(false);
     }
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
@@ -386,6 +389,8 @@ struct ViewerController::Private {
                 else if (name=="treePinned") object[name]=treePin;
                 else if (name=="textScale") object[name]=textScale;
                 else if (name=="reducedMotion") object[name]=reducedMotion;
+                else if (name=="highContrast") object[name]=highContrast;
+                else if (name=="largeTargets") object[name]=largeTargets;
             }
         }).ok();
     }
@@ -1127,6 +1132,10 @@ void ViewerController::setTextScale(qreal scale) {
     d->save({"textScale"});
     emit stateChanged();
 }
+bool ViewerController::highContrast() const { return d->highContrast; }
+void ViewerController::setHighContrast(bool on) { if (on == d->highContrast) return; d->highContrast = on; d->save({"highContrast"}); emit stateChanged(); }
+bool ViewerController::largeTargets() const { return d->largeTargets; }
+void ViewerController::setLargeTargets(bool on) { if (on == d->largeTargets) return; d->largeTargets = on; d->save({"largeTargets"}); emit stateChanged(); }
 bool ViewerController::reducedMotion() const { return d->reducedMotion; }
 void ViewerController::setReducedMotion(bool reduced) {
     if (reduced == d->reducedMotion) return;

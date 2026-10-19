@@ -7,16 +7,20 @@ import QtQuick
 QtObject {
     // Color roles (project-defined; never hard-code product colors in components)
     readonly property bool dark: theme.dark
-    readonly property color background: theme.colors.background
-    readonly property color surface: theme.colors.surface
-    readonly property color text: theme.colors.text
-    readonly property color muted: theme.colors.muted
-    readonly property color primary: theme.colors.primary
-    readonly property color textOnPrimary: theme.colors.onPrimary // "on…" names would read as signal handlers
-    readonly property color accent: theme.colors.accent
-    readonly property color border: theme.colors.border
-    readonly property color hover: theme.colors.hover
-    readonly property color danger: theme.colors.danger
+    // F053 high contrast: pure black/white text and surfaces, text-coloured borders and focus ring, no dimmed role. Every pair below
+    // is checked at WCAG AAA (7:1 text, 3:1 borders) in both modes by input_ui_tests.
+    property bool highContrast: (typeof viewer !== "undefined" && viewer && viewer.highContrast) ? viewer.highContrast : false
+    property bool largeTargets: (typeof viewer !== "undefined" && viewer && viewer.largeTargets) ? viewer.largeTargets : false
+    readonly property color background: highContrast ? (dark ? "#000000" : "#ffffff") : theme.colors.background
+    readonly property color surface: highContrast ? (dark ? "#0d0d0d" : "#ffffff") : theme.colors.surface
+    readonly property color text: highContrast ? (dark ? "#ffffff" : "#000000") : theme.colors.text
+    readonly property color muted: highContrast ? (dark ? "#e6e6e6" : "#1a1a1a") : theme.colors.muted
+    readonly property color primary: highContrast ? (dark ? "#ffd400" : "#0030b0") : theme.colors.primary
+    readonly property color textOnPrimary: highContrast ? (dark ? "#000000" : "#ffffff") : theme.colors.onPrimary // "on…" names would read as signal handlers
+    readonly property color accent: highContrast ? primary : theme.colors.accent
+    readonly property color border: highContrast ? (dark ? "#ffffff" : "#000000") : theme.colors.border
+    readonly property color hover: highContrast ? (dark ? "#333333" : "#d9d9d9") : theme.colors.hover
+    readonly property color danger: highContrast ? (dark ? "#ff8a8a" : "#a00018") : theme.colors.danger
     // Derived roles
     readonly property color pressed: Qt.tint(hover, Qt.alpha(text, 0.08))
     readonly property color selection: Qt.alpha(primary, 0.18)
@@ -38,11 +42,12 @@ QtObject {
     readonly property int radiusControl: 8  // buttons, fields, rows, menus
     readonly property int radiusCard: 12    // cards, toasts
     readonly property int radiusLarge: 16   // dialogs
-    readonly property int borderWidth: 1
-    readonly property int focusWidth: 2
-    readonly property int controlHeight: 32
-    readonly property int rowHeight: 28
-    readonly property int barHeight: 48
+    readonly property int borderWidth: highContrast ? 2 : 1
+    readonly property int focusWidth: highContrast ? 3 : 2
+    // F053 large targets: controls and rows reach the 44 px touch minimum.
+    readonly property int controlHeight: largeTargets ? 44 : 32
+    readonly property int rowHeight: largeTargets ? 44 : 28
+    readonly property int barHeight: largeTargets ? 60 : 48
     readonly property int iconSize: 16
 
     // Typography & Accessibility (UI-SETTINGS-01 / UX-11)

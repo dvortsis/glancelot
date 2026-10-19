@@ -195,6 +195,8 @@ bool resetSection(const QString& sectionName, QString* error) {
             root.remove(QStringLiteral("appearance"));
             root.remove(QStringLiteral("textScale"));
             root.remove(QStringLiteral("reducedMotion"));
+            root.remove(QStringLiteral("highContrast"));
+            root.remove(QStringLiteral("largeTargets"));
         } else if (sec == QStringLiteral("viewing")) {
             root.remove(QStringLiteral("boundary"));
             root.remove(QStringLiteral("wheel"));
@@ -213,6 +215,8 @@ bool resetSection(const QString& sectionName, QString* error) {
             root.remove(QStringLiteral("appearance"));
             root.remove(QStringLiteral("textScale"));
             root.remove(QStringLiteral("reducedMotion"));
+            root.remove(QStringLiteral("highContrast"));
+            root.remove(QStringLiteral("largeTargets"));
             root.remove(QStringLiteral("boundary"));
             root.remove(QStringLiteral("wheel"));
             root.remove(QStringLiteral("nearest"));

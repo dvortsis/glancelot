@@ -160,6 +160,7 @@ private slots:
     void scopedBindingsPersistAndReload();
     void wheelModifiersPersistFallBackIndividuallyAndMerge();
     void bindingProblemExplainsEveryRefusal();
+    void accessibilityOptionsPersistAndReset();
 };
 
 void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
@@ -957,6 +958,18 @@ void WindowSlotTests::bindingProblemExplainsEveryRefusal() {
     QCOMPARE(viewer.bindingProblem("no-such-command", "F9"), QString());
     QCOMPARE(viewer.keyStep(Qt::Key_J, Qt::ControlModifier), QString("Ctrl+J"));
     QCOMPARE(viewer.keyStep(Qt::Key_Right, Qt::NoModifier), QString("Right"));
+}
+// F053: both options default off, persist, and "Reset appearance" clears them.
+void WindowSlotTests::accessibilityOptionsPersistAndReset() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    { ViewerController v; QVERIFY(!v.highContrast() && !v.largeTargets()); v.setHighContrast(true); v.setLargeTargets(true); }
+    { ViewerController v; QVERIFY(v.highContrast() && v.largeTargets());
+      const auto root = settingsOf(config.path());
+      QVERIFY(root.value("highContrast").toBool() && root.value("largeTargets").toBool()); }
+    QString error;
+    QVERIFY(glancelot::resetSection("appearance", &error));
+    ViewerController after; QVERIFY(!after.highContrast() && !after.largeTargets());
 }
 #include "window_slot_tests.moc"
 
