@@ -220,3 +220,29 @@ platform-merged-windows-matrix.json and platform-merged-linux/qualification.
 Sanitized current smoke/matrix records are committed beside historical records.
 Independent approval and pre-merge gates are complete; integrated-commit checks
 remain before the lead closes software packaging. Physical gates stay unverified.
+
+## Integrated gate remains open, 2026-10-19
+
+Integrated commit 73fa157 passed the required Docker command using the same
+content-identical cached image recorded above. Native scripts/build.ps1 -Test
+failed 17/18 (219.21s); a full diagnostic CTest run also failed 17/18 (213.04s).
+Captured directory_model assertions measured 942ms interleaved-refresh and
+806ms large-folder event-loop gaps against the unchanged 250ms limits.
+Logs: .cache/platform-integrated-windows.log, platform-integrated-diagnostic-suite.log
+and platform-ctest-model-assertions.txt in codex-platform-01. Generated CTest
+diagnostic output changes were restored.
+
+Actual independent Claude integration diagnosis 130da47 on exact 73fa157 is
+CHANGES REQUIRED, preserved in PLATFORM-01-INTEGRATION-CLAUDE-REVIEW.md. Queued
+GUI events were delayed alongside timers while native sleep/spin probes stayed
+responsive. Both normal and no-window launches failed intermittently; neither
+timer resolution nor launch mode is an established cause. USER-subsystem stalls
+were observed, with concurrent native jobs a confounder. No supported product or
+harness fix was found. No threshold, priority, power or machine-wide change is
+authorized by this evidence. Reviewer temporary source probes were restored.
+
+PLATFORM remains integration, not done. The serial merge lock is released after
+recording this incomplete attempt; reacquire it before any corrective integration.
+Next evidence must isolate native work, establish the remaining cause or validate
+a supported fix, then pass the required integrated gates. Earlier package approval
+does not override this failed integrated gate. Physical qualifications remain open.

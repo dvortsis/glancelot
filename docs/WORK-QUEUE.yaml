@@ -2,10 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock:
-  holder: codex-lead
-  branch: codex/platform-01
-  started: 2026-10-19T15:28:29.854328+00:00
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -411,7 +408,8 @@ tasks:
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
     review_candidate: c35ec602f18a1e2bd1e42390fee3bd26e0c9efdd
     review_handoff: docs/handoff/CODEX-PLATFORM-01-REVIEW.md (on codex/platform-01)
-    review_gate: User approved PLATFORM review and standing future PLATFORM reviews; actual independent Claude review cfba419 APPROVED; merged-source checks pending
+    review_gate: Candidate cfba419 APPROVED; integrated 73fa157 Windows 17/18 FAILED; Claude integration diagnosis 130da47 CHANGES REQUIRED; docs/verification/PLATFORM-01-INTEGRATION-CLAUDE-REVIEW.md
+    integrated_gate: Required Docker command passed cached image; native 219.21s and diagnostic 213.04s failed unchanged 250ms directory responsiveness assertions; no supported fix yet; lock released incomplete
   - id: MONITOR-OUTPUT-01
     requirements: [UX-10, COLOR-01, VIEW-04, PERF-04, SYS-02]
     milestone: M5
