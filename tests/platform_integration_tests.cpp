@@ -255,6 +255,8 @@ int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
 #ifdef Q_OS_WIN
     if (native_fixture::environment(L"GLANCELOT_NATIVE_SANDBOX").isEmpty()) return native_fixture::bootstrap(app.arguments());
+    // The deliberate invalid-image case must report a loader error, never show OS UI.
+    SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
 #endif
 #ifndef Q_OS_WIN
     const auto name = QFileInfo(QString::fromLocal8Bit(argv[0])).fileName();
