@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+ARG QT_IMAGE=glancelot-qt:codex-perf-measure
+FROM ${QT_IMAGE} AS build
+WORKDIR /src
+COPY CMakeLists.txt ./
+COPY app app
+COPY assets assets
+COPY include include
+COPY src src
+COPY ui ui
+COPY tests tests
+COPY LICENSE README.md THIRD_PARTY_NOTICES.md ./
+COPY tools/platform tools/platform
+RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+ARG SOURCE_COMMIT
+ARG SOURCE_DIRTY
+ARG SOURCE_DATE_EPOCH
+ARG TOOLCHAIN_IMAGE_ID
+RUN python3 tools/platform/stage_linux.py --repo /src --build /build --qt /opt/Qt/6.8.3/gcc_64 --output /package --epoch "$SOURCE_DATE_EPOCH" --source-commit "$SOURCE_COMMIT" --source-dirty "$SOURCE_DIRTY" --toolchain-image "$TOOLCHAIN_IMAGE_ID"
+
+# Independent runtime: no Qt SDK/development prefix, compiler, or source checkout.
+FROM ubuntu:24.04 AS smoke
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates tigervnc-standalone-server tigervnc-tools fonts-noto-core libgl1-mesa-dri libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libasound2t64 libglib2.0-0t64 && rm -rf /var/lib/apt/lists/* && userdel -r ubuntu && useradd --create-home --uid 1000 viewer && mkdir /results && chown viewer:viewer /results
+COPY --from=build /package/Glancelot /opt/package
+COPY tools/platform /opt/platform-tools
+USER viewer
+RUN --network=none python3 /opt/platform-tools/dependency_audit.py /opt/package /results/dependencies.json
+RUN --network=none sh /opt/platform-tools/linux_smoke.sh /opt/package /results/package-smoke
+
+FROM scratch AS artifact
+COPY --from=build /package/ /
+COPY --from=smoke /results/ /qualification/
