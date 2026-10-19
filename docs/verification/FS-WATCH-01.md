@@ -249,3 +249,38 @@ creation identity and zero exit are checked. The fixture requires a valid ASCII
 8.3 alias of its exact private sandbox volume/directory; absence fails code110,
 not a skip. These limitations are explicitly accepted and do not qualify visible
 Shell presentation or the physical hardware matrix.
+
+## Corrective candidate and local metadata cost, October 19
+
+Actual Claude static reviews 0dafc6c and bb3d271 requested changes; neither
+approved FS-WATCH. Candidate b4cfd20 preserves the first-scope marker through
+worker/controller publication coalescing, retains complete monitor baselines
+through partial observations, and distinguishes an alias entry from its resolved
+target when deciding whether directory selection should follow a rename.
+Targeted Windows regressions passed 12/12, zero skips, in 6.373s after an actual
+red run (5 failures, 4 passes, 4.494s). These include first unacknowledged image
+and directory renames, four partial-baseline cases, coalesced publication, native
+junction watch coverage, steady polling, selected rename/hash/pixels, ordinary
+alias-to-target navigation reset and dangling targets. Logs remain under ignored
+.cache/fs-watch-corrective-{red,green}.txt. Full current-source checks and actual
+Claude independent runtime approval remain pending.
+
+A generated local folder of 20,000 one-byte files measured the actual unchanged
+worker functions on b4cfd20: glancelot::listDirectory (limit 100,000), the model's
+buildListing, and fs_watch::snapshot (limit 20,000). Three rounds alternated
+forward/reverse/forward method order. Every result had exactly 20,000 rows and a
+complete identity observation. Bare listing took 64.74-81.91ms, model listing
+496.64-587.06ms, and watcher snapshots 379.53-442.54ms. File generation took
+6,459ms and is excluded. Exact samples and conditions are in
+[fs-watch-01/local-cost.json](fs-watch-01/local-cost.json).
+
+The ignored diagnostic compiled the actual directory_entry_model.cpp and private
+revision helper with Qt 6.8.3/MSVC Release and the branch's glancelot_core library;
+no product seam or timing assertion changed. Elapsed time includes constructing
+and destroying the worker results, but excludes GUI publication and decoding.
+Cache state was uncontrolled after file generation; no cache flush was attempted.
+No other native test or Linux build job was observed before starting the probe.
+This is evidence of material per-entry metadata overhead, not a first-paint,
+network-share, ReFS/OneDrive or production workload qualification. The existing
+250ms GUI responsiveness gate still applies. Actual Claude R3 is independently
+reviewing fixed candidate b4cfd20; its disposition is not claimed here.
