@@ -174,3 +174,13 @@ df2390c99477a005240cb14d3c1fa3f075e17df8b9e1e027ccf2f1bfa0c9c650.
 Wait for a verified free native slot before a fresh full Windows gate; rerun Docker
 on this new source too. These gates, whole-controller cancellation result and
 independent Claude FS-WATCH review remain pending. The goal and packet stay open.
+
+## Current-source Linux gate, October19
+
+After importing615c0b5 and adding the whole-controller regression b9fa03b, required
+docker build -t glancelot-browser:main . passed20/20 in144.99s; fs_watch31.43s
+and fs_watch_ui1.14s. This includes the new live large-decode cancellation and
+explicit-open/hash checks. Image733559bd1d8fc078d006b92c112680e6c2cc340da3c1390f238e1beff257134e;
+log .cache/fs-watch-worker-docker.log. Actual source is unchanged by evidence-only
+commits. A newly serialized full Windows gate is running with lead-owned native
+slot markers; no result is claimed yet. Independent FS-WATCH review remains pending.
