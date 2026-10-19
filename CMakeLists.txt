@@ -137,6 +137,28 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(input_ui_tests glancelot-decoder)
     add_test(NAME input_ui COMMAND input_ui_tests -o -,txt)
     set_tests_properties(input_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
+    # F002: breadcrumbs and path completion (its own file; grid_ui_tests stays untouched).
+    qt_add_executable(pathbar_ui_tests tests/pathbar_ui_tests.cpp
+      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
+      src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
+      src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
+      src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
+      src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
+      src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
+    target_include_directories(pathbar_ui_tests PRIVATE include src/render)
+    target_compile_definitions(pathbar_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(pathbar_ui_tests PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
+    qt_add_resources(pathbar_ui_tests input_theme_catalog PREFIX "/" BASE assets FILES assets/themes/catalog.json ${ui_fonts})
+    qt_add_resources(pathbar_ui_tests input_brand_assets PREFIX "/" BASE assets FILES
+      assets/brand/icons/app/dark/glancelot-64.png assets/brand/icons/app/light/glancelot-64.png
+      assets/brand/mascots/transparent/01_mascot_standing.png)
+    qt_add_shaders(pathbar_ui_tests "input_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
+    add_dependencies(pathbar_ui_tests glancelot-decoder)
+    add_test(NAME pathbar_ui COMMAND pathbar_ui_tests -o -,txt)
+    set_tests_properties(pathbar_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
     qt_add_executable(file_operation_service_tests tests/file_operation_service_tests.cpp src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp)
     target_include_directories(file_operation_service_tests PRIVATE include src/app)
     target_link_libraries(file_operation_service_tests PRIVATE glancelot_core Qt6::Core Qt6::Test Qt6::Concurrent)

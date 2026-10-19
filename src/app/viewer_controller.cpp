@@ -187,6 +187,9 @@ struct ViewerController::Private {
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool* navigationPool=new QThreadPool;
+    // F002 path completion: one bounded folder listing at a time; a newer request cancels the older one.
+    std::stop_source completionStop;
+    quint64 completionGeneration{};
     bool navigationBusy{}, navigationReady{};
     std::deque<std::pair<int,bool>> navigationIntents;
     bool navigationOpen{};
@@ -720,7 +723,34 @@ void ViewerController::navigateDirectory(const QString& value) {
         return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
     },"No supported images in this folder."});
 }
-void ViewerController::openFolder(const QString& value){
+// F002: folders of the typed scope that start with the last typed segment. The listing runs off the UI thread, is
+// cancelled by the next request, and its result is dropped when a newer request exists. Text only; nothing is created.
+void ViewerController::completePath(const QString& text){
+    d->completionStop.request_stop(); d->completionStop=std::stop_source{};
+    const quint64 generation=++d->completionGeneration;
+    const QString typed=QDir::fromNativeSeparators(text);
+    const int cut=typed.lastIndexOf(QLatin1Char('/'));
+    if(cut<0||typed.trimmed().isEmpty()){emit pathCompletions(text,{});return;}
+    const QString scope=typed.left(cut+1),prefix=typed.mid(cut+1);
+    const auto cancel=d->completionStop.get_token();
+    auto* watcher=new QFutureWatcher<QStringList>(this);
+    connect(watcher,&QFutureWatcher<QStringList>::finished,this,[this,watcher,text,generation]{
+        const auto names=watcher->result();watcher->deleteLater();
+        if(generation==d->completionGeneration)emit pathCompletions(text,names);
+    });
+    watcher->setFuture(QtConcurrent::run([scope,prefix,cancel]{
+        QStringList names;
+        const auto listing=childFolders(nativePath(scope),cancel,5000);
+        for(const auto& folder:listing.folders){
+            if(cancel.stop_requested())return QStringList{};
+            const QString name=displayPath(folder.filename());
+            if(name.startsWith(prefix,Qt::CaseInsensitive))names.append(name);
+        }
+        names.sort(Qt::CaseInsensitive);
+        if(names.size()>20)names=names.mid(0,20);
+        return names;
+    }));
+}void ViewerController::openFolder(const QString& value){
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(value.trimmed().isEmpty()||folder.isEmpty())return;

@@ -26,6 +26,41 @@ Rectangle {
     signal deleteRequested(string path)
     // INPUT-02: the window, for the command-menu rows (scope predicate, live bindings, command routing).
     property var host: null
+    // F002: ancestors of the current folder as [{label, path}], split from text only (drive, UNC share and "/" roots kept).
+    readonly property var crumbList: {
+        const full = viewer.directory.replace(/\\/g, "/").replace(/(.)\/+$/, "$1")
+        if (full.length === 0) return []
+        const unc = full.startsWith("//")
+        const parts = full.split("/").filter(s => s.length > 0)
+        const list = []
+        let acc = unc ? "/" : ""
+        for (let i = 0; i < parts.length; ++i) {
+            const first = i === 0
+            acc = unc ? (first ? "//" + parts[0] : acc + "/" + parts[i]) : (first ? (full.startsWith("/") ? "/" + parts[0] : parts[0]) : acc + "/" + parts[i])
+            const isDrive = !unc && first && /^[A-Za-z]:$/.test(parts[0])
+            list.push({ label: parts[i], path: isDrive ? parts[0] + "/" : acc })
+        }
+        if (full.startsWith("/") && !unc) list.unshift({ label: "/", path: "/" })
+        return list
+    }
+    // F002 completion: child folders of the typed scope, newest request only (cancelled and dropped in the controller).
+    property var suggestions: []
+    property string suggestionScope: ""
+    function acceptSuggestion(name) {
+        const text = address.text.replace(/\\/g, "/")
+        address.text = text.slice(0, text.lastIndexOf("/") + 1) + name + "/"
+        address.cursorPosition = address.text.length
+        address.modified = true
+        suggestions = []
+        viewer.completePath(address.text)
+    }
+    Timer { id: completeDelay; interval: 120; onTriggered: viewer.completePath(address.text) }
+    Connections {
+        target: viewer
+        function onPathCompletions(text, names) {
+            if (text === address.text && address.activeFocus) panel.suggestions = names
+        }
+    }
     readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
     function openRowMenu(row, x, y) {
         const info = folderTree.rowInfo(row)
@@ -162,6 +197,47 @@ Rectangle {
             onClicked: { folderTree.browseComputer(); panel.focusList() }
         }
 
+        // F002 breadcrumbs: each ancestor of the current folder jumps there. Pure text; the path is split, never probed.
+        Flickable {
+            id: crumbs
+            objectName: "pathBreadcrumbs"
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
+            Layout.preferredHeight: visible ? Theme.controlHeight : 0
+            visible: panel.crumbList.length > 0
+            clip: true
+            contentWidth: crumbRow.childrenRect.width
+            contentHeight: height
+            interactive: contentWidth > width
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            onContentWidthChanged: contentX = Math.max(0, contentWidth - width) // the current folder stays in view
+            Accessible.role: Accessible.Grouping
+            Accessible.name: "Folder breadcrumbs"
+            Row {
+                id: crumbRow
+                height: parent.height
+                spacing: 0
+                Repeater {
+                    model: panel.crumbList
+                    delegate: Row {
+                        required property var modelData
+                        required property int index
+                        height: crumbRow.height
+                        UiIcon { visible: index > 0; anchors.verticalCenter: parent.verticalCenter; name: "chevron-right"; color: Theme.muted; size: 12 }
+                        UiButton {
+                            objectName: "crumb-" + index
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.label
+                            variant: index === panel.crumbList.length - 1 ? "outline" : "quiet"
+                            tip: modelData.path
+                            Accessible.name: "Go to " + modelData.label + (index === panel.crumbList.length - 1 ? ", current folder" : "")
+                            onClicked: viewer.navigateDirectory(modelData.path)
+                        }
+                    }
+                }
+            }
+        }
         RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
@@ -179,7 +255,9 @@ Rectangle {
                 property bool modified: false
                 text: viewer.directory
                 selectByMouse: true
-                onTextEdited: modified = true
+                onTextEdited: { modified = true; completeDelay.restart() }
+                onActiveFocusChanged: if (!activeFocus) { completeDelay.stop(); panel.suggestions = [] }
+                Keys.onTabPressed: event => { if (panel.suggestions.length > 0) { panel.acceptSuggestion(panel.suggestions[0]); event.accepted = true } }
                 onAccepted: { modified = false; viewer.navigateDirectory(text) }
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { pathMenu.popup(address, Theme.gapMd, address.height); event.accepted = true }
@@ -218,6 +296,28 @@ Rectangle {
                 tip: "Copy the full current folder path"
                 enabled: viewer.directory.length > 0
                 onClicked: viewer.copyDirectory()
+            }
+        }
+        Column { // completion suggestions: folders in the typed scope; click or Tab accepts
+            objectName: "pathSuggestions"
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
+            Layout.bottomMargin: visible ? Theme.gapXs : 0
+            visible: panel.suggestions.length > 0 && address.activeFocus
+            Accessible.role: Accessible.List
+            Accessible.name: "Folder suggestions"
+            Repeater {
+                model: Math.min(6, panel.suggestions.length)
+                delegate: UiButton {
+                    required property int index
+                    objectName: "suggestion-" + index
+                    width: parent.width
+                    alignment: Qt.AlignLeft
+                    iconName: "folder"
+                    text: panel.suggestions[index]
+                    focusPolicy: Qt.NoFocus
+                    onClicked: { panel.acceptSuggestion(panel.suggestions[index]); address.forceActiveFocus() }
+                }
             }
         }
         Label {

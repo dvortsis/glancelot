@@ -76,6 +76,9 @@ public:
     // Exact asynchronous address visit; empty directories are valid and errors retain the location.
     Q_INVOKABLE void navigateDirectory(const QString& folder);
     Q_INVOKABLE void copyDirectory() const;
+    // F002: asynchronous, cancellable folder-name completion for the typed path. Emits pathCompletions(text, names) for the
+    // newest request only; names are child folders of the typed scope whose names start with the last segment (at most 20).
+    Q_INVOKABLE void completePath(const QString& text);
     Q_INVOKABLE void cancelDirectoryNavigation();
     QString directoryError() const; bool directoryPending() const;
     // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
@@ -101,6 +104,7 @@ signals:
     // The folder tree was just shown by command; the UI should move keyboard focus into it.
     void treeShown();
     void viewCommand(const QString& id);
+    void pathCompletions(const QString& text, const QStringList& names);
 private:
     struct Private;
     std::unique_ptr<Private> d;
