@@ -33,6 +33,8 @@ class ViewerController : public QObject {
     Q_PROPERTY(int windowSlot READ windowSlot NOTIFY stateChanged)
     Q_PROPERTY(QString sortKey READ sortKey WRITE setSortKey NOTIFY stateChanged)
     Q_PROPERTY(bool sortDescending READ sortDescending WRITE setSortDescending NOTIFY stateChanged)
+    Q_PROPERTY(qreal textScale READ textScale WRITE setTextScale NOTIFY stateChanged)
+    Q_PROPERTY(bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY stateChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -86,7 +88,18 @@ public:
     // F002: asynchronous, cancellable folder-name completion for the typed path. Emits pathCompletions(text, names) for the
     // newest request only; names are child folders of the typed scope whose names start with the last segment (at most 20).
     Q_INVOKABLE void completePath(const QString& text);
+    Q_INVOKABLE bool copyFilePath(const QStringList& paths = QStringList());
+    Q_INVOKABLE bool copyFileUrls(const QStringList& paths = QStringList());
+    Q_INVOKABLE bool copyImageBitmap();
     Q_INVOKABLE void cancelDirectoryNavigation();
+    Q_INVOKABLE bool revealInFileManager(const QString& path = QString());
+    Q_INVOKABLE bool openTerminal(const QString& directory = QString());
+    qreal textScale() const; void setTextScale(qreal scale);
+    bool reducedMotion() const; void setReducedMotion(bool reduced);
+    Q_INVOKABLE bool exportSettings(const QString& targetFilePath);
+    Q_INVOKABLE bool importSettings(const QString& sourceFilePath);
+    Q_INVOKABLE bool resetSection(const QString& sectionName);
+    Q_INVOKABLE bool resetAllSettings();
     QString directoryError() const; bool directoryPending() const;
     // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
     Q_INVOKABLE void raiseRoot();

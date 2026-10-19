@@ -21,8 +21,32 @@ Rectangle {
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
+    property string searchQuery: ""
+    property int preSearchRow: -1
     // A host that pairs the grid with another pane takes Tab (GRID-PREVIEW-01); null keeps the focus chain.
     property var tabHandler: null
+    // Thumbnail size buckets (F010): 96, 128, 160 (default), 220, 320
+    readonly property var sizeBuckets: [96, 128, 160, 220, 320]
+    property int bucketIndex: 2
+    readonly property int currentBucketSize: sizeBuckets[bucketIndex]
+    function zoomIn() {
+        if (bucketIndex < sizeBuckets.length - 1) {
+            bucketIndex++
+            Qt.callLater(panel.reveal)
+        }
+    }
+    function zoomOut() {
+        if (bucketIndex > 0) {
+            bucketIndex--
+            Qt.callLater(panel.reveal)
+        }
+    }
+    function resetZoom() {
+        if (bucketIndex !== 2) {
+            bucketIndex = 2
+            Qt.callLater(panel.reveal)
+        }
+    }
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
     // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
@@ -30,9 +54,10 @@ Rectangle {
     // F009: one row per item with name, size and modified time instead of thumbnail tiles.
     property bool details: false
     function sizeText(bytes) { return bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : bytes < 1073741824 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1073741824).toFixed(2) + " GB" }
-    readonly property int columns: details ? 1 : Math.max(1, Math.min(12, Math.floor(grid.width / (compact ? 136 : 176))))
+    readonly property int targetWidth: compact ? Math.max(96, Math.floor(currentBucketSize * 0.85)) : (currentBucketSize + 16)
+    readonly property int columns: details ? 1 : Math.max(1, Math.min(24, Math.floor(grid.width / targetWidth)))
     readonly property int count: grid.count
-    readonly property int thumbEdge: 256
+    readonly property int thumbEdge: currentBucketSize >= 220 ? 512 : 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
     readonly property int modeReplace: 0
     readonly property int modeToggle: 1
@@ -182,11 +207,19 @@ Rectangle {
         }
         if (mods === Qt.ControlModifier) {
             if (event.key === Qt.Key_A) return "all"
+            if (event.key === Qt.Key_I) return "invert"
+            if (event.key === Qt.Key_D) return "clear"
+            if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) return "zoomIn"
+            if (event.key === Qt.Key_Minus) return "zoomOut"
+            if (event.key === Qt.Key_0) return "zoomReset"
             if (event.key === Qt.Key_Space) return "toggle"
         }
         return ""
     }
     onVisibleChanged: {
+        searchQuery = ""
+        preSearchRow = -1
+        searchTimer.stop()
         fileGrid.setActive(visible) // hidden: no listing, no rows, no thumbnail requests
         if (visible) Qt.callLater(enter)
         else noticeText = ""
@@ -194,7 +227,12 @@ Rectangle {
     // A grid restored as visible at start-up (a saved grid or combined mode) never sees a visibility change.
     Component.onCompleted: if (visible) { fileGrid.setActive(true); Qt.callLater(enter) }
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
-    onFolderPathChanged: placeCursor = true
+    onFolderPathChanged: {
+        searchQuery = ""
+        preSearchRow = -1
+        searchTimer.stop()
+        placeCursor = true
+    }
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
@@ -203,6 +241,7 @@ Rectangle {
         function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
+    Timer { id: searchTimer; interval: 3000; onTriggered: { searchQuery = ""; preSearchRow = -1 } }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
 
     // Location header: parent route, folder name, item count and multi-selection count.
@@ -271,6 +310,17 @@ Rectangle {
                         font.features: { "tnum": 1 }
                     }
                     UiButton {
+                        objectName: "gridInvertSelection"
+                        iconName: "refresh"
+                        iconOnly: true
+                        text: "Invert selection"
+                        tip: "Invert selection (Ctrl+I)"
+                        focusPolicy: Qt.NoFocus
+                        implicitHeight: Theme.controlHeight - Theme.gapSm
+                        implicitWidth: implicitHeight
+                        onClicked: { fileGrid.invertSelection(); panel.focusGrid() }
+                    }
+                    UiButton {
                         objectName: "gridClearSelection"
                         iconName: "close"
                         iconOnly: true
@@ -336,12 +386,12 @@ Rectangle {
         cellWidth: width / panel.columns
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
-        // Compact panes snap to whole rows (two when they fit at 100 px or more) so no filename is half clipped.
         cellHeight: panel.details ? Theme.rowHeight + Theme.gapSm : panel.compact
-                    ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(160, cellWidth * 0.6 + 40))))
+                    ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(panel.currentBucketSize, cellWidth * 0.6 + 40))))
+
                                      : Math.max(100, height))
-                    : Math.max(160, Math.min(220, cellWidth * 0.75 + 46),
-                               Math.ceil(height / Math.max(1, Math.floor(160 / panel.columns) - 4)))
+                    : Math.max(Math.floor(panel.currentBucketSize * 0.9), Math.min(Math.floor(panel.currentBucketSize * 1.4), cellWidth * 0.75 + 46),
+                               Math.ceil(height / Math.max(1, Math.floor(panel.currentBucketSize / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
@@ -351,9 +401,104 @@ Rectangle {
         Accessible.name: "Items in " + panel.folderPath
         Accessible.description: "Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo."
         ScrollBar.vertical: UiScrollBar { }
+        WheelHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onWheel: event => {
+                if (event.angleDelta.y > 0) panel.zoomIn()
+                else if (event.angleDelta.y < 0) panel.zoomOut()
+            }
+        }
         // Grid keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
-        Keys.onShortcutOverride: event => { if (panel.keyAction(event).length) event.accepted = true }
+        Keys.onShortcutOverride: event => {
+            if (panel.searchQuery.length > 0) {
+                if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
+                    event.key === Qt.Key_Backspace || event.key === Qt.Key_F3 || event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+                    event.accepted = true
+                    return
+                }
+            }
+            if (event.key === Qt.Key_F3) { event.accepted = true; return }
+            const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
+            if (event.key >= 0x20 && event.key <= 0x7e && !mods) {
+                event.accepted = true
+                return
+            }
+            if (panel.keyAction(event).length) event.accepted = true
+        }
         Keys.onPressed: event => {
+            const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
+
+            // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
+            if (event.key >= 0x20 && event.key <= 0x7e && !mods && event.text.length > 0) {
+                if (panel.searchQuery.length === 0) {
+                    panel.preSearchRow = fileGrid.cursorRow
+                }
+                panel.searchQuery += event.text
+                const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
+                if (match >= 0) {
+                    panel.select(match, panel.modeReplace)
+                    searchTimer.restart()
+                } else {
+                    searchTimer.restart()
+                }
+                event.accepted = true
+                return
+            }
+
+            // F3 or Down/Up while searching
+            if (event.key === Qt.Key_F3 || ((event.key === Qt.Key_Down || event.key === Qt.Key_Up) && panel.searchQuery.length > 0)) {
+                if (panel.searchQuery.length > 0 && fileGrid.count > 0) {
+                    const forward = !(event.modifiers & Qt.ShiftModifier) && event.key !== Qt.Key_Up
+                    const start = forward ? (fileGrid.cursorRow + 1) % fileGrid.count : (fileGrid.cursorRow - 1 + fileGrid.count) % fileGrid.count
+                    const next = fileGrid.findMatch(panel.searchQuery, start, forward)
+                    if (next >= 0) {
+                        panel.select(next, panel.modeReplace)
+                        searchTimer.restart()
+                    }
+                }
+                event.accepted = true
+                return
+            }
+
+            // Backspace while searching
+            if (event.key === Qt.Key_Backspace && panel.searchQuery.length > 0) {
+                panel.searchQuery = panel.searchQuery.slice(0, -1)
+                if (panel.searchQuery.length === 0) {
+                    panel.preSearchRow = -1
+                    searchTimer.stop()
+                } else {
+                    const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
+                    if (match >= 0) {
+                        panel.select(match, panel.modeReplace)
+                    }
+                    searchTimer.restart()
+                }
+                event.accepted = true
+                return
+            }
+
+            // Escape while searching
+            if (event.key === Qt.Key_Escape && panel.searchQuery.length > 0) {
+                if (panel.preSearchRow >= 0 && panel.preSearchRow < fileGrid.count) {
+                    panel.select(panel.preSearchRow, panel.modeReplace)
+                }
+                panel.searchQuery = ""
+                panel.preSearchRow = -1
+                searchTimer.stop()
+                event.accepted = true
+                return
+            }
+
+            // Return / Enter while searching
+            if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && panel.searchQuery.length > 0) {
+                panel.searchQuery = ""
+                panel.preSearchRow = -1
+                searchTimer.stop()
+                panel.activate()
+                event.accepted = true
+                return
+            }
+
             const action = panel.keyAction(event)
             if (!action.length) return
             event.accepted = true
@@ -361,6 +506,11 @@ Rectangle {
             if (action === "up") { panel.goUp(); return }
             if (action === "menu") { panel.contextAtCursor(); return }
             if (action === "all") { fileGrid.selectAll(); return }
+            if (action === "invert") { fileGrid.invertSelection(); return }
+            if (action === "clear") { fileGrid.clearSelection(); return }
+            if (action === "zoomIn") { panel.zoomIn(); return }
+            if (action === "zoomOut") { panel.zoomOut(); return }
+            if (action === "zoomReset") { panel.resetZoom(); return }
             if (action === "escape") { if (fileGrid.selectedCount > 1) fileGrid.clearSelection(); else panel.dismissed(); return }
             if (action === "toggle") {
                 if (fileGrid.cursorRow >= 0) fileGrid.select(fileGrid.cursorRow, panel.modeToggle)
@@ -674,6 +824,68 @@ Rectangle {
             wrapMode: Text.Wrap
             font.pixelSize: Theme.textSmall
             Accessible.role: Accessible.AlertMessage
+        }
+    }
+
+    // Instant search (F004): floating chip overlay showing current query and match position
+    Rectangle {
+        id: searchChip
+        objectName: "gridSearchChip"
+        visible: panel.searchQuery.length > 0
+        anchors {
+            top: grid.top
+            right: grid.right
+            topMargin: Theme.gapMd
+            rightMargin: Theme.gapMd
+        }
+        z: 10
+        height: Theme.controlHeight
+        implicitWidth: searchChipRow.implicitWidth + 2 * Theme.gapSm
+        radius: Theme.radiusControl
+        color: Qt.alpha(Theme.surface, 0.94)
+        border.width: Theme.borderWidth
+        border.color: Theme.border
+        Accessible.role: Accessible.StaticText
+        Accessible.name: panel.searchQuery.length > 0 ? ("Search: " + panel.searchQuery + ", " + searchCountText.text) : ""
+
+        RowLayout {
+            id: searchChipRow
+            anchors.fill: parent
+            anchors.leftMargin: Theme.gapSm
+            anchors.rightMargin: Theme.gapSm
+            spacing: Theme.gapXs
+
+            UiIcon {
+                name: "search"
+                size: Theme.iconSize
+                color: Theme.muted
+            }
+
+            Label {
+                id: searchQueryText
+                objectName: "gridSearchQuery"
+                text: panel.searchQuery
+                color: Theme.text
+                font.pixelSize: Theme.textSmall
+                font.weight: Font.Medium
+            }
+
+            Rectangle {
+                width: 1
+                height: 12
+                color: Theme.border
+            }
+
+            Label {
+                id: searchCountText
+                objectName: "gridSearchCount"
+                text: fileGrid.matchCount(panel.searchQuery) > 0
+                      ? (fileGrid.matchIndex(panel.searchQuery, fileGrid.cursorRow) + " of " + fileGrid.matchCount(panel.searchQuery))
+                      : "No matches"
+                color: fileGrid.matchCount(panel.searchQuery) > 0 ? Theme.muted : Theme.danger
+                font.pixelSize: Theme.textSmall
+                font.features: { "tnum": 1 }
+            }
         }
     }
 }

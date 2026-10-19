@@ -545,8 +545,48 @@ ApplicationWindow {
         else if (id === "grid-select-all") fileGrid.selectAll()
         else if (id === "tree-open-folder") treePanel.openCursor()
         else if (id === "focus-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.focusAddress) }
-        else if (id === "copy-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
         else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
+        else if (id === "copy-folder-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
+        else if (id === "reveal-in-file-manager") {
+            let target = ""
+            const hasGridFocusOrSelection = focusWithin(photoGrid) || gridScope || photoGrid.selectedCount > 0
+            const targets = photoGrid.deletionTargets()
+            if (hasGridFocusOrSelection && (photoGrid.selectedPath.length > 0 || targets.length > 0)) {
+                target = photoGrid.selectedPath.length > 0 ? photoGrid.selectedPath : targets[0]
+            } else if (viewer.filePath.length > 0) {
+                target = viewer.filePath
+            } else {
+                target = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            }
+            viewer.revealInFileManager(target)
+        }
+        else if (id === "open-terminal") {
+            const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            viewer.openTerminal(folder)
+        }
+        else if (id === "copy-path" || id === "copy-file") {
+            let targets = []
+            const gridActive = focusWithin(photoGrid) || gridScope || gridMode || (workspace._gridShown && fileGrid.count > 0) || photoGrid.selectedCount > 0
+            if (gridActive) {
+                const dt = photoGrid.deletionTargets()
+                if (dt.length > 0) targets = dt
+                else if (photoGrid.selectedPath.length > 0) targets = [photoGrid.selectedPath]
+            }
+            if (targets.length === 0 && viewer.filePath.length > 0) {
+                targets = [viewer.filePath]
+            }
+            if (id === "copy-path") viewer.copyFilePath(targets)
+            else viewer.copyFileUrls(targets)
+        }
+        else if (id === "copy-image") {
+            viewer.copyImageBitmap()
+        }
+        else if (id === "select-all") { if (workspace._gridShown || gridScope) fileGrid.selectAll() }
+        else if (id === "clear-selection") { if (workspace._gridShown || gridScope) fileGrid.clearSelection() }
+        else if (id === "invert-selection") { if (workspace._gridShown || gridScope) fileGrid.invertSelection() }
+        else if (id === "grid-zoom-in") { if (workspace._gridShown || gridScope) photoGrid.zoomIn() }
+        else if (id === "grid-zoom-out") { if (workspace._gridShown || gridScope) photoGrid.zoomOut() }
+        else if (id === "grid-zoom-reset") { if (workspace._gridShown || gridScope) photoGrid.resetZoom() }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel(); stopSlideshow() }
@@ -1498,8 +1538,8 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
-                color: viewer.status.length > 0 ? Theme.text : Theme.muted
+                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             BarLabel { // F031: the slideshow state, with its pace
                 objectName: "slideshowIndicator"

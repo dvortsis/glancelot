@@ -118,13 +118,12 @@ private slots:
         QCOMPARE(h.viewer.currentIndex(), 2);
         h.viewer.setTreeVisible(false); focusCanvas(h); QTRY_VERIFY(canvas->hasActiveFocus());
         // Scopes that never overlap may share a key: R rotates in the canvas and goes up a folder in the grid.
-        QVERIFY(h.viewer.setBinding("grid-up", "R"));
-        QCOMPARE(h.viewer.bindingFor("rotate"), QString("R"));
-        WAIT_FIRST_KEY(h, "R");
-        QTest::keyClick(h.window, Qt::Key_R); QTRY_COMPARE(canvas->rotation(), 90);
+        QVERIFY(h.viewer.setBinding("rotate", "F7")); QVERIFY(h.viewer.setBinding("grid-up", "F7")); // not a letter: the grid owns letters for type-to-select
+        WAIT_FIRST_KEY(h, "F7");
+        QTest::keyClick(h.window, Qt::Key_F7); QTRY_COMPARE(canvas->rotation(), 90);
         // A modal dialog outranks the canvas: neither key acts while Settings is open.
         h.viewer.trigger("settings"); QTRY_VERIFY(flag(h, "modalOpen"));
-        QTest::keyClick(h.window, Qt::Key_Right); QTest::keyClick(h.window, Qt::Key_R); QTest::qWait(250);
+        QTest::keyClick(h.window, Qt::Key_Right); QTest::keyClick(h.window, Qt::Key_F7); QTest::qWait(250);
         QCOMPARE(h.viewer.currentIndex(), 2); QCOMPARE(canvas->rotation(), 90);
         QVERIFY(QMetaObject::invokeMethod(h.object("settingsDialog"), "close"));
         QTRY_VERIFY(!flag(h, "modalOpen"));
@@ -136,7 +135,7 @@ private slots:
         QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(h.fileGrid.cursorRow() != row);
         QCOMPARE(h.viewer.currentIndex(), 2);
         const QString folder = h.fileGrid.directory();
-        QTest::keyClick(h.window, Qt::Key_R);
+        QTest::keyClick(h.window, Qt::Key_F7);
         QTRY_VERIFY(h.fileGrid.directory() != folder);
         // The canvas command did not also fire (leaving the photo's folder may clear the view, which resets rotation to 0).
         QVERIFY2(canvas->rotation() == 90 || canvas->rotation() == 0, qPrintable(QString::number(canvas->rotation())));
@@ -211,12 +210,12 @@ private slots:
     void escapeCancelsAChordBeforeTheGridOrTreeActOnIt() {
         Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
-        QVERIFY(h.viewer.setBinding("sort-reverse", "K, S"));
-        WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "S");
+        QVERIFY(h.viewer.setBinding("sort-reverse", "Ctrl+K, Ctrl+S"));
+        WAIT_FIRST_KEY(h, "Ctrl+K"); WAIT_SECOND_KEY(h, "Ctrl+S");
         auto pending = [&] { return flag(h, "chordPending"); };
         h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
         QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
-        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
+        QTest::keyClick(h.window, Qt::Key_K, Qt::ControlModifier); QTRY_VERIFY(pending());
         QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
         QVERIFY(flag(h, "gridMode")); // the grid did not also leave to the photo
         QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!flag(h, "gridMode")); // with nothing pending, Escape is the grid's again
@@ -224,7 +223,7 @@ private slots:
         auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
         QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
         QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
-        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
+        QTest::keyClick(h.window, Qt::Key_K, Qt::ControlModifier); QTRY_VERIFY(pending());
         QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
         QCOMPARE(h.window->property("focusRegion").toString(), QString("tree")); // the tree did not dismiss itself
     }
@@ -576,10 +575,10 @@ private slots:
         auto* rotate = menu->findChild<QQuickItem*>("menuItem-rotate"); QVERIFY(rotate);
         QCOMPARE(rotate->property("keys").toString(), QString("R"));
         closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
-        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+R"));
+        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+J"));
         focusCanvas(h); QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(menu));
         rotate = menu->findChild<QQuickItem*>("menuItem-rotate");
-        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+R"));
+        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+J"));
         // Choosing a row runs the same command the key would.
         QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rotate));
         QTRY_COMPARE(canvas->rotation(), 90);
@@ -693,14 +692,14 @@ private slots:
             else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
             QTRY_VERIFY2(menuOpen(pathMenu), qPrintable(QString::number(how)));
             QVERIFY2(menuProblems(h, pathMenu).isEmpty(), qPrintable(menuProblems(h, pathMenu).join("; ")));
-            for (const char* id : {"menuItem-focus-path", "menuItem-copy-path", "menuItem-paste-path"}) QVERIFY(pathMenu->findChild<QQuickItem*>(id));
+            for (const char* id : {"menuItem-focus-path", "menuItem-copy-folder-path", "menuItem-paste-path"}) QVERIFY(pathMenu->findChild<QQuickItem*>(id));
             closeMenu(pathMenu); QTRY_VERIFY(!menuOpen(pathMenu));
         }
         // "Copy the folder path" through the menu row.
         QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
         QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(pathMenu));
         QGuiApplication::clipboard()->setText("sentinel");
-        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(pathMenu->findChild<QQuickItem*>("menuItem-copy-path")));
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(pathMenu->findChild<QQuickItem*>("menuItem-copy-folder-path")));
         QTRY_COMPARE(QGuiApplication::clipboard()->text(), h.viewer.directory());
     }
 

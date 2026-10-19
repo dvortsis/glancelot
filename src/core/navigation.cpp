@@ -1,3 +1,5 @@
+#include <optional>
+#include "glancelot/perf_trace.hpp"
 #include "glancelot/navigation.hpp"
 #include "link_policy.hpp"
 #include <algorithm>
@@ -71,12 +73,13 @@ struct ScanCancelled {};
 using MetaMap = std::unordered_map<fs::path::string_type, FileMeta>;
 std::vector<fs::path> entries(const fs::path& directory, bool directories, std::stop_token cancel,
                               std::size_t limit = static_cast<std::size_t>(-1), bool* truncated = nullptr, MetaMap* meta = nullptr, bool includeMountedFolders = false) {
+    std::optional<perf::ScopedSpan> enumeration(std::in_place,perf::Stage::Enumerate);
     std::vector<fs::path> result;
-    if (cancel.stop_requested() || !safePath(directory, cancel)) return result;
+    if (cancel.stop_requested() || !safePath(directory, cancel)) { enumeration->setFlags(cancel.stop_requested() ? perf::Cancelled : perf::Failed); return result; }
     std::error_code ec;
     fs::directory_iterator it(directory, fs::directory_options::skip_permission_denied, ec), end;
     while (!ec && it != end) {
-        if (cancel.stop_requested()) return {};
+        if (cancel.stop_requested()) { enumeration->setFlags(perf::Cancelled); return {}; }
         const auto path = it->path();
         const auto status = it->symlink_status(ec);
         bool sameVolume = true;
@@ -103,14 +106,18 @@ std::vector<fs::path> entries(const fs::path& directory, bool directories, std::
         ec.clear();
         it.increment(ec);
     }
-    if (cancel.stop_requested()) return {};
+    if (cancel.stop_requested()) { enumeration->setFlags(perf::Cancelled); return {}; }
+    if (ec) enumeration->setFlags(perf::Failed);
+    enumeration->setBytes(result.size()); enumeration.reset();
+    perf::ScopedSpan timing(perf::Stage::Sort);
+    timing.setBytes(result.size());
     try {
         std::sort(result.begin(), result.end(), [cancel](const fs::path& a, const fs::path& b) {
             if (cancel.stop_requested()) throw ScanCancelled{};
             return naturalLess(a, b);
         });
-    } catch (const ScanCancelled&) { return {}; }
-    if (cancel.stop_requested()) return {};
+    } catch (const ScanCancelled&) { timing.setFlags(perf::Cancelled); return {}; }
+    if (cancel.stop_requested()) { timing.setFlags(perf::Cancelled); return {}; }
     return result;
 }
 std::optional<fs::path> adjacentDirectory(const fs::path& root, fs::path current, int direction, std::stop_token cancel) {
@@ -195,6 +202,8 @@ std::vector<fs::path> sortedImageFiles(const fs::path& directory, const SortSpec
     const bool needMeta = sort.key == SortKey::Modified || sort.key == SortKey::Size;
     auto files = entries(directory, false, cancel, static_cast<std::size_t>(-1), nullptr, needMeta ? &map : nullptr);
     if (cancel.stop_requested()) return {};
+    perf::ScopedSpan timing(perf::Stage::Sort);
+    timing.setBytes(files.size());
     const auto lookup = [&](const fs::path& path) { const auto found = map.find(path.native()); return found == map.end() ? FileMeta{} : found->second; };
     if (sort.key == SortKey::Name) {
         // entries() already returns natural order, a strict total order, so descending is exactly its reverse.
@@ -205,9 +214,9 @@ std::vector<fs::path> sortedImageFiles(const fs::path& directory, const SortSpec
                 if (cancel.stop_requested()) throw ScanCancelled{};
                 return sortBefore(sort, a, lookup(a), b, lookup(b));
             });
-        } catch (const ScanCancelled&) { return {}; }
+        } catch (const ScanCancelled&) { timing.setFlags(perf::Cancelled); return {}; }
     }
-    if (cancel.stop_requested()) return {};
+    if (cancel.stop_requested()) { timing.setFlags(perf::Cancelled); return {}; }
     if (meta) { meta->clear(); meta->reserve(files.size()); for (const auto& file : files) meta->push_back(lookup(file)); }
     return files;
 }

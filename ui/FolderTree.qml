@@ -273,7 +273,7 @@ Rectangle {
                     onClosed: { panel.focusedControls -= 1; if (panel.visible) address.forceActiveFocus(Qt.PopupFocusReason) }
                     background: Rectangle { implicitWidth: 304; radius: Theme.radiusControl; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.border }
                     CommandMenuItem { host: panel.host; commandId: "focus-path" }
-                    CommandMenuItem { host: panel.host; commandId: "copy-path" }
+                    CommandMenuItem { host: panel.host; commandId: "copy-folder-path" }
                     CommandMenuItem { host: panel.host; commandId: "paste-path" }
                 }
                 Keys.onEscapePressed: event => {
