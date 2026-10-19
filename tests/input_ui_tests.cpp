@@ -460,6 +460,51 @@ private slots:
         QTRY_VERIFY(!namedAll(h.window, "gridThumb0").isEmpty());
     }
 
+    // F051: the recorder captures real key presses (chords too), explains refusals, clears and cancels, and keeps window
+    // shortcuts quiet while it records.
+    void shortcutRecorderCapturesChordsAndExplainsRefusals() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* dialog = h.object("settingsDialog"); QVERIFY(dialog);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString("controls")), Q_ARG(QVariant, false)));
+        QTRY_VERIFY(flag(h, "modalOpen"));
+        QTest::qWait(400); // the dialog moves focus to its section list once it opens; let that settle
+        auto recorder = [&](const char* id) { return named(h.window, QString("shortcutRecorder-") + id); };
+        QTRY_VERIFY(recorder("rotate") != nullptr);
+        // The list rebuilds when a binding is saved, so rows are looked up again each time, never held.
+        auto rotate = [&] { return recorder("rotate"); };
+        QCOMPARE(rotate()->property("text").toString(), QString("R"));
+        auto begin = [&](QQuickItem* r) { QVERIFY(r); r->forceActiveFocus(Qt::TabFocusReason); QTRY_VERIFY(r->hasActiveFocus()); QTest::keyClick(h.window, Qt::Key_Space); QTest::qWait(150); QTRY_VERIFY(r->property("recording").toBool()); };
+        // A chord: two presses record immediately.
+        begin(rotate());
+        QCOMPARE(rotate()->property("text").toString(), QString("Press a shortcut…"));
+        QTest::keyClick(h.window, Qt::Key_J, Qt::ControlModifier);
+        QTRY_COMPARE(rotate()->property("text").toString(), QString("Ctrl+J, …"));
+        QTest::keyClick(h.window, Qt::Key_L, Qt::ControlModifier);
+        QTRY_COMPARE(h.viewer.bindingFor("rotate"), QString("Ctrl+J, Ctrl+L"));
+        QTRY_VERIFY(!rotate()->property("recording").toBool());
+        // A key that is already taken: refused with the reason, nothing saved, and the taken key's own command did not run.
+        auto* canvas = h.canvas(); const QColor backdrop = canvas->background();
+        auto zoom = [&] { return recorder("zoom-200"); }; QVERIFY(zoom());
+        begin(zoom());
+        QTest::keyClick(h.window, Qt::Key_B);
+        QTest::qWait(1700); // a single key is accepted after a pause
+        QTRY_VERIFY(!zoom()->property("recording").toBool());
+        QCOMPARE(h.viewer.bindingFor("zoom-200"), QString());
+        QCOMPARE(canvas->background(), backdrop);
+        QVERIFY2(dialog->property("bindingMessage").toString().contains("Already used by"), qPrintable(dialog->property("bindingMessage").toString()));
+        // Escape cancels without changing anything; Backspace clears.
+        begin(zoom()); QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!zoom()->property("recording").toBool());
+        QVERIFY(flag(h, "modalOpen")); // the Escape belonged to the recorder, not the dialog
+        begin(rotate()); QTest::keyClick(h.window, Qt::Key_Backspace);
+        QTRY_COMPARE(h.viewer.bindingFor("rotate"), QString());
+        QCOMPARE(rotate()->property("text").toString(), QString("Unassigned"));
+        // A free single key is saved after the pause.
+        begin(zoom()); QTest::keyClick(h.window, Qt::Key_F8); QTest::qWait(1700);
+        QTRY_COMPARE(h.viewer.bindingFor("zoom-200"), QString("F8"));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+    }
+
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
         Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);

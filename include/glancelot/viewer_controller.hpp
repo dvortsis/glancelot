@@ -71,6 +71,9 @@ public:
     Q_INVOKABLE QString bindingConflict(const QString& id, const QString& sequence) const;
     // The portable text of one key press (as it appears in a binding step), so panes can tell whether a key is remapped.
     Q_INVOKABLE QString keyStep(int key, int modifiers) const;
+    // Why `sequence` cannot be saved for `id` (reserved Escape, too many steps, a hold that needs one key, or the command it
+    // would take a key from), in a sentence for the user; empty when it can. Clearing ("") is always fine.
+    Q_INVOKABLE QString bindingProblem(const QString& id, const QString& sequence) const;
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
     bool canRaiseRoot() const;
     bool treeVisible() const; void setTreeVisible(bool visible);

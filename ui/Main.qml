@@ -386,7 +386,9 @@ ApplicationWindow {
         }
         return best
     }
-    readonly property bool keysLive: !modalOpen && !editingText
+    // The shortcut recorder (F051) owns every key while it records, so no window shortcut may fire meanwhile.
+    readonly property bool recordingKey: activeFocusItem !== null && activeFocusItem.recordingShortcut === true
+    readonly property bool keysLive: !modalOpen && !editingText && !recordingKey
     // Two-step chords: the first key arms a pending state that the second key completes. It ends after 1.5 s, on
     // Escape, on losing focus or when a modal opens; commands in the same scope never share the first key alone.
     property string chordFirst: ""

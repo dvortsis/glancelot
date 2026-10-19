@@ -525,7 +525,7 @@ UiDialog {
                     onAccepted: dialog.runFirstMatch()
                     Keys.onDownPressed: { const first = commandRows.firstVisible(); if (first) first.forceActiveFocus(Qt.TabFocusReason) }
                 }
-                Note { text: "Select a command to run it. Type a shortcut such as Ctrl+O or Shift+Right to remap it; clear a shortcut to unassign it." }
+                Note { text: "Select a command to run it. To change a shortcut, activate its box and press the new keys (two presses make a chord such as Ctrl+K, Ctrl+C). Escape cancels; Backspace clears it." }
                 Note {
                     visible: dialog.host.gridMode
                     text: "Commands that act on the open photo are dimmed while the grid view is showing. Their shortcuts can still be changed."
@@ -549,6 +549,7 @@ UiDialog {
                             id: commandRow
                             required property var modelData
                             readonly property string reason: dialog.unavailableReason(modelData.id)
+                            readonly property var settings: dialog // for handlers of nested components, which cannot see this id
                             property alias runButton: runButton
                             Layout.fillWidth: true
                             spacing: Theme.gapSm
@@ -572,20 +573,24 @@ UiDialog {
                                 font.pixelSize: Theme.textSmall
                                 Accessible.ignored: true // already the button's description
                             }
-                            UiTextField {
-                                Layout.preferredWidth: 148
-                                mono: true
-                                text: commandRow.modelData.binding
-                                placeholderText: "Unassigned"
-                                Accessible.name: "Shortcut for " + commandRow.modelData.label
-                                onEditingFinished: {
-                                    if (text !== commandRow.modelData.binding) {
-                                        const ok = viewer.setBinding(commandRow.modelData.id, text)
-                                        dialog.bindingMessage = viewer.status
-                                        dialog.bindingFailed = !ok
-                                        if (!ok) text = commandRow.modelData.binding
-                                    }
+                            // F051: press the keys to record; a refused shortcut explains why and nothing is saved.
+                            ShortcutRecorder {
+                                objectName: "shortcutRecorder-" + commandRow.modelData.id
+                                Layout.preferredWidth: 168
+                                commandId: commandRow.modelData.id
+                                commandLabel: commandRow.modelData.label
+                                binding: commandRow.modelData.binding
+                                // Saved after this handler returns: a saved binding rebuilds the command list, which destroys this
+                                // very row, and that must not happen in the middle of its own signal.
+                                onCommitted: sequence => {
+                                    const id = commandRow.modelData.id, label = commandRow.modelData.label, owner = commandRow.settings
+                                    Qt.callLater(() => {
+                                        const ok = viewer.setBinding(id, sequence)
+                                        owner.bindingMessage = ok ? (sequence.length ? "Shortcut for “" + label + "” is now " + sequence + "." : "Shortcut for “" + label + "” cleared.") : viewer.status
+                                        owner.bindingFailed = !ok
+                                    })
                                 }
+                                onRefused: reason => { commandRow.settings.bindingMessage = reason; commandRow.settings.bindingFailed = true }
                             }
                         }
                     }

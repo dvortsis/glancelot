@@ -857,7 +857,21 @@ bool ViewerController::setWheelModifier(const QString& modifier,const QString& a
 QString ViewerController::keyStep(int key,int modifiers) const{
     return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
 }
-QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
+QString ViewerController::bindingProblem(const QString& id,const QString& sequence) const{
+    if(!d->bindings.contains(id)||sequence.trimmed().isEmpty())return {};
+    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+    if(parsed.isEmpty())return QStringLiteral("That is not a key combination.");
+    if(parsed.count()>2)return QStringLiteral("A shortcut is at most two key presses.");
+    for(int i=0;i<parsed.count();++i)if(parsed[i]==QKeyCombination(Qt::NoModifier,Qt::Key_Escape))return QStringLiteral("Escape is reserved for closing views and cancelling a pending shortcut.");
+    if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1)return QStringLiteral("A hold shortcut is one key: it is released to restore the view.");
+    const auto other=bindingConflict(id,sequence);
+    if(!other.isEmpty()){
+        const auto* command=findCommand(other);
+        const QString label=command?QString::fromStdString(command->label):other;
+        return QStringLiteral("Already used by “%1”. Clear that shortcut first, or choose another key.").arg(label);
+    }
+    return {};
+}QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
     if(!d->bindings.contains(id))return {};
     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
     if(parsed.isEmpty())return {};

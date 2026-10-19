@@ -159,6 +159,7 @@ private slots:
     void scopeAwareConflictsAndChordPrefixes();
     void scopedBindingsPersistAndReload();
     void wheelModifiersPersistFallBackIndividuallyAndMerge();
+    void bindingProblemExplainsEveryRefusal();
 };
 
 void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
@@ -938,6 +939,24 @@ void WindowSlotTests::wheelModifiersPersistFallBackIndividuallyAndMerge() {
     QCOMPARE(stored.value("ctrl").toString(), QString("pan"));
     QCOMPARE(stored.value("alt").toString(), QString("navigate"));
     QCOMPARE(stored.value("future").toString(), QString("kept"));
+}
+// F051: every refusal comes with a sentence; a shortcut that can be saved has none.
+void WindowSlotTests::bindingProblemExplainsEveryRefusal() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    ViewerController viewer;
+    QCOMPARE(viewer.bindingProblem("rotate", ""), QString());                 // clearing is always fine
+    QCOMPARE(viewer.bindingProblem("rotate", "Ctrl+Alt+J"), QString());
+    QCOMPARE(viewer.bindingProblem("rotate", "Ctrl+K, Ctrl+C"), QString());
+    QVERIFY(viewer.bindingProblem("rotate", "Escape").contains("Escape"));
+    QVERIFY(viewer.bindingProblem("rotate", "Ctrl+K, Ctrl+C, Ctrl+V").contains("two"));
+    QVERIFY(viewer.bindingProblem("hold-actual", "Ctrl+J, Ctrl+Z").contains("one key"));
+    const QString taken = viewer.bindingProblem("rotate", "Right");           // belongs to "Next image"
+    QVERIFY2(taken.contains("Already used by") && taken.contains("Next image"), qPrintable(taken));
+    QVERIFY(viewer.bindingProblem("rotate", "G, D").contains("Toggle folder grid")); // chord prefix on a global key
+    QCOMPARE(viewer.bindingProblem("no-such-command", "F9"), QString());
+    QCOMPARE(viewer.keyStep(Qt::Key_J, Qt::ControlModifier), QString("Ctrl+J"));
+    QCOMPARE(viewer.keyStep(Qt::Key_Right, Qt::NoModifier), QString("Right"));
 }
 #include "window_slot_tests.moc"
 
