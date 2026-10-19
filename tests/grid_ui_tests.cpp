@@ -2391,7 +2391,8 @@ private slots:
             QDir().mkpath(".cache/delete");
             for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/tree-menu-" + mode + "-1180.png")); }
         }
-        QTest::keyClick(h.window, Qt::Key_Down); // highlight the only item
+        QTest::keyClick(h.window, Qt::Key_Down); // INPUT-02: "Open folder" is first; the destructive row stays last
+        QTest::keyClick(h.window, Qt::Key_Down); // highlight the move-to-trash item
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
         QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");

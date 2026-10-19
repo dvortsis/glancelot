@@ -43,6 +43,8 @@ Rectangle {
     signal itemActivated(string path)
     signal dismissed()
     signal foldersRequested()
+    // INPUT-02: a context menu was asked for at (x, y) in this pane over `row` (-1: empty area). The host owns the menu.
+    signal contextRequested(real x, real y, int row)
     // DELETE-01: the header action asks the host to confirm moving these paths to the trash; nothing happens here.
     signal deleteRequested(var paths)
     property bool deleteBlocked: false // every item here is on a read-only drive
@@ -142,6 +144,14 @@ Rectangle {
         const name = path.slice(path.lastIndexOf("/") + 1)
         showNotice("“" + name + "” isn't a photo Glancelot can open. Supported formats are JPEG and PNG.")
     }
+    // The menu key opens the menu on the cursor item, or the pane's corner when there is none.
+    function contextAtCursor() {
+        const row = fileGrid.cursorRow
+        if (row < 0) { contextRequested(grid.x + Theme.gapMd, grid.y + Theme.gapMd, -1); return }
+        const column = row % columns, line = Math.floor(row / columns)
+        const x = grid.x + (column + 0.5) * grid.cellWidth, y = grid.y + (line + 1) * grid.cellHeight - grid.contentY + grid.originY
+        contextRequested(Math.max(grid.x, Math.min(x, grid.x + grid.width - 1)), Math.max(grid.y, Math.min(y, grid.y + grid.height - 1)), row)
+    }
     function goUp() { if (inputEnabled && parentPath.length) { noticeText = ""; viewer.navigateDirectory(parentPath) } }
     function clickRow(row, modifiers) {
         const ctrl = (modifiers & Qt.ControlModifier) !== 0, shift = (modifiers & Qt.ShiftModifier) !== 0
@@ -152,6 +162,7 @@ Rectangle {
     // One table for both shortcut override and handling, so the grid claims exactly the keys it uses.
     function keyAction(event) {
         const mods = event.modifiers & ~Qt.KeypadModifier
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && mods === Qt.ShiftModifier)) return "menu"
         const navigation = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown]
         if (navigation.indexOf(event.key) >= 0) {
             if (mods === Qt.NoModifier) return "move"
@@ -343,6 +354,7 @@ Rectangle {
             event.accepted = true
             if (action === "activate") { panel.activate(); return }
             if (action === "up") { panel.goUp(); return }
+            if (action === "menu") { panel.contextAtCursor(); return }
             if (action === "all") { fileGrid.selectAll(); return }
             if (action === "escape") { if (fileGrid.selectedCount > 1) fileGrid.clearSelection(); else panel.dismissed(); return }
             if (action === "toggle") {
@@ -365,6 +377,15 @@ Rectangle {
             case Qt.Key_PageDown: next += page; break
             }
             panel.select(next, action === "extend" ? panel.modeRange : panel.modeReplace)
+        }
+        // Right click: the item under the pointer, or the empty area. Left clicks stay with the delegates.
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: point => {
+                const row = grid.indexAt(point.position.x + grid.contentX, point.position.y + grid.contentY)
+                const at = grid.mapToItem(panel, point.position.x, point.position.y)
+                panel.contextRequested(at.x, at.y, row)
+            }
         }
         Keys.onBacktabPressed: event => { panel.foldersRequested(); event.accepted = true }
         Keys.onTabPressed: event => { if (panel.tabHandler) panel.tabHandler(); event.accepted = panel.tabHandler !== null }

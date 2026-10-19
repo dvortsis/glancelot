@@ -24,6 +24,8 @@ Rectangle {
     signal dismissed()
     // DELETE-01: a row's context menu (right-click, Menu key, Shift+F10) asks the host to confirm a move to the trash.
     signal deleteRequested(string path)
+    // INPUT-02: the window, for the command-menu rows (scope predicate, live bindings, command routing).
+    property var host: null
     readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
     function openRowMenu(row, x, y) {
         const info = folderTree.rowInfo(row)
@@ -47,6 +49,22 @@ Rectangle {
     function activate(row, depth, expandable, isCurrent, path) {
         if (depth === 0 && expandable) folderTree.toggle(row)
         else if (!isCurrent) viewer.openFolder(path)
+    }
+    // The "Open the focused folder" command: the same action as Enter on the cursor row.
+    function openCursor() {
+        if (list.currentIndex < 0) return
+        const info = folderTree.rowInfo(list.currentIndex)
+        if (info && info.path) activate(list.currentIndex, info.depth, info.expandable, info.isCurrent, info.path)
+    }
+    function focusAddress() { address.forceActiveFocus(Qt.ShortcutFocusReason); address.selectAll() }
+    // "Go to the folder path on the clipboard": paste over the field and navigate, only if something was pasted.
+    function pasteAddress() {
+        address.forceActiveFocus(Qt.ShortcutFocusReason); address.selectAll()
+        const before = address.text
+        address.paste()
+        if (address.text === before) return
+        address.modified = false
+        viewer.navigateDirectory(address.text)
     }
     function currentSelectedFolder() {
         if (!list.activeFocus || list.currentIndex < 0 || !folderTree) return ""
@@ -163,6 +181,23 @@ Rectangle {
                 selectByMouse: true
                 onTextEdited: modified = true
                 onAccepted: { modified = false; viewer.navigateDirectory(text) }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { pathMenu.popup(address, Theme.gapMd, address.height); event.accepted = true }
+                }
+                // Right click: the field has no built-in menu, so the path commands are offered here.
+                TapHandler { acceptedButtons: Qt.RightButton; onTapped: point => { address.forceActiveFocus(Qt.MouseFocusReason); pathMenu.popup(address, point.position.x, point.position.y) } }
+                Menu {
+                    id: pathMenu
+                    objectName: "pathContextMenu"
+                    margins: Theme.gapSm
+                    padding: Theme.gapXs
+                    onOpened: panel.focusedControls += 1
+                    onClosed: { panel.focusedControls -= 1; if (panel.visible) address.forceActiveFocus(Qt.PopupFocusReason) }
+                    background: Rectangle { implicitWidth: 304; radius: Theme.radiusControl; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.border }
+                    CommandMenuItem { host: panel.host; commandId: "focus-path" }
+                    CommandMenuItem { host: panel.host; commandId: "copy-path"; enabled: viewer.directory.length > 0 }
+                    CommandMenuItem { host: panel.host; commandId: "paste-path" }
+                }
                 Keys.onEscapePressed: event => {
                     viewer.cancelDirectoryNavigation(); text = viewer.directory; modified = false; if(panel.arrangementMode)panel.dismissed();else panel.focusList(); event.accepted = true
                 }
@@ -397,6 +432,7 @@ Rectangle {
                     border.width: Theme.borderWidth
                     border.color: Theme.border
                 }
+                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
                 MenuItem {
                     id: trashItem
                     objectName: "folderMoveToTrash"
@@ -415,6 +451,13 @@ Rectangle {
                             color: trashItem.enabled ? Theme.danger : Theme.muted
                             font.pixelSize: Theme.textBody
                             Layout.fillWidth: true
+                        }
+                        Label { // the live binding of the command this row stands for
+                            visible: trashItem.enabled && text.length > 0
+                            text: panel.host ? panel.host.keyHint("delete-selection") : ""
+                            color: Theme.muted
+                            font.family: Theme.monoFamily
+                            font.pixelSize: Theme.textSmall
                         }
                     }
                     background: Rectangle { radius: Theme.radiusSmall; color: trashItem.highlighted ? Theme.hover : "transparent" }

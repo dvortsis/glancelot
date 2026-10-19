@@ -1,5 +1,7 @@
 #include "image_canvas.hpp"
 #include <QQuickWindow>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QFile>
 #include <QMatrix4x4>
 #include <QPointer>
@@ -172,6 +174,7 @@ protected:
     }
 };
 
+ImageCanvas::~ImageCanvas() { unwatchHold(); }
 ImageCanvas::ImageCanvas(QQuickItem* parent):QQuickRhiItem(parent) {
     setAlphaBlending(false);
     connect(this,&QQuickRhiItem::effectiveColorBufferSizeChanged,this,[this] { refreshFit(); });
@@ -247,11 +250,40 @@ void ImageCanvas::beginLoupe(qreal x,qreal y) {
     if (m_loupe || m_image.isNull()) return;
     m_savedZoom=m_zoom; m_savedPan=m_pan; m_savedFit=m_fitMode; m_loupe=true;
     zoomAt(std::max(qreal(1),m_zoom)/m_zoom,x,y);
+    emit loupeChanged();
 }
 void ImageCanvas::endLoupe() {
     if (!m_loupe) return;
     m_zoom=m_savedZoom; m_pan=m_savedPan; m_fitMode=m_savedFit; m_loupe=false;
-    emit viewChanged(); update();
+    unwatchHold();
+    emit viewChanged(); emit loupeChanged(); update();
+}
+// INPUT-02 hold: exactly 1:1 around (x,y) until the key is released. The window filter sees the release wherever focus sits
+// (a shortcut consumes the press, never the release); a deactivated window restores too. Auto-repeat releases are ignored.
+void ImageCanvas::beginHold(qreal x,qreal y,const QString& sequence) {
+    if (m_loupe || m_image.isNull()) return;
+    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+    m_savedZoom=m_zoom; m_savedPan=m_pan; m_savedFit=m_fitMode; m_loupe=true;
+    zoomAt(1/m_zoom,x,y);
+    if (parsed.count()==1 && window()) {
+        m_holdKey=int(parsed[0].key());
+        m_holdWindow=window();
+        m_holdWindow->installEventFilter(this);
+    }
+    emit loupeChanged();
+}
+void ImageCanvas::unwatchHold() {
+    if (m_holdWindow) m_holdWindow->removeEventFilter(this);
+    m_holdWindow=nullptr; m_holdKey=0;
+}
+bool ImageCanvas::eventFilter(QObject* watched,QEvent* event) {
+    if (m_loupe && watched==m_holdWindow) {
+        if (event->type()==QEvent::KeyRelease) {
+            const auto* key=static_cast<QKeyEvent*>(event);
+            if (!key->isAutoRepeat() && m_holdKey!=0 && key->key()==m_holdKey) endLoupe();
+        } else if (event->type()==QEvent::WindowDeactivate) endLoupe();
+    }
+    return false;
 }
 void ImageCanvas::cycleBackground() {
     if (m_checkerboard) { setCheckerboard(false); setBackground(QColor("#191919")); }
