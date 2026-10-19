@@ -3,9 +3,9 @@ project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
-  holder: none
-  branch: none
-  started: none
+  holder: codex-lead
+  branch: codex/platform-01
+  started: 2026-10-19T03:04:17.166804+00:00
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
