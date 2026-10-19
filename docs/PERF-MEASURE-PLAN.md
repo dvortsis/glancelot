@@ -6,7 +6,7 @@ The lead froze this contract on October 18, 2026.
 | --- | --- |
 | Lane | Codex |
 | Requirements | SYS-05, PERF-04, PERF-05 |
-| Source | PERFORMANCE-STRATEGY.md, packet PERF-MEASURE (§3, §4 and §16) |
+| Source | PERFORMANCE-STRATEGY.md, packet PERF-MEASURE (Â§3, Â§4 and Â§16) |
 | Branch | `codex/perf-measure` |
 | Worktree | `.worktrees/codex-perf-measure` |
 | Build directory | `build-codex-perf-measure` |
@@ -41,7 +41,7 @@ These additions are pre-approved:
   - mixed folders with 1k, 10k and 100k entries;
   - nested trees.
   The manifest ID goes in the report, and user paths never do.
-- **Replay.** `tools/perf/replay.ps1` (and a `.sh` for Linux/Docker) runs scripted sessions: open, next ×N, reverse, folder jump, grid scroll and combined preview. It writes the JSON report, and `compare` diffs two reports with per-stage thresholds.
+- **Replay.** `tools/perf/replay.ps1` (and a `.sh` for Linux/Docker) runs scripted sessions: open, next Ã—N, reverse, folder jump, grid scroll and combined preview. It writes the JSON report, and `compare` diffs two reports with per-stage thresholds.
 - **Overhead.** Measure the cost with the recorder enabled and disabled. Report it, and fail the test if the disabled per-span cost exceeds a stated bound.
 - **Boundaries.** This packet adds measurement only. It changes no cache, scheduler or decode policy (CACHE-01 and IO-01 are Gemini-lane tasks). No network access and no telemetry.
 
@@ -57,3 +57,21 @@ These additions are pre-approved:
 - **App:** `--perf-report` on a generated fixture produces the report, both with and without cache hits. It demonstrates the hit/miss distinction and the cold/warm split.
 - **Full suite and Linux:** `scripts/build.ps1 -BuildDir build-codex-perf-measure -Test`, plus `docker build`. Record Windows and Docker baselines, including platform, backend and the actual numbers, in the verification document.
 - **Unverified unless measured:** physical HDD, SMB and high-refresh hardware.
+
+
+## Lead clarification of existing timing boundaries
+
+October 19, 2026: the user-appointed lead accepts the existing frozen Stage enum's
+parent IPC boundaries: DecodeQueue is process-launch wait, and Decode runs from
+worker-start notification through validated copied pixels, including worker
+probe/admission and IPC. These are end-to-end worker-service timings, not codec-only
+CPU time. No cross-process clock origins may be subtracted. A future worker-local
+phase schema would require a separate frozen contract and is not a new public enum
+addition in this packet.
+
+Upload and Present record CPU upload/command-submission callback work. Startup ends
+on the first Qt frame-swap after a nonnull image. Reports and verification must state
+that these do not prove GPU completion or physical/input-to-photon latency. Cold
+means process-first full decode/startup, not a cold OS/server/shader cache. Actual
+cache hits remain distinct and must come from a real cache lookup. This clarification
+does not approve the implementation; independent Claude review remains required.

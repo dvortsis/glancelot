@@ -21,6 +21,7 @@
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QClipboard>
+#include <QMimeData>
 #include <QQuickStyle>
 #include <QQuickImageProvider>
 #include <QQuickItem>
@@ -2554,6 +2555,111 @@ private slots:
 
         QVERIFY(!viewer.openTerminal("C:/nonexistent_dir_path_12345"));
         QCOMPARE(viewer.status(), QString("Could not open terminal."));
+    }
+    void clipboardOperationsRegisteredAndFunctional() {
+        ViewerController viewer;
+        const auto commands = viewer.commands();
+        QMap<QString, QVariantMap> map;
+        for (const auto& cmd : commands) {
+            const auto row = cmd.toMap();
+            map[row["id"].toString()] = row;
+        }
+
+        // 1. Verify commands and default shortcuts in viewer.commands
+        QVERIFY(map.contains("copy-path"));
+        QCOMPARE(map["copy-path"]["binding"].toString(), QStringLiteral("Ctrl+C"));
+        QCOMPARE(map["copy-path"]["label"].toString(), QStringLiteral("Copy file path"));
+
+        QVERIFY(map.contains("copy-file"));
+        QCOMPARE(map["copy-file"]["binding"].toString(), QStringLiteral("Ctrl+Shift+C"));
+        QCOMPARE(map["copy-file"]["label"].toString(), QStringLiteral("Copy file"));
+
+        QVERIFY(map.contains("copy-image"));
+        QCOMPARE(map["copy-image"]["binding"].toString(), QStringLiteral("Ctrl+Alt+C"));
+        QCOMPARE(map["copy-image"]["label"].toString(), QStringLiteral("Copy image"));
+
+        // 2. Empty-state status messages and return false
+        QVERIFY(!viewer.copyFilePath());
+        QCOMPARE(viewer.status(), QStringLiteral("Nothing selected to copy path."));
+
+        QVERIFY(!viewer.copyFileUrls());
+        QCOMPARE(viewer.status(), QStringLiteral("Nothing selected to copy file."));
+
+        QVERIFY(!viewer.copyImageBitmap());
+        QCOMPARE(viewer.status(), QStringLiteral("No image open to copy."));
+
+        // 3. Functional copyFilePath with single and multiple paths
+        QTemporaryDir tempDir;
+        QVERIFY(tempDir.isValid());
+        const QString file1 = QDir(tempDir.path()).filePath("photo1.png");
+        const QString file2 = QDir(tempDir.path()).filePath("photo2.png");
+        {
+            QFile f1(file1); QVERIFY(f1.open(QIODevice::WriteOnly)); f1.close();
+            QFile f2(file2); QVERIFY(f2.open(QIODevice::WriteOnly)); f2.close();
+        }
+
+        // Single path
+        QVERIFY(viewer.copyFilePath(QStringList{file1}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied path to clipboard."));
+        QCOMPARE(QGuiApplication::clipboard()->text(), QDir::toNativeSeparators(file1));
+
+        // Multiple paths
+        QVERIFY(viewer.copyFilePath(QStringList{file1, file2}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied 2 paths to clipboard."));
+#ifdef Q_OS_WIN
+        const QString expectedJoined = QDir::toNativeSeparators(file1) + "\r\n" + QDir::toNativeSeparators(file2);
+#else
+        const QString expectedJoined = QDir::toNativeSeparators(file1) + "\n" + QDir::toNativeSeparators(file2);
+#endif
+        QCOMPARE(QGuiApplication::clipboard()->text(), expectedJoined);
+
+        // 4. Functional copyFileUrls with single and multiple paths
+        QVERIFY(viewer.copyFileUrls(QStringList{file1}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied file to clipboard."));
+        const QMimeData* mimeSingle = QGuiApplication::clipboard()->mimeData();
+        QVERIFY(mimeSingle != nullptr);
+        QVERIFY(mimeSingle->hasUrls());
+        QCOMPARE(mimeSingle->urls().size(), 1);
+        QCOMPARE(QDir::cleanPath(mimeSingle->urls().first().toLocalFile()).toCaseFolded(), QDir::cleanPath(file1).toCaseFolded());
+        QCOMPARE(QGuiApplication::clipboard()->text(), QDir::toNativeSeparators(file1));
+
+        QVERIFY(viewer.copyFileUrls(QStringList{file1, file2}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied 2 files to clipboard."));
+        const QMimeData* mimeMulti = QGuiApplication::clipboard()->mimeData();
+        QVERIFY(mimeMulti != nullptr);
+        QVERIFY(mimeMulti->hasUrls());
+        QCOMPARE(mimeMulti->urls().size(), 2);
+        QCOMPARE(QDir::cleanPath(mimeMulti->urls()[0].toLocalFile()).toCaseFolded(), QDir::cleanPath(file1).toCaseFolded());
+        QCOMPARE(QDir::cleanPath(mimeMulti->urls()[1].toLocalFile()).toCaseFolded(), QDir::cleanPath(file2).toCaseFolded());
+        QCOMPARE(QGuiApplication::clipboard()->text(), expectedJoined);
+
+        // 5. Functional copyImageBitmap
+        QImage testImg(64, 48, QImage::Format_RGB32);
+        testImg.fill(Qt::blue);
+        QVERIFY(testImg.save(file1));
+
+        viewer.open(file1);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(), 15000);
+        QCOMPARE(viewer.image().size(), QSize(64, 48));
+
+        // When image is loaded, copyImageBitmap succeeds and copies bitmap
+        QVERIFY(viewer.copyImageBitmap());
+        QCOMPARE(viewer.status(), QStringLiteral("Copied image bitmap to clipboard."));
+        QImage clipImg = QGuiApplication::clipboard()->image();
+        QVERIFY(!clipImg.isNull());
+        QCOMPARE(clipImg.size(), QSize(64, 48));
+
+        // Also test copyFilePath fallback when no paths provided: falls back to d->path (file1)
+        QVERIFY(viewer.copyFilePath());
+        QCOMPARE(viewer.status(), QStringLiteral("Copied path to clipboard."));
+        QCOMPARE(QGuiApplication::clipboard()->text(), QDir::toNativeSeparators(file1));
+
+        // Also test copyFileUrls fallback when no paths provided: falls back to d->path (file1)
+        QVERIFY(viewer.copyFileUrls());
+        QCOMPARE(viewer.status(), QStringLiteral("Copied file to clipboard."));
+        QVERIFY(QGuiApplication::clipboard()->mimeData()->hasUrls());
+        QCOMPARE(QGuiApplication::clipboard()->mimeData()->urls().size(), 1);
+        QCOMPARE(QDir::cleanPath(QGuiApplication::clipboard()->mimeData()->urls().first().toLocalFile()).toCaseFolded(), QDir::cleanPath(file1).toCaseFolded());
     }
     void deleteCurrentFileAndFolderShortcuts() {
         DeleteFolder media(3, 2); QVERIFY(media.root.isValid());

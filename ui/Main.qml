@@ -318,7 +318,10 @@ ApplicationWindow {
         return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
                 "view-preview", "view-grid", "view-combined", "combined-orientation",
                 "reveal-in-file-manager", "open-terminal",
-                "delete-selection", "delete-current-file", "delete-current-folder"].indexOf(id) >= 0
+                "copy-path", "copy-file", "copy-image",
+                "delete-selection", "delete-current-file", "delete-current-folder",
+                "select-all", "clear-selection", "invert-selection",
+                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -402,6 +405,29 @@ ApplicationWindow {
             const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
             viewer.openTerminal(folder)
         }
+        else if (id === "copy-path" || id === "copy-file") {
+            let targets = []
+            const gridActive = focusWithin(photoGrid) || gridScope || gridMode || (workspace._gridShown && fileGrid.count > 0) || photoGrid.selectedCount > 0
+            if (gridActive) {
+                const dt = photoGrid.deletionTargets()
+                if (dt.length > 0) targets = dt
+                else if (photoGrid.selectedPath.length > 0) targets = [photoGrid.selectedPath]
+            }
+            if (targets.length === 0 && viewer.filePath.length > 0) {
+                targets = [viewer.filePath]
+            }
+            if (id === "copy-path") viewer.copyFilePath(targets)
+            else viewer.copyFileUrls(targets)
+        }
+        else if (id === "copy-image") {
+            viewer.copyImageBitmap()
+        }
+        else if (id === "select-all") { if (workspace._gridShown || gridScope) fileGrid.selectAll() }
+        else if (id === "clear-selection") { if (workspace._gridShown || gridScope) fileGrid.clearSelection() }
+        else if (id === "invert-selection") { if (workspace._gridShown || gridScope) fileGrid.invertSelection() }
+        else if (id === "grid-zoom-in") { if (workspace._gridShown || gridScope) photoGrid.zoomIn() }
+        else if (id === "grid-zoom-out") { if (workspace._gridShown || gridScope) photoGrid.zoomOut() }
+        else if (id === "grid-zoom-reset") { if (workspace._gridShown || gridScope) photoGrid.resetZoom() }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -1202,8 +1228,8 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
-                color: viewer.status.length > 0 ? Theme.text : Theme.muted
+                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }

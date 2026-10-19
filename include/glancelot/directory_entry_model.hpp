@@ -20,6 +20,9 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(bool accessible READ accessible NOTIFY directoryChanged)
     Q_PROPERTY(bool truncated READ truncated NOTIFY directoryChanged)
     Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
+    Q_PROPERTY(qint64 selectedBytes READ selectedBytes NOTIFY selectionChanged)
+    Q_PROPERTY(QString selectedBytesFormatted READ selectedBytesFormatted NOTIFY selectionChanged)
+    Q_PROPERTY(QString selectedSummary READ selectedSummary NOTIFY selectionChanged)
     Q_PROPERTY(int cursorRow READ cursorRow NOTIFY selectionChanged)
     Q_PROPERTY(QString currentImage READ currentImage WRITE setCurrentImage NOTIFY currentImageChanged)
     Q_PROPERTY(quint64 epoch READ epoch NOTIFY epochChanged)
@@ -49,11 +52,21 @@ public:
     Q_INVOKABLE void select(int row, SelectMode mode = Replace);
     Q_INVOKABLE void selectAll();
     Q_INVOKABLE void clearSelection();
+    Q_INVOKABLE void invertSelection();
     int selectedCount() const; int cursorRow() const;
+    qint64 selectedBytes() const;
+    QString selectedBytesFormatted() const;
+    QString selectedSummary() const;
     Q_INVOKABLE QStringList selectedPaths() const;     // listing order
     Q_INVOKABLE int rowOf(const QString& path) const;  // -1 when absent
     Q_INVOKABLE QString pathAt(int row) const;
     Q_INVOKABLE QString kindAt(int row) const;         // "folder" | "image" | "file" | ""
+
+    // Instant search (F004): case-insensitive substring match across listing names.
+    // Returns matching row index or -1 if no match found.
+    Q_INVOKABLE int findMatch(const QString& query, int startRow = 0, bool forward = true) const;
+    Q_INVOKABLE int matchCount(const QString& query) const;
+    Q_INVOKABLE int matchIndex(const QString& query, int row) const;
 
     QString currentImage() const; void setCurrentImage(const QString& path);
     quint64 epoch() const;

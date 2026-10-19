@@ -2,6 +2,7 @@
 #include "../core/perf_context.hpp"
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QMimeData>
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
@@ -96,6 +97,15 @@ const std::vector<Command> registry {
     {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
     {"reveal-in-file-manager", "Reveal in File Manager", "Ctrl+Alt+R"},
     {"open-terminal", "Open Terminal", "Ctrl+Alt+T"},
+    {"copy-path", "Copy file path", "Ctrl+C"},
+    {"copy-file", "Copy file", "Ctrl+Shift+C"},
+    {"copy-image", "Copy image", "Ctrl+Alt+C"},
+    {"select-all", "Select all items in grid", ""},
+    {"clear-selection", "Clear grid selection", "Ctrl+D"},
+    {"invert-selection", "Invert grid selection", "Ctrl+I"},
+    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
+    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
+    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -142,6 +152,8 @@ struct ViewerController::Private {
     QString directoryError;
     bool directoryPending{};
     bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
+    qreal textScale{1.0};
+    bool reducedMotion{false};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
     QJsonObject bindings;
@@ -282,6 +294,12 @@ struct ViewerController::Private {
         }
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
+        if (object.value("textScale").isDouble()) {
+            const double s = object.value("textScale").toDouble();
+            if (s >= 0.75 && s <= 2.0) textScale = s;
+        } else textScale = 1.0;
+        if (object.value("reducedMotion").isBool()) reducedMotion = object.value("reducedMotion").toBool();
+        else reducedMotion = false;
     }
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
@@ -297,6 +315,8 @@ struct ViewerController::Private {
                 else if (name=="filmstrip") object[name]=filmstrip;
                 else if (name=="tree") object[name]=tree;
                 else if (name=="treePinned") object[name]=treePin;
+                else if (name=="textScale") object[name]=textScale;
+                else if (name=="reducedMotion") object[name]=reducedMotion;
             }
         }).ok();
     }
@@ -557,9 +577,99 @@ QString ViewerController::directory() const{return d->path.isEmpty()?displayPath
 QString ViewerController::directoryError() const{return d->directoryError;}
 bool ViewerController::directoryPending() const{return d->directoryPending;}
 void ViewerController::copyDirectory() const{QGuiApplication::clipboard()->setText(directory());}
-bool ViewerController::copyFilePath(const QStringList& paths) { Q_UNUSED(paths); return false; }
-bool ViewerController::copyFileUrls(const QStringList& paths) { Q_UNUSED(paths); return false; }
-bool ViewerController::copyImageBitmap() { return false; }
+bool ViewerController::copyFilePath(const QStringList& paths) {
+    QStringList resolved;
+    for (const QString& p : paths) {
+        if (!p.trimmed().isEmpty()) {
+            const QUrl url(p);
+            resolved.append(url.isLocalFile() ? url.toLocalFile() : p);
+        }
+    }
+    if (resolved.isEmpty()) {
+        if (!d->path.isEmpty()) resolved.append(d->path);
+        else if (!directory().isEmpty()) resolved.append(directory());
+    }
+    if (resolved.isEmpty()) {
+        d->status = QStringLiteral("Nothing selected to copy path.");
+        emit stateChanged();
+        return false;
+    }
+    QStringList nativePaths;
+    nativePaths.reserve(resolved.size());
+    for (const QString& p : resolved) {
+        nativePaths.append(QDir::toNativeSeparators(p));
+    }
+#ifdef Q_OS_WIN
+    const QString newline = QStringLiteral("\r\n");
+#else
+    const QString newline = QStringLiteral("\n");
+#endif
+    const QString joinedText = nativePaths.join(newline);
+    if (auto* clipboard = QGuiApplication::clipboard()) {
+        clipboard->setText(joinedText);
+    }
+    const int count = nativePaths.size();
+    d->status = count == 1 ? QStringLiteral("Copied path to clipboard.") : QStringLiteral("Copied %1 paths to clipboard.").arg(count);
+    emit stateChanged();
+    return true;
+}
+
+bool ViewerController::copyFileUrls(const QStringList& paths) {
+    QStringList resolved;
+    for (const QString& p : paths) {
+        if (!p.trimmed().isEmpty()) {
+            const QUrl url(p);
+            resolved.append(url.isLocalFile() ? url.toLocalFile() : p);
+        }
+    }
+    if (resolved.isEmpty()) {
+        if (!d->path.isEmpty()) resolved.append(d->path);
+        else if (!directory().isEmpty()) resolved.append(directory());
+    }
+    if (resolved.isEmpty()) {
+        d->status = QStringLiteral("Nothing selected to copy file.");
+        emit stateChanged();
+        return false;
+    }
+    QStringList nativePaths;
+    QList<QUrl> urls;
+    nativePaths.reserve(resolved.size());
+    urls.reserve(resolved.size());
+    for (const QString& p : resolved) {
+        nativePaths.append(QDir::toNativeSeparators(p));
+        urls.append(QUrl::fromLocalFile(p));
+    }
+#ifdef Q_OS_WIN
+    const QString newline = QStringLiteral("\r\n");
+#else
+    const QString newline = QStringLiteral("\n");
+#endif
+    const QString joinedText = nativePaths.join(newline);
+    if (auto* clipboard = QGuiApplication::clipboard()) {
+        auto* mime = new QMimeData;
+        mime->setUrls(urls);
+        mime->setText(joinedText);
+        clipboard->setMimeData(mime);
+    }
+    const int count = nativePaths.size();
+    d->status = count == 1 ? QStringLiteral("Copied file to clipboard.") : QStringLiteral("Copied %1 files to clipboard.").arg(count);
+    emit stateChanged();
+    return true;
+}
+
+bool ViewerController::copyImageBitmap() {
+    if (d->image.isNull()) {
+        d->status = QStringLiteral("No image open to copy.");
+        emit stateChanged();
+        return false;
+    }
+    if (auto* clipboard = QGuiApplication::clipboard()) {
+        clipboard->setImage(d->image);
+    }
+    d->status = QStringLiteral("Copied image bitmap to clipboard.");
+    emit stateChanged();
+    return true;
+}
 bool ViewerController::revealInFileManager(const QString& path) {
     QString target = path;
     if (target.isEmpty()) {
@@ -643,7 +753,20 @@ void ViewerController::trigger(const QString& id){
     else if(id=="sort"){const char* cycle[]={"name","modified","size","shuffle"};int at=0;for(int i=0;i<4;++i)if(sortKey()==cycle[i])at=i;setSortKey(cycle[(at+1)%4]);}
     else if(id=="sort-reverse")setSortDescending(!d->sortSpec.descending);
     else if(id=="tree")setTreeVisible(!d->tree);
-    else if(id=="quit")QCoreApplication::quit();else if(d->bindings.contains(id))emit viewCommand(id);
+    else if(id=="quit")QCoreApplication::quit();
+    else if(id=="copy-path") {
+        if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
+        emit viewCommand(id);
+    }
+    else if(id=="copy-file") {
+        if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFileUrls();
+        emit viewCommand(id);
+    }
+    else if(id=="copy-image") {
+        if(receivers(SIGNAL(viewCommand(QString))) == 0) copyImageBitmap();
+        emit viewCommand(id);
+    }
+    else if(d->bindings.contains(id))emit viewCommand(id);
 }
 QString ViewerController::bindingFor(const QString& id) const{return d->bindings.value(id).toString();}
 bool ViewerController::setBinding(const QString& id,const QString& sequence){
@@ -824,3 +947,68 @@ void ViewerController::setSortKey(const QString& key){
 void ViewerController::setSortDescending(bool descending){auto next=d->sortSpec;next.descending=descending;d->changeSort(next);}
 void ViewerController::setBoundaryMode(const QString& value){if(value!="continue"&&value!="stop"&&value!="loop")return;d->boundary=value;d->nav.setBoundary(boundaryValue(value));if(!d->save({"boundary"}))d->status="Boundary mode changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::setWheelMode(const QString& value){if(value!="navigate"&&value!="zoom"&&value!="pan")return;d->wheel=value;if(!d->save({"wheel"}))d->status="Wheel behavior changed; settings could not be saved.";emit stateChanged();}
+qreal ViewerController::textScale() const { return d->textScale; }
+void ViewerController::setTextScale(qreal scale) {
+    const qreal clamped = std::clamp(scale, 0.75, 2.0);
+    if (qFuzzyCompare(clamped, d->textScale)) return;
+    d->textScale = clamped;
+    d->save({"textScale"});
+    emit stateChanged();
+}
+bool ViewerController::reducedMotion() const { return d->reducedMotion; }
+void ViewerController::setReducedMotion(bool reduced) {
+    if (reduced == d->reducedMotion) return;
+    d->reducedMotion = reduced;
+    d->save({"reducedMotion"});
+    emit stateChanged();
+}
+bool ViewerController::exportSettings(const QString& targetFilePath) {
+    QString error;
+    if (!glancelot::exportSettings(targetFilePath, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not export settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->status = QStringLiteral("Settings exported successfully.");
+    emit stateChanged();
+    return true;
+}
+bool ViewerController::importSettings(const QString& sourceFilePath) {
+    QString error;
+    if (!glancelot::importSettings(sourceFilePath, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not import settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("Settings imported successfully.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
+bool ViewerController::resetSection(const QString& sectionName) {
+    QString error;
+    if (!glancelot::resetSection(sectionName, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not reset section.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("Section reset to defaults.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
+bool ViewerController::resetAllSettings() {
+    QString error;
+    if (!glancelot::resetSection(QStringLiteral("all"), &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not reset all settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("All settings reset to defaults.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
