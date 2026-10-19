@@ -20,6 +20,15 @@ M2.1 exit requires independent tests for keyboard/tree behavior, dark/light/comp
 
 Author tests -> independent review/acceptance -> serial integration -> integrated checks -> done. Your feedback is advisory and not a routine gate. Agents continue ready tasks, preserving evidence of infrastructure blocks. Public publishing, paid services and new external access are separate actions. Forecast from first ten integrated tasks, not agent-count multiplication. Sessions checkpoint work; agents do not promise execution after the session ends.
 
+## Agent lanes (October 18, 2026)
+
+Claude Code, Codex and Gemini now work concurrently in separate lanes. [AGENT-LANES-PLAN.md](AGENT-LANES-PLAN.md) covers three things:
+- which lane owns each remaining task, feature opportunity and performance packet;
+- the per-lane limits and cross-lane review rule;
+- the hot-file rules and the serial `integration_lock` protocol.
+
+Gemini-lane tasks follow the Gemini plan and are not reassigned. The Codex brief for Wave 1 is [handoff/CODEX-WAVE1.md](handoff/CODEX-WAVE1.md).
+
 ## Current continuation: M3 workspace and file-manager priority
 
 Use [FEATURE-OPPORTUNITIES.md](FEATURE-OPPORTUNITIES.md) for the broader candidate inventory and [PERFORMANCE-STRATEGY.md](PERFORMANCE-STRATEGY.md) for platform-specific implementation packets. They are planning references: preserve the eight approved priorities, map enhancements onto existing requirements/tasks, and promote new scope explicitly rather than treating every proposal as ready work. Performance tuning begins with reproducible measurement and retains all source-safety and platform-evidence gates.
