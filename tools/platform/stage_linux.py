@@ -1,9 +1,11 @@
 """Build an offline X11 GUI package from the configured pinned Qt toolchain."""
 import argparse
+import json
 import os
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from artifacts import MARKER, archive, encoded, require, seal, verify_tree
 from collect_build import collect
@@ -12,6 +14,49 @@ from collect_build import collect
 def elf(path):
     with path.open("rb") as source:
         return source.read(4) == b"\x7fELF"
+
+
+def copy_qml(repo, qt, destination):
+    env = os.environ.copy(); env.update(LANG="C.UTF-8", LC_ALL="C.UTF-8")
+    with tempfile.TemporaryDirectory(prefix="glancelot-qml-imports-") as temporary:
+        basic = Path(temporary) / "BasicStyle.qml"
+        basic.write_text("import QtQuick\nimport QtQuick.Controls.Basic\nItem {}\n", encoding="utf-8")
+        result = subprocess.run([str(qt / "libexec/qmlimportscanner"), "-rootPath", str(repo / "ui"),
+            "-importPath", str(qt / "qml"), "-qmlFiles", str(basic)], env=env,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)
+    require(result.returncode == 0 and len(result.stdout) <= 8 * 1024**2, "QML import resolution failed")
+    imports = json.loads(result.stdout)
+    require(isinstance(imports, list) and len(imports) <= 512, "QML import count exceeds bound")
+    modules, unavailable_styles = {}, []
+    for entry in imports:
+        if entry.get("type") != "module": continue
+        if not entry.get("path"):
+            name = entry.get("name")
+            if name in ("QtQuick.Controls.Windows", "QtQuick.Controls.macOS", "QtQuick.Controls.iOS"):
+                unavailable_styles.append(name)
+                continue
+            if name != "Glancelot": print("Unresolved QML import:", name, flush=True)
+            require(name == "Glancelot", "required QML module unresolved")
+            continue
+        path = Path(entry["path"]).resolve()
+        require(path.is_relative_to(qt / "qml") and path.is_dir(), "QML module outside pinned toolkit")
+        modules[path.relative_to(qt / "qml").as_posix()] = entry["name"]
+    require("QtQuick" in modules and "QtQuick/Controls/Basic" in modules, "viewer/Basic QML imports absent")
+    for relative in sorted(modules):
+        module = qt / "qml" / relative
+        for folder, directories, files in os.walk(module):
+            base = Path(folder)
+            # Child modules have their own scanner record. Do not accidentally
+            # include unrelated SDK modules by recursively copying their parent.
+            directories[:] = [name for name in directories if name != "designer" and not (base / name / "qmldir").exists()]
+            for name in files:
+                source = base / name
+                require(source.resolve().is_relative_to(qt), "QML resource escaped toolkit")
+                target = destination / source.relative_to(qt / "qml")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+    return {"modules": [{"name": modules[path], "relative_path": path} for path in sorted(modules)],
+            "fixed_application_style": "Basic", "unavailable_foreign_platform_styles": sorted(unavailable_styles)}
 
 
 def stage(repo, build, qt, output, epoch, source_commit, source_dirty, toolchain_image):
@@ -41,7 +86,8 @@ exec "$here/bin/glancelot" "$@"
         shutil.copy2(qt / "plugins/platforms" / name, root / "qt/plugins/platforms" / name)
     for folder in ("imageformats", "xcbglintegrations"):
         shutil.copytree(qt / "plugins" / folder, root / "qt/plugins" / folder)
-    shutil.copytree(qt / "qml", root / "qt/qml", symlinks=False)
+    qml_imports = copy_qml(repo, qt, root / "qt/qml")
+    (root / "QML-IMPORTS.json").write_bytes(encoded({"schema": 1, **qml_imports}))
     shutil.copytree(qt / "sbom", root / "qt-sbom", symlinks=False)
     require(any((root / "qt-sbom").glob("*.spdx.json")), "Qt SPDX inventory absent")
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
@@ -54,6 +100,10 @@ exec "$here/bin/glancelot" "$@"
     for path in sorted(root.rglob("*")):
         if not path.is_file() or not elf(path): continue
         result = subprocess.run(["ldd", str(path)], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
+        if result.returncode != 0 or "not found" in result.stdout:
+            print("Unresolved packaged ELF:", path.relative_to(root).as_posix(), flush=True)
+            for line in result.stdout.splitlines():
+                if "not found" in line: print(line.strip(), flush=True)
         require(result.returncode == 0 and "not found" not in result.stdout, "configured ELF dependency closure incomplete")
         for line in result.stdout.splitlines():
             match = re.match(r"\s*(\S+) => (/\S+) \(", line)

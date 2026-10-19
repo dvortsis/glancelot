@@ -109,7 +109,7 @@ def qt_modules(process):
                       or path.name.lower() in ("qwindows.dll", "libqxcb.so", "qoffscreen.dll")))
 
 
-def run(package, output, image, missing=False):
+def run(package, output, image, missing=False, dimensions=(1024, 768), color_oracle=True):
     output.mkdir()
     env = os.environ.copy()
     for name in ("QTDIR", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH",
@@ -132,11 +132,14 @@ def run(package, output, image, missing=False):
         observed = []
         try:
             deadline = time.monotonic() + 4
+            ready_after = time.monotonic() + 2
+            display_plugin = "qwindows.dll" if os.name == "nt" else "libqxcb.so"
             while process.poll() is None and time.monotonic() < deadline:
                 observed = qt_modules(process)
-                if len(observed) >= 4: break
+                if len(observed) >= 4 and display_plugin in {path.name.lower() for path in observed} and time.monotonic() >= ready_after: break
                 time.sleep(0.1)
-            require(len(observed) >= 4 and all(path.is_relative_to(package) for path in observed), "Qt modules did not load exclusively from package")
+            require(len(observed) >= 4 and display_plugin in {path.name.lower() for path in observed}
+                    and all(path.is_relative_to(package) for path in observed), "Qt modules did not load exclusively from package")
             process.wait(timeout=20)
         finally:
             if process.poll() is None:
@@ -153,9 +156,11 @@ def run(package, output, image, missing=False):
                 and "Decoder is missing" in value["status"], "missing packaged decoder was not diagnosed")
         summary["missing_decoder_diagnosed"] = True
     else:
-        require((value["width"], value["height"]) == (1024, 768) and value["decoded_ms"] >= 0
+        require((value["width"], value["height"]) == dimensions and value["decoded_ms"] >= 0
                 and value["first_image_frame_ms"] >= 0 and value["frames"] > 0, "packaged image decode/render failed")
-        summary["screenshot"] = screenshot_colors(screenshot)
+        if color_oracle: summary["screenshot"] = screenshot_colors(screenshot)
+        else: require(screenshot.is_file() and screenshot.stat().st_size > 100, "JPEG screenshot absent")
+        summary["decoded_dimensions"] = list(dimensions)
     return summary
 
 
@@ -169,16 +174,23 @@ def smoke(package, output):
     original = digest_file(image)
     positive = run(package, output / "positive", image)
     require(positive["version"] == manifest["build"]["app_version"], "binary version differs from provenance")
+    jpeg = output / "generated-smoke.jpg"
+    shutil.copyfile(Path(__file__).parent / "fixtures/smoke.jpg", jpeg)
+    jpeg_original = digest_file(jpeg)
+    require(jpeg_original == "801532c946d6e60c7490c96ec8adb258506e854e98c14bf48966322dd597cf3b", "generated JPEG fixture changed")
+    jpeg_result = run(package, output / "jpeg", jpeg, dimensions=(64, 48), color_oracle=False)
     broken = output / "missing-decoder-package"
     decoder_name = "glancelot-decoder.exe" if os.name == "nt" else "glancelot-decoder"
     shutil.copytree(package, broken, ignore=lambda folder, names: {decoder_name} if Path(folder).resolve() == package / "bin" else set())
     require(not (broken / "bin" / decoder_name).exists(), "negative fixture still has decoder")
     negative = run(broken, output / "missing-decoder", image, missing=True)
     require(digest_file(image) == original, "generated source media changed")
+    require(digest_file(jpeg) == jpeg_original, "generated JPEG source changed")
     verify_tree(package)
     result = {"schema": 1, "passed": True, "source": manifest["source"], "target": manifest["target"],
               "source_media_sha256_unchanged": original, "package_inventory_unchanged": True,
-              "positive": positive, "negative": negative,
+              "generated_jpeg_sha256_unchanged": jpeg_original,
+              "positive": positive, "jpeg": jpeg_result, "negative": negative,
               "physical_color_dpi_refresh_qualification": "unverified"}
     (output / "smoke.json").write_bytes(encoded(result))
     print("PASS packaged decode/render/source colors, package-only Qt modules, missing-decoder diagnosis and unchanged source/package hashes")

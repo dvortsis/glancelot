@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$true)][string]$Output,
     [Parameter(Mandatory=$true)][long]$Epoch,
-    [string]$Distribution = 'Ubuntu'
+    [string]$Distribution = 'Ubuntu',
+    [string]$Attempt = 'default'
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
@@ -17,5 +18,5 @@ $unixRepo = & wsl -d $Distribution --exec wslpath -a $repoRoot.Replace('\','/')
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve source mount.' }
 $unixOutput = & wsl -d $Distribution --exec wslpath -a $outputRoot.Replace('\','/')
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve new output mount.' }
-& wsl -d $Distribution --exec sh "$unixRepo/tools/platform/linux_package.sh" --output $unixOutput --epoch $Epoch --source-commit $sourceCommit --source-dirty $sourceDirty
+& wsl -d $Distribution --exec sh "$unixRepo/tools/platform/linux_package.sh" --output $unixOutput --epoch $Epoch --source-commit $sourceCommit --source-dirty $sourceDirty --attempt $Attempt
 if ($LASTEXITCODE -ne 0) { throw 'Linux package build, tests, dependency audit or clean-runtime smoke failed.' }

@@ -3,6 +3,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import os
 import re
 import stat
 import struct
@@ -343,6 +344,39 @@ def compare(first, second):
             "changed": sorted(name for name in a.keys() & b.keys() if a[name] != b[name])}
 
 
+def extract(path, destination):
+    path, destination = Path(path).resolve(), Path(destination).absolute()
+    require(not destination.exists() and not destination.is_symlink(), "extraction destination must be new")
+    value = verify_archive(path)
+    original = digest_file(path)
+    side = json.loads(read_limited(path.with_name(path.name + ".json"), 8192))
+    destination.mkdir(parents=True, exist_ok=False)
+    destination = destination.resolve()
+    for name in sorted(value["directories"], key=lambda name: (len(PurePosixPath(name).parts), name)):
+        (destination / name).mkdir()
+        (destination / name).chmod(0o755)
+    container = zipfile.ZipFile(path) if side["format"] == "zip" else tarfile.open(path, "r:gz", tarinfo=PackageTarInfo)
+    rows = {row["path"]: row for row in value["files"]}
+    rows[MANIFEST] = {"size": None, "executable": False}
+    with container:
+        for name, row in sorted(rows.items()):
+            target = destination / safe_path(name)
+            require(target.resolve().is_relative_to(destination), "extraction path escaped destination")
+            source = container.open(name) if side["format"] == "zip" else container.extractfile(container.getmember(name))
+            with source, target.open("xb") as output:
+                total = 0
+                limit = MAX_MANIFEST if name == MANIFEST else row["size"]
+                while block := source.read(1024 * 1024):
+                    total += len(block)
+                    require(total <= limit, "extracted payload exceeds bound")
+                    output.write(block)
+            target.chmod(0o755 if row["executable"] else 0o644)
+            os.utime(target, (value["source_date_epoch"], value["source_date_epoch"]))
+    require(digest_file(path) == original, "archive changed during extraction")
+    require(verify_tree(destination) == value, "extracted inventory differs")
+    return value
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -359,6 +393,7 @@ def main():
     pack_parser = commands.add_parser("archive"); pack_parser.add_argument("root", type=Path)
     pack_parser.add_argument("output", type=Path); pack_parser.add_argument("--format", choices=("zip", "tar.gz"), required=True)
     verify_parser = commands.add_parser("verify-archive"); verify_parser.add_argument("archive", type=Path)
+    extract_parser = commands.add_parser("extract"); extract_parser.add_argument("archive", type=Path); extract_parser.add_argument("destination", type=Path)
     compare_parser = commands.add_parser("compare"); compare_parser.add_argument("first", type=Path); compare_parser.add_argument("second", type=Path)
     args = parser.parse_args()
     if args.command == "seal":
@@ -370,6 +405,8 @@ def main():
         archive(args.root, args.output, args.format)
     elif args.command == "verify-archive":
         verify_archive(args.archive)
+    elif args.command == "extract":
+        extract(args.archive, args.destination)
     else:
         result = compare(args.first, args.second)
         print(json.dumps(result, indent=2))
