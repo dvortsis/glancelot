@@ -37,6 +37,7 @@ bool PlatformIntegration::revealInFileManager(const QString& path) {
 bool PlatformIntegration::openTerminal(const QString& directoryPath) {
     if (directoryPath.isEmpty()) return false;
     const QFileInfo fi(directoryPath);
+    if (!fi.exists()) return false;
     const QString targetDir = fi.isDir() ? fi.absoluteFilePath() : fi.absolutePath();
     if (!QDir(targetDir).exists()) return false;
 

@@ -317,6 +317,7 @@ ApplicationWindow {
     function gridAllowsCommand(id) {
         return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
                 "view-preview", "view-grid", "view-combined", "combined-orientation",
+                "reveal-in-file-manager", "open-terminal",
                 "delete-selection", "delete-current-file", "delete-current-folder"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
@@ -383,6 +384,23 @@ ApplicationWindow {
             } else {
                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
             }
+        }
+        else if (id === "reveal-in-file-manager") {
+            let target = ""
+            const hasGridFocusOrSelection = focusWithin(photoGrid) || gridScope || photoGrid.selectedCount > 0
+            const targets = photoGrid.deletionTargets()
+            if (hasGridFocusOrSelection && (photoGrid.selectedPath.length > 0 || targets.length > 0)) {
+                target = photoGrid.selectedPath.length > 0 ? photoGrid.selectedPath : targets[0]
+            } else if (viewer.filePath.length > 0) {
+                target = viewer.filePath
+            } else {
+                target = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            }
+            viewer.revealInFileManager(target)
+        }
+        else if (id === "open-terminal") {
+            const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            viewer.openTerminal(folder)
         }
         else if (id === "quit") close()
     }

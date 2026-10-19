@@ -2507,6 +2507,26 @@ private slots:
         QCOMPARE(map["delete-current-folder"]["label"].toString(), QString("Move current folder to the Trash"));
 #endif
     }
+    void platformOperationsShortcutsRegisteredAndBound() {
+        ViewerController viewer;
+        const auto commands = viewer.commands();
+        QMap<QString, QVariantMap> map;
+        for (const auto& cmd : commands) {
+            const auto row = cmd.toMap();
+            map[row["id"].toString()] = row;
+        }
+
+        QVERIFY(map.contains("reveal-in-file-manager"));
+        QCOMPARE(map["reveal-in-file-manager"]["binding"].toString(), QString("Ctrl+Alt+R"));
+        QCOMPARE(map["reveal-in-file-manager"]["label"].toString(), QString("Reveal in File Manager"));
+
+        QVERIFY(map.contains("open-terminal"));
+        QCOMPARE(map["open-terminal"]["binding"].toString(), QString("Ctrl+Alt+T"));
+        QCOMPARE(map["open-terminal"]["label"].toString(), QString("Open Terminal"));
+
+        QVERIFY(!viewer.revealInFileManager(""));
+        QVERIFY(!viewer.openTerminal(""));
+    }
     void deleteCurrentFileAndFolderShortcuts() {
         DeleteFolder media(3, 2); QVERIFY(media.root.isValid());
         Harness h(true); QVERIFY(h.window);

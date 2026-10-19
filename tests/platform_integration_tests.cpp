@@ -16,16 +16,38 @@ private slots:
         QVERIFY(!glancelot::PlatformIntegration::openTerminal("C:/nonexistent_dir_path_12345"));
     }
 
+    void revealValidTempFileReturnsTrue() {
+        QTemporaryFile tempFile;
+        QVERIFY(tempFile.open());
+        tempFile.close();
+        QVERIFY(QFileInfo::exists(tempFile.fileName()));
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(tempFile.fileName()));
+    }
+
+    void openTerminalValidTempDirReturnsTrue() {
+        QTemporaryDir tempDir;
+        QVERIFY(tempDir.isValid());
+        QVERIFY(glancelot::PlatformIntegration::openTerminal(tempDir.path()));
+    }
+
     void pathsWithSpacesAndUnicodeValidation() {
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
         QDir dir(tempDir.path());
-        QVERIFY(dir.mkdir("folder with spaces"));
-        const QString subPath = dir.filePath("folder with spaces");
+        const QString unicodeDirName = QString::fromUtf8("folder with spaces \u2602 \u00e9");
+        QVERIFY(dir.mkdir(unicodeDirName));
+        const QString subPath = dir.filePath(unicodeDirName);
         QVERIFY(QFileInfo::exists(subPath));
-        // Verify path resolution does not crash or throw on spaces/special characters
         QFileInfo fi(subPath);
         QVERIFY(fi.isDir());
+
+        QFile tempFile(dir.filePath(unicodeDirName + "/test photo \u2603.png"));
+        QVERIFY(tempFile.open(QIODevice::WriteOnly));
+        tempFile.close();
+        QVERIFY(QFileInfo::exists(tempFile.fileName()));
+
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(tempFile.fileName()));
+        QVERIFY(glancelot::PlatformIntegration::openTerminal(subPath));
     }
 };
 
