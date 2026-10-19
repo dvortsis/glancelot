@@ -501,6 +501,20 @@ tasks:
     depends: [REVIEW-ALL-01]
     outcome: Reversible back/forward folder navigation history stack with state preservation (F001)
     acceptance: Distinguish folder visits from image steps; Alt+Left / Alt+Right and mouse back/forward parity; restore remembered image/selection/scroll; recover from missing mounts; bounded capacity
+  - id: SHORTCUTS-HELP-01
+    requirements: [IN-01, IN-04, UX-13]
+    feature: F056
+    milestone: M3
+    priority: 8
+    owner: lead
+    state: implementing
+    branch: agent/shortcuts-help
+    worktree: .worktrees/shortcuts-help
+    build: build-shortcuts-help
+    plan: docs/SHORTCUTS-HELP-01-PLAN.md
+    depends: [REVIEW-ALL-01]
+    outcome: In-app keyboard shortcut cheat sheet and discovery modal (F056)
+    acceptance: Quick access via F1 and ?; dynamic binding reflection; categorized command cards; instant search filter; direct link to settings shortcuts tab; full keyboard and focus dismissal
   - id: FILTER-01
     requirements: [NAV-05, UX-02]
     milestone: M3
