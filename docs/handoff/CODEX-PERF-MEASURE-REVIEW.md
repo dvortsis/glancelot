@@ -60,3 +60,8 @@ full-dataset replay also completed: 1 session, 559 spans, zero drops, 11694ms, a
 source hashes unchanged. It views 64x48 mixed tiles in 1k/adjacent 10k folders, not
 large-MP or 100k interactive latency qualification. See the verification record for
 actual source/executable identities.
+
+Final CTest folder_grid rerun passed 1/1 in 117.45s with the original 180s timeout.
+Every candidate Windows test has now passed across the preceding full run 14/15
+and that targeted rerun. This is not a relabelled single green full run. Required
+Docker platform-test owner fix, Claude approval and serial integrated checks remain.

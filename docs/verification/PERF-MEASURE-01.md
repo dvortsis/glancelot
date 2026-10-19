@@ -193,19 +193,20 @@ Known-distribution tests pass for exact p50/p95/totals and incompatible/truncate
 Repeated native capture and a comparison pipeline check are recorded below.
 Linux software-rendered replay remains in progress.
 
-## Still required before review
+## Remaining review and integration gates
 
-- Full fixture verification passed; retain its evidence when exercising replay on the larger mixed folders.
-- Exercise the complete replay on Linux/Docker and collect repeated comparable native/software-rendered baselines; first native workflow passed.
-- Use comparison on sufficiently repeated, equivalent replay workloads; tooling tests alone do not qualify performance.
-- Claude review of the documented existing IPC/render stage boundaries. Finer
-  worker-local phase timing has no frozen interface in this packet.
-- Full Linux viewer/Docker gate and final Windows checks; resolve owner-controlled
-  platform-test environment failures. Do not count the replay-only artifact as a passing gate.
-- Claude-lane independent review, serial integration and integrated-commit Windows/Linux checks.
+- Claude-lane independent review, including the documented existing IPC/render
+  stage boundaries. Finer worker-local phase timing has no frozen interface here.
+- Owner-controlled Linux platform-launcher test environment fix and a passing full
+  Docker gate. The replay-only artifact is not a substitute.
+- Serial integration under the lead's lock, then required full Windows/Linux checks
+  on the integrated commit. The Windows candidate full run plus targeted rerun covers
+  every test, as recorded below, but is not one passing full run.
 
 Physical HDD, SMB, monitor DPI, ICC/HDR and high-refresh behavior are **unverified**.
-This packet and the remaining Codex lane inventory are not marked done.
+Large-MP and 100k-folder interactive latency also remain unqualified. This packet
+and the remaining Codex lane inventory are not marked done. PLATFORM-01 cannot
+start implementation until its lead-frozen packet/queue promotion is committed.
 
 ## Latest candidate checks and repeated native baseline
 
@@ -383,3 +384,19 @@ adjacent 10k folder. It does not qualify 12/24/45/60 MP decode latency or the 10
 interactive latency. All large-image dimensions and all 100k folder entries passed
 strict dataset integrity verification. This one-session workflow result is not a
 statistical/hardware latency qualification.
+
+
+The final CTest grid rerun passed with the original environment, working directory
+and 180-second timeout:
+
+```
+ctest --test-dir build-codex-perf-measure -R '^folder_grid$' --output-on-failure
+1/1 Test #10: folder_grid Passed 117.45 sec
+100% tests passed out of 1
+Total Test time (real) = 117.53 sec
+```
+
+The preceding required full Windows run passed the other 14 tests. Thus every
+candidate Windows test has passed across the full run and targeted rerun; do not
+rewrite the initial 14/15 run as one green full run. No limits or assertions were
+weakened. Integrated-commit Windows/Linux full checks remain required.
