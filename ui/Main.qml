@@ -17,6 +17,7 @@ ApplicationWindow {
     color: Theme.background
     property bool frameless: false
     property bool hudVisible: true
+    property bool focusMode: false          // F049: content only; Escape or the command returns the bars
     property bool navigatorOn: false        // F037 zoom navigator overview
     property rect navRect: Qt.rect(0, 0, 0, 0) // the visible part of the photo, in source pixels
     property bool gridMode: false
@@ -154,9 +155,10 @@ ApplicationWindow {
         const all=["topbar","statusbar","filmstrip","tree","preview","grid"]
         // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
         // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
-        const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
-            topbar:state.topbar.visible||frameless, statusbar:state.statusbar.visible,
-            filmstrip:state.filmstrip.visible&&!gridOn&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
+        // F049 focus mode: a session-only state that hides every bar and panel without touching the saved layout.
+        const shown={tree:!focusMode&&(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
+            topbar:!focusMode&&(state.topbar.visible||frameless), statusbar:!focusMode&&state.statusbar.visible,
+            filmstrip:!focusMode&&state.filmstrip.visible&&!gridOn&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
             preview:previewOn,grid:gridOn}
         const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
             topbar:shown.topbar&&(gridOn||state.topbar.frozen),
@@ -522,6 +524,8 @@ ApplicationWindow {
         // F040
         else if (id === "reference-pin") { if (!viewer.pinReference()) deleteFlow.showNotice("Open a photo first to pin it as a reference.") }
         else if (id === "reference-close") viewer.clearReference()
+        // F049
+        else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
         // F031
         else if (id === "slideshow") { if (slideshowOn) stopSlideshow(); else startSlideshow() }
         else if (id === "slideshow-slower") setSlideshowSeconds(slideshowSeconds + (slideshowSeconds >= 10 ? 5 : 1))
@@ -585,6 +589,7 @@ ApplicationWindow {
         onActivated: {
             if (app.chordPending) { app.chordCancel(); return } // the first Escape only abandons the pending chord
             if (app.slideshowOn) { app.stopSlideshow(); return }
+            if (app.focusMode) { app.focusMode = false; return }
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
             if (app.gridMode) app.showCanvas()

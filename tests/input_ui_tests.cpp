@@ -346,6 +346,28 @@ private slots:
         QTRY_VERIFY(h.viewer.imageReady());
     }
 
+    // F049: focus mode hides every bar and panel for the session, leaves the saved layout alone, and Escape returns them.
+    void focusModeHidesChromeAndEscapeRestoresIt() {
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        h.viewer.setTreeVisible(true);
+        auto* top = named(h.window, "topBar"); QVERIFY(top);
+        QTRY_VERIFY(top->isVisible());
+        const auto saved = h.layout.panes();
+        auto* canvas = h.canvas();
+        const qreal before = canvas->height();
+        h.viewer.trigger("focus-mode");
+        QTRY_VERIFY(flag(h, "focusMode"));
+        QTRY_VERIFY(!top->isVisible());
+        QTRY_VERIFY(!named(h.window, "folderTree")->isVisible());
+        QTRY_VERIFY(canvas->height() >= before);
+        QCOMPARE(h.layout.panes(), saved);
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!flag(h, "focusMode"));
+        QTRY_VERIFY(top->isVisible());
+        QCOMPARE(h.layout.panes(), saved);
+    }
+
     // F031: the slideshow advances on its own pace, never queues, and ends on manual steps, Escape and a folder boundary.
     void slideshowAdvancesAndEndsCleanly() {
         Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
