@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64
 FROM qt AS build
 WORKDIR /src
 COPY CMakeLists.txt ./
+COPY cmake cmake
 COPY app app
 COPY assets assets
 COPY include include
