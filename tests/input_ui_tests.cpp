@@ -29,6 +29,8 @@
 #include <QtTest>
 
 #include "ui_test_support.hpp"
+#include <QAccessible>
+#include <QAccessibleInterface>
 namespace {
 // Every row is a registered command, shows its live binding, and is enabled exactly when its key would act.
 // Returns what is wrong (empty when the menu agrees with the keyboard).
@@ -574,6 +576,48 @@ private slots:
         QTRY_VERIFY(!flag(h, "modalOpen"));
         QVERIFY(h.layout.deletePreset("My review"));
         QVERIFY(!h.layout.presetNames().contains("My review"));
+    }
+    // F052: every interactive control reachable on the main screens exposes an accessible name and a sensible role to the
+    // platform accessibility tree. Lists every offender at once so a regression names the control.
+    void everyInteractiveControlIsNamedForAssistiveTechnology() {
+        QAccessible::setActive(true);
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.setTreeVisible(true); h.viewer.setFilmstripVisible(true);
+        QTest::qWait(400);
+        int inspected = 0; // the audit must really look at controls, or an empty pass would mean nothing
+        auto audit = [&](const QString& where) {
+            QStringList problems;
+            QList<QQuickItem*> pending{h.window->contentItem()};
+            while (!pending.isEmpty()) {
+                QQuickItem* item = pending.takeFirst();
+                pending << item->childItems();
+                if (!item->isVisible() || item->width() <= 0 || item->height() <= 0) continue;
+                const QString cls = item->metaObject()->className();
+                const bool interactive = item->activeFocusOnTab() || cls.contains("Button") || cls.contains("TextField")
+                    || cls.contains("ComboBox") || cls.contains("Switch") || cls.contains("MenuItem") || cls.contains("CheckBox");
+                if (!interactive) continue;
+                auto* iface = QAccessible::queryAccessibleInterface(item);
+                if (!iface) { problems << where + ": " + cls + " " + item->objectName() + " has no accessible interface"; continue; }
+                if (iface->state().invisible || iface->state().disabled) continue;
+                ++inspected;
+                if (iface->text(QAccessible::Name).trimmed().isEmpty())
+                    problems << where + ": " + cls + " '" + item->objectName() + "' has no accessible name";
+                if (iface->role() == QAccessible::NoRole)
+                    problems << where + ": " + cls + " '" + item->objectName() + "' has no role";
+            }
+            return problems;
+        };
+        QStringList problems = audit("main");
+        auto* dialog = h.object("settingsDialog"); QVERIFY(dialog);
+        for (const char* section : {"appearance", "viewing", "browsing", "controls", "about"}) {
+            QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString(section)), Q_ARG(QVariant, false)));
+            QTRY_VERIFY(flag(h, "modalOpen")); QTest::qWait(350);
+            problems << audit(QString("settings/") + section);
+        }
+        QVERIFY2(inspected >= 40, qPrintable(QString("only %1 controls were inspected").arg(inspected)));
+        QVERIFY2(problems.isEmpty(), qPrintable(problems.join("\n")));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
     }
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
