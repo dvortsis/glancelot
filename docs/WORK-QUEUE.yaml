@@ -469,10 +469,15 @@ tasks:
     acceptance: Bounded combined allocations/jobs; current-image priority; manual override; SSD/HDD/SMB evidence rather than fixed-worker claims
   - id: FAVORITES-01
     requirements: [UX-03, SYS-03]
+    feature: F003
     milestone: M3
     priority: 7
     owner: lead
-    state: ready
+    state: implementing
+    branch: agent/favorites
+    worktree: .worktrees/favorites
+    build: build-favorites
+    plan: docs/FAVORITES-01-PLAN.md
     depends: [REVIEW-ALL-01]
     outcome: Folder favorites in the existing tree with coordinated settings and missing-path recovery
     acceptance: Add/remove/reorder and keyboard routes; no scans while hidden; unknown preference preservation; native UI review
