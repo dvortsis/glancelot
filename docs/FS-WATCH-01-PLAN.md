@@ -16,13 +16,18 @@ No shared public C++ header change is required. Use the existing
 ViewerController::trigger, filesInvalidated and state/error signals, and existing
 model refresh/invalidation entry points. Add command refresh (label Refresh,
 default F5, workspace scope) in a per-task FS-WATCH-01 command-table block. The
-existing generic shortcut route handles it. Any need to change a shared header
+generic shortcut route handles it in preview. The October 19 routing amendment
+assigns Codex the sole narrow Main.qml change of adding refresh to
+gridAllowsCommand, so the same workspace command reaches grid/combined focus.
+No second dispatcher or precedence change is permitted. Any need to change a shared header
 returns to the lead before implementation.
 
 Private watcher/revision helpers may live under src/app or src/core. Models and
 controller may use private source identity to reconcile renames; no stable plugin
-ABI is introduced. Do not modify ui/Main.qml or other product QML, bindings/input
-precedence owned by INPUT-02, Gemini's platform adapter, or cache/scheduler policy.
+ABI is introduced. The only product QML edit permitted is the refresh allow-list
+entry above; all other Main.qml and product QML behavior remains with its UI lane
+owner. Do not change bindings/input precedence owned by INPUT-02, Gemini's
+platform adapter, or cache/scheduler policy.
 Read the required native UI skills if implementation or review reaches UI behavior;
 apply them to Qt/QML and preserve existing branding/tokens without web frameworks.
 
@@ -92,7 +97,9 @@ handle/queue bounds and command results; do not rely only on manual screenshots.
 
 Before review: the lead enables the frozen fs_watch target in root CMake under
 the lock, then run scripts/build.ps1 -Test on Windows and the full Docker build.
-The full test list must include fs_watch; skipped assertions do not establish
+The full test list must include fs_watch and the required real-QML fs_watch_ui
+target. The latter exercises actual F5 in preview/grid/combined modes and
+text-input/settings-modal precedence using the existing dispatcher. Skipped assertions do not establish
 acceptance. Record commands, terminal output, failure/cancel cases, source hashes
 and limitations in docs/verification/FS-WATCH-01.md.
 
@@ -100,3 +107,45 @@ Independent Claude review, serial integration and full checks on the integrated
 commit are required before done. Physical/network-share and other filesystem or
 driver coverage remains unverified unless actually measured. Preserve the separate
 CANVAS-UI, DECODE-01, color and performance hardware gates.
+
+## Reviewed decoder prerequisite amendment, October 19
+
+FS-WATCH reload cancellation must not freeze the GUI while discarding a transfer.
+The lead permits importing only Claude-authored standalone commit a6bda32
+(src/worker/main.cpp semaphore removal) into this packet. Independent Codex
+review db23447 APPROVED that isolated Windows protocol change: complete64MiB
+payload/ack and five witnessed mid-copy kills detached in13-17ms; the old worker
+reproduced a60s detach hang. Preserve the unchanged report
+docs/verification/DECODER-CANCEL-INDEPENDENT-CODEX-REVIEW.md. This imports an
+independently reviewed prerequisite; Codex does not take ownership of INPUT-02 UI.
+No shared header or protocol message changes. Production reads pixels only after
+decoded and acknowledges only after copying. The five INPUT UI blockers remain.
+
+This scoped Windows review does not prove Linux cancellation or whole-controller
+teardown. Run the packet's complete native and Docker gates on the resulting
+source, record failures honestly, and include cancellation in independent Claude
+review. An inherited or intermittent failure cannot be counted as a full pass.
+
+## Shared Windows qualification prerequisite
+
+The lead assigns the frozen test-only Windows launcher fixture from
+docs/PLATFORM-01-PLAN.md to this active worktree. Its four tests/ files and the
+lead-owned cmake/PlatformTestFixtures.cmake inclusion are permitted prerequisites
+for required native gates. Production platform adapter/public API remain unchanged.
+Independent Claude64f0af0 assessed the proposal; implemented code still requires
+review and full checks. Do not alter directory_model's250ms oracle or add arbitrary
+drains. This does not approve the pending FS-WATCH implementation.
+
+## Linked-scope clarification after independent FS review
+
+Lead permits a private worker-only directoryProbe helper in fs_revision.hpp.
+For a linked/junction scope directory, resolve the target at each membership scan boundary
+and probe that directory for membership revision. Keep requested alias spellings
+in rows, callbacks and watch registrations; never rewrite the user's address.
+Capture the link entry revision too and reject completeness if it or the target
+revision changes across enumeration. Ordinary entries still use no-follow probes:
+links/hard-link ambiguity cannot establish an asset or alias-directory rename.
+Apply the same scope probing in model listings, without any filesystem work on
+the GUI thread, recursion or extra watch handles. Test generated POSIX directory
+symlinks and Windows junctions, target-file rename/selection and unchanged bytes.
+This adds no public header, user setting, original-media write or cloud access.

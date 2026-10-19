@@ -1,3 +1,5 @@
+#include "glancelot/perf_trace.hpp"
+#include "../core/perf_context.hpp"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -156,6 +158,16 @@ struct ViewerController::Private {
     Navigator nav;
     QJsonObject bindings;
     QProcess* worker{};
+    qint64 perfQueued{-1}, perfDecoding{-1};
+    quint64 perfGeneration{};
+    bool perfFirstDecode{true};
+    std::uint8_t perfFlags{};
+    void finishDecodeTrace(std::uint8_t flags, std::uint64_t bytes = 0) {
+        using namespace glancelot::perf;
+        detail::finish(perfDecoding >= 0 ? Stage::Decode : Stage::DecodeQueue, perfGeneration,
+            perfDecoding >= 0 ? perfDecoding : perfQueued, std::uint8_t(perfFlags | flags), bytes);
+        perfQueued = perfDecoding = -1;
+    }
     QTimer deadline, reload;
     QFileSystemWatcher watcher;
     std::unique_ptr<QSharedMemory> transfer;
@@ -318,7 +330,8 @@ struct ViewerController::Private {
             }
         }).ok();
     }
-    void cancel() {
+    void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
+        finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
         deadline.stop();
         if (worker) {
             worker->disconnect(q);
@@ -330,7 +343,7 @@ struct ViewerController::Private {
         }
         transfer.reset(); admittedPixelBytes=0; output.clear();
     }
-    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
+    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
     void observe() {
         if (!watcher.files().isEmpty()) watcher.removePaths(watcher.files());
         if (!watcher.directories().isEmpty()) watcher.removePaths(watcher.directories());
@@ -339,16 +352,24 @@ struct ViewerController::Private {
     }
     void decode(const QString& file,quint64 token) {
         trace("decode:begin");
-        const auto key=cacheKey(file);
+        const auto key=[&] { glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,token); return cacheKey(file); }();
         // Explicit opens are decoded again: coarse timestamps cannot prove content identity.
         // The bounded retained cache is reserved for a future validated-revision prefetch path.
         QString program=QCoreApplication::applicationDirPath()+"/glancelot-decoder";
 #ifdef Q_OS_WIN
         program+=".exe";
 #endif
+        perfGeneration = token; perfQueued = glancelot::perf::detail::begin();
+        perfDecoding = -1; perfFlags = perfFirstDecode ? glancelot::perf::Cold : glancelot::perf::None;
+        perfFirstDecode = false;
         worker=new QProcess(q);
         worker->setStandardErrorFile(QProcess::nullDevice()); // bound memory even if a codec floods diagnostics
         auto* process=worker;
+        QObject::connect(process,&QProcess::started,q,[this,token,process] {
+            if (token != generation || process != worker) return;
+            glancelot::perf::detail::finish(glancelot::perf::Stage::DecodeQueue,token,perfQueued,perfFlags);
+            perfQueued = -1; perfDecoding = glancelot::perf::detail::begin();
+        });
         QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key]{
             trace("decode:message");
             if (token!=generation || process!=worker) return;
@@ -389,6 +410,7 @@ struct ViewerController::Private {
                     image.setColorSpace(QColorSpace::SRgb);
                     const int cost=int((image.sizeInBytes()+1023)/1024);
                     if (cost<=cache.maxCost()) cache.insert(key,new QImage(image),cost);
+                    finishDecodeTrace(glancelot::perf::None,std::uint64_t(image.sizeInBytes()));
                     loading=false; imageReady=true; deadline.stop();
                     status=message.value("color").toString()+" · display profile not yet managed";
                     notePosition(path);
@@ -401,7 +423,7 @@ struct ViewerController::Private {
         QObject::connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),q,[this,process,token](int code,QProcess::ExitStatus exit){
             if (token!=generation || process!=worker) return;
             worker=nullptr; transfer.reset(); process->deleteLater();
-            if (loading) { deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
+            if (loading) { finishDecodeTrace(glancelot::perf::Failed); deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
         });
         process->start(program,{file}); deadline.start();
         trace("decode:started");
@@ -448,7 +470,7 @@ struct ViewerController::Private {
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
         });
-        future->setFuture(QtConcurrent::run(navigationPool,std::move(job.work)));
+        future->setFuture(QtConcurrent::run(navigationPool,[work=std::move(job.work),sequence]() mutable { glancelot::perf::detail::GenerationContext context(sequence); return work(); }));
     }
     // Applies a new file order on the navigation worker (never the GUI thread); the current image stays current.
     // The navigator the UI shows can be older than a job that is still in flight, so a re-sort is only ever built

@@ -2,10 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock:
-  holder: none
-  branch: none
-  started: none
+integration_lock: {holder: gemini, branch: agent/ui-settings, started: "2026-10-19T14:20:00Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -400,7 +397,7 @@ tasks:
     priority: 9
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: integration
     depends: [REVIEW-ALL-01]
     branch: codex/platform-01
     worktree: .worktrees/codex-platform-01
@@ -409,6 +406,13 @@ tasks:
     scope_addition: F080 reproducible packages and PERF-BUILD provenance basics; qualification scripts for CANVAS-UI/DECODE-01 physical gates
     outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
+    review_candidate: c35ec602f18a1e2bd1e42390fee3bd26e0c9efdd
+    review_handoff: docs/handoff/CODEX-PLATFORM-01-REVIEW.md (on codex/platform-01)
+    review_gate: Candidate cfba419 APPROVED; integrated 73fa157 Windows 17/18 FAILED; Claude integration diagnosis 130da47 CHANGES REQUIRED; docs/verification/PLATFORM-01-INTEGRATION-CLAUDE-REVIEW.md
+    integrated_gate: Corrective integrated 1d51c17 Windows scripts/build.ps1 -Test passed18/18 176.11s; required Docker command passed cached identical image0ba808df; earlier failed gates retained in verification; final independent close-out audit pending
+    native_fixture_proposal: docs/handoff/CODEX-PLATFORM-01-NATIVE-FIXTURES-PROPOSAL.md
+    native_fixture_evidence: docs/verification/PLATFORM-01-NATIVE-FIXTURE.md
+    native_fixture_status: Independently approved8888d41 plus Docker wiring acceptance7bb7b80; integrated1d51c17 Windows18/18 176.11s and Docker gate passed; no production adapter or oracle change
   - id: MONITOR-OUTPUT-01
     requirements: [UX-10, COLOR-01, VIEW-04, PERF-04, SYS-02]
     milestone: M5
@@ -498,6 +502,8 @@ tasks:
     worktree: .worktrees/claude-input-02
     plan: docs/INPUT-02-PLAN.md
     scope_addition: F055 context menus with command-route parity
+    review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
+    review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01
@@ -506,14 +512,14 @@ tasks:
     priority: 8
     owner: lead
     owner_lane: codex
-    state: review
+    state: done
     depends: [REVIEW-ALL-01]
     branch: codex/perf-measure
     worktree: .worktrees/codex-perf-measure
     plan: docs/PERF-MEASURE-PLAN.md
     outcome: Bounded timing spans, fixture manifest, result schema and baseline replay (PERFORMANCE-STRATEGY PERF-MEASURE)
     acceptance: Spans have bounded memory and negligible measured overhead; cache hit/miss and cold/warm distinguished; monotonic clock semantics; replayable baseline report on generated fixtures; no telemetry or upload
-    evidence: Candidate codex/perf-measure affabf4 plus evidence descendants; Windows 15/15 203.16s and Docker 15/15 128.24s; full required runtime replay passes; independent Claude review and integrated checks pending
+    evidence: Independent Claude 21be1b8 APPROVED with documentation condition fulfilled ec6bcb3; merged-source Windows 18/18 161.59s and Docker 18/18 123.31s plus strict render replay passed; integrated main 4b92825 Windows 18/18 218.49s; required Docker command passed with content-identical cached image; integration evidence docs/verification/PERF-MEASURE-01.md
   - id: PATH-COMPLETE-01
     requirements: [UX-13, IN-01]
     milestone: M3
@@ -540,7 +546,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: ready
+    state: implementing
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -548,6 +554,9 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
+    decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
+    native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
+    test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
     start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
     acceptance: Replacement, rename, delete and watcher-overflow recovery; selected identities survive where possible; changed revisions invalidate caches; no watcher per delegate
@@ -559,6 +568,9 @@ tasks:
     owner_lane: codex
     state: ready
     depends: [WINDOW-RESUME-01]
+    memory_action: act_mvfhyfit_af2798dd4e13
+    contract_proposal: docs/handoff/CODEX-SAFE-MODE-01-CONTRACT-PROPOSAL.md
+    contract_gate: Planning only; freeze shared checked-transaction API, known-section schema, startup intent and required tests before implementation; no second active Codex implementation
     outcome: Safe mode, configuration diff, settings backup/restore and crash-recovery restore engine (F064, F057 engine)
     acceptance: Recover without deleting originals or unknown preferences; isolate bad layout or renderer overrides; preserve last-good state; restore lazily with explicit-open precedence; corrupted state and interrupted migration tests
   - id: FORMAT-02
