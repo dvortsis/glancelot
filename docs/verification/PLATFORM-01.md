@@ -183,3 +183,40 @@ Pending: serial integration and checks on the integrated commit. Physical DPI/re
 native Linux desktop/Wayland, separately provisioned clean Windows, large-MP decode,
 HDD/SMB and R1-R4 results remain unverified. No original media, credentials, telemetry,
 publishing or machine-wide configuration is involved.
+## Reviewed merge candidate and package checks, 2026-10-19
+
+Actual independent Claude review cfba419 APPROVED c35ec60, with no blocking or
+medium findings. Report is preserved unchanged. Stale status wording was corrected.
+Main b22b1b0 merged as c0a7795; the only conflict was the equivalent explanatory
+comment in the already-reviewed virtualized-row prerequisite. Main's version and
+all real assertions were retained. No product QML was edited by this packet.
+Merged package source is clean Git 9698ff01f2b384e0aa4a062f96bc660e3f7af1af.
+
+Required root Docker build passed all 18 tests, 115.55s, image
+770ee4ef33c35111e2f4cfbe5192bef4cf3aa8740f2f747d9574c118419d2d94.
+Linux GUI packaging independently compiled and passed 18/18, 115.51s, then its
+non-root network-disabled clean runtime passed archive extraction, 71-ELF dependency
+audit, PNG/JPEG strict frame/RGB/module smoke and evidence-bound qualification.
+Linux archive SHA256 01ffda17740e11c040a21c69e4eb693b5262b8796b8fb5180698a634d0f921be.
+This is one current-source build; historical repeat claims remain scoped above.
+
+First merged Windows default wrapper failed directory_model (290.22s total), with
+no detailed Qt output captured by CTest. A direct diagnostic run with an explicit
+Qt log passed all 20 cases (16.534s). The full default wrapper was rerun with other
+heavy checks paused, without source changes or relaxed assertions: 18/18 passed,
+177.54s, then fresh-prefix install/seal/verify passed. The initial failure cause is
+not established; contention is a possibility, not a verified diagnosis.
+Windows ZIP SHA256 cd241e81c43c783e4c6488c16c57e2fe0151bb74d0e8bbb35eeef2484b364b17.
+Independent extraction of that ZIP passed strict PNG/JPEG frame and RGB smoke,
+package-only Qt modules, missing-decoder diagnosis, unchanged media/package hashes
+and bound qualification. API4, PNG first frame601ms/13swaps; JPEG435ms/16swaps.
+The software-GL Linux PNG was608ms/15swaps; JPEG315ms/15swaps. These are uncontrolled
+tiny-fixture observations, not performance or physical presentation claims.
+
+Local logs: .cache/platform-merged-{windows,windows-retry,linux,docker}.log and
+platform-merged-model-diagnostic.txt. Generated artifacts/evidence are in
+.cache/platform-merged-windows-retry, platform-merged-windows-smoke,
+platform-merged-windows-matrix.json and platform-merged-linux/qualification.
+Sanitized current smoke/matrix records are committed beside historical records.
+Independent approval and pre-merge gates are complete; integrated-commit checks
+remain before the lead closes software packaging. Physical gates stay unverified.
