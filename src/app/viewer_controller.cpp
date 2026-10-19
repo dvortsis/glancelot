@@ -902,7 +902,7 @@ bool ViewerController::closeTab(int index) {
         QStringList steps;
         const auto parsed=QKeySequence::fromString(binding,QKeySequence::PortableText);
         for(int i=0;i<parsed.count();++i)steps.append(QKeySequence(parsed[i]).toString(QKeySequence::PortableText));
-        rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",binding},
+        rows.append(QVariantMap{{"id",id},{"label",QCoreApplication::translate("Commands",cmd.label.c_str())},{"binding",binding},
             {"scope",QString::fromStdString(cmd.scope)},{"hold",cmd.hold},{"repeat",cmd.repeat},{"steps",steps}});
     }
     return rows;

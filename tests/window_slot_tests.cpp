@@ -17,6 +17,7 @@
 #include <QSet>
 #include <QTemporaryDir>
 #include <QThread>
+#include <QTranslator>
 #include <QtTest>
 #include <QScopeGuard>
 #include <array>
@@ -162,6 +163,7 @@ private slots:
     void bindingProblemExplainsEveryRefusal();
     void accessibilityOptionsPersistAndReset();
     void tabsKeepLocationsAndRestoreWithTheWindow();
+    void commandNamesAreTranslatable();
 };
 
 void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
@@ -1003,6 +1005,24 @@ void WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow() {
         QVERIFY(w.closeTab(w.activeTab())); QVERIFY(w.tabs().isEmpty()); // closing down to one hides the strip
         QTRY_VERIFY(w.imageReady() || !w.directory().isEmpty());
     }
+}
+// F054: command names go through the Commands translation context, with the English text as the key.
+void WindowSlotTests::commandNamesAreTranslatable() {
+    struct Spanish : QTranslator {
+        QString translate(const char* context, const char* source, const char*, int) const override {
+            return QByteArray(context) == "Commands" && QByteArray(source) == "Next image" ? QStringLiteral("Imagen siguiente") : QString();
+        }
+        bool isEmpty() const override { return false; }
+    } spanish;
+    QTemporaryDir config; QVERIFY(config.isValid()); qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    auto label = [](ViewerController& v, const QString& id) { for (const auto& r : v.commands()) if (r.toMap().value("id").toString() == id) return r.toMap().value("label").toString(); return QString(); };
+    ViewerController v;
+    QCOMPARE(label(v, "next"), QString("Next image"));
+    QVERIFY(QCoreApplication::installTranslator(&spanish));
+    QCOMPARE(label(v, "next"), QString("Imagen siguiente"));
+    QCOMPARE(label(v, "previous"), QString("Previous image")); // an untranslated name falls back to English
+    QCoreApplication::removeTranslator(&spanish);
+    QCOMPARE(label(v, "next"), QString("Next image"));
 }
 #include "window_slot_tests.moc"
 
