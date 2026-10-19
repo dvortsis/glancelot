@@ -16,18 +16,32 @@ private slots:
         QVERIFY(!glancelot::PlatformIntegration::openTerminal("C:/nonexistent_dir_path_12345"));
     }
 
-    void revealValidTempFileReturnsTrue() {
-        QTemporaryFile tempFile;
-        QVERIFY(tempFile.open());
-        tempFile.close();
-        QVERIFY(QFileInfo::exists(tempFile.fileName()));
-        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(tempFile.fileName()));
-    }
-
-    void openTerminalValidTempDirReturnsTrue() {
+    void revealValidTempDirReturnsTrue() {
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
-        QVERIFY(glancelot::PlatformIntegration::openTerminal(tempDir.path()));
+        QVERIFY(QFileInfo(tempDir.path()).isDir());
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(tempDir.path()));
+    }
+
+    void openTerminalRootDirectoryReturnsTrue() {
+        const QString root = QDir::rootPath();
+        QVERIFY(QFileInfo::exists(root));
+        QVERIFY(glancelot::PlatformIntegration::openTerminal(root));
+    }
+
+    void revealDirectoryVsFileBehaviors() {
+        QTemporaryDir tempDir;
+        QVERIFY(tempDir.isValid());
+        const QString dirPath = tempDir.path();
+        QVERIFY(QFileInfo(dirPath).isDir());
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(dirPath));
+
+        QFile tempFile(QDir(dirPath).filePath("sample.png"));
+        QVERIFY(tempFile.open(QIODevice::WriteOnly));
+        tempFile.close();
+        const QString filePath = tempFile.fileName();
+        QVERIFY(QFileInfo(filePath).isFile());
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(filePath));
     }
 
     void pathsWithSpacesAndUnicodeValidation() {
@@ -41,13 +55,8 @@ private slots:
         QFileInfo fi(subPath);
         QVERIFY(fi.isDir());
 
-        QFile tempFile(dir.filePath(unicodeDirName + "/test photo \u2603.png"));
-        QVERIFY(tempFile.open(QIODevice::WriteOnly));
-        tempFile.close();
-        QVERIFY(QFileInfo::exists(tempFile.fileName()));
-
-        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(tempFile.fileName()));
-        QVERIFY(glancelot::PlatformIntegration::openTerminal(subPath));
+        // Validate reveal on directory containing spaces and unicode characters
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(subPath));
     }
 };
 

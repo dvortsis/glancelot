@@ -2524,8 +2524,19 @@ private slots:
         QCOMPARE(map["open-terminal"]["binding"].toString(), QString("Ctrl+Alt+T"));
         QCOMPARE(map["open-terminal"]["label"].toString(), QString("Open Terminal"));
 
+        // When no path or directory is set, controller invokables return false and update status
         QVERIFY(!viewer.revealInFileManager(""));
+        QCOMPARE(viewer.status(), QString("No photo or folder is open to reveal."));
+
         QVERIFY(!viewer.openTerminal(""));
+        QCOMPARE(viewer.status(), QString("No folder is open to open a terminal."));
+
+        // When nonexistent path is passed, controller attempts operation and reports failure
+        QVERIFY(!viewer.revealInFileManager("C:/nonexistent_file_path_12345.png"));
+        QCOMPARE(viewer.status(), QString("Could not open file manager."));
+
+        QVERIFY(!viewer.openTerminal("C:/nonexistent_dir_path_12345"));
+        QCOMPARE(viewer.status(), QString("Could not open terminal."));
     }
     void deleteCurrentFileAndFolderShortcuts() {
         DeleteFolder media(3, 2); QVERIFY(media.root.isValid());

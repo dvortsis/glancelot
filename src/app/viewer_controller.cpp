@@ -543,7 +543,18 @@ bool ViewerController::revealInFileManager(const QString& path) {
         const QUrl url(target);
         if (url.isLocalFile()) target = url.toLocalFile();
     }
-    return glancelot::PlatformIntegration::revealInFileManager(target);
+    if (target.isEmpty()) {
+        d->status = "No photo or folder is open to reveal.";
+        emit stateChanged();
+        return false;
+    }
+    const bool ok = glancelot::PlatformIntegration::revealInFileManager(target);
+    if (!ok) {
+        d->status = "Could not open file manager.";
+        emit stateChanged();
+        return false;
+    }
+    return true;
 }
 bool ViewerController::openTerminal(const QString& directory) {
     QString targetDir = directory;
@@ -556,7 +567,18 @@ bool ViewerController::openTerminal(const QString& directory) {
         const QUrl url(targetDir);
         if (url.isLocalFile()) targetDir = url.toLocalFile();
     }
-    return glancelot::PlatformIntegration::openTerminal(targetDir);
+    if (targetDir.isEmpty()) {
+        d->status = "No folder is open to open a terminal.";
+        emit stateChanged();
+        return false;
+    }
+    const bool ok = glancelot::PlatformIntegration::openTerminal(targetDir);
+    if (!ok) {
+        d->status = "Could not open terminal.";
+        emit stateChanged();
+        return false;
+    }
+    return true;
 }
 QString ViewerController::status() const{return d->status;}
 bool ViewerController::loading() const{return d->loading;}
