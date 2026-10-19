@@ -1,4 +1,5 @@
 #include <QtTest>
+#include <QProcess>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QCryptographicHash>
@@ -22,9 +23,9 @@ class FSWatchTests : public QObject {
         return QCryptographicHash::hash(file.readAll(),QCryptographicHash::Sha256);
     }
     QTemporaryDir config;
-    static bool png(const QString& path,Qt::GlobalColor color) {
+    static bool png(const QString& path,Qt::GlobalColor color,QSize size=QSize(32,24)) {
         QSaveFile target(path);if(!target.open(QIODevice::WriteOnly))return false;
-        QImage image(32,24,QImage::Format_RGB32);image.fill(color);
+        QImage image(size,QImage::Format_RGB32);image.fill(color);
         return image.save(&target,"PNG")&&target.commit();
     }
 private slots:
@@ -126,6 +127,29 @@ private slots:
         for(int i=0;i<20;++i){viewer.open(first);viewer.open(last);}
         QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&viewer.filePath()==last,10000);
         QTest::qWait(500);QCOMPARE(viewer.filePath(),last);QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+    }
+    void liveLargeDecodeCancellationKeepsExplicitOpen() {
+        QTemporaryDir media;QVERIFY(media.isValid());
+        const auto large=media.filePath("large.png"),final=media.filePath("final.png");
+        QVERIFY(png(large,Qt::red,QSize(4096,4096)));QVERIFY(png(final,Qt::blue));
+        const auto largeHash=hash(large),finalHash=hash(final);
+        ViewerController viewer;
+        const auto liveWorker=[&] {
+            for(auto* process:viewer.findChildren<QProcess*>())
+                if(process->state()==QProcess::Running)return true;
+            return false;
+        };
+        for(const int delay:{0,20,100}) {
+            viewer.open(large);
+            QTRY_VERIFY_WITH_TIMEOUT(liveWorker(),5000);
+            if(delay)QTest::qWait(delay);
+            QElapsedTimer cancellation;cancellation.start();viewer.open(final);
+            QVERIFY2(cancellation.elapsed()<750,"cancelling a live decoder blocked the GUI");
+            QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&viewer.filePath()==final,10000);
+            QTest::qWait(150);
+            QCOMPARE(viewer.filePath(),final);QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+        }
+        QCOMPARE(hash(large),largeHash);QCOMPARE(hash(final),finalHash);
     }
     void replacementAndUnrelatedChanges() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("current.png");

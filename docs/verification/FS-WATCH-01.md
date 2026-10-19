@@ -131,5 +131,29 @@ unestablished. Logs .cache/fs-watch-{directory_model,platform_integration}-diagn
 and fs-watch-native-diagnostic-summary.txt. Other lanes' builds/native suites were
 observed during this interval; do not call it an isolated performance run.
 
-The required docker build -t glancelot-browser:main . is running from this worktree
-through WSL Ubuntu, log .cache/fs-watch-final-docker.log. Its result remains pending.
+The required docker build -t glancelot-browser:main . passed20/20,139.50s on
+source b4c9b04 through WSL Ubuntu; log .cache/fs-watch-final-docker.log. Backend
+fs_watch passed29.97s and real-QML fs_watch_ui1.17s; directory_model3.07s and
+platform_integration0.47s passed. Runtime image is
+sha256:d47dc10b08af1739431e538d53ed22c0c90f4fa3a8b89a33d8166afc2e6a3f37.
+A generated-file probe in that exact network-disabled image verified nonzero native
+birth identity, unchanged identity/hash across rename and a distinct replacement
+at the old pathname (.cache/fs-watch-linux-identity-capability.json). This checks
+the container filesystem capability; it does not qualify other filesystems.
+
+## Reviewed decoder prerequisite
+
+Lead froze main5b91249 permitting exact Claude-authored a6bda32 after independent
+Codex scoped approval db23447. Imported unchanged as615c0b5, with the original
+author preserved; INPUT UI remains CHANGES REQUIRED. The long-held worker semaphore
+was independently shown to hang parent detach after a witnessed partial-copy kill;
+the fixed worker passed complete64MiB RGBA/ack and five qualifying kills in13-17ms.
+The unchanged report is DECODER-CANCEL-INDEPENDENT-CODEX-REVIEW.md.
+
+New whole-controller generated-media coverage cancels a confirmed live decoder for
+a4096x4096 image at several delays, opens a blue final image, checks bounded cancel
+return/stale-result rejection and unchanged source hashes. This controller test is
+not claimed to pinpoint a mid-copy kill; the independent host supplies that proof.
+The earlier full gates above precede this prerequisite and new regression. Full
+Windows and Docker checks must run again on the resulting source; no new pass is
+claimed yet.
