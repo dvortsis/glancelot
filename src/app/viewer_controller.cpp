@@ -657,6 +657,9 @@ bool ViewerController::setWheelModifier(const QString& modifier,const QString& a
     if(!saved)d->status="Wheel behavior changed; settings could not be saved.";
     emit stateChanged();return true;
 }
+QString ViewerController::keyStep(int key,int modifiers) const{
+    return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
+}
 QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
     if(!d->bindings.contains(id))return {};
     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
