@@ -206,7 +206,7 @@ AFF462DAD30C599138E54653FBD3FFEC97A9052ACF5AE5BD31B90819FA7861A9.
 Private copied runner/stubs retain Unicode/non-BMP application directory, CWD,
 media and argv; validated same-directory short PATH aliases accommodate Qt's
 narrow default executable search. Process creation time distinguishes helper PID
-reuse; exact capture module/hash/token and zero exit are asserted. COM balance,
+reuse while its process object exists; exact capture module/hash/token are asserted. COM balance,
 Qt-module failure diagnostics and bounded job accounting were strengthened after
 independent Claude review56d27cb requested changes. Re-review is pending.
 
@@ -229,3 +229,23 @@ A serialized direct directory_model run then passed20/20,26.040s with worst GUI
 gaps31/33/11ms against250ms. Log .cache/directory-model-post-explorer.txt.
 This changed environment is not a causal proof. A fresh required full Windows
 suite is now running; no full gate or independent FS-WATCH approval is claimed.
+
+The fresh full Windows attempt was stopped during folder_grid after confirming
+another lane's native INPUT grid process30056. Only owned CTest47176 and its
+child tree were stopped; no other lane job was stopped. Log
+.cache/fs-watch-fixture-full-windows.log and its cancel note preserve the attempt.
+This partial run does not qualify the gate. Independent Claude static re-review
+8594e86 found no blocking defect, conditional on its independent runtime check.
+Final diagnostic polish cd25573 fixes eager diagnostic construction, retains a
+bounded prefix of oversized failure logs and reports ordinary child exits clearly.
+The reviewer has an isolated PLATFORM-only candidate b4fa53e and permission to run
+its own bounded target when the native slot is verified free. Full Windows and
+Docker gates remain pending; no FS-WATCH approval or integrated pass is claimed.
+
+Helper exit limitation: startDetached closes its handles. If the process object
+has already disappeared, a committed capture plus empty owned-job accounting
+shows completion; an exit code was not read in that case. Otherwise process
+creation identity and zero exit are checked. The fixture requires a valid ASCII
+8.3 alias of its exact private sandbox volume/directory; absence fails code110,
+not a skip. These limitations are explicitly accepted and do not qualify visible
+Shell presentation or the physical hardware matrix.
