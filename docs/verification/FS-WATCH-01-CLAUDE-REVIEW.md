@@ -100,9 +100,8 @@ A transient unknown identity can only cause a harmless remove and re-add inside 
 scope change clears all native watches first, so a stale stored identity cannot be used (it is
 guarded by `registered.contains`). Handles stay at most three (directory, parent, image).
 `retargetRearmsNativeAliasWatch` waits for B's identity and `coverage`, writes into B and requires
-the event in under 1.5 s while polling is 2 s. The poll cannot fire inside that window, because
-`lastProbe` is set before the observation is published and the window starts after it, so the test
-discriminates native delivery from polling. A false failure is possible on a loaded machine (see N16).
+the event in under 1.5 s while polling is 2 s. CORRECTION (follow-up commit): this test is not proof of
+alias-watch delivery; see N16.1. It can pass on the parent watch or on a late poll.
 
 ### N11 - ancestor alias vs real rename: FIXED (static), see N12
 `buildListing:121-124` makes a directory rename require a non-empty native directory identity equal to the
@@ -158,8 +157,18 @@ the accepted policy and is not claimed as a large-directory solution. It needs a
 250 ms GUI oracle with a sustained external writer before integration.
 
 ### N16 (low, test quality)
-1. `retargetRearmsNativeAliasWatch` has a 1.5 s native-delivery bound; the other lane's CTest load that
-   collided with the author's run could produce a false failure. A false pass is not possible (see N10).
+1. `retargetRearmsNativeAliasWatch` can false-pass and false-fail. (a) `A`, `B` and `alias` are all children
+   of `root`, which is the watched parent and is never rebound. Writing into `B` changes B's last-write time,
+   and if Qt's Windows directory watch includes a last-write filter that fires `root`, the next scan reads B's
+   membership through the alias and the test passes on parent delivery. I could not check the flags: only the
+   private header `qfilesystemwatcher_win_p.h` is under `.tools/Qt`, not the `.cpp`, so this is open, not
+   asserted either way. (b) The "poll cannot land in the window" argument needs under 500 ms between the last
+   `lastProbe` and the write. Publication queueing plus QTRY's stepping under load can exceed that, and the
+   2 s poll then lands inside the 1.5 s window. (c) The same load can false-fail the 1.5 s bound (the other
+   lane's CTest collided with the author's run). Proposed fix: place `A`, `B` and the alias parent in separate
+   directories so a write into `B` cannot touch the watched parent, and assert the event arrived with no poll
+   (for example by stopping periodic polling via the hook or checking `stats().snapshots`). Until then, treat
+   the native alias-rebind evidence as unproven.
 2. The test covers a bare directory alias without an image. The image-below-alias rebind branch
    (`:140-143`) and the parent rebind branch (`:144`) have no test.
 3. `controllerLateCoalescedBaselineDecodesOnce` depends on real timers: the second scan needs the 2 s
