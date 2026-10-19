@@ -1,3 +1,5 @@
+#include "glancelot/perf_trace.hpp"
+#include "../core/perf_context.hpp"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -98,6 +100,12 @@ const std::vector<Command> registry {
     {"copy-path", "Copy file path", "Ctrl+C"},
     {"copy-file", "Copy file", "Ctrl+Shift+C"},
     {"copy-image", "Copy image", "Ctrl+Alt+C"},
+    {"select-all", "Select all items in grid", ""},
+    {"clear-selection", "Clear grid selection", "Ctrl+D"},
+    {"invert-selection", "Invert grid selection", "Ctrl+I"},
+    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
+    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
+    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -144,10 +152,22 @@ struct ViewerController::Private {
     QString directoryError;
     bool directoryPending{};
     bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
+    qreal textScale{1.0};
+    bool reducedMotion{false};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
     QJsonObject bindings;
     QProcess* worker{};
+    qint64 perfQueued{-1}, perfDecoding{-1};
+    quint64 perfGeneration{};
+    bool perfFirstDecode{true};
+    std::uint8_t perfFlags{};
+    void finishDecodeTrace(std::uint8_t flags, std::uint64_t bytes = 0) {
+        using namespace glancelot::perf;
+        detail::finish(perfDecoding >= 0 ? Stage::Decode : Stage::DecodeQueue, perfGeneration,
+            perfDecoding >= 0 ? perfDecoding : perfQueued, std::uint8_t(perfFlags | flags), bytes);
+        perfQueued = perfDecoding = -1;
+    }
     QTimer deadline, reload;
     QFileSystemWatcher watcher;
     std::unique_ptr<QSharedMemory> transfer;
@@ -274,6 +294,12 @@ struct ViewerController::Private {
         }
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
+        if (object.value("textScale").isDouble()) {
+            const double s = object.value("textScale").toDouble();
+            if (s >= 0.75 && s <= 2.0) textScale = s;
+        } else textScale = 1.0;
+        if (object.value("reducedMotion").isBool()) reducedMotion = object.value("reducedMotion").toBool();
+        else reducedMotion = false;
     }
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
@@ -289,10 +315,13 @@ struct ViewerController::Private {
                 else if (name=="filmstrip") object[name]=filmstrip;
                 else if (name=="tree") object[name]=tree;
                 else if (name=="treePinned") object[name]=treePin;
+                else if (name=="textScale") object[name]=textScale;
+                else if (name=="reducedMotion") object[name]=reducedMotion;
             }
         }).ok();
     }
-    void cancel() {
+    void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
+        finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
         deadline.stop();
         if (worker) {
             worker->disconnect(q);
@@ -304,7 +333,7 @@ struct ViewerController::Private {
         }
         transfer.reset(); admittedPixelBytes=0; output.clear();
     }
-    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
+    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
     void observe() {
         if (!watcher.files().isEmpty()) watcher.removePaths(watcher.files());
         if (!watcher.directories().isEmpty()) watcher.removePaths(watcher.directories());
@@ -313,16 +342,24 @@ struct ViewerController::Private {
     }
     void decode(const QString& file,quint64 token) {
         trace("decode:begin");
-        const auto key=cacheKey(file);
+        const auto key=[&] { glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,token); return cacheKey(file); }();
         // Explicit opens are decoded again: coarse timestamps cannot prove content identity.
         // The bounded retained cache is reserved for a future validated-revision prefetch path.
         QString program=QCoreApplication::applicationDirPath()+"/glancelot-decoder";
 #ifdef Q_OS_WIN
         program+=".exe";
 #endif
+        perfGeneration = token; perfQueued = glancelot::perf::detail::begin();
+        perfDecoding = -1; perfFlags = perfFirstDecode ? glancelot::perf::Cold : glancelot::perf::None;
+        perfFirstDecode = false;
         worker=new QProcess(q);
         worker->setStandardErrorFile(QProcess::nullDevice()); // bound memory even if a codec floods diagnostics
         auto* process=worker;
+        QObject::connect(process,&QProcess::started,q,[this,token,process] {
+            if (token != generation || process != worker) return;
+            glancelot::perf::detail::finish(glancelot::perf::Stage::DecodeQueue,token,perfQueued,perfFlags);
+            perfQueued = -1; perfDecoding = glancelot::perf::detail::begin();
+        });
         QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key]{
             trace("decode:message");
             if (token!=generation || process!=worker) return;
@@ -363,6 +400,7 @@ struct ViewerController::Private {
                     image.setColorSpace(QColorSpace::SRgb);
                     const int cost=int((image.sizeInBytes()+1023)/1024);
                     if (cost<=cache.maxCost()) cache.insert(key,new QImage(image),cost);
+                    finishDecodeTrace(glancelot::perf::None,std::uint64_t(image.sizeInBytes()));
                     loading=false; imageReady=true; deadline.stop();
                     status=message.value("color").toString()+" · display profile not yet managed";
                     notePosition(path);
@@ -375,7 +413,7 @@ struct ViewerController::Private {
         QObject::connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),q,[this,process,token](int code,QProcess::ExitStatus exit){
             if (token!=generation || process!=worker) return;
             worker=nullptr; transfer.reset(); process->deleteLater();
-            if (loading) { deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
+            if (loading) { finishDecodeTrace(glancelot::perf::Failed); deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
         });
         process->start(program,{file}); deadline.start();
         trace("decode:started");
@@ -422,7 +460,7 @@ struct ViewerController::Private {
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
         });
-        future->setFuture(QtConcurrent::run(navigationPool,std::move(job.work)));
+        future->setFuture(QtConcurrent::run(navigationPool,[work=std::move(job.work),sequence]() mutable { glancelot::perf::detail::GenerationContext context(sequence); return work(); }));
     }
     // Applies a new file order on the navigation worker (never the GUI thread); the current image stays current.
     // The navigator the UI shows can be older than a job that is still in flight, so a re-sort is only ever built
@@ -909,3 +947,68 @@ void ViewerController::setSortKey(const QString& key){
 void ViewerController::setSortDescending(bool descending){auto next=d->sortSpec;next.descending=descending;d->changeSort(next);}
 void ViewerController::setBoundaryMode(const QString& value){if(value!="continue"&&value!="stop"&&value!="loop")return;d->boundary=value;d->nav.setBoundary(boundaryValue(value));if(!d->save({"boundary"}))d->status="Boundary mode changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::setWheelMode(const QString& value){if(value!="navigate"&&value!="zoom"&&value!="pan")return;d->wheel=value;if(!d->save({"wheel"}))d->status="Wheel behavior changed; settings could not be saved.";emit stateChanged();}
+qreal ViewerController::textScale() const { return d->textScale; }
+void ViewerController::setTextScale(qreal scale) {
+    const qreal clamped = std::clamp(scale, 0.75, 2.0);
+    if (qFuzzyCompare(clamped, d->textScale)) return;
+    d->textScale = clamped;
+    d->save({"textScale"});
+    emit stateChanged();
+}
+bool ViewerController::reducedMotion() const { return d->reducedMotion; }
+void ViewerController::setReducedMotion(bool reduced) {
+    if (reduced == d->reducedMotion) return;
+    d->reducedMotion = reduced;
+    d->save({"reducedMotion"});
+    emit stateChanged();
+}
+bool ViewerController::exportSettings(const QString& targetFilePath) {
+    QString error;
+    if (!glancelot::exportSettings(targetFilePath, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not export settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->status = QStringLiteral("Settings exported successfully.");
+    emit stateChanged();
+    return true;
+}
+bool ViewerController::importSettings(const QString& sourceFilePath) {
+    QString error;
+    if (!glancelot::importSettings(sourceFilePath, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not import settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("Settings imported successfully.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
+bool ViewerController::resetSection(const QString& sectionName) {
+    QString error;
+    if (!glancelot::resetSection(sectionName, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not reset section.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("Section reset to defaults.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
+bool ViewerController::resetAllSettings() {
+    QString error;
+    if (!glancelot::resetSection(QStringLiteral("all"), &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not reset all settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("All settings reset to defaults.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}

@@ -1,3 +1,4 @@
+#include "../core/perf_context.hpp"
 #include "glancelot/thumbnail_service.hpp"
 #include <QCache>
 #include <QHash>
@@ -19,7 +20,7 @@ constexpr int kIdleShutdownMs = 30000;
 }
 
 struct ThumbnailService::Private {
-    struct Job { quint64 id{}; QString path; int edge{}; quint64 epoch{}; bool cancelled{}; };
+    struct Job { quint64 id{}; QString path; int edge{}; quint64 epoch{}; bool cancelled{}; qint64 queued{-1}, started{-1}; };
     struct Worker {
         QProcess* process{};
         QTimer* deadline{};
@@ -96,6 +97,9 @@ struct ThumbnailService::Private {
 
     void finish(Worker& worker, const QImage& image, const QString& error) {
         const Job job = worker.job;
+        const auto flags = std::uint8_t((job.cancelled ? glancelot::perf::Cancelled : 0)
+            | (job.epoch != epoch ? glancelot::perf::Stale : 0) | (!error.isEmpty() ? glancelot::perf::Failed : 0));
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,job.epoch,job.started,flags,std::uint64_t(image.sizeInBytes()));
         worker.busy = false; worker.buffer.clear(); worker.bodyBytes = -1;
         if (worker.deadline) worker.deadline->stop();
         if (deliverable(job)) {
@@ -110,6 +114,8 @@ struct ThumbnailService::Private {
     void breakWorker(Worker& worker, const QString& error) {
         const Job job = worker.job;
         const bool hadJob = worker.busy;
+        if (hadJob) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,job.epoch,job.started,
+            std::uint8_t(glancelot::perf::Failed | (job.cancelled ? glancelot::perf::Cancelled : 0) | (job.epoch != epoch ? glancelot::perf::Stale : 0)));
         retire(worker, false);
         if (hadJob && deliverable(job)) emit q->failed(job.id, error);
         // Defer removal so pump() cannot reuse this slot and the vector is not mutated mid-iteration.
@@ -193,6 +199,8 @@ struct ThumbnailService::Private {
                 idleWorker = spawn();
             }
             idleWorker->job = pending.front(); pending.pop_front();
+            glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,idleWorker->job.epoch,idleWorker->job.queued);
+            idleWorker->job.started = glancelot::perf::detail::begin();
             idleWorker->busy = true; idleWorker->buffer.clear(); idleWorker->bodyBytes = -1;
             if (idleWorker->process->state() == QProcess::NotRunning) {
                 // start() failed synchronously; fail this job on the next turn so callers never see a re-entrant signal.
@@ -223,12 +231,18 @@ quint64 ThumbnailService::request(const QString& path, int edge, quint64 epoch) 
         d->deliverImmediate(id);
         return id;
     }
-    if (const QImage* hit = d->cache.object(Private::key(path, edge))) {
+    const QImage* hit = [&] {
+        glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,epoch);
+        const auto* value = d->cache.object(Private::key(path, edge));
+        if (value) { lookup.setFlags(glancelot::perf::CacheHit); lookup.setBytes(std::uint64_t(value->sizeInBytes())); }
+        return value;
+    }();
+    if (hit) {
         d->immediate.insert(id, {*hit, {}});
         d->deliverImmediate(id);
         return id;
     }
-    d->pending.push_back({id, path, edge, epoch, false});
+    d->pending.push_back({id, path, edge, epoch, false, glancelot::perf::detail::begin(), -1});
     d->pump();
     return id;
 }
@@ -236,7 +250,10 @@ quint64 ThumbnailService::request(const QString& path, int edge, quint64 epoch) 
 void ThumbnailService::cancel(quint64 id) {
     d->immediate.remove(id);
     const auto it = std::find_if(d->pending.begin(), d->pending.end(), [id](const auto& job) { return job.id == id; });
-    if (it != d->pending.end()) d->pending.erase(it);
+    if (it != d->pending.end()) {
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,it->epoch,it->queued,glancelot::perf::Cancelled);
+        d->pending.erase(it);
+    }
     for (auto& worker : d->workers) if (worker->busy && worker->job.id == id) worker->job.cancelled = true;
     if (d->pending.empty() && d->activeCount() == 0) d->idle.start();
 }
@@ -244,6 +261,7 @@ void ThumbnailService::cancel(quint64 id) {
 void ThumbnailService::setEpoch(quint64 epoch) {
     if (epoch == d->epoch) return;
     d->epoch = epoch;
+    for (const auto& job : d->pending) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Stale);
     d->cache.clear(); d->pending.clear(); d->immediate.clear();
     // In-flight jobs finish on their workers but fail the deliverable() epoch check.
 }
@@ -254,6 +272,9 @@ int ThumbnailService::pending() const { return int(d->pending.size()); }
 int ThumbnailService::active() const { return d->activeCount(); }
 qint64 ThumbnailService::cacheBytes() const { return d->cache.totalCost(); }
 void ThumbnailService::shutdown() {
+    for (const auto& job : d->pending) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Cancelled);
+    for (const auto& worker : d->workers) if (worker->busy)
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,worker->job.epoch,worker->job.started,glancelot::perf::Cancelled);
     d->pending.clear(); d->immediate.clear(); d->idle.stop();
     d->stopWorkers(true);
 }

@@ -5,7 +5,7 @@ lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
   holder: codex-lead
   branch: codex/platform-01
-  started: 2026-10-19T03:04:17.166804+00:00
+  started: 2026-10-19T15:28:29.854328+00:00
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -170,19 +170,38 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: done
     branch: agent/grid-search
     worktree: .worktrees/grid-search
     build: build-grid-search
+    commit: bf2bbcb
+    evidence: docs/verification/GRID-SEARCH-01.md; independent review approved; Windows build.ps1 -Test 15/15 (333.56s); Linux Docker Qt 15/15 (114.72s)
     outcome: Instant current-folder filename search with type-to-select and match navigation
     acceptance: Typing alphanumeric characters in grid starts instant search; transient search chip shows query and match count; F3/Shift+F3 and Up/Down navigate matches; Enter activates; Escape restores previous cursor; case-insensitive substring matching; empty results feedback
     verification: Substring matching, case insensitivity, boundary cycling, empty results, special characters, Escape restore, timeout auto-dismiss, keyboard navigation parity
+  - id: GRID-DENSITY-01
+    requirements: [UX-16, UX-17, IN-01]
+    feature: F010, F011
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: done
+    branch: agent/grid-density
+    worktree: .worktrees/grid-density
+    build: build-grid-density
+    commit: db64e0f
+    evidence: docs/verification/GRID-DENSITY-01.md; independent review approved; Windows build.ps1 -Test 16/16 (184.23s); Linux Docker Qt 16/16 (108.64s)
+    outcome: Thumbnail size zoom buckets, Ctrl+Wheel zoom, and selection commands with summary badge (F010/F011)
+    acceptance: Thumbnail size presets/buckets (96px, 128px, 160px default, 220px, 320px); zoom in (Ctrl++ / Ctrl+=), zoom out (Ctrl+-), and reset zoom (Ctrl+0); Ctrl+Wheel over grid zooms between buckets; zoom changes do not lose scroll position or selected item; select all (Ctrl+A); clear selection (Escape / Ctrl+D) when multiple items selected; invert selection (Ctrl+I); status bar / footer selection badge showing 'Selected: N items (X MB)' when selection count > 0; text editing retains shortcut precedence
+    verification: Bucket boundary clamping, wheel step direction, zoom reset, select-all count, invert selection parity, clear selection keeps cursor, byte size calculation formatted with KB/MB/GB, empty folder, text field precedence
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
     priority: 10
-    owner: lead
-    state: ready
+    state: implementing
+    branch: agent/ui-settings
+    worktree: .worktrees/ui-settings
+    build: build-ui-settings
     depends: [PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-KEYS-01]
     outcome: Advanced searchable UI customization and settings using existing theme and preference infrastructure
     acceptance: Pane visibility, placement, sizes, freeze, pin/auto-hide timing and layout presets; grid thumbnail size, density, labels, folders-first and hidden-file visibility; preview placement, toolbar actions, UI text scale, backgrounds, theme selection, reduced motion and shortcut editing; per-section reset plus full UI reset; portable import/export with validation and explicit global versus per-window scope
@@ -381,7 +400,7 @@ tasks:
     priority: 9
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: integration
     depends: [REVIEW-ALL-01]
     branch: codex/platform-01
     worktree: .worktrees/codex-platform-01
@@ -390,6 +409,9 @@ tasks:
     scope_addition: F080 reproducible packages and PERF-BUILD provenance basics; qualification scripts for CANVAS-UI/DECODE-01 physical gates
     outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
+    review_candidate: c35ec602f18a1e2bd1e42390fee3bd26e0c9efdd
+    review_handoff: docs/handoff/CODEX-PLATFORM-01-REVIEW.md (on codex/platform-01)
+    review_gate: User approved PLATFORM review and standing future PLATFORM reviews; actual independent Claude review cfba419 APPROVED; merged-source checks pending
   - id: MONITOR-OUTPUT-01
     requirements: [UX-10, COLOR-01, VIEW-04, PERF-04, SYS-02]
     milestone: M5
@@ -487,14 +509,14 @@ tasks:
     priority: 8
     owner: lead
     owner_lane: codex
-    state: review
+    state: done
     depends: [REVIEW-ALL-01]
     branch: codex/perf-measure
     worktree: .worktrees/codex-perf-measure
     plan: docs/PERF-MEASURE-PLAN.md
     outcome: Bounded timing spans, fixture manifest, result schema and baseline replay (PERFORMANCE-STRATEGY PERF-MEASURE)
     acceptance: Spans have bounded memory and negligible measured overhead; cache hit/miss and cold/warm distinguished; monotonic clock semantics; replayable baseline report on generated fixtures; no telemetry or upload
-    evidence: Candidate codex/perf-measure affabf4 plus evidence descendants; Windows 15/15 203.16s and Docker 15/15 128.24s; full required runtime replay passes; independent Claude review and integrated checks pending
+    evidence: Independent Claude 21be1b8 APPROVED with documentation condition fulfilled ec6bcb3; merged-source Windows 18/18 161.59s and Docker 18/18 123.31s plus strict render replay passed; integrated main 4b92825 Windows 18/18 218.49s; required Docker command passed with content-identical cached image; integration evidence docs/verification/PERF-MEASURE-01.md
   - id: PATH-COMPLETE-01
     requirements: [UX-13, IN-01]
     milestone: M3
@@ -521,8 +543,16 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: ready
+    state: implementing
     depends: [FILE-GRID-01]
+    branch: codex/fs-watch-01
+    worktree: .worktrees/codex-fs-watch-01
+    build: build-codex-fs-watch-01
+    plan: docs/FS-WATCH-01-PLAN.md
+    memory_action: act_mvfcixst_8e09ad782b31
+    test_target_contract: cmake/FSWatchTests.cmake
+    test_target_wiring: Lead enabled required target and Docker cmake source copy on feature commit caf5030 under serial lock; implementation checks pending
+    start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
     acceptance: Replacement, rename, delete and watcher-overflow recovery; selected identities survive where possible; changed revisions invalidate caches; no watcher per delegate
   - id: SAFE-MODE-01
@@ -545,7 +575,7 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
 priority_amendment:
   date: '2026-10-17'

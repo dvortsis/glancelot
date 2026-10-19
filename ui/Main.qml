@@ -319,7 +319,9 @@ ApplicationWindow {
                 "view-preview", "view-grid", "view-combined", "combined-orientation",
                 "reveal-in-file-manager", "open-terminal",
                 "copy-path", "copy-file", "copy-image",
-                "delete-selection", "delete-current-file", "delete-current-folder"].indexOf(id) >= 0
+                "delete-selection", "delete-current-file", "delete-current-folder",
+                "select-all", "clear-selection", "invert-selection",
+                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -420,6 +422,12 @@ ApplicationWindow {
         else if (id === "copy-image") {
             viewer.copyImageBitmap()
         }
+        else if (id === "select-all") { if (workspace._gridShown || gridScope) fileGrid.selectAll() }
+        else if (id === "clear-selection") { if (workspace._gridShown || gridScope) fileGrid.clearSelection() }
+        else if (id === "invert-selection") { if (workspace._gridShown || gridScope) fileGrid.invertSelection() }
+        else if (id === "grid-zoom-in") { if (workspace._gridShown || gridScope) photoGrid.zoomIn() }
+        else if (id === "grid-zoom-out") { if (workspace._gridShown || gridScope) photoGrid.zoomOut() }
+        else if (id === "grid-zoom-reset") { if (workspace._gridShown || gridScope) photoGrid.resetZoom() }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -1220,8 +1228,8 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
-                color: viewer.status.length > 0 ? Theme.text : Theme.muted
+                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }

@@ -2317,8 +2317,8 @@ private slots:
         QObject* results = h.window->findChild<QObject*>("deleteResults");
         const QString trash = deleteFlow(h)->property("trashName").toString();
         QCOMPARE(results->property("title").toString(), "Moved 2 of 4 items to the " + trash);
-        // Reveal virtualized rows before reading their error messages. This is
-        // the same test-only prerequisite in the PERF-MEASURE review candidate (4f2fc35).
+        // Results are virtualized. Wait for the model, then reveal each row instead of
+        // assuming both delegates exist immediately when the dialog starts opening.
         auto* failures = overlayItem(h, "deleteFailures"); QVERIFY(failures);
         QTRY_COMPARE(failures->property("count").toInt(), 2);
         const auto reasonAt = [&](int row) {

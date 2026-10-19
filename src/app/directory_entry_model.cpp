@@ -1,3 +1,5 @@
+#include "glancelot/perf_trace.hpp"
+#include "../core/perf_context.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/directory_listing.hpp"
 #include "thumbnail_id.hpp"
@@ -137,11 +139,16 @@ struct DirectoryEntryModel::Private {
         const quint64 token = generation;
         auto* watcher = new QFutureWatcher<Listing>(q);
         QObject::connect(watcher, &QFutureWatcher<Listing>::finished, q, [this, watcher, token] {
+            { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
             auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
-            if (token == generation && active && !listing.cancelled) apply(std::move(listing));
+            publication.setBytes(listing.rows.size());
+            if (token != generation || !active) publication.setFlags(glancelot::perf::Stale);
+            else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);
+            else { if (!listing.accessible) publication.setFlags(glancelot::perf::Failed); apply(std::move(listing)); } }
             pump();
         });
-        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token()] {
+        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token] {
+            glancelot::perf::detail::GenerationContext context(token);
             return buildListing(directory, sort, hidden, cancel, kMaxEntries);
         }));
     }
@@ -397,6 +404,29 @@ int DirectoryEntryModel::matchIndex(const QString& query, int row) const {
     return index;
 }
 int DirectoryEntryModel::selectedCount() const { return d->accessible ? int(d->selected.size()) : 0; }
+qint64 DirectoryEntryModel::selectedBytes() const {
+    if (!d->accessible || d->selected.isEmpty()) return 0;
+    qint64 total = 0;
+    for (const auto& row : d->rows) {
+        if (d->selected.contains(row.key) && row.size > 0) {
+            total += row.size;
+        }
+    }
+    return total;
+}
+QString DirectoryEntryModel::selectedBytesFormatted() const {
+    return QLocale().formattedDataSize(selectedBytes());
+}
+QString DirectoryEntryModel::selectedSummary() const {
+    const int count = selectedCount();
+    if (count <= 0) return {};
+    const qint64 bytes = selectedBytes();
+    const QString countStr = QString::number(count) + (count == 1 ? QStringLiteral(" item") : QStringLiteral(" items"));
+    if (bytes > 0) {
+        return QStringLiteral("Selected: %1 (%2)").arg(countStr, selectedBytesFormatted());
+    }
+    return QStringLiteral("Selected: %1").arg(countStr);
+}
 int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
     QStringList paths;
