@@ -37,7 +37,9 @@ private slots:
     void initTestCase() {
         QVERIFY2(fixture.prepare(),qPrintable(fixture.error));
         for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"}) QVERIFY(resolves(name));
-        QVERIFY2(native_fixture::samePath(QStandardPaths::findExecutable("wt.exe"),QDir(fixture.sandbox).filePath("wt.exe")),qPrintable("envEqual="+QString::number(qEnvironmentVariable("PATH")==native_fixture::environment(L"PATH"))+" explicit="+QStandardPaths::findExecutable("wt.exe",{fixture.sandbox})+" found="+QStandardPaths::findExecutable("wt.exe")+" QtPATH="+qEnvironmentVariable("PATH")+" nativePATH="+native_fixture::environment(L"PATH")));
+        const QString terminal=QStandardPaths::findExecutable("wt.exe");
+        if(!native_fixture::samePath(terminal,QDir(fixture.sandbox).filePath("wt.exe")))
+            QFAIL(qPrintable("Qt terminal lookup failed: "+terminal));
         // Fail closed on copied runner/helper identity before invoking even a canary bare executable.
         QVERIFY(fixture.begin());QVERIFY(QProcess::startDetached("explorer.exe",{"--canary",native_fixture::environment(L"GLANCELOT_NATIVE_TOKEN")}));
         QVERIFY2(fixture.verify("explorer.exe",{"--canary",native_fixture::environment(L"GLANCELOT_NATIVE_TOKEN")},fixture.sandbox),qPrintable(fixture.error));
