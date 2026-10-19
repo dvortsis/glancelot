@@ -269,6 +269,10 @@ int main(int argc, char** argv) {
     }
 #endif
     PlatformIntegrationTests tests;
+#ifdef Q_OS_WIN
+    return QTest::qExec(&tests, app.arguments());
+#else
     return QTest::qExec(&tests, argc, argv);
+#endif
 }
 #include "platform_integration_tests.moc"
