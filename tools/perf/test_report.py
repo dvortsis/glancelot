@@ -30,4 +30,19 @@ except ValueError:
     pass
 else:
     raise AssertionError("accepted private fixture path")
+for mutate in (
+    lambda p: p["stages"]["cache_lookup"]["all"].update(p95_ns=96),
+    lambda p: p["stages"]["cache_lookup"]["all"].update(total_ns=5051),
+    lambda p: p["stages"]["cache_lookup"]["splits"]["hit"].update(bytes=1),
+    lambda p: p["spans"][0].update(flags=p["spans"][0]["flags"] ^ 1),
+    lambda p: p["spans"][0].update(end_ns=p["spans"][0]["end_ns"] + 1),
+):
+    invalid = copy.deepcopy(report)
+    mutate(invalid)
+    try:
+        validate(invalid)
+    except ValueError:
+        continue
+    raise AssertionError("accepted raw/summary disagreement")
 print("PASS independent JSON parse, exact percentiles, hit/miss/cold/warm splits, stale exclusion and invalid-schema rejection")
+print("PASS raw-derived metrics and flag split disagreement rejection")

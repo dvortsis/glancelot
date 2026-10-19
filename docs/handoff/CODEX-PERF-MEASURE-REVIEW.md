@@ -65,3 +65,8 @@ Final CTest folder_grid rerun passed 1/1 in 117.45s with the original 180s timeo
 Every candidate Windows test has now passed across the preceding full run 14/15
 and that targeted rerun. This is not a relabelled single green full run. Required
 Docker platform-test owner fix, Claude approval and serial integrated checks remain.
+
+The validator now independently recomputes all raw-backed metrics/splits, rather than
+only matching counts. Five inconsistent-report cases are rejected; all 101 recorded
+captures pass stricter validation. This tooling change leaves captured application
+binaries and reports unchanged.

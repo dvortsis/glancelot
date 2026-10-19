@@ -29,6 +29,17 @@ def metrics(value):
         require(value["total_ns"] >= value["max_ns"], "total less than maximum")
 
 
+def raw_metrics(samples):
+    if not samples:
+        return dict.fromkeys(METRICS, 0)
+    durations = sorted(end - start for start, end, _ in samples)
+    return {"count": len(samples), "min_ns": durations[0],
+            "p50_ns": durations[(len(samples) + 1) // 2 - 1],
+            "p95_ns": durations[(95 * len(samples) + 99) // 100 - 1],
+            "max_ns": durations[-1], "total_ns": min(2**64 - 1, sum(durations)),
+            "bytes": min(2**64 - 1, sum(size for _, _, size in samples))}
+
+
 def validate(report):
     require(isinstance(report, dict), "report must be an object")
     require(set(report) in ({"schema", "clock", "percentile", "context", "dropped", "stages"},
@@ -53,14 +64,28 @@ def validate(report):
             require(stage["splits"][first]["count"] + stage["splits"][second]["count"] == stage["all"]["count"], "incomplete split")
     if "spans" in report:
         require(isinstance(report["spans"], list), "invalid raw spans")
-        counts = dict.fromkeys(STAGES, 0)
+        groups = {name: {"all": [], **{split: [] for split in SPLITS}} for name in STAGES}
         for span in report["spans"]:
             require(isinstance(span, dict) and set(span) == {"stage", "flags", "thread", "generation", "start_ns", "end_ns", "bytes"}, "invalid span fields")
             require(span["stage"] in STAGES, "unknown raw stage")
             require(all(integer(v) for k, v in span.items() if k != "stage"), "invalid raw numeric value")
             require(span["end_ns"] >= span["start_ns"] and span["flags"] <= 31, "invalid span duration or flags")
-            counts[span["stage"]] += 1
-        require(all(counts[name] == report["stages"][name]["all"]["count"] for name in STAGES), "raw/aggregate count mismatch")
+            selected = groups[span["stage"]]
+            sample = (span["start_ns"], span["end_ns"], span["bytes"])
+            selected["all"].append(sample)
+            flags = span["flags"]
+            selected["hit" if flags & 1 else "miss"].append(sample)
+            selected["cold" if flags & 8 else "warm"].append(sample)
+            for flag, key in ((2, "cancelled"), (4, "failed"), (16, "stale")):
+                if flags & flag:
+                    selected[key].append(sample)
+            if not flags & (2 | 4 | 16):
+                selected["useful"].append(sample)
+        for name, group in groups.items():
+            stage = report["stages"][name]
+            require(stage["all"] == raw_metrics(group["all"]), "raw/aggregate metrics mismatch")
+            for split in SPLITS:
+                require(stage["splits"][split] == raw_metrics(group[split]), "raw/split metrics mismatch")
     return report
 
 

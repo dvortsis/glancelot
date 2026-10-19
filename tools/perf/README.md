@@ -54,7 +54,8 @@ is explicit and cannot pass comparison. No path or EXIF field is accepted in the
 performance report context. The older --report option is separate and contains paths.
 
 report.schema.json defines the structural schema. validate_report.py additionally
-checks percentile order, split totals and raw/aggregate count agreement. All durations
+checks percentile order and split totals. When raw spans are present it independently
+recomputes every metric and flag split, rejecting raw/summary disagreements. All durations
 are nanoseconds on a process-relative steady clock. A generation is stage-local:
 worker/navigation request generation or rendered QImage revision. Worker clock origins
 must not be subtracted from parent timestamps.

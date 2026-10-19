@@ -400,3 +400,20 @@ The preceding required full Windows run passed the other 14 tests. Thus every
 candidate Windows test has passed across the full run and targeted rerun; do not
 rewrite the initial 14/15 run as one green full run. No limits or assertions were
 weakened. Integrated-commit Windows/Linux full checks remain required.
+
+
+## Independent raw-summary consistency
+
+The report validator now recomputes every all/split count, minimum, nearest-rank
+p50/p95, maximum, saturating total and payload sum directly from raw spans whenever
+they are present. It independently derives cache hit/miss, cold/warm and useful
+membership from flags. Previously only raw counts were cross-checked; ordered but
+incorrect percentiles or split membership could pass structural validation.
+
+The actual C++ reporter passes this stricter check. Five deliberately inconsistent
+reports (p95, total, split payload, raw flags and raw duration) are rejected. Existing
+comparison and aggregation tests still pass. All 101 recorded captures also passed
+revalidation: 50 historical native, 50 Linux software-GL and 1 final native full-dataset
+session. No captured report or application binary was modified. Summary-only
+aggregates remain structurally validated; their derivation is evidenced by original
+capture hashes and raw-sample aggregation, not invented raw timelines.
