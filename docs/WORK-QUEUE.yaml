@@ -3,9 +3,9 @@ project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
-  holder: none
-  branch: none
-  started: none
+  holder: gemini
+  branch: agent/clipboard-ops
+  started: '2026-10-18T20:45:00-06:00'
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -155,7 +155,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: review
     branch: agent/clipboard-ops
     worktree: .worktrees/clipboard-ops
     build: build-clipboard-ops
@@ -366,10 +366,12 @@ tasks:
     priority: 9
     owner: lead
     owner_lane: codex
-    state: ready
+    state: implementing
     depends: [REVIEW-ALL-01]
     branch: codex/platform-01
     worktree: .worktrees/codex-platform-01
+    plan: docs/PLATFORM-01-PLAN.md
+    start_gate: PERF-MEASURE-01 reaches review after required candidate checks
     scope_addition: F080 reproducible packages and PERF-BUILD provenance basics; qualification scripts for CANVAS-UI/DECODE-01 physical gates
     outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
@@ -470,13 +472,14 @@ tasks:
     priority: 8
     owner: lead
     owner_lane: codex
-    state: ready
+    state: review
     depends: [REVIEW-ALL-01]
     branch: codex/perf-measure
     worktree: .worktrees/codex-perf-measure
     plan: docs/PERF-MEASURE-PLAN.md
     outcome: Bounded timing spans, fixture manifest, result schema and baseline replay (PERFORMANCE-STRATEGY PERF-MEASURE)
     acceptance: Spans have bounded memory and negligible measured overhead; cache hit/miss and cold/warm distinguished; monotonic clock semantics; replayable baseline report on generated fixtures; no telemetry or upload
+    evidence: Candidate codex/perf-measure affabf4 plus evidence descendants; Windows 15/15 203.16s and Docker 15/15 128.24s; full required runtime replay passes; independent Claude review and integrated checks pending
   - id: PATH-COMPLETE-01
     requirements: [UX-13, IN-01]
     milestone: M3
