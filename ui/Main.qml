@@ -338,8 +338,9 @@ ApplicationWindow {
     // Whether the focused pane lets a command's key act. This one predicate gates shortcuts and context-menu rows.
     function scopeAllows(id) {
         const scope = scopeOf(id)
-        if (scope === "canvas") return !gridScope
-        if (scope === "grid") return gridScope && workspace._gridShown
+        // A pane's commands act only while that pane owns keys: a tree that has focus keeps the canvas and grid keys quiet.
+        if (scope === "canvas") return !gridScope && focusRegion !== "tree"
+        if (scope === "grid") return gridScope && workspace._gridShown && focusRegion !== "tree"
         if (scope === "tree") return focusRegion === "tree" && treePanel.visible
         return true
     }
@@ -391,6 +392,19 @@ ApplicationWindow {
     function chordCancel() { chordFirst = ""; chordTimer.stop() }
     function beginChord(step) { chordFirst = step; chordTimer.restart(); wakeHud() }
     onChordPendingChanged: if (chordPending) hudVisible = true
+    onFocusRegionChanged: chordCancel() // a chord started in one pane never finishes in another
+    // True when this key press is a live registered key of a grid or tree command (or the second step of a chord that
+    // started there or on a pane command). The panes yield exactly those keys, so a pane command remapped onto a native key
+    // works; global commands remapped onto native pane keys still lose to the pane, as before (grid keys beat global remaps).
+    function remapped(event) {
+        const step = viewer.keyStep(event.key, event.modifiers)
+        if (step.length === 0) return false
+        const paneCommand = id => id.length > 0 && (scopeOf(id) === "grid" || scopeOf(id) === "tree")
+        if (chordPending) return !!keyTable.seconds[step] && paneCommand(resolveKey(keyTable.seconds[step], chordFirst))
+        if (!keyTable.firsts[step]) return false
+        const id = resolveKey(keyTable.firsts[step])
+        return paneCommand(id)
+    }
     Timer { id: chordTimer; objectName: "chordTimer"; interval: 1500; onTriggered: app.chordFirst = "" }
     onKeysLiveChanged: if (!keysLive) chordCancel()
     // A key reached its command. Holds start here and end when the key is released (see ImageCanvas::beginHold).
@@ -487,6 +501,9 @@ ApplicationWindow {
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
+            if (focusRegion === "tree" && treePanel.cursorIsRoot()) { // the menu row is disabled here, so the key explains instead of retargeting
+                deleteFlow.showNotice("Drives can't be moved to the " + deleteFlow.trashName + "."); return
+            }
             const treeFolder = treePanel.currentSelectedFolder()
             if (treeFolder.length > 0) {
                 deleteFlow.request([treeFolder], "tree", "")
@@ -694,6 +711,7 @@ ApplicationWindow {
     }
     MouseArea {
         id: interaction
+        objectName: "canvasPointer"
         visible: app.workspace._previewShown
         anchors.fill: canvas
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
@@ -728,7 +746,7 @@ ApplicationWindow {
             endPointerLoupe()
             if (!loupe) app.openCanvasMenu(mouse.x, mouse.y)
         }
-        onCanceled: endPointerLoupe()
+        onCanceled: { endPointerLoupe(); canvas.endLoupe() } // a cancelled grab restores a key hold too
         onDoubleClicked: mouse => { if (mouse.button === Qt.LeftButton) app.invoke("fullscreen") }
         onWheel: wheel => {
             app.wakeHud()
@@ -785,6 +803,7 @@ ApplicationWindow {
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else if(app.combinedMode)app.focusPane("preview");else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
         onContextRequested: (x, y, row) => app.openGridMenu(x, y, row)
+        yields: app.remapped
         chordPending: app.chordPending
         tabHandler: app.combinedMode ? (() => app.focusPane("preview")) : null
         Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("preview"); event.accepted = true } }
@@ -805,6 +824,7 @@ ApplicationWindow {
             implicitHeight: contentHeight
             model: menu.contentModel
             currentIndex: menu.currentIndex
+            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain) // keyboard navigation keeps the current row visible
             clip: true
             interactive: contentHeight > height
             boundsBehavior: Flickable.StopAtBounds
