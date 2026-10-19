@@ -37,7 +37,7 @@ private slots:
     void initTestCase() {
         QVERIFY2(fixture.prepare(),qPrintable(fixture.error));
         for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"}) QVERIFY(resolves(name));
-        QVERIFY(native_fixture::samePath(QStandardPaths::findExecutable("wt.exe"),QDir(fixture.sandbox).filePath("wt.exe")));
+        QVERIFY2(native_fixture::samePath(QStandardPaths::findExecutable("wt.exe"),QDir(fixture.sandbox).filePath("wt.exe")),qPrintable("envEqual="+QString::number(qEnvironmentVariable("PATH")==native_fixture::environment(L"PATH"))+" explicit="+QStandardPaths::findExecutable("wt.exe",{fixture.sandbox})+" found="+QStandardPaths::findExecutable("wt.exe")+" QtPATH="+qEnvironmentVariable("PATH")+" nativePATH="+native_fixture::environment(L"PATH")));
         // Fail closed on copied runner/helper identity before invoking even a canary bare executable.
         QVERIFY(fixture.begin());QVERIFY(QProcess::startDetached("explorer.exe",{"--canary",native_fixture::environment(L"GLANCELOT_NATIVE_TOKEN")}));
         QVERIFY2(fixture.verify("explorer.exe",{"--canary",native_fixture::environment(L"GLANCELOT_NATIVE_TOKEN")},fixture.sandbox),qPrintable(fixture.error));
@@ -63,12 +63,15 @@ private slots:
         verifyShell();QVERIFY(fixture.noCapture());verifyApartmentUninitialized();
     }
     void revealFileNativeSuccessBalancesExistingSta() {
+        {
         const HRESULT result=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
         // Always balance the outer initialization even when a later assertion fails.
         struct Balance {HRESULT result;~Balance(){if(SUCCEEDED(result))CoUninitialize();}} balance{result};
         QCOMPARE(result,HRESULT(S_OK));QVERIFY(glancelot::PlatformIntegration::revealInFileManager(photo));verifyShell();QVERIFY(fixture.noCapture());
         const HRESULT nested=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
         if(SUCCEEDED(nested))CoUninitialize();QCOMPARE(nested,HRESULT(S_FALSE));
+        }
+        verifyApartmentUninitialized();
     }
     void revealFileNativeFailureFallsBackToOwnedExplorer() {
         native_fixture::shellCapture().result=E_FAIL;QVERIFY(resolves("explorer.exe"));
