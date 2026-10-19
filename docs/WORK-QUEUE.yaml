@@ -592,3 +592,12 @@ theme_task:
   outcome: Supplied Slate and Ice branding plus 40 families and 80 built-in variants
   acceptance: Exact supplied tokens, persisted settings, contrast, live search, compact layout, portable smoke
 remaining_waves: [browsing, culling, format_completion, hardening, expansions]
+  - id: CLAUDE-STACK-01
+    owner_lane: claude
+    state: review
+    branch: claude/f014
+    stack: [claude/input-02, claude/f002, claude/f037, claude/f031, claude/f040, claude/f049, claude/f009, claude/f014]
+    plans: [docs/INPUT-02-PLAN.md, docs/F002-PLAN.md, docs/F037-PLAN.md, docs/F031-PLAN.md, docs/F040-PLAN.md, docs/F049-PLAN.md, docs/F009-PLAN.md, docs/F014-PLAN.md]
+    outcome: INPUT-02 plus F002, F037, F031, F040, F049 (focus mode), F009 and F014 (type and error badges), merged with main at 244bfae
+    evidence: Windows ctest all targets pass except load-sensitive directory_model/folder_grid timing (main fails the same way); Linux docker build of claude/f014 20/20 tests passed; docs/verification/INPUT-02.md
+    pending: independent Codex-lane review, then lane-locked integration per branch order; F013, F042 and F014 metadata badges wait for META-HUD-01/FILTER-01 and a sectioned directory model (no queue entries yet)
