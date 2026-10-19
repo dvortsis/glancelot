@@ -1228,8 +1228,8 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
-                color: viewer.status.length > 0 ? Theme.text : Theme.muted
+                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }

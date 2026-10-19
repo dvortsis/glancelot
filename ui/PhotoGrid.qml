@@ -23,13 +23,34 @@ Rectangle {
     property int preSearchRow: -1
     // A host that pairs the grid with another pane takes Tab (GRID-PREVIEW-01); null keeps the focus chain.
     property var tabHandler: null
+    // Thumbnail size buckets (F010): 96, 128, 160 (default), 220, 320
+    readonly property var sizeBuckets: [96, 128, 160, 220, 320]
+    property int bucketIndex: 2
+    readonly property int currentBucketSize: sizeBuckets[bucketIndex]
+    function zoomIn() {
+        if (bucketIndex < sizeBuckets.length - 1) {
+            bucketIndex++
+            Qt.callLater(panel.reveal)
+        }
+    }
+    function zoomOut() {
+        if (bucketIndex > 0) {
+            bucketIndex--
+            Qt.callLater(panel.reveal)
+        }
+    }
+    function resetZoom() {
+        if (bucketIndex !== 2) {
+            bucketIndex = 2
+            Qt.callLater(panel.reveal)
+        }
+    }
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
-    // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
-    // Measured on the full view width so a half-width combined pane (about 360 px) still gets two columns.
-    readonly property int columns: Math.max(1, Math.min(12, Math.floor(grid.width / (compact ? 136 : 176))))
+    readonly property int targetWidth: compact ? Math.max(96, Math.floor(currentBucketSize * 0.85)) : (currentBucketSize + 16)
+    readonly property int columns: Math.max(1, Math.min(24, Math.floor(grid.width / targetWidth)))
     readonly property int count: grid.count
-    readonly property int thumbEdge: 256
+    readonly property int thumbEdge: currentBucketSize >= 220 ? 512 : 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
     readonly property int modeReplace: 0
     readonly property int modeToggle: 1
@@ -168,6 +189,11 @@ Rectangle {
         }
         if (mods === Qt.ControlModifier) {
             if (event.key === Qt.Key_A) return "all"
+            if (event.key === Qt.Key_I) return "invert"
+            if (event.key === Qt.Key_D) return "clear"
+            if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) return "zoomIn"
+            if (event.key === Qt.Key_Minus) return "zoomOut"
+            if (event.key === Qt.Key_0) return "zoomReset"
             if (event.key === Qt.Key_Space) return "toggle"
         }
         return ""
@@ -266,6 +292,17 @@ Rectangle {
                         font.features: { "tnum": 1 }
                     }
                     UiButton {
+                        objectName: "gridInvertSelection"
+                        iconName: "refresh"
+                        iconOnly: true
+                        text: "Invert selection"
+                        tip: "Invert selection (Ctrl+I)"
+                        focusPolicy: Qt.NoFocus
+                        implicitHeight: Theme.controlHeight - Theme.gapSm
+                        implicitWidth: implicitHeight
+                        onClicked: { fileGrid.invertSelection(); panel.focusGrid() }
+                    }
+                    UiButton {
                         objectName: "gridClearSelection"
                         iconName: "close"
                         iconOnly: true
@@ -331,12 +368,11 @@ Rectangle {
         cellWidth: width / panel.columns
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
-        // Compact panes snap to whole rows (two when they fit at 100 px or more) so no filename is half clipped.
         cellHeight: panel.compact
-                    ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(160, cellWidth * 0.6 + 40))))
+                    ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(panel.currentBucketSize, cellWidth * 0.6 + 40))))
                                      : Math.max(100, height))
-                    : Math.max(160, Math.min(220, cellWidth * 0.75 + 46),
-                               Math.ceil(height / Math.max(1, Math.floor(160 / panel.columns) - 4)))
+                    : Math.max(Math.floor(panel.currentBucketSize * 0.9), Math.min(Math.floor(panel.currentBucketSize * 1.4), cellWidth * 0.75 + 46),
+                               Math.ceil(height / Math.max(1, Math.floor(panel.currentBucketSize / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
@@ -346,6 +382,13 @@ Rectangle {
         Accessible.name: "Items in " + panel.folderPath
         Accessible.description: "Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo."
         ScrollBar.vertical: UiScrollBar { }
+        WheelHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onWheel: event => {
+                if (event.angleDelta.y > 0) panel.zoomIn()
+                else if (event.angleDelta.y < 0) panel.zoomOut()
+            }
+        }
         // Grid keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
         Keys.onShortcutOverride: event => {
             if (panel.searchQuery.length > 0) {
@@ -443,6 +486,11 @@ Rectangle {
             if (action === "activate") { panel.activate(); return }
             if (action === "up") { panel.goUp(); return }
             if (action === "all") { fileGrid.selectAll(); return }
+            if (action === "invert") { fileGrid.invertSelection(); return }
+            if (action === "clear") { fileGrid.clearSelection(); return }
+            if (action === "zoomIn") { panel.zoomIn(); return }
+            if (action === "zoomOut") { panel.zoomOut(); return }
+            if (action === "zoomReset") { panel.resetZoom(); return }
             if (action === "escape") { if (fileGrid.selectedCount > 1) fileGrid.clearSelection(); else panel.dismissed(); return }
             if (action === "toggle") {
                 if (fileGrid.cursorRow >= 0) fileGrid.select(fileGrid.cursorRow, panel.modeToggle)
