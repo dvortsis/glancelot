@@ -48,6 +48,11 @@ Rectangle {
         if (depth === 0 && expandable) folderTree.toggle(row)
         else if (!isCurrent) viewer.openFolder(path)
     }
+    function currentSelectedFolder() {
+        if (!list.activeFocus || list.currentIndex < 0 || !folderTree) return ""
+        const info = folderTree.rowInfo(list.currentIndex)
+        return (info && info.depth > 0 && info.path) ? info.path : ""
+    }
     implicitWidth: Math.min(maximumWidth, userWidth > 0 ? userWidth : (compact ? 232 : 280))
     color: Theme.surface
     Accessible.role: Accessible.Pane

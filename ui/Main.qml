@@ -316,7 +316,8 @@ ApplicationWindow {
     }
     function gridAllowsCommand(id) {
         return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
-                "view-preview", "view-grid", "view-combined", "combined-orientation", "delete-selection"].indexOf(id) >= 0
+                "view-preview", "view-grid", "view-combined", "combined-orientation",
+                "delete-selection", "delete-current-file", "delete-current-folder"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -351,9 +352,37 @@ ApplicationWindow {
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
-            // The selection lives in the grid; the canvas never moves an item the user cannot see selected.
-            if (gridMode || (combinedMode && workspace._gridShown)) deleteFlow.request(photoGrid.deletionTargets(), "command", fileGrid.directory)
-            else deleteFlow.showNotice("Open the grid (" + (viewer.bindingFor("grid") || "Grid") + ") and select items to move them to the " + deleteFlow.trashName + ".")
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (treeFolder.length > 0) {
+                deleteFlow.request([treeFolder], "tree", "")
+            } else if (focusWithin(photoGrid) || (workspace._gridShown && fileGrid.count > 0)) {
+                if (photoGrid.deletionTargets().length > 0) {
+                    deleteFlow.request(photoGrid.deletionTargets(), "command", fileGrid.directory)
+                } else if (workspace._previewShown && viewer.filePath.length > 0) {
+                    deleteFlow.request([viewer.filePath], "command", viewer.directory)
+                } else {
+                    deleteFlow.showNotice("Select items in the grid to move them to the " + deleteFlow.trashName + ".")
+                }
+            } else if (viewer.filePath.length > 0) {
+                deleteFlow.request([viewer.filePath], "command", viewer.directory)
+            } else {
+                deleteFlow.showNotice("Select items in the grid to move them to the " + deleteFlow.trashName + ".")
+            }
+        }
+        else if (id === "delete-current-file") {
+            if (viewer.filePath.length > 0) {
+                deleteFlow.request([viewer.filePath], "command", viewer.directory)
+            } else {
+                deleteFlow.showNotice("No photo is currently open to move to the " + deleteFlow.trashName + ".")
+            }
+        }
+        else if (id === "delete-current-folder") {
+            const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            if (folder.length > 0) {
+                deleteFlow.request([folder], "command", "")
+            } else {
+                deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
+            }
         }
         else if (id === "quit") close()
     }
@@ -370,6 +399,7 @@ ApplicationWindow {
             required property var modelData
             sequence: modelData.binding
             context: Qt.WindowShortcut
+            autoRepeat: false
             enabled: !app.modalOpen && !app.editingText && modelData.binding.length > 0 && (!app.gridScope || app.gridAllowsCommand(modelData.id))
             onActivated: app.invoke(modelData.id)
         }
