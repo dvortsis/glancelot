@@ -2317,8 +2317,25 @@ private slots:
         QObject* results = h.window->findChild<QObject*>("deleteResults");
         const QString trash = deleteFlow(h)->property("trashName").toString();
         QCOMPARE(results->property("title").toString(), "Moved 2 of 4 items to the " + trash);
+        // Reveal virtualized rows before reading their error messages. This is
+        // the same test-only prerequisite reviewed with PERF-MEASURE (4f2fc35).
+        auto* failures = overlayItem(h, "deleteFailures"); QVERIFY(failures);
+        QTRY_COMPARE(failures->property("count").toInt(), 2);
+        const auto reasonAt = [&](int row) {
+            QQuickItem* delegate = nullptr;
+            if (!QMetaObject::invokeMethod(failures, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, delegate), Q_ARG(int, row)) || !delegate)
+                return QString{};
+            for (auto* item : descendants(delegate))
+                if (item->objectName() == "deleteFailureReason") return item->property("text").toString();
+            return QString{};
+        };
         QStringList reasons;
-        for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
+        for (int row = 0; row < 2; ++row) {
+            QVERIFY(QMetaObject::invokeMethod(failures, "positionViewAtIndex", Q_ARG(int, row), Q_ARG(int, 4)));
+            QString reason;
+            QTRY_VERIFY(!(reason = reasonAt(row)).isEmpty());
+            reasons << reason;
+        }
         QCOMPARE(reasons.size(), 2);
         QVERIFY(reasons.join("|").contains("open in another app"));
         QVERIFY(reasons.join("|").contains("Nothing was deleted"));
