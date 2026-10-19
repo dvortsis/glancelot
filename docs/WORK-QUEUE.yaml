@@ -164,6 +164,19 @@ tasks:
     outcome: Clipboard operations for copying file path, native file objects, and decoded bitmap
     acceptance: Discoverable commands for Copy file path (Ctrl+C), Copy file (Ctrl+Shift+C), and Copy image (Ctrl+Alt+C); text fields retain Ctrl+C precedence; single and multiselection support; valid QMimeData URLs for native shell pasting; full bitmap copying without source mutation; user status feedback
     verification: Text editing precedence, empty selection, no opened image, multiple selection paths, clipboard format inspection (text/plain, text/uri-list, image/png), modal dialog suppression
+  - id: GRID-SEARCH-01
+    requirements: [UX-16, NAV-06]
+    feature: F004
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: implementing
+    branch: agent/grid-search
+    worktree: .worktrees/grid-search
+    build: build-grid-search
+    outcome: Instant current-folder filename search with type-to-select and match navigation
+    acceptance: Typing alphanumeric characters in grid starts instant search; transient search chip shows query and match count; F3/Shift+F3 and Up/Down navigate matches; Enter activates; Escape restores previous cursor; case-insensitive substring matching; empty results feedback
+    verification: Substring matching, case insensitivity, boundary cycling, empty results, special characters, Escape restore, timeout auto-dismiss, keyboard navigation parity
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3

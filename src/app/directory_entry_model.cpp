@@ -354,6 +354,48 @@ void DirectoryEntryModel::clearSelection() {
     d->changedRows(previous, {SelectedRole});
     emit selectionChanged();
 }
+void DirectoryEntryModel::invertSelection() {
+    if (d->rows.empty()) return;
+    QSet<QString> newSelected;
+    for (const auto& row : d->rows) {
+        if (!d->selected.contains(row.key)) newSelected.insert(row.key);
+    }
+    d->selected = std::move(newSelected);
+    emit dataChanged(index(0), index(count() - 1), {SelectedRole});
+    emit selectionChanged();
+}
+int DirectoryEntryModel::findMatch(const QString& query, int startRow, bool forward) const {
+    if (query.isEmpty() || d->rows.empty()) return -1;
+    const int total = int(d->rows.size());
+    const QString q = query.trimmed().toLower();
+    if (q.isEmpty()) return -1;
+    int cur = std::clamp(startRow, 0, total - 1);
+    for (int step = 0; step < total; ++step) {
+        if (d->rows[std::size_t(cur)].name.toLower().contains(q)) return cur;
+        cur = forward ? (cur + 1) % total : (cur - 1 + total) % total;
+    }
+    return -1;
+}
+int DirectoryEntryModel::matchCount(const QString& query) const {
+    if (query.isEmpty() || d->rows.empty()) return 0;
+    const QString q = query.trimmed().toLower();
+    if (q.isEmpty()) return 0;
+    int matches = 0;
+    for (const auto& row : d->rows) {
+        if (row.name.toLower().contains(q)) ++matches;
+    }
+    return matches;
+}
+int DirectoryEntryModel::matchIndex(const QString& query, int row) const {
+    if (query.isEmpty() || row < 0 || row >= int(d->rows.size())) return 0;
+    const QString q = query.trimmed().toLower();
+    if (q.isEmpty()) return 0;
+    int index = 0;
+    for (int i = 0; i <= row; ++i) {
+        if (d->rows[std::size_t(i)].name.toLower().contains(q)) ++index;
+    }
+    return index;
+}
 int DirectoryEntryModel::selectedCount() const { return d->accessible ? int(d->selected.size()) : 0; }
 int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
