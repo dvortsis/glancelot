@@ -12,3 +12,7 @@ Branch `claude/input-02`, commits ddd67ae and 01d5daa, base 76da49e (Windows 11,
 - The full `docker build -t glancelot-browser:main .` integration check was not run on the final commit (the run was declined).
 - Independent cross-lane review: an advisory read-only Claude subagent reviewed ddd67ae (CHANGES REQUESTED; Escape-in-grid/tree, weak wheel assertions, parity test, tree row naming, loupe/hold guard were fixed in 01d5daa). This does not count as the required Codex-lane review.
 - Known low items left: bindings on keys the grid or tree claim (arrows, Enter) are accepted but never fire (for the F051 recorder to validate); physical trackpads, real keyboard layouts and IMEs are unverified.
+
+## Integration note (October 19, 2026)
+
+A trial merge of `main` (41bdce5, after GRID-DENSITY-01 and PLATFORM-01) into the top of this stack, `claude/f009`, conflicts in `CMakeLists.txt`, `include/glancelot/viewer_controller.hpp`, `ui/Main.qml` and `ui/PhotoGrid.qml` (command tables, QML_FILES and test-target lists, and the grid delegate). The merge was aborted. Per the lane protocol the integrator merges `main` into the reviewed branch under the lock, so the stack is not rebased while `main` is still moving; each branch merges `main` once it has its independent review, in order: input-02, f002, f037, f031, f040, f049, f009.
