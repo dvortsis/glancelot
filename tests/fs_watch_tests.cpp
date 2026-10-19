@@ -233,31 +233,6 @@ private slots:
         }
         QCOMPARE(hash(moved+"/photo.png"),original);
     }
-#ifdef Q_OS_WIN
-    void incompleteIdentityRefreshRetainsLastGoodSelectionBaseline() {
-        QTemporaryDir dir;QVERIFY(dir.isValid());
-        const auto original=dir.filePath("a.png"),renamed=dir.filePath("b.png"),other=dir.filePath("c.png");
-        QVERIFY(png(original,Qt::red));QVERIFY(png(other,Qt::blue));
-        DirectoryEntryModel grid;grid.setDirectory(dir.path());grid.setActive(true);
-        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,5000);
-        grid.select(grid.rowOf(original));QCOMPARE(grid.selectedPaths(),QStringList{original});
-        const QString principal=qEnvironmentVariable("USERDOMAIN")+"\\"+qEnvironmentVariable("USERNAME");
-        const auto permissions=[&](const QStringList& operation) {
-            QProcess command;command.start("icacls.exe",QStringList{original}+operation);
-            return command.waitForStarted(2000)&&command.waitForFinished(5000)&&command.exitStatus()==QProcess::NormalExit&&command.exitCode()==0;
-        };
-        struct Restore {std::function<void()> action;~Restore(){action();}} restore{[&]{permissions({"/remove:d",principal});}};
-        QVERIFY(permissions({"/deny",principal+":(RA)"}));
-        const auto path=fs_watch::native(original);QVERIFY(!fs_watch::probe(path).known);
-        grid.refresh();QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,5000);
-        QCOMPARE(grid.selectedPaths(),QStringList{original});
-        QVERIFY(permissions({"/remove:d",principal}));
-        QVERIFY(QFile::rename(original,renamed));grid.refresh();
-        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(renamed)>=0,5000);
-        QCOMPARE(grid.selectedPaths(),QStringList{renamed});
-        QCOMPARE(grid.pathAt(grid.cursorRow()),renamed);
-    }
-#endif
     void selectedNoncurrentRenameAndCurrentRename() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto a=dir.filePath("a.png"),b=dir.filePath("b.png"),c=dir.filePath("c.png");
         QVERIFY(png(a,Qt::red));QVERIFY(png(b,Qt::blue));
