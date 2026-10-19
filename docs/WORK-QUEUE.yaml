@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: gemini, branch: agent/favorites, started: "2026-10-19T15:16:00-06:00"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -473,7 +473,10 @@ tasks:
     milestone: M3
     priority: 7
     owner: lead
-    state: implementing
+    state: done
+    commit: 6758029
+    evidence: docs/verification/FAVORITES-01.md; independent review approved; Windows build.ps1 -Test 19/19 (168.21s); Linux Docker Qt 19/19 (104.11s)
+    integrated_evidence: integrated 6758029 Windows scripts/build.ps1 -Test 19/19 (187.88s) and Linux docker build 19/19 (102.01s)
     branch: agent/favorites
     worktree: .worktrees/favorites
     build: build-favorites
