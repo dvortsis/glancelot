@@ -15,6 +15,10 @@ ApplicationWindow {
     visible: true
     title: viewer.fileName ? viewer.fileName + " — Glancelot" : "Glancelot"
     color: Theme.background
+    // F054: layouts mirror when the application layout direction is right-to-left (Arabic, Hebrew, Persian, Urdu locales).
+    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.enabled: rtl
+    LayoutMirroring.childrenInherit: true
     property bool frameless: false
     property bool hudVisible: true
     property int presetCursor: -1           // F049: the last preset the cycle command applied
@@ -149,6 +153,8 @@ ApplicationWindow {
     // ---- end GRID-PREVIEW-01 state
     readonly property var workspace: {
         const state=JSON.parse(JSON.stringify(paneLayout.panes))
+        // F054 right-to-left: the saved "left" and "right" mean the start and end side, so a mirrored window swaps them (display only).
+        if(rtl)for(const id of Object.keys(state)){const r=state[id].region;if(r==="left")state[id].region="right";else if(r==="right")state[id].region="left"}
         // Content panes fill the center wherever they are saved. In the combined view the grid's saved edge decides
         // which side (left/top) or end (right/bottom) of the split it takes.
         const gridEdge=state.grid.region,gridOn=gridMode||combinedMode,previewOn=!gridMode
@@ -1040,6 +1046,10 @@ ApplicationWindow {
         width: app.paneRect("preview").width; height: app.paneRect("preview").height
         visible: app.combinedMode && app.workspace._previewShown && stateName.length > 0 && stateName !== "loading"
         color: Theme.background
+    // F054: layouts mirror when the application layout direction is right-to-left (Arabic, Hebrew, Persian, Urdu locales).
+    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.enabled: rtl
+    LayoutMirroring.childrenInherit: true
         z: 1
         Accessible.role: Accessible.StaticText
         Accessible.name: stateTitle.text + (stateDetail.text.length ? ". " + stateDetail.text : "")
@@ -1214,6 +1224,10 @@ ApplicationWindow {
         anchors.fill: canvas
         visible: emptyState.visible
         color: Theme.background
+    // F054: layouts mirror when the application layout direction is right-to-left (Arabic, Hebrew, Persian, Urdu locales).
+    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.enabled: rtl
+    LayoutMirroring.childrenInherit: true
     }
     ColumnLayout { // empty state: one message, one action
         id: emptyState
@@ -1351,7 +1365,7 @@ ApplicationWindow {
                 fillMode: Image.PreserveAspectFit
                 Accessible.ignored: true
             }
-            UiButton { id: openButton; text: "Open"; tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
+            UiButton { id: openButton; objectName: "openButton"; text: "Open"; tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
             UiButton {
                 id: foldersButton
                 objectName: "foldersToggle"
@@ -1647,6 +1661,10 @@ ApplicationWindow {
         visible: viewer.referenceName.length > 0
         title: "Reference — " + viewer.referenceName
         color: Theme.background
+    // F054: layouts mirror when the application layout direction is right-to-left (Arabic, Hebrew, Persian, Urdu locales).
+    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.enabled: rtl
+    LayoutMirroring.childrenInherit: true
         onClosing: viewer.clearReference()
         ImageCanvas {
             id: referenceCanvas

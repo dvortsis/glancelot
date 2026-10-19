@@ -29,6 +29,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTimer>
+#include <QLocale>
+#include <QTranslator>
 #include <cstdio>
 #include <QIcon>
 #include <QFontDatabase>
@@ -41,6 +43,14 @@ int main(int argc,char** argv) {
     QCoreApplication::setOrganizationName("Glancelot");
     QCoreApplication::setApplicationVersion("0.1.0-alpha.1");
     QQuickStyle::setStyle("Basic");
+    // F054: a translation catalog resource ":/i18n/glancelot_<language>.qm" is installed when one exists for GLANCELOT_LANGUAGE or the
+    // system language. QGuiApplication already follows the locale's text direction, which the UI mirrors for right-to-left languages.
+    QTranslator translator;
+    {
+        const QString requested=qEnvironmentVariable("GLANCELOT_LANGUAGE");
+        const QLocale locale=requested.isEmpty()?QLocale::system():QLocale(requested);
+        if(translator.load(locale,QStringLiteral("glancelot"),QStringLiteral("_"),QStringLiteral(":/i18n")))app.installTranslator(&translator);
+    }
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
         if(QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)))<0)

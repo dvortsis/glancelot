@@ -30,6 +30,7 @@
 
 #include "ui_test_support.hpp"
 #include <QAccessible>
+#include <QScopeGuard>
 #include <QAccessibleInterface>
 namespace {
 // Every row is a registered command, shows its live binding, and is enabled exactly when its key would act.
@@ -618,6 +619,27 @@ private slots:
         QVERIFY2(inspected >= 40, qPrintable(QString("only %1 controls were inspected").arg(inspected)));
         QVERIFY2(problems.isEmpty(), qPrintable(problems.join("\n")));
         QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+    }
+    // F054: a right-to-left layout direction mirrors the toolbar and swaps the start and end panes; left-to-right restores it.
+    void rightToLeftMirrorsTheWorkspace() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+        auto* open = named(h.window, "openButton"); auto* settings = named(h.window, "settingsButton"); auto* tree = named(h.window, "folderTree");
+        QVERIFY(open && settings && tree); QTRY_VERIFY(tree->isVisible());
+        auto cx = [](QQuickItem* i) { return i->mapToScene(QPointF(i->width() / 2, 0)).x(); };
+        QTRY_VERIFY(cx(open) < cx(settings));
+        QVERIFY(cx(tree) < h.window->width() / 2);
+        QGuiApplication::setLayoutDirection(Qt::RightToLeft);
+        const auto restore = qScopeGuard([] { QGuiApplication::setLayoutDirection(Qt::LeftToRight); });
+        QTRY_VERIFY(flag(h, "rtl"));
+        QTRY_VERIFY(cx(open) > cx(settings));            // the toolbar reads from the right
+        QTRY_VERIFY(cx(tree) > h.window->width() / 2);   // the folder tree sits on the start (right) side
+        QCOMPARE(h.layout.pane("tree")["region"].toString(), QString("left")); // the saved layout is untouched
+        QGuiApplication::setLayoutDirection(Qt::LeftToRight);
+        QTRY_VERIFY(!flag(h, "rtl"));
+        QTRY_VERIFY(cx(open) < cx(settings));
+        QTRY_VERIFY(cx(tree) < h.window->width() / 2);
     }
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
