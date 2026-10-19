@@ -17,7 +17,7 @@ struct Observation {
     quint64 scope{}, revision{};
     QString directory,image;
     std::shared_ptr<const Snapshot> before,after,parentBefore,parentAfter;
-    bool fileEvent{}, forced{}, coverage{};
+    bool fileEvent{}, forced{}, coverage{}, baseline{};
     Revision imageBefore,imageAfter;
     QString renamedImage,renamedDirectory;
 };

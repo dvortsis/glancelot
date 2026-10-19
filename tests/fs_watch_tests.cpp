@@ -86,6 +86,55 @@ private slots:
         else QCOMPARE(values.last().renamedImage,renamed);
         QVERIFY(monitor.stats().maxHandles<=3);
     }
+    void firstBaselineMarkerSurvivesPublicationCoalescing() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());QVector<fs_watch::Observation> values;
+        fs_watch::MonitorOptions options;options.manualBaseline=true;options.registerNative=false;
+        fs_watch::Monitor monitor(this,[&](auto value){values.push_back(std::move(value));},options);
+        monitor.setScope(dir.path(),{});
+        QElapsedTimer timeout;timeout.start();
+        // Deliberately do not dispatch receiver events until both scans publish.
+        while(monitor.stats().snapshots<1&&timeout.elapsed()<5000)QThread::msleep(5);
+        QVERIFY(monitor.stats().snapshots>=1);QVERIFY(values.isEmpty());monitor.refresh();
+        while(monitor.stats().snapshots<2&&timeout.elapsed()<5000)QThread::msleep(5);
+        QVERIFY(monitor.stats().snapshots>=2);QVERIFY(values.isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(values.size(),1,5000);
+        QVERIFY(values.last().before);QVERIFY(values.last().baseline);
+    }
+    void incompleteMonitorObservationRetainsCompleteBaseline_data() {
+        QTest::addColumn<bool>("manual");QTest::addColumn<bool>("firstIncomplete");
+        QTest::newRow("automatic-middle-partial")<<false<<false;
+        QTest::newRow("manual-middle-partial")<<true<<false;
+        QTest::newRow("automatic-first-partial")<<false<<true;
+        QTest::newRow("manual-first-partial")<<true<<true;
+    }
+    void incompleteMonitorObservationRetainsCompleteBaseline() {
+        QFETCH(bool,manual);QFETCH(bool,firstIncomplete);
+        QTemporaryDir dir;QVERIFY(dir.isValid());const auto a=dir.filePath("a.png"),b=dir.filePath("b.png");
+        QVERIFY(write(a,"generated original"));
+        if(fs_watch::probe(fs_watch::native(a)).identity().isEmpty())QSKIP("native identity is unavailable; refusal cases are separate");
+        auto partial=std::make_shared<std::atomic_bool>(firstIncomplete);
+        fs_watch::MonitorOptions options;options.manualBaseline=manual;options.registerNative=false;
+        options.read=[partial,folder=dir.path()](const QString& path,std::stop_token stop) {
+            auto result=fs_watch::snapshot(path,stop);if(path==folder&&partial->load())result.complete=false;return result;
+        };
+        QVector<fs_watch::Observation> values;
+        fs_watch::Monitor monitor(this,[&](auto value){values.push_back(std::move(value));},options);
+        monitor.setScope(dir.path(),a);QTRY_VERIFY_WITH_TIMEOUT(!values.isEmpty(),5000);
+        if(firstIncomplete) {
+            QVERIFY(!values.last().after->complete);partial->store(false);monitor.refresh();
+            QTRY_VERIFY_WITH_TIMEOUT(values.last().after->complete,5000);
+            // The first complete publication is also left unacknowledged.
+        } else {
+            QVERIFY(values.last().after->complete);if(manual)monitor.acknowledge(values.last());
+            partial->store(true);monitor.refresh();
+            QTRY_VERIFY_WITH_TIMEOUT(!values.last().after->complete,5000);
+            if(manual)monitor.acknowledge(values.last());partial->store(false);
+        }
+        QVERIFY(QFile::rename(a,b));monitor.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(values.last().after->complete&&values.last().after->entries.contains(fs_watch::key(b)),5000);
+        QVERIFY(values.last().before&&values.last().before->complete);
+        QCOMPARE(values.last().renamedImage,b);
+    }
     void deferredBaselineRetainsOriginalRenameIdentity() {
         QTemporaryDir dir;QVERIFY(dir.isValid());
         const auto a=dir.filePath("a.png"),b=dir.filePath("b.png"),c=dir.filePath("c.png");
@@ -136,6 +185,9 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(b)>=0,5000);
         if(!identity.isEmpty()) {QCOMPARE(values.last().renamedImage,b);QCOMPARE(grid.selectedPaths(),QStringList{b});}
         QCOMPARE(hash(b),original);QVERIFY(monitor.stats().maxHandles<=3);
+        grid.setDirectory(target);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(target+"/b.png")>=0,5000);
+        QVERIFY(grid.selectedPaths().isEmpty());QCOMPARE(grid.cursorRow(),-1);
     }
     void establishedWatchLossAndRearm() {
         QTemporaryDir dir;QVERIFY(dir.isValid());
