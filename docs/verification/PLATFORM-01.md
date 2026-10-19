@@ -160,7 +160,24 @@ It rejects another package/target instead of borrowing a pass. Reference-case la
 are not attestations. Offline operator instructions are in
  tools/platform/QUALIFICATION-MATRIX.md and tools/platform/LINUX-PACKAGE.md.
 
-Pending: final default Windows wrapper check, independent Claude PLATFORM review,
+Final default Windows wrapper at clean source 7c1e5a2 passed 15/15 in 191.16s
+and produced ZIP df56405ce6df8dcfb4e9acbaca5e83fe481c08e1394b2af91f6c1788991deeff.
+The independently extracted package passed package-only Qt module checks, generated
+PNG/JPEG decode, strict positive frame-swap and RGB screenshot checks, missing-decoder
+diagnosis and unchanged media/package hashes. Evidence: .cache/platform-windows-
+final-visible-smoke/smoke.json and .cache/platform-windows-final-matrix.json.
+
+An initial run decoded and grabbed correct RGB pixels but reported zero frame swaps.
+The user confirmed an interactive desktop; process and Explorer session IDs matched.
+Native inspection found a visible, non-minimized, non-cloaked window near the lower
+desktop edge. Moving the SAME binary into the primary work area and bringing it
+forward yielded four swaps and first-image-frame 2014ms. The private smoke harness
+now restores and positions only its own process window in that work area before
+measurement. With this setup the full strict smoke passed; no frame oracle was
+relaxed and no product rendering source changed. This establishes a controlled
+visible-window test, not physical display latency or a definitive driver diagnosis.
+
+Pending: independent Claude PLATFORM review,
 serial integration and checks on the integrated commit. Physical DPI/refresh/ICC/HDR,
 native Linux desktop/Wayland, separately provisioned clean Windows, large-MP decode,
 HDD/SMB and R1-R4 results remain unverified. No original media, credentials, telemetry,

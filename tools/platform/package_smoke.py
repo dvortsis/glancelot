@@ -110,6 +110,33 @@ def qt_modules(process):
                       or path.name.lower() in ("qwindows.dll", "libqxcb.so", "qoffscreen.dll")))
 
 
+def expose_test_window(process):
+    """Place only this disposable test's window in the primary work area."""
+    if os.name != "nt":
+        return True
+    user = ctypes.windll.user32
+    area = (ctypes.c_long * 4)()
+    require(user.SystemParametersInfoW(48, 0, ctypes.byref(area), 0), "cannot read Windows work area")
+    shown = []
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    def visit(window, unused):
+        pid = ctypes.c_ulong()
+        user.GetWindowThreadProcessId(window, ctypes.byref(pid))
+        if pid.value == process.pid and user.IsWindowVisible(window):
+            user.ShowWindow(window, 9)
+            shown.append(bool(user.SetWindowPos(window, 0, area[0] + 20, area[1] + 20,
+                min(1180, area[2] - area[0] - 40), min(780, area[3] - area[1] - 40), 0x0040)))
+        return True
+    # Explicit pointer signatures keep HWND values intact on 64-bit Windows.
+    user.GetWindowThreadProcessId.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+    user.IsWindowVisible.argtypes = [ctypes.c_void_p]
+    user.ShowWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    user.SetWindowPos.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int,
+                                ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+    user.EnumWindows(visit, 0)
+    return any(shown)
+
+
 def run(package, output, image, missing=False, dimensions=(1024, 768), color_oracle=True):
     output.mkdir()
     env = os.environ.copy()
@@ -135,12 +162,16 @@ def run(package, output, image, missing=False, dimensions=(1024, 768), color_ora
             deadline = time.monotonic() + 4
             ready_after = time.monotonic() + 2
             display_plugin = "qwindows.dll" if os.name == "nt" else "libqxcb.so"
+            exposed = False
             while process.poll() is None and time.monotonic() < deadline:
+                if not exposed:
+                    exposed = expose_test_window(process)
                 observed = qt_modules(process)
                 if len(observed) >= 4 and display_plugin in {path.name.lower() for path in observed} and time.monotonic() >= ready_after: break
                 time.sleep(0.1)
             require(len(observed) >= 4 and display_plugin in {path.name.lower() for path in observed}
                     and all(path.is_relative_to(package) for path in observed), "Qt modules did not load exclusively from package")
+            require(exposed, "test window could not be placed in the work area")
             process.wait(timeout=20)
         finally:
             if process.poll() is None:
