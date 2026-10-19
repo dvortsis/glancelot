@@ -290,7 +290,9 @@ PASS complete manifest coverage, dimensions, toolchain and unexpected-file/direc
 ```
 
 This closes an index-subset validation gap; it does not alter the replay workload
-or application binary. A strict full-matrix recheck is running separately. The
+or application binary. The strict full-matrix recheck passed all 111,136 files, exact manifest coverage,
+image dimensions, expected directories and hashes; the index remains
+9c5b6da1ffa6d467d5b9f496bd4bbd5d426fe544153353794bd04c82abd9e1e7. The
 Linux repeated baseline's application binary is SHA256-prefix 142e27c0c383f56d,
 source revision dd0820eec0546082fd4d026ea5f7411be2249b52. Its first exploratory
 smoke supplied an incorrect declared commit suffix and is excluded from provenance
@@ -348,9 +350,9 @@ Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 1927ms
 The full grid diagnostic completed with per-case file output under the same
 180-second bound: 73 passed, 0 failed, 4 skipped, 154937ms. It used the rebuilt
 candidate, offscreen/software rendering and no assertion/timeout changes. This is
-a separate diagnostic pass, not a relabelled passing scripts/build.ps1 full run. The full-matrix native workflow has passed its action/trace
-checks and is completing the post-run source-hash verification. Full-matrix strict
-manifest verification is also pending. These live jobs have not been restarted.
+a separate diagnostic pass, not a relabelled passing scripts/build.ps1 full run. The full-dataset native workflow passed its action/trace
+checks and post-run source-hash verification. Full-matrix strict
+manifest verification has passed. These live jobs have not been restarted.
 
 
 The grid diagnostic used Python subprocess.run(timeout=180) around the actual
@@ -366,3 +368,18 @@ then assert directory-vs-file targets, Unicode/space paths, fallback selection a
 launch failures. Such tests must verify actual captured requests, rather than merely
 returning success. Native desktop integration still needs separate real-desktop
 checks. This is a proposed owner-controlled fix, not implemented in the PERF lane.
+
+
+Final native full-dataset replay completed successfully: one standard-v1 session,
+11694ms, 559 spans, zero drops, and all 111,136 fixture source hashes unchanged before
+and after. The aggregate independently validates. Windows context is qt-api-4,
+source bcc952796cccb5453676638fd413b1a15aa81760 (application source unchanged since
+e68ebd7), executable SHA-prefix 9df803cc149a3f0f. Evidence is under
+.cache/perf-final-full-native-dd0820e; the directory name is only an artifact label,
+while the report records the actual revision above.
+
+The scenario views 64x48 mixed-folder tiles, starts in the 1k folder and jumps to the
+adjacent 10k folder. It does not qualify 12/24/45/60 MP decode latency or the 100k folder's
+interactive latency. All large-image dimensions and all 100k folder entries passed
+strict dataset integrity verification. This one-session workflow result is not a
+statistical/hardware latency qualification.

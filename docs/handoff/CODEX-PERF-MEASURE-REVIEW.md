@@ -54,3 +54,9 @@ The independent fixture verifier was subsequently tightened to require complete
 manifest coverage (including every tree entry), image dimensions and Qt provenance,
 and reject unexpected files/directories. Eight corruption cases pass normally and
 under Python -O. This affects tooling validation, not the captured application binary.
+
+Strict full-dataset verification now passes 111,136 expected files and paths. Native
+full-dataset replay also completed: 1 session, 559 spans, zero drops, 11694ms, all
+source hashes unchanged. It views 64x48 mixed tiles in 1k/adjacent 10k folders, not
+large-MP or 100k interactive latency qualification. See the verification record for
+actual source/executable identities.
