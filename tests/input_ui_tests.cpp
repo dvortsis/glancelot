@@ -346,6 +346,32 @@ private slots:
         QTRY_VERIFY(h.viewer.imageReady());
     }
 
+    // F009: details mode lists name, size and date in one column and requests no thumbnails.
+    void detailsModeListsRowsWithoutThumbnails() {
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 3);
+        auto* grid = h.object("photoGrid"); QVERIFY(grid);
+        auto tiles = [&] { return namedAll(h.window, "photoGridCell"); };
+        QTRY_COMPARE(tiles().size(), 3);
+        QTRY_VERIFY(!namedAll(h.window, "gridThumb0").isEmpty());
+        h.viewer.trigger("view-details");
+        QTRY_VERIFY(grid->property("details").toBool());
+        QTRY_VERIFY(namedAll(h.window, "gridThumb0").isEmpty() && namedAll(h.window, "gridThumb1").isEmpty());
+        QCOMPARE(grid->property("columns").toInt(), 1);
+        QTRY_COMPARE(tiles().size(), 3);
+        for (auto* cell : tiles()) QVERIFY(cell->height() < 60);
+        // Selection and keys behave as before.
+        auto* view = named(h.window, "photoGridView"); QVERIFY(view); view->forceActiveFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
+        h.fileGrid.select(0, DirectoryEntryModel::Replace);
+        QTest::qWait(250); QTest::keyClick(h.window, Qt::Key_Down);
+        QTRY_COMPARE(h.fileGrid.cursorRow(), 1);
+        h.viewer.trigger("view-details");
+        QTRY_VERIFY(!grid->property("details").toBool());
+        QTRY_VERIFY(!namedAll(h.window, "gridThumb0").isEmpty());
+    }
+
     // F049: focus mode hides every bar and panel for the session, leaves the saved layout alone, and Escape returns them.
     void focusModeHidesChromeAndEscapeRestoresIt() {
         Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);

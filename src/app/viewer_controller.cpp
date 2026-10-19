@@ -104,6 +104,8 @@ const std::vector<Command> registry {
     {"reference-pin","Pin this photo in a reference window","",false,"canvas"}, {"reference-close","Close the reference window","",false,"global"},
     // F049: content-only focus mode (session state; the saved layout is untouched).
     {"focus-mode","Focus mode: hide bars and panels","",false,"global"},
+    // F009: details (list) mode for the folder grid; session state.
+    {"view-details","Folder grid: details or thumbnails","",false,"grid"},
     {"slideshow","Start or stop the slideshow","",false,"canvas"}, {"slideshow-slower","Slideshow: longer per photo","",false,"canvas"},
     {"slideshow-faster","Slideshow: shorter per photo","",false,"canvas"},
     {"zoom-lock","Keep zoom when changing photos","",false,"canvas"}, {"navigator","Show or hide the zoom navigator","",false,"canvas"},

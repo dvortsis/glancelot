@@ -27,7 +27,10 @@ Rectangle {
     readonly property bool compact: height < 420
     // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
     // Measured on the full view width so a half-width combined pane (about 360 px) still gets two columns.
-    readonly property int columns: Math.max(1, Math.min(12, Math.floor(grid.width / (compact ? 136 : 176))))
+    // F009: one row per item with name, size and modified time instead of thumbnail tiles.
+    property bool details: false
+    function sizeText(bytes) { return bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : bytes < 1073741824 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1073741824).toFixed(2) + " GB" }
+    readonly property int columns: details ? 1 : Math.max(1, Math.min(12, Math.floor(grid.width / (compact ? 136 : 176))))
     readonly property int count: grid.count
     readonly property int thumbEdge: 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
@@ -334,7 +337,7 @@ Rectangle {
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
         // Compact panes snap to whole rows (two when they fit at 100 px or more) so no filename is half clipped.
-        cellHeight: panel.compact
+        cellHeight: panel.details ? Theme.rowHeight + Theme.gapSm : panel.compact
                     ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(160, cellWidth * 0.6 + 40))))
                                      : Math.max(100, height))
                     : Math.max(160, Math.min(220, cellWidth * 0.75 + 46),
@@ -400,10 +403,12 @@ Rectangle {
             required property bool isLink
             required property bool isSelected
             required property bool isCursor
+            required property var size
+            required property var modified
             required property bool isCurrent
             readonly property bool selected: isSelected
             readonly property bool image: kind === "image"
-            readonly property bool previewFailed: image && thumb.status === Image.Error
+            property bool previewFailed: false // set by the tile's image (it lives in the tile component, absent in details mode)
             readonly property string extension: panel.fileExtension(name)
             objectName: "photoGridCell"
             Component.onCompleted: ++panel.liveDelegateCount
@@ -440,7 +445,10 @@ Rectangle {
                 border.width: cursorRing || cell.isSelected ? Theme.focusWidth : 0
                 border.color: cursorRing ? Theme.focusRing : Theme.primary
             }
-            contentItem: Column {
+            contentItem: Loader { sourceComponent: panel.details ? detailsComp : tileComp }
+            Component {
+                id: tileComp
+            Column {
                 spacing: Theme.gapXs + Theme.gapXxs
                 Item {
                     id: preview
@@ -458,6 +466,8 @@ Rectangle {
                         sourceSize.height: panel.thumbEdge
                         fillMode: Image.PreserveAspectFit
                         visible: status === Image.Ready
+                        onStatusChanged: cell.previewFailed = cell.image && status === Image.Error
+                        Component.onDestruction: cell.previewFailed = false
                     }
                     Label {
                         anchors.centerIn: parent
@@ -529,6 +539,26 @@ Rectangle {
                     elide: Text.ElideMiddle
                     color: Theme.text
                     font.pixelSize: Theme.textSmall
+                }
+            }
+            }
+            Component {
+                id: detailsComp
+                // F009 details row: name, size and modified time on one line; no thumbnail is requested in this mode.
+                RowLayout {
+                    spacing: Theme.gapMd
+                    UiIcon { name: cell.kind === "folder" ? "folder" : cell.image ? "image" : "file"; color: cell.kind === "folder" ? Theme.text : Theme.muted }
+                    Label { Layout.fillWidth: true; text: cell.name; elide: Text.ElideMiddle; color: Theme.text; font.pixelSize: Theme.textBody }
+                    Label {
+                        Layout.preferredWidth: 84; horizontalAlignment: Text.AlignRight
+                        text: cell.kind === "folder" ? "" : panel.sizeText(cell.size)
+                        color: Theme.muted; font.pixelSize: Theme.textSmall; font.features: { "tnum": 1 }
+                    }
+                    Label {
+                        Layout.preferredWidth: panel.width >= 520 ? 150 : 0; visible: panel.width >= 520
+                        text: cell.modified ? Qt.formatDateTime(cell.modified, "yyyy-MM-dd HH:mm") : ""
+                        color: Theme.muted; font.pixelSize: Theme.textSmall; font.features: { "tnum": 1 }
+                    }
                 }
             }
         }

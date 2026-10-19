@@ -524,6 +524,8 @@ ApplicationWindow {
         // F040
         else if (id === "reference-pin") { if (!viewer.pinReference()) deleteFlow.showNotice("Open a photo first to pin it as a reference.") }
         else if (id === "reference-close") viewer.clearReference()
+        // F009
+        else if (id === "view-details") photoGrid.details = !photoGrid.details
         // F049
         else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
         // F031
