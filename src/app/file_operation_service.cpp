@@ -1,3 +1,4 @@
+#include "../core/perf_context.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
 #include "platform_trash.hpp"
@@ -306,8 +307,12 @@ quint64 FileOperationService::plan(const QStringList& paths, const QString& orig
         d->ready = std::move(plan); d->readyId = id; d->readyOrigin = origin;
         emit planReady(id, d->summary(id, origin, *d->ready));
     });
-    watcher->setFuture(QtConcurrent::run(d->pool, [requested = std::move(requested), cancel = d->planStop.get_token()] {
-        return planDeletion(requested, cancel);
+    watcher->setFuture(QtConcurrent::run(d->pool, [requested = std::move(requested), cancel = d->planStop.get_token(), id] {
+        glancelot::perf::ScopedSpan timing(glancelot::perf::Stage::Mutation,id);
+        auto result = planDeletion(requested, cancel);
+        timing.setBytes(result.targets.size());
+        if (result.cancelled) timing.setFlags(glancelot::perf::Cancelled);
+        return result;
     }));
     return id;
 }
@@ -337,9 +342,17 @@ bool FileOperationService::confirm(quint64 id) {
         emit finished(id, list);
         if (!removed.isEmpty()) emit pathsRemoved(removed);
     });
-    watcher->setFuture(QtConcurrent::run(d->pool, [backend = d->backend, plan = std::move(plan), cancel = d->executeStop.get_token()](QPromise<std::vector<DeleteResult>>& promise) {
+    watcher->setFuture(QtConcurrent::run(d->pool, [backend = d->backend, plan = std::move(plan), cancel = d->executeStop.get_token(), id](QPromise<std::vector<DeleteResult>>& promise) {
+        glancelot::perf::ScopedSpan timing(glancelot::perf::Stage::Mutation,id);
         promise.setProgressRange(0, int(plan.targets.size()));
         auto results = executeDeletion(plan, *backend, cancel, [&promise](std::size_t done, std::size_t) { promise.setProgressValue(int(done)); });
+        timing.setBytes(results.size());
+        std::uint8_t flags{};
+        for (const auto& result : results) {
+            if (result.outcome == DeleteOutcome::Cancelled) flags |= glancelot::perf::Cancelled;
+            else if (result.outcome != DeleteOutcome::Trashed) flags |= glancelot::perf::Failed;
+        }
+        timing.setFlags(flags);
         promise.addResult(std::move(results));
     }));
     return true;
