@@ -108,6 +108,9 @@ const std::vector<Command> registry {
     {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
     // FAVORITES-01 (F003)
     {"add-to-favorites", "Add current folder to favorites", ""},
+    // FOLDER-HISTORY-01 (F001)
+    {"navigate-back", "Go back to previous folder", "Alt+Left"},
+    {"navigate-forward", "Go forward to next folder", "Alt+Right"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},

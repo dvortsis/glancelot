@@ -17,6 +17,7 @@ Item {
 
     readonly property var paths: ({
         "chevron-right": "M6 3.5 L10.5 8 L6 12.5",
+        "chevron-left": "M10 3.5 L5.5 8 L10 12.5",
         "chevron-down": "M3.5 6 L8 10.5 L12.5 6",
         "folder": "M2 4.5 Q2 3.5 3 3.5 H6.2 L7.7 5 H13 Q14 5 14 6 V12 Q14 13 13 13 H3 Q2 13 2 12 Z",
         "folder-open": "M2 12.5 V4.5 Q2 3.5 3 3.5 H6.2 L7.7 5 H12 Q13 5 13 6 V7.5 M2 12.5 L3.7 8.2 Q4 7.5 4.8 7.5 H14.2 Q15 7.5 14.7 8.3 L13.3 12.3 Q13 13 12.3 13 H2.5 Q2 13 2 12.5 Z",

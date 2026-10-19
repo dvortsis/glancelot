@@ -321,7 +321,8 @@ ApplicationWindow {
                 "copy-path", "copy-file", "copy-image",
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
-                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset"].indexOf(id) >= 0
+                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset",
+                "navigate-back", "navigate-forward"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -428,6 +429,8 @@ ApplicationWindow {
         else if (id === "grid-zoom-in") { if (workspace._gridShown || gridScope) photoGrid.zoomIn() }
         else if (id === "grid-zoom-out") { if (workspace._gridShown || gridScope) photoGrid.zoomOut() }
         else if (id === "grid-zoom-reset") { if (workspace._gridShown || gridScope) photoGrid.resetZoom() }
+        else if (id === "navigate-back") { if (typeof folderHistory !== "undefined") folderHistory.navigateBack() }
+        else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -561,7 +564,7 @@ ApplicationWindow {
         id: interaction
         visible: app.workspace._previewShown
         anchors.fill: canvas
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton | Qt.BackButton | Qt.ForwardButton
         hoverEnabled: true
         property real lastX: 0
         property real lastY: 0
@@ -573,6 +576,8 @@ ApplicationWindow {
             app.wakeHud()
         }
         onPressed: mouse => {
+            if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
+            if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
             canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
             if (mouse.button === Qt.RightButton) canvas.beginLoupe(mouse.x,mouse.y)
         }
