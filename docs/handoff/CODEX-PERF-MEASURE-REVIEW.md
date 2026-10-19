@@ -70,3 +70,8 @@ The validator now independently recomputes all raw-backed metrics/splits, rather
 only matching counts. Five inconsistent-report cases are rejected; all 101 recorded
 captures pass stricter validation. This tooling change leaves captured application
 binaries and reports unchanged.
+
+A subsequent actual required scripts/build.ps1 -Test run passed all 15 tests in
+184.75s on 3885ca7 (app source unchanged). This is a single green full Windows run.
+See quiet-run evidence in the verification record; earlier timeout history stays
+visible. Linux full gate and independent Claude approval remain.

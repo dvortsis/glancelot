@@ -417,3 +417,27 @@ revalidation: 50 historical native, 50 Linux software-GL and 1 final native full
 session. No captured report or application binary was modified. Summary-only
 aggregates remain structurally validated; their derivation is evidenced by original
 capture hashes and raw-sample aggregation, not invented raw timelines.
+
+
+## Quiet required Windows full-suite pass
+
+After the concurrent lane test processes ended, the actual required command was
+run again on candidate 3885ca7 (application source unchanged since e68ebd7):
+
+```
+./scripts/build.ps1 -BuildDir build-codex-perf-measure -Test
+10/15 Test #10: folder_grid Passed 103.44 sec
+15/15 Test #15: platform_integration Passed 4.88 sec
+100% tests passed out of 15
+Total Test time (real) = 184.75 sec
+```
+
+No timeout or assertion was changed. This is a single green required Windows full
+run; earlier timeout history remains above. Local evidence:
+.cache/perf-quiet-full-windows.log. Linux full Docker repair/recheck, independent
+Claude review and integrated-commit checks remain required.
+
+The user subsequently appointed this session lead. Main now freezes
+ docs/PLATFORM-01-PLAN.md, including an isolated test-only launcher-environment
+prerequisite. No Gemini production platform adapter changes are authorized by that
+repair. PLATFORM implementation starts only after PERF reaches review.
