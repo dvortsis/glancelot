@@ -1,5 +1,6 @@
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QMimeData>
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
@@ -94,6 +95,9 @@ const std::vector<Command> registry {
     {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
     {"reveal-in-file-manager", "Reveal in File Manager", "Ctrl+Alt+R"},
     {"open-terminal", "Open Terminal", "Ctrl+Alt+T"},
+    {"copy-path", "Copy file path", "Ctrl+C"},
+    {"copy-file", "Copy file", "Ctrl+Shift+C"},
+    {"copy-image", "Copy image", "Ctrl+Alt+C"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -535,9 +539,99 @@ QString ViewerController::directory() const{return d->path.isEmpty()?displayPath
 QString ViewerController::directoryError() const{return d->directoryError;}
 bool ViewerController::directoryPending() const{return d->directoryPending;}
 void ViewerController::copyDirectory() const{QGuiApplication::clipboard()->setText(directory());}
-bool ViewerController::copyFilePath(const QStringList& paths) { Q_UNUSED(paths); return false; }
-bool ViewerController::copyFileUrls(const QStringList& paths) { Q_UNUSED(paths); return false; }
-bool ViewerController::copyImageBitmap() { return false; }
+bool ViewerController::copyFilePath(const QStringList& paths) {
+    QStringList resolved;
+    for (const QString& p : paths) {
+        if (!p.trimmed().isEmpty()) {
+            const QUrl url(p);
+            resolved.append(url.isLocalFile() ? url.toLocalFile() : p);
+        }
+    }
+    if (resolved.isEmpty()) {
+        if (!d->path.isEmpty()) resolved.append(d->path);
+        else if (!directory().isEmpty()) resolved.append(directory());
+    }
+    if (resolved.isEmpty()) {
+        d->status = QStringLiteral("Nothing selected to copy path.");
+        emit stateChanged();
+        return false;
+    }
+    QStringList nativePaths;
+    nativePaths.reserve(resolved.size());
+    for (const QString& p : resolved) {
+        nativePaths.append(QDir::toNativeSeparators(p));
+    }
+#ifdef Q_OS_WIN
+    const QString newline = QStringLiteral("\r\n");
+#else
+    const QString newline = QStringLiteral("\n");
+#endif
+    const QString joinedText = nativePaths.join(newline);
+    if (auto* clipboard = QGuiApplication::clipboard()) {
+        clipboard->setText(joinedText);
+    }
+    const int count = nativePaths.size();
+    d->status = count == 1 ? QStringLiteral("Copied path to clipboard.") : QStringLiteral("Copied %1 paths to clipboard.").arg(count);
+    emit stateChanged();
+    return true;
+}
+
+bool ViewerController::copyFileUrls(const QStringList& paths) {
+    QStringList resolved;
+    for (const QString& p : paths) {
+        if (!p.trimmed().isEmpty()) {
+            const QUrl url(p);
+            resolved.append(url.isLocalFile() ? url.toLocalFile() : p);
+        }
+    }
+    if (resolved.isEmpty()) {
+        if (!d->path.isEmpty()) resolved.append(d->path);
+        else if (!directory().isEmpty()) resolved.append(directory());
+    }
+    if (resolved.isEmpty()) {
+        d->status = QStringLiteral("Nothing selected to copy file.");
+        emit stateChanged();
+        return false;
+    }
+    QStringList nativePaths;
+    QList<QUrl> urls;
+    nativePaths.reserve(resolved.size());
+    urls.reserve(resolved.size());
+    for (const QString& p : resolved) {
+        nativePaths.append(QDir::toNativeSeparators(p));
+        urls.append(QUrl::fromLocalFile(p));
+    }
+#ifdef Q_OS_WIN
+    const QString newline = QStringLiteral("\r\n");
+#else
+    const QString newline = QStringLiteral("\n");
+#endif
+    const QString joinedText = nativePaths.join(newline);
+    if (auto* clipboard = QGuiApplication::clipboard()) {
+        auto* mime = new QMimeData;
+        mime->setUrls(urls);
+        mime->setText(joinedText);
+        clipboard->setMimeData(mime);
+    }
+    const int count = nativePaths.size();
+    d->status = count == 1 ? QStringLiteral("Copied file to clipboard.") : QStringLiteral("Copied %1 files to clipboard.").arg(count);
+    emit stateChanged();
+    return true;
+}
+
+bool ViewerController::copyImageBitmap() {
+    if (d->image.isNull()) {
+        d->status = QStringLiteral("No image open to copy.");
+        emit stateChanged();
+        return false;
+    }
+    if (auto* clipboard = QGuiApplication::clipboard()) {
+        clipboard->setImage(d->image);
+    }
+    d->status = QStringLiteral("Copied image bitmap to clipboard.");
+    emit stateChanged();
+    return true;
+}
 bool ViewerController::revealInFileManager(const QString& path) {
     QString target = path;
     if (target.isEmpty()) {
@@ -621,7 +715,20 @@ void ViewerController::trigger(const QString& id){
     else if(id=="sort"){const char* cycle[]={"name","modified","size","shuffle"};int at=0;for(int i=0;i<4;++i)if(sortKey()==cycle[i])at=i;setSortKey(cycle[(at+1)%4]);}
     else if(id=="sort-reverse")setSortDescending(!d->sortSpec.descending);
     else if(id=="tree")setTreeVisible(!d->tree);
-    else if(id=="quit")QCoreApplication::quit();else if(d->bindings.contains(id))emit viewCommand(id);
+    else if(id=="quit")QCoreApplication::quit();
+    else if(id=="copy-path") {
+        if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
+        emit viewCommand(id);
+    }
+    else if(id=="copy-file") {
+        if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFileUrls();
+        emit viewCommand(id);
+    }
+    else if(id=="copy-image") {
+        if(receivers(SIGNAL(viewCommand(QString))) == 0) copyImageBitmap();
+        emit viewCommand(id);
+    }
+    else if(d->bindings.contains(id))emit viewCommand(id);
 }
 QString ViewerController::bindingFor(const QString& id) const{return d->bindings.value(id).toString();}
 bool ViewerController::setBinding(const QString& id,const QString& sequence){
