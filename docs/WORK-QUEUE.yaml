@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: gemini, branch: agent/ui-settings, started: "2026-10-19T14:20:00Z"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -195,10 +195,14 @@ tasks:
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
     priority: 10
-    state: implementing
+    owner: lead
+    state: done
     branch: agent/ui-settings
     worktree: .worktrees/ui-settings
     build: build-ui-settings
+    commit: c43b413
+    evidence: docs/verification/UI-SETTINGS-01.md; independent review approved; Windows scripts/build.ps1 -Test 18/18 (154.64s); Linux Docker Qt 18/18 (112.38s)
+    integrated_evidence: integrated c43b413 Windows scripts/build.ps1 -Test 18/18 (154.64s) and Linux docker build 18/18 (112.38s)
     depends: [PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-KEYS-01]
     outcome: Advanced searchable UI customization and settings using existing theme and preference infrastructure
     acceptance: Pane visibility, placement, sizes, freeze, pin/auto-hide timing and layout presets; grid thumbnail size, density, labels, folders-first and hidden-file visibility; preview placement, toolbar actions, UI text scale, backgrounds, theme selection, reduced motion and shortcut editing; per-section reset plus full UI reset; portable import/export with validation and explicit global versus per-window scope
