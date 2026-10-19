@@ -125,3 +125,13 @@ This scoped Windows review does not prove Linux cancellation or whole-controller
 teardown. Run the packet's complete native and Docker gates on the resulting
 source, record failures honestly, and include cancellation in independent Claude
 review. An inherited or intermittent failure cannot be counted as a full pass.
+
+## Shared Windows qualification prerequisite
+
+The lead assigns the frozen test-only Windows launcher fixture from
+docs/PLATFORM-01-PLAN.md to this active worktree. Its four tests/ files and the
+lead-owned cmake/PlatformTestFixtures.cmake inclusion are permitted prerequisites
+for required native gates. Production platform adapter/public API remain unchanged.
+Independent Claude64f0af0 assessed the proposal; implemented code still requires
+review and full checks. Do not alter directory_model's250ms oracle or add arbitrary
+drains. This does not approve the pending FS-WATCH implementation.
