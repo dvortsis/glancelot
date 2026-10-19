@@ -16,6 +16,7 @@
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QFutureWatcher>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QKeySequence>
@@ -120,6 +121,8 @@ const std::vector<Command> registry {
     // F049: content-only focus mode (session state; the saved layout is untouched).
     {"focus-mode","Focus mode: hide bars and panels","",false,"global"},
     {"layout-preset-next","Next layout preset","",false,"global"},
+    // F015 tabs (shape A)
+    {"tab-new","New tab","",false,"global"}, {"tab-close","Close tab","",false,"global"}, {"tab-next","Next tab","",false,"global"}, {"tab-previous","Previous tab","",false,"global"},
     // F009: details (list) mode for the folder grid; session state.
     {"view-details","Folder grid: details or thumbnails","",false,"grid"},
     {"slideshow","Start or stop the slideshow","",false,"canvas"}, {"slideshow-slower","Slideshow: longer per photo","",false,"canvas"},
@@ -243,6 +246,11 @@ struct ViewerController::Private {
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
     bool positionDirty{}, restoreRequested{};
+    // F015 tabs: the inactive tabs' locations; the active tab's entry is refreshed from live state whenever it is read.
+    struct TabRecord { QString folder, image; };
+    QList<TabRecord> tabList;
+    int activeTabIndex{0};
+    TabRecord liveLocation() const { return {path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path}; }
     QTimer positionTimer;
     // Paths this window just moved to the trash (DELETE-01); cleared by the next explicit open.
     QStringList removedPaths;
@@ -273,6 +281,7 @@ struct ViewerController::Private {
             else { navigate(1, false); }
         });
         QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
+        QObject::connect(q,&ViewerController::stateChanged,q,[this]{ if(tabList.size()>1) emit q->tabsChanged(); });
         QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
     }
     ~Private() {
@@ -293,11 +302,15 @@ struct ViewerController::Private {
         if (!positionDirty || slot<=0) return true;
         const QString folder=pendingFolder,image=pendingImage;
         const int target=slot;
+        QJsonArray tabRows;
+        if(tabList.size()>1)for(int i=0;i<tabList.size();++i){const auto record=i==activeTabIndex?liveLocation():tabList[i];tabRows.append(QJsonObject{{"folder",record.folder},{"image",record.image}});}
         const auto result=updateSettings([&](QJsonObject& object) {
             // Re-read under the lock: only this slot's entry changes; other windows' slots, bindings, themes
             // and unknown keys stay as they are on disk.
             auto windows=object.value("windows").toObject();
-            windows[QString::number(target)]=QJsonObject{{"folder",folder},{"image",image},{"saved",QDateTime::currentSecsSinceEpoch()}};
+            QJsonObject saved{{"folder",folder},{"image",image},{"saved",QDateTime::currentSecsSinceEpoch()}};
+            if(!tabRows.isEmpty()){saved["tabs"]=tabRows;saved["activeTab"]=activeTabIndex;}
+            windows[QString::number(target)]=saved;
             object["windows"]=windows;
         },final);
         positionDirty=!result.ok();
@@ -621,6 +634,15 @@ void ViewerController::restoreWindow(){
     const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
     const QString folder=entry.value("folder").toString(),image=entry.value("image").toString();
     if(folder.isEmpty()&&image.isEmpty())return;
+    {   // F015: a saved tab set returns with its active tab; only that tab navigates now
+        const auto rows=entry.value("tabs").toArray();
+        if(rows.size()>=2&&rows.size()<=8){
+            QList<Private::TabRecord> restored;
+            for(const auto& row:rows)restored.append({row.toObject().value("folder").toString(),row.toObject().value("image").toString()});
+            d->tabList=restored;d->activeTabIndex=qBound(0,entry.value("activeTab").toInt(),int(restored.size())-1);
+            emit tabsChanged();
+        }
+    }
     d->restoreRequested=true;
     d->status="Restoring your last folder…";emit stateChanged();
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[image=nativePath(image),folder=nativePath(folder),folderText=folder,cancellation=d->navigationStop.get_token()]() mutable {
@@ -823,7 +845,56 @@ int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); cons
 int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
 int ViewerController::imageWidth() const{return d->image.width();}
 int ViewerController::imageHeight() const{return d->image.height();}
-QVariantList ViewerController::commands() const{
+// ---- F015 tabs (shape A)
+QVariantList ViewerController::tabs() const {
+    QVariantList rows;
+    if(d->tabList.size()<2)return rows;
+    for(int i=0;i<d->tabList.size();++i){
+        const auto record=i==d->activeTabIndex?d->liveLocation():d->tabList[i];
+        QString title=QFileInfo(record.folder).fileName();
+        if(title.isEmpty())title=record.folder;
+        rows.append(QVariantMap{{"title",title},{"folder",record.folder},{"image",record.image},{"active",i==d->activeTabIndex}});
+    }
+    return rows;
+}
+int ViewerController::activeTab() const{return d->tabList.size()<2?0:d->activeTabIndex;}
+bool ViewerController::newTab() {
+    if(d->tabList.size()>=8)return false;
+    if(d->tabList.isEmpty())d->tabList.append(d->liveLocation());
+    else d->tabList[d->activeTabIndex]=d->liveLocation();
+    d->tabList.insert(d->activeTabIndex+1,d->liveLocation()); // a copy of where you are, next to it
+    ++d->activeTabIndex;
+    d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
+    emit tabsChanged();return true;
+}
+bool ViewerController::activateTab(int index) {
+    if(d->tabList.size()<2||index<0||index>=d->tabList.size()||index==d->activeTabIndex)return false;
+    d->tabList[d->activeTabIndex]=d->liveLocation();
+    d->activeTabIndex=index;
+    const auto target=d->tabList[index];
+    d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
+    emit tabsChanged();
+    if(!target.image.isEmpty()&&QFileInfo::exists(target.image))open(target.image);
+    else navigateDirectory(target.folder);
+    return true;
+}
+bool ViewerController::closeTab(int index) {
+    if(d->tabList.size()<2||index<0||index>=d->tabList.size())return false;
+    d->tabList[d->activeTabIndex]=d->liveLocation();
+    const bool closingActive=index==d->activeTabIndex;
+    d->tabList.removeAt(index);
+    if(index<d->activeTabIndex)--d->activeTabIndex;
+    else if(closingActive)d->activeTabIndex=qMin(index,int(d->tabList.size())-1);
+    const auto target=d->tabList[d->activeTabIndex];
+    if(d->tabList.size()<2){d->tabList.clear();d->activeTabIndex=0;}
+    d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
+    emit tabsChanged();
+    if(closingActive){
+        if(!target.image.isEmpty()&&QFileInfo::exists(target.image))open(target.image);
+        else navigateDirectory(target.folder);
+    }
+    return true;
+}QVariantList ViewerController::commands() const{
     QVariantList rows;
     for(const auto& cmd:registry){
         const QString id=QString::fromStdString(cmd.id),binding=d->bindings.value(id).toString();
@@ -903,6 +974,9 @@ void ViewerController::trigger(const QString& id){
     else if(id=="sort"){const char* cycle[]={"name","modified","size","shuffle"};int at=0;for(int i=0;i<4;++i)if(sortKey()==cycle[i])at=i;setSortKey(cycle[(at+1)%4]);}
     else if(id=="sort-reverse")setSortDescending(!d->sortSpec.descending);
     else if(id=="tree")setTreeVisible(!d->tree);
+    else if(id=="tab-new")newTab();else if(id=="tab-close")closeTab(d->tabList.size()<2?-1:d->activeTabIndex);
+    else if(id=="tab-next"){if(d->tabList.size()>1)activateTab((d->activeTabIndex+1)%d->tabList.size());}
+    else if(id=="tab-previous"){if(d->tabList.size()>1)activateTab((d->activeTabIndex+d->tabList.size()-1)%d->tabList.size());}
     else if(id=="quit")QCoreApplication::quit();
     else if(id=="copy-path") {
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();

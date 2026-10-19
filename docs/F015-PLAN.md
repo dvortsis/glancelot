@@ -23,3 +23,9 @@ Two tabs with different folders keep independent selection, scroll and sort; hid
 
 ## Dependencies
 Wave 7 lists it after UI-SETTINGS-01 (done). It should land after the Codex PERF-RESOURCE accounting packet or carry its own admission limits, because hidden tabs multiply cache pressure.
+
+## Delivered (shape A, first working version)
+
+The lead's choice between shapes is still open; this implements shape A so the feature works today and can be replaced by shape B without changing the UI. `ViewerController` gains `tabs`, `activeTab`, `newTab()`, `closeTab(i)` and `activateTab(i)`; registry commands `tab-new`, `tab-close`, `tab-next`, `tab-previous` (global, unbound). A tab is {folder, image}; at most 8; "new tab" copies the current location next to the active tab; switching navigates (image if it still exists, otherwise the folder); closing the active tab activates its neighbour; closing down to one tab hides the strip. The top bar shows a tab strip (named, selected state, a close button per tab, a new-tab button) in place of the title while there are two or more tabs. The set persists with the window's position (`windows[slot].tabs` and `activeTab`) and restores with the active tab navigated. Tests: `window_slot_tests` (tabs: lifecycle, limit, persistence and restore) and `input_ui_tests` (strip visibility, click, commands).
+
+Limits of shape A, stated so the choice can be made on facts: switching loses the leaving tab's scroll, selection and decoded image; there is no per-tab sort; no drag-reorder, reopen-closed-tab or "open in new tab" menu rows yet.

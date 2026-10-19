@@ -641,6 +641,28 @@ private slots:
         QTRY_VERIFY(cx(open) < cx(settings));
         QTRY_VERIFY(cx(tree) < h.window->width() / 2);
     }
+    // F015: the tab strip replaces the title once there are two tabs, switches location on click and shrinks back when closed.
+    void tabStripSwitchesLocationsAndHidesAtOneTab() {
+        QTemporaryDir other; QVERIFY(other.isValid());
+        QImage image(64, 48, QImage::Format_RGB32); image.fill(Qt::blue); QVERIFY(image.save(other.filePath("o1.png")));
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* strip = named(h.window, "tabStrip"); auto* title = named(h.window, "topBarTitle"); QVERIFY(strip && title);
+        QVERIFY(!strip->isVisible()); QVERIFY(title->isVisible());
+        h.viewer.trigger("tab-new");
+        QTRY_VERIFY(strip->isVisible()); QVERIFY(!title->isVisible());
+        QTRY_VERIFY(named(h.window, "tab-0") && named(h.window, "tab-1"));
+        h.viewer.open(other.filePath("o1.png")); QTRY_VERIFY(h.viewer.imageReady());
+        auto* first = named(h.window, "tab-0"); QVERIFY(first);
+        QTest::mouseMove(h.window, sceneCenter(first)); QTest::qWait(50);
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(first), 60);
+        QTRY_COMPARE(QDir::cleanPath(h.viewer.directory()).toLower(), QDir::cleanPath(media.dir.path()).toLower());
+        h.viewer.trigger("tab-next");
+        QTRY_COMPARE(QDir::cleanPath(h.viewer.directory()).toLower(), QDir::cleanPath(other.path()).toLower());
+        h.viewer.trigger("tab-close");
+        QTRY_VERIFY(!strip->isVisible()); QTRY_VERIFY(title->isVisible());
+        QTRY_VERIFY(h.viewer.imageReady());
+    }
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
         Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);

@@ -161,6 +161,7 @@ private slots:
     void wheelModifiersPersistFallBackIndividuallyAndMerge();
     void bindingProblemExplainsEveryRefusal();
     void accessibilityOptionsPersistAndReset();
+    void tabsKeepLocationsAndRestoreWithTheWindow();
 };
 
 void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
@@ -970,6 +971,38 @@ void WindowSlotTests::accessibilityOptionsPersistAndReset() {
     QString error;
     QVERIFY(glancelot::resetSection("appearance", &error));
     ViewerController after; QVERIFY(!after.highContrast() && !after.largeTargets());
+}
+// F015 (shape A): a tab is a saved location; switching navigates; the set persists with the window and restores.
+void WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow() {
+    QTemporaryDir config, media; QVERIFY(config.isValid() && media.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    QVERIFY(QDir(media.path()).mkpath("alpha") && QDir(media.path()).mkpath("beta"));
+    QImage image(32, 24, QImage::Format_RGB32); image.fill(Qt::darkGreen);
+    const QString a = QDir(media.path()).filePath("alpha/a.png"), b = QDir(media.path()).filePath("beta/b.png");
+    QVERIFY(image.save(a) && image.save(b));
+    auto same = [](const QString& x, const QString& y) { return QDir::cleanPath(x).compare(QDir::cleanPath(y), Qt::CaseInsensitive) == 0; };
+    {
+        ViewerController v; v.setWindowSlot(6);
+        QVERIFY(v.tabs().isEmpty()); QVERIFY(!v.closeTab(0)); QVERIFY(!v.activateTab(1)); // one implicit tab
+        v.open(a); QTRY_VERIFY(v.imageReady());
+        QVERIFY(v.newTab()); QCOMPARE(v.tabs().size(), 2); QCOMPARE(v.activeTab(), 1);
+        v.open(b); QTRY_VERIFY(v.imageReady() && same(v.filePath(), b));
+        QCOMPARE(v.tabs().at(1).toMap().value("title").toString(), QString("beta"));
+        QCOMPARE(v.tabs().at(0).toMap().value("title").toString(), QString("alpha"));
+        QVERIFY(v.activateTab(0)); QTRY_VERIFY(same(v.filePath(), a)); QCOMPARE(v.activeTab(), 0);
+        QVERIFY(v.activateTab(1)); QTRY_VERIFY(same(v.filePath(), b));
+        for (int i = 0; i < 6; ++i) QVERIFY(v.newTab()); QVERIFY(!v.newTab()); QCOMPARE(v.tabs().size(), 8); // at most eight
+        while (v.tabs().size() > 2) QVERIFY(v.closeTab(v.tabs().size() - 1));
+        v.flushWindowPosition();
+    }
+    {   ViewerController w; w.setWindowSlot(6); w.restoreWindow();
+        QTRY_VERIFY(w.imageReady());
+        QCOMPARE(w.tabs().size(), 2);
+        QVERIFY(same(w.tabs().at(0).toMap().value("folder").toString(), QDir(media.path()).filePath("alpha")));
+        QCOMPARE(w.activeTab(), w.tabs().at(1).toMap().value("active").toBool() ? 1 : 0);
+        QVERIFY(w.closeTab(w.activeTab())); QVERIFY(w.tabs().isEmpty()); // closing down to one hides the strip
+        QTRY_VERIFY(w.imageReady() || !w.directory().isEmpty());
+    }
 }
 #include "window_slot_tests.moc"
 

@@ -36,6 +36,10 @@ class ViewerController : public QObject {
     Q_PROPERTY(qreal textScale READ textScale WRITE setTextScale NOTIFY stateChanged)
     Q_PROPERTY(bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY stateChanged)
     // F053: a high-contrast palette (WCAG AAA text and non-text contrast) and 44 px touch-sized targets. Both persist.
+    // F015 tabs (shape A: a tab is a saved location; switching navigates). Empty while there is one tab. At most 8 tabs; they persist
+    // with the window's position and restore with the active one navigated.
+    Q_PROPERTY(QVariantList tabs READ tabs NOTIFY tabsChanged)
+    Q_PROPERTY(int activeTab READ activeTab NOTIFY tabsChanged)
     Q_PROPERTY(bool highContrast READ highContrast WRITE setHighContrast NOTIFY stateChanged)
     Q_PROPERTY(bool largeTargets READ largeTargets WRITE setLargeTargets NOTIFY stateChanged)
 public:
@@ -104,6 +108,10 @@ public:
     Q_INVOKABLE bool openTerminal(const QString& directory = QString());
     qreal textScale() const; void setTextScale(qreal scale);
     bool reducedMotion() const; void setReducedMotion(bool reduced);
+    QVariantList tabs() const; int activeTab() const;
+    Q_INVOKABLE bool newTab();
+    Q_INVOKABLE bool closeTab(int index);
+    Q_INVOKABLE bool activateTab(int index);
     bool highContrast() const; void setHighContrast(bool on);
     bool largeTargets() const; void setLargeTargets(bool on);
     Q_INVOKABLE bool exportSettings(const QString& targetFilePath);
@@ -134,6 +142,7 @@ signals:
     // The folder tree was just shown by command; the UI should move keyboard focus into it.
     void treeShown();
     void viewCommand(const QString& id);
+    void tabsChanged();
     void pathCompletions(const QString& text, const QStringList& names);
 private:
     struct Private;

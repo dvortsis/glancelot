@@ -1455,8 +1455,54 @@ ApplicationWindow {
                 Accessible.description: "Changes the order of photos inside folders, not the folder order"
             }
             BarDivider { id: topBarDivider; objectName: "topBarDivider" }
+            // F015 tab strip: replaces the title while there are two or more tabs. Each tab is a saved location.
+            Flickable {
+                id: tabStrip
+                objectName: "tabStrip"
+                visible: viewer.tabs.length > 1
+                Layout.fillWidth: visible
+                Layout.preferredHeight: Theme.controlHeight
+                Layout.minimumWidth: 0
+                clip: true
+                contentWidth: tabRow.childrenRect.width
+                interactive: contentWidth > width
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.HorizontalFlick
+                Accessible.role: Accessible.PageTabList
+                Accessible.name: "Folder tabs"
+                Row {
+                    id: tabRow
+                    spacing: Theme.gapXxs
+                    Repeater {
+                        model: viewer.tabs
+                        delegate: Row {
+                            required property var modelData
+                            required property int index
+                            spacing: 0
+                            UiButton {
+                                objectName: "tab-" + index
+                                text: modelData.title
+                                selected: modelData.active
+                                tip: modelData.folder
+                                Accessible.role: Accessible.PageTab
+                                Accessible.name: modelData.title + (modelData.active ? ", selected" : "")
+                                onClicked: viewer.activateTab(index)
+                            }
+                            UiButton {
+                                objectName: "tabClose-" + index
+                                iconName: "close"
+                                iconOnly: true
+                                text: "Close tab " + modelData.title
+                                onClicked: viewer.closeTab(index)
+                            }
+                        }
+                    }
+                    UiButton { objectName: "tabNew"; iconOnly: true; iconName: "folder-open"; text: "New tab"; onClicked: viewer.newTab() }
+                }
+            }
             Label {
                 objectName: "topBarTitle"
+                visible: viewer.tabs.length < 2
                 text: viewer.fileName || "No photo open"
                 elide: Text.ElideMiddle
                 Layout.fillWidth: true
