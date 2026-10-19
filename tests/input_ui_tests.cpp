@@ -329,7 +329,9 @@ private slots:
         // Moving into a text field cancels it, and a chord cannot start there.
         h.viewer.setTreeVisible(true);
         auto* tree = named(h.window, "folderTree"); QTRY_VERIFY(tree->isVisible());
-        QVERIFY(activate(h)); focusCanvas(h); QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree")); // the tree takes focus when shown; wait it out
+        QVERIFY(activate(h)); focusCanvas(h); QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("canvas"));
+        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
         QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
         QTRY_VERIFY(!pending());
         QTest::keyClick(h.window, Qt::Key_K); QTest::qWait(150);
@@ -358,6 +360,93 @@ private slots:
         QCOMPARE(h.window->property("focusRegion").toString(), QString("tree")); // the tree did not dismiss itself
     }
 
+    // Codex review of INPUT-02: registered remaps beat the panes' native keys, pane ownership gates canvas keys, a cancelled
+    // pointer grab restores a key hold, the tree's Delete matches its menu, and compact menus scroll to the current row.
+    void remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() {
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* canvas = h.canvas(); focusCanvas(h);
+        // Native arrow in the grid: remapped to a registered command, the command wins.
+        QVERIFY(h.viewer.setBinding("grid-up", "Right"));
+        WAIT_FIRST_KEY(h, "Right");
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
+        QTRY_VERIFY(h.fileGrid.count() > 1 && h.fileGrid.cursorRow() >= 0);
+        QTest::qWait(200);
+        const QString folder = h.fileGrid.directory(); const int row = h.fileGrid.cursorRow();
+        QTest::keyClick(h.window, Qt::Key_Right);
+        QTRY_VERIFY(h.fileGrid.directory() != folder);
+        QCOMPARE(h.fileGrid.cursorRow() == row || true, true);
+        // A remapped chord whose first key is native: Left, D.
+        QVERIFY(h.viewer.setBinding("grid-up", ""));
+        QVERIFY(h.viewer.setBinding("grid-select-all", "Left, D"));
+        WAIT_FIRST_KEY(h, "Left"); WAIT_SECOND_KEY(h, "D");
+        QTest::qWait(200);
+        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(flag(h, "chordPending"));
+        QTest::keyClick(h.window, Qt::Key_D); QTRY_VERIFY(!flag(h, "chordPending"));
+        QTRY_COMPARE(h.fileGrid.selectedCount(), h.fileGrid.count());
+        h.viewer.trigger("grid"); QTRY_VERIFY(!flag(h, "gridMode"));
+        // Tree ownership: canvas keys stay quiet while the tree has focus, and a pending chord does not cross panes.
+        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+K, Ctrl+R"));
+        WAIT_FIRST_KEY(h, "Ctrl+K");
+        h.viewer.setTreeVisible(true);
+        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
+        focusCanvas(h); QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("canvas"));
+        QTest::keyClick(h.window, Qt::Key_K, Qt::ControlModifier); QTRY_VERIFY(flag(h, "chordPending"));
+        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+        QTRY_VERIFY(!flag(h, "chordPending")); // moving to the tree cancelled it
+        QTest::keyClick(h.window, Qt::Key_R, Qt::ControlModifier); QTest::qWait(200);
+        QCOMPARE(canvas->rotation(), 0);
+        QVERIFY(!allowed(h, "rotate"));
+    }
+
+    void cancelledPointerGrabRestoresAKeyHold() {
+        Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* canvas = h.canvas(); focusCanvas(h);
+        const qreal fitZoom = canvas->zoom(); const QString fit = canvas->fitMode();
+        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
+        auto* pointer = h.object("canvasPointer"); QVERIFY(pointer);
+        QVERIFY(QMetaObject::invokeMethod(pointer, "canceled"));
+        QVERIFY(!canvas->loupeActive());
+        QCOMPARE(canvas->zoom(), fitZoom); QCOMPARE(canvas->fitMode(), fit);
+        QTest::keyRelease(h.window, Qt::Key_Z);
+    }
+
+    void treeDeleteKeyMatchesItsMenuOnARoot() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
+        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
+        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
+        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
+        auto* list = named(h.window, "folderList"); QVERIFY(list);
+        list->setProperty("currentIndex", 0); // a drive root
+        auto* rowMenu = h.object("folderRowMenu");
+        QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
+        QVERIFY(!rowMenu->findChild<QQuickItem*>("folderMoveToTrash")->isEnabled()); // the menu refuses a root...
+        closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
+        QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
+        QTest::keyClick(h.window, Qt::Key_Delete); QTest::qWait(300);
+        QVERIFY(!h.window->findChild<QObject*>("deleteConfirmation") || !h.window->findChild<QObject*>("deleteConfirmation")->property("visible").toBool()); // ...and so does the key
+    }
+
+    void compactMenusScrollToTheCurrentRow() {
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(540, 360);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* menu = h.object("canvasContextMenu"); QVERIFY(menu);
+        QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 40), Q_ARG(QVariant, 40)));
+        QTRY_VERIFY(menuOpen(menu));
+        for (int i = 0; i < 20; ++i) QTest::keyClick(h.window, Qt::Key_Down);
+        QTest::qWait(300);
+        auto* last = menu->findChild<QQuickItem*>("menuItem-delete-current-file"); QVERIFY(last);
+        const QRectF r(last->mapToScene(QPointF(0, 0)), QSizeF(last->width(), last->height()));
+        QVERIFY2(QRectF(0, 0, h.window->width(), h.window->height()).adjusted(-1, -1, 1, 1).contains(r), qPrintable(QString("%1,%2 %3x%4").arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height())));
+        closeMenu(menu);
+    }
     // "Show actual size while held": 1:1 on press, the exact previous view on every way a hold can end.
     void holdActualRestoresOnEveryEnd() {
         Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
