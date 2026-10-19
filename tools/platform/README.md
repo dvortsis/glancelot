@@ -48,6 +48,13 @@ traversal, changed payloads/modes/timestamps, link/extension entries and digest
 mismatches. Entry count, file/total sizes, manifest size and archive metadata allocation
 are bounded. Tests use disposable generated files and actual archives, including
 corruption and path attacks; they do not require user media or external services.
+ZIP entries use the stored method. Compressed/encrypted ZIP entries are rejected
+before opening any payload decoder; a small advertised size cannot request an
+unbounded codec dictionary. Linux tar.gz uses the fixed-window gzip decoder.
+New manifests sort exact relative path components consistently across hosts.
+Verification compares complete inventories independently of array ordering, so
+valid older manifests remain portable; all paths, sizes, hashes, modes, duplicates
+and extra/missing-entry checks still apply.
 
 ## Build, smoke and compare
 

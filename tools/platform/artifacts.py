@@ -90,7 +90,9 @@ def scan(root, executable):
         require(len(paths) < MAX_FILES + 1, "too many package entries")
         require(not path.is_symlink() and path.resolve().is_relative_to(root), "package links are not materialized")
         paths.append(path)
-    for path in sorted(paths):
+    # pathlib's native Windows ordering folds case, unlike Linux. Sort by exact
+    # relative components so newly sealed manifests have one portable ordering.
+    for path in sorted(paths, key=lambda item: item.relative_to(root).parts):
         name = safe_path(path.relative_to(root).as_posix())
         require(not path.is_symlink() and path.resolve().is_relative_to(root), "package links are not materialized")
         require(name.casefold() not in seen, "case-colliding package entries")
@@ -181,7 +183,10 @@ def verify_tree(root):
     root = Path(root).resolve()
     value = read_manifest(read_limited(root / MANIFEST, MAX_MANIFEST))
     files, directories = scan(root, {row["path"] for row in value["files"] if row["executable"]})
-    require(files == value["files"] and directories == value["directories"], "package inventory differs")
+    # Inventories describe sets, not an OS-specific directory iteration order.
+    # Both scans and manifest validation already reject duplicate/colliding names.
+    require({row["path"]: row for row in files} == {row["path"]: row for row in value["files"]}
+            and set(directories) == set(value["directories"]), "package inventory differs")
     return value
 
 
@@ -283,6 +288,11 @@ def verify_archive(path):
         container = zipfile.ZipFile(path)
         entries = [(item.filename, item.is_dir(), item.file_size, item) for item in container.infolist()]
         require(all(stat.S_IFMT(item.external_attr >> 16) in (stat.S_IFDIR, stat.S_IFREG) for _, _, _, item in entries), "unsupported ZIP entry type")
+        # Our canonical ZIP writer stores entries. Reject alternate codecs before
+        # opening even the manifest: e.g. LZMA can request a large dictionary from
+        # its own header despite a tiny declared uncompressed entry size.
+        require(all(item.compress_type == zipfile.ZIP_STORED and not item.flag_bits & 1
+                    for _, _, _, item in entries), "unsupported ZIP compression or encryption")
         def open_entry(item):
             return container.open(item)
     elif side["format"] == "tar.gz":

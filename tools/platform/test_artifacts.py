@@ -52,6 +52,17 @@ class ArtifactsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             subject.archive(self.root, self.root / "nested.zip", "zip")
 
+    def test_inventory_order_is_not_payload_identity(self):
+        reordered = copy.deepcopy(self.manifest)
+        reordered["files"].reverse()
+        reordered["directories"].reverse()
+        (self.root / subject.MANIFEST).write_bytes(subject.encoded(reordered))
+        self.assertEqual(subject.verify_tree(self.root), reordered)
+        artifact = self.parent / "reordered.zip"
+        subject.archive(self.root, artifact, "zip")
+        self.assertEqual(subject.verify_archive(artifact), reordered)
+        self.assertEqual(subject.extract(artifact, self.parent / "reordered-extracted"), reordered)
+
     def test_tree_mutation_extra_missing_and_link_rejection(self):
         path = self.root / "NOTICE.txt"
         original = path.read_bytes()
@@ -101,7 +112,7 @@ class ArtifactsTests(unittest.TestCase):
     def test_archive_tampering(self):
         original = self.parent / "original.zip"
         subject.archive(self.root, original, "zip")
-        cases = ("duplicate", "traversal", "payload", "symlink", "mode", "missing", "timestamp")
+        cases = ("duplicate", "traversal", "payload", "symlink", "mode", "missing", "timestamp", "compression")
         for case in cases:
             changed = self.parent / (case + ".zip")
             with zipfile.ZipFile(original) as source, zipfile.ZipFile(changed, "w") as target:
@@ -114,6 +125,7 @@ class ArtifactsTests(unittest.TestCase):
                         elif case == "symlink": item.external_attr = (stat.S_IFLNK | 0o755) << 16
                         elif case == "mode": item.external_attr = (stat.S_IFREG | 0o644) << 16
                         elif case == "timestamp": item.date_time = (2025, 1, 1, 0, 0, 0)
+                        elif case == "compression": item.compress_type = zipfile.ZIP_LZMA
                     target.writestr(item, data)
                 if case in ("duplicate", "traversal"):
                     item = zipfile.ZipInfo("NOTICE.txt" if case == "duplicate" else "../outside")
