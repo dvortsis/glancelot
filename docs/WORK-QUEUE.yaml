@@ -3,9 +3,9 @@ project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
-  holder: none
-  branch: none
-  started: none
+  holder: gemini
+  branch: agent/clipboard-ops
+  started: '2026-10-18T20:45:00-06:00'
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
