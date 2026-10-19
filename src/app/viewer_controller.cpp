@@ -98,7 +98,7 @@ const std::vector<Command> registry {
     {"copy-path", "Copy file path", "Ctrl+C"},
     {"copy-file", "Copy file", "Ctrl+Shift+C"},
     {"copy-image", "Copy image", "Ctrl+Alt+C"},
-    {"select-all", "Select all items in grid", "Ctrl+A"},
+    {"select-all", "Select all items in grid", ""},
     {"clear-selection", "Clear grid selection", "Ctrl+D"},
     {"invert-selection", "Invert grid selection", "Ctrl+I"},
     {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
