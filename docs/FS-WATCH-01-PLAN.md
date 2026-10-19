@@ -135,3 +135,17 @@ for required native gates. Production platform adapter/public API remain unchang
 Independent Claude64f0af0 assessed the proposal; implemented code still requires
 review and full checks. Do not alter directory_model's250ms oracle or add arbitrary
 drains. This does not approve the pending FS-WATCH implementation.
+
+## Linked-scope clarification after independent FS review
+
+Lead permits a private worker-only directoryProbe helper in fs_revision.hpp.
+For a linked/junction scope directory, resolve the target once per observation
+and probe that directory for membership revision. Keep requested alias spellings
+in rows, callbacks and watch registrations; never rewrite the user's address.
+Capture the link entry revision too and reject completeness if it or the target
+revision changes across enumeration. Ordinary entries still use no-follow probes:
+links/hard-link ambiguity cannot establish an asset or alias-directory rename.
+Apply the same scope probing in model listings, without any filesystem work on
+the GUI thread, recursion or extra watch handles. Test generated POSIX directory
+symlinks and Windows junctions, target-file rename/selection and unchanged bytes.
+This adds no public header, user setting, original-media write or cloud access.

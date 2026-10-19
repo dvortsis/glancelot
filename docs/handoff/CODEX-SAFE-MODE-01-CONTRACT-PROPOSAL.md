@@ -134,3 +134,65 @@ Before promotion: freeze exact shared API, known-section schema and startup flag
 combinations against current main; do not reduce the packet to --reset-settings or
 an export wrapper. Required Windows build.ps1 -Test and full Docker, independent
 cross-lane review, serial integration and integrated-commit checks remain required.
+
+## Checked transaction proposal after inspecting the current writer
+
+Planning refinement only; no declarations or implementation are frozen here.
+Current src/app/settings_file.cpp updateSettings takes the lock, parses primary,
+may substitute a valid .bak into root, calls a void editor, then writes backup or
+damaged evidence before replacing primary. A recovery editor must see the raw
+primary and backup states before that substitution, and must be able to veto
+before any evidence or backup mutation. readSettings cannot provide this because
+it is lock-free and returns a recovered object rather than the raw pair.
+
+Propose one internal locked transaction pipeline reused by existing updateSettings
+and the new recovery APIs; do not let a callback recursively call the old writer.
+The raw snapshot is a bounded value containing, for primary and backup, explicit
+presence, exact bytes, SHA256 and parse classification. Missing is distinct from
+zero-length/corrupt. Its revision hashes a versioned, length-delimited encoding
+of both presence flags and both raw member hashes; equal parsed JSON is not an
+equal revision. Read errors and oversized members cannot produce a usable plan.
+
+The checked editor receives the immutable raw snapshot plus the selected logical
+base and returns a typed decision: Commit, NoChange, Conflict or Cancelled, with
+one bounded replacement object for Commit. This callback is private/synchronous,
+worker-only, bounded and cannot start UI or traverse arbitrary filesystem paths.
+Conflict/Cancelled/NoChange do not write primary, .bak or .damaged. Existing void
+editors adapt to Commit through the same pipeline and retain current behavior.
+NoChange returns explicitly without reserializing or claiming a write occurred.
+
+Recovery Commit requires the expected raw revision and independently verified
+sealed backup revision; it rejects a stale plan under the settings lock before
+creating a preimage. Revalidate package member identity/hash and copy its bounded
+bytes before applying; do not keep a pointer into a mutable preview object or
+re-open arbitrary manifest paths at commit. A cancellation token is checked
+before preimage publication and immediately before primary replacement; after
+replacement, return Committed even if cancellation races completion.
+
+Create a process-owned exclusive preimage directory while holding the same lock,
+with exact raw primary/backup members and a sealed manifest. Never replace an
+existing directory or infer exclusivity from a prior exists() check. Failure to
+seal or verify this preimage aborts primary mutation. Failure after a sealed
+preimage but before primary replacement can leave an inert recoverable preimage;
+report its location and keep the primary unchanged. Normal .bak/.damaged writes
+remain governed by the existing writer and cannot overwrite the unique preimage.
+Atomicity is the primary replacement, not a promise of multi-file atomic rename.
+No cross-process lock protects noncooperating tools; bound/read/hash and reject
+changed input, and state this concurrency limitation in verification.
+
+Expose recovery-specific result codes without making callers infer success from
+an ordinary SettingsStatus::Ok: NoChange, Committed, Conflict, Cancelled,
+Unsupported, Corrupt, Busy, Unreadable and WriteFailed. Keep existing enum values
+and writer call sites compatible. Freeze whether the public shared extension is
+a small checked callback or a fixed recovery transaction before coding; prefer
+the smallest API that preserves raw comparison and checked commit semantics.
+
+Required fault-stage tests cover veto before any backup write, primary missing
+versus empty, byte-only formatting changes, primary stable/backup changed,
+concurrent new preference, destination collision, preimage seal failure,
+post-preimage/pre-primary failure, cancel before/after commit, future schema,
+and exact unknown-field/other-slot preservation. Kill tests assert old-or-new
+primary and a valid original/preimage; they do not establish physical durability.
+The full packet still includes safe startup, config diff, backup/restore and the
+crash-recovery restore engine; this transaction is a prerequisite, not a smaller
+replacement objective. UI-SETTINGS known-schema policy remains to be frozen.
