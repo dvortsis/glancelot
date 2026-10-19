@@ -1,6 +1,11 @@
 schema: 1
 project: glancelot
 integration_branch: main
+lanes: docs/AGENT-LANES-PLAN.md
+integration_lock:
+  holder: none
+  branch: none
+  started: none
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -25,7 +30,9 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: review
+    state: done
+    commit: 3e06e78
+    integrated_evidence: integrated 3e06e78 Windows scripts/build.ps1 -Test 11/11 (154.23s) and Linux docker build 11/11 (63.86s)
     branch: fix/folder-jump
     base_commit: 85a468e
     memory_action: act_mve823bx_51ecdb7a6932
@@ -184,6 +191,7 @@ tasks:
   - id: CANVAS-UI
     requirements: [PERF-01, UX-01, VIEW-01, VIEW-03, VIEW-04, IN-04]
     owner: canvas
+    owner_lane: codex
     state: integration
     evidence: Native GPU window screenshot and viewport tests pass; physical DPI/performance qualification remains
     depends: [BOOT-01]
@@ -195,6 +203,7 @@ tasks:
     state: integration
     evidence: Independent19-case acceptance passed; bounded queues cancellation and process cleanup repaired
     depends: [BOOT-01]
+    owner_lane: codex
     files: [src/worker, src/app, app]
     acceptance: Separate bounded JPEG/PNG decoder, stale-generation rejection, config persistence
   - id: VERIFY-01
@@ -341,8 +350,12 @@ tasks:
     milestone: M3
     priority: 9
     owner: lead
+    owner_lane: codex
     state: ready
     depends: [REVIEW-ALL-01]
+    branch: codex/platform-01
+    worktree: .worktrees/codex-platform-01
+    scope_addition: F080 reproducible packages and PERF-BUILD provenance basics; qualification scripts for CANVAS-UI/DECODE-01 physical gates
     outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
   - id: MONITOR-OUTPUT-01
@@ -360,6 +373,7 @@ tasks:
     milestone: M5
     priority: 7
     owner: lead
+    owner_lane: claude
     state: ready
     depends: [MONITOR-OUTPUT-01, UI-SETTINGS-01]
     outcome: Display picker, named presentation presets and independent output customization
@@ -370,6 +384,7 @@ tasks:
     milestone: M5
     priority: 7
     owner: reviewer
+    owner_lane: codex
     state: ready
     depends: [MONITOR-OUTPUT-01, MONITOR-CUSTOM-01]
     outcome: Independent Windows and Linux second-monitor qualification matrix
@@ -425,10 +440,68 @@ tasks:
     milestone: M3
     priority: 6
     owner: lead
+    owner_lane: claude
     state: ready
     depends: [REVIEW-ALL-01]
+    branch: claude/input-02
+    worktree: .worktrees/claude-input-02
+    plan: docs/INPUT-02-PLAN.md
+    scope_addition: F055 context menus with command-route parity
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
+  - id: PERF-MEASURE-01
+    requirements: [SYS-05, PERF-04, PERF-05]
+    milestone: M3
+    priority: 8
+    owner: lead
+    owner_lane: codex
+    state: ready
+    depends: [REVIEW-ALL-01]
+    branch: codex/perf-measure
+    worktree: .worktrees/codex-perf-measure
+    plan: docs/PERF-MEASURE-PLAN.md
+    outcome: Bounded timing spans, fixture manifest, result schema and baseline replay (PERFORMANCE-STRATEGY PERF-MEASURE)
+    acceptance: Spans have bounded memory and negligible measured overhead; cache hit/miss and cold/warm distinguished; monotonic clock semantics; replayable baseline report on generated fixtures; no telemetry or upload
+  - id: PATH-COMPLETE-01
+    requirements: [UX-13, IN-01]
+    milestone: M3
+    priority: 6
+    owner: lead
+    owner_lane: claude
+    state: ready
+    depends: [PATH-BAR-01]
+    outcome: Breadcrumbs plus cancellable path completion (F002)
+    acceptance: Jump to ancestors and siblings; completion only for the typed scope, cancellable off the GUI thread; clipboard, UNC, Unicode, keyboard and long paths keep exact text semantics
+  - id: VIEW-POLISH-01
+    requirements: [VIEW-02, VIEW-03, VIEW-04]
+    milestone: M3
+    priority: 6
+    owner: lead
+    owner_lane: claude
+    state: ready
+    depends: [CANVAS-UI]
+    outcome: Quick loupe, zoom presets, navigator overview and zoom-lock polish (F037)
+    acceptance: Predictable zoom anchor; focus-loss and hold cancellation; physical 1:1 under fractional DPI is unverified without hardware
+  - id: FS-WATCH-01
+    requirements: [META-04, NAV-08, SYS-02]
+    milestone: M3
+    priority: 7
+    owner: lead
+    owner_lane: codex
+    state: ready
+    depends: [FILE-GRID-01]
+    outcome: Bounded file-change reconciliation and explicit refresh (F063)
+    acceptance: Replacement, rename, delete and watcher-overflow recovery; selected identities survive where possible; changed revisions invalidate caches; no watcher per delegate
+  - id: SAFE-MODE-01
+    requirements: [SYS-03, UX-12]
+    milestone: M3
+    priority: 6
+    owner: lead
+    owner_lane: codex
+    state: ready
+    depends: [WINDOW-RESUME-01]
+    outcome: Safe mode, configuration diff, settings backup/restore and crash-recovery restore engine (F064, F057 engine)
+    acceptance: Recover without deleting originals or unknown preferences; isolate bad layout or renderer overrides; preserve last-good state; restore lazily with explicit-open precedence; corrupted state and interrupted migration tests
   - id: FORMAT-02
     requirements: [FMT-02, FMT-03, FMT-06, PERF-03]
     milestone: M3

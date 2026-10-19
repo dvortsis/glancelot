@@ -20,6 +20,10 @@ enum class PixelFormat { Rgba8, Rgba16Float };
 struct PixelBufferDescriptor { int width{}, height{}, stride{}; PixelFormat format{PixelFormat::Rgba8}; std::string colorSpace{"sRGB"}; std::uint64_t generation{}; };
 struct ViewportState { double physicalScale{1.0}, centerX{0.5}, centerY{0.5}; int quarterTurns{}; };
 struct DisplayCapabilities { std::string backend; double devicePixelRatio{1.0}; bool hdr{}, monitorProfileManaged{}; };
-struct Command { std::string id, label, defaultBinding; bool repeat{}; };
+// INPUT-02: scope is "global" | "workspace" | "canvas" | "grid" | "tree"; a hold command activates on press and restores
+// on release, focus loss, pointer cancel or image change. Defaults keep existing positional initializers valid.
+struct Command { std::string id, label, defaultBinding; bool repeat{};
+                 std::string scope{"global"};
+                 bool hold{}; };
 struct DecoderCapability { std::string format; bool still{}, animated{}, multiPage{}, preview{}, highPrecision{}; };
 }
