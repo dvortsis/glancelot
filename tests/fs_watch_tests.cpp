@@ -109,6 +109,34 @@ private slots:
         if(!identity.isEmpty())QCOMPARE(values.last().renamedImage,c);
         monitor.acknowledge(values.last());QVERIFY(monitor.stats().maxHandles<=3);
     }
+    void linkedScopeMonitorsTargetAndPreservesRenameSelection() {
+        QTemporaryDir root;QVERIFY(root.isValid());QVERIFY(QDir(root.path()).mkdir("target directory"));
+        const auto target=root.filePath("target directory"),alias=root.filePath("linked scope");
+        QVERIFY(png(target+"/a.png",Qt::red));
+#ifdef Q_OS_WIN
+        QProcess junction;junction.start("cmd.exe",{"/d","/c","mklink","/J",alias,target});
+        QVERIFY(junction.waitForStarted(2000)&&junction.waitForFinished(5000));
+        QVERIFY2(junction.exitCode()==0,junction.readAllStandardError().constData());
+#else
+        std::error_code error;std::filesystem::create_directory_symlink(fs_watch::native(target),fs_watch::native(alias),error);
+        QVERIFY2(!error,error.message().c_str());
+#endif
+        QVERIFY(fs_watch::probe(fs_watch::native(alias)).link);
+        QVERIFY(fs_watch::snapshot(alias).complete);
+        const auto a=alias+"/a.png",b=alias+"/b.png";
+        const auto identity=fs_watch::probe(fs_watch::native(a)).identity();const auto original=hash(a);
+        QVector<fs_watch::Observation> values;
+        fs_watch::Monitor monitor(this,[&](auto value){values.push_back(std::move(value));});
+        monitor.setScope(alias,a);
+        QTRY_VERIFY_WITH_TIMEOUT(!values.isEmpty()&&values.last().after->complete,5000);
+        DirectoryEntryModel grid;grid.setDirectory(alias);grid.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==1,5000);grid.select(grid.rowOf(a));
+        QVERIFY(QFile::rename(a,b));monitor.refresh();grid.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(values.last().after->entries.contains(fs_watch::key(b)),5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(b)>=0,5000);
+        if(!identity.isEmpty()) {QCOMPARE(values.last().renamedImage,b);QCOMPARE(grid.selectedPaths(),QStringList{b});}
+        QCOMPARE(hash(b),original);QVERIFY(monitor.stats().maxHandles<=3);
+    }
     void establishedWatchLossAndRearm() {
         QTemporaryDir dir;QVERIFY(dir.isValid());
         auto gate=std::make_shared<std::atomic_bool>(true);
