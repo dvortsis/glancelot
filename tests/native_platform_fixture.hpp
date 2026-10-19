@@ -23,6 +23,7 @@
 #include <QUuid>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 
 namespace native_fixture {
 inline QString modulePath(HMODULE module=nullptr) {
@@ -46,7 +47,26 @@ inline QString canonical(const QString& path) {return QFileInfo(path).canonicalF
 inline bool samePath(const QString& a,const QString& b) {
     return !canonical(a).isEmpty() && canonical(a).compare(canonical(b),Qt::CaseInsensitive)==0;
 }
-inline QString qtDirectory() {return QFileInfo(modulePath(GetModuleHandleW(L"Qt6Core.dll"))).absolutePath();}
+inline QString qtDirectory() {
+    HMODULE core=GetModuleHandleW(L"Qt6Core.dll");
+    if(!core) core=GetModuleHandleW(L"Qt6Cored.dll");
+    return core?QFileInfo(modulePath(core)).absolutePath():QString();
+}
+inline QString shortDirectory(const QString& path) {
+    wchar_t buffer[32768]{};
+    const DWORD n=GetShortPathNameW(reinterpret_cast<LPCWSTR>(path.utf16()),buffer,32768);
+    if(!n || n>=32768) return {};
+    const QString result=QString::fromWCharArray(buffer,int(n));
+    for(const QChar c:result) if(c.unicode()>127) return {};
+    HANDLE original=CreateFileW(reinterpret_cast<LPCWSTR>(path.utf16()),0,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+    HANDLE alias=CreateFileW(buffer,0,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+    BY_HANDLE_FILE_INFORMATION a{},b{};
+    const bool same=original!=INVALID_HANDLE_VALUE && alias!=INVALID_HANDLE_VALUE && GetFileInformationByHandle(original,&a) && GetFileInformationByHandle(alias,&b) && a.dwVolumeSerialNumber==b.dwVolumeSerialNumber && a.nFileIndexHigh==b.nFileIndexHigh && a.nFileIndexLow==b.nFileIndexLow;
+    if(original!=INVALID_HANDLE_VALUE) CloseHandle(original);
+    if(alias!=INVALID_HANDLE_VALUE) CloseHandle(alias);
+    return same?result:QString();
+}
+inline int failure(int code,const char* reason) {std::fprintf(stderr,"native fixture %d: %s (Win32=%lu)\n",code,reason,GetLastError());return code;}
 struct ShellCapture {int calls{};QString folder;QStringList children;UINT count{};DWORD flags{};HRESULT result=S_OK;};
 ShellCapture& shellCapture();
 HRESULT WINAPI captureSelection(PCIDLIST_ABSOLUTE folder,UINT count,PCUITEMID_CHILD_ARRAY children,DWORD flags);
@@ -69,7 +89,7 @@ public:
            !samePath(qtDirectory(),environment(L"GLANCELOT_NATIVE_QT_DIR"))) {error="private runner/Qt identity mismatch";return false;}
         for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"})
             if(hash(QDir(sandbox).filePath(name))!=environment(L"GLANCELOT_NATIVE_STUB_SHA")) {error="private helper identity mismatch";return false;}
-        if(QDir::currentPath()!=sandbox || environment(L"PATH")!=sandbox+";"+qtDirectory()) {error="private CWD/PATH mismatch";return false;}
+        if(QDir::currentPath()!=sandbox || environment(L"PATH")!=shortDirectory(sandbox)+";"+qtDirectory()) {error="private CWD/PATH mismatch";return false;}
         return true;
     }
     bool begin() {
@@ -92,8 +112,9 @@ public:
         if(process) {
             wchar_t path[32768]{};DWORD length=32768;
             const bool own=QueryFullProcessImageNameW(process,0,path,&length) && samePath(QString::fromWCharArray(path,int(length)),module);
-            const DWORD wait=own?WaitForSingleObject(process,1500):WAIT_FAILED;CloseHandle(process);
-            if(!own || wait!=WAIT_OBJECT_0) {error="owned helper did not exit or pid identity changed";return false;}
+            const DWORD wait=own?WaitForSingleObject(process,1500):WAIT_FAILED;DWORD exitCode=STILL_ACTIVE;
+            const bool exited=GetExitCodeProcess(process,&exitCode) && exitCode==0;CloseHandle(process);
+            if(!own || wait!=WAIT_OBJECT_0 || !exited) {error="owned helper did not exit or pid identity changed";return false;}
         } else if(GetLastError()!=ERROR_INVALID_PARAMETER) {error="cannot verify helper termination";return false;}
         return QFile::remove(capture);
     }
@@ -102,13 +123,15 @@ public:
 #ifdef GLANCELOT_TEST_LAUNCH_STUB
 inline int bootstrap(const QStringList& originalArguments) {
     QTemporaryDir temp(QDir::tempPath()+QString::fromUtf8("/glancelot native \U0001f9ea space-XXXXXX"));
-    if(!temp.isValid()) return 101;
+    if(!temp.isValid()) return failure(101,"temporary directory");
     const QString sandbox=canonical(temp.path()), runner=QDir(sandbox).filePath("platform_integration_tests.exe");
     const QString stub=QString::fromUtf8(GLANCELOT_TEST_LAUNCH_STUB);
-    if(hash(stub).isEmpty() || !QFile::copy(QCoreApplication::applicationFilePath(),runner) || !QDir(sandbox).mkdir("captures")) return 102;
-    for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"}) if(!QFile::copy(stub,QDir(sandbox).filePath(name))) return 103;
+    if(hash(stub).isEmpty() || !QFile::copy(QCoreApplication::applicationFilePath(),runner) || !QDir(sandbox).mkdir("captures")) return failure(102,"copy runner or capture directory");
+    for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"}) if(!QFile::copy(stub,QDir(sandbox).filePath(name))) return failure(103,"copy helper");
     QProcessEnvironment env=QProcessEnvironment::systemEnvironment();
-    env.insert("PATH",sandbox+";"+qtDirectory());env.insert("GLANCELOT_NATIVE_SANDBOX",sandbox);
+    const QString searchDirectory=shortDirectory(sandbox);
+    if(searchDirectory.isEmpty() || qtDirectory().isEmpty()) return failure(110,"short directory identity or loaded Qt module missing");
+    env.insert("PATH",searchDirectory+";"+qtDirectory());env.insert("GLANCELOT_NATIVE_SANDBOX",sandbox);
     env.insert("GLANCELOT_NATIVE_QT_DIR",qtDirectory());env.insert("GLANCELOT_NATIVE_RUNNER_SHA",hash(runner));
     env.insert("GLANCELOT_NATIVE_STUB_SHA",hash(stub));env.insert("GLANCELOT_NATIVE_TOKEN",QUuid::createUuid().toString());
     // Resolve relative QtTest log destinations before changing the child's working directory.
@@ -117,13 +140,13 @@ inline int bootstrap(const QStringList& originalArguments) {
         const qsizetype comma=args[i].lastIndexOf(','); const QString file=comma>=0?args[i].left(comma):args[i];
         if(QDir::isRelativePath(file)) args[i]=QFileInfo(file).absoluteFilePath()+(comma>=0?args[i].mid(comma):QString());
     }
-    HANDLE job=CreateJobObjectW(nullptr,nullptr); if(!job) return 104;
+    HANDLE job=CreateJobObjectW(nullptr,nullptr); if(!job) return failure(104,"create owned job");
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit{};limit.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    if(!SetInformationJobObject(job,JobObjectExtendedLimitInformation,&limit,sizeof(limit))) {CloseHandle(job);return 105;}
+    if(!SetInformationJobObject(job,JobObjectExtendedLimitInformation,&limit,sizeof(limit))) {CloseHandle(job);return failure(105,"configure owned job");}
     QProcess child;child.setProcessEnvironment(env);child.setWorkingDirectory(sandbox);child.setProcessChannelMode(QProcess::ForwardedChannels);
     child.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments* arg){arg->flags|=CREATE_SUSPENDED|CREATE_NO_WINDOW;});
     child.start(runner,args.mid(1));
-    if(!child.waitForStarted(2000)) {CloseHandle(job);return 106;}
+    if(!child.waitForStarted(2000)) {CloseHandle(job);return failure(106,"start copied runner");}
     HANDLE process=OpenProcess(PROCESS_SET_QUOTA|PROCESS_TERMINATE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,DWORD(child.processId()));
     bool assigned=process && AssignProcessToJobObject(job,process);if(process) CloseHandle(process);
     bool resumed=false;
@@ -136,17 +159,19 @@ inline int bootstrap(const QStringList& originalArguments) {
             }} while(Thread32Next(snapshot,&entry));CloseHandle(snapshot);
         }
     }
-    if(!assigned || !resumed) {child.kill();child.waitForFinished(1000);CloseHandle(job);return 107;}
+    if(!assigned || !resumed) {child.kill();child.waitForFinished(1000);CloseHandle(job);return failure(107,"assign or resume owned runner");}
     const bool finished=child.waitForFinished(22000);
     if(!finished) {TerminateJobObject(job,108);child.waitForFinished(1000);}
     int result=finished && child.exitStatus()==QProcess::NormalExit?child.exitCode():108;
     JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};
+    QElapsedTimer settle;settle.start();
+    while(QueryInformationJobObject(job,JobObjectBasicAccountingInformation,&accounting,sizeof(accounting),nullptr) && accounting.ActiveProcesses && settle.elapsed()<1000) QThread::msleep(5);
     if(!QueryInformationJobObject(job,JobObjectBasicAccountingInformation,&accounting,sizeof(accounting),nullptr) || accounting.ActiveProcesses!=0) {
         if(result==0) result=109; // An owned helper outlived the test child: never silently accept a leak.
         TerminateJobObject(job,109);
     }
     // Closing this handle also kills any owned helper that outlived its request, including abnormal child exits.
-    CloseHandle(job);return result;
+    CloseHandle(job);if(result) failure(result,"copied runner failed, timed out or retained owned processes");return result;
 }
 #endif
 } // namespace native_fixture
