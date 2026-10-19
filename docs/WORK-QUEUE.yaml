@@ -149,6 +149,19 @@ tasks:
     outcome: Reveal in system file manager and open terminal at current location safely
     acceptance: Discoverable commands for Reveal in file manager (Ctrl+Alt+R) and Open terminal (Ctrl+Alt+T); argument arrays without shell interpolation; handle Unicode and spaces; highlight file or open folder; graceful fallback and user feedback if unavailable
     verification: Non-existent paths, root/drive paths, Unicode paths, spaces, Windows Terminal vs PowerShell fallback, detached process safety, text fields retain shortcut precedence
+  - id: CLIPBOARD-OPS-01
+    requirements: [META-09, IN-01]
+    feature: F067
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: implementing
+    branch: agent/clipboard-ops
+    worktree: .worktrees/clipboard-ops
+    build: build-clipboard-ops
+    outcome: Clipboard operations for copying file path, native file objects, and decoded bitmap
+    acceptance: Discoverable commands for Copy file path (Ctrl+C), Copy file (Ctrl+Shift+C), and Copy image (Ctrl+Alt+C); text fields retain Ctrl+C precedence; single and multiselection support; valid QMimeData URLs for native shell pasting; full bitmap copying without source mutation; user status feedback
+    verification: Text editing precedence, empty selection, no opened image, multiple selection paths, clipboard format inspection (text/plain, text/uri-list, image/png), modal dialog suppression
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3

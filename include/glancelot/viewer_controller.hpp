@@ -68,6 +68,9 @@ public:
     // Exact asynchronous address visit; empty directories are valid and errors retain the location.
     Q_INVOKABLE void navigateDirectory(const QString& folder);
     Q_INVOKABLE void copyDirectory() const;
+    Q_INVOKABLE bool copyFilePath(const QStringList& paths = QStringList());
+    Q_INVOKABLE bool copyFileUrls(const QStringList& paths = QStringList());
+    Q_INVOKABLE bool copyImageBitmap();
     Q_INVOKABLE void cancelDirectoryNavigation();
     Q_INVOKABLE bool revealInFileManager(const QString& path = QString());
     Q_INVOKABLE bool openTerminal(const QString& directory = QString());
