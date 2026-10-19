@@ -88,6 +88,14 @@ inline Revision probe(const std::filesystem::path& path) {
 #endif
     return result;
 }
+// Scope membership belongs to the resolved directory, while callers retain the
+// requested alias spelling. Ordinary entries still use the no-follow probe.
+inline Revision directoryProbe(const std::filesystem::path& path,Revision* source=nullptr) {
+    const auto entry=probe(path);if(source)*source=entry;
+    if(!entry.link)return entry;
+    std::error_code error;const auto target=std::filesystem::canonical(path,error);
+    return error?Revision{}:probe(target);
+}
 struct Entry { QString path; Revision revision; bool operator==(const Entry&) const = default; };
 inline constexpr std::size_t IdentityByteBudget=16*1024*1024;
 inline std::size_t entryBytes(const QString& path) {
@@ -106,7 +114,7 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
                          std::size_t byteLimit=IdentityByteBudget) {
     Snapshot result;result.directory=directory;
     if(stop.stop_requested()){result.cancelled=true;return result;}
-    const auto path=native(directory);result.revision=probe(path);
+    const auto path=native(directory);Revision sourceRevision;result.revision=directoryProbe(path,&sourceRevision);
     std::error_code error;
     std::filesystem::directory_iterator it(path,error),end;
     if(error) {result.missing=error==std::errc::no_such_file_or_directory;return result;}
@@ -124,8 +132,9 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
     }
     // A membership change during enumeration makes rename/deletion inference
     // unsafe even when every individual probe succeeded.
-    const auto finalRevision=probe(path);
-    result.complete=readable&&finalRevision==result.revision&&!error&&!stop.stop_requested();
+    const auto finalRevision=directoryProbe(path);
+    const bool stableAlias=!sourceRevision.link||sourceRevision==probe(path);
+    result.complete=readable&&stableAlias&&finalRevision==result.revision&&!error&&!stop.stop_requested();
     result.cancelled=stop.stop_requested();
     return result;
 }

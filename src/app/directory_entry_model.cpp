@@ -82,7 +82,8 @@ struct Listing {
 Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, bool hidden, std::stop_token cancel, std::size_t limit,
                      const fs_watch::Snapshot& prior) {
     Listing result;
-    const auto directoryRevision=fs_watch::probe(nativePath(directory));
+    fs_watch::Revision directoryEntryRevision;
+    const auto directoryRevision=fs_watch::directoryProbe(nativePath(directory),&directoryEntryRevision);
     auto listing = glancelot::listDirectory(nativePath(directory), sort, hidden, cancel, limit);
     result.accessible = listing.accessible; result.cancelled = listing.cancelled; result.truncated = listing.truncated;
     if (listing.cancelled || cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
@@ -115,7 +116,8 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
         result.rows.push_back(std::move(row));
     }
     result.identities.complete=result.identities.complete&&
-        fs_watch::probe(nativePath(directory))==directoryRevision;
+        fs_watch::directoryProbe(nativePath(directory))==directoryRevision&&
+        (!directoryEntryRevision.link||fs_watch::probe(nativePath(directory))==directoryEntryRevision);
     const auto directoryIdentity=result.identities.revision.identity();
     result.renamedDirectory=keyFor(prior.directory)!=keyFor(directory)&&!directoryIdentity.isEmpty()&&
         directoryIdentity==prior.revision.identity();
