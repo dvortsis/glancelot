@@ -9,6 +9,7 @@
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
 #include "glancelot/favorites_model.hpp"
+#include "glancelot/folder_history.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
 #include "file_operation_wiring.hpp"
@@ -118,6 +119,16 @@ int main(int argc,char** argv) {
     FavoritesModel favorites;
     favorites.setCurrentDirectory(viewer.directory());
     QObject::connect(&viewer,&ViewerController::stateChanged,&favorites,[&]{favorites.setCurrentDirectory(viewer.directory());});
+    FolderHistory folderHistory;
+    if (!viewer.directory().isEmpty()) folderHistory.recordVisit(viewer.directory(), viewer.filePath());
+    QObject::connect(&viewer, &ViewerController::stateChanged, &folderHistory, [&] {
+        if (!viewer.directory().isEmpty()) folderHistory.recordVisit(viewer.directory(), viewer.filePath());
+    });
+    QObject::connect(&folderHistory, &FolderHistory::navigationRequested, &viewer, [&](const QString& directory, const QString& filePath, const QString& selectedPath, int scroll) {
+        Q_UNUSED(selectedPath); Q_UNUSED(scroll);
+        if (!filePath.isEmpty() && QFileInfo::exists(filePath)) viewer.open(filePath);
+        else if (!directory.isEmpty()) viewer.navigateDirectory(directory);
+    });
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
@@ -125,6 +136,7 @@ int main(int argc,char** argv) {
     engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
     engine.rootContext()->setContextProperty("folderTree",&folderTree);
     engine.rootContext()->setContextProperty("favoritesModel",&favorites);
+    engine.rootContext()->setContextProperty("folderHistory",&folderHistory);
     engine.rootContext()->setContextProperty("fileGrid",&fileGrid);
     engine.rootContext()->setContextProperty("theme",&theme);
     engine.rootContext()->setContextProperty("fileOperations",&fileOperations);
