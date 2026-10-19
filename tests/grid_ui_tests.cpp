@@ -1311,7 +1311,7 @@ private slots:
                     QMetaObject::invokeMethod(dialog, "close");
                     QTRY_VERIFY(!h.window->property("modalOpen").toBool());
                 }
-                QCOMPARE(choices, 7); // appearance mode; fit/wheel; file order/folder boundary
+                QCOMPARE(choices, 8); // appearance mode; fit/wheel; file order/folder boundary; F049 layout preset
             }
         }
         QVERIFY(original.open(QIODevice::ReadOnly)); QCOMPARE(original.readAll(), bytes);
