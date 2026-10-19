@@ -441,7 +441,7 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: ready
+    state: review
     depends: [REVIEW-ALL-01]
     branch: claude/input-02
     worktree: .worktrees/claude-input-02
