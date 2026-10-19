@@ -90,10 +90,11 @@ inline Revision probe(const std::filesystem::path& path) {
 }
 // Scope membership belongs to the resolved directory, while callers retain the
 // requested alias spelling. Ordinary entries still use the no-follow probe.
-inline Revision directoryProbe(const std::filesystem::path& path,Revision* source=nullptr) {
+inline Revision directoryProbe(const std::filesystem::path& path,Revision* source=nullptr,
+                               std::filesystem::path* resolved=nullptr) {
     const auto entry=probe(path);if(source)*source=entry;
-    if(!entry.link)return entry;
     std::error_code error;const auto target=std::filesystem::canonical(path,error);
+    if(resolved)*resolved=error?std::filesystem::path{}:target;
     return error?Revision{}:probe(target);
 }
 struct Entry { QString path; Revision revision; bool operator==(const Entry&) const = default; };
@@ -114,9 +115,10 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
                          std::size_t byteLimit=IdentityByteBudget) {
     Snapshot result;result.directory=directory;
     if(stop.stop_requested()){result.cancelled=true;return result;}
-    const auto path=native(directory);Revision sourceRevision;result.revision=directoryProbe(path,&sourceRevision);
+    const auto path=native(directory);Revision sourceRevision;std::filesystem::path resolved;
+    result.revision=directoryProbe(path,&sourceRevision,&resolved);
     std::error_code error;
-    std::filesystem::directory_iterator it(path,error),end;
+    std::filesystem::directory_iterator it(resolved.empty()?path:resolved,error),end;
     if(error) {result.missing=error==std::errc::no_such_file_or_directory;return result;}
     bool readable=result.revision.known&&result.revision.directory&&!result.revision.link;
     std::size_t count=0,bytes=0;
@@ -124,7 +126,7 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
         if(error)return result;
         if(stop.stop_requested()){result.cancelled=true;return result;}
         if(count++==limit)return result;
-        const auto name=display(it->path());const auto cost=entryBytes(name);
+        const auto name=QDir(directory).filePath(display(it->path().filename()));const auto cost=entryBytes(name);
         if(cost>byteLimit-bytes)return result;
         bytes+=cost;const auto revision=probe(it->path());
         readable=readable&&revision.known;
@@ -133,7 +135,7 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
     // A membership change during enumeration makes rename/deletion inference
     // unsafe even when every individual probe succeeded.
     const auto finalRevision=directoryProbe(path);
-    const bool stableAlias=!sourceRevision.link||sourceRevision==probe(path);
+    const bool stableAlias=sourceRevision==probe(path);
     result.complete=readable&&stableAlias&&finalRevision==result.revision&&!error&&!stop.stop_requested();
     result.cancelled=stop.stop_requested();
     return result;
