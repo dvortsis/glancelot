@@ -118,11 +118,13 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: review
+    state: done
     depends: [DELETE-01]
     branch: agent/delete-keys
     worktree: .worktrees/delete-keys
     build: build-delete-keys
+    commit: c0b193e
+    evidence: docs/verification/DELETE-KEYS-01.md; independent review approved; Windows build.ps1 -Test 13/13 (160.10s)
     outcome: Separate remappable shortcuts for deleting the current file and current folder
     acceptance: Discoverable commands for Delete selection, Delete current file and Delete current folder; current file means the opened preview image, current folder means the displayed browsing directory; proposed defaults are Delete for focused grid/tree selection or canvas file, Ctrl+Delete for current file and Ctrl+Shift+Delete for current folder; check conflicts before binding; show exact targets and reuse deletion confirmation/service
     verification: Text editing, modal dialogs, grid versus preview focus, empty selection, no opened image, focused tree folder versus browsing directory, held-key repeats and rapid navigation; captured targets cannot change while confirmation is open
