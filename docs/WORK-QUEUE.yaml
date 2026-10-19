@@ -3,9 +3,9 @@ project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
-  holder: gemini
-  branch: agent/grid-search
-  started: '2026-10-18T21:46:00-06:00'
+  holder: none
+  branch: none
+  started: none
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -170,10 +170,12 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: integration
+    state: done
     branch: agent/grid-search
     worktree: .worktrees/grid-search
     build: build-grid-search
+    commit: bf2bbcb
+    evidence: docs/verification/GRID-SEARCH-01.md; independent review approved; Windows build.ps1 -Test 15/15 (333.56s); Linux Docker Qt 15/15 (114.72s)
     outcome: Instant current-folder filename search with type-to-select and match navigation
     acceptance: Typing alphanumeric characters in grid starts instant search; transient search chip shows query and match count; F3/Shift+F3 and Up/Down navigate matches; Enter activates; Escape restores previous cursor; case-insensitive substring matching; empty results feedback
     verification: Substring matching, case insensitivity, boundary cycling, empty results, special characters, Escape restore, timeout auto-dismiss, keyboard navigation parity
