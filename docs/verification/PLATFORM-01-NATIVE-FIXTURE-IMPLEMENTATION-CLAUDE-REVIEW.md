@@ -140,3 +140,40 @@ This is not a runtime approval and not a gate pass.
 1. Independent runtime run of `platform_integration` (bounded CTest plus its log) by a reviewer in a free native slot, with an owned-job and pid leak check. Do not use global process counts.
 2. Author decision or fix on R1–R3, and documentation of R4 and R5.
 3. Full native and Docker gates on the integrated commit under the project's integration rules. The strict 250 ms `directory_model` oracle and the 30 s deadline stay unchanged and unrelaxed.
+
+---
+
+# Independent static + runtime verification of `b4fa53e`
+
+## Verdict: APPROVED for the native platform launcher fixture (`platform_integration` only)
+This is not approval of the full Windows gate, Docker, the integrated commit, FS-WATCH or INPUT UI. The strict 250 ms `directory_model` oracle and the full native timing gate remain failed/unresolved.
+
+## Static (diff `6b7109e..b4fa53e`: `native_fixture.hpp`, `platform_integration_tests.cpp` only)
+- **R1:** `findExecutable("wt.exe")` is now computed once. `QFAIL` builds the message only on failure, and the `PATH` dumps are gone.
+- **R2:** the default log is read up to 256 KiB, CRLF is normalized, and the prefix is replayed. If the log is larger, a truncation note goes to stderr and a passing run becomes exit 111. A missing log is 111 only when the result was 0. Failing runs keep their (prefix of the) diagnostics.
+  - Residual: the prefix, not the tail, is kept. This is acceptable.
+- **R3:** the final line is now `copied runner exit/result N` with no stale `GetLastError`. The 110 message names the 8.3 alias precondition.
+- **R4/R5:** accepted as described by the author. For R4, when the helper process object is already gone, completion is inferred from the committed capture plus an empty job, and no claim is made that every helper exit code was read.
+- No change to CMake, the adapter, headers or the stub.
+
+## Runtime (my own worktree and build directory)
+- **Environment:** commit `b4fa53ef6d772778f1c110fce74af9715f658f87`. Slot check: I polled the process list for cmake/ninja/cl/link/ctest/msbuild until none remained (about 30 s after the first look; another lane's cmake, ninja, cl and ctest had been present). Nothing was stopped. Qt 6.8.3 MSVC2022 project-local, VS 2022 BuildTools.
+- **Build:** I configured and built only `platform_integration_tests` and `platform_launcher_stub` in `build-claude-review-native-fixture` (9/9 steps). My ad-hoc VsDevCmd step printed "'vswhere.exe' is not recognized" because I did not add its directory to `PATH`. The build still found MSVC and succeeded. This does not affect the result.
+- **Production adapter:** `git diff ae8bd92 HEAD -- src include` is empty.
+  - `src/app/platform_integration.cpp` SHA-256: `AFF462DAD30C599138E54653FBD3FFEC97A9052ACF5AE5BD31B90819FA7861A9`
+  - `include/glancelot/platform_integration.hpp` SHA-256: `AE9D837838ABDA224F3BDB86E424F5DAB21B5A3F2958DB1935AEE3165DC05EA1`
+- **Helper PE:** `platform_launcher_stub.exe` has PE subsystem 2 (GUI). Its SHA-256 starts with `ED361D04B1BDCC63`. `platform_integration_tests.exe` has subsystem 3 (console) and starts with `2266444D77C5A5DC`.
+- **Test run:** `PATH` was set to the project Qt `bin`. I ran `ctest --test-dir build-claude-review-native-fixture -R '^platform_integration$' --output-on-failure -V --timeout 30`. The result was 1/1 passed, 0.79 s in CTest, 1.07 s wall clock.
+  - The verbose output shows the parent-replayed log. All 9 slots passed: `initTestCase`, `invalidPathsNeverLaunch`, `revealDirectoryCapturesNativeArgument`, `revealFileNativeSuccessBalancesNewSta`, `revealFileNativeSuccessBalancesExistingSta`, `revealFileNativeFailureFallsBackToOwnedExplorer`, `terminalDirectoryAndFileParentCaptureWt`, `terminalPowerShellLiteralFallbackAndControlledFailure`, `cleanupTestCase`.
+  - Totals: 9 passed, 0 failed, 0 skipped, 574 ms. The 30 s timeout is unchanged and CTest exit was 0.
+- **Ownership checks after the run:**
+  - No process has an image path containing `glancelot native` (the private sandbox).
+  - No `glancelot native*` directory is left in `%TEMP%`.
+  - The bootstrap job-accounting poll returns 109 if any owned process is left. The exit was 0, so the job was empty.
+  - I did not attribute any other `explorer.exe` or global process to this run. I closed no windows, stopped no processes and read no inventory.
+
+## Limits
+- One run only; the fixture runs in under a second here. Flake rate is unmeasured, and I ran no repeat loop.
+- A captured launch request does not prove a visible Explorer selection or terminal.
+- Explorer-missing coverage remains the invalid-executable substitute. Parent-abort inert `%TEMP%` files are accepted.
+- Remaining before done: full Windows `scripts/build.ps1 -Test` and the Docker gate on the integrated commit, with the 250 ms oracle unchanged. The independent responsiveness noise-floor question remains open.
