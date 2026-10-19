@@ -28,6 +28,15 @@ struct MonitorOptions {
     std::function<Snapshot(const QString&,std::stop_token)> read=[](const QString& path,std::stop_token stop){return snapshot(path,stop);};
 };
 struct MonitorStats {quint64 snapshots{},publications{};int maxHandles{};};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+// Construction overrides are copied by the controller. No viewer/runtime API.
+struct ControllerTestHooks {
+    MonitorOptions options;
+    std::function<bool()> deferReconciliation;
+    std::function<void(const Observation&)> pending;
+};
+inline thread_local const ControllerTestHooks* controllerTestHooks{};
+#endif
 // One worker, one latest scope/request and one coalesced publication. No filesystem
 // calls on the GUI thread, even registration and watch rearming. Timed fallback is
 // necessary because QFileSystemWatcher cannot report every native queue overflow.
@@ -66,6 +75,8 @@ class Monitor {
             QObject context;QFileSystemWatcher watcher;QTimer poll;
             QElapsedTimer clock;clock.start();
             Request scope;
+            QString registeredDirectoryIdentity,registeredParentIdentity;
+            Revision registeredDirectoryEntry,registeredParentEntry;
             bool dirty{},fileEvent{},forced{},baselinePending{};qint64 firstDirty{},lastDirty{},lastProbe=-2000,retryDelay=2000;
             quint64 revision{};
             const auto mark=[&](bool file) {
@@ -116,10 +127,32 @@ class Monitor {
                 const bool nativeEnabled=state->options.registerNative&&
                     (!state->options.registrationGate||state->options.registrationGate->load());
                 auto registered=watcher.files()+watcher.directories();
+                // A retained alias spelling can now denote another native object.
+                // Rebind its watch (and the image below it) before claiming coverage.
+                const auto directoryIdentity=current->revision.identity();
+                const auto parentIdentity=currentParent->revision.identity();
+                const bool directoryRebound=registered.contains(scope.directory)&&
+                    (directoryIdentity!=registeredDirectoryIdentity||
+                     (current->entryRevision.link&&current->entryRevision!=registeredDirectoryEntry));
+                const bool parentRebound=registered.contains(parentPath)&&
+                    (parentIdentity!=registeredParentIdentity||
+                     (currentParent->entryRevision.link&&currentParent->entryRevision!=registeredParentEntry));
+                if(directoryRebound) {
+                    watcher.removePath(scope.directory);
+                    if(registered.contains(scope.image))watcher.removePath(scope.image);
+                }
+                if(parentRebound)watcher.removePath(parentPath);
+                registered=watcher.files()+watcher.directories();
                 for(const auto& path:registered)if(!nativeEnabled||!wanted.contains(path))watcher.removePath(path);
                 registered=watcher.files()+watcher.directories();
                 if(nativeEnabled)for(const auto& path:wanted)if(!registered.contains(path))watcher.addPath(path);
                 registered=watcher.files()+watcher.directories();
+                if(registered.contains(scope.directory)) {
+                    registeredDirectoryIdentity=directoryIdentity;registeredDirectoryEntry=current->entryRevision;
+                }
+                if(registered.contains(parentPath)) {
+                    registeredParentIdentity=parentIdentity;registeredParentEntry=currentParent->entryRevision;
+                }
                 bool coverage=current->revision.known&&current->revision.directory&&!current->revision.link&&
                     currentParent->revision.known&&currentParent->revision.directory&&!currentParent->revision.link;
                 if(!scope.image.isEmpty())coverage=coverage&&currentImage.known&&!currentImage.directory;

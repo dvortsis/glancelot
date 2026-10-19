@@ -178,6 +178,10 @@ struct ViewerController::Private {
     std::unique_ptr<fs_watch::Monitor> monitor;
     std::optional<fs_watch::Observation> pendingObservation;
     quint64 observationRevision{};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+    std::optional<fs_watch::ControllerTestHooks> testHooks=fs_watch::controllerTestHooks?
+        std::optional{*fs_watch::controllerTestHooks}:std::nullopt;
+#endif
     std::unique_ptr<QSharedMemory> transfer;
     qint64 admittedPixelBytes{};
     QByteArray output;
@@ -224,6 +228,11 @@ struct ViewerController::Private {
             if(!decodeAwaitingBaseline||path.isEmpty())return;
             decodeAwaitingBaseline=false;decodeStartedWithoutBaseline=true;decode(path,generation);
         });
+        fs_watch::MonitorOptions monitorOptions;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks)monitorOptions=testHooks->options;
+#endif
+        monitorOptions.manualBaseline=true;
         monitor=std::make_unique<fs_watch::Monitor>(q,[this](fs_watch::Observation value){
             if(value.scope!=monitor->generation()||value.revision<=observationRevision)return;
             observationRevision=value.revision;
@@ -235,16 +244,24 @@ struct ViewerController::Private {
                 }
             }
             if(pendingObservation&&pendingObservation->scope==value.scope) {
-                value.before=pendingObservation->before?pendingObservation->before:pendingObservation->after;
-                value.parentBefore=pendingObservation->parentBefore?pendingObservation->parentBefore:pendingObservation->parentAfter;
+                const auto earliestComplete=[](const auto& pendingBefore,const auto& workerBefore,const auto& pendingAfter) {
+                    if(pendingBefore&&pendingBefore->complete)return pendingBefore;
+                    if(workerBefore&&workerBefore->complete)return workerBefore;
+                    return pendingAfter&&pendingAfter->complete?pendingAfter:workerBefore;
+                };
+                value.before=earliestComplete(pendingObservation->before,value.before,pendingObservation->after);
+                value.parentBefore=earliestComplete(pendingObservation->parentBefore,value.parentBefore,pendingObservation->parentAfter);
                 value.fileEvent=value.fileEvent||pendingObservation->fileEvent;
                 value.forced=value.forced||pendingObservation->forced;
                 value.baseline=value.baseline||pendingObservation->baseline;
                 if(pendingObservation->imageBefore.known)value.imageBefore=pendingObservation->imageBefore;
             }
             pendingObservation=std::move(value);
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            if(testHooks&&testHooks->pending)testHooks->pending(*pendingObservation);
+#endif
             reconcileObservation();
-        },fs_watch::MonitorOptions{.manualBaseline=true});
+        },std::move(monitorOptions));
     }
     ~Private() {
         monitor.reset();writePosition(true);navigationStop.request_stop();cancel();
@@ -375,6 +392,9 @@ struct ViewerController::Private {
         monitor->setScope(path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path,restart);
     }
     void reconcileObservation() {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks&&testHooks->deferReconciliation&&testHooks->deferReconciliation())return;
+#endif
         if(!pendingObservation||navigationBusy||pendingNavigation||!navigationIntents.empty())return;
         auto value=std::move(*pendingObservation);pendingObservation.reset();
         if(value.scope!=monitor->generation())return;
@@ -402,7 +422,7 @@ struct ViewerController::Private {
             // A bounded/failed membership scan cannot prove deletion or rename.
             // The independent current-file probe can still establish a revision,
             // and explicit refresh must remain useful in a larger directory.
-            if(value.before||value.forced)emit q->filesInvalidated();
+            if(!value.baseline||value.forced)emit q->filesInvalidated();
             const bool changed=value.imageBefore.known&&value.imageAfter.known&&!(value.imageBefore==value.imageAfter);
             if(!path.isEmpty()&&value.imageAfter.known&&(value.forced||value.fileEvent||changed)) {
                 cache.clear();const auto target=path;q->open(target);

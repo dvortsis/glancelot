@@ -284,3 +284,32 @@ This is evidence of material per-entry metadata overhead, not a first-paint,
 network-share, ReFS/OneDrive or production workload qualification. The existing
 250ms GUI responsiveness gate still applies. Actual Claude R3 is independently
 reviewing fixed candidate b4cfd20; its disposition is not claimed here.
+
+## R3 corrective implementation on synchronized main
+
+Actual Claude R3 report ecb9d54 is preserved unchanged here. It requested changes
+without a new blocker. Lead contract f4c7cbe freezes incomplete-scope relisting,
+alias rearming/selection policy and deterministic backend-test-only hooks. Merge
+b0593b8 synchronizes main's Favorites, UI settings and approved PLATFORM source;
+additive command/test-target conflicts retained both sides. This is a feature
+branch synchronization, not FS-WATCH integration or approval.
+
+Corrections prefer complete baselines during controller pending coalescing,
+invalidate permanently incomplete listings after the first observation with the
+existing backoff, rebind native alias/image watches when their target or link
+entry changes, and reset selection on explicit ancestor-alias navigation while
+preserving proven real directory renames. Private scan and controller hooks are
+compiled only with GLANCELOT_FS_WATCH_TESTING in fs_watch_tests. Product viewer,
+decoder and real-QML binaries do not contain these hooks.
+
+Required build.ps1 build succeeded after synchronization. New deterministic
+Windows regressions passed10/10,0 failed,0 skipped in15.682s: controller pending
+partial-to-complete coalescing, ancestor-alias navigation, permanent incomplete
+scope automatic invalidation without F5, A-B and A-B-A scan-boundary retarget,
+native retarget delivery within1.5s (below2s polling), and actual late/coalesced
+baseline fresh pixels with exactly one re-decode plus newer-open precedence.
+Logs .cache/fs-watch-r4-{build,incremental-build}.log and r4-targeted.txt preserve
+commands/output. No competing native test was observed during this targeted run.
+Full Windows/Linux gates and independent corrective review remain pending.
+Coarse-timestamp identity collisions and physical/network/cloud variants remain
+unverified; this run does not establish their behavior.

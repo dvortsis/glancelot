@@ -7,6 +7,9 @@
 #include <filesystem>
 #include <stop_token>
 #include <cstdint>
+#ifdef GLANCELOT_FS_WATCH_TESTING
+#include <functional>
+#endif
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -112,7 +115,11 @@ struct Snapshot {
 // A partial/unreadable snapshot is never evidence that an entry was deleted.
 // Limit counts all directory entries, including unsupported files and links.
 inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std::size_t limit=20000,
-                         std::size_t byteLimit=IdentityByteBudget) {
+                         std::size_t byteLimit=IdentityByteBudget
+#ifdef GLANCELOT_FS_WATCH_TESTING
+                         ,const std::function<void()>& afterEnumeration={}
+#endif
+                         ) {
     Snapshot result;result.directory=directory;
     if(stop.stop_requested()){result.cancelled=true;return result;}
     const auto path=native(directory);Revision sourceRevision;std::filesystem::path resolved;
@@ -134,6 +141,9 @@ inline Snapshot snapshot(const QString& directory, std::stop_token stop={}, std:
     }
     // A membership change during enumeration makes rename/deletion inference
     // unsafe even when every individual probe succeeded.
+#ifdef GLANCELOT_FS_WATCH_TESTING
+    if(afterEnumeration)afterEnumeration();
+#endif
     const auto finalRevision=directoryProbe(path);
     const bool stableAlias=sourceRevision==probe(path);
     result.complete=readable&&stableAlias&&finalRevision==result.revision&&!error&&!stop.stop_requested();
