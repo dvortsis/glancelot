@@ -1,0 +1,25 @@
+{
+  "added": [],
+  "archive_bytes_equal": true,
+  "artifacts": [
+    {
+      "path": "a/Glancelot-linux-x86_64.tar.gz",
+      "sha256": "e9f1886ad53964b37b35f5df4c32bcfe6d2707ffc80143491048a8f26be2635e"
+    },
+    {
+      "path": "b/Glancelot-linux-x86_64.tar.gz",
+      "sha256": "e9f1886ad53964b37b35f5df4c32bcfe6d2707ffc80143491048a8f26be2635e"
+    }
+  ],
+  "changed": [],
+  "executables_equal": true,
+  "independent_builds": 2,
+  "metadata_equal": true,
+  "payloads_equal": true,
+  "removed": [],
+  "schema": 1,
+  "source_commit": "e4532d2315ebb6af3df84186c83134c7d7431794",
+  "source_date_epoch": 1792383552,
+  "status": "identical",
+  "target": "linux"
+}

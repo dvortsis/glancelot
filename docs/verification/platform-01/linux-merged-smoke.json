@@ -1,0 +1,152 @@
+{
+  "environment": {
+    "active_gpu_identity": "unverified",
+    "cpu_affinity_count": 12,
+    "filesystem_cache_state": "uncontrolled",
+    "logical_cpu_count_visible": 12,
+    "machine": "x86_64",
+    "os": "Linux",
+    "power_thermal_state": "uncontrolled",
+    "python": "3.12.3",
+    "release": "6.18.33.2-microsoft-standard-WSL2",
+    "version": "#1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026"
+  },
+  "executable_hashes": {
+    "Glancelot.sh": "90ccb3ce055776e8947699692b471383a6914ffe057bc75134413a1baf2ecf92",
+    "bin/glancelot": "2b10378b7ca3f6e0bda7fab8a67e6d911bdd381d0bcc1bd2c860d2d49de7d62c",
+    "bin/glancelot-decoder": "4178851da19653c2f0b9a60c88b4ab5943be1637ea9dcd0d0cccde128e2d1cc9"
+  },
+  "generated_jpeg_sha256_unchanged": "801532c946d6e60c7490c96ec8adb258506e854e98c14bf48966322dd597cf3b",
+  "jpeg": {
+    "decoded_dimensions": [
+      64,
+      48
+    ],
+    "development_qt_removed_from_path": true,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": 315,
+    "frames": 15,
+    "graphics_api": 3,
+    "qt": "6.8.3",
+    "qt_modules": [
+      "libQt6Core.so.6",
+      "libQt6DBus.so.6",
+      "libQt6Gui.so.6",
+      "libQt6Network.so.6",
+      "libQt6OpenGL.so.6",
+      "libQt6Qml.so.6",
+      "libQt6QmlMeta.so.6",
+      "libQt6QmlModels.so.6",
+      "libQt6QmlWorkerScript.so.6",
+      "libQt6Quick.so.6",
+      "libQt6QuickControls2.so.6",
+      "libQt6QuickControls2Basic.so.6",
+      "libQt6QuickControls2BasicStyleImpl.so.6",
+      "libQt6QuickControls2Impl.so.6",
+      "libQt6QuickDialogs2.so.6",
+      "libQt6QuickDialogs2QuickImpl.so.6",
+      "libQt6QuickDialogs2Utils.so.6",
+      "libQt6QuickLayouts.so.6",
+      "libQt6QuickShapes.so.6",
+      "libQt6QuickTemplates2.so.6",
+      "libQt6XcbQpa.so.6",
+      "libqxcb.so"
+    ],
+    "qt_modules_from_package": true,
+    "version": "0.1.0-alpha.1"
+  },
+  "manifest_sha256": "45d3f8ec5a0329f8f6e13cdf2c54e4f1678405c3928844c3f8036e8d99307760",
+  "negative": {
+    "development_qt_removed_from_path": true,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": -1,
+    "frames": 4,
+    "graphics_api": 3,
+    "missing_decoder_diagnosed": true,
+    "qt": "6.8.3",
+    "qt_modules": [
+      "libQt6Core.so.6",
+      "libQt6DBus.so.6",
+      "libQt6Gui.so.6",
+      "libQt6Network.so.6",
+      "libQt6OpenGL.so.6",
+      "libQt6Qml.so.6",
+      "libQt6QmlMeta.so.6",
+      "libQt6QmlModels.so.6",
+      "libQt6QmlWorkerScript.so.6",
+      "libQt6Quick.so.6",
+      "libQt6QuickControls2.so.6",
+      "libQt6QuickControls2Basic.so.6",
+      "libQt6QuickControls2BasicStyleImpl.so.6",
+      "libQt6QuickControls2Impl.so.6",
+      "libQt6QuickDialogs2.so.6",
+      "libQt6QuickDialogs2QuickImpl.so.6",
+      "libQt6QuickDialogs2Utils.so.6",
+      "libQt6QuickLayouts.so.6",
+      "libQt6QuickShapes.so.6",
+      "libQt6QuickTemplates2.so.6",
+      "libQt6XcbQpa.so.6",
+      "libqxcb.so"
+    ],
+    "qt_modules_from_package": true,
+    "version": "0.1.0-alpha.1"
+  },
+  "package_inventory_unchanged": true,
+  "passed": true,
+  "physical_color_dpi_refresh_qualification": "unverified",
+  "positive": {
+    "decoded_dimensions": [
+      1024,
+      768
+    ],
+    "development_qt_removed_from_path": true,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": 608,
+    "frames": 15,
+    "graphics_api": 3,
+    "qt": "6.8.3",
+    "qt_modules": [
+      "libQt6Core.so.6",
+      "libQt6DBus.so.6",
+      "libQt6Gui.so.6",
+      "libQt6Network.so.6",
+      "libQt6OpenGL.so.6",
+      "libQt6Qml.so.6",
+      "libQt6QmlMeta.so.6",
+      "libQt6QmlModels.so.6",
+      "libQt6QmlWorkerScript.so.6",
+      "libQt6Quick.so.6",
+      "libQt6QuickControls2.so.6",
+      "libQt6QuickControls2Basic.so.6",
+      "libQt6QuickControls2BasicStyleImpl.so.6",
+      "libQt6QuickControls2Impl.so.6",
+      "libQt6QuickDialogs2.so.6",
+      "libQt6QuickDialogs2QuickImpl.so.6",
+      "libQt6QuickDialogs2Utils.so.6",
+      "libQt6QuickLayouts.so.6",
+      "libQt6QuickShapes.so.6",
+      "libQt6QuickTemplates2.so.6",
+      "libQt6XcbQpa.so.6",
+      "libqxcb.so"
+    ],
+    "qt_modules_from_package": true,
+    "screenshot": {
+      "height": 780,
+      "source_color_pixels": {
+        "blue": 196608,
+        "green": 196608,
+        "red": 196608
+      },
+      "width": 1180
+    },
+    "version": "0.1.0-alpha.1"
+  },
+  "schema": 1,
+  "source": {
+    "commit": "9698ff01f2b384e0aa4a062f96bc660e3f7af1af",
+    "dirty": false,
+    "origin": "declared"
+  },
+  "source_media_sha256_unchanged": "e1d871f879453d0161641d06505f857b5a4ea0d43cc92091f31d0cb24bd1b209",
+  "target": "linux-x86_64"
+}
