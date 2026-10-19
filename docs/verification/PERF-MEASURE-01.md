@@ -1,6 +1,6 @@
 # PERF-MEASURE-01 implementation evidence
 
-Status: **implementing**, not approved, not integrated. Branch `codex/perf-measure`,
+Status: **review candidate**, not approved, not integrated. Branch `codex/perf-measure`,
 worktree `.worktrees/codex-perf-measure`, build `build-codex-perf-measure`.
 Contract base: main `76da49e`; public `perf_trace.hpp` is unchanged.
 Authoritative full scope: `docs/AGENT-LANES-PLAN.md` and `docs/PERF-MEASURE-PLAN.md`.
@@ -467,3 +467,28 @@ This is the full required Docker gate, not the earlier replay-only artifact. The
 runtime image also passes its normal binary/Qt plugin ldd checks. Final runtime
 replay and refreshed Windows full suite are running. Actual Claude review of the
 combined candidate, including both test corrections, and integrated checks remain.
+
+
+## Combined candidate release for independent review
+
+Application/test source affabf4 passed both required commands. Windows:
+
+```
+./scripts/build.ps1 -BuildDir build-codex-perf-measure -Test
+folder_grid Passed 113.43 sec
+platform_integration Passed 4.31 sec
+100% tests passed out of 15
+Total Test time (real) = 203.16 sec
+```
+
+Docker passed 15/15 in 128.24 sec as recorded above. The newly built required runtime
+image also passed a complete standard-v1 smoke replay (steps 3, cycles 2, RequireRender)
+with exact affabf4 source provenance and all 316 fixture hashes unchanged before/after.
+Local evidence: .cache/perf-combined-required-windows.log,
+.cache/perf-final-required-docker.log and .cache/perf-final-required-docker-replay.log.
+
+The lead promotes PERF-MEASURE-01 to review based on these actual terminal results.
+Independent Claude approval, serial main integration and integrated-commit full
+checks remain. The user-appointed lead accepted the coarse existing IPC/render
+semantics in main 91a49d2; this does not substitute for review. PLATFORM-01 may now
+start under its frozen packet, without marking PERF done or merging it unreviewed.

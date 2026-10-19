@@ -40,3 +40,7 @@ in combined PERF candidate affabf4. Its required full Docker build passes 15/15
 in 128.24s; platform_integration passes in 0.47s. This verifies real helper-process
 argv/cwd assertions in the headless build image. Independent review and main
 integration remain pending.
+
+The combined candidate Windows required full suite also passes 15/15 in 203.16s,
+platform test 4.31s. The tests do not alter native Windows behavior. Combined PERF
+review covers this prerequisite before main integration; it is not self-approved.

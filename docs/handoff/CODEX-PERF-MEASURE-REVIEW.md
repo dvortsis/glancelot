@@ -51,14 +51,15 @@ files/paths/dimensions/hashes. No original media was used or modified.
 
 The prior Linux full gate failed only platform-launcher environment assumptions.
 Initial new process-routing test passed 1/1 in 0.37s before the final extra literal-path
-case. Required combined affabf4 full Windows and Docker commands are running; their
-terminal results must be recorded before promotion to review. No test is skipped or
+case. Required combined affabf4 full commands passed: Windows 15/15 in 203.16s;
+Docker 15/15 in 128.24s. The required runtime image also passed complete smoke replay,
+source hashes unchanged. The lead releases this combined candidate for review. No test is skipped or
 replaced with unconditional launch success to manufacture that gate.
 
 Physical HDD, SMB, DPI/ICC/HDR/high-refresh, active GPU identity, large-MP decode and
 100k-folder interactive latency remain unqualified. Software/WSL bind-mounted replay
 and uncontrolled power/cache/thermal state are not hardware qualification.
 
-Remaining: terminal combined-candidate checks, actual Claude approval, serial main
+Remaining: actual Claude approval, serial main
 integration and required checks on the integrated commit. PLATFORM-01 is frozen on
 main but starts only after PERF reaches review. Do not self-approve or mark done.
