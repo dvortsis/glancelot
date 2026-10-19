@@ -98,6 +98,12 @@ const std::vector<Command> registry {
     {"copy-path", "Copy file path", "Ctrl+C"},
     {"copy-file", "Copy file", "Ctrl+Shift+C"},
     {"copy-image", "Copy image", "Ctrl+Alt+C"},
+    {"select-all", "Select all items in grid", "Ctrl+A"},
+    {"clear-selection", "Clear grid selection", "Ctrl+D"},
+    {"invert-selection", "Invert grid selection", "Ctrl+I"},
+    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
+    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
+    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},

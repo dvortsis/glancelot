@@ -397,6 +397,29 @@ int DirectoryEntryModel::matchIndex(const QString& query, int row) const {
     return index;
 }
 int DirectoryEntryModel::selectedCount() const { return d->accessible ? int(d->selected.size()) : 0; }
+qint64 DirectoryEntryModel::selectedBytes() const {
+    if (!d->accessible || d->selected.isEmpty()) return 0;
+    qint64 total = 0;
+    for (const auto& row : d->rows) {
+        if (d->selected.contains(row.key) && row.size > 0) {
+            total += row.size;
+        }
+    }
+    return total;
+}
+QString DirectoryEntryModel::selectedBytesFormatted() const {
+    return QLocale().formattedDataSize(selectedBytes());
+}
+QString DirectoryEntryModel::selectedSummary() const {
+    const int count = selectedCount();
+    if (count <= 0) return {};
+    const qint64 bytes = selectedBytes();
+    const QString countStr = QString::number(count) + (count == 1 ? QStringLiteral(" item") : QStringLiteral(" items"));
+    if (bytes > 0) {
+        return QStringLiteral("Selected: %1 (%2)").arg(countStr, selectedBytesFormatted());
+    }
+    return QStringLiteral("Selected: %1").arg(countStr);
+}
 int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
     QStringList paths;

@@ -179,6 +179,19 @@ tasks:
     outcome: Instant current-folder filename search with type-to-select and match navigation
     acceptance: Typing alphanumeric characters in grid starts instant search; transient search chip shows query and match count; F3/Shift+F3 and Up/Down navigate matches; Enter activates; Escape restores previous cursor; case-insensitive substring matching; empty results feedback
     verification: Substring matching, case insensitivity, boundary cycling, empty results, special characters, Escape restore, timeout auto-dismiss, keyboard navigation parity
+  - id: GRID-DENSITY-01
+    requirements: [UX-16, UX-17, IN-01]
+    feature: F010, F011
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: implementing
+    branch: agent/grid-density
+    worktree: .worktrees/grid-density
+    build: build-grid-density
+    outcome: Thumbnail size zoom buckets, Ctrl+Wheel zoom, and selection commands with summary badge (F010/F011)
+    acceptance: Thumbnail size presets/buckets (96px, 128px, 160px default, 220px, 320px); zoom in (Ctrl++ / Ctrl+=), zoom out (Ctrl+-), and reset zoom (Ctrl+0); Ctrl+Wheel over grid zooms between buckets; zoom changes do not lose scroll position or selected item; select all (Ctrl+A); clear selection (Escape / Ctrl+D) when multiple items selected; invert selection (Ctrl+I); status bar / footer selection badge showing 'Selected: N items (X MB)' when selection count > 0; text editing retains shortcut precedence
+    verification: Bucket boundary clamping, wheel step direction, zoom reset, select-all count, invert selection parity, clear selection keeps cursor, byte size calculation formatted with KB/MB/GB, empty folder, text field precedence
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
@@ -547,7 +560,7 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
 priority_amendment:
   date: '2026-10-17'
