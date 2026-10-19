@@ -107,3 +107,21 @@ Independent Claude review, serial integration and full checks on the integrated
 commit are required before done. Physical/network-share and other filesystem or
 driver coverage remains unverified unless actually measured. Preserve the separate
 CANVAS-UI, DECODE-01, color and performance hardware gates.
+
+## Reviewed decoder prerequisite amendment, October 19
+
+FS-WATCH reload cancellation must not freeze the GUI while discarding a transfer.
+The lead permits importing only Claude-authored standalone commit a6bda32
+(src/worker/main.cpp semaphore removal) into this packet. Independent Codex
+review db23447 APPROVED that isolated Windows protocol change: complete64MiB
+payload/ack and five witnessed mid-copy kills detached in13-17ms; the old worker
+reproduced a60s detach hang. Preserve the unchanged report
+docs/verification/DECODER-CANCEL-INDEPENDENT-CODEX-REVIEW.md. This imports an
+independently reviewed prerequisite; Codex does not take ownership of INPUT-02 UI.
+No shared header or protocol message changes. Production reads pixels only after
+decoded and acknowledges only after copying. The five INPUT UI blockers remain.
+
+This scoped Windows review does not prove Linux cancellation or whole-controller
+teardown. Run the packet's complete native and Docker gates on the resulting
+source, record failures honestly, and include cancellation in independent Claude
+review. An inherited or intermittent failure cannot be counted as a full pass.

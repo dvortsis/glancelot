@@ -5,7 +5,7 @@ lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
   holder: codex-lead
   branch: codex/fs-watch-01
-  started: 2026-10-19T16:24:48.506452+00:00
+  started: 2026-10-19T16:49:51.249193+00:00
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -554,6 +554,7 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
+    decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
     start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
