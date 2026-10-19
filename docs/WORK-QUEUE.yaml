@@ -140,10 +140,12 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: review
+    state: done
     branch: agent/platform-ops
     worktree: .worktrees/platform-ops
     build: build-platform-ops
+    commit: cf1a97f
+    evidence: docs/verification/PLATFORM-OPS-01.md; independent review approved after remediation round; Windows build.ps1 -Test 14/14 (270.37s)
     outcome: Reveal in system file manager and open terminal at current location safely
     acceptance: Discoverable commands for Reveal in file manager (Ctrl+Alt+R) and Open terminal (Ctrl+Alt+T); argument arrays without shell interpolation; handle Unicode and spaces; highlight file or open folder; graceful fallback and user feedback if unavailable
     verification: Non-existent paths, root/drive paths, Unicode paths, spaces, Windows Terminal vs PowerShell fallback, detached process safety, text fields retain shortcut precedence
