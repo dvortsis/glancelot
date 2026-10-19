@@ -532,3 +532,19 @@ the desktop was interactive and sessions matched. Restoring/positioning the same
 packaged test window in the primary work area yielded actual swaps; strict Windows
 package smoke subsequently passed. This is a visible-window setup observation,
 not physical presentation timing or hardware qualification.
+
+## Integrated commit verification
+
+Main merge 4b92825 was checked in the clean isolated lead worktree
+.worktrees/codex-perf-integration, build-codex-perf-integration. Required Windows
+scripts/build.ps1 -Test passed 18/18 in 218.49s. Required docker build -t
+ glancelot-browser:main . returned 0 and reproduced the exact merged-source image
+7247b7881939ff8945a5c0b36ddef95c0124a7c619409965e8e9fa250779c12b using
+content-identical build/test cache layers; this invocation was not a second Linux
+test execution. The actual uncached 18/18 Linux execution (123.31s) and strict
+render replay on the identical source/image are recorded above. Integrated logs:
+.cache/integrated-{windows,docker}.log in that lead worktree.
+
+Independent approval, documentation condition, serial no-ff merge, required checks
+on the integrated commit and evidence recording are complete. Hardware performance,
+physical presentation, GPU/SMB/refresh qualification remain outside these results.

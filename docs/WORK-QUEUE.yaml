@@ -2,10 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock:
-  holder: codex-lead
-  branch: codex/perf-measure
-  started: '2026-10-19T14:44:07Z'
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -411,7 +408,7 @@ tasks:
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
     review_candidate: c35ec602f18a1e2bd1e42390fee3bd26e0c9efdd
     review_handoff: docs/handoff/CODEX-PLATFORM-01-REVIEW.md (on codex/platform-01)
-    review_gate: Independent Claude external review awaiting explicit PLATFORM approval after auto-review rejected reuse of PERF-only approval
+    review_gate: User approved PLATFORM review and standing future PLATFORM reviews; actual isolated Claude reviewer running
   - id: MONITOR-OUTPUT-01
     requirements: [UX-10, COLOR-01, VIEW-04, PERF-04, SYS-02]
     milestone: M5
@@ -509,14 +506,14 @@ tasks:
     priority: 8
     owner: lead
     owner_lane: codex
-    state: integration
+    state: done
     depends: [REVIEW-ALL-01]
     branch: codex/perf-measure
     worktree: .worktrees/codex-perf-measure
     plan: docs/PERF-MEASURE-PLAN.md
     outcome: Bounded timing spans, fixture manifest, result schema and baseline replay (PERFORMANCE-STRATEGY PERF-MEASURE)
     acceptance: Spans have bounded memory and negligible measured overhead; cache hit/miss and cold/warm distinguished; monotonic clock semantics; replayable baseline report on generated fixtures; no telemetry or upload
-    evidence: Independent Claude 21be1b8 APPROVED with documentation condition fulfilled ec6bcb3; merged-source Windows 18/18 161.59s and Docker 18/18 123.31s plus strict render replay passed; integrated main 4b92825 checks running
+    evidence: Independent Claude 21be1b8 APPROVED with documentation condition fulfilled ec6bcb3; merged-source Windows 18/18 161.59s and Docker 18/18 123.31s plus strict render replay passed; integrated main 4b92825 Windows 18/18 218.49s; required Docker command passed with content-identical cached image; integration evidence docs/verification/PERF-MEASURE-01.md
   - id: PATH-COMPLETE-01
     requirements: [UX-13, IN-01]
     milestone: M3
