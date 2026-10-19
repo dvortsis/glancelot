@@ -197,3 +197,35 @@ supersede the earlier running status; they do not qualify the full Windows gate.
 The independently assessed Windows launcher fixture prerequisite is now being
 implemented under the frozen PLATFORM contract. Production adapter bytes,
 performance assertions and test timeouts remain unchanged.
+
+## Windows launcher fixture and post-environment diagnostics
+
+Test-only source038d1b5 keeps production platform adapter/header unchanged.
+The helper PE subsystem is2 (GUI). Production adapter SHA256 is
+AFF462DAD30C599138E54653FBD3FFEC97A9052ACF5AE5BD31B90819FA7861A9.
+Private copied runner/stubs retain Unicode/non-BMP application directory, CWD,
+media and argv; validated same-directory short PATH aliases accommodate Qt's
+narrow default executable search. Process creation time distinguishes helper PID
+reuse; exact capture module/hash/token and zero exit are asserted. COM balance,
+Qt-module failure diagnostics and bounded job accounting were strengthened after
+independent Claude review56d27cb requested changes. Re-review is pending.
+
+The deliberate invalid-PE failure initially hung under CTest until the22s owned
+runner deadline. Private runner SetErrorMode suppresses loader error UI for this
+intentional negative test. Default QtTest output uses a bounded relative file in
+the Unicode CWD and is replayed to CTest; explicit log arguments remain available.
+Required scripts/build.ps1 -BuildDir build-codex-fs-watch-01 build passed;
+ctest --test-dir build-codex-fs-watch-01 -R '^platform_integration$'
+--output-on-failure passed1/1,0.70s (total0.75s). Direct logged run passed9/9,
+672ms. Logs .cache/native-fixture-{loader-build,loader-ctest,process-detail}.*.
+No timeout or performance oracle changed. Parent termination can leave inert
+private TEMP files; the owned kill-on-close job bounds live child lifetime.
+
+User authorized closing the57 saved Explorer folder windows. At execution none
+remained in Shell.Application.Windows, so none were closed and no processes were
+killed. Explorer footprint had already fallen to17 processes/about1.7GB from the
+earlier58/about8.4GB. Inventory and saved locations stay private and untracked.
+A serialized direct directory_model run then passed20/20,26.040s with worst GUI
+gaps31/33/11ms against250ms. Log .cache/directory-model-post-explorer.txt.
+This changed environment is not a causal proof. A fresh required full Windows
+suite is now running; no full gate or independent FS-WATCH approval is claimed.
