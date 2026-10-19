@@ -118,7 +118,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: review
     depends: [DELETE-01]
     branch: agent/delete-keys
     worktree: .worktrees/delete-keys
