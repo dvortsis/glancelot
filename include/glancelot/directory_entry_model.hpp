@@ -49,11 +49,18 @@ public:
     Q_INVOKABLE void select(int row, SelectMode mode = Replace);
     Q_INVOKABLE void selectAll();
     Q_INVOKABLE void clearSelection();
+    Q_INVOKABLE void invertSelection();
     int selectedCount() const; int cursorRow() const;
     Q_INVOKABLE QStringList selectedPaths() const;     // listing order
     Q_INVOKABLE int rowOf(const QString& path) const;  // -1 when absent
     Q_INVOKABLE QString pathAt(int row) const;
     Q_INVOKABLE QString kindAt(int row) const;         // "folder" | "image" | "file" | ""
+
+    // Instant search (F004): case-insensitive substring match across listing names.
+    // Returns matching row index or -1 if no match found.
+    Q_INVOKABLE int findMatch(const QString& query, int startRow = 0, bool forward = true) const;
+    Q_INVOKABLE int matchCount(const QString& query) const;
+    Q_INVOKABLE int matchIndex(const QString& query, int row) const;
 
     QString currentImage() const; void setCurrentImage(const QString& path);
     quint64 epoch() const;

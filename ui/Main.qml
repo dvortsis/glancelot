@@ -318,6 +318,7 @@ ApplicationWindow {
         return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
                 "view-preview", "view-grid", "view-combined", "combined-orientation",
                 "reveal-in-file-manager", "open-terminal",
+                "copy-path", "copy-file", "copy-image",
                 "delete-selection", "delete-current-file", "delete-current-folder"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
@@ -401,6 +402,23 @@ ApplicationWindow {
         else if (id === "open-terminal") {
             const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
             viewer.openTerminal(folder)
+        }
+        else if (id === "copy-path" || id === "copy-file") {
+            let targets = []
+            const gridActive = focusWithin(photoGrid) || gridScope || gridMode || (workspace._gridShown && fileGrid.count > 0) || photoGrid.selectedCount > 0
+            if (gridActive) {
+                const dt = photoGrid.deletionTargets()
+                if (dt.length > 0) targets = dt
+                else if (photoGrid.selectedPath.length > 0) targets = [photoGrid.selectedPath]
+            }
+            if (targets.length === 0 && viewer.filePath.length > 0) {
+                targets = [viewer.filePath]
+            }
+            if (id === "copy-path") viewer.copyFilePath(targets)
+            else viewer.copyFileUrls(targets)
+        }
+        else if (id === "copy-image") {
+            viewer.copyImageBitmap()
         }
         else if (id === "quit") close()
     }

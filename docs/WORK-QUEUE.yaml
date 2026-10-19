@@ -3,9 +3,9 @@ project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock:
-  holder: none
-  branch: none
-  started: none
+  holder: codex-lead
+  branch: codex/platform-01
+  started: 2026-10-19T03:04:17.166804+00:00
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -155,13 +155,28 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: review
+    state: done
     branch: agent/clipboard-ops
     worktree: .worktrees/clipboard-ops
     build: build-clipboard-ops
+    commit: d13aaf8
+    evidence: docs/verification/CLIPBOARD-OPS-01.md; independent review approved; Windows build.ps1 -Test 14/14 (189.39s); Linux Docker Qt 14/14 (102.82s)
     outcome: Clipboard operations for copying file path, native file objects, and decoded bitmap
     acceptance: Discoverable commands for Copy file path (Ctrl+C), Copy file (Ctrl+Shift+C), and Copy image (Ctrl+Alt+C); text fields retain Ctrl+C precedence; single and multiselection support; valid QMimeData URLs for native shell pasting; full bitmap copying without source mutation; user status feedback
     verification: Text editing precedence, empty selection, no opened image, multiple selection paths, clipboard format inspection (text/plain, text/uri-list, image/png), modal dialog suppression
+  - id: GRID-SEARCH-01
+    requirements: [UX-16, NAV-06]
+    feature: F004
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: implementing
+    branch: agent/grid-search
+    worktree: .worktrees/grid-search
+    build: build-grid-search
+    outcome: Instant current-folder filename search with type-to-select and match navigation
+    acceptance: Typing alphanumeric characters in grid starts instant search; transient search chip shows query and match count; F3/Shift+F3 and Up/Down navigate matches; Enter activates; Escape restores previous cursor; case-insensitive substring matching; empty results feedback
+    verification: Substring matching, case insensitivity, boundary cycling, empty results, special characters, Escape restore, timeout auto-dismiss, keyboard navigation parity
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
