@@ -75,7 +75,7 @@ def build_info(value):
     require(value["qt_version"] == "6.8.3" and value["cxx_standard"] == 20, "wrong pinned Qt or C++ standard")
     require(isinstance(value["flags"], list) and len(value["flags"]) <= 128, "invalid flags")
     for flag in value["flags"]:
-        require(isinstance(flag, str) and len(flag) <= 128 and re.fullmatch(r"(?:[-/][A-Za-z0-9_+=.,-]+|[A-Za-z0-9_+=.,]+)", flag), "flags must be path-free tokens")
+        require(isinstance(flag, str) and len(flag) <= 128 and re.fullmatch(r"(?:[-/][A-Za-z0-9_+=.,:+-]+|[A-Za-z0-9_+=.,]+)", flag), "flags must be path-free tokens")
     return value
 
 
