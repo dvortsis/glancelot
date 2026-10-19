@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: gemini, branch: agent/shortcuts-help, started: "2026-10-19T16:45:00"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -507,10 +507,12 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: implementing
+    state: done
     branch: agent/shortcuts-help
     worktree: .worktrees/shortcuts-help
     build: build-shortcuts-help
+    commit: 39ddbc5
+    evidence: docs/verification/SHORTCUTS-HELP-01.md; independent review approved; integrated 39ddbc5 Windows scripts/build.ps1 -Test 21/21 (152.13s) and Linux docker build 21/21 (106.86s)
     plan: docs/SHORTCUTS-HELP-01-PLAN.md
     depends: [REVIEW-ALL-01]
     outcome: In-app keyboard shortcut cheat sheet and discovery modal (F056)
