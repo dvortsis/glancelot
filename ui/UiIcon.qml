@@ -46,7 +46,9 @@ Item {
         // The brand delete glyph (assets/brand/icons/ui/currentColor/delete.svg) redrawn on the 16-unit grid.
         "trash": "M2.75 4.75 H13.25 M6 4.75 V2.75 H10 V4.75 M12 4.75 L11.35 13.25 H4.65 L4 4.75 M6.75 7.25 V11 M9.25 7.25 V11",
         "alert": "M8 2.25 L14.25 13.25 H1.75 Z M8 6.5 V9.25 M8 11.25 L8.01 11.25",
-        "spinner": "M8 2 A6 6 0 1 1 2 8"
+        "spinner": "M8 2 A6 6 0 1 1 2 8",
+        "star": "M8 1.5 L9.9 5.8 L14.5 6.3 L11.1 9.4 L12 14 L8 11.7 L4 14 L4.9 9.4 L1.5 6.3 L6.1 5.8 Z",
+        "plus": "M8 3 V13 M3 8 H13"
     })
 
     Shape {
