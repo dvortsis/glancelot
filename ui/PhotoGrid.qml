@@ -18,6 +18,8 @@ Rectangle {
     property bool inputEnabled: true
     // INPUT-02: while the host has a chord pending, Escape is its to cancel, not the grid's.
     property bool chordPending: false
+    // INPUT-02: a function(event) -> bool; true when a registered remap owns this key, so the native handling steps aside.
+    property var yields: null
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
@@ -192,6 +194,7 @@ Rectangle {
     // One table for both shortcut override and handling, so the grid claims exactly the keys it uses.
     function keyAction(event) {
         const mods = event.modifiers & ~Qt.KeypadModifier
+        if (yields && yields(event)) return ""
         if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && mods === Qt.ShiftModifier)) return "menu"
         const navigation = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown]
         if (navigation.indexOf(event.key) >= 0) {

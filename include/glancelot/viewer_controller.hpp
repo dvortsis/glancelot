@@ -69,6 +69,8 @@ public:
     Q_INVOKABLE bool setWheelModifier(const QString& modifier, const QString& action);
     // The command whose binding blocks `sequence` for `id` (same or overlapping scope, including chord prefixes), or "".
     Q_INVOKABLE QString bindingConflict(const QString& id, const QString& sequence) const;
+    // The portable text of one key press (as it appears in a binding step), so panes can tell whether a key is remapped.
+    Q_INVOKABLE QString keyStep(int key, int modifiers) const;
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
     bool canRaiseRoot() const;
     bool treeVisible() const; void setTreeVisible(bool visible);

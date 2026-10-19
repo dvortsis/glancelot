@@ -91,6 +91,11 @@ Rectangle {
         const info = folderTree.rowInfo(list.currentIndex)
         if (info && info.path) activate(list.currentIndex, info.depth, info.expandable, info.isCurrent, info.path)
     }
+    function cursorIsRoot() {
+        if (list.currentIndex < 0) return false
+        const info = folderTree.rowInfo(list.currentIndex)
+        return !!info && info.depth === 0
+    }
     function focusAddress() { address.forceActiveFocus(Qt.ShortcutFocusReason); address.selectAll() }
     // "Go to the folder path on the clipboard": paste over the field and navigate, only if something was pasted.
     function pasteAddress() {
@@ -358,7 +363,7 @@ Rectangle {
             // Keys the tree owns while it has focus; without this the window-level shortcuts would also fire.
             Keys.onShortcutOverride: event => {
                 event.accepted = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End,
-                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0 && !(event.key === Qt.Key_Escape && panel.host && panel.host.chordPending)
+                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0 && !(event.key === Qt.Key_Escape && panel.host && panel.host.chordPending) && !(panel.host && panel.host.remapped(event))
                                  || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))
             }
             Keys.onUpPressed: currentIndex = Math.max(0, currentIndex - 1)
