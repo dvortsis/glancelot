@@ -5,6 +5,7 @@
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
+#include "glancelot/platform_integration.hpp"
 #include <QtConcurrent/QtConcurrentRun>
 #include <QCache>
 #include <QColorSpace>
@@ -93,6 +94,8 @@ const std::vector<Command> registry {
     // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
     {"view-preview","Show photo preview only",""}, {"view-grid","Show folder grid only",""},
     {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
+    {"reveal-in-file-manager", "Reveal in File Manager", "Ctrl+Alt+R"},
+    {"open-terminal", "Open Terminal", "Ctrl+Alt+T"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -554,6 +557,51 @@ QString ViewerController::directory() const{return d->path.isEmpty()?displayPath
 QString ViewerController::directoryError() const{return d->directoryError;}
 bool ViewerController::directoryPending() const{return d->directoryPending;}
 void ViewerController::copyDirectory() const{QGuiApplication::clipboard()->setText(directory());}
+bool ViewerController::revealInFileManager(const QString& path) {
+    QString target = path;
+    if (target.isEmpty()) {
+        target = !d->path.isEmpty() ? d->path : directory();
+    } else {
+        const QUrl url(target);
+        if (url.isLocalFile()) target = url.toLocalFile();
+    }
+    if (target.isEmpty()) {
+        d->status = "No photo or folder is open to reveal.";
+        emit stateChanged();
+        return false;
+    }
+    const bool ok = glancelot::PlatformIntegration::revealInFileManager(target);
+    if (!ok) {
+        d->status = "Could not open file manager.";
+        emit stateChanged();
+        return false;
+    }
+    return true;
+}
+bool ViewerController::openTerminal(const QString& directory) {
+    QString targetDir = directory;
+    if (targetDir.isEmpty()) {
+        targetDir = this->directory();
+        if (targetDir.isEmpty() && !d->path.isEmpty()) {
+            targetDir = QFileInfo(d->path).absolutePath();
+        }
+    } else {
+        const QUrl url(targetDir);
+        if (url.isLocalFile()) targetDir = url.toLocalFile();
+    }
+    if (targetDir.isEmpty()) {
+        d->status = "No folder is open to open a terminal.";
+        emit stateChanged();
+        return false;
+    }
+    const bool ok = glancelot::PlatformIntegration::openTerminal(targetDir);
+    if (!ok) {
+        d->status = "Could not open terminal.";
+        emit stateChanged();
+        return false;
+    }
+    return true;
+}
 QString ViewerController::status() const{return d->status;}
 bool ViewerController::loading() const{return d->loading;}
 bool ViewerController::imageReady() const{return d->imageReady;}
