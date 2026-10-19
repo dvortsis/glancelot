@@ -87,13 +87,15 @@ class Monitor {
                 dirty=false;lastProbe=now;
                 const auto cancellation=state->stop.get_token();
                 auto current=std::make_shared<Snapshot>(state->options.read(scope.directory,cancellation));
-                auto currentParent=std::make_shared<Snapshot>(state->options.read(QDir(scope.directory).absolutePath()+"/..",cancellation));
+                // Normalize before probing: on POSIX, missing-folder/.. cannot
+                // be traversed after the folder was renamed or deleted.
+                const auto parentPath=QDir::cleanPath(QDir(scope.directory).absolutePath()+"/..");
+                auto currentParent=std::make_shared<Snapshot>(state->options.read(parentPath,cancellation));
                 if(cancellation.stop_requested())return;
                 // At most directory, its parent and current image. Remove obsolete native
                 // registrations, then rearm names dropped after an atomic replace.
                 QStringList wanted;
                 if(current->revision.known&&current->revision.directory)wanted<<scope.directory;
-                const auto parentPath=QDir::cleanPath(QDir(scope.directory).absolutePath()+"/..");
                 if(currentParent->revision.known&&currentParent->revision.directory)wanted<<parentPath;
                 const auto currentImage=scope.image.isEmpty()?Revision{}:probe(native(scope.image));
                 if(currentImage.known)wanted<<scope.image;
@@ -105,7 +107,9 @@ class Monitor {
                 registered=watcher.files()+watcher.directories();
                 if(nativeEnabled)for(const auto& path:wanted)if(!registered.contains(path))watcher.addPath(path);
                 registered=watcher.files()+watcher.directories();
-                bool coverage=current->revision.known&&current->revision.directory&&!wanted.isEmpty();
+                bool coverage=current->revision.known&&current->revision.directory&&!current->revision.link&&
+                    currentParent->revision.known&&currentParent->revision.directory&&!currentParent->revision.link;
+                if(!scope.image.isEmpty())coverage=coverage&&currentImage.known&&!currentImage.directory;
                 for(const auto& path:wanted)coverage=coverage&&registered.contains(path);
                 // Delay is measured from completion, so an expensive/stalled
                 // scan cannot turn periodic recovery into a continuously busy loop.
