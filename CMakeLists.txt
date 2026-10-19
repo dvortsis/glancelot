@@ -45,6 +45,7 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
     src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp
+    src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
     src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
@@ -162,6 +163,12 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(ui_settings_tests glancelot-decoder)
     add_test(NAME ui_settings COMMAND ui_settings_tests -o -,txt)
     set_tests_properties(ui_settings PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+    qt_add_executable(favorites_tests tests/favorites_tests.cpp src/app/favorites_model.cpp include/glancelot/favorites_model.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    target_include_directories(favorites_tests PRIVATE include src/app)
+    target_link_libraries(favorites_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
+    add_dependencies(favorites_tests glancelot-decoder)
+    add_test(NAME favorites COMMAND favorites_tests -o -,txt)
+    set_tests_properties(favorites PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
   endif()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
