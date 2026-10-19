@@ -413,6 +413,7 @@ Rectangle {
         }
         // Grid keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
         Keys.onShortcutOverride: event => {
+            if (panel.yields && panel.yields(event)) return // INPUT-02: a registered grid-command key beats type-to-select and native keys
             if (panel.searchQuery.length > 0) {
                 if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
                     event.key === Qt.Key_Backspace || event.key === Qt.Key_F3 || event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
@@ -429,6 +430,7 @@ Rectangle {
             if (panel.keyAction(event).length) event.accepted = true
         }
         Keys.onPressed: event => {
+            if (panel.yields && panel.yields(event)) return
             const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
 
             // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
