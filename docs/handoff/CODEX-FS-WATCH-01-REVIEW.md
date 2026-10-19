@@ -117,3 +117,27 @@ Only generated test evidence may be copied from ignored cache. The old Linux
 When a full FS-WATCH review is authorized, use a fixed detached candidate with its
 own named branch/worktree/build, not the independently scoped PLATFORM tree. Do
 not treat PLATFORM fixture review or decoder approval as FS-WATCH approval.
+## Corrective review R3 status
+
+Source b4cfd20 fixes startup-marker coalescing, complete identity baseline
+retention, and alias-to-target navigation selection. Author narrow Windows
+regressions passed12/12 with zero skips (6.373s), following five actual failures
+before the fixes. Evidence-only commit27c4b0e records the 20k generated local
+metadata probe: bare64.74-81.91ms, actual model496.64-587.06ms, snapshot379.53-
+442.54ms; uncontrolled file cache, worker-only, no network qualification.
+
+Actual Claude R3 is reviewing fixed b4cfd20 in its own new review tree. No
+independent runtime or approval is claimed. PLATFORM is now done on main32cf4f4
+with actual Claude91b3e11 and integrated Windows18/18 plus Docker; prior pending
+fixture statements above are historical. Latest main (UI settings/favorites and
+folder-history contract) has not yet been merged into this feature branch.
+
+The new full Windows attempt was cancelled after another lane started its
+build-claude-f051 suite during this gate. Only verified owned FS-WATCH wrapper
+46988 and its descendants were stopped; no other lane was stopped. The attempt
+passed the first nine targets, then stopped during folder_grid. It is partial
+and does not qualify the required full native gate. Actual output and the reason
+are in ignored .cache/fs-watch-r3-full-windows.log and its cancel-reason file.
+Wait for a verified free native slot. A marker alone is not proof of ownership;
+inspect all *_tests.exe processes and CTest wrappers. Full Windows/Docker,
+independent runtime, latest-main review and integrated checks remain required.
