@@ -538,6 +538,13 @@ tasks:
     owner_lane: codex
     state: ready
     depends: [FILE-GRID-01]
+    branch: codex/fs-watch-01
+    worktree: .worktrees/codex-fs-watch-01
+    build: build-codex-fs-watch-01
+    plan: docs/FS-WATCH-01-PLAN.md
+    memory_action: act_mvfcixst_8e09ad782b31
+    test_target_contract: cmake/FSWatchTests.cmake
+    start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
     acceptance: Replacement, rename, delete and watcher-overflow recovery; selected identities survive where possible; changed revisions invalidate caches; no watcher per delegate
   - id: SAFE-MODE-01
