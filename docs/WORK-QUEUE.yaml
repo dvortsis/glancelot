@@ -133,7 +133,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: review
     branch: agent/platform-ops
     worktree: .worktrees/platform-ops
     build: build-platform-ops
