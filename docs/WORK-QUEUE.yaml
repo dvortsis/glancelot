@@ -2,7 +2,10 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: null, branch: null, started: null}
+integration_lock:
+  holder: codex-lead
+  branch: codex/safe-mode-01
+  started: 2026-10-19T17:00:50.800526+00:00
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
