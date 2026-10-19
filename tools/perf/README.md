@@ -68,6 +68,7 @@ process-first full decode/startup, not a cold filesystem/server/shader cache.
 ```powershell
 ./build-codex-perf-measure/perf_trace_tests.exe
 python tools/perf/test_report.py build-codex-perf-measure/perf_trace_tests.exe
+python tools/perf/test_fixture_integrity.py .cache/perf-fixtures-smoke-a
 python tools/perf/test_compare.py build-codex-perf-measure/perf_trace_tests.exe
 python tools/perf/validate_report.py .cache/report.json
 python tools/perf/compare.py .cache/baseline.json .cache/changed.json --percent 10 --min-samples 50 --split useful
@@ -134,3 +135,9 @@ It creates a private authenticated localhost VNC display, refuses existing displ
 endpoints, and terminates only its own server. It does not use the production browser
 entrypoint. Native 50-capture evidence is in the verification record; it is a smoke
 workload under uncontrolled hardware conditions, not a hardware qualification result.
+
+The verifier derives every expected image, mixed-folder entry and nested-tree path
+from the versioned manifest. It rejects incomplete indexes, dimensions inconsistent
+with the manifest, unexpected files/directories and mismatched Qt provenance.
+test_fixture_integrity.py uses only a temporary copy of generated smoke fixtures
+and checks these failures both normally and under Python -O.
