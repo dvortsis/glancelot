@@ -2318,7 +2318,11 @@ private slots:
         const QString trash = deleteFlow(h)->property("trashName").toString();
         QCOMPARE(results->property("title").toString(), "Moved 2 of 4 items to the " + trash);
         QStringList reasons;
-        for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
+        QTRY_VERIFY_WITH_TIMEOUT([&]() {
+            reasons.clear();
+            for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
+            return reasons.size() == 2;
+        }(), 5000);
         QCOMPARE(reasons.size(), 2);
         QVERIFY(reasons.join("|").contains("open in another app"));
         QVERIFY(reasons.join("|").contains("Nothing was deleted"));
