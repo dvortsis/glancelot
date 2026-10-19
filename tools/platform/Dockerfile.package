@@ -11,12 +11,12 @@ COPY ui ui
 COPY tests tests
 COPY LICENSE README.md THIRD_PARTY_NOTICES.md ./
 ARG BUILD_ATTEMPT=default
+ARG SOURCE_DATE_EPOCH
 RUN test -n "$BUILD_ATTEMPT" && cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
 RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
 COPY tools/platform tools/platform
 ARG SOURCE_COMMIT
 ARG SOURCE_DIRTY
-ARG SOURCE_DATE_EPOCH
 ARG TOOLCHAIN_IMAGE_ID
 RUN python3 tools/platform/stage_linux.py --repo /src --build /build --qt /opt/Qt/6.8.3/gcc_64 --output /package --epoch "$SOURCE_DATE_EPOCH" --source-commit "$SOURCE_COMMIT" --source-dirty "$SOURCE_DIRTY" --toolchain-image "$TOOLCHAIN_IMAGE_ID"
 

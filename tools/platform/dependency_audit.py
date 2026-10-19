@@ -21,6 +21,10 @@ def audit(package, output):
         if row["sha256"] in seen: continue
         seen.add(row["sha256"])
         process = subprocess.run(["ldd", str(path)], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
+        if process.returncode != 0 or "not found" in process.stdout:
+            print("Unresolved packaged ELF:", row["path"], flush=True)
+            for line in process.stdout.splitlines():
+                if "not found" in line: print(line.strip(), flush=True)
         require(process.returncode == 0 and "not found" not in process.stdout, "packaged ELF dependency missing")
         dependencies = []
         for line in process.stdout.splitlines():
