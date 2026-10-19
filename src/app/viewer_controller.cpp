@@ -603,11 +603,13 @@ struct ViewerController::Private {
         const auto oldRoot=nav.snapshot().root;
         navigationStop.request_stop(); navigationStop=std::stop_source{};
         const auto cancellation=navigationStop.get_token();
-        submitNavigation({token,++navigationGeneration,true,[file,oldRoot,cancellation,spec=sortSpec]{
+        Navigator fallback=nav;fallback.setCancellation(cancellation);
+        submitNavigation({token,++navigationGeneration,true,[file,oldRoot,cancellation,spec=sortSpec,fallback=std::move(fallback)]() mutable {
             Navigator result; std::error_code error;
             result.setCancellation(cancellation);
             result.setSort(spec); // nothing is listed yet, so this is free
-            if (result.open(nativePath(file),error) && !oldRoot.empty()) result.setRoot(oldRoot);
+            if(!result.open(nativePath(file),error))return NavigationResult{std::move(fallback),std::nullopt};
+            if(!oldRoot.empty())result.setRoot(oldRoot);
             return NavigationResult{std::move(result),std::nullopt};
         }});
     }
@@ -1022,6 +1024,7 @@ void ViewerController::reconcileRemovedPaths(const QStringList& paths) {
         for(int depth=0;depth<256&&!candidate.empty()&&!cancellation.stop_requested();++depth) {
             Navigator target; target.setCancellation(cancellation); target.setSort(sort); std::error_code error;
             if(target.openDirectory(candidate,error)) {
+                if(!copy.snapshot().root.empty())target.setRoot(copy.snapshot().root);
                 const auto current=target.snapshot().current;
                 return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
             }

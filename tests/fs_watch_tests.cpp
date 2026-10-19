@@ -176,6 +176,17 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!invalidated.isEmpty(),5000);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),10000);
         QCOMPARE(viewer.filePath(),c);
     }
+    void failedSourceAndRefreshPreserveWidenedRoot() {
+        QTemporaryDir root;QVERIFY(root.isValid());QVERIFY(QDir(root.path()).mkdir("album"));
+        const auto photo=root.filePath("album/photo.png");QVERIFY(png(photo,Qt::red));
+        ViewerController viewer;viewer.open(photo);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),10000);
+        viewer.raiseRoot();QTRY_COMPARE_WITH_TIMEOUT(fs_watch::key(fs_watch::display(viewer.snapshot().root)),fs_watch::key(root.path()),10000);
+        viewer.open(root.filePath("album/missing.png"));QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading(),10000);
+        QCOMPARE(fs_watch::key(fs_watch::display(viewer.snapshot().root)),fs_watch::key(root.path()));
+        viewer.trigger("refresh");QTRY_COMPARE_WITH_TIMEOUT(viewer.filePath(),photo,10000);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),10000);
+        QCOMPARE(fs_watch::key(fs_watch::display(viewer.snapshot().root)),fs_watch::key(root.path()));
+    }
     void nativeEventsRefreshAndScopeIsolation() {
         QTemporaryDir a,b;QVERIFY(a.isValid()&&b.isValid());
         const auto image=a.filePath("current.png");QVERIFY(write(image,"old generated"));

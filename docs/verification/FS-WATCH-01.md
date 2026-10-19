@@ -88,3 +88,9 @@ Final Windows build.ps1 -Test, full root Docker build, actual Windows/Linux even
 failure/cancellation outputs, independent Claude review and integrated-commit checks
 remain. Native network shares, other filesystems, physical GPUs/DPI/ICC/HDR and
 hardware performance stay unverified unless measured. Viewing never writes originals.
+
+A final source-race inspection added last-good navigation retention when a scan
+fails and preserves an intact widened root during the non-anchored recovery path.
+A new generated-media test covers failed source plus F5 recovery under that root.
+These changes are pending final-source checks alongside the byte/backoff/case-only
+changes; no additional pass is claimed.
