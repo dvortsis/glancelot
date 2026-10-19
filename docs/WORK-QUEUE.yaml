@@ -367,7 +367,7 @@ tasks:
     owner: lead
     owner_lane: codex
     state: ready
-    depends: [REVIEW-ALL-01, PERF-MEASURE-01]
+    depends: [REVIEW-ALL-01]
     branch: codex/platform-01
     worktree: .worktrees/codex-platform-01
     plan: docs/PLATFORM-01-PLAN.md
