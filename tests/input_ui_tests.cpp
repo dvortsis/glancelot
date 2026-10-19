@@ -545,6 +545,36 @@ private slots:
         h.viewer.setLargeTargets(false);
         QTRY_COMPARE(tokens->property("controlHeight").toInt(), 32);
     }
+    // F049: presets apply from the keyboard command and from Settings, and save/delete from Settings.
+    void layoutPresetsFromCommandAndSettings() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* top = named(h.window, "topBar"); QVERIFY(top); QTRY_VERIFY(top->isVisible());
+        h.viewer.trigger("layout-preset-next"); // first in the cycle: Default
+        h.viewer.trigger("layout-preset-next"); // Review: toolbar hidden
+        QTRY_VERIFY(!h.layout.pane("topbar")["visible"].toBool());
+        QTRY_VERIFY(!top->isVisible());
+        h.viewer.trigger("layout-preset-next"); // Browse: combined view
+        QTRY_COMPARE(h.layout.contentMode(), QString("combined"));
+        QVERIFY(h.layout.applyPreset("Default"));
+        QTRY_VERIFY(top->isVisible());
+        // Settings: save the arrangement under a name, see it listed, delete it.
+        QVERIFY(h.layout.resize("tree", 301));
+        auto* dialog = h.object("settingsDialog"); QVERIFY(dialog);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString("browsing")), Q_ARG(QVariant, false)));
+        QTRY_VERIFY(flag(h, "modalOpen")); QTest::qWait(400);
+        auto* name = named(h.window, "layoutPresetName"); QVERIFY(name);
+        name->setProperty("text", "My review");
+        auto* save = named(h.window, "layoutPresetSave"); QVERIFY(save); QTRY_VERIFY(save->isEnabled());
+        QTest::mouseMove(h.window, sceneCenter(save)); QTest::qWait(50);
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(save), 60);
+        QTRY_VERIFY(h.layout.presetNames().contains("My review"));
+        QTRY_VERIFY(name->property("text").toString().isEmpty());
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        QTRY_VERIFY(!flag(h, "modalOpen"));
+        QVERIFY(h.layout.deletePreset("My review"));
+        QVERIFY(!h.layout.presetNames().contains("My review"));
+    }
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
         Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);

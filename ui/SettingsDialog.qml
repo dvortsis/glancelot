@@ -374,6 +374,54 @@ UiDialog {
                     checked: paneLayout.locked
                     onToggled: paneLayout.locked = checked
                 }
+                // F049 presets: apply a saved arrangement in one step; save the current one under a name.
+                SettingRow {
+                    label: "Layout preset"
+                    description: "Review, Browse and Default are built in; your own saved layouts follow."
+                    RowLayout {
+                        spacing: Theme.gapSm
+                        UiComboBox {
+                            id: presetChoice
+                            objectName: "layoutPresetChoice"
+                            model: paneLayout.presetNames
+                            Accessible.name: "Layout preset"
+                        }
+                        UiButton {
+                            objectName: "layoutPresetApply"
+                            text: "Apply"
+                            enabled: !paneLayout.locked && presetChoice.currentIndex >= 0
+                            onClicked: paneLayout.applyPreset(presetChoice.currentText)
+                        }
+                        UiButton {
+                            objectName: "layoutPresetDelete"
+                            text: "Delete"
+                            variant: "outline"
+                            enabled: presetChoice.currentIndex >= 0 && !paneLayout.isBuiltInPreset(presetChoice.currentText)
+                            onClicked: paneLayout.deletePreset(presetChoice.currentText)
+                        }
+                    }
+                }
+                SettingRow {
+                    label: "Save current layout as"
+                    RowLayout {
+                        spacing: Theme.gapSm
+                        UiTextField {
+                            id: presetName
+                            objectName: "layoutPresetName"
+                            implicitWidth: 180
+                            placeholderText: "Preset name"
+                            maximumLength: 40
+                            Accessible.name: "Name for the new layout preset"
+                            onAccepted: if (paneLayout.savePreset(text.trim())) text = ""
+                        }
+                        UiButton {
+                            objectName: "layoutPresetSave"
+                            text: "Save"
+                            enabled: presetName.text.trim().length > 0
+                            onClicked: if (paneLayout.savePreset(presetName.text.trim())) presetName.text = ""
+                        }
+                    }
+                }
                 SettingRow {
                     label: "Pane"
                     UiComboBox {

@@ -17,6 +17,7 @@ ApplicationWindow {
     color: Theme.background
     property bool frameless: false
     property bool hudVisible: true
+    property int presetCursor: -1           // F049: the last preset the cycle command applied
     property bool focusMode: false          // F049: content only; Escape or the command returns the bars
     property bool navigatorOn: false        // F037 zoom navigator overview
     property rect navRect: Qt.rect(0, 0, 0, 0) // the visible part of the photo, in source pixels
@@ -546,6 +547,13 @@ ApplicationWindow {
         // F009
         else if (id === "view-details") photoGrid.details = !photoGrid.details
         // F049
+        else if (id === "layout-preset-next") {
+            const names = paneLayout.presetNames
+            if (names.length === 0) return
+            presetCursor = (presetCursor + 1) % names.length
+            if (paneLayout.applyPreset(names[presetCursor])) showSplitMessage("Layout: " + names[presetCursor])
+            else showSplitMessage(paneLayout.feedback)
+        }
         else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
         // F031
         else if (id === "slideshow") { if (slideshowOn) stopSlideshow(); else startSlideshow() }
