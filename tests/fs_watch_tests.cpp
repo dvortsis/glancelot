@@ -227,6 +227,15 @@ private slots:
         if(!before.identity().isEmpty())QVERIFY(before.identity()!=after.identity());
         QVERIFY(!(before==after));
     }
+    void sameSizeRestoredMtimeStillHasChangedRevision() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());const auto file=dir.filePath("revision.png");
+        QVERIFY(write(file,"old generated"));const auto path=fs_watch::native(file);
+        const auto timestamp=std::filesystem::last_write_time(path);const auto before=fs_watch::probe(path);
+        QTest::qWait(25);QVERIFY(write(file,"new generated"));std::filesystem::last_write_time(path,timestamp);
+        const auto after=fs_watch::probe(path);QVERIFY(before.known&&after.known);
+        QCOMPARE(before.size,after.size);QCOMPARE(before.modified,after.modified);
+        QVERIFY(before.changed!=after.changed);
+    }
     void hardLinksRefuseInference() {
         QTemporaryDir dir;QVERIFY(dir.isValid());
         const auto a=dir.filePath("a.png"),b=dir.filePath("b.png");QVERIFY(write(a,"generated"));

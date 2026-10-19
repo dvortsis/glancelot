@@ -66,6 +66,9 @@ inline Revision probe(const std::filesystem::path& path) {
         result.links=info.nNumberOfLinks;
         result.directory=(info.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=0;
         result.link=(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)!=0;
+        FILE_BASIC_INFO basic{};
+        if(GetFileInformationByHandleEx(handle,FileBasicInfo,&basic,sizeof(basic)))
+            result.changed=std::uint64_t(basic.ChangeTime.QuadPart);
     }
     CloseHandle(handle);
 #else
