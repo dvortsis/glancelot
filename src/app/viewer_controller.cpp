@@ -150,6 +150,8 @@ struct ViewerController::Private {
     QString directoryError;
     bool directoryPending{};
     bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
+    qreal textScale{1.0};
+    bool reducedMotion{false};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
     QJsonObject bindings;
@@ -280,6 +282,12 @@ struct ViewerController::Private {
         }
         if (object.value("tree").isBool()) tree=object.value("tree").toBool();
         if (object.value("treePinned").isBool()) treePin=object.value("treePinned").toBool();
+        if (object.value("textScale").isDouble()) {
+            const double s = object.value("textScale").toDouble();
+            if (s >= 0.75 && s <= 2.0) textScale = s;
+        } else textScale = 1.0;
+        if (object.value("reducedMotion").isBool()) reducedMotion = object.value("reducedMotion").toBool();
+        else reducedMotion = false;
     }
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
@@ -295,6 +303,8 @@ struct ViewerController::Private {
                 else if (name=="filmstrip") object[name]=filmstrip;
                 else if (name=="tree") object[name]=tree;
                 else if (name=="treePinned") object[name]=treePin;
+                else if (name=="textScale") object[name]=textScale;
+                else if (name=="reducedMotion") object[name]=reducedMotion;
             }
         }).ok();
     }
@@ -915,3 +925,68 @@ void ViewerController::setSortKey(const QString& key){
 void ViewerController::setSortDescending(bool descending){auto next=d->sortSpec;next.descending=descending;d->changeSort(next);}
 void ViewerController::setBoundaryMode(const QString& value){if(value!="continue"&&value!="stop"&&value!="loop")return;d->boundary=value;d->nav.setBoundary(boundaryValue(value));if(!d->save({"boundary"}))d->status="Boundary mode changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::setWheelMode(const QString& value){if(value!="navigate"&&value!="zoom"&&value!="pan")return;d->wheel=value;if(!d->save({"wheel"}))d->status="Wheel behavior changed; settings could not be saved.";emit stateChanged();}
+qreal ViewerController::textScale() const { return d->textScale; }
+void ViewerController::setTextScale(qreal scale) {
+    const qreal clamped = std::clamp(scale, 0.75, 2.0);
+    if (qFuzzyCompare(clamped, d->textScale)) return;
+    d->textScale = clamped;
+    d->save({"textScale"});
+    emit stateChanged();
+}
+bool ViewerController::reducedMotion() const { return d->reducedMotion; }
+void ViewerController::setReducedMotion(bool reduced) {
+    if (reduced == d->reducedMotion) return;
+    d->reducedMotion = reduced;
+    d->save({"reducedMotion"});
+    emit stateChanged();
+}
+bool ViewerController::exportSettings(const QString& targetFilePath) {
+    QString error;
+    if (!glancelot::exportSettings(targetFilePath, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not export settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->status = QStringLiteral("Settings exported successfully.");
+    emit stateChanged();
+    return true;
+}
+bool ViewerController::importSettings(const QString& sourceFilePath) {
+    QString error;
+    if (!glancelot::importSettings(sourceFilePath, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not import settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("Settings imported successfully.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
+bool ViewerController::resetSection(const QString& sectionName) {
+    QString error;
+    if (!glancelot::resetSection(sectionName, &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not reset section.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("Section reset to defaults.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}
+bool ViewerController::resetAllSettings() {
+    QString error;
+    if (!glancelot::resetSection(QStringLiteral("all"), &error)) {
+        d->status = error.isEmpty() ? QStringLiteral("Could not reset all settings.") : error;
+        emit stateChanged();
+        return false;
+    }
+    d->load();
+    d->status = QStringLiteral("All settings reset to defaults.");
+    emit stateChanged();
+    emit bindingsChanged();
+    return true;
+}

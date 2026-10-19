@@ -198,8 +198,10 @@ tasks:
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
     priority: 10
-    owner: lead
-    state: ready
+    state: implementing
+    branch: agent/ui-settings
+    worktree: .worktrees/ui-settings
+    build: build-ui-settings
     depends: [PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-KEYS-01]
     outcome: Advanced searchable UI customization and settings using existing theme and preference infrastructure
     acceptance: Pane visibility, placement, sizes, freeze, pin/auto-hide timing and layout presets; grid thumbnail size, density, labels, folders-first and hidden-file visibility; preview placement, toolbar actions, UI text scale, backgrounds, theme selection, reduced motion and shortcut editing; per-section reset plus full UI reset; portable import/export with validation and explicit global versus per-window scope

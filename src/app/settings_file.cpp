@@ -124,4 +124,113 @@ bool resetSettings(QString* movedTo) {
     if (movedTo) *movedTo = target;
     return QFile::rename(path, target);
 }
+
+bool exportSettings(const QString& targetFilePath, QString* error) {
+    if (targetFilePath.trimmed().isEmpty()) {
+        if (error) *error = QStringLiteral("Target file path cannot be empty.");
+        return false;
+    }
+    QJsonObject root;
+    const auto status = readSettings(root);
+    if (!status.ok()) {
+        if (error) *error = QStringLiteral("Could not read settings for export.");
+        return false;
+    }
+    QSaveFile saveFile(targetFilePath);
+    if (!saveFile.open(QIODevice::WriteOnly)) {
+        if (error) *error = QStringLiteral("Could not create target export file.");
+        return false;
+    }
+    root["schema"] = 1;
+    saveFile.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    if (!saveFile.commit()) {
+        if (error) *error = QStringLiteral("Could not write export file atomically.");
+        return false;
+    }
+    return true;
 }
+
+bool importSettings(const QString& sourceFilePath, QString* error) {
+    QFile file(sourceFilePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = QStringLiteral("Could not open settings file for import.");
+        return false;
+    }
+    const auto bytes = file.readAll();
+    if (bytes.size() > kMaxSettingsBytes) {
+        if (error) *error = QStringLiteral("Import file exceeds maximum settings size.");
+        return false;
+    }
+    QJsonParseError parseError;
+    const auto doc = QJsonDocument::fromJson(bytes, &parseError);
+    if (doc.isNull() || !doc.isObject()) {
+        if (error) *error = QStringLiteral("Import file contains invalid JSON.");
+        return false;
+    }
+    const auto imported = doc.object();
+    const int schema = imported.value(QStringLiteral("schema")).toInt(1);
+    if (schema > 1) {
+        if (error) *error = QStringLiteral("Import file has an unsupported newer schema.");
+        return false;
+    }
+
+    const auto status = updateSettings([&](QJsonObject& root) {
+        for (auto it = imported.begin(); it != imported.end(); ++it) {
+            if (it.key() == QStringLiteral("schema")) continue;
+            root[it.key()] = it.value();
+        }
+    });
+
+    if (!status.ok()) {
+        if (error) *error = QStringLiteral("Could not save imported settings.");
+        return false;
+    }
+    return true;
+}
+
+bool resetSection(const QString& sectionName, QString* error) {
+    const QString sec = sectionName.trimmed().toLower();
+    const auto status = updateSettings([&](QJsonObject& root) {
+        if (sec == QStringLiteral("appearance")) {
+            root.remove(QStringLiteral("appearance"));
+            root.remove(QStringLiteral("textScale"));
+            root.remove(QStringLiteral("reducedMotion"));
+        } else if (sec == QStringLiteral("viewing")) {
+            root.remove(QStringLiteral("boundary"));
+            root.remove(QStringLiteral("wheel"));
+            root.remove(QStringLiteral("nearest"));
+            root.remove(QStringLiteral("backdrop"));
+        } else if (sec == QStringLiteral("browsing")) {
+            root.remove(QStringLiteral("filmstrip"));
+            root.remove(QStringLiteral("tree"));
+            root.remove(QStringLiteral("treePinned"));
+            root.remove(QStringLiteral("sort"));
+        } else if (sec == QStringLiteral("panes")) {
+            root.remove(QStringLiteral("layouts"));
+        } else if (sec == QStringLiteral("bindings")) {
+            root.remove(QStringLiteral("bindings"));
+        } else if (sec == QStringLiteral("all")) {
+            root.remove(QStringLiteral("appearance"));
+            root.remove(QStringLiteral("textScale"));
+            root.remove(QStringLiteral("reducedMotion"));
+            root.remove(QStringLiteral("boundary"));
+            root.remove(QStringLiteral("wheel"));
+            root.remove(QStringLiteral("nearest"));
+            root.remove(QStringLiteral("backdrop"));
+            root.remove(QStringLiteral("filmstrip"));
+            root.remove(QStringLiteral("tree"));
+            root.remove(QStringLiteral("treePinned"));
+            root.remove(QStringLiteral("sort"));
+            root.remove(QStringLiteral("layouts"));
+            root.remove(QStringLiteral("bindings"));
+        }
+    });
+
+    if (!status.ok()) {
+        if (error) *error = QStringLiteral("Could not reset settings section.");
+        return false;
+    }
+    return true;
+}
+}
+
