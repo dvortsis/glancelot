@@ -34,3 +34,9 @@ Final literal-path case and full candidate Windows/Docker checks remain required
 Include this prerequisite in PERF candidate review so an actual Claude reviewer
 can audit it before any main integration. Real native Linux file-manager/terminal
 UX remains unverified; captured process-start routing is the scope of these tests.
+
+The final test source (including literal Unicode/metacharacter paths) is included
+in combined PERF candidate affabf4. Its required full Docker build passes 15/15
+in 128.24s; platform_integration passes in 0.47s. This verifies real helper-process
+argv/cwd assertions in the headless build image. Independent review and main
+integration remain pending.

@@ -441,3 +441,29 @@ The user subsequently appointed this session lead. Main now freezes
  docs/PLATFORM-01-PLAN.md, including an isolated test-only launcher-environment
 prerequisite. No Gemini production platform adapter changes are authorized by that
 repair. PLATFORM implementation starts only after PERF reaches review.
+
+
+## Lead-owned combined candidate and required Docker gate
+
+The user appointed this session lead. Main froze PLATFORM-01 in 444f896 and clarified
+existing PERF timing semantics in 91a49d2. The candidate synchronized main in 70b3652,
+then merged the separately committed test-only Linux launcher prerequisite 14e7c46
+in affabf4. Production Gemini platform code is unchanged by that repair; its actual
+process requests are tested, not replaced with unconditional success. See
+ docs/verification/PLATFORM-TEST-ENV-01.md. No unreviewed implementation was merged into main.
+
+The unmodified required Dockerfile and full test command now pass on affabf4:
+
+```
+docker build -t glancelot-browser:codex-perf-measure .
+10/15 Test #10: folder_grid Passed 79.50 sec
+15/15 Test #15: platform_integration Passed 0.47 sec
+100% tests passed, 0 tests failed out of 15
+Total Test time (real) = 128.24 sec
+writing image sha256:b2949e9f07c87e19e5743578baf626f92b58381b8aa00f8fe3203efeb3558934
+```
+
+This is the full required Docker gate, not the earlier replay-only artifact. The
+runtime image also passes its normal binary/Qt plugin ldd checks. Final runtime
+replay and refreshed Windows full suite are running. Actual Claude review of the
+combined candidate, including both test corrections, and integrated checks remain.
