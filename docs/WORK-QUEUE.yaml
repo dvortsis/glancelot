@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: gemini, branch: agent/folder-history, started: "2026-10-19T16:18:00"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -491,10 +491,12 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: implementing
+    state: done
     branch: agent/folder-history
     worktree: .worktrees/folder-history
     build: build-folder-history
+    commit: 3cf4dcf
+    evidence: docs/verification/FOLDER-HISTORY-01.md; independent review approved; integrated 3cf4dcf Windows scripts/build.ps1 -Test 20/20 (155.30s) and Linux docker build 20/20 (106.53s)
     plan: docs/FOLDER-HISTORY-01-PLAN.md
     depends: [REVIEW-ALL-01]
     outcome: Reversible back/forward folder navigation history stack with state preservation (F001)
