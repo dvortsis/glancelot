@@ -149,11 +149,14 @@ inline int bootstrap(const QStringList& originalArguments) {
     // through the parent's stdout so CTest retains the complete result.
     const QString defaultLog=QDir(sandbox).filePath("test-output.txt");
     const bool ownLog=!args.contains("-o");
-    if(ownLog) args.append({"-o",defaultLog+",txt"});
+
     for(qsizetype i=1;i<args.size();++i) if(args[i-1]=="-o" && args[i]!="-" && !args[i].startsWith("-,")) {
         const qsizetype comma=args[i].lastIndexOf(','); const QString file=comma>=0?args[i].left(comma):args[i];
         if(QDir::isRelativePath(file)) args[i]=QFileInfo(file).absoluteFilePath()+(comma>=0?args[i].mid(comma):QString());
     }
+    // QtTest opens its logger with a narrow CRT filename. Resolve this simple
+    // relative name inside the unchanged wide-character private CWD.
+    if(ownLog) args.append({"-o","test-output.txt,txt"});
     HANDLE job=CreateJobObjectW(nullptr,nullptr); if(!job) return failure(104,"create owned job");
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit{};limit.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     if(!SetInformationJobObject(job,JobObjectExtendedLimitInformation,&limit,sizeof(limit))) {CloseHandle(job);return failure(105,"configure owned job");}
