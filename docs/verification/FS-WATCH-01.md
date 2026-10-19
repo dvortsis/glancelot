@@ -313,3 +313,57 @@ commands/output. No competing native test was observed during this targeted run.
 Full Windows/Linux gates and independent corrective review remain pending.
 Coarse-timestamp identity collisions and physical/network/cloud variants remain
 unverified; this run does not establish their behavior.
+
+## R4 independent findings and R5 corrections
+
+Actual Claude R4 a19a431 found no blocking source defect and confirmed N8-N11
+fixed. Its preserved report still withholds approval pending runtime/full gates.
+On fixed9177b15 the complete Docker build passed21/21 in163.94s (fs_watch50.66s,
+fs_watch_ui1.09s), imagea83da558b936d0a96ae4d236e0249646ad6927ceccaf5650b76cbdcf2f21bd49.
+Log .cache/fs-watch-r4-full-docker.log; terminal exit0. The native wait coordinator
+ended9 after five minutes with the slot occupied; no full Windows gate started.
+The Docker result predates the following corrections and cannot qualify them.
+
+N12 now resolves the former directory spelling before declaring that it no
+longer denotes the renamed object. Grid selection tests cover a missing old
+name, a different object reusing it, and an old-name alias pointing to the moved
+object. N14 separates subsequent-scan evidence from the OR-merged first-baseline
+marker, so an initial and later incomplete scan coalesced in the controller still
+invalidate listings. New native rearm rows cover image and parent watches as well
+as the directory itself. Full build passed. Focused Windows tests passed9/9,
+zero skips,6.151s; exact output is fs-watch-01/windows-r5-targeted.txt.
+
+The new actual controller/model100,000-entry test passed3/3 (including init and
+cleanup), zero skips,68.017s. It generated files in40.901s before starting its
+GUI timer, then recorded12ms worst gap during initial publication and140ms during
+271 atomic replacements over8s plus final listing recovery,11 invalidations.
+It checked an actual metadata publication,100,000 retained rows, current image
+pixels/path and unchanged original PNG hash. Both gaps satisfy the existing
+strictly-less-than250ms oracle. Writes use a separate worker thread and real
+QSaveFile atomic replacements in generated TEMP media, without injected events.
+Exact output is fs-watch-01/windows-r5-100k-stress.txt. Concurrent native jobs from
+other lanes were observed; these are filtered filesystem backend results, not an
+isolated benchmark, full Windows gate or physical hardware qualification.
+
+Current-source metadata measurement also covered20,000 entries in the scope and
+20,000 in its parent (39,999 one-byte files plus the scope directory). Three
+forward/reverse/forward rounds measured bare scope131.98-172.69ms, bare scope and
+parent217.68-260.11ms, actual model651.52-803.44ms, watch scope559.62-685.49ms and
+watch scope plus parent1126.01-1612.92ms. Generation16.347s is excluded; each sample
+had its exact expected row count and complete identities. Exact data and limits
+are in fs-watch-01/local-cost-scope-and-parent.json. The ignored diagnostic
+compiles actual directory_entry_model.cpp and fs_revision.hpp unchanged, plus the
+branch core library; worker construction/destruction only, no GUI/decoder, warm
+uncontrolled file cache, one local volume, no randomization or cache flush. Other
+native jobs were active. This confirms material background I/O cost; it is not
+proof of isolated latency, acceptable power use or network performance. Poll delay
+is measured from scan completion, so a slow scan does not create a continuous loop.
+Independent runtime repetition and current-source full gates remain required.
+
+Residual R4 N13 registration ABA/coarse identity cases can degrade native latency
+while bounded polling still recovers membership; physical/coarse-timestamp,
+network/ReFS/cloud behavior remains unverified. No native handle binding or
+hardware qualification is inferred from QFileSystemWatcher's path strings. N16's
+1.5s event bound remains intentionally below2s polling; a loaded-host failure is
+a real failed test result, never silently converted to a pass or skipped. The
+first-baseline timer/cancellation cases retain their exact decode-count checks.

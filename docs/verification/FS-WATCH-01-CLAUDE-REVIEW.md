@@ -1,188 +1,228 @@
-# FS-WATCH-01 Claude-lane independent corrective review R3 (STATIC phase)
+# FS-WATCH-01 Claude-lane independent corrective review R4 (STATIC phase)
 
-Candidate: b4cfd20 (fixed). Reviewer: Claude Code, branch claude/review-fs-watch-01-r3,
-own worktree. Reviewed range: `08bb4b1..b4cfd20` (source, tests, plan wording), plus the
-full current `fs_monitor.hpp`, `fs_revision.hpp`, the observation/reconcile/open/trigger
-paths of `viewer_controller.cpp` and `buildListing`/`apply` in `directory_entry_model.cpp`.
-Prior report: bb3d271 (N4-N7, B1, N1, N2, N3), superseded by this file.
+Candidate: 9177b15 (fixed). Reviewer: Claude Code, branch claude/review-fs-watch-01-r4,
+own worktree. Reviewed range `b0593b8..9177b15` (src, tests, docs) plus the full resulting
+`fs_monitor.hpp`, `fs_revision.hpp`, the observation/reconcile/open paths of
+`viewer_controller.cpp`, `buildListing`/`apply`/`setDirectory` of `directory_entry_model.cpp`,
+`cmake/FSWatchTests.cmake` and the frozen plan including the R3 policy/seam amendment.
+The R3 report (ecb9d54, candidate b4cfd20) is preserved unchanged in git history; this file
+supersedes it in the working tree. The author's R4 handoff is not approval.
 
-Phase: static only. Nothing was configured, built, run or probed, and no process or
-window was touched. No runtime evidence is claimed. I read the author's two logs
-(`.cache/author-corrective-{red,green}.txt`) only as a description of what the author ran.
-They are not approval. The green log is a 12-case filtered subset (`Totals: 12 passed`),
-not the 32-method `fs_watch` file, and not the full Windows or Docker gate.
+Phase: static only. I did not configure, build, run, probe or use Docker, and touched no
+process or window. No runtime result is claimed. `.cache/author-r4-targeted.txt` reads
+`Totals: 10 passed, 0 failed, 0 skipped, 15682ms`. I treat that as a description of what the
+author ran. It is a 10-case filtered subset, not the full `fs_watch` file, the Windows suite or
+Docker.
 
-UI: no `ui/`, QML, token or visual file is in `08bb4b1..b4cfd20` (checked with
-`git diff --stat`). The native UI skills were therefore not needed for this round. The
-earlier one-token `Main.qml` F5 change is unchanged and is not re-reviewed here.
+UI: the diff contains no `ui/` file. The one-token `"refresh"` allow-list in `ui/Main.qml` came
+from the earlier routing amendment (`0bb6207..9177b15` shows exactly that token). No UI behavior was
+reached, so the native UI skills were not needed and no visual review is claimed.
 
-## Disposition: CHANGES REQUESTED (static). No new blocking defect found.
+## Disposition: NOT APPROVED (static phase). No blocking source defect found.
 
-The source fixes for N4, N5 and N6 are correct in my reading, for the cases they target.
-I found four new non-blocking findings (N8-N11) and several unclosed coverage gaps.
-Full approval is withheld because:
-1. No native build, CTest or Docker run exists for b4cfd20. The author's 12-case run is narrow.
-2. N3 (20k-entry I/O cost) is still unmeasured.
-3. The N7 mid-enumeration retarget test and a controller-level N4 test do not exist.
-4. The branch lacks the latest `main` (UI, settings, favorites, platform 32cf4f4). The frozen
-   public contracts and source need an integration review again after that merge.
-FS-WATCH is not integrated and nothing here says otherwise.
+All four R3 findings (N8-N11) are fixed in source as the lead's R3 policy specifies, for the
+cases they target. I found five new non-blocking findings (N12-N16). This is not full approval
+because these gates are open and none is waived or counted:
+1. Full current-source `scripts/build.ps1 -Test` on Windows, including the whole `fs_watch` file
+   and `fs_watch_ui`. The author's attempt collided with another lane and was cancelled.
+2. `docker build -t glancelot-browser:main .` (Linux runtime of the symlink/regular-file cases).
+3. Independent runtime review on 9177b15 (B1/N2 probes, N3 timing, real junction/symlink,
+   F5 in preview/grid/combined). Another lane owns the Windows run in this phase.
+4. Serial integration under the lock and checks on the integrated commit.
+Because of 1-3, the verdict on 9177b15 is "static review clean of blockers, runtime pending",
+not APPROVED. Do not merge on this report alone.
 
-## Prior findings, re-assessed on b4cfd20
+## Synchronization and contracts (checked)
 
-| Id | Disposition | Basis |
-|----|-------------|-------|
-| B1 first baseline lost while controller busy | Fixed (static) | `fs_monitor.hpp:136-143` seeds the first complete `accepted`/`acceptedParent` and `acceptedImage` under the mutex, so later unacknowledged scans carry the earliest baseline. Unchanged in intent. |
-| N1 linked scope permanently incomplete | Fixed (static), see N9, N10 | Resolved-target probing, alias row spelling and at most 3 handles are intact. |
-| N2 incomplete identity map replaced the last complete | Fixed in model and now in monitor | Model: `apply()` `:204-205`. Monitor: see N6. |
-| N3 steady-state I/O | Open | Needs the runtime measurement. Static estimate below. |
-| N4 `!before` stopped meaning "first observation" | Fixed (static), controller path untested | `Observation.baseline` is set on the worker's first scan of a scope (`:87`, `:147`), OR-merged on the publication slot (`:162`) and in the controller pending merge (`viewer_controller.cpp:240`). The decode gate at `:228` now tests `value.baseline`. The gate runs on arrival, before the merge. A flag carried by a merged pending value is not reused, so there is no double re-decode. Open/restart always bumps the scope (`restart=true`), so a re-open of the same path always gets a new baseline. |
-| N5 alias to target navigation read as a directory rename | Fixed (static) for a link leaf | `buildListing:121-123` uses the no-follow `directoryEntryRevision.identity()` against `prior.entryRevision.identity()`. `identity()` is empty for a link, so alias to target, target to alias and L1 to L2 are never renames. A real rename of an ordinary directory still matches. Ancestor aliasing: see N11. |
-| N6 partial snapshots replaced the monitor baseline | Fixed (static) | `remember()` advances `accepted`/`acceptedParent` only to a complete snapshot, and `acceptedImage` independently. `establishScope()` clears all three on a scope change, in the worker, in `acknowledge()` and in the automatic path. The automatic path is guarded by `value->scope==shared->request.scope` (`:175`), and `acknowledge()` by `value.scope!=scope` (GUI thread, serialized with `setScope`). I could not construct an interleaving where `acceptedScope` runs ahead of the worker's scope or an old scope's identities survive. |
-| N7 linked-scope coverage | Partly addressed | Added: coverage and zero-invalidation steady state, viewer rename following, a dangling target, a regular-file target (POSIX only), and ordinary navigation reset. Still missing: the retarget A-B-A guard test (below). |
+- `0bb6207` (root main) is not an ancestor of 9177b15. Its only delta from the common base is
+  `docs/WORK-QUEUE.yaml` (one line, lock release). No product delta.
+- `include/` is byte-identical to `0bb6207` (empty `git diff --stat`). No shared header changed.
+- Against `0bb6207` the root `CMakeLists.txt` differs by one line, `include(cmake/FSWatchTests.cmake)`.
+  `favorites_tests` and its `add_test` remain, so both test target sets are kept. Both `refresh`
+  (`viewer_controller.cpp:111`, handler `:893`) and `add-to-favorites` (`:113`) commands are present.
 
-## New findings
+## Macro, ODR and lifetime (GLANCELOT_FS_WATCH_TESTING)
 
-### N8 (non-blocking, should fix) - controller pending merge can pin an incomplete `before` over the worker's complete seed
-- `viewer_controller.cpp:236`: `value.before = pending->before ? pending->before : pending->after`.
-  `pending->after` can be incomplete, and the merge result then becomes the next
-  `pending->before`.
-- Trigger: the first scan of a scope is incomplete (a busy or large folder, or a change
-  during the scan) while navigation or reconciliation is busy. Scan 2 is complete. The worker
-  seeds S2 but publishes `before=null`. The controller assigns `before=S1` (incomplete). Scan 3
-  arrives with the worker's correct `before=S2`, but `pending->before` is non-null, so S1 wins
-  again and stays until the controller acknowledges.
-- Effect, all conservative: `value.before->entries != current.entries` is true, so
-  `filesInvalidated` plus a navigation refresh job fire without a real change (`:402-404`,
-  `:426-432`). `:382` also refuses to prove a deleted folder because `before->complete` is false.
-  Worker `renamedImage`/`renamedDirectory` use the worker's own `before` and stay correct.
-  No wrong deletion or rename follows.
-- Proposed fix: keep a pending `before` only when it is complete, else prefer the worker's
-  `value.before`, else a complete `pending->after`. Add a controller-level test that runs this
-  sequence with a busy navigation. The Monitor-level partial tests cannot see it.
+- `rg` over the whole tree finds exactly one definition, `cmake/FSWatchTests.cmake:11`, `PRIVATE` on
+  `fs_watch_tests`. No root, preset or script defines it. `fs_watch_ui_tests` compiles the same
+  `viewer_controller.cpp` without it. Viewer, decoder and other feature binaries therefore do not
+  contain `ControllerTestHooks`, the thread-local, the `afterEnumeration` parameter or the
+  `deferReconciliation`/`pending` calls. (Static source reasoning; no binary inspection was done.)
+- ODR: `fs_revision.hpp`/`fs_monitor.hpp` are included only by `viewer_controller.cpp`,
+  `directory_entry_model.cpp` and `tests/fs_watch_tests.cpp`. The libraries `glancelot_core` and
+  `glancelot_platform` do not include them. Inside `fs_watch_tests` every TU has the macro, so the
+  extended `snapshot()` signature is consistent. In other executables no TU has it. `Private` is
+  defined only inside `viewer_controller.cpp`, and the public header is unchanged, so the layout
+  difference is not visible across TUs. No mixed-definition hazard found.
+- Lifetime: hooks are copied by value at `Private` construction from a thread-local pointer.
+  `HookScope` restores the previous pointer in its destructor, so it cannot leak across tests.
+  Test lambdas capture `shared_ptr`s or locals declared before the `ViewerController`, which is
+  destroyed first. `~Monitor` sets `closed` and clears `accept` under the mutex, so a late `pending`
+  hook invocation after destruction is not reachable. In the late-baseline test the gate loop also
+  exits on `stop_requested()`, and a `QScopeGuard` releases it, so a failing `QVERIFY` cannot hang
+  the worker.
+- The tests run the real `ViewerController`, `Monitor::Worker`, `reconcileObservation` and
+  `DirectoryEntryModel`. Only the snapshot reader (`read`), native registration and the two
+  deterministic gates are substituted. `afterEnumeration` runs inside the real `snapshot()`.
+  I judge the tests exercise actual controller logic, not a copy.
 
-### N9 (non-blocking, needs a lead decision) - folders the monitor can never snapshot completely no longer auto-refresh the grid
-- `Observation.before` is now non-null only after a complete snapshot, because partial
-  snapshots no longer seed or advance `accepted` (N6). The incomplete branch of
-  `reconcileObservation` emits `filesInvalidated` only `if(value.before||value.forced)` (`:393`).
-- Trigger: a folder with more than 20,000 entries or more than 16 MiB of identity (so
-  `snapshot()` is always incomplete), but within the model's own 100k listing limit. Before
-  this round, `accepted` followed the incomplete snapshot, `before` was non-null and every
-  observation invalidated. That also meant a full relist on every retry, up to every 30 s,
-  which is the N3 cost. Now only F5 (`forced`) invalidates. A file added by another program
-  does not appear in the grid. The "could not obtain a complete snapshot, press F5" status is
-  shown, so the user is told, but this is a behaviour change the plan did not state.
-- The plan says this packet does not claim large-directory publication. Either record this as
-  an accepted limitation, or gate the invalidation on `!value.baseline` instead of `value.before`
-  so a truncated folder still refreshes on events with the existing backoff. Either way, add a
-  test with an injected `read` that is permanently incomplete and make the policy explicit.
+## Findings on the stated items
 
-### N10 (low, unverified) - alias retarget does not re-arm the native registration
-- `:121` registers only paths missing from `watcher.files()+directories()` by string. When the
-  alias link is retargeted from A to B, the string `alias` stays registered, but the OS handle
-  or inotify watch belongs to the old target A.
-- `coverage` stays true and the next scan sees B's membership through the periodic path (every
-  2 s when coverage and completeness hold). Native events from B are never delivered, so
-  latency falls from event-driven to the poll interval without any degraded indicator.
-- Not a correctness loss. Propose: remove and re-add the alias path when
-  `current->entryRevision` (the link entry) differs from the revision seen at registration, or
-  document the 2 s bound. Linux inotify and the Windows change handle behaviour are untested.
+### N8 - pending baseline preference: FIXED (static)
+`viewer_controller.cpp:247-261` `earliestComplete` returns pending-before if complete, else the worker's
+before if complete, else a complete pending-after, else the worker's before, separately for the
+folder and the parent. An incomplete snapshot can no longer become the carried baseline: the final
+fallback is the worker's value, which is null or complete. This closes the R3 S1-incomplete pin.
+`controllerPendingPrefersCompleteWorkerBaseline` discriminates it. I traced it against the old
+`pending->before ? pending->before : pending->after`: scan 2 would carry incomplete S1 as `before`,
+and on scan 3 the old code keeps it, so `pending.last().before->complete` fails on the old code and
+passes on the new one. Its reconcile deferral is a controller hook, so the real merge runs. Residual:
+the worker's `renamedImage`/`renamedDirectory` are not re-derived across merges, but they are computed
+from the unacknowledged `accepted` baseline, so they stay cumulative. No defect.
 
-### N11 (low) - test-quality gaps in the new cases
-1. `firstBaselineMarkerSurvivesPublicationCoalescing` asserts the `baseline` flag on a bare
-   Monitor. The thing N4 protects is the controller's single post-baseline re-decode, which has
-   no test. Needed: delay the receiver event loop, publish two scans, assert exactly one
-   re-decode after a late baseline and no stale image (hash of decoded pixels after a write
-   between decode start and scan 1).
-2. `automatic-first-partial` passed in the author's red run (`Totals: 4 passed, 5 failed`), so
-   it does not discriminate the fix. The manual cases and middle-partial cases do.
-3. `viewer.image().pixelColor(0,0)==red` after the rename cannot distinguish a reload from
-   retained pixels, because the image is the same colour. The `filePath()==b` and `imageReady`
-   checks carry the evidence. Use a distinct colour per file, or compare the decoded hash.
-4. A leaf alias is covered. A non-link directory reached through a link ancestor (for example
-   `junction\sub` against `real\sub`) has a non-link entry identity equal to the prior, so
-   `renamedDirectory` is true and the selection follows to the other spelling. That is the
-   same object, so it is arguably right, but it contradicts "ordinary navigation starts with a
-   new selection" and has no test or stated decision.
-5. Identity cases `QSKIP` or `QWARN` on filesystems without a usable native identity. A skipped
-   result is not a pass.
+### N9 - automatic invalidation after the first incomplete observation: FIXED (static), see N14, N15
+`:425` is now `if(!value.baseline||value.forced) emit filesInvalidated()`. The first scan of a scope
+(the baseline, when the model has just listed) is skipped. Every later incomplete observation
+invalidates, including a permanent one, at the existing backoff (`retryDelay` doubles from 2 s to
+30 s while `coverage&&complete` is false). Incomplete still never proves rename or deletion: the
+rename paths require `complete`, and the missing-folder deletion proof requires `before->complete`
+and `parentAfter->complete`. `permanentlyIncompleteScopeStillRefreshesAutomatically` has no F5 and
+uses `registerNative=false`, so the second periodic scan (about 4 s) is the only possible source,
+inside a 10 s timeout. It discriminates the R3 behavior. It asserts the open image stays ready and
+that a degraded error is shown.
 
-## Required remaining coverage (concrete)
-- **N7 retarget during enumeration.** `snapshot()` has no seam between `directory_iterator`
-  and the `finalRevision`/`stableAlias` checks (`fs_revision.hpp:135-139`). Add a private
-  test-only hook, for example an optional callback invoked once after enumeration, or a
-  `std::function` parameter with a default. Then: retarget alias to B and back to A inside
-  the hook and assert `complete` is false when the link entry revision changed; swap to B and
-  leave it, assert `complete==false` and that the controller does not report B's membership
-  as A's rename. Record `coverage` and `maxHandles<=3` in the same test. Without a seam, the
-  guard is only exercised by chance. Residual hole to state: a swap that leaves inode, ctime
-  and birth time identical within one kernel tick on a coarse-timestamp filesystem.
-- **Controller N4 and N8 tests** (above), including cancellation of the re-decode by a newer
-  open.
-- **N9 policy test** with a permanently incomplete injected `read`.
-- **POSIX symlink and regular-file-target tests** (`directoryAliasToRegularFile...` is
-  `#ifndef Q_OS_WIN` and has never run). They need the Docker/Linux run.
-- **Windows reparse variants** beyond a junction: `mklink /D` directory symlink and a cloud
-  placeholder. `probe` sets `link` for any reparse point, so those scopes are incomplete
-  (`readable` false) and have coverage false. That is conservative, not a regression, but it
-  is unmeasured.
-- Original-media immutability: the changed code adds no writes (probes use read-attributes
-  only, as before). Hash assertions exist in the rename tests and need the full run.
+### N10 - alias and image rebinding: FIXED (static), see N13, N16
+`fs_monitor.hpp:130-155`. Registration identity and link-entry revision are stored only if the path
+is in `watcher.files()+directories()` after the add (`:150-155`), which is the requested "after actual
+add". Rebind triggers on a target identity change, or on a link-entry revision change when the entry
+is a link. A directory rebind also drops the image watch, so an image below a retargeted alias is re-added.
+A transient unknown identity can only cause a harmless remove and re-add inside the same scan. A
+scope change clears all native watches first, so a stale stored identity cannot be used (it is
+guarded by `registered.contains`). Handles stay at most three (directory, parent, image).
+`retargetRearmsNativeAliasWatch` waits for B's identity and `coverage`, writes into B and requires
+the event in under 1.5 s while polling is 2 s. CORRECTION (follow-up commit): this test is not proof of
+alias-watch delivery; see N16.1. It can pass on the parent watch or on a late poll.
 
-## Checked statically, no defect found
-- Coalescing: one publication slot, `publicationQueued` single flight, `baseline`/`forced`/
-  `fileEvent` ORed only inside the same scope. An old-scope publication is replaced, never
-  merged into a new one. `observationRevision` is monotonic across scopes because the worker
-  counter is not reset.
-- Races: `before` is read under the mutex, then rename maps are computed outside it. A
-  concurrent acknowledge can only make that `before` older, never from another scope, so a
-  match remains an identity relation against a real earlier complete snapshot.
-- Receiver startup and teardown: the worker invokes the receiver only while holding the mutex
-  with `closed==false`, and `~Monitor` sets `closed` under the same mutex before waiting 250
-  ms. A blocked filesystem call holds only `shared_ptr` state. The leaked-thread path after a
-  timed-out wait is unchanged and is bounded by the abandon design.
-- Rename with missing old pathname or name reuse: `renamedDirectory` and `renamedImage` come
-  from identity maps keyed by the old path, so a new object created at the old name does not
-  mask a proven rename, and ambiguous (hard link, reparse, unknown) identities are refused by
-  `identity()`. The worker uses the lexical parent, and the parent entry of an alias is a link,
-  so an alias directory rename is never inferred.
-- Stale acknowledgement: `value.scope!=scope` on the GUI thread, plus `establishScope` clearing.
-- Bounds: snapshots stay at 20,000 entries and 16 MiB of identity cost. The change adds no
-  retained snapshot (the seed shares the same `shared_ptr`s). Peak retention is still the
-  accepted pair, the current pair, one publication and one controller pending observation.
-  The 100k model limit is unchanged and untouched by this diff.
-- Off-GUI calls: the diff adds no filesystem call on the GUI thread. `observe()` uses lexical
-  `QFileInfo` paths, and all probes, `canonical` and registration remain in the worker or the
-  listing/navigation pools.
-- Test-file integrity: every slot present at e4c3d3d, 301674a and 08bb4b1 is present at HEAD.
-  The mid-series removal at ed85f5e (22 slots) was restored by 3506e08. HEAD has 32 slot names
-  including one `_data`. The author's "30 originals" count refers to 301674a.
-- Plan wording change in `FS-WATCH-01-PLAN.md` ("at each membership scan boundary") matches
-  the code (`directoryProbe` at the start and again at the end of `snapshot`).
+### N11 - ancestor alias vs real rename: FIXED (static), see N12
+`buildListing:121-124` makes a directory rename require a non-empty native directory identity equal to the
+prior entry identity AND that the probe of the former spelling no longer yields that identity. The probe
+runs on the listing worker, not the GUI thread. Cases traced:
+- `alias/sub` to `target/sub`: the former spelling still resolves to the same directory (ancestor
+  link), so the identities are equal, `renamedDirectory` is false and `setDirectory` resets the
+  selection. Test `ancestorAliasNavigationResetsSelection` passes the right way round.
+- Real rename `A` to `B`, with the old name missing: the probe is unknown, so the identity differs
+  and the rename is proven.
+- Old name reused by a different object: the identity includes volume, object id and birth time,
+  so it differs and the rename is still proven.
+- Leaf link alias: the prior identity is empty for a link, so the rename is never proven (unchanged).
+The controller path for a proven rename (parent identity match in the worker) is unchanged and is
+covered by the existing rename tests. Full results depend on the runtime phase.
 
-## N3 static estimate (not a measurement)
-Per scan the monitor probes every entry (Windows: open, `GetFileInformationByHandle`,
-`GetFileInformationByHandleEx`, close), then probes the parent listing too, and repeats every
-2 s while complete and covered. At 20k entries that is on the order of 80k handle operations
-for the folder plus the parent's, on a worker. The model repeats it per listing. This is
-off-GUI and bounded, but the steady cost is unproven. Alias scopes add two `canonical()` and
-one more `probe` per snapshot, which is negligible. The prepared 20k three-round probe still
-needs the runtime phase: actual model, bare listing and snapshot, measured with and without
-the probes, for both folder and parent.
+## New findings (all non-blocking)
+
+### N12 (low) - N11 uses a no-follow probe on the former spelling
+`directory_entry_model.cpp:124` compares `probe(prior.directory).identity()`, which is empty for a link
+leaf. If someone renames `A` to `B` and then makes `A` a junction/symlink to `B`, the former spelling
+still denotes the same object, yet the probe returns "different" and the model treats the move as a
+rename, so the selection follows instead of resetting. The plan text says a rename requires "former
+spelling no longer denotes that identity". Suggested fix: use
+`directoryProbe(nativePath(prior.directory)).identity()`, which resolves leaf links. Also no test covers
+the model selection path for old-name reuse by a different object; the existing reuse test
+(`renamedDirectorySurvivesOldPathReuse`) covers the viewer's current image only, not grid selection.
+
+### N13 (low, unverified) - residual rebind holes
+(a) Registration happens after the scan snapshot. An A-B-A swap that straddles one scan and one add
+leaves the stored identity equal to the later identity for an ancestor alias, which has no link entry to
+compare. The next scan then sees no change although the handle may be on B. Bounded: the poll still
+re-scans every 2 s while covered, so only native latency is lost, never membership.
+(b) `identity()` needs a birth time. On a Linux filesystem without `STATX_BTIME`, `born` is 0 and identity is
+empty, so identity-based rebinding and rename proof are inert (link-entry rebinding still works for a
+leaf symlink). (c) On a coarse-timestamp filesystem a swap with inode reuse inside one tick can leave the
+link entry equal. Physical/coarse-timestamp/network variants are unmeasured, as the plan states.
+
+### N14 (low) - merged `baseline` can suppress one invalidation
+`baseline` is OR-merged in the controller's pending coalescing and cleared only after reconcile.
+If a first incomplete baseline observation and a later incomplete one coalesce while navigation is
+busy, the merged observation is treated as the baseline and does not invalidate. The next observation,
+within the 30 s backoff cap, does. This is bounded and conservative. It matters only for the claim "after
+the first observation"; a deferred-reconcile test with two incomplete observations would pin it.
+
+### N15 (note, policy cost, unmeasured) - permanent relisting
+Under the R3 policy a folder that can never snapshot completely (over 20,000 entries or the 16 MiB identity
+budget) is relisted by the model on every observation, every 4-30 s when idle and on each native event burst
+when active, up to the model's 100k limit. Each relist is a worker job, with at most the model's concurrency
+plus one pending request, and a merge or reset on the GUI thread. N3 measured one 20k relist at about
+0.5-0.6 s. Nobody measured a 100k folder, a sustained writer or GUI merge/reset cost with this policy. This is
+the accepted policy and is not claimed as a large-directory solution. It needs a runtime check against the
+250 ms GUI oracle with a sustained external writer before integration.
+
+### N16 (low, test quality)
+1. `retargetRearmsNativeAliasWatch` can false-pass and false-fail. (a) `A`, `B` and `alias` are all children
+   of `root`, which is the watched parent and is never rebound. Writing into `B` changes B's last-write time,
+   and if Qt's Windows directory watch includes a last-write filter that fires `root`, the next scan reads B's
+   membership through the alias and the test passes on parent delivery. I could not check the flags: only the
+   private header `qfilesystemwatcher_win_p.h` is under `.tools/Qt`, not the `.cpp`, so this is open, not
+   asserted either way. (b) The "poll cannot land in the window" argument needs under 500 ms between the last
+   `lastProbe` and the write. Publication queueing plus QTRY's stepping under load can exceed that, and the
+   2 s poll then lands inside the 1.5 s window. (c) The same load can false-fail the 1.5 s bound (the other
+   lane's CTest collided with the author's run). Proposed fix: place `A`, `B` and the alias parent in separate
+   directories so a write into `B` cannot touch the watched parent, and assert the event arrived with no poll
+   (for example by stopping periodic polling via the hook or checking `stats().snapshots`). Until then, treat
+   the native alias-rebind evidence as unproven.
+2. The test covers a bare directory alias without an image. The image-below-alias rebind branch
+   (`:140-143`) and the parent rebind branch (`:144`) have no test.
+3. `controllerLateCoalescedBaselineDecodesOnce` depends on real timers: the second scan needs the 2 s
+   retry, then a fixed 100 ms sleep and a 2.3 s wait. Its trace-count assertions (2 and 3) are exact but
+   fragile if the retry interval changes. It uses `GLANCELOT_TRACE_FILE` and restores it with a guard.
+4. `emptyFolderAndRenamedDirectoryRecover` and `renamedDirectorySurvivesOldPathReuse` still have an `else`
+   branch that passes when the filesystem reports no identity. That is not a skip, but it proves nothing.
+5. Pre-existing: a skipped or `QWARN` identity test is not a pass.
+
+## N3 local metadata cost - assessment of stated limits
+
+`docs/verification/fs-watch-01/local-cost.json` matches the quoted ranges exactly: bare listing
+64.74-81.91 ms, model listing 496.64-587.06 ms, watch snapshot 379.53-442.54 ms, three alternating rounds
+of 20,000 one-byte local files, `setup_ms` 6459. The file's own `timing_scope` is "worker construction and
+destruction; no GUI publication or decoder", and `cache_state` is "uncontrolled".
+- Stated limits are honest. Overhead is about 5-6x the bare listing for a snapshot and 6-9x for the model.
+  The snapshot adds one open-and-query per entry, as predicted in R3.
+- Limits I would add: n=3 per method with no order randomization (the round-0 model sample, the slowest at
+  587 ms, is also the first run); generated 1-byte files are warm after creation; one volume only; the parent
+  was not a second 20k folder; a monitor scan probes the folder and its parent every 2 s while healthy, which is
+  about 0.4 s of worker I/O per 2 s on this machine (a high steady background load for a 20k folder, never
+  compared against the 250 ms GUI gate); nothing was measured past 20k, on a network share, ReFS, OneDrive or
+  a spinning disk. It was measured on b4cfd20. The enumeration and probe code in 9177b15 is unchanged apart
+  from the test-only parameter, plus one extra `probe` in `buildListing` per directory change, so the numbers
+  carry over for the snapshot but not as a re-measurement of this candidate.
+- Conclusion: the cost is material and measured locally under those limits. It does not establish acceptable
+  first-paint, steady-state CPU or network performance. The current-source and independent runtime
+  measurement stays required, and no timeout, 250 ms oracle or original-media rule is changed by the diff.
+
+## Checked, no defect found
+- Original media: the diff adds no write. `probe` uses read-attributes on Windows and `lstat`/`statx` on
+  POSIX. The new tests write only generated files in temporary folders.
+- Off-GUI work: the only new filesystem calls are in the monitor worker and the listing worker. The controller
+  hooks run no filesystem call.
+- Generation safety: the new code adds no result path that bypasses `value.scope!=monitor->generation()` and the
+  monotonic `observationRevision` guard. The late-baseline path re-checks `path` and the `generation`.
+- Bounds: still three watch handles, 20,000 entries and 16 MiB identity cost per snapshot, one publication
+  slot and one controller pending observation.
+- The 250 ms GUI oracle, the 15 s decode deadline and decoder behavior are untouched.
 
 ## Remaining gates (none waived, none counted as pass)
-1. Merge of latest `main` (32cf4f4 and later) into this branch, then a fresh review of the
-   shared-contract and source diff.
-2. Author fixes or a lead waiver for N8, N9, N10, N11 and the N7 seam test.
-3. Full `scripts/build.ps1 -Test` on Windows with `fs_watch` and `fs_watch_ui` in the list.
-4. `docker build -t glancelot-browser:main .`, which also runs the POSIX symlink and
-   file-target cases.
-5. Independent runtime review: B1/N2 historical probes re-run on b4cfd20, N3 timing, the real
-   junction and symlink behaviour, F5 in preview/grid/combined.
-6. Serial integration under the lock, then checks on the integrated commit.
+1. Full current-source `scripts/build.ps1 -Test` on Windows, with `fs_watch` and `fs_watch_ui` in the list,
+   zero skips and no overlapping lane's CTest. Another lane owns it in this phase.
+2. `docker build -t glancelot-browser:main .`, which also runs the POSIX symlink and regular-file-target cases.
+3. Independent runtime review at 9177b15: N3 re-measurement including 100k and a sustained writer (N15), real
+   junction and symlink behavior, ancestor-alias reset, image-below-alias rebind (N16), F5 in preview, grid and
+   combined modes. Runtime must be released explicitly; this phase did not run anything.
+4. Author decision on N12 (one-line change to `directoryProbe`, plus a model test for old-name reuse) and
+   acknowledgement of N13-N16, or a lead waiver recorded in the queue.
+5. Serial integration under the lock and checks on the integrated commit.
+6. Physical CANVAS/DECODE/color/network hardware gates stay unverified, as does coarse-timestamp, network,
+   reparse, ReFS and cloud-placeholder behavior.
 
 ## Limitations
-- No build, CTest, Docker, UI or filesystem probe was run in this phase. Every statement above
-  is from reading source and diffs, including the claim that the tests would pass or fail.
-- Physical, network-share, ReFS, OneDrive and cloud-placeholder behaviour is unverified.
-- The author's red/green counts are accepted only as a description of what was run.
+- Static reading only. Statements that a test passes or fails come from tracing source, not a run. Macro absence
+  from product binaries is inferred from build definitions, not from binary inspection.
+- The author's logs are accepted only as descriptions of what was run.

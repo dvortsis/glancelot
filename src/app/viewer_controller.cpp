@@ -254,6 +254,7 @@ struct ViewerController::Private {
                 value.fileEvent=value.fileEvent||pendingObservation->fileEvent;
                 value.forced=value.forced||pendingObservation->forced;
                 value.baseline=value.baseline||pendingObservation->baseline;
+                value.subsequent=value.subsequent||pendingObservation->subsequent;
                 if(pendingObservation->imageBefore.known)value.imageBefore=pendingObservation->imageBefore;
             }
             pendingObservation=std::move(value);
@@ -422,7 +423,7 @@ struct ViewerController::Private {
             // A bounded/failed membership scan cannot prove deletion or rename.
             // The independent current-file probe can still establish a revision,
             // and explicit refresh must remain useful in a larger directory.
-            if(!value.baseline||value.forced)emit q->filesInvalidated();
+            if(value.subsequent||value.forced)emit q->filesInvalidated();
             const bool changed=value.imageBefore.known&&value.imageAfter.known&&!(value.imageBefore==value.imageAfter);
             if(!path.isEmpty()&&value.imageAfter.known&&(value.forced||value.fileEvent||changed)) {
                 cache.clear();const auto target=path;q->open(target);

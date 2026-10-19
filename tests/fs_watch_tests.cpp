@@ -92,6 +92,45 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(target+"/sub/a.png")>=0,5000);
         QVERIFY(grid.selectedPaths().isEmpty());QCOMPARE(grid.cursorRow(),-1);
     }
+    void renamedDirectorySelectionWithFormerPathReuse_data() {
+        QTest::addColumn<int>("reuse");
+        QTest::newRow("missing-old-name")<<0;QTest::newRow("different-object")<<1;QTest::newRow("alias-to-renamed-object")<<2;
+    }
+    void renamedDirectorySelectionWithFormerPathReuse() {
+        QFETCH(int,reuse);QTemporaryDir root;QVERIFY(root.isValid());QVERIFY(QDir(root.path()).mkdir("A"));
+        const auto a=root.filePath("A"),b=root.filePath("B");
+        QVERIFY(png(a+"/a.png",Qt::red));QVERIFY(png(a+"/selected.png",Qt::blue));
+        if(fs_watch::probe(fs_watch::native(a)).identity().isEmpty())QSKIP("native directory identity unavailable; no rename qualification");
+        const auto original=hash(a+"/selected.png");
+        DirectoryEntryModel grid;grid.setDirectory(a);grid.setCurrentImage(a+"/a.png");grid.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,5000);grid.select(grid.rowOf(a+"/selected.png"));
+        QVERIFY(QDir().rename(a,b));
+        if(reuse==1){QVERIFY(QDir().mkdir(a));QVERIFY(png(a+"/selected.png",Qt::green));}
+        else if(reuse==2)QVERIFY(directoryAlias(b,a));
+        grid.setDirectory(b);QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(b+"/selected.png")>=0,5000);
+        if(reuse==2){QVERIFY(grid.selectedPaths().isEmpty());QCOMPARE(grid.cursorRow(),-1);}
+        else {QCOMPARE(grid.selectedPaths(),QStringList{b+"/selected.png"});QCOMPARE(grid.cursorRow(),grid.rowOf(b+"/selected.png"));}
+        QCOMPARE(hash(b+"/selected.png"),original);
+    }
+    void controllerCoalescedIncompleteStillInvalidates() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("a.png");QVERIFY(png(image,Qt::red));
+        int arrivals=0;bool defer=true;
+        fs_watch::ControllerTestHooks hooks;
+        hooks.options.registerNative=false;
+        hooks.options.read=[folder=dir.path()](const QString& path,std::stop_token stop){
+            auto result=fs_watch::snapshot(path,stop);if(path==folder)result.complete=false;return result;
+        };
+        hooks.deferReconciliation=[&]{return defer;};
+        hooks.pending=[&](const auto&){if(++arrivals>=2)defer=false;};
+        HookScope override(hooks);ViewerController viewer;viewer.open(image);
+        QTRY_VERIFY_WITH_TIMEOUT(arrivals==1&&viewer.imageReady(),10000);
+        QSignalSpy invalidations(&viewer,&ViewerController::filesInvalidated);
+        QVERIFY(write(dir.filePath("external.dat"),"generated"));
+        QTRY_VERIFY_WITH_TIMEOUT(arrivals>=2,6000);
+        // No forced refresh: both incomplete scans coalesced with the initial marker.
+        QTRY_VERIFY_WITH_TIMEOUT(invalidations.count()>0,5000);
+        QCOMPARE(viewer.filePath(),image);QVERIFY(viewer.imageReady());
+    }
     void permanentlyIncompleteScopeStillRefreshesAutomatically() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("a.png");QVERIFY(png(image,Qt::red));
         fs_watch::ControllerTestHooks hooks;hooks.options.registerNative=false;
@@ -105,6 +144,45 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(invalidations.count()>prior,10000);
         QCOMPARE(viewer.filePath(),image);QVERIFY(viewer.imageReady());
         QVERIFY(!viewer.directoryError().isEmpty());
+    }
+    void hundredThousandEntriesSustainedWriterKeepsGuiResponsive() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("000000.png");
+        QVERIFY(png(image,Qt::red));const auto original=hash(image);
+        QElapsedTimer setup;setup.start();
+        for(int i=1;i<100000;++i)
+            QVERIFY(write(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0'))),"generated"));
+        const auto setupMs=setup.elapsed();
+        ViewerController viewer;DirectoryEntryModel grid;file_grid_wiring::followViewer(viewer,grid);grid.setActive(true);
+        QElapsedTimer clock;clock.start();qint64 previous=0,worst=0;
+        QTimer heartbeat;heartbeat.setInterval(1);
+        QObject::connect(&heartbeat,&QTimer::timeout,this,[&]{const auto now=clock.elapsed();worst=std::max(worst,now-previous);previous=now;});
+        heartbeat.start();viewer.open(image);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==100000&&viewer.imageReady(),30000);
+        const auto initialGap=worst;worst=0;previous=clock.elapsed();
+        QSignalSpy invalidations(&viewer,&ViewerController::filesInvalidated);
+        QSignalSpy metadata(&grid,&QAbstractItemModel::dataChanged);
+        std::atomic_int writes{};std::atomic_bool failed{};
+        const auto destination=dir.filePath("099999.dat");
+        // Real filesystem atomic replacements on a separate thread, never a
+        // simulated notification or a GUI-thread write during measurement.
+        std::jthread writer([&](std::stop_token stop){
+            while(!stop.stop_requested()) {
+                QSaveFile file(destination);const auto bytes=QByteArray::number(writes.load())+" generated changed bytes";
+                if(!file.open(QIODevice::WriteOnly)||file.write(bytes)!=bytes.size()||!file.commit()){failed=true;return;}
+                ++writes;std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            }
+        });
+        QTest::qWait(8000);writer.request_stop();writer.join();
+        QVERIFY(!failed.load());QVERIFY(writes.load()>20);
+        QTRY_VERIFY_WITH_TIMEOUT(invalidations.count()>0,10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&metadata.count()>0,30000);
+        heartbeat.stop();worst=std::max(worst,clock.elapsed()-previous);
+        qInfo()<<"100000 entries: generated setup"<<setupMs<<"ms; initial GUI gap"<<initialGap
+               <<"ms; sustained-writer/recovery GUI gap"<<worst<<"ms; writes"<<writes.load()<<"invalidations"<<invalidations.count();
+        QCOMPARE(grid.count(),100000);QVERIFY(viewer.imageReady());QCOMPARE(viewer.filePath(),image);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));QCOMPARE(hash(image),original);
+        QVERIFY2(initialGap<250,qPrintable(QString("100k initial publication GUI gap %1 ms").arg(initialGap)));
+        QVERIFY2(worst<250,qPrintable(QString("100k sustained writer GUI gap %1 ms").arg(worst)));
     }
     void retargetDuringEnumerationRefusesCompleteMembership_data() {
         QTest::addColumn<bool>("backToA");QTest::newRow("A-B")<<false;QTest::newRow("A-B-A")<<true;
@@ -122,17 +200,27 @@ private slots:
         QVERIFY(changed);QVERIFY(!after.complete);QVERIFY(fs_watch::renames(before,after).isEmpty());
         QVERIFY(fs_watch::snapshot(alias).complete);
     }
+    void retargetRearmsNativeAliasWatch_data() {
+        QTest::addColumn<int>("kind");QTest::newRow("directory")<<0;QTest::newRow("image")<<1;QTest::newRow("parent")<<2;
+    }
     void retargetRearmsNativeAliasWatch() {
+        QFETCH(int,kind);
         QTemporaryDir root;QVERIFY(root.isValid());QVERIFY(QDir(root.path()).mkdir("A"));QVERIFY(QDir(root.path()).mkdir("B"));
         const auto a=root.filePath("A"),b=root.filePath("B"),alias=root.filePath("alias");
+        if(kind==2){QVERIFY(QDir().mkdir(a+"/sub"));QVERIFY(QDir().mkdir(b+"/sub"));}
+        if(kind==1){QVERIFY(write(a+"/current.dat","A"));QVERIFY(write(b+"/current.dat","B"));}
+        const auto scope=kind==2?alias+"/sub":alias;
+        const auto expected=fs_watch::snapshot(kind==2?b+"/sub":b).revision.identity();
         QVERIFY(directoryAlias(a,alias));QVector<fs_watch::Observation> values;
-        fs_watch::Monitor monitor(this,[&](auto value){values.push_back(std::move(value));});monitor.setScope(alias,{});
+        fs_watch::Monitor monitor(this,[&](auto value){values.push_back(std::move(value));});
+        monitor.setScope(scope,kind==1?alias+"/current.dat":QString{});
         QTRY_VERIFY_WITH_TIMEOUT(!values.isEmpty()&&values.last().coverage,5000);
         QVERIFY(removeAlias(alias));QVERIFY(directoryAlias(b,alias));monitor.refresh();
-        QTRY_VERIFY_WITH_TIMEOUT(values.last().after->revision.identity()==fs_watch::snapshot(b).revision.identity()&&values.last().coverage,5000);
-        const auto count=values.size();QVERIFY(write(b+"/native-event.dat","generated"));
+        QTRY_VERIFY_WITH_TIMEOUT(values.last().after->revision.identity()==expected&&values.last().coverage,5000);
+        const auto count=values.size();QVERIFY(write(b+(kind==1?"/current.dat":"/native-event.dat"),"generated changed bytes"));
         // Strictly shorter than the healthy 2s polling interval: native B delivery.
-        QTRY_VERIFY_WITH_TIMEOUT(values.size()>count&&values.last().after->entries.contains(fs_watch::key(alias+"/native-event.dat")),1500);
+        QTRY_VERIFY_WITH_TIMEOUT(values.size()>count&&(kind==1?values.last().fileEvent:
+            (kind==2?values.last().parentAfter:values.last().after)->entries.contains(fs_watch::key(alias+"/native-event.dat"))),1500);
         QVERIFY(values.last().coverage);QVERIFY(monitor.stats().maxHandles<=3);
     }
     void controllerLateCoalescedBaselineDecodesOnce_data() {

@@ -17,7 +17,7 @@ struct Observation {
     quint64 scope{}, revision{};
     QString directory,image;
     std::shared_ptr<const Snapshot> before,after,parentBefore,parentAfter;
-    bool fileEvent{}, forced{}, coverage{}, baseline{};
+    bool fileEvent{}, forced{}, coverage{}, baseline{}, subsequent{};
     Revision imageBefore,imageAfter;
     QString renamedImage,renamedDirectory;
 };
@@ -177,7 +177,7 @@ class Monitor {
                 Observation result{scope.scope,++revision,scope.directory,scope.image,
                     before,current,parentBefore,currentParent,fileEvent,forced,coverage};
                 result.imageBefore=imageBefore;result.imageAfter=currentImage;
-                result.baseline=baselinePending;baselinePending=false;
+                result.subsequent=!baselinePending;result.baseline=baselinePending;baselinePending=false;
                 // Identity matching is worker work too. Retain only the two paths
                 // needed by the controller, not another unbounded history/map.
                 if(before&&!scope.image.isEmpty())
@@ -193,6 +193,7 @@ class Monitor {
                     result.fileEvent=result.fileEvent||state->publication->fileEvent;
                     result.forced=result.forced||state->publication->forced;
                     result.baseline=result.baseline||state->publication->baseline;
+                    result.subsequent=result.subsequent||state->publication->subsequent;
                 }
                 state->publication=std::move(result);
                 if(!state->publicationQueued) {

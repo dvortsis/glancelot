@@ -121,7 +121,7 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     const auto directoryIdentity=directoryEntryRevision.identity();
     result.renamedDirectory=keyFor(prior.directory)!=keyFor(directory)&&!directoryIdentity.isEmpty()&&
         directoryIdentity==prior.entryRevision.identity()&&
-        fs_watch::probe(nativePath(prior.directory)).identity()!=directoryIdentity;
+        fs_watch::directoryProbe(nativePath(prior.directory)).identity()!=directoryIdentity;
     if(keyFor(prior.directory)==keyFor(directory)||result.renamedDirectory)
         result.renamed=fs_watch::renames(prior,result.identities);
     return result;
