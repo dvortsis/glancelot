@@ -121,7 +121,16 @@ presentation remain distinct concepts.
 
 ## Remaining packet work
 
-Linux replay, repeated native/software-rendered baseline capture and comparison,
+Linux replay, repeated software-rendered baseline capture and comparison,
 full viewer Docker checks, owner-controlled baseline failures, worker phase boundary
 review, independent Claude review and integration remain open. Hardware/SMB/high-refresh
 claims require separate measured evidence.
+
+
+For an isolated Docker software-GL display, container_replay.sh accepts EXE FIXTURES
+NEW_OUTPUT SOURCE_COMMIT [RUNS]. Run it in an ephemeral container with --network none,
+no published ports, read-only source/fixture mounts and a writable results mount.
+It creates a private authenticated localhost VNC display, refuses existing display 99
+endpoints, and terminates only its own server. It does not use the production browser
+entrypoint. Native 50-capture evidence is in the verification record; it is a smoke
+workload under uncontrolled hardware conditions, not a hardware qualification result.

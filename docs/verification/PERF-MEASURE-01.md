@@ -30,8 +30,10 @@ No QML, scheduling, cache policy, frozen public header or Gemini implementation 
 
 `decode_queue` is full-worker process launch wait. `decode` runs from process-start
 notification through validated copied pixels, including worker probe/admission and IPC.
-It does not pretend to isolate codec CPU time. Worker-local phase timings remain a
-follow-up item in this packet.
+It does not pretend to isolate codec CPU time. These are the existing parent IPC boundaries. Claude/lead review must accept this
+interpretation or freeze a separate worker-phase contract; this lane does not expand
+the frozen Stage enum. Publication now includes GUI-thread result retrieval through
+model application, ending before the next request is pumped.
 
 `upload` and `present` measure CPU command issuance and renderer callback work;
 they are not GPU completion or monitor presentation. `startup` ends on Qt's first
@@ -188,7 +190,8 @@ The aggregate.py tool recomputes nearest-rank percentiles from original raw dura
 samples. It refuses incompatible build/conditions, dropped traces, missing raw samples
 and bounded-input overflow. It never averages percentiles or merges timestamp origins.
 Known-distribution tests pass for exact p50/p95/totals and incompatible/truncated inputs.
-Repeated native/Docker baseline captures and comparison remain to be completed.
+Repeated native capture and a comparison pipeline check are recorded below.
+Linux software-rendered replay remains in progress.
 
 ## Still required before review
 
@@ -196,8 +199,75 @@ Repeated native/Docker baseline captures and comparison remain to be completed.
 - Exercise the complete replay on Linux/Docker and collect repeated comparable native/software-rendered baselines; first native workflow passed.
 - Use comparison on sufficiently repeated, equivalent replay workloads; tooling tests alone do not qualify performance.
 - Detailed worker IPC phase measurements or lead-reviewed stage-boundary resolution.
-- Rebuild latest changes; full Linux viewer/Docker checks; resolve owner-controlled baseline blockers.
+- Full Linux viewer/Docker gate and final Windows checks; resolve owner-controlled
+  platform-test environment failures. Do not count the replay-only artifact as a passing gate.
 - Claude-lane independent review, serial integration and integrated-commit Windows/Linux checks.
 
 Physical HDD, SMB, monitor DPI, ICC/HDR and high-refresh behavior are **unverified**.
 This packet and the remaining Codex lane inventory are not marked done.
+
+## Latest candidate checks and repeated native baseline
+
+Main d8aba16 was merged cleanly in 97e084c. Gemini's missing-path platform fix and
+QML changes remain theirs; Codex did not edit their implementation. Commit 4f2fc35
+corrects an existing test's virtualized-results inspection: wait for model count 2,
+reveal each row, obtain its delegate, then assert both original error messages.
+All deletion, partial-failure and Stop/cancellation assertions remain in place.
+It introduces no product behavior or QML change.
+
+Latest full Linux command (candidate 4f2fc35):
+
+```
+docker build -t glancelot-browser:codex-perf-measure .
+folder_grid Passed 120.50 sec
+platform_integration Failed: four valid-path launcher assertions returned false
+93% tests passed, 1 tests failed out of 15
+Total Test time (real) = 169.63 sec
+```
+
+The Qt build stage has no xdg-open or supported terminal executable. These tests
+invoke real desktop launchers and assert success. A headless build-stage test needs
+an owner-approved launch test seam or explicit desktop test environment. Do not
+silently skip it, replace launchers with success stubs, or claim the full gate passed.
+A separately labelled local replay-only Dockerfile omits the failed test command
+solely to produce a runtime for instrumentation replay; it is not the required
+Docker gate and is not a repository Dockerfile change.
+
+Latest full Windows command (candidate 4f2fc35):
+
+```
+./scripts/build.ps1 -BuildDir build-codex-perf-measure -Test
+platform_integration Passed 6.64 sec
+folder_grid Timeout 180.21 sec
+93% tests passed, 1 tests failed out of 15
+Total Test time (real) = 352.22 sec
+```
+
+This ran concurrently with Docker compilation and the separate cross-lane review
+build. The timeout is unresolved; a verbose targeted run is in progress. No timeout
+limit or assertion was weakened. Final checks must rebuild the publication-scope
+adjustment before review.
+
+The historical native baseline uses commit 816a180's executable, before the main
+merge and publication-scope adjustment. It must not be silently reused as the final
+candidate's baseline. All 50 fresh processes passed standard-v1, steps 3, cycles 2,
+RequireRender; aggregate contains 21,285 raw-derived spans. Independent report
+validation and min-samples 50 self-comparison passed. Self-comparison verifies the
+pipeline only and is not an optimization A/B claim.
+
+Useful p95 observations in milliseconds: enumerate 10.3997; sort 0.0188;
+publish 82.2885; thumbnail_queue 120.1973; thumbnail_decode 66.1675;
+decode_queue 10.2564; decode 181.237; upload 0.0061; present 0.5309;
+cache_lookup 0.1865; startup 1816.7574. These are the tiny smoke fixture workload,
+not 24 MP qualification. Mutation is absent because replay never mutates media.
+
+Conditions: Windows 11 Pro 10.0.26200, Intel i7-12700H, Qt 6.8.3, requested D3D11
+(report qt-api-4), 1180x780, Slate & Ice dark. Installed Intel Arc A370M and Iris Xe
+are candidate inventory only; the active GPU was not verified. Power/thermal state
+was uncontrolled, filesystem caches were not flushed, and a Docker build overlapped.
+No physical-presentation, R1, HDD or SMB claim follows. Every source fixture hash
+was checked before/after. Ignored evidence lives under .cache/perf-native-baseline-50
+and .cache/perf-measure-native-baseline-50.log.
+
+Negative-path checks also passed: invalid replay configuration exits 2, an unwritable
+report destination exits 4, and Python -O cannot bypass fixture integrity validation.

@@ -139,8 +139,8 @@ struct DirectoryEntryModel::Private {
         const quint64 token = generation;
         auto* watcher = new QFutureWatcher<Listing>(q);
         QObject::connect(watcher, &QFutureWatcher<Listing>::finished, q, [this, watcher, token] {
-            auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
             { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
+            auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
             publication.setBytes(listing.rows.size());
             if (token != generation || !active) publication.setFlags(glancelot::perf::Stale);
             else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);
