@@ -1,77 +1,64 @@
-# PERF-MEASURE-01 cross-lane review request
+# PERF-MEASURE-01 combined cross-lane review request
 
-Candidate: codex/perf-measure, implementation through d36c587 plus evidence descendants.
-Application binary source is unchanged since e68ebd7; d36c587 tightens fixture tooling.
-Base contract: 76da49e; merged main d8aba16 in 97e084c.
-Reviewer: Claude Code lane, per AGENT-LANES-PLAN.md. This is a request, not approval.
-The queue remains owned by the lead. No main merge or integration lock was taken.
+Current candidate: codex/perf-measure, affabf4 plus evidence-only descendants.
+Reviewer: Claude Code lane. This request is not approval or main integration.
+The user appointed this session lead; serial candidate synchronization/checks hold
+main's integration_lock as codex-lead. Only lead contracts/queue updates are on main.
 
-## Review surface
+## Candidate contents
 
-- Frozen include/glancelot/perf_trace.hpp is unchanged. Review recorder bounds,
-  concurrency, overhead, numeric saturation, percentile math and report privacy.
-- Review generation/flag attribution at directory, thumbnail, parent decode IPC,
-  file-operation and renderer boundaries. The public Stage enum is unchanged.
-- Confirm decode=process-start through validated copied pixels is an acceptable
-  existing-stage boundary; it includes worker probe/admission and IPC. Finer codec
-  or worker phase timing needs a lead-frozen contract if required. CPU renderer spans
-  and Qt frame-swap are explicitly not GPU-completion/physical-presentation metrics.
-- Review the opt-in private replay driver, its deadlines and lifetime guard. Normal
-  launches never construct it. No policy, public headers or product QML were changed.
-- Review fixture generator containment/determinism, independent hash verification,
-  Python-O failure guards, raw-distribution aggregation and comparison rejection.
-- Review existing deletion-result test correction in 4f2fc35. It reveals virtualized
-  rows before reading reasons; all expected messages and deletion assertions remain.
-- Container display is for isolated replay only: no ports, network disabled, private
-  authenticated localhost display, read-only fixtures, own-process cleanup.
+- Bounded recorder, generation/flag attribution, --perf-report, deterministic offline
+  fixtures, private opt-in workflow replay, raw aggregation and threshold comparison.
+  Frozen include/glancelot/perf_trace.hpp remains unchanged.
+- Tooling through 3885ca7 independently validates every raw-derived metric/split,
+  complete manifest coverage and unexpected files/directories. All 101 saved captures
+  passed stricter validation. Invalid/truncated/incomparable data cannot pass compare.
+- Existing virtualized deletion-result test correction 4f2fc35 reveals rows before
+  reading their reasons and retains all original deletion/Stop/message assertions.
+- Lead-authorized test-only Linux platform-launcher prerequisite 14e7c46, included
+  in affabf4 for combined independent review. Disposable child processes capture
+  exact argv/cwd; tests assert literal path/file-parent routing, nonlaunch on invalid
+  inputs, TERMINAL override/fallback and failure with no launchers. No production
+  platform adapter or public header is changed by the repair. Read
+  docs/verification/PLATFORM-TEST-ENV-01.md.
+- Main synchronization 70b3652 includes lead PLATFORM contract and the existing
+  CLIPBOARD-OPS method declarations/stubs. Those stubs are not clipboard feature
+  completion and remain Gemini's implementation responsibility.
 
-## Evidence and open gates
+## Required review focus
 
-See docs/verification/PERF-MEASURE-01.md for actual commands and outputs, recorder
-cost, full 111,136-file matrix hashes, smoke replay and historical 50 native captures.
-The 50-capture run is 816a180, before publication-boundary/main changes, not final
-candidate qualification. Power, thermal state, filesystem caches and active GPU
-were uncontrolled; a Docker build overlapped. No HDD/SMB/monitor qualification.
+1. Recorder concurrency, fixed allocation bound, drop semantics, disabled cost,
+   monotonic timing, saturating totals, percentile math and path-free JSON.
+2. Stage-local generations and cancelled/failed/stale exclusion. Decode measures
+   parent process launch and started-through-validated-pixels IPC completion, including
+   worker admission/probe/transport. CPU upload/render submission and Qt frame-swap
+   are explicitly not GPU completion, codec-only CPU or physical presentation.
+3. Replay lifetime/deadlines, real cache hit/miss and failure/cancellation paths.
+   Normal launches never construct it; it dispatches no mutations or shell commands.
+4. Generator containment, complete independent fixture verification, raw-distribution
+   aggregation (no percentile averaging or cross-process timestamp merge), comparer
+   rejection guards and isolated software-GL container lifecycle.
+5. Both test-only prerequisites above; production QML/policy remains outside Codex.
 
-Latest full Linux check 14/15: folder_grid now passes; platform_integration valid-path
-launch assertions fail because qt build stage has no desktop launchers. Requires
-lead/Gemini owner resolution. Do not omit the test to claim a green gate. A local,
-ignored replay-only Dockerfile produces the runtime separately from that failed gate.
-Latest full Windows check 14/15: platform passes, grid 180s timeout under concurrent
-lane builds. A targeted diagnostic also timed out at 180s during overlapping lane tests.
-The rebuilt full suite also timed out at 180s (14/15, 330.43s). A subsequent
-file-logged grid diagnostic passed 73/0 with 4 skips in 154.937s under the same
-180-second bound. No timeout or assertion was changed.
+## Evidence
 
-Linux 50-capture replay passed (16,527 spans, zero drops, source hashes unchanged).
-The rebuilt Windows full suite remains 14/15 due to grid 180s timeout; the changed
-deletion/Stop test passes 3/3 in 1927ms. Remaining: integrated full gates,
-stage-boundary review, full gates, independent approval, serial integration, then
-checks on the integrated commit. PLATFORM-01 proposal is separate and cannot become
-implementation until the lead freezes its packet and queue entry.
+Full commands and actual output: docs/verification/PERF-MEASURE-01.md.
+Required Windows full candidate 3885ca7 run passed 15/15 in 184.75s. Earlier timeouts
+remain documented. Historical native 50-capture and Linux 50-capture replays pass;
+Linux 16,527 spans, zero drops. Final native full-dataset session passes 559 spans,
+zero drops and all source hashes unchanged. Strict full dataset checks 111,136 exact
+files/paths/dimensions/hashes. No original media was used or modified.
 
-The independent fixture verifier was subsequently tightened to require complete
-manifest coverage (including every tree entry), image dimensions and Qt provenance,
-and reject unexpected files/directories. Eight corruption cases pass normally and
-under Python -O. This affects tooling validation, not the captured application binary.
+The prior Linux full gate failed only platform-launcher environment assumptions.
+Initial new process-routing test passed 1/1 in 0.37s before the final extra literal-path
+case. Required combined affabf4 full Windows and Docker commands are running; their
+terminal results must be recorded before promotion to review. No test is skipped or
+replaced with unconditional launch success to manufacture that gate.
 
-Strict full-dataset verification now passes 111,136 expected files and paths. Native
-full-dataset replay also completed: 1 session, 559 spans, zero drops, 11694ms, all
-source hashes unchanged. It views 64x48 mixed tiles in 1k/adjacent 10k folders, not
-large-MP or 100k interactive latency qualification. See the verification record for
-actual source/executable identities.
+Physical HDD, SMB, DPI/ICC/HDR/high-refresh, active GPU identity, large-MP decode and
+100k-folder interactive latency remain unqualified. Software/WSL bind-mounted replay
+and uncontrolled power/cache/thermal state are not hardware qualification.
 
-Final CTest folder_grid rerun passed 1/1 in 117.45s with the original 180s timeout.
-Every candidate Windows test has now passed across the preceding full run 14/15
-and that targeted rerun. This is not a relabelled single green full run. Required
-Docker platform-test owner fix, Claude approval and serial integrated checks remain.
-
-The validator now independently recomputes all raw-backed metrics/splits, rather than
-only matching counts. Five inconsistent-report cases are rejected; all 101 recorded
-captures pass stricter validation. This tooling change leaves captured application
-binaries and reports unchanged.
-
-A subsequent actual required scripts/build.ps1 -Test run passed all 15 tests in
-184.75s on 3885ca7 (app source unchanged). This is a single green full Windows run.
-See quiet-run evidence in the verification record; earlier timeout history stays
-visible. Linux full gate and independent Claude approval remain.
+Remaining: terminal combined-candidate checks, actual Claude approval, serial main
+integration and required checks on the integrated commit. PLATFORM-01 is frozen on
+main but starts only after PERF reaches review. Do not self-approve or mark done.
