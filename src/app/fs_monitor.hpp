@@ -124,6 +124,13 @@ class Monitor {
                     if(state->closed)return;
                     if(state->acceptedScope==scope.scope) {
                         before=state->accepted;parentBefore=state->acceptedParent;imageBefore=state->acceptedImage;
+                    } else if(state->options.manualBaseline) {
+                        // The first publication can remain unreconciled while navigation
+                        // is busy. Seed its identity before any later worker scan; only
+                        // subsequent advances require the controller's acknowledgement.
+                        // Keep this first observation's before null for decode startup.
+                        state->accepted=current;state->acceptedParent=currentParent;
+                        state->acceptedScope=scope.scope;state->acceptedImage=currentImage;
                     }
                 }
                 Observation result{scope.scope,++revision,scope.directory,scope.image,
