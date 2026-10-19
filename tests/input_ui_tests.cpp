@@ -140,6 +140,18 @@ QString trashName() {
     return "Trash";
 #endif
 }
+// A remapped key only works once the window has rebuilt its Shortcuts (slow machines and containers take a few frames).
+bool shortcutReady(Harness& h, const char* instantiator, const QString& step) {
+    QObject* keys = h.object(instantiator);
+    for (int i = 0; keys && i < keys->property("count").toInt(); ++i) {
+        QObject* shortcut = nullptr;
+        QMetaObject::invokeMethod(keys, "objectAt", Q_RETURN_ARG(QObject*, shortcut), Q_ARG(int, i));
+        if (shortcut && shortcut->property("modelData").toString() == step) return true;
+    }
+    return false;
+}
+#define WAIT_FIRST_KEY(h, step) QTRY_VERIFY_WITH_TIMEOUT(shortcutReady(h, "firstKeys", step), 10000)
+#define WAIT_SECOND_KEY(h, step) QTRY_VERIFY_WITH_TIMEOUT(shortcutReady(h, "secondKeys", step), 10000)
 bool menuOpen(QObject* menu) { return menu && menu->property("visible").toBool(); }
 void closeMenu(QObject* menu) { if (menu) QMetaObject::invokeMethod(menu, "close"); }
 QList<QQuickItem*> menuRows(QObject* menu) {
@@ -152,11 +164,13 @@ QList<QQuickItem*> menuRows(QObject* menu) {
 QStringList menuProblems(Harness& h, QObject* menu) {
     QStringList problems;
     QStringList known;
-    QVariantMap bindings;
+    QVariantMap bindings, firstStep;
     for (const auto& row : h.viewer.commands()) {
         const auto map = row.toMap();
         known << map.value("id").toString();
         bindings.insert(map.value("id").toString(), map.value("binding"));
+        const auto steps = map.value("steps").toStringList();
+        firstStep.insert(map.value("id").toString(), steps.size() == 1 ? steps.first() : QString());
     }
     const auto rows = menuRows(menu);
     if (rows.isEmpty()) problems << "menu has no command rows";
@@ -165,6 +179,23 @@ QStringList menuProblems(Harness& h, QObject* menu) {
         if (!known.contains(id)) { problems << id + " is not a registered command"; continue; }
         if (!row->isVisible()) continue; // rows that do not apply take no space and are not offered
         if (row->isEnabled() != allowed(h, id)) problems << id + ": menu and shortcut disagree";
+        // Against the real Shortcut objects too, not only the shared predicate: a key that is live reaches the row's
+        // command only when the row is enabled, and a dead key means a disabled row.
+        const QString binding0 = firstStep.value(id).toString();
+        if (!binding0.isEmpty() && flag(h, "keysLive")) {
+            bool shared = false;
+            for (auto it = firstStep.begin(); it != firstStep.end(); ++it) if (it.key() != id && it.value().toString() == binding0) shared = true;
+            QObject* keys = h.object("firstKeys"); bool found = false;
+            for (int i = 0; keys && i < keys->property("count").toInt(); ++i) {
+                QObject* shortcut = nullptr;
+                QMetaObject::invokeMethod(keys, "objectAt", Q_RETURN_ARG(QObject*, shortcut), Q_ARG(int, i));
+                if (!shortcut || shortcut->property("modelData").toString() != binding0) continue;
+                found = true;
+                if (!shared && shortcut->property("enabled").toBool() != row->isEnabled()) problems << id + ": the live Shortcut and the menu row disagree";
+                if (shortcut->property("enabled").toBool() == false && row->isEnabled()) problems << id + ": enabled row on a dead key";
+            }
+            if (!found) problems << id + ": no Shortcut owns " + binding0;
+        }
         const QString binding = bindings.value(id).toString();
         if (!binding.isEmpty() && row->property("keys").toString() != binding) problems << id + ": shows " + row->property("keys").toString() + " not " + binding;
         if (row->property("text").toString().isEmpty()) problems << id + ": no label";
@@ -218,7 +249,7 @@ private slots:
         // Scopes that never overlap may share a key: R rotates in the canvas and goes up a folder in the grid.
         QVERIFY(h.viewer.setBinding("grid-up", "R"));
         QCOMPARE(h.viewer.bindingFor("rotate"), QString("R"));
-        QTest::qWait(100);
+        WAIT_FIRST_KEY(h, "R");
         QTest::keyClick(h.window, Qt::Key_R); QTRY_COMPARE(canvas->rotation(), 90);
         // A modal dialog outranks the canvas: neither key acts while Settings is open.
         h.viewer.trigger("settings"); QTRY_VERIFY(flag(h, "modalOpen"));
@@ -236,7 +267,8 @@ private slots:
         const QString folder = h.fileGrid.directory();
         QTest::keyClick(h.window, Qt::Key_R);
         QTRY_VERIFY(h.fileGrid.directory() != folder);
-        QCOMPARE(canvas->rotation(), 90); // the canvas command did not also fire
+        // The canvas command did not also fire (leaving the photo's folder may clear the view, which resets rotation to 0).
+        QVERIFY2(canvas->rotation() == 90 || canvas->rotation() == 0, qPrintable(QString::number(canvas->rotation())));
     }
 
     void chordPendingTimeoutEscapeAndFocusLoss() {
@@ -247,7 +279,7 @@ private slots:
         QVERIFY(h.viewer.setBinding("fit", "J"));
         QVERIFY(!h.viewer.setBinding("background", "K"));        // the chord's first key is not a single key in an overlapping scope
         QCOMPARE(h.viewer.bindingConflict("background", "K"), QString("rotate"));
-        QTest::qWait(100);
+        WAIT_FIRST_KEY(h, "K"); WAIT_FIRST_KEY(h, "J"); WAIT_SECOND_KEY(h, "R");
         auto pending = [&] { return flag(h, "chordPending"); };
         // First key arms the pending state and shows it in the status bar; nothing runs yet.
         QTest::keyClick(h.window, Qt::Key_K);
@@ -262,7 +294,7 @@ private slots:
         // A single-key command bound to J never fires as the chord's second key; the chord wins while pending.
         canvas->zoomAt(2, 300, 200); QVERIFY(canvas->fitMode().isEmpty());
         QVERIFY(h.viewer.setBinding("rotate", "K, J"));
-        QTest::qWait(100);
+        WAIT_SECOND_KEY(h, "J");
         QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
         QTest::keyClick(h.window, Qt::Key_J); QTRY_COMPARE(canvas->rotation(), 180);
         QVERIFY(canvas->fitMode().isEmpty()); // "fit" did not run
@@ -302,6 +334,28 @@ private slots:
         QTRY_VERIFY(!pending());
         QTest::keyClick(h.window, Qt::Key_K); QTest::qWait(150);
         QVERIFY(!pending());
+    }
+
+    // Escape belongs to the pending chord before the pane that has focus: neither the grid nor the tree acts on it.
+    void escapeCancelsAChordBeforeTheGridOrTreeActOnIt() {
+        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        QVERIFY(h.viewer.setBinding("sort-reverse", "K, S"));
+        WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "S");
+        auto pending = [&] { return flag(h, "chordPending"); };
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
+        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
+        QVERIFY(flag(h, "gridMode")); // the grid did not also leave to the photo
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!flag(h, "gridMode")); // with nothing pending, Escape is the grid's again
+        h.viewer.setTreeVisible(true);
+        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
+        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
+        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
+        QCOMPARE(h.window->property("focusRegion").toString(), QString("tree")); // the tree did not dismiss itself
     }
 
     // "Show actual size while held": 1:1 on press, the exact previous view on every way a hold can end.
@@ -388,6 +442,13 @@ private slots:
         QTest::mouseClick(h.window, Qt::RightButton, {}, at);
         QTRY_VERIFY(menuOpen(menu));
         QVERIFY(!canvas->loupeActive());
+        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
+        // A key hold in progress is not taken over, or ended, by a right-button hold.
+        focusCanvas(h); QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
+        QTest::mousePress(h.window, Qt::RightButton, {}, at); QTest::qWait(350);
+        QTest::mouseRelease(h.window, Qt::RightButton, {}, at);
+        QVERIFY(canvas->loupeActive());
+        QTest::keyRelease(h.window, Qt::Key_Z); QVERIFY(!canvas->loupeActive());
     }
 
     // The wheel matrix: each modifier has one action; navigation accumulates to detents, zoom and pan are continuous.
@@ -446,20 +507,24 @@ private slots:
         QTest::qWait(150); QCOMPARE(h.viewer.currentIndex(), 1);
         sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier); // the sixth completes one
         QTRY_COMPARE(h.viewer.currentIndex(), 2);
-        // Reversing direction discards the partial detent instead of cancelling against it.
+        // Reversing direction discards the partial detent: +60 then -140 is one step forward (without the discard
+        // it would net -80 and not move at all).
         for (int i = 0; i < 3; ++i) sendWheel(h, at, QPoint(0, 10), {}, Qt::AltModifier);
-        for (int i = 0; i < 3; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
-        QTest::qWait(150); QCOMPARE(h.viewer.currentIndex(), 2);
-        // A partial detent does not wait for the next gesture.
+        for (int i = 0; i < 7; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
+        QTRY_COMPARE(h.viewer.currentIndex(), 3);
+        QTest::qWait(600); // let the remainder settle
+        // A partial detent does not wait for the next gesture: -100, a pause, -100 is not a detent (without the idle
+        // discard it would be -200 and step).
+        for (int i = 0; i < 5; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
         QTest::qWait(600);
-        sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
-        QTest::qWait(150); QCOMPARE(h.viewer.currentIndex(), 2);
+        for (int i = 0; i < 5; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
+        QTest::qWait(200); QCOMPARE(h.viewer.currentIndex(), 3);
         QTest::qWait(600);
         // Classic wheels: one 120 notch is one photo.
         sendWheel(h, at, {}, QPoint(0, -120), Qt::AltModifier);
-        QTRY_COMPARE(h.viewer.currentIndex(), 3);
+        QTRY_COMPARE(h.viewer.currentIndex(), 4);
         sendWheel(h, at, {}, QPoint(0, 120), Qt::NoModifier);
-        QTRY_COMPARE(h.viewer.currentIndex(), 2);
+        QTRY_COMPARE(h.viewer.currentIndex(), 3);
         // The plain wheel still follows the legacy setting.
         h.viewer.setWheelMode("zoom");
         canvas->actualSize(); zoom = canvas->zoom();
@@ -571,19 +636,25 @@ private slots:
         h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
         h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
         auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
-        QTRY_VERIFY(!namedAll(h.window, "folderRow").isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
         auto* rowMenu = h.object("folderRowMenu"); QVERIFY(rowMenu);
         // Keyboard on the tree.
         QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
         QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
+        named(h.window, "folderList")->setProperty("currentIndex", h.folders.currentRow()); // the current folder, not a drive
         for (int how = 0; how < 2; ++how) {
             if (how == 0) QTest::keyClick(h.window, Qt::Key_Menu); else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
             QTRY_VERIFY(menuOpen(rowMenu));
             QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
-            QVERIFY(rowMenu->findChild<QQuickItem*>("folderMoveToTrash"));
+            auto* trash = rowMenu->findChild<QQuickItem*>("folderMoveToTrash"); QVERIFY(trash);
+            if (how == 0) { // the destructive row names its folder
+                const QString text = trash->property("text").toString();
+                QVERIFY2(text.contains(QFileInfo(media.dir.path()).fileName()) && text.contains(trashName()), qPrintable(text));
+            }
             QVERIFY(rowMenu->findChild<QQuickItem*>("menuItem-tree-open-folder")->isEnabled());
             closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
             QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+            named(h.window, "folderList")->setProperty("currentIndex", h.folders.currentRow());
         }
         // Right click on a row.
         const auto rows = namedAll(h.window, "folderRow"); QVERIFY(!rows.isEmpty());

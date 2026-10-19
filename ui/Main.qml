@@ -500,7 +500,7 @@ ApplicationWindow {
         else if (id === "grid-select-all") fileGrid.selectAll()
         else if (id === "tree-open-folder") treePanel.openCursor()
         else if (id === "focus-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.focusAddress) }
-        else if (id === "copy-path") viewer.copyDirectory()
+        else if (id === "copy-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
         else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
         else if (id === "quit") close()
     }
@@ -674,7 +674,7 @@ ApplicationWindow {
             id: loupeDelay
             interval: 220
             onTriggered: {
-                if (interaction.pressedButtons & Qt.RightButton) { interaction.pointerLoupe = true; canvas.beginLoupe(interaction.lastX, interaction.lastY) }
+                if ((interaction.pressedButtons & Qt.RightButton) && !canvas.loupeActive) { interaction.pointerLoupe = true; canvas.beginLoupe(interaction.lastX, interaction.lastY) }
             }
         }
         function endPointerLoupe() { loupeDelay.stop(); if (pointerLoupe) { pointerLoupe = false; canvas.endLoupe() } }
@@ -708,6 +708,7 @@ ApplicationWindow {
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else if(app.combinedMode)app.focusPane("preview");else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
         onContextRequested: (x, y, row) => app.openGridMenu(x, y, row)
+        chordPending: app.chordPending
         tabHandler: app.combinedMode ? (() => app.focusPane("preview")) : null
         Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("preview"); event.accepted = true } }
         deleteBlocked: deleteFlow.isReadOnly(fileGrid.directory)
@@ -717,6 +718,8 @@ ApplicationWindow {
     // Every row is a registered command with its live binding. Right click, the Menu key and Shift+F10 open them.
     component ContextMenu: Menu {
         id: menu
+        // Closing a menu without choosing returns keys to the pane that had them (a choice that opens a dialog keeps the dialog's).
+        onClosed: Qt.callLater(() => { if (!app.modalOpen && !deleteFlow.modal) app.focusContent() })
         margins: Theme.gapSm // stays inside a narrow window
         padding: Theme.gapXs
         // Taller than a compact window: the rows scroll instead of running off the screen.

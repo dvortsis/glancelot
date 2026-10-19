@@ -195,7 +195,7 @@ Rectangle {
                     onClosed: { panel.focusedControls -= 1; if (panel.visible) address.forceActiveFocus(Qt.PopupFocusReason) }
                     background: Rectangle { implicitWidth: 304; radius: Theme.radiusControl; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.border }
                     CommandMenuItem { host: panel.host; commandId: "focus-path" }
-                    CommandMenuItem { host: panel.host; commandId: "copy-path"; enabled: viewer.directory.length > 0 }
+                    CommandMenuItem { host: panel.host; commandId: "copy-path" }
                     CommandMenuItem { host: panel.host; commandId: "paste-path" }
                 }
                 Keys.onEscapePressed: event => {
@@ -258,7 +258,7 @@ Rectangle {
             // Keys the tree owns while it has focus; without this the window-level shortcuts would also fire.
             Keys.onShortcutOverride: event => {
                 event.accepted = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End,
-                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0
+                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0 && !(event.key === Qt.Key_Escape && panel.host && panel.host.chordPending)
                                  || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))
             }
             Keys.onUpPressed: currentIndex = Math.max(0, currentIndex - 1)
@@ -420,6 +420,7 @@ Rectangle {
                 id: rowMenu
                 objectName: "folderRowMenu"
                 property string path: ""
+                readonly property string name: { const p = path.replace(/\\/g, "/").replace(/\/+$/, ""); const leaf = p.slice(p.lastIndexOf("/") + 1); return leaf.length > 30 ? leaf.slice(0, 18) + "…" + leaf.slice(-10) : leaf }
                 property int depth: 0
                 property bool handedOff: false // the confirmation dialog owns focus after a choice
                 padding: Theme.gapXs
@@ -437,7 +438,7 @@ Rectangle {
                     id: trashItem
                     objectName: "folderMoveToTrash"
                     // Drives and other roots are never moved; the item stays visible and explains itself.
-                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move to " + panel.trashName
+                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move “" + rowMenu.name + "” to the " + panel.trashName
                     enabled: rowMenu.depth > 0 && !fileOperations.busy
                     implicitHeight: Theme.controlHeight
                     leftPadding: Theme.gapSm; rightPadding: Theme.gapSm

@@ -16,6 +16,8 @@ Rectangle {
     property string revealPath: ""
     property bool placeCursor: false
     property bool inputEnabled: true
+    // INPUT-02: while the host has a chord pending, Escape is its to cancel, not the grid's.
+    property bool chordPending: false
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
@@ -172,7 +174,7 @@ Rectangle {
         }
         if (mods === Qt.NoModifier) {
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) return "activate"
-            if (event.key === Qt.Key_Escape) return "escape"
+            if (event.key === Qt.Key_Escape) return panel.chordPending ? "" : "escape"
             if (event.key === Qt.Key_Backspace) return "up"
         }
         if (mods === Qt.ControlModifier) {
