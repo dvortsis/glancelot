@@ -197,7 +197,10 @@ struct DirectoryEntryModel::Private {
             if(listing.renamed.contains(cursorKey))cursorKey=keyFor(listing.renamed[cursorKey]);
             previousSelection.clear();previousAnchor.clear();previousCursor.clear();
         }
-        if(accessible&&!truncated)identities=listing.identities;
+        // An incomplete identity scan cannot replace the last complete baseline
+        // for this scope. Do not carry that baseline across unrelated navigation.
+        if(listing.identities.complete)identities=listing.identities;
+        else if(keyFor(identities.directory)!=directoryKey)identities={};
         // Failed/partial refreshes cannot prove disappearance of existing rows.
         if(!truncated||rows.empty())merge(std::move(listing));
         // Selection, anchor and cursor are keys: keep those that still exist, drop the rest. A failed listing of the
