@@ -104,16 +104,41 @@ GridUiTests::deleteBatchProgressStopAndPartialFailureResults
 Actual reasons.size(): 1; expected: 2
 ```
 
-WSL itself has no CMake installed. Linux core verification is instead running in the
-existing `glancelot-qt:dev` Docker toolchain with this checkout mounted read-only.
-Results are not claimed until the command completes and its output is inspected.
+WSL itself has no CMake installed. Linux core verification ran in the existing
+`glancelot-qt:dev` Docker toolchain with this checkout mounted read-only:
+
+```
+100% tests passed, 0 tests failed out of 4
+Total Test time (real) = 2.86 sec
+disabled_ns_per_span=1.97817 enabled_ns_per_span=83.1071 disabled_bound_ns=1000
+```
+
+That older image lacks Qt's ICU/GLib link dependencies and cannot link the fixture
+tool. The current Dockerfile `qt` stage is used instead for Qt tool verification;
+no host libraries or viewer policy were changed to work around it.
+
+## Fixture and comparison tooling
+
+The versioned manifest, Qt-only offline generator, Windows/Linux build wrappers,
+independent dimension/hash/count verifier and result schema are under tools/perf.
+Windows smoke generation completed twice with byte-identical indexes (316 files
+each). Every hash was independently checked; JPEG/PNG dimensions and actual folder
+entry counts were verified. Reusing an existing output and targeting a nonempty
+sentinel directory both returned failure while leaving existing data unchanged.
+The full 12/24/45/60 MP and 111,136-file matrix is running, not yet claimed passed.
+
+The comparison checker passes identical-data, real 100-percent p95 regression,
+per-stage threshold, noise-floor, inadequate-sample, mismatched-fixture, dropped-trace
+and invalid-option cases. It refuses missing conditions, unversioned builds,
+truncated traces and unequal sample counts. The documented default minimum is 50
+samples; this does not turn the one-image native smoke into performance qualification.
 
 ## Still required before review
 
-- Versioned deterministic JPEG/PNG 12/24/45/60 MP, 1k/10k/100k mixed-folder and nested-tree fixture generator.
+- Finish full-matrix and Linux fixture verification, including actual hashes and dimensions.
 - Windows and Linux replay scripts covering open, next, reverse, folder jump, grid scroll and combined preview,
   with correctness verdicts, genuine thumbnail hits/misses, cancellation/stale/failure cases and repeat counts.
-- Per-stage baseline comparison with thresholds and validation of comparable conditions.
+- Use comparison on sufficiently repeated, equivalent replay workloads; tooling tests alone do not qualify performance.
 - Detailed worker IPC phase measurements or lead-reviewed stage-boundary resolution.
 - Rebuild latest changes; full Linux viewer/Docker checks; resolve owner-controlled baseline blockers.
 - Claude-lane independent review, serial integration and integrated-commit Windows/Linux checks.

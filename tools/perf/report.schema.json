@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:glancelot:perf-report:1",
+  "title": "Glancelot local performance report schema 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "clock",
+    "percentile",
+    "context",
+    "dropped",
+    "stages"
+  ],
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1
+    },
+    "clock": {
+      "const": "steady_process_relative_ns"
+    },
+    "percentile": {
+      "const": "nearest_rank"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "build",
+        "platform",
+        "qt_backend",
+        "fixture"
+      ],
+      "properties": {
+        "build": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.+ -]*$"
+        },
+        "platform": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.+ -]*$"
+        },
+        "qt_backend": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.+ -]*$"
+        },
+        "fixture": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.+ -]*$"
+        }
+      }
+    },
+    "dropped": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enumerate",
+        "sort",
+        "publish",
+        "thumbnail_queue",
+        "thumbnail_decode",
+        "decode_queue",
+        "decode",
+        "upload",
+        "present",
+        "cache_lookup",
+        "mutation",
+        "startup"
+      ],
+      "properties": {
+        "enumerate": {
+          "$ref": "#/$defs/stage"
+        },
+        "sort": {
+          "$ref": "#/$defs/stage"
+        },
+        "publish": {
+          "$ref": "#/$defs/stage"
+        },
+        "thumbnail_queue": {
+          "$ref": "#/$defs/stage"
+        },
+        "thumbnail_decode": {
+          "$ref": "#/$defs/stage"
+        },
+        "decode_queue": {
+          "$ref": "#/$defs/stage"
+        },
+        "decode": {
+          "$ref": "#/$defs/stage"
+        },
+        "upload": {
+          "$ref": "#/$defs/stage"
+        },
+        "present": {
+          "$ref": "#/$defs/stage"
+        },
+        "cache_lookup": {
+          "$ref": "#/$defs/stage"
+        },
+        "mutation": {
+          "$ref": "#/$defs/stage"
+        },
+        "startup": {
+          "$ref": "#/$defs/stage"
+        }
+      }
+    },
+    "spans": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/span"
+      }
+    }
+  },
+  "$defs": {
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "min_ns",
+        "p50_ns",
+        "p95_ns",
+        "max_ns",
+        "total_ns",
+        "bytes"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "p50_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "p95_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "all",
+        "splits"
+      ],
+      "properties": {
+        "all": {
+          "$ref": "#/$defs/metrics"
+        },
+        "splits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hit",
+            "miss",
+            "cold",
+            "warm",
+            "cancelled",
+            "failed",
+            "stale",
+            "useful"
+          ],
+          "properties": {
+            "hit": {
+              "$ref": "#/$defs/metrics"
+            },
+            "miss": {
+              "$ref": "#/$defs/metrics"
+            },
+            "cold": {
+              "$ref": "#/$defs/metrics"
+            },
+            "warm": {
+              "$ref": "#/$defs/metrics"
+            },
+            "cancelled": {
+              "$ref": "#/$defs/metrics"
+            },
+            "failed": {
+              "$ref": "#/$defs/metrics"
+            },
+            "stale": {
+              "$ref": "#/$defs/metrics"
+            },
+            "useful": {
+              "$ref": "#/$defs/metrics"
+            }
+          }
+        }
+      }
+    },
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage",
+        "flags",
+        "thread",
+        "generation",
+        "start_ns",
+        "end_ns",
+        "bytes"
+      ],
+      "properties": {
+        "stage": {
+          "enum": [
+            "enumerate",
+            "sort",
+            "publish",
+            "thumbnail_queue",
+            "thumbnail_decode",
+            "decode_queue",
+            "decode",
+            "upload",
+            "present",
+            "cache_lookup",
+            "mutation",
+            "startup"
+          ]
+        },
+        "flags": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "thread": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
