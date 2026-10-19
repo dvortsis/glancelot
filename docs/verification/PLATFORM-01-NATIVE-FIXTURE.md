@@ -57,3 +57,26 @@ The changed host load and removal of future Shell side effects do not prove the
 cause of earlier stock-Qt responsiveness stalls. Physical DPI/ICC/HDR/high-refresh,
 native Linux display and network/filesystem qualification stay unverified unless
 separately measured. FS-WATCH and INPUT UI remain independently unapproved here.
+## Integrated fixture qualification, October19
+
+Corrective integrated commit1d51c17 passed required
+scripts/build.ps1 -BuildDir build-codex-platform-native-fixture -Test:
+18/18,176.11s, with unchanged strict250ms directory responsiveness assertions.
+folder_grid95.20s, directory_model21.60s and platform_integration1.14s passed.
+The clean integration worktree was fast-forwarded to exact main1d51c17, so the
+root checkout's two unrelated blank-line edits were excluded. Native slot was
+verified quiet30s before acquisition; no competing native suite/build was
+observed during this integrated run. Logs/source record:
+.cache/platform-native-fixture-integrated-{windows.log,source.txt}.
+
+Required integrated docker build -t glancelot-browser:main . passed using
+identical cached image0ba808df636ddcd1a66115898c9d46cce5f486b5190c956eee6e42f8ce542692.
+No new test execution is claimed for this cached command. The preceding actual
+Linux test run passed18/18,110.41s on code-identical inputs (documentation-only
+merges followed); log .cache/platform-native-fixture-integrated-docker.log records
+integrated command success. Earlier full Linux and native results remain above.
+
+The fixture prerequisite is independently reviewed and checked on its integrated
+commit. The integration lock is released after recording these results. PLATFORM
+software close-out remains pending a final independent evidence audit; historical
+model stall causes are not established by this pass. Physical gates remain open.
