@@ -127,7 +127,19 @@ tasks:
     evidence: docs/verification/DELETE-KEYS-01.md; independent review approved; Windows build.ps1 -Test 13/13 (160.10s)
     outcome: Separate remappable shortcuts for deleting the current file and current folder
     acceptance: Discoverable commands for Delete selection, Delete current file and Delete current folder; current file means the opened preview image, current folder means the displayed browsing directory; proposed defaults are Delete for focused grid/tree selection or canvas file, Ctrl+Delete for current file and Ctrl+Shift+Delete for current folder; check conflicts before binding; show exact targets and reuse deletion confirmation/service
-    verification: Text editing, modal dialogs, grid versus preview focus, empty selection, no opened image, focused tree folder versus browsing directory, held-key repeats and rapid navigation; captured targets cannot change while confirmation is open
+  - id: PLATFORM-OPS-01
+    requirements: [IN-01, SYS-04]
+    feature: F065
+    milestone: M3
+    priority: 10
+    owner: lead
+    state: implementing
+    branch: agent/platform-ops
+    worktree: .worktrees/platform-ops
+    build: build-platform-ops
+    outcome: Reveal in system file manager and open terminal at current location safely
+    acceptance: Discoverable commands for Reveal in file manager (Ctrl+Alt+R) and Open terminal (Ctrl+Alt+T); argument arrays without shell interpolation; handle Unicode and spaces; highlight file or open folder; graceful fallback and user feedback if unavailable
+    verification: Non-existent paths, root/drive paths, Unicode paths, spaces, Windows Terminal vs PowerShell fallback, detached process safety, text fields retain shortcut precedence
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
     milestone: M3
