@@ -321,7 +321,7 @@ ApplicationWindow {
                 "copy-path", "copy-file", "copy-image",
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
-                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset"].indexOf(id) >= 0
+                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
