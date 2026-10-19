@@ -184,3 +184,16 @@ explicit-open/hash checks. Image733559bd1d8fc078d006b92c112680e6c2cc340da3c1390f
 log .cache/fs-watch-worker-docker.log. Actual source is unchanged by evidence-only
 commits. A newly serialized full Windows gate is running with lead-owned native
 slot markers; no result is claimed yet. Independent FS-WATCH review remains pending.
+
+## Serialized Windows gate on current product source
+
+The serialized full scripts/build.ps1 -Test run on product source b9fa03b
+completed18/20 in506.81s. fs_watch passed37.85s and fs_watch_ui1.59s;
+folder_grid passed273.25s within its unchanged300s timeout. directory_model
+failed47.14s without Qt stdout and platform_integration timed out29.97s.
+Log .cache/fs-watch-worker-windows-serial.log preserves actual command output.
+No concurrent full native suite was observed during this run. These results
+supersede the earlier running status; they do not qualify the full Windows gate.
+The independently assessed Windows launcher fixture prerequisite is now being
+implemented under the frozen PLATFORM contract. Production adapter bytes,
+performance assertions and test timeouts remain unchanged.
