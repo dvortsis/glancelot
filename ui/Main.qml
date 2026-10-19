@@ -17,6 +17,8 @@ ApplicationWindow {
     color: Theme.background
     property bool frameless: false
     property bool hudVisible: true
+    property bool navigatorOn: false        // F037 zoom navigator overview
+    property rect navRect: Qt.rect(0, 0, 0, 0) // the visible part of the photo, in source pixels
     property bool gridMode: false
     property bool layoutEditing: false
     property var resizePreview: ({})
@@ -493,6 +495,12 @@ ApplicationWindow {
                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
             }
         }
+        // F037
+        else if (id === "zoom-50") canvas.zoomTo(0.5)
+        else if (id === "zoom-200") canvas.zoomTo(2)
+        else if (id === "zoom-400") canvas.zoomTo(4)
+        else if (id === "zoom-lock") { canvas.zoomLock = !canvas.zoomLock; wakeHud() }
+        else if (id === "navigator") navigatorOn = !navigatorOn
         // INPUT-02
         else if (id === "hold-actual") canvas.actualSize() // reached without its key: nothing to release, so just show 1:1
         else if (id === "grid-open") photoGrid.activate()
@@ -696,7 +704,44 @@ ApplicationWindow {
             wheel.accepted=true
         }
     }
-    PhotoGrid {
+    // F037 navigator: a map of the photo with the visible part outlined; click or drag recentres the view. It appears only
+    // while zoomed in past the whole photo, so a fitted photo never carries extra chrome.
+    Connections { target: canvas; function onViewChanged() { app.navRect = canvas.visibleImageRect() } function onImageChanged() { app.navRect = canvas.visibleImageRect() } }
+    Rectangle {
+        id: navigatorPanel
+        objectName: "zoomNavigator"
+        readonly property real scaleFactor: viewer.imageWidth > 0 ? Math.min(160 / viewer.imageWidth, 120 / viewer.imageHeight) : 1
+        readonly property bool zoomedIn: viewer.imageWidth > 0 && (app.navRect.width < viewer.imageWidth - 1 || app.navRect.height < viewer.imageHeight - 1)
+        visible: app.navigatorOn && app.workspace._previewShown && zoomedIn && !app.layoutEditing
+        width: Math.round(viewer.imageWidth * scaleFactor) + 2 * Theme.borderWidth
+        height: Math.round(viewer.imageHeight * scaleFactor) + 2 * Theme.borderWidth
+        x: canvas.x + canvas.width - width - Theme.gapMd
+        y: canvas.y + canvas.height - height - Theme.gapLg - 2 * Theme.controlHeight
+        z: 4
+        color: Qt.alpha(Theme.surface, 0.9)
+        border.width: Theme.borderWidth
+        border.color: Theme.border
+        radius: Theme.radiusSmall
+        Accessible.role: Accessible.Pane
+        Accessible.name: "Zoom navigator"
+        Accessible.description: "Click or drag to move the visible area of the photo"
+        Rectangle {
+            objectName: "navigatorViewport"
+            x: Theme.borderWidth + app.navRect.x * navigatorPanel.scaleFactor
+            y: Theme.borderWidth + app.navRect.y * navigatorPanel.scaleFactor
+            width: Math.max(2, app.navRect.width * navigatorPanel.scaleFactor)
+            height: Math.max(2, app.navRect.height * navigatorPanel.scaleFactor)
+            color: Qt.alpha(Theme.primary, 0.18)
+            border.width: Theme.focusWidth
+            border.color: Theme.primary
+        }
+        MouseArea {
+            anchors.fill: parent
+            function go(mouse) { canvas.centerOn((mouse.x - Theme.borderWidth) / navigatorPanel.scaleFactor, (mouse.y - Theme.borderWidth) / navigatorPanel.scaleFactor) }
+            onPressed: mouse => go(mouse)
+            onPositionChanged: mouse => { if (pressed) go(mouse) }
+        }
+    }    PhotoGrid {
         id: photoGrid
         objectName: "photoGrid"
         x: app.paneRect("grid").x; y: app.paneRect("grid").y

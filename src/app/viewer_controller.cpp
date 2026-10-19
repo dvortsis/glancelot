@@ -97,6 +97,9 @@ const std::vector<Command> registry {
     // INPUT-02: hold lifecycle, per-pane commands and context-menu routes. Keys the grid and tree handle themselves
     // (Enter, Backspace, Ctrl+A) stay unbound here; the menus show those fixed keys.
     {"hold-actual","Show actual size while held","Z",false,"canvas",true},
+    // F037: presets (physical scale), zoom lock and the navigator overview. Unbound until the user asks.
+    {"zoom-50","Zoom to 50%","",false,"canvas"}, {"zoom-200","Zoom to 200%","",false,"canvas"}, {"zoom-400","Zoom to 400%","",false,"canvas"},
+    {"zoom-lock","Keep zoom when changing photos","",false,"canvas"}, {"navigator","Show or hide the zoom navigator","",false,"canvas"},
     {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
     {"grid-select-all","Select all items","",false,"grid"},
     {"tree-open-folder","Open the focused folder","",false,"tree"},

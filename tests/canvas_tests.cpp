@@ -45,6 +45,32 @@ private slots:
         QVERIFY(close(canvas.imagePointAt(250,200),center+QPointF(-20,30)));
         QVERIFY(canvas.fitMode().isEmpty());
     }
+    // F037: presets about the centre, zoom lock across photos, and the navigator's visible rectangle and recentring.
+    void presetsZoomLockAndNavigator() {
+        ImageCanvas canvas;
+        canvas.setSize({500,400}); canvas.setImage(fixture());
+        const auto center=canvas.imagePointAt(250,200);
+        canvas.zoomTo(2); QCOMPARE(canvas.zoom(),2.0); QVERIFY(canvas.fitMode().isEmpty());
+        QVERIFY(close(canvas.imagePointAt(250,200),center)); // about the view centre
+        // Without the lock a new photo fits again; with it the magnification stays, centred and upright.
+        canvas.setImage(fixture(800,600)); QCOMPARE(canvas.fitMode(),QString("shrink")); QVERIFY(canvas.zoom()<=1.0);
+        canvas.zoomTo(2); canvas.setZoomLock(true);
+        canvas.setImage(fixture(900,300)); QCOMPARE(canvas.zoom(),2.0); QVERIFY(canvas.fitMode().isEmpty());
+        QVERIFY(close(canvas.imagePointAt(250,200),QPointF(450,150)));
+        canvas.fit("shrink"); canvas.setImage(fixture(700,300)); // a fitted view never becomes locked
+        QCOMPARE(canvas.fitMode(),QString("shrink"));
+        // Visible rectangle: the whole photo when fitted, a window onto it when zoomed; centerOn puts a point mid-view.
+        canvas.setImage(fixture(1000,500)); canvas.setZoomLock(false);
+        QCOMPARE(canvas.visibleImageRect(),QRectF(0,0,1000,500));
+        canvas.zoomTo(2);
+        const QRectF zoomed=canvas.visibleImageRect(); QCOMPARE(zoomed.width(),250.0); QCOMPARE(zoomed.height(),200.0);
+        for (int turns=0; turns<4; ++turns) {
+            canvas.centerOn(700,120);
+            QVERIFY(close(canvas.imagePointAt(250,200),QPointF(700,120)));
+            QVERIFY(canvas.visibleImageRect().contains(QPointF(700,120)));
+            canvas.rotateClockwise(); canvas.zoomTo(2);
+        }
+    }
     void loupeRestoresExactly() {
         ImageCanvas canvas;
         canvas.setSize({500,400}); canvas.setImage(fixture());

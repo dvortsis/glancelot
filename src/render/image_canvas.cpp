@@ -183,8 +183,36 @@ QQuickRhiItemRenderer* ImageCanvas::createRenderer() { return new ImageRenderer;
 qreal ImageCanvas::dpr() const { return window()?window()->effectiveDevicePixelRatio():1; }
 void ImageCanvas::setImage(const QImage& value) {
     if (value.cacheKey()==m_image.cacheKey()) return;
+    // F037 zoom lock: a manually zoomed view keeps its magnification on the next photo (centred, upright).
+    const bool keepZoom=m_zoomLock && !m_image.isNull() && !value.isNull() && m_fitMode.isEmpty() && !m_loupe;
+    const qreal lockedZoom=m_zoom;
     endLoupe(); m_image=value; m_rotation=0; m_pan={}; m_fitMode="shrink";
-    reportRendererError({}); refreshFit(); emit imageChanged(); update();
+    reportRendererError({}); refreshFit();
+    if (keepZoom) { m_zoom=lockedZoom; m_fitMode.clear(); emit viewChanged(); }
+    emit imageChanged(); update();
+}
+void ImageCanvas::setZoomLock(bool value) { if (m_zoomLock==value) return; m_zoomLock=value; emit zoomLockChanged(); }
+// Preset magnification about the view centre; 1 is physical 1:1.
+void ImageCanvas::zoomTo(qreal scale) {
+    if (m_image.isNull() || !std::isfinite(scale) || scale<=0) return;
+    endLoupe(); zoomAt(scale/m_zoom,width()/2,height()/2);
+}
+// The part of the image the view shows, in source pixels (unrotated image space), clamped to the image.
+QRectF ImageCanvas::visibleImageRect() const {
+    if (m_image.isNull()) return {};
+    const QPointF a=imagePointAt(0,0), b=imagePointAt(width(),0), c=imagePointAt(0,height()), d=imagePointAt(width(),height());
+    const qreal left=std::min({a.x(),b.x(),c.x(),d.x()}), right=std::max({a.x(),b.x(),c.x(),d.x()});
+    const qreal top=std::min({a.y(),b.y(),c.y(),d.y()}), bottom=std::max({a.y(),b.y(),c.y(),d.y()});
+    return QRectF(QPointF(left,top),QPointF(right,bottom)).intersected(QRectF(QPointF(0,0),QSizeF(m_image.size())));
+}
+// Navigator: puts source point (x, y) at the view centre.
+void ImageCanvas::centerOn(qreal x,qreal y) {
+    if (m_image.isNull() || !std::isfinite(x) || !std::isfinite(y)) return;
+    endLoupe();
+    const qreal radians=qDegreesToRadians(qreal(m_rotation));
+    const qreal dx=x-m_image.width()/2.0, dy=y-m_image.height()/2.0;
+    const qreal px=std::cos(radians)*dx-std::sin(radians)*dy, py=std::sin(radians)*dx+std::cos(radians)*dy;
+    m_pan=QPointF(-px,-py)*(m_zoom/dpr()); m_fitMode.clear(); emit viewChanged(); update();
 }
 void ImageCanvas::reportRendererError(const QString& value) {
     if (m_rendererError==value) return;

@@ -298,6 +298,31 @@ private slots:
         QTest::keyRelease(h.window, Qt::Key_Z);
     }
 
+    // F037: the navigator appears only while zoomed in, tracks the view and recentres on click; presets and zoom lock are commands.
+    void navigatorPresetsAndZoomLock() {
+        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* canvas = h.canvas(); focusCanvas(h);
+        h.viewer.trigger("navigator");
+        auto* nav = named(h.window, "zoomNavigator"); QVERIFY(nav);
+        QVERIFY(!nav->isVisible()); // fitted: no extra chrome
+        h.viewer.trigger("zoom-200");
+        QTRY_COMPARE(canvas->zoom(), 2.0);
+        QTRY_VERIFY(nav->isVisible());
+        auto* viewport = named(h.window, "navigatorViewport"); QVERIFY(viewport);
+        QTest::mouseMove(h.window, sceneCenter(nav)); QTest::qWait(50);
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, nav->mapToScene(QPointF(nav->width() * 0.8, nav->height() * 0.25)).toPoint(), 60);
+        const QPointF at = canvas->imagePointAt(canvas->width() / 2, canvas->height() / 2);
+        QVERIFY2(at.x() > 1200 && at.y() < 800, qPrintable(QString("%1,%2").arg(at.x()).arg(at.y()))); // moved toward the upper right
+        h.viewer.trigger("zoom-lock");
+        h.viewer.next(); QTRY_COMPARE(h.viewer.currentIndex(), 2); QTRY_VERIFY(h.viewer.imageReady());
+        QCOMPARE(canvas->zoom(), 2.0);
+        h.viewer.trigger("zoom-lock");
+        h.viewer.next(); QTRY_COMPARE(h.viewer.currentIndex(), 3); QTRY_VERIFY(h.viewer.imageReady());
+        QCOMPARE(canvas->fitMode(), QString("shrink"));
+        QTRY_VERIFY(!nav->isVisible());
+    }
+
     // Right button: a quick click is the menu; holding it is the loupe, which ends with the button.
     void rightButtonClickIsTheMenuAndHoldIsTheLoupe() {
         Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
