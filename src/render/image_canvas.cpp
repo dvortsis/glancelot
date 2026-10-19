@@ -1,3 +1,4 @@
+#include "glancelot/perf_trace.hpp"
 #include "image_canvas.hpp"
 #include <QQuickWindow>
 #include <QFile>
@@ -66,6 +67,8 @@ protected:
         pipeline.reset();
     }
     void render(QRhiCommandBuffer* cb) override {
+        // CPU command submission only: GPU completion/display presentation need platform qualification.
+        glancelot::perf::ScopedSpan submission(glancelot::perf::Stage::Present,std::uint64_t(image.cacheKey()));
         QRhiResourceUpdateBatch* updates=rhi()->nextResourceUpdateBatch();
         bool drawable=!image.isNull();
         if (drawable && (image.format()!=QImage::Format_RGBA8888 || image.sizeInBytes()>textureBudget
@@ -128,6 +131,8 @@ protected:
                 updates->uploadStaticBuffer(vertices.get(),data); vertexUpload=false;
             }
             if (upload || imageKey!=image.cacheKey()) {
+                glancelot::perf::ScopedSpan uploadTiming(glancelot::perf::Stage::Upload,std::uint64_t(image.cacheKey()));
+                uploadTiming.setBytes(std::uint64_t(image.sizeInBytes()));
                 updates->uploadTexture(texture.get(),image);
                 upload=false; imageKey=image.cacheKey();
             }

@@ -1,3 +1,5 @@
+#include "glancelot/perf_trace.hpp"
+#include "../core/perf_context.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/directory_listing.hpp"
 #include "thumbnail_id.hpp"
@@ -138,10 +140,15 @@ struct DirectoryEntryModel::Private {
         auto* watcher = new QFutureWatcher<Listing>(q);
         QObject::connect(watcher, &QFutureWatcher<Listing>::finished, q, [this, watcher, token] {
             auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
-            if (token == generation && active && !listing.cancelled) apply(std::move(listing));
+            { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
+            publication.setBytes(listing.rows.size());
+            if (token != generation || !active) publication.setFlags(glancelot::perf::Stale);
+            else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);
+            else { if (!listing.accessible) publication.setFlags(glancelot::perf::Failed); apply(std::move(listing)); } }
             pump();
         });
-        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token()] {
+        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token] {
+            glancelot::perf::detail::GenerationContext context(token);
             return buildListing(directory, sort, hidden, cancel, kMaxEntries);
         }));
     }
