@@ -6,6 +6,11 @@ import struct
 from pathlib import Path, PurePosixPath
 
 
+def require(condition, message="fixture integrity check failed"):
+    if not condition:
+        raise ValueError(message)
+
+
 def sha256(path):
     with path.open("rb") as source:
         result = hashlib.sha256()
@@ -48,32 +53,32 @@ def verify(root, manifest):
     raw_index = (root / "fixture-index.json").read_bytes()
     index = json.loads(raw_index)
     spec = json.loads(manifest.read_text(encoding="utf-8"))
-    assert index["schema"] == spec["schema"] == 1
-    assert index["manifest_sha256"] == sha256(manifest)
-    assert index["profile"] in ("smoke", "full")
-    assert index["id"] == spec["id"] + ("-smoke" if index["profile"] == "smoke" else "")
-    assert (root / ".glancelot-perf-generated").read_text().strip() == index["id"]
-    assert len(index["files"]) <= 170000
+    require(index["schema"] == spec["schema"] == 1)
+    require(index["manifest_sha256"] == sha256(manifest))
+    require(index["profile"] in ("smoke", "full"))
+    require(index["id"] == spec["id"] + ("-smoke" if index["profile"] == "smoke" else ""))
+    require((root / ".glancelot-perf-generated").read_text().strip() == index["id"])
+    require(len(index["files"]) <= 170000)
     paths = set()
     counts = {}
     for entry in index["files"]:
         name = PurePosixPath(entry["path"])
-        assert not name.is_absolute() and ".." not in name.parts and name.as_posix() not in paths
+        require(not name.is_absolute() and ".." not in name.parts and name.as_posix() not in paths)
         paths.add(name.as_posix())
         path = root.joinpath(*name.parts)
-        assert path.resolve().is_relative_to(root) and not path.is_symlink()
-        assert sha256(path) == entry["sha256"]
+        require(path.resolve().is_relative_to(root) and not path.is_symlink())
+        require(sha256(path) == entry["sha256"])
         if "width" in entry:
-            assert dimensions(path) == (entry["width"], entry["height"])
+            require(dimensions(path) == (entry["width"], entry["height"]))
         counts[str(name.parent)] = counts.get(str(name.parent), 0) + 1
     for item in spec["images"]:
         expected = (64, 48) if index["profile"] == "smoke" else (item["width"], item["height"])
         for suffix in ("png", "jpg"):
-            assert dimensions(root / "images" / (item["id"] + "." + suffix)) == expected
+            require(dimensions(root / "images" / (item["id"] + "." + suffix)) == expected)
     for folder in index["mixed_folders"]:
         actual = min(100, folder["requested_entries"]) if index["profile"] == "smoke" else folder["requested_entries"]
-        assert folder["actual_entries"] == actual == counts[folder["path"]]
-        assert sum(1 for _ in (root / folder["path"]).iterdir()) == actual
+        require(folder["actual_entries"] == actual == counts[folder["path"]])
+        require(sum(1 for _ in (root / folder["path"]).iterdir()) == actual)
     digest = hashlib.sha256(raw_index).hexdigest()
     print("PASS fixture", index["id"], "files", len(paths), "profile", index["profile"], "index_sha256", digest)
     return index

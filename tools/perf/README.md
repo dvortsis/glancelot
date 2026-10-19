@@ -86,11 +86,42 @@ evidence). The default 50-sample minimum deliberately refuses a one-open smoke
 report as broad benchmark evidence. No-sample stages are reported explicitly.
 Thresholds never turn a missing, truncated or mismatched workload into a pass.
 
+## Replay and repeated captures
+
+```powershell
+./tools/perf/replay.ps1 -Exe ./build-codex-perf-measure/glancelot.exe -Fixtures .cache/new-fixtures -Output .cache/new-replay -Python python -Runs 1 -Steps 5 -Cycles 2 -RequireRender
+```
+
+```sh
+sh tools/perf/replay.sh --exe ./build-codex-perf-measure/glancelot --fixtures .cache/new-fixtures --output .cache/new-replay --runs 1 --steps 5 --cycles 2 --require-render
+```
+
+Use a new or empty output directory outside the source fixtures. Both wrappers use
+replay.py, which verifies all source hashes before and after. The app's bounded,
+explicit standard-v1 test driver exercises open, next N, reverse N, folder jumps,
+scrolling, combined cursor preview, a real thumbnail cache miss/hit pair, rapid-open
+cancellation, corrupt-file failure and recovery. It requires --perf-report and
+--no-resume; normal launches do not construct it. No QML/keyboard bindings, decoder
+policy or original media are changed. An independent correctness verdict and the
+trace assertions must both pass.
+
+Each capture fixes Slate & Ice dark and 1180x780, isolates preferences, records actual
+executable SHA256 and source commit, and incorporates the dataset index hash and
+steps/cycles into the fixture identifier. For a packaged/container runtime without
+Git, replay.py accepts --source-commit with 40 hex digits, explicitly labeling it as
+declared provenance while still measuring the binary hash. Logs stay local.
+
+--runs supports 1..50 fresh processes. aggregate.json recomputes percentiles from
+raw duration samples, preserves condition splits and omits a fictitious combined
+process timeline. aggregate.aggregation.json records input report hashes and capture
+count. The tool caps aggregation at 200 captures, 64 MiB per input and two million
+spans. It never averages p95 values. A one-run smoke remains inadequate for broad
+performance qualification. Startup, filesystem-cache state and native physical
+presentation remain distinct concepts.
+
 ## Remaining packet work
 
-Windows/Linux replay wrappers and a verified action driver still need to cover
-open, next/reverse, folder jump, grid scroll and combined preview, including actual
-cache hits/misses, failure/cancellation and correctness verdicts. Full viewer Docker
-checks, owner-controlled baseline failures, detailed worker phase attribution,
-independent Claude review and integration remain open. Hardware/SMB/high-refresh
+Linux replay, repeated native/software-rendered baseline capture and comparison,
+full viewer Docker checks, owner-controlled baseline failures, worker phase boundary
+review, independent Claude review and integration remain open. Hardware/SMB/high-refresh
 claims require separate measured evidence.

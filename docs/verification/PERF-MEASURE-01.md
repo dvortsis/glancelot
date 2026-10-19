@@ -137,7 +137,17 @@ The index hash matches both Windows smoke runs. The Linux wrapper initially fail
 because its working-tree file had CRLF despite the Git blob's LF normalization;
 actual LF bytes and the local .gitattributes rule resolve it. The successful rerun
 used the shipped build_tools.sh and independent verify_fixtures.py.
-The full 12/24/45/60 MP and 111,136-file matrix is running, not yet claimed passed.
+The full matrix also completed and passed independent verification:
+
+```
+Generated glancelot-perf-fixtures-v1: 111136 files; Qt 6.8.3; profile full
+PASS fixture glancelot-perf-fixtures-v1 files 111136 profile full
+index_sha256 9c5b6da1ffa6d467d5b9f496bd4bbd5d426fe544153353794bd04c82abd9e1e7
+```
+
+This checks every generated hash, JPEG/PNG dimensions (including all four actual
+MP sizes), and exact 1k/10k/100k entry counts. It is not a claim that every large
+image is admitted by the existing viewer memory policy.
 
 The comparison checker passes identical-data, real 100-percent p95 regression,
 per-stage threshold, noise-floor, inadequate-sample, mismatched-fixture, dropped-trace
@@ -145,11 +155,45 @@ and invalid-option cases. It refuses missing conditions, unversioned builds,
 truncated traces and unequal sample counts. The documented default minimum is 50
 samples; this does not turn the one-image native smoke into performance qualification.
 
+## Replay implementation and first native workflow check
+
+The private driver is inactive unless GLANCELOT_PERF_REPLAY=standard-v1, --perf-report
+and --no-resume are explicitly supplied. It has bounded steps/cycles, per-action and
+overall deadlines. It invokes existing read-only viewer/grid APIs and writes a separate
+path-free correctness verdict. It dispatches no mutation or shell commands and makes no
+QML or public-header changes. Normal launches do not construct a replay driver.
+
+replay.ps1 and replay.sh call the shared replay.py runner. It verifies source fixtures
+before and after, uses isolated preferences and new/empty output directories, records
+executable SHA/build identity and fixed window/theme/workload settings, checks action
+counts and trace flags, and refuses incomplete/failed/truncated results. Fixture
+verification now uses explicit checks, so Python -O cannot bypass integrity validation.
+
+The first native Windows run (steps=3, cycles=2, D3D11 requested, RequireRender) passed:
+
+```
+PASS standard-v1 run 0 next/previous 6 cache hit/miss, grid, combined,
+  cancellation, corrupt decode and recovery
+```
+
+Observed action counts: next=6, previous=6, next/previous folder=1 each,
+grid_scroll=6, combined selection=1, thumbnail probes=2, burst opens=2,
+corrupt open=1 and recovery open=1. The real thumbnail cache produced one hit;
+trace flags included cancelled=20, stale=1 and failed=3 across stages. Upload,
+render-submission, publication and startup spans were all present. Every original
+generated-fixture hash remained unchanged. This is workflow/trace evidence, not
+a statistically qualified latency result.
+
+The aggregate.py tool recomputes nearest-rank percentiles from original raw duration
+samples. It refuses incompatible build/conditions, dropped traces, missing raw samples
+and bounded-input overflow. It never averages percentiles or merges timestamp origins.
+Known-distribution tests pass for exact p50/p95/totals and incompatible/truncated inputs.
+Repeated native/Docker baseline captures and comparison remain to be completed.
+
 ## Still required before review
 
-- Finish full-matrix fixture verification, including actual hashes and dimensions; Linux smoke checks passed.
-- Windows and Linux replay scripts covering open, next, reverse, folder jump, grid scroll and combined preview,
-  with correctness verdicts, genuine thumbnail hits/misses, cancellation/stale/failure cases and repeat counts.
+- Full fixture verification passed; retain its evidence when exercising replay on the larger mixed folders.
+- Exercise the complete replay on Linux/Docker and collect repeated comparable native/software-rendered baselines; first native workflow passed.
 - Use comparison on sufficiently repeated, equivalent replay workloads; tooling tests alone do not qualify performance.
 - Detailed worker IPC phase measurements or lead-reviewed stage-boundary resolution.
 - Rebuild latest changes; full Linux viewer/Docker checks; resolve owner-controlled baseline blockers.

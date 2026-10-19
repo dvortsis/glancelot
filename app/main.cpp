@@ -1,3 +1,4 @@
+#include "perf_replay.hpp"
 #include "glancelot/perf_trace.hpp"
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/viewer_controller.hpp"
@@ -150,7 +151,7 @@ int main(int argc,char** argv) {
         if(!parser.isSet("perf-report")) return;
         auto& recorder=glancelot::perf::Recorder::instance();
         auto spans=recorder.drain();
-        const auto build=qEnvironmentVariable("GLANCELOT_PERF_BUILD",QCoreApplication::applicationVersion()+"-unversioned");
+        const auto build=QCoreApplication::applicationVersion()+"-"+qEnvironmentVariable("GLANCELOT_PERF_BUILD","unversioned");
         glancelot::perf::ReportContext context{build.toStdString(),
             (QSysInfo::productType()+"-"+QSysInfo::productVersion()+"-"+QSysInfo::kernelVersion()).toStdString(),
             std::string("qt-api-")+std::to_string(window?int(window->rendererInterface()->graphicsApi()):0),
@@ -194,6 +195,7 @@ int main(int argc,char** argv) {
             app.exit(viewer.loading()?3:0);
         });
     }
+    if(!glancelot::perf::installReplay(app,viewer,fileGrid,thumbnails,engine.rootObjects().first(),parser.isSet("perf-report")&&parser.isSet("no-resume")))return 2;
     const int result=app.exec();
     return perfReportFailed ? 4 : result;
 }
