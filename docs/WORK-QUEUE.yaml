@@ -170,7 +170,7 @@ tasks:
     milestone: M3
     priority: 10
     owner: lead
-    state: implementing
+    state: review
     branch: agent/grid-search
     worktree: .worktrees/grid-search
     build: build-grid-search
