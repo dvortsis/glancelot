@@ -99,6 +99,9 @@ const std::vector<Command> registry {
     {"hold-actual","Show actual size while held","Z",false,"canvas",true},
     // F037: presets (physical scale), zoom lock and the navigator overview. Unbound until the user asks.
     {"zoom-50","Zoom to 50%","",false,"canvas"}, {"zoom-200","Zoom to 200%","",false,"canvas"}, {"zoom-400","Zoom to 400%","",false,"canvas"},
+    // F031 slideshow: advances only after the current photo has shown; any manual step, Escape, a modal or focus loss ends it.
+    {"slideshow","Start or stop the slideshow","",false,"canvas"}, {"slideshow-slower","Slideshow: longer per photo","",false,"canvas"},
+    {"slideshow-faster","Slideshow: shorter per photo","",false,"canvas"},
     {"zoom-lock","Keep zoom when changing photos","",false,"canvas"}, {"navigator","Show or hide the zoom navigator","",false,"canvas"},
     {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
     {"grid-select-all","Select all items","",false,"grid"},

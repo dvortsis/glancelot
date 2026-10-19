@@ -63,7 +63,7 @@ ApplicationWindow {
     function pathKey(path) { const p = String(path).replace(/\\/g, "/"); return Qt.platform.os === "windows" ? p.toLowerCase() : p }
     function leafName(path) { const p = String(path).replace(/\\/g, "/").replace(/\/+$/, ""); return p.slice(p.lastIndexOf("/") + 1) }
     function syncMode() { gridMode = paneLayout.contentMode === "grid" }
-    onGridModeChanged: if (gridMode !== (paneLayout.contentMode === "grid")) paneLayout.setContentMode(gridMode ? "grid" : "preview")
+    onGridModeChanged: { if (gridMode) stopSlideshow(); if (gridMode !== (paneLayout.contentMode === "grid")) paneLayout.setContentMode(gridMode ? "grid" : "preview") }
     onCombinedModeChanged: {
         previewDebounce.stop(); splitDrag = -1
         if (combinedMode) { previewFollowsCursor = false; focusedPane = "grid" }
@@ -312,6 +312,7 @@ ApplicationWindow {
     // window shortcuts follow the focused pane (`gridScope`).
     function invoke(id) {
         if (!routeAllows(id)) return
+        if (slideshowOn && ["next", "previous", "next-folder", "previous-folder"].indexOf(id) >= 0) stopSlideshow()
         if (combinedMode && ["next", "previous", "next-folder", "previous-folder"].indexOf(id) >= 0) previewFollowsCursor = false
         viewer.trigger(id); wakeHud()
     }
@@ -423,13 +424,36 @@ ApplicationWindow {
             const step = pixel !== 0 ? pixel * 2 : delta
             if (wheelRemainder !== 0 && (step > 0) !== (wheelRemainder > 0)) wheelRemainder = 0 // a reversal starts afresh
             wheelRemainder += step
-            if (Math.abs(wheelRemainder) >= 120) previewFollowsCursor = false
+            if (Math.abs(wheelRemainder) >= 120) { previewFollowsCursor = false; stopSlideshow() }
             while (wheelRemainder >= 120) { viewer.previous(); wheelRemainder -= 120 }
             while (wheelRemainder <= -120) { viewer.next(); wheelRemainder += 120 }
         }
     }
     // A partial detent does not wait for the next gesture.
     Timer { id: wheelIdle; interval: 400; onTriggered: app.wheelRemainder = 0 }
+    // ---- F031 slideshow. The timer only advances once the current photo has shown (never a queue of steps), honours the
+    // folder boundary mode (a stop boundary ends it) and ends on any manual navigation, Escape, a modal or focus loss.
+    property bool slideshowOn: false
+    property int slideshowSeconds: 5
+    property int slideshowLastIndex: -1
+    function startSlideshow() {
+        if (viewer.fileCount < 2 || gridMode) return
+        slideshowLastIndex = -1; slideshowOn = true; slideshowTimer.restart(); wakeHud()
+    }
+    function stopSlideshow() { slideshowOn = false; slideshowTimer.stop() }
+    function setSlideshowSeconds(seconds) { slideshowSeconds = Math.max(1, Math.min(60, seconds)); if (slideshowOn) slideshowTimer.restart() }
+    Timer {
+        id: slideshowTimer
+        objectName: "slideshowTimer"
+        interval: app.slideshowSeconds * 1000
+        repeat: true
+        onTriggered: {
+            if (!viewer.imageReady || viewer.loading || app.modalOpen) return
+            if (app.slideshowLastIndex === viewer.currentIndex) { app.stopSlideshow(); return } // the last step went nowhere: a boundary
+            app.slideshowLastIndex = viewer.currentIndex
+            viewer.next()
+        }
+    }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
         let offset = 0
@@ -495,6 +519,10 @@ ApplicationWindow {
                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
             }
         }
+        // F031
+        else if (id === "slideshow") { if (slideshowOn) stopSlideshow(); else startSlideshow() }
+        else if (id === "slideshow-slower") setSlideshowSeconds(slideshowSeconds + (slideshowSeconds >= 10 ? 5 : 1))
+        else if (id === "slideshow-faster") setSlideshowSeconds(slideshowSeconds - (slideshowSeconds > 10 ? 5 : 1))
         // F037
         else if (id === "zoom-50") canvas.zoomTo(0.5)
         else if (id === "zoom-200") canvas.zoomTo(2)
@@ -512,8 +540,8 @@ ApplicationWindow {
         else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
         else if (id === "quit") close()
     }
-    onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel() }
-    onModalOpenChanged: if (modalOpen) { canvas.endLoupe(); chordCancel() }
+    onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel(); stopSlideshow() }
+    onModalOpenChanged: if (modalOpen) { canvas.endLoupe(); chordCancel(); stopSlideshow() }
     Connections {
         target: viewer
         function onViewCommand(id) { app.handleViewCommand(id) }
@@ -553,6 +581,7 @@ ApplicationWindow {
         enabled: !app.modalOpen && !app.editingText
         onActivated: {
             if (app.chordPending) { app.chordCancel(); return } // the first Escape only abandons the pending chord
+            if (app.slideshowOn) { app.stopSlideshow(); return }
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
             if (app.gridMode) app.showCanvas()
@@ -1461,6 +1490,15 @@ ApplicationWindow {
                 elide: Text.ElideRight
                 text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
                 color: viewer.status.length > 0 ? Theme.text : Theme.muted
+            }
+            BarLabel { // F031: the slideshow state, with its pace
+                objectName: "slideshowIndicator"
+                visible: app.slideshowOn
+                Layout.leftMargin: Theme.gapSm
+                text: "Slideshow · " + app.slideshowSeconds + " s"
+                color: Theme.text
+                Accessible.role: Accessible.StaticText
+                Accessible.name: "Slideshow running, " + app.slideshowSeconds + " seconds per photo. Escape stops it."
             }
             BarLabel { // INPUT-02: the first key of a two-key shortcut was pressed; the second key or Escape ends it
                 objectName: "chordPending"

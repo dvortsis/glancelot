@@ -323,6 +323,31 @@ private slots:
         QTRY_VERIFY(!nav->isVisible());
     }
 
+    // F031: the slideshow advances on its own pace, never queues, and ends on manual steps, Escape and a folder boundary.
+    void slideshowAdvancesAndEndsCleanly() {
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        h.viewer.setBoundaryMode("stop");
+        QVERIFY(QMetaObject::invokeMethod(h.window, "setSlideshowSeconds", Q_ARG(QVariant, 1)));
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY(named(h.window, "slideshowIndicator")->isVisible());
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 2, 4000);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 3, 4000);
+        QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 4000); // the stop boundary ended it
+        QCOMPARE(h.viewer.currentIndex(), 3);
+        // Escape stops it; so does a manual step.
+        h.viewer.setBoundaryMode("loop");
+        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!flag(h, "slideshowOn"));
+        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(!flag(h, "slideshowOn"));
+        // A modal dialog ends it too.
+        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        h.viewer.trigger("settings"); QTRY_VERIFY(!flag(h, "slideshowOn"));
+        QVERIFY(QMetaObject::invokeMethod(h.object("settingsDialog"), "close"));
+    }
+
     // Right button: a quick click is the menu; holding it is the loupe, which ends with the button.
     void rightButtonClickIsTheMenuAndHoldIsTheLoupe() {
         Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
