@@ -139,7 +139,7 @@ inline int bootstrap(const QStringList& originalArguments) {
     for(const auto* name:{"explorer.exe","wt.exe","powershell.exe"}) if(!QFile::copy(stub,QDir(sandbox).filePath(name))) return failure(103,"copy helper");
     QProcessEnvironment env=QProcessEnvironment::systemEnvironment();
     const QString searchDirectory=shortDirectory(sandbox);
-    if(searchDirectory.isEmpty() || qtDirectory().isEmpty()) return failure(110,"short directory identity or loaded Qt module missing");
+    if(searchDirectory.isEmpty() || qtDirectory().isEmpty()) return failure(110,"ASCII 8.3 directory alias unavailable, identity mismatch or loaded Qt module missing");
     env.insert("PATH",searchDirectory+";"+qtDirectory());env.insert("GLANCELOT_NATIVE_SANDBOX",sandbox);
     env.insert("GLANCELOT_NATIVE_QT_DIR",qtDirectory());env.insert("GLANCELOT_NATIVE_RUNNER_SHA",hash(runner));
     env.insert("GLANCELOT_NATIVE_STUB_SHA",hash(stub));env.insert("GLANCELOT_NATIVE_TOKEN",QUuid::createUuid().toString());
@@ -191,11 +191,15 @@ inline int bootstrap(const QStringList& originalArguments) {
     CloseHandle(job);
     if(ownLog) {
         QFile log(defaultLog);
-        if(log.open(QIODevice::ReadOnly) && log.size()<=256*1024) {
-            const auto bytes=log.readAll();std::fwrite(bytes.constData(),1,size_t(bytes.size()),stdout);std::fflush(stdout);
-        } else if(result==0) result=failure(111,"missing or oversized default QtTest log");
+        if(log.open(QIODevice::ReadOnly)) {
+            const bool truncated=log.size()>256*1024;
+            auto bytes=log.read(256*1024);bytes.replace("\r\n","\n");
+            std::fwrite(bytes.constData(),1,size_t(bytes.size()),stdout);std::fflush(stdout);
+            if(truncated) {std::fprintf(stderr,"native fixture: QtTest log truncated at 256 KiB\n");if(result==0) result=111;}
+        } else if(result==0) result=failure(111,"missing default QtTest log");
     }
-    if(result) failure(result,"copied runner failed, timed out or retained owned processes");return result;
+    if(result) std::fprintf(stderr,"native fixture: copied runner exit/result %d\n",result);
+    return result;
 }
 #endif
 } // namespace native_fixture
