@@ -66,8 +66,16 @@ python tools/platform/repeat_build.py --target linux --output .cache/repeat-linu
 ```
 
 Windows defaults to scripts/build.ps1 -Test -Package before sealing. Explicit
--UseExistingDeployment skips that invocation and validates deployment binaries
-against the selected build; it does not create fresh test evidence. Run package
+-UseExistingBuild (alias -UseExistingDeployment) skips that invocation and requires
+-SourceIdentity pointing to a recorded source object with commit, dirty and
+origin="declared". This packages an explicitly identified existing build and does
+not create fresh compilation/test evidence or label an old binary as current HEAD.
+For example, preserve the source object from its original verified provenance and
+mark its origin declared; never guess the build's revision from version strings.
+Every archive uses a new CMake deployment prefix, copying notices and Qt SBOMs
+directly from their sources, so old plugins and nested SBOM copies in dist are not
+inherited. Freshly deployed executable hashes must match the selected build.
+Run package
 commands serially because the existing Windows deployment directory is shared
 within this worktree. Linux requires WSL Ubuntu/Docker on Windows, or use
 tools/platform/linux_package.sh --output NEW_OUTPUT --epoch EPOCH on Linux.
@@ -80,4 +88,5 @@ Repeat builds require clean Git state, create fresh build directories and force
 two separate Linux compilations. comparison.json records actual archive hashes,
 executable/payload/metadata equality and changed files. Exit 1 reports differing
 archive bytes; it is a measured result, not permission to claim reproducibility.
+Exit 2 indicates an invalid or failed experiment and does not establish a comparison.
 Read QUALIFICATION-MATRIX.md for physical gates and evidence reuse checks.

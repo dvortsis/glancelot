@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from artifacts import compare, digest_file, encoded, require
 
@@ -62,5 +63,9 @@ if __name__ == "__main__":
     parser.add_argument("--target", choices=("windows", "linux"), required=True)
     parser.add_argument("--epoch", type=int, required=True)
     args = parser.parse_args()
-    result = repeat(args.repo, args.output, args.target, args.epoch)
+    try:
+        result = repeat(args.repo, args.output, args.target, args.epoch)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+        print("Repeat experiment failed:", error, file=sys.stderr)
+        raise SystemExit(2)
     raise SystemExit(0 if result["archive_bytes_equal"] else 1)
