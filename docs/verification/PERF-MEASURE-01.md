@@ -76,8 +76,8 @@ The following tests FAILED:
 The baseline before production edits failed the same Windows platform suite (13/14
 passed, 221.28 sec). That adapter belongs to PLATFORM-OPS-01/Gemini. Static inspection
 finds `openTerminal` maps a nonexistent requested path to its existing parent before
-launching; the test expects rejection. Do not repair it in this lane. The latest
-trace-attribution-only source edits still need an incremental rebuild and checks.
+launching; the test expects rejection. Do not repair it in this lane. This historical failure predates the main merge described below; the updated
+Windows platform test now passes. Final candidate checks are recorded separately.
 
 A generated 1024x768 PNG was opened by a timed foreground native viewer with isolated
 preferences, `--perf-report`, `--no-resume`, and D3D11 requested:
@@ -198,7 +198,8 @@ Linux software-rendered replay remains in progress.
 - Full fixture verification passed; retain its evidence when exercising replay on the larger mixed folders.
 - Exercise the complete replay on Linux/Docker and collect repeated comparable native/software-rendered baselines; first native workflow passed.
 - Use comparison on sufficiently repeated, equivalent replay workloads; tooling tests alone do not qualify performance.
-- Detailed worker IPC phase measurements or lead-reviewed stage-boundary resolution.
+- Claude review of the documented existing IPC/render stage boundaries. Finer
+  worker-local phase timing has no frozen interface in this packet.
 - Full Linux viewer/Docker gate and final Windows checks; resolve owner-controlled
   platform-test environment failures. Do not count the replay-only artifact as a passing gate.
 - Claude-lane independent review, serial integration and integrated-commit Windows/Linux checks.
@@ -271,3 +272,26 @@ and .cache/perf-measure-native-baseline-50.log.
 
 Negative-path checks also passed: invalid replay configuration exits 2, an unwritable
 report destination exits 4, and Python -O cannot bypass fixture integrity validation.
+
+## Complete fixture coverage guards
+
+Commit d36c587 makes verification derive every expected path and image dimension
+from the versioned manifest, including mixed folders and nested trees. It rejects
+missing groups/files, dimensions inconsistent with the manifest, mismatched pinned
+Qt provenance and unexpected files/directories. It bounds report size and expected
+entry counts before allocating the expected dataset. The generated fixtures are
+unchanged. Eight corruption cases pass on Windows both normally and with Python -O,
+and on Linux with Python -O in the isolated runtime container:
+
+```
+python tools/perf/test_fixture_integrity.py .cache/perf-fixtures-smoke-a
+python -O tools/perf/test_fixture_integrity.py .cache/perf-fixtures-smoke-a
+PASS complete manifest coverage, dimensions, toolchain and unexpected-file/directory rejection
+```
+
+This closes an index-subset validation gap; it does not alter the replay workload
+or application binary. A strict full-matrix recheck is running separately. The
+Linux repeated baseline's application binary is SHA256-prefix 142e27c0c383f56d,
+source revision dd0820eec0546082fd4d026ea5f7411be2249b52. Its first exploratory
+smoke supplied an incorrect declared commit suffix and is excluded from provenance
+and baseline evidence. The repeated run reads the exact source revision from Git.
