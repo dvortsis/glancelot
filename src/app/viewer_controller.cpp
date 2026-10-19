@@ -557,6 +557,9 @@ QString ViewerController::directory() const{return d->path.isEmpty()?displayPath
 QString ViewerController::directoryError() const{return d->directoryError;}
 bool ViewerController::directoryPending() const{return d->directoryPending;}
 void ViewerController::copyDirectory() const{QGuiApplication::clipboard()->setText(directory());}
+bool ViewerController::copyFilePath(const QStringList& paths) { Q_UNUSED(paths); return false; }
+bool ViewerController::copyFileUrls(const QStringList& paths) { Q_UNUSED(paths); return false; }
+bool ViewerController::copyImageBitmap() { return false; }
 bool ViewerController::revealInFileManager(const QString& path) {
     QString target = path;
     if (target.isEmpty()) {
