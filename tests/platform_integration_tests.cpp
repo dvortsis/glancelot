@@ -16,16 +16,47 @@ private slots:
         QVERIFY(!glancelot::PlatformIntegration::openTerminal("C:/nonexistent_dir_path_12345"));
     }
 
+    void revealValidTempDirReturnsTrue() {
+        QTemporaryDir tempDir;
+        QVERIFY(tempDir.isValid());
+        QVERIFY(QFileInfo(tempDir.path()).isDir());
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(tempDir.path()));
+    }
+
+    void openTerminalRootDirectoryReturnsTrue() {
+        const QString root = QDir::rootPath();
+        QVERIFY(QFileInfo::exists(root));
+        QVERIFY(glancelot::PlatformIntegration::openTerminal(root));
+    }
+
+    void revealDirectoryVsFileBehaviors() {
+        QTemporaryDir tempDir;
+        QVERIFY(tempDir.isValid());
+        const QString dirPath = tempDir.path();
+        QVERIFY(QFileInfo(dirPath).isDir());
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(dirPath));
+
+        QFile tempFile(QDir(dirPath).filePath("sample.png"));
+        QVERIFY(tempFile.open(QIODevice::WriteOnly));
+        tempFile.close();
+        const QString filePath = tempFile.fileName();
+        QVERIFY(QFileInfo(filePath).isFile());
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(filePath));
+    }
+
     void pathsWithSpacesAndUnicodeValidation() {
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
         QDir dir(tempDir.path());
-        QVERIFY(dir.mkdir("folder with spaces"));
-        const QString subPath = dir.filePath("folder with spaces");
+        const QString unicodeDirName = QString::fromUtf8("folder with spaces \u2602 \u00e9");
+        QVERIFY(dir.mkdir(unicodeDirName));
+        const QString subPath = dir.filePath(unicodeDirName);
         QVERIFY(QFileInfo::exists(subPath));
-        // Verify path resolution does not crash or throw on spaces/special characters
         QFileInfo fi(subPath);
         QVERIFY(fi.isDir());
+
+        // Validate reveal on directory containing spaces and unicode characters
+        QVERIFY(glancelot::PlatformIntegration::revealInFileManager(subPath));
     }
 };
 

@@ -69,6 +69,8 @@ public:
     Q_INVOKABLE void navigateDirectory(const QString& folder);
     Q_INVOKABLE void copyDirectory() const;
     Q_INVOKABLE void cancelDirectoryNavigation();
+    Q_INVOKABLE bool revealInFileManager(const QString& path = QString());
+    Q_INVOKABLE bool openTerminal(const QString& directory = QString());
     QString directoryError() const; bool directoryPending() const;
     // Explicitly widens the traversal root to its parent (never implicit; never past the filesystem root).
     Q_INVOKABLE void raiseRoot();

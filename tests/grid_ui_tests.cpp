@@ -2507,6 +2507,37 @@ private slots:
         QCOMPARE(map["delete-current-folder"]["label"].toString(), QString("Move current folder to the Trash"));
 #endif
     }
+    void platformOperationsShortcutsRegisteredAndBound() {
+        ViewerController viewer;
+        const auto commands = viewer.commands();
+        QMap<QString, QVariantMap> map;
+        for (const auto& cmd : commands) {
+            const auto row = cmd.toMap();
+            map[row["id"].toString()] = row;
+        }
+
+        QVERIFY(map.contains("reveal-in-file-manager"));
+        QCOMPARE(map["reveal-in-file-manager"]["binding"].toString(), QString("Ctrl+Alt+R"));
+        QCOMPARE(map["reveal-in-file-manager"]["label"].toString(), QString("Reveal in File Manager"));
+
+        QVERIFY(map.contains("open-terminal"));
+        QCOMPARE(map["open-terminal"]["binding"].toString(), QString("Ctrl+Alt+T"));
+        QCOMPARE(map["open-terminal"]["label"].toString(), QString("Open Terminal"));
+
+        // When no path or directory is set, controller invokables return false and update status
+        QVERIFY(!viewer.revealInFileManager(""));
+        QCOMPARE(viewer.status(), QString("No photo or folder is open to reveal."));
+
+        QVERIFY(!viewer.openTerminal(""));
+        QCOMPARE(viewer.status(), QString("No folder is open to open a terminal."));
+
+        // When nonexistent path is passed, controller attempts operation and reports failure
+        QVERIFY(!viewer.revealInFileManager("C:/nonexistent_file_path_12345.png"));
+        QCOMPARE(viewer.status(), QString("Could not open file manager."));
+
+        QVERIFY(!viewer.openTerminal("C:/nonexistent_dir_path_12345"));
+        QCOMPARE(viewer.status(), QString("Could not open terminal."));
+    }
     void deleteCurrentFileAndFolderShortcuts() {
         DeleteFolder media(3, 2); QVERIFY(media.root.isValid());
         Harness h(true); QVERIFY(h.window);
