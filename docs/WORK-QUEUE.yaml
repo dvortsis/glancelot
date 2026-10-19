@@ -522,7 +522,11 @@ tasks:
     milestone: M3
     priority: 7
     owner: lead
-    state: ready
+    state: implementing
+    branch: agent/filter
+    worktree: .worktrees/filter
+    build: build-filter
+    plan: docs/FILTER-01-PLAN.md
     depends: [SORT-01, REVIEW-ALL-01]
     outcome: Explicit persistent versus temporary folder-file filtering
     acceptance: Temporary filters clear only after a successful crossing; failed search retains selection/filter; grid and traversal agree
