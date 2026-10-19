@@ -154,3 +154,16 @@ proof of visible Explorer selection or terminal presentation. Independently revi
 and execute the implemented fixture, then rerun required full Windows/Docker gates
 and integrated checks. This fixes future desktop side effects; it does not establish
 the cause of the independent responsiveness noise floor.
+
+### Windows fixture PATH representation clarification
+
+Qt6.8.3 QStandardPaths default lookup reads PATH with qgetenv and
+QString::fromLocal8Bit (qtbase src/corelib/io/qstandardpaths.cpp462-490).
+The native wide lookup and explicit QString search find the non-BMP sandbox
+while default lookup does not. Permit GetShortPathNameW of the same private
+sandbox as the PATH entry only: validate identical directory identity and
+ASCII representation, fail closed if unavailable. Keep the copied runner,
+application directory, CWD, capture paths and media arguments in the original
+non-BMP sandbox; no substitute ASCII sandbox or product adapter change.
+Root resumes implementation of the existing four test files after its assigned
+implementer hit a usage limit; actual Claude remains independent reviewer.
