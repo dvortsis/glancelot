@@ -125,6 +125,18 @@ Windows smoke generation completed twice with byte-identical indexes (316 files
 each). Every hash was independently checked; JPEG/PNG dimensions and actual folder
 entry counts were verified. Reusing an existing output and targeting a nonempty
 sentinel directory both returned failure while leaving existing data unchanged.
+Linux generation and verification also passed in the current pinned Qt Docker stage:
+
+```
+Generated glancelot-perf-fixtures-v1-smoke: 316 files; Qt 6.8.3; profile smoke
+PASS fixture glancelot-perf-fixtures-v1-smoke files 316 profile smoke
+index_sha256 c87fae45141806538c3ac9c12dbe422356b4c2c8d07c5ec9b312ed0b1529cbea
+```
+
+The index hash matches both Windows smoke runs. The Linux wrapper initially failed
+because its working-tree file had CRLF despite the Git blob's LF normalization;
+actual LF bytes and the local .gitattributes rule resolve it. The successful rerun
+used the shipped build_tools.sh and independent verify_fixtures.py.
 The full 12/24/45/60 MP and 111,136-file matrix is running, not yet claimed passed.
 
 The comparison checker passes identical-data, real 100-percent p95 regression,
@@ -135,7 +147,7 @@ samples; this does not turn the one-image native smoke into performance qualific
 
 ## Still required before review
 
-- Finish full-matrix and Linux fixture verification, including actual hashes and dimensions.
+- Finish full-matrix fixture verification, including actual hashes and dimensions; Linux smoke checks passed.
 - Windows and Linux replay scripts covering open, next, reverse, folder jump, grid scroll and combined preview,
   with correctness verdicts, genuine thumbnail hits/misses, cancellation/stale/failure cases and repeat counts.
 - Use comparison on sufficiently repeated, equivalent replay workloads; tooling tests alone do not qualify performance.
