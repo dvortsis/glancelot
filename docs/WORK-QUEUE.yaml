@@ -367,9 +367,11 @@ tasks:
     owner: lead
     owner_lane: codex
     state: ready
-    depends: [REVIEW-ALL-01]
+    depends: [REVIEW-ALL-01, PERF-MEASURE-01]
     branch: codex/platform-01
     worktree: .worktrees/codex-platform-01
+    plan: docs/PLATFORM-01-PLAN.md
+    start_gate: PERF-MEASURE-01 reaches review after required candidate checks
     scope_addition: F080 reproducible packages and PERF-BUILD provenance basics; qualification scripts for CANVAS-UI/DECODE-01 physical gates
     outcome: Qt 6.8.3 Linux GUI build/package and explicit native hardware qualification matrix
     acceptance: Windows/Linux build and package evidence; physical DPI/backend/ICC gates remain unverified unless measured; no WSL-core-to-GUI inference
@@ -470,7 +472,7 @@ tasks:
     priority: 8
     owner: lead
     owner_lane: codex
-    state: ready
+    state: implementing
     depends: [REVIEW-ALL-01]
     branch: codex/perf-measure
     worktree: .worktrees/codex-perf-measure
