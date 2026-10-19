@@ -145,6 +145,11 @@ inline int bootstrap(const QStringList& originalArguments) {
     env.insert("GLANCELOT_NATIVE_STUB_SHA",hash(stub));env.insert("GLANCELOT_NATIVE_TOKEN",QUuid::createUuid().toString());
     // Resolve relative QtTest log destinations before changing the child's working directory.
     QStringList args=originalArguments;
+    // Give the console-less copied runner a real default QtTest sink. Replay it
+    // through the parent's stdout so CTest retains the complete result.
+    const QString defaultLog=QDir(sandbox).filePath("test-output.txt");
+    const bool ownLog=!args.contains("-o");
+    if(ownLog) args.append({"-o",defaultLog+",txt"});
     for(qsizetype i=1;i<args.size();++i) if(args[i-1]=="-o" && args[i]!="-" && !args[i].startsWith("-,")) {
         const qsizetype comma=args[i].lastIndexOf(','); const QString file=comma>=0?args[i].left(comma):args[i];
         if(QDir::isRelativePath(file)) args[i]=QFileInfo(file).absoluteFilePath()+(comma>=0?args[i].mid(comma):QString());
@@ -180,7 +185,14 @@ inline int bootstrap(const QStringList& originalArguments) {
         TerminateJobObject(job,109);
     }
     // Closing this handle also kills any owned helper that outlived its request, including abnormal child exits.
-    CloseHandle(job);if(result) failure(result,"copied runner failed, timed out or retained owned processes");return result;
+    CloseHandle(job);
+    if(ownLog) {
+        QFile log(defaultLog);
+        if(log.open(QIODevice::ReadOnly) && log.size()<=256*1024) {
+            const auto bytes=log.readAll();std::fwrite(bytes.constData(),1,size_t(bytes.size()),stdout);std::fflush(stdout);
+        } else if(result==0) result=failure(111,"missing or oversized default QtTest log");
+    }
+    if(result) failure(result,"copied runner failed, timed out or retained owned processes");return result;
 }
 #endif
 } // namespace native_fixture
