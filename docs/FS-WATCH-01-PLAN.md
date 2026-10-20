@@ -290,7 +290,8 @@ and compile the real ThumbnailService into fs_watch_tests. The fixture accepts
 at most 8 KiB of generated JSON controls outside watched media, produces only
 generated 32x24 pixels, and implements revision/probe/shared-memory/decoded/ack
 framing. It does not read or write media. Private ControllerTestHooks may copy
-decoder program/argument overrides, positive test deadline overrides, guarded
+decoder program/argument overrides, positive test deadline overrides (including
+baseline wait for IPC cases; production registration fallback remains 100 ms), guarded
 worker-start observers, copied cancellable discovery, bounded state observers
 and a weak-controller request closure. All hooks remain exclusive to the
 GLANCELOT_FS_WATCH_TESTING backend target. Production deadlines remain 15 s.
