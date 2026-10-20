@@ -5,11 +5,16 @@
 #include <QCloseEvent>
 #include <QResizeEvent>
 
+#include <functional>
+
 class ImageCanvas;
 
 namespace glancelot {
 
 class DisplayManager;
+
+// Aggregate GPU texture admission limit for one presentation window (split across its canvases).
+constexpr qint64 kPresentationTextureBudget = 256LL * 1024 * 1024;
 
 class PresentationWindow : public QQuickWindow {
     Q_OBJECT
@@ -23,6 +28,8 @@ public:
     void setPrimaryImage(const QImage& image);
     void setSecondaryImage(const QImage& image);
     void setFitMode(const QString& mode);
+    QString fitMode() const { return m_fitMode; }
+    void setToggleBindingProvider(std::function<QString()> provider) { m_toggleBinding = std::move(provider); }
 
     ImageCanvas* primaryCanvas() const { return m_canvasA; }
     ImageCanvas* secondaryCanvas() const { return m_canvasB; }
@@ -43,6 +50,7 @@ private:
     ImageCanvas* m_canvasB{nullptr};
     bool m_comparisonMode{false};
     QString m_fitMode{"shrink"};
+    std::function<QString()> m_toggleBinding;
 };
 
 void registerPresentationWindowFactory();

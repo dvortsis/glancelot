@@ -14,10 +14,12 @@ PresentationWindow::PresentationWindow(QWindow* parent)
     setFlags(Qt::Window | Qt::FramelessWindowHint);
 
     m_canvasA = new ImageCanvas(contentItem());
+    m_canvasA->setTextureBudget(kPresentationTextureBudget / 2);
     m_canvasA->setBackground(QColor(0, 0, 0));
     m_canvasA->fit(m_fitMode);
 
     m_canvasB = new ImageCanvas(contentItem());
+    m_canvasB->setTextureBudget(kPresentationTextureBudget / 2);
     m_canvasB->setBackground(QColor(0, 0, 0));
     m_canvasB->fit(m_fitMode);
     m_canvasB->setVisible(false);
@@ -49,6 +51,7 @@ void PresentationWindow::setSecondaryImage(const QImage& image) {
 }
 
 void PresentationWindow::setFitMode(const QString& mode) {
+    if (mode != "shrink" && mode != "fit" && mode != "fill" && mode != "width" && mode != "height") return;
     m_fitMode = mode;
     if (m_canvasA) m_canvasA->fit(mode);
     if (m_canvasB) m_canvasB->fit(mode);
@@ -82,12 +85,20 @@ void PresentationWindow::updateLayout() {
 }
 
 void PresentationWindow::keyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_Escape || event->key() == Qt::Key_F8) {
+    // Escape is the reserved dismiss key. The toggle key follows the user-rebindable binding
+    // of presentation-toggle (supplied by the owner); it is not hard-coded.
+    bool dismiss = event->key() == Qt::Key_Escape && event->modifiers() == Qt::NoModifier;
+    if (!dismiss && m_toggleBinding) {
+        const QKeySequence bound = QKeySequence::fromString(m_toggleBinding(), QKeySequence::PortableText);
+        dismiss = bound.count() == 1 && bound[0] == QKeyCombination(event->modifiers(), Qt::Key(event->key()));
+    }
+    if (dismiss) {
         event->accept();
+        // One close path only: the owner closes (and deletes) this window in response.
         emit escapePressed();
-        close();
         return;
     }
+
     QQuickWindow::keyPressEvent(event);
 }
 
@@ -106,6 +117,7 @@ public:
     explicit DefaultPresentationWindowWrapper(DisplayManager* owner) {
         m_window = new PresentationWindow();
         if (owner) {
+            m_window->setToggleBindingProvider([owner] { return owner->toggleBinding(); });
             QObject::connect(m_window.data(), &PresentationWindow::escapePressed, owner, &DisplayManager::closePresentation);
             QObject::connect(m_window.data(), &PresentationWindow::closedByUser, owner, &DisplayManager::closePresentation);
         }
@@ -118,6 +130,7 @@ public:
     void setComparisonMode(bool comparison) override { if (m_window) m_window->setComparisonMode(comparison); }
     void setPrimaryImage(const QImage& image) override { if (m_window) m_window->setPrimaryImage(image); }
     void setSecondaryImage(const QImage& image) override { if (m_window) m_window->setSecondaryImage(image); }
+    void setFitMode(const QString& mode) override { if (m_window) m_window->setFitMode(mode); }
     QQuickWindow* quickWindow() override { return m_window.data(); }
 
 private:

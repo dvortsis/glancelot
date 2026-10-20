@@ -1,6 +1,7 @@
 #include <QtTest>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QSignalSpy>
 #include "glancelot/display_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "presentation_window.hpp"
@@ -255,6 +256,202 @@ private slots:
         // Trigger close command
         controller.trigger("presentation-close");
         QVERIFY(!controller.isPresentationActive());
+    }
+
+    // ---- MONITOR-OUTPUT-01 fix pass ----
+    static void flushDeletes() { QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); }
+
+    void testIdentityIdenticalMonitorsWithoutSerialAreDistinct() {
+        glancelot::DisplayIdentitySource a;
+        a.manufacturer = "DEL"; a.model = "U2720Q"; a.platformCode = "DEL40F4";
+        a.physicalSizeMm = QSize(600, 340); a.pixelSize = QSize(3840, 2160);
+        const auto ids = glancelot::DisplayManager::assignDisplayIds({a, a});
+        QCOMPARE(ids.size(), 2);
+        QVERIFY(ids[0] != ids[1]);
+        // No names at all: pure geometry fallback still separates identical panels.
+        glancelot::DisplayIdentitySource g;
+        g.physicalSizeMm = QSize(500, 300); g.pixelSize = QSize(1920, 1080);
+        const auto gids = glancelot::DisplayManager::assignDisplayIds({g, g, g});
+        QCOMPARE(QSet<QString>(gids.begin(), gids.end()).size(), 3);
+    }
+
+    void testIdentitySerialSurvivesReorderAndReconnect() {
+        glancelot::DisplayIdentitySource a, b;
+        a.manufacturer = "DEL"; a.model = "U2720Q"; a.serial = "AAA111"; a.physicalSizeMm = QSize(600, 340);
+        b = a; b.serial = "BBB222";
+        const auto ab = glancelot::DisplayManager::assignDisplayIds({a, b});
+        const auto ba = glancelot::DisplayManager::assignDisplayIds({b, a});
+        QCOMPARE(ab[0], ba[1]);
+        QCOMPARE(ab[1], ba[0]);
+        const auto onlyB = glancelot::DisplayManager::assignDisplayIds({b});   // a unplugged
+        QCOMPARE(onlyB[0], ab[1]);
+        const auto again = glancelot::DisplayManager::assignDisplayIds({a, b}); // reconnected
+        QCOMPARE(again, ab);
+    }
+
+    void testColorSpaceIsNotHardcoded() {
+        QCOMPARE(glancelot::DisplayManager::colorSpaceName(nullptr), QStringLiteral("Unknown"));
+        glancelot::DisplayManager dm;
+        const auto screens = QGuiApplication::screens();
+        const auto list = dm.displays();
+        for (int i = 0; i < list.size(); ++i)
+            QCOMPARE(list[i].colorSpace, glancelot::DisplayManager::colorSpaceName(screens[i]));
+        QCOMPARE(glancelot::DisplayInfo().colorSpace, QStringLiteral("Unknown"));
+    }
+
+    void testCompareCommandSuppliesSecondImage() {
+        ViewerController controller;
+        auto* dm = controller.displayManager();
+        controller.trigger("presentation-toggle");
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow());
+        QVERIFY(pw);
+        dm->updateImage("a.jpg", createTestImage(300, 200, Qt::red), 1);
+        dm->updateImage("b.jpg", createTestImage(640, 480, Qt::blue), 2);
+        controller.trigger("presentation-compare");
+        QCOMPARE(controller.presentationMode(), QStringLiteral("comparison"));
+        QVERIFY(pw->isComparisonMode());
+        QCOMPARE(pw->primaryCanvas()->image().size(), QSize(640, 480));
+        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(300, 200));   // previous image
+        // Pinned image takes precedence over previous.
+        dm->pinImage("pin.jpg", createTestImage(111, 99, Qt::green), 3);
+        controller.trigger("presentation-compare");
+        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(111, 99));
+        controller.trigger("presentation-close");
+    }
+
+    void testStalePinAndComparisonRejected() {
+        glancelot::DisplayManager dm;
+        dm.openPresentation();
+        dm.pinImage("p10.jpg", createTestImage(100, 100, Qt::red), 10);
+        dm.pinImage("p5.jpg", createTestImage(50, 50, Qt::blue), 5);
+        QCOMPARE(dm.pinnedPath(), QStringLiteral("p10.jpg"));
+        dm.setComparisonImage("c20.jpg", createTestImage(70, 70, Qt::red), 20);
+        dm.setComparisonImage("c7.jpg", createTestImage(30, 30, Qt::blue), 7);
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(70, 70));
+        dm.closePresentation();
+    }
+
+    void testOutputFitModeCommandAndPerOutputState() {
+        ViewerController controller;
+        auto* dm = controller.displayManager();
+        controller.trigger("presentation-toggle");
+        const QString id = dm->activeDisplayId();
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow());
+        QCOMPARE(pw->fitMode(), QStringLiteral("shrink"));
+        controller.trigger("presentation-fit");
+        QCOMPARE(pw->fitMode(), QStringLiteral("fit"));
+        QCOMPARE(dm->outputFitMode(id), QStringLiteral("fit"));
+        QCOMPARE(pw->primaryCanvas()->fitMode(), QStringLiteral("fit"));
+        controller.setPresentationFitMode("fill");
+        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
+        controller.trigger("presentation-close");
+        // Reopen: state is remembered for this output id.
+        controller.trigger("presentation-toggle");
+        pw = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow());
+        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
+        controller.setPresentationFitMode("bogus");
+        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
+        controller.trigger("presentation-close");
+    }
+
+    void testAggregateImageBudgetAndCloseRelease() {
+        const qint64 saved = glancelot::DisplayManager::imageBudgetBytes();
+        const qint64 one = qint64(200) * 200 * 4;
+        glancelot::DisplayManager::setImageBudgetBytes(one * 2 + 16);
+        glancelot::DisplayManager dm;
+        dm.openPresentation();
+        dm.updateImage("1", createTestImage(200, 200, Qt::red), 1);
+        dm.updateImage("2", createTestImage(200, 200, Qt::green), 2);   // previous = 1
+        dm.updateImage("3", createTestImage(200, 200, Qt::blue), 3);    // previous = 2
+        QVERIFY(dm.retainedImageBytes() <= one * 2 + 16);
+        dm.pinImage("pin", createTestImage(200, 200, Qt::gray), 4);
+        dm.setComparisonImage("cmp", createTestImage(200, 200, Qt::cyan), 5);
+        QVERIFY(dm.retainedImageBytes() <= one * 2 + 16);
+        QCOMPARE(dm.currentPath(), QStringLiteral("3"));          // current is never shed
+        glancelot::DisplayManager::setImageBudgetBytes(saved);
+
+        // Shared QImage is counted once.
+        const QImage shared = createTestImage(200, 200, Qt::white);
+        dm.updateImage("s", shared, 6);
+        dm.pinImage("s-pin", shared, 7);
+        QVERIFY(dm.retainedImageBytes() <= one * 2);
+
+        dm.setComparisonImage("cmp2", createTestImage(100, 100, Qt::cyan), 8);
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QVERIFY(pw->primaryCanvas()->textureBudget() + pw->secondaryCanvas()->textureBudget()
+                <= glancelot::kPresentationTextureBudget);
+        dm.closePresentation();
+        QVERIFY(dm.presentationWindow() == nullptr);
+        dm.releaseCachedImages();
+        QVERIFY(dm.retainedImageBytes() <= one * 2);   // only current + pinned (shared) remain
+    }
+
+    void testScreenRemovedAndAddedPaths() {
+        glancelot::DisplayManager dm;
+        QSignalSpy displaysSpy(&dm, &glancelot::DisplayManager::displaysChanged);
+        QSignalSpy closedSpy(&dm, &glancelot::DisplayManager::presentationClosed);
+        QScreen* screen = QGuiApplication::primaryScreen();
+        dm.openPresentation();
+        QVERIFY(dm.isPresentationActive());
+        // A different screen disappearing must not close the output.
+        emit qGuiApp->screenRemoved(nullptr);
+        QVERIFY(dm.isPresentationActive());
+        // The output's own screen disappearing closes it exactly once.
+        emit qGuiApp->screenRemoved(screen);
+        QVERIFY(!dm.isPresentationActive());
+        QCOMPARE(closedSpy.count(), 1);
+        QVERIFY(dm.presentationWindow() == nullptr);
+        QVERIFY(displaysSpy.count() >= 2);
+        const int before = displaysSpy.count();
+        emit qGuiApp->screenAdded(screen);
+        QCOMPARE(displaysSpy.count(), before + 1);
+        // Controller side remains usable and can reopen.
+        QVERIFY(dm.openPresentation());
+        dm.closePresentation();
+        flushDeletes();
+    }
+
+    void testFailedDecodeAndRepeatedOpenCloseDoNotLeak() {
+        flushDeletes();
+        const int windowsBefore = QGuiApplication::allWindows().size();
+        glancelot::DisplayManager dm;
+        for (int i = 0; i < 50; ++i) {
+            QVERIFY(dm.openPresentation());
+            dm.updateImage(QString("f%1").arg(i), createTestImage(64, 64, Qt::red), quint64(2 * i + 1));
+            dm.updateImage(QString(), QImage(), quint64(2 * i + 2));   // failed decode
+            QVERIFY(dm.currentPath().isEmpty());
+            auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+            QVERIFY(pw);
+            QVERIFY(pw->primaryCanvas()->image().isNull());
+            dm.closePresentation();
+            flushDeletes();
+            QCOMPARE(QGuiApplication::allWindows().size(), windowsBefore);
+        }
+        QVERIFY(!dm.isPresentationActive());
+    }
+
+    void testEscapeClosesOnceAndToggleKeyIsRebindable() {
+        glancelot::DisplayManager dm;
+        QSignalSpy closedSpy(&dm, &glancelot::DisplayManager::presentationClosed);
+        dm.openPresentation();
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(pw, &esc);
+        flushDeletes();
+        QCOMPARE(closedSpy.count(), 1);
+
+        dm.setToggleBindingProvider([] { return QStringLiteral("F9"); });
+        dm.openPresentation();
+        pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QKeyEvent f8(QEvent::KeyPress, Qt::Key_F8, Qt::NoModifier);
+        QCoreApplication::sendEvent(pw, &f8);          // no longer bound
+        QVERIFY(dm.isPresentationActive());
+        QKeyEvent f9(QEvent::KeyPress, Qt::Key_F9, Qt::NoModifier);
+        QCoreApplication::sendEvent(pw, &f9);
+        QVERIFY(!dm.isPresentationActive());
+        QCOMPARE(closedSpy.count(), 2);
+        flushDeletes();
     }
 };
 

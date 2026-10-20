@@ -17,7 +17,7 @@ QShader shader(const char* path) {
     QFile file(QString::fromUtf8(path));
     return file.open(QIODevice::ReadOnly) ? QShader::fromSerialized(file.readAll()) : QShader{};
 }
-constexpr qint64 textureBudget = 256LL * 1024 * 1024;
+constexpr qint64 defaultTextureBudget = 256LL * 1024 * 1024;
 }
 
 class ImageRenderer final : public QQuickRhiItemRenderer {
@@ -29,6 +29,7 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
     QRhi* device{};
     QImage image;
     qint64 imageKey{};
+    qint64 textureBudget{defaultTextureBudget};
     bool upload{}, vertexUpload{}, nearest{}, checker{};
     QColor background;
     QSizeF viewport;
@@ -59,7 +60,7 @@ protected:
         }
         viewport=item->size(); zoom=item->m_zoom; pan=item->m_pan;
         rotation=item->m_rotation; dpr=item->dpr(); background=item->m_background;
-        checker=item->m_checkerboard;
+        checker=item->m_checkerboard; textureBudget=item->m_textureBudget;
     }
     void initialize(QRhiCommandBuffer*) override {
         if (device != rhi()) { reset(); device=rhi(); }
@@ -187,6 +188,11 @@ void ImageCanvas::setImage(const QImage& value) {
     if (value.cacheKey()==m_image.cacheKey()) return;
     endLoupe(); m_image=value; m_rotation=0; m_pan={}; m_fitMode="shrink";
     reportRendererError({}); refreshFit(); emit imageChanged(); update();
+}
+void ImageCanvas::setTextureBudget(qint64 bytes) {
+    bytes=std::max<qint64>(0,bytes);
+    if (bytes==m_textureBudget) return;
+    m_textureBudget=bytes; update();
 }
 void ImageCanvas::reportRendererError(const QString& value) {
     if (m_rendererError==value) return;

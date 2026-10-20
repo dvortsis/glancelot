@@ -28,6 +28,10 @@ public:
     bool nearest() const { return m_nearest; }
     void setNearest(bool value);
     QString rendererError() const { return m_rendererError; }
+    // Per-canvas GPU texture admission limit (default 256 MiB). Owners of several canvases lower it
+    // so the aggregate stays bounded.
+    qint64 textureBudget() const { return m_textureBudget; }
+    void setTextureBudget(qint64 bytes);
     Q_INVOKABLE void fit(const QString& mode = QStringLiteral("shrink"));
     Q_INVOKABLE void actualSize();
     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
@@ -62,6 +66,7 @@ private:
     QPointF m_savedPan;
     QString m_savedFit;
     QString m_rendererError;
+    qint64 m_textureBudget{256LL * 1024 * 1024};
 };
 
 

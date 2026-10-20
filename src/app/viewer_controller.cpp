@@ -154,6 +154,7 @@ const std::vector<Command> registry {
     {"presentation-pin", "Presentation: Pin current photo", ""},
     {"presentation-compare", "Presentation: Comparison mode", ""},
     {"presentation-close", "Close presentation display", ""},
+    {"presentation-fit", "Presentation: Cycle fit mode for this display", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -415,6 +416,7 @@ struct ViewerController::Private {
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationActiveChanged, q, [this](bool) {
             emit q->presentationChanged();
         });
+        displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
@@ -1415,7 +1417,8 @@ void ViewerController::trigger(const QString& id){
     else if(id=="presentation-toggle") { togglePresentation(); emit viewCommand(id); }
     else if(id=="presentation-mirror") { d->displayManager.setPresentationMode("mirror"); emit viewCommand(id); }
     else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
-    else if(id=="presentation-compare") { d->displayManager.setPresentationMode("comparison"); emit viewCommand(id); }
+    else if(id=="presentation-compare") { d->displayManager.compareWithPinnedOrPrevious(); emit viewCommand(id); }
+    else if(id=="presentation-fit") { cyclePresentationFit(); emit viewCommand(id); }
     else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
     else if(d->bindings.contains(id))emit viewCommand(id);
 }
@@ -1810,6 +1813,16 @@ void ViewerController::openPresentation(const QString& displayId, const QString&
     if (mode == QStringLiteral("pinned")) m = glancelot::PresentationMode::Pinned;
     else if (mode == QStringLiteral("comparison")) m = glancelot::PresentationMode::Comparison;
     d->displayManager.openPresentation(displayId, m);
+}
+
+void ViewerController::setPresentationFitMode(const QString& mode) {
+    d->displayManager.setOutputFitMode(mode);
+}
+
+void ViewerController::cyclePresentationFit() {
+    static const QStringList order{QStringLiteral("shrink"), QStringLiteral("fit"), QStringLiteral("fill")};
+    const int i = order.indexOf(d->displayManager.outputFitMode());
+    d->displayManager.setOutputFitMode(order[(i + 1) % order.size()]);
 }
 
 void ViewerController::closePresentation() {

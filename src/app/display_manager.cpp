@@ -6,10 +6,44 @@
 #include <QColorSpace>
 #include <QPointer>
 #include <algorithm>
+#include <QHash>
+#include <QSet>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 namespace glancelot {
 
 static PresentationWindowFactory s_presentationWindowFactory = nullptr;
+// 256 MiB of retained decoded pixels across current/pinned/comparison/previous; GPU textures are
+// budgeted separately per canvas (see PresentationWindow).
+static qint64 s_imageBudgetBytes = 256LL * 1024 * 1024;
+
+void DisplayManager::setImageBudgetBytes(qint64 bytes) { s_imageBudgetBytes = std::max<qint64>(0, bytes); }
+qint64 DisplayManager::imageBudgetBytes() { return s_imageBudgetBytes; }
+
+namespace {
+#ifdef Q_OS_WIN
+// Windows adapter: map QScreen::name() (\\.\DISPLAYn) to the monitor device interface path
+// (\\?\DISPLAY#DEL40F4#...) and return its hardware id segment ("DEL40F4"), which encodes the EDID
+// manufacturer + product code. The per-port instance segment is deliberately not used.
+// UNVERIFIED on real multi-monitor hardware.
+QString platformMonitorCode(const QScreen* screen) {
+    const std::wstring adapterName = screen->name().toStdWString();
+    DISPLAY_DEVICEW adapter{}; adapter.cb = sizeof(adapter);
+    for (DWORD i = 0; EnumDisplayDevicesW(nullptr, i, &adapter, 0); ++i) {
+        if (adapterName != adapter.DeviceName) { adapter = {}; adapter.cb = sizeof(adapter); continue; }
+        DISPLAY_DEVICEW mon{}; mon.cb = sizeof(mon);
+        if (!EnumDisplayDevicesW(adapter.DeviceName, 0, &mon, 0x00000001 /*EDD_GET_DEVICE_INTERFACE_NAME*/)) return {};
+        const QStringList parts = QString::fromWCharArray(mon.DeviceID).split(QLatin1Char('#'));
+        return parts.size() > 2 ? parts[1] : QString();
+    }
+    return {};
+}
+#else
+QString platformMonitorCode(const QScreen*) { return {}; }
+#endif
+} // namespace
 
 void DisplayManager::setPresentationWindowFactory(PresentationWindowFactory factory) {
     s_presentationWindowFactory = std::move(factory);
@@ -55,6 +89,12 @@ struct DisplayManager::Private {
     QImage comparisonImage;
     quint64 comparisonGeneration{0};
 
+    QString previousPath;
+    QImage previousImage;
+
+    QHash<QString, QString> fitModes;           // per display id
+    std::function<QString()> toggleBindingProvider;
+
     std::unique_ptr<IPresentationWindow> presentationWindow;
     QPointer<QScreen> presentationScreen;
 
@@ -75,7 +115,7 @@ struct DisplayManager::Private {
         info.devicePixelRatio = screen->devicePixelRatio();
         info.refreshRate = screen->refreshRate() > 0 ? screen->refreshRate() : 60.0;
         info.colorDepth = screen->depth() > 0 ? screen->depth() : 24;
-        info.colorSpace = QStringLiteral("sRGB");
+        info.colorSpace = DisplayManager::colorSpaceName(screen);
         info.isPrimary = (screen == QGuiApplication::primaryScreen());
         info.isAvailable = true;
         return info;
@@ -99,6 +139,34 @@ struct DisplayManager::Private {
         return nullptr;
     }
 
+    QImage secondaryImage() const {
+        if (!comparisonImage.isNull()) return comparisonImage;
+        return !pinnedImage.isNull() ? pinnedImage : previousImage;
+    }
+
+    qint64 retainedBytes() const {
+        QSet<qint64> keys; qint64 total = 0;
+        for (const QImage* im : {&currentImage, &pinnedImage, &comparisonImage, &previousImage}) {
+            if (im->isNull() || keys.contains(im->cacheKey())) continue;
+            keys.insert(im->cacheKey()); total += im->sizeInBytes();
+        }
+        return total;
+    }
+
+    // Shed in order: previous, comparison, pinned. The current image is never dropped.
+    void enforceBudget() {
+        if (retainedBytes() <= s_imageBudgetBytes) return;
+        previousImage = QImage(); previousPath.clear();
+        if (retainedBytes() <= s_imageBudgetBytes) return;
+        comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0;
+        if (retainedBytes() <= s_imageBudgetBytes) return;
+        if (!pinnedImage.isNull()) {
+            pinnedImage = QImage(); pinnedPath.clear(); pinnedGeneration = 0;
+            emit q->pinnedPathChanged(pinnedPath);
+            if (mode == PresentationMode::Pinned) q->setMode(PresentationMode::Mirror);
+        }
+    }
+
     void applyImagesToWindow() {
         if (!presentationWindow) return;
 
@@ -109,7 +177,7 @@ struct DisplayManager::Private {
             presentationWindow->setPrimaryImage(pinnedImage);
         } else if (mode == PresentationMode::Comparison) {
             presentationWindow->setPrimaryImage(currentImage);
-            presentationWindow->setSecondaryImage(!comparisonImage.isNull() ? comparisonImage : pinnedImage);
+            presentationWindow->setSecondaryImage(secondaryImage());
         } else {
             // Mirror
             presentationWindow->setPrimaryImage(currentImage);
@@ -183,30 +251,61 @@ DisplayInfo DisplayManager::preferredPresentationDisplay() const {
     return d->screenToInfo(screens.first(), 0);
 }
 
-QString DisplayManager::computeDisplayId(const QScreen* screen) {
-    if (!screen) return QStringLiteral("none");
-
-    const QString mfg = screen->manufacturer().trimmed();
-    const QString model = screen->model().trimmed();
-    const QString serial = screen->serialNumber().trimmed();
-    const QString name = screen->name().trimmed();
-    const QSize physical = screen->physicalSize().toSize();
-    const QRect geom = screen->geometry();
-
-    if (!mfg.isEmpty() && (!model.isEmpty() || !serial.isEmpty())) {
-        const QString identity = QStringLiteral("hw:%1_%2_%3_%4x%5")
-            .arg(mfg, model, serial)
-            .arg(physical.width()).arg(physical.height());
-        return QString::fromLatin1(QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha256).toHex().left(16));
+QStringList DisplayManager::assignDisplayIds(const QList<DisplayIdentitySource>& sources) {
+    QStringList ids;
+    QHash<QString, int> seen;
+    for (const auto& s : sources) {
+        const QString mfg = s.manufacturer.trimmed(), model = s.model.trimmed();
+        const QString serial = s.serial.trimmed(), code = s.platformCode.trimmed();
+        QString key;
+        if (!serial.isEmpty() && (!mfg.isEmpty() || !model.isEmpty() || !code.isEmpty())) {
+            key = QStringLiteral("serial:%1|%2|%3|%4").arg(mfg, model, code, serial);
+        } else if (!mfg.isEmpty() || !model.isEmpty() || !code.isEmpty()) {
+            key = QStringLiteral("model:%1|%2|%3|%4x%5").arg(mfg, model, code)
+                      .arg(s.physicalSizeMm.width()).arg(s.physicalSizeMm.height());
+        } else {
+            // Last resort: no hardware naming at all. The Windows \\.\DISPLAYn name is NOT used
+            // because it changes with topology; the ordinal separates identical panels.
+            key = QStringLiteral("geom:%1x%2|%3x%4").arg(s.pixelSize.width()).arg(s.pixelSize.height())
+                      .arg(s.physicalSizeMm.width()).arg(s.physicalSizeMm.height());
+        }
+        const int ordinal = seen[key]++;
+        const QString identity = QStringLiteral("%1#%2").arg(key).arg(ordinal);
+        ids.append(QString::fromLatin1(QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha256).toHex().left(16)));
     }
-
-    const QString fallback = QStringLiteral("heuristic:%1_%2x%3_%4x%5")
-        .arg(name)
-        .arg(geom.width()).arg(geom.height())
-        .arg(physical.width()).arg(physical.height());
-    return QString::fromLatin1(QCryptographicHash::hash(fallback.toUtf8(), QCryptographicHash::Sha256).toHex().left(16));
+    return ids;
 }
 
+static DisplayIdentitySource identitySourceFor(const QScreen* s) {
+    DisplayIdentitySource src;
+    src.manufacturer = s->manufacturer();
+    src.model = s->model();
+    src.serial = s->serialNumber();
+    src.platformCode = platformMonitorCode(s);
+    src.physicalSizeMm = s->physicalSize().toSize();
+    src.pixelSize = s->geometry().size();
+    return src;
+}
+
+QString DisplayManager::computeDisplayId(const QScreen* screen) {
+    if (!screen) return QStringLiteral("none");
+    const auto screens = QGuiApplication::screens();
+    QList<DisplayIdentitySource> sources;
+    int self = -1;
+    for (int i = 0; i < screens.size(); ++i) {
+        if (screens[i] == screen) self = i;
+        sources.append(identitySourceFor(screens[i]));
+    }
+    if (self < 0) { sources.append(identitySourceFor(screen)); self = sources.size() - 1; }
+    return assignDisplayIds(sources).value(self);
+}
+
+QString DisplayManager::colorSpaceName(const QScreen* screen) {
+    // Qt 6.8 public QScreen exposes no display color space, and reading the monitor ICC profile
+    // needs a platform adapter that is not implemented (COLOR-01). Report honestly instead of "sRGB".
+    Q_UNUSED(screen);
+    return QStringLiteral("Unknown");
+}
 bool DisplayManager::isPresentationActive() const {
     return d->active;
 }
@@ -277,6 +376,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
     }
 
     if (d->presentationWindow) {
+        d->presentationWindow->setFitMode(outputFitMode(d->activeId));
         d->presentationWindow->setScreen(targetScreen);
         d->presentationWindow->setGeometry(targetScreen->geometry());
         d->applyImagesToWindow();
@@ -297,6 +397,9 @@ void DisplayManager::closePresentation() {
     d->activeId.clear();
     d->activeName.clear();
     d->presentationScreen = nullptr;
+    // Closing releases the window (and its canvases/textures) and the non-essential pixel copies.
+    d->previousImage = QImage(); d->previousPath.clear();
+    d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
 
     if (d->presentationWindow) {
         d->presentationWindow->hide();
@@ -337,9 +440,14 @@ void DisplayManager::setMode(PresentationMode mode) {
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
     if (generation < d->currentGeneration) return;
 
+    if (path != d->currentPath && !d->currentImage.isNull()) {
+        d->previousPath = d->currentPath;
+        d->previousImage = d->currentImage;
+    }
     d->currentPath = path;
     d->currentImage = image;
     d->currentGeneration = generation;
+    d->enforceBudget();
 
     if (d->mode == PresentationMode::Mirror || d->mode == PresentationMode::Comparison) {
         d->applyImagesToWindow();
@@ -352,9 +460,13 @@ void DisplayManager::pinCurrentImage() {
 }
 
 void DisplayManager::pinImage(const QString& path, const QImage& image, quint64 generation) {
+    if (generation < d->pinnedGeneration) return;   // stale pin request
     d->pinnedPath = path;
     d->pinnedImage = image;
     d->pinnedGeneration = generation;
+    d->enforceBudget();
+    if (!image.isNull() && d->pinnedImage.isNull()) return;   // shed by budget
+    if (d->mode == PresentationMode::Pinned) d->applyImagesToWindow();
     setMode(PresentationMode::Pinned);
     emit pinnedPathChanged(path);
 }
@@ -368,10 +480,45 @@ void DisplayManager::unpin() {
 }
 
 void DisplayManager::setComparisonImage(const QString& path, const QImage& image, quint64 generation) {
+    if (generation < d->comparisonGeneration) return;   // stale comparison request
     d->comparisonPath = path;
     d->comparisonImage = image;
     d->comparisonGeneration = generation;
+    d->enforceBudget();
+    d->applyImagesToWindow();
     setMode(PresentationMode::Comparison);
+}
+
+void DisplayManager::compareWithPinnedOrPrevious() {
+    d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
+    setMode(PresentationMode::Comparison);
+    d->applyImagesToWindow();
+}
+
+void DisplayManager::setOutputFitMode(const QString& mode) {
+    if (!d->active || d->activeId.isEmpty()) return;
+    d->fitModes[d->activeId] = mode;
+    if (d->presentationWindow) d->presentationWindow->setFitMode(mode);
+}
+
+QString DisplayManager::outputFitMode(const QString& displayId) const {
+    return d->fitModes.value(displayId.isEmpty() ? d->activeId : displayId, QStringLiteral("shrink"));
+}
+
+qint64 DisplayManager::retainedImageBytes() const { return d->retainedBytes(); }
+
+void DisplayManager::releaseCachedImages() {
+    d->previousImage = QImage(); d->previousPath.clear();
+    d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
+    d->applyImagesToWindow();
+}
+
+void DisplayManager::setToggleBindingProvider(std::function<QString()> provider) {
+    d->toggleBindingProvider = std::move(provider);
+}
+
+QString DisplayManager::toggleBinding() const {
+    return d->toggleBindingProvider ? d->toggleBindingProvider() : QStringLiteral("F8");
 }
 
 QQuickWindow* DisplayManager::presentationWindow() const {

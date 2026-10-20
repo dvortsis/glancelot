@@ -23,6 +23,14 @@ enum class PresentationMode {
     Comparison   // Comparison display (side-by-side with reference)
 };
 
+// Raw facts used to derive a stable display id. platformCode is a platform adapter value
+// (Windows: hardware id segment of the monitor device interface path, e.g. "DEL40F4").
+struct DisplayIdentitySource {
+    QString manufacturer, model, serial, platformCode;
+    QSize physicalSizeMm;
+    QSize pixelSize;
+};
+
 struct DisplayInfo {
     int index{-1};
     QString id;                 // Stable identity string
@@ -36,7 +44,7 @@ struct DisplayInfo {
     qreal devicePixelRatio{1.0};
     qreal refreshRate{60.0};
     int colorDepth{24};
-    QString colorSpace{"sRGB"};
+    QString colorSpace{"Unknown"};   // "Unknown" when the platform reports none
     bool isPrimary{false};
     bool isAvailable{true};
 
@@ -54,6 +62,7 @@ public:
     virtual void setComparisonMode(bool comparison) = 0;
     virtual void setPrimaryImage(const QImage& image) = 0;
     virtual void setSecondaryImage(const QImage& image) = 0;
+    virtual void setFitMode(const QString& mode) = 0;
     virtual QQuickWindow* quickWindow() = 0;
 };
 
@@ -86,6 +95,10 @@ public:
     DisplayInfo preferredPresentationDisplay() const;
 
     static QString computeDisplayId(const QScreen* screen);
+    // Pure id derivation for a whole topology. Identical monitors (same key) receive a
+    // disambiguating ordinal in list order; serial-bearing monitors are order independent.
+    static QStringList assignDisplayIds(const QList<DisplayIdentitySource>& sources);
+    static QString colorSpaceName(const QScreen* screen);
 
     // Presentation lifecycle
     bool isPresentationActive() const;
@@ -110,6 +123,23 @@ public:
     Q_INVOKABLE void pinImage(const QString& path, const QImage& image, quint64 generation);
     Q_INVOKABLE void unpin();
     Q_INVOKABLE void setComparisonImage(const QString& path, const QImage& image, quint64 generation);
+    // Comparison against the pinned image, else the previously shown image.
+    Q_INVOKABLE void compareWithPinnedOrPrevious();
+
+    // Per-output fit mode, remembered by display id and restored when that output reopens.
+    Q_INVOKABLE void setOutputFitMode(const QString& mode);
+    QString outputFitMode(const QString& displayId = QString()) const;
+
+    // Aggregate budget for decoded images retained by the presentation (shared QImages count once).
+    static void setImageBudgetBytes(qint64 bytes);
+    static qint64 imageBudgetBytes();
+    qint64 retainedImageBytes() const;
+    // Drops non-essential retained pixels (previous/comparison); hook for low-memory signals.
+    Q_INVOKABLE void releaseCachedImages();
+
+    // Window-local key handling consults the user-rebindable toggle binding through this provider.
+    void setToggleBindingProvider(std::function<QString()> provider);
+    QString toggleBinding() const;
 
     // Presentation Window access (for testing/canvas inspection)
     QQuickWindow* presentationWindow() const;
