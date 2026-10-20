@@ -299,3 +299,14 @@ Require malformed/empty tokens, superseded and timed-out workers, bounded
 discovery (one running/one latest pending), real thumbnail capacity wakeup and
 cross-service admission identities before combined independent review. Preserve
 existing native decoder tests and full Windows/Linux/integrated gates.
+
+### Current-main controller adapters
+
+During FS integration, preserve imported metadata/animation/mutation/RAW features.
+Adapt metadata dispatch only (not its parser/model policy) to one active/one latest
+pending value-owned parse with receiver-owned completion and selection generation
+guards; cancellation/close must not leave callbacks referencing Private. Route
+rename reconciliation through existing asynchronous controller navigation/monitor
+paths instead of synchronous Navigator scans. Apply the frozen source revision
+and lock-free shared-memory completion protocol to imported RAW decode as well.
+These are private integration adapters, not new Gemini implementation packets.
