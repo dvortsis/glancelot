@@ -32,6 +32,7 @@ QJsonObject PaneLayout::defaults() {
     };
     add("tree","left",0,280,true);add("preview","center",0,640,true);add("grid","center",1,640,true);
     add("filmstrip","top",1,112,true);add("topbar","top",0,48,true);add("statusbar","bottom",0,48,true);
+    add("metadata","right",0,320,false);
     return result;
 }
 PaneLayout::PaneLayout(QObject* parent):QObject(parent),panes_(defaults()) {}

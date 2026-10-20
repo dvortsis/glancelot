@@ -203,6 +203,47 @@ void FolderHistory::clear() {
     d->emitChanges(prevCanBack, prevCanForward, prevHasCurrent);
 }
 
+void FolderHistory::reconcileRenamedPath(const QString& oldPath, const QString& newPath) {
+    if (oldPath.isEmpty() || newPath.isEmpty()) return;
+
+    auto replacePrefix = [](QString& target, const QString& oldBase, const QString& newBase) {
+        if (target.isEmpty()) return;
+        if (pathsEqual(target, oldBase)) {
+            target = newBase;
+            return;
+        }
+        const QString nTarget = normalizePath(target);
+        const QString nOld = normalizePath(oldBase);
+        const QString prefix = nOld.endsWith(QLatin1Char('/')) ? nOld : (nOld + QLatin1Char('/'));
+#ifdef Q_OS_WIN
+        if (nTarget.startsWith(prefix, Qt::CaseInsensitive)) {
+#else
+        if (nTarget.startsWith(prefix)) {
+#endif
+            const QString suffix = nTarget.mid(prefix.length());
+            target = normalizePath(newBase + QLatin1Char('/') + suffix);
+        }
+    };
+
+    auto reconcile = [&](FolderHistoryEntry& entry) {
+        replacePrefix(entry.directory, oldPath, newPath);
+        replacePrefix(entry.filePath, oldPath, newPath);
+        replacePrefix(entry.selectedPath, oldPath, newPath);
+    };
+
+    for (auto& entry : d->backStack) {
+        reconcile(entry);
+    }
+    for (auto& entry : d->forwardStack) {
+        reconcile(entry);
+    }
+    if (d->current.has_value()) {
+        reconcile(*d->current);
+    }
+    emit historyChanged();
+    emit currentDirectoryChanged();
+}
+
 bool FolderHistory::navigateBack() {
     while (!d->backStack.isEmpty()) {
         const FolderHistoryEntry candidate = d->backStack.takeLast();

@@ -3,6 +3,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
+#include <QBuffer>
+#include <QElapsedTimer>
+#include "glancelot/raw_preview.hpp" 
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSharedMemory>
@@ -62,6 +65,31 @@ void sendThumbnailError(qint64 id, const QString& message) {
 }
 
 QImage makeThumbnail(const QString& path, int edge, QString& error) {
+    if (glancelot::RawPreviewExtractor::isRawExtension(path)) {
+        const auto rawResult = glancelot::RawPreviewExtractor::extractPreview(path);
+        if (!rawResult.success) {
+            error = "RAW preview extraction failed: " + rawResult.error;
+            return {};
+        }
+        QBuffer buffer;
+        buffer.setData(rawResult.jpegData);
+        if (!buffer.open(QIODevice::ReadOnly)) { error = "Cannot open preview buffer."; return {}; }
+        QImageReader reader(&buffer);
+        reader.setAutoTransform(true);
+        const QSize stored = reader.size();
+        if (!stored.isValid() || stored.width() > 32768 || stored.height() > 32768) { error = "Invalid or unsupported preview dimensions."; return {}; }
+        const double factor = (std::min)(1.0, double(edge) / (std::max)(stored.width(), stored.height()));
+        if (factor < 1.0)
+            reader.setScaledSize(QSize((std::max)(1, int(std::lround(stored.width() * factor))), (std::max)(1, int(std::lround(stored.height() * factor)))));
+        QImage image = reader.read();
+        if (image.isNull()) { error = "Preview decode failed: " + reader.errorString(); return {}; }
+        if ((std::max)(image.width(), image.height()) > edge)
+            image = image.scaled(edge, edge, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        if (!image.colorSpace().isValid()) image.setColorSpace(QColorSpace::SRgb);
+        image.convertToColorSpace(QColorSpace::SRgb, QImage::Format_RGBA8888);
+        return image;
+    }
+
     // QFileInfo stats lazily: read the values now, or the later comparison would compare two post-decode stats.
     const QFileInfo initialInfo(path);
     const qint64 initialSize = initialInfo.size();
@@ -72,7 +100,7 @@ QImage makeThumbnail(const QString& path, int edge, QString& error) {
     reader.setDecideFormatFromContent(true);
     reader.setAutoTransform(true);
     const auto format = reader.format().toLower();
-    if (format != "jpeg" && format != "jpg" && format != "png") { error = "Unsupported format for thumbnails."; return {}; }
+    if (format != "jpeg" && format != "jpg" && format != "png" && format != "gif" && format != "webp" && format != "tiff" && format != "tif" && format != "bmp" && format != "tga" && format != "wbmp" && format != "ico") { error = "Unsupported format for thumbnails."; return {}; }
     // Scale in the stored orientation; the EXIF transform is applied after decoding, so the final
     // aspect ratio is correct even when the orientation swaps the axes.
     const QSize stored = reader.size();
@@ -134,6 +162,63 @@ int main(int argc, char** argv) {
     const QString path = app.arguments().at(1);
     const auto initialRevision=fs_watch::probe(fs_watch::native(path));
     const auto initialToken=fs_watch::sourceToken(initialRevision);
+
+    if (glancelot::RawPreviewExtractor::isRawExtension(path)) {
+        QElapsedTimer timer;
+        timer.start();
+        const auto rawResult = glancelot::RawPreviewExtractor::extractPreview(path);
+        const qint64 extractUs = timer.nsecsElapsed() / 1000;
+        if (!rawResult.success) {
+            return fail("RAW preview extraction failed: " + rawResult.error);
+        }
+
+        std::unique_ptr<QBuffer> previewBuf = std::make_unique<QBuffer>();
+        previewBuf->setData(rawResult.jpegData);
+        if (!previewBuf->open(QIODevice::ReadOnly)) {
+            return fail("Cannot open preview data buffer.");
+        }
+
+        QImageReader::setAllocationLimit(256);
+        QImageReader reader(previewBuf.get());
+        reader.setAutoTransform(true);
+        const QSize size = reader.size();
+        if (!size.isValid() || size.width() > 32768 || size.height() > 32768) return fail("Invalid or unsupported RAW preview dimensions.");
+        const qint64 capacity = qint64(size.width()) * size.height() * 4;
+        if (capacity <= 0 || capacity > 256LL*1024*1024) return fail("RAW preview exceeds the 256 MiB decoded-image limit.");
+
+        send({{"phase", "probe"}, {"width", size.width()}, {"height", size.height()}, {"bytes", double(capacity)}, {"extractUs", double(extractUs)}});
+
+        char request[4096]{};
+        if (!std::fgets(request, sizeof(request), stdin)) return fail("Decode was cancelled before memory admission.");
+        QJsonParseError parseError;
+        const auto configuration = QJsonDocument::fromJson(QByteArray(request), &parseError).object();
+        if (parseError.error != QJsonParseError::NoError || configuration.value("key").toString().isEmpty()) return fail("Invalid shared-memory admission request.");
+        QSharedMemory transfer(configuration.value("key").toString());
+        if (!transfer.attach(QSharedMemory::ReadWrite) || transfer.size() < capacity) return fail("Cannot attach admitted pixel transfer buffer.");
+
+        QImage image = reader.read();
+        previewBuf->close();
+        if (image.isNull()) return fail("RAW preview decode failed: " + reader.errorString());
+
+        const bool tagged = image.colorSpace().isValid();
+        if (!tagged) image.setColorSpace(QColorSpace::SRgb);
+        image.convertToColorSpace(QColorSpace::SRgb, QImage::Format_RGBA8888);
+        if (image.isNull() || image.format() != QImage::Format_RGBA8888) return fail("Cannot convert source pixels to the SDR working format.");
+        const qint64 bytes = qint64(image.width()) * image.height() * 4;
+        if (bytes > transfer.size() || bytes != capacity) return fail("Decoded dimensions exceed the admitted transfer.");
+        auto* output = static_cast<unsigned char*>(transfer.data());
+        for (int y=0; y<image.height(); ++y) std::memcpy(output+qint64(y)*image.width()*4, image.constScanLine(y), size_t(image.width())*4);
+        const auto finalRevision=fs_watch::probe(fs_watch::native(path));
+        if(initialRevision.known&&initialRevision!=finalRevision)
+            return fail("Source revision changed while decoding; retry when the writer finishes.");
+        const auto verifiedToken=initialRevision==finalRevision?initialToken:QString{};
+        send({{"phase", "decoded"}, {"width", image.width()}, {"height", image.height()}, {"stride", image.width()*4},
+              {"color", tagged ? "Embedded profile converted to sRGB" : "RAW embedded preview sRGB"},
+              {"extractUs", double(extractUs)}, {"sourceToken",verifiedToken}});
+        if (!std::fgets(request, sizeof(request), stdin)) return 1;
+        return 0;
+    }
+
     const QFileInfo initialInfo(path);
     const qint64 initialSize = initialInfo.size();
     const QDateTime initialModified = initialInfo.lastModified();
@@ -144,7 +229,7 @@ int main(int argc, char** argv) {
     reader.setDecideFormatFromContent(true);
     reader.setAutoTransform(true);
     const auto format = reader.format().toLower();
-    if (format != "jpeg" && format != "jpg" && format != "png") return fail("This alpha supports JPEG and PNG images.");
+    if (format != "jpeg" && format != "jpg" && format != "png" && format != "gif" && format != "webp" && format != "tiff" && format != "tif" && format != "bmp" && format != "tga" && format != "wbmp" && format != "ico") return fail("This alpha supports JPEG, PNG, GIF, WebP, TIFF, BMP, and TGA images.");
     const QSize size = reader.size();
     if (!size.isValid() || size.width() > 32768 || size.height() > 32768) return fail("Invalid or unsupported image dimensions.");
     const qint64 capacity = qint64(size.width()) * size.height() * 4;

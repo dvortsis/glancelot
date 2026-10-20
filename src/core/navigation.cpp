@@ -162,11 +162,50 @@ bool naturalLess(const fs::path& a, const fs::path& b) {
     if (an != bn) return an < bn;
     return a.native() < b.native();
 }
-bool isSupportedImage(const fs::path& path) {
+ImageFormatCategory imageCategory(const fs::path& path) {
     auto extension = path.extension().native();
     std::transform(extension.begin(), extension.end(), extension.begin(), fold);
-    return extension == fs::path(".jpg").native() || extension == fs::path(".jpeg").native()
-        || extension == fs::path(".png").native();
+    if (extension.empty()) return ImageFormatCategory::Unsupported;
+
+    // Animated formats (FMT-02, FMT-03)
+    if (extension == fs::path(".gif").native() ||
+        extension == fs::path(".webp").native() ||
+        extension == fs::path(".apng").native()) {
+        return ImageFormatCategory::Animated;
+    }
+
+    // Common still rasters (FMT-02)
+    if (extension == fs::path(".jpg").native() ||
+        extension == fs::path(".jpeg").native() ||
+        extension == fs::path(".png").native() ||
+        extension == fs::path(".bmp").native() ||
+        extension == fs::path(".tga").native() ||
+        extension == fs::path(".tif").native() ||
+        extension == fs::path(".tiff").native()) {
+        return ImageFormatCategory::Raster;
+    }
+
+    // RAW camera files with embedded preview support (FMT-06)
+    if (extension == fs::path(".dng").native() ||
+        extension == fs::path(".cr2").native() ||
+        extension == fs::path(".cr3").native() ||
+        extension == fs::path(".nef").native() ||
+        extension == fs::path(".nrw").native() ||
+        extension == fs::path(".arw").native() ||
+        extension == fs::path(".sr2").native() ||
+        extension == fs::path(".raf").native() ||
+        extension == fs::path(".orf").native() ||
+        extension == fs::path(".rw2").native() ||
+        extension == fs::path(".pef").native() ||
+        extension == fs::path(".iiq").native()) {
+        return ImageFormatCategory::Raw;
+    }
+
+    return ImageFormatCategory::Unsupported;
+}
+
+bool isSupportedImage(const fs::path& path) {
+    return imageCategory(path) != ImageFormatCategory::Unsupported;
 }
 std::vector<fs::path> imageFiles(const fs::path& directory, std::stop_token cancel) { return entries(directory, false, cancel); }
 namespace {

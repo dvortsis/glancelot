@@ -282,3 +282,20 @@ coalesced/bounded and must not recurse into pump during worker retirement. Add
 real ownership/cancellation/wakeup regressions in FS feature tests, preserve
 original IO/Cache tests, and return the combined source to independent Claude
 review and full platform/integrated gates. No new product QML is permitted.
+
+### Controlled IPC verification amendment
+
+Freeze the test-only fs_watch_decoder_fixture target (QtCore/Gui, uninstalled)
+and compile the real ThumbnailService into fs_watch_tests. The fixture accepts
+at most 8 KiB of generated JSON controls outside watched media, produces only
+generated 32x24 pixels, and implements revision/probe/shared-memory/decoded/ack
+framing. It does not read or write media. Private ControllerTestHooks may copy
+decoder program/argument overrides, positive test deadline overrides (including
+baseline wait for IPC cases; production registration fallback remains 100 ms), guarded
+worker-start observers, copied cancellable discovery, bounded state observers
+and a weak-controller request closure. All hooks remain exclusive to the
+GLANCELOT_FS_WATCH_TESTING backend target. Production deadlines remain 15 s.
+Require malformed/empty tokens, superseded and timed-out workers, bounded
+discovery (one running/one latest pending), real thumbnail capacity wakeup and
+cross-service admission identities before combined independent review. Preserve
+existing native decoder tests and full Windows/Linux/integrated gates.

@@ -13,6 +13,8 @@
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
 #include "glancelot/platform_integration.hpp"
+#include "glancelot/metadata_model.hpp"
+#include "glancelot/metadata_parser.hpp"
 #include <QtConcurrent/QtConcurrentRun>
 #include <QCache>
 #include <QColorSpace>
@@ -130,6 +132,22 @@ const std::vector<Command> registry {
     {"filter", "Filter folder files", "Ctrl+F"},
     {"clear-filter", "Clear active filter", ""},
     {"toggle-filter-persistence", "Toggle filter persistence", ""},
+    // META-HUD-01 (META-01 / UX-04)
+    {"toggle-metadata", "Toggle metadata inspector", "I"},
+    // ANIM-01 (ADV-06 / FMT-03 / F036)
+    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
+    {"animation-next-frame", "Step to next frame / page", "."},
+    {"animation-previous-frame", "Step to previous frame / page", ","},
+    {"animation-speed-up", "Increase animation speed", "]"},
+    {"animation-speed-down", "Decrease animation speed", "["},
+    {"animation-toggle-loop", "Toggle animation loop", ""},
+    // RENAME-01 (F018)
+    {"rename", "Rename current file or folder", "F2"},
+    {"new-folder", "Create new folder", "Ctrl+Shift+N"},
+    // COPY-MOVE-01 (F020)
+    {"cut-selection", "Cut selected files", "Ctrl+X"},
+    {"copy-selection", "Copy selected files", ""},
+    {"paste", "Paste files to current folder", "Ctrl+V"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -247,6 +265,32 @@ struct ViewerController::Private {
     struct LookaheadRequest { Navigator navigator; int direction{}; quint64 token{}; std::stop_token stop; };
     bool lookaheadBusy{};
     std::optional<LookaheadRequest> pendingLookahead;
+    MetadataModel metadataModel;
+    bool metadataVisible{false};
+    quint64 metadataGeneration{0};
+    glancelot::AnimationController animationController;
+    glancelot::MutationService mutationService;
+    glancelot::CopyMoveService copyMoveService;
+
+    void loadMetadata(const QString& targetPath, quint64 gen) {
+        animationController.load(targetPath, gen);
+        if (targetPath.isEmpty()) {
+            metadataModel.clear();
+            return;
+        }
+        const quint64 metaGen = ++metadataGeneration;
+        metadataModel.setLoading(true);
+        const QString resolved = targetPath;
+        QThreadPool::globalInstance()->start([this, resolved, metaGen, gen]() {
+            if (metaGen != metadataGeneration) return;
+            auto record = glancelot::MetadataParser::parse(resolved, metaGen);
+            QMetaObject::invokeMethod(q, [this, record, metaGen]() {
+                if (metaGen == metadataGeneration) {
+                    metadataModel.setRecord(record);
+                }
+            }, Qt::QueuedConnection);
+        });
+    }
 
     explicit Private(ViewerController* owner):q(owner) {
         trace("controller:construct");
@@ -317,6 +361,29 @@ struct ViewerController::Private {
 #endif
             reconcileObservation();
         },std::move(monitorOptions));
+
+        QObject::connect(&mutationService, &glancelot::MutationService::pathRenamed, q, &ViewerController::reconcileRenamedPath);
+        QObject::connect(&mutationService, &glancelot::MutationService::folderCreated, q, &ViewerController::reconcileCreatedFolder);
+        QObject::connect(&copyMoveService, &glancelot::CopyMoveService::pathsMutated, q, [this](const QStringList& sources, const QStringList& destinations, bool isMove) {
+            auto pathMatches = [](const QString& a, const QString& b) {
+#ifdef Q_OS_WIN
+                return a.compare(b, Qt::CaseInsensitive) == 0;
+#else
+                return a == b;
+#endif
+            };
+            if (isMove && !path.isEmpty()) {
+                for (int i = 0; i < sources.size(); ++i) {
+                    if (pathMatches(path, sources[i])) {
+                        q->reconcileRenamedPath(sources[i], destinations.value(i));
+                        break;
+                    }
+                }
+            }
+            cache.clear();
+            emit q->cacheChanged();
+            emit q->filesInvalidated();
+        });
     }
     ~Private() {
         monitor.reset();writePosition(true);navigationStop.request_stop();cancel();
@@ -465,6 +532,7 @@ struct ViewerController::Private {
         notifyIoStatsChanged();
     }
     void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
+        animationController.clear();
         cancelLookahead();
         finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
         deadline.stop();
@@ -647,7 +715,7 @@ struct ViewerController::Private {
         });
         futureWatcher->setFuture(future);
     }
-    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
+    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; metadataModel.clear(); status=message; emit q->stateChanged(); }
     void observe(bool restart=false) {
         monitor->setScope(path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path,restart);
     }
@@ -801,6 +869,7 @@ struct ViewerController::Private {
                         glancelot::perf::Flag::CacheHit,std::uint64_t(image.sizeInBytes()));
                     observe();notifyCacheChanged();emit q->imageChanged();emit q->stateChanged();
                     if(token==generation)scheduleLookahead();
+                    if(token==generation)loadMetadata(path,token);
                     return;
                 }
                 if (phase=="probe") {
@@ -847,6 +916,7 @@ struct ViewerController::Private {
                     process->write("ok\n");
                     observe(); emit q->imageChanged(); emit q->stateChanged();
                     if(token==generation)scheduleLookahead();
+                    if(token==generation)loadMetadata(path,token);
                     return;
                 } else { fail("Unknown decoder response."); return; }
             }
@@ -889,7 +959,7 @@ struct ViewerController::Private {
                     if(result.directoryFailed) { status=result.message; emit q->stateChanged(); }
                     else if(!result.destination) {
                         ++generation; cancel();
-                        path.clear(); image=QImage{}; imageReady=false; loading=false;
+                        path.clear(); image=QImage{}; imageReady=false; loading=false; metadataModel.clear();
                         lastDecodedPath.clear(); pendingImage.clear();
                         pendingFolder=displayPath(result.navigator.snapshot().directory);
                         positionRetries=0;positionDirty=slot>0;
@@ -1284,6 +1354,13 @@ void ViewerController::trigger(const QString& id){
     else if(id=="storage-profile-ssd") { setStorageProfile("ssd"); emit viewCommand(id); }
     else if(id=="storage-profile-hdd") { setStorageProfile("hdd"); emit viewCommand(id); }
     else if(id=="storage-profile-network") { setStorageProfile("network"); emit viewCommand(id); }
+    else if(id=="toggle-metadata") { toggleMetadata(); emit viewCommand(id); }
+    else if(id=="animation-toggle-play-pause") { d->animationController.togglePlayPause(); emit viewCommand(id); }
+    else if(id=="animation-next-frame") { d->animationController.nextFrame(); emit viewCommand(id); }
+    else if(id=="animation-previous-frame") { d->animationController.previousFrame(); emit viewCommand(id); }
+    else if(id=="animation-speed-up") { d->animationController.setSpeed(d->animationController.speed() * 1.5); emit viewCommand(id); }
+    else if(id=="animation-speed-down") { d->animationController.setSpeed(d->animationController.speed() / 1.5); emit viewCommand(id); }
+    else if(id=="animation-toggle-loop") { d->animationController.setLoop(!d->animationController.isLoop()); emit viewCommand(id); }
     else if(id=="quit")QCoreApplication::quit();
     else if(id=="copy-path") {
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
@@ -1609,4 +1686,92 @@ int ViewerController::activeIoJobs() const {
 
 qint64 ViewerController::admittedIoBytes() const {
     return IoScheduler::instance().admittedBytes();
+}
+
+MetadataModel* ViewerController::metadataModel() const {
+    return &d->metadataModel;
+}
+
+glancelot::AnimationController* ViewerController::animationController() const {
+    return &d->animationController;
+}
+
+bool ViewerController::isMetadataVisible() const {
+    return d->metadataVisible;
+}
+
+void ViewerController::setMetadataVisible(bool visible) {
+    if (d->metadataVisible == visible) return;
+    d->metadataVisible = visible;
+    emit metadataVisibleChanged();
+}
+
+void ViewerController::toggleMetadata() {
+    setMetadataVisible(!d->metadataVisible);
+}
+
+
+glancelot::MutationService* ViewerController::mutationService() const {
+    return &d->mutationService;
+}
+
+void ViewerController::reconcileRenamedPath(const QString& oldPath, const QString& newPath) {
+    if (oldPath.isEmpty() || newPath.isEmpty()) return;
+    d->cache.clear();
+    emit cacheChanged();
+
+    const QString cleanOld = QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
+    const QString cleanNew = QDir::cleanPath(QDir::fromNativeSeparators(newPath));
+
+    auto pathMatches = [](const QString& a, const QString& b) {
+#ifdef Q_OS_WIN
+        return a.compare(b, Qt::CaseInsensitive) == 0;
+#else
+        return a == b;
+#endif
+    };
+
+    if (pathMatches(d->path, cleanOld)) {
+        d->path = cleanNew;
+        d->lastDecodedPath = cleanNew;
+        d->status = QStringLiteral("Renamed to %1").arg(QFileInfo(cleanNew).fileName());
+        std::error_code ec;
+        d->nav.open(nativePath(cleanNew), ec);
+        emit imageChanged();
+        emit stateChanged();
+    } else if (insideRoot(cleanOld, d->path)) {
+        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
+        const QString suffix = d->path.mid(prefix.length());
+        d->path = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
+        d->lastDecodedPath = d->path;
+        std::error_code ec;
+        d->nav.open(nativePath(d->path), ec);
+        emit stateChanged();
+    }
+
+    const QString currentDir = directory();
+    if (pathMatches(currentDir, cleanOld)) {
+        std::error_code ec;
+        d->nav.openDirectory(nativePath(cleanNew), ec);
+        emit stateChanged();
+    } else if (insideRoot(cleanOld, currentDir)) {
+        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
+        const QString suffix = currentDir.mid(prefix.length());
+        const QString newCurrentDir = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
+        std::error_code ec;
+        d->nav.openDirectory(nativePath(newCurrentDir), ec);
+        emit stateChanged();
+    }
+
+    emit filesInvalidated();
+}
+
+void ViewerController::reconcileCreatedFolder(const QString& folderPath) {
+    Q_UNUSED(folderPath);
+    emit filesInvalidated();
+}
+
+
+glancelot::CopyMoveService* ViewerController::copyMoveService() const {
+    return &d->copyMoveService;
 }
