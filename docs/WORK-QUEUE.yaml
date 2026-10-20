@@ -1,6 +1,7 @@
 schema: 1
 project: glancelot
 integration_branch: main
+windows_native_fixture_hold: Defender Behavior:Win32/DefenseEvasion.A!ml; old platform_launcher_stub is retired; no restore/exclusions or old-fixture Windows gates; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock: {holder: "codex/fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T13:50:00.4513474Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7

@@ -1,6 +1,8 @@
 # Lead-frozen native launcher test isolation. Include only after the feature's
 # real test sources exist. No production target or adapter is changed.
 if(WIN32)
+  message(FATAL_ERROR
+    "Windows native launcher fixture is under a security hold after Defender Behavior:Win32/DefenseEvasion.A!ml. Do not restore/allow-list/rebuild the old helper. See docs/verification/PLATFORM-FIXTURE-SECURITY-01.md; a reviewed replacement is required.")
   qt_add_executable(platform_launcher_stub WIN32 tests/platform_launcher_stub.cpp)
   target_include_directories(platform_launcher_stub PRIVATE tests)
   target_link_libraries(platform_launcher_stub PRIVATE Qt6::Core shell32)
