@@ -1,116 +1,83 @@
-# FS-WATCH-01 Claude-lane independent corrective review R6
+# FS-WATCH-01 independent Claude-lane review R9 (static only)
 
-Candidate: 2bd898d (fixed), branch claude/review-fs-watch-01-r6, own worktree. Reviewed
-`9bc891f..2bd898d` (src, tests, docs, generated evidence) plus the resulting whole
-`buildListing`/`Private::pump`/`apply`/`merge`/`reset` in directory_entry_model.cpp, the identity
-helpers in fs_revision.hpp, cmake/FSWatchTests.cmake and the installed Qt 6.8.3 headers. The R5
-report (1398061) is preserved in git history. Author counts, the retained 9bc891f Docker pass and
-the author's pending full gates are not approval. No `ui/` or QML file is in the delta, so no UI
-behavior was reached and no visual review is claimed. I used no subagents and touched no other
-worktree.
+Candidate: `825f7f2150f2d513d9cf4f44ce4b932f0452e8ab` (fixed), reviewed in `claude-review-fs-watch-01-r9` by the Claude lane,
+independent of the Codex implementing lane. Inspected diff: `git diff f20711e..825f7f2`. Source-touching files are only
+`src/app/directory_entry_model.cpp` (+3/-3) and `tests/fs_watch_tests.cpp` (+5/-1). The rest is docs/evidence
+(FS-WATCH-01.md, the Cache-integration handoff note, preserved `claude-r8-review.md`, `windows-r9-*` and
+`windows-r10-unique-final-size.txt`). No CMake, header, QML or queue change. Prior reports `claude-r7-review.md` and
+`claude-r8-review.md` are preserved unchanged.
 
-## Disposition: NOT APPROVED. N17 (100k responsiveness margin) stays open; full gates outstanding.
+**Static review only.** I ran no test, compile, Docker build or native app, and edited no product, test, queue, config
+or other-worktree file. Everything below comes from reading source and the author's saved output, not from my own execution.
+The candidate still carries only the f708068 Cache contracts. I did not merge main (the Cache engine); its owner holds
+the integration lock.
 
-### Static findings: both performance fixes are correct as written
+## Diff assessment
+1. **Applied marker (G5).** `publicationStats.applied/filtered` moved from the top of `apply()` into the
+   `if (!truncated || ...)` publication guard, under `GLANCELOT_FS_WATCH_TESTING`. `applied` now means "the model
+   publication/projection path ran". A retained truncated listing is not counted. The pump handler still resets the stats
+   first, so stale and cancelled results stay `applied=false`. The duplicate `#ifdef` pair was removed. In production builds
+   the block compiles out: no behaviour, ABI or header change. G5's naming half is resolved.
+2. **Unique final size (G4).** The writer takes `sequence=filteredWrites.load()` and writes `QByteArray(128+sequence,'x')`.
+   Sizes are strictly increasing per write, so the final expected size equals no earlier replacement. They are also all >=128 bytes,
+   so they differ from the unfiltered phase's short `"N generated changed bytes"` content. `filteredSize` is stored after
+   a successful `commit()`, before the counter increments. The test joins the writer before reading it, so there is no race.
+   The 4096 cap sets `filteredFailure`, which is asserted. At about 25 ms per write over the 2 s window it is unreachable. The final `QTRY`
+   (30 s, unchanged) now passes only once the model row shows the last replacement's size, so it proves convergence to the final content.
+   G4 is resolved.
+3. **Lifetime.** The atomics are declared before the `jthread`, so they outlive it on early `QVERIFY` returns, and `join()` is
+   explicit before the read. No lifetime issue.
+4. **Unchanged oracles.** Heartbeat gap, publication `<250`, filter change `<250`, filtered publication `<250` and `QTRY` 30 s
+   are unchanged. So are the full last-complete-baseline assertion (`observed 0 / accepted 1`), the all-publication
+   `<250` loop, and the final selection/cursor/hash rename assertions after `clearFilter()`. The filtered phase calls no
+   `refresh()`: publications come from the real `QSaveFile` writer through the monitor path. The only `refresh()` calls
+   are the initial one (line 220) and the post-cleanup rename (line 300), which are the pre-existing baseline steps.
+5. **Not claimed.** The docs state this is a model-only regression and do not claim QML delegate/layout timing. That is
+   the correct scope; G5's measurement-scope caveat remains an honest limitation, not a defect.
 
-1. Impossible-identity early admission (directory_entry_model.cpp:102-107). Every real
-   entry costs `entryBytes(row.path)` with `row.path = base + name`, name at least 1 char, so
-   `entryBytes(base)` is a strict lower bound per entry. `n > B/m` (integer floor) is exactly
-   `n*m > B`, which implies the per-entry loop would have tripped `cost > budget - bytes` at
-   some entry anyway. So `identities.complete=false` is the same final verdict the old code
-   reached; only the native `probe()` calls and the retained prefix map are skipped. Rows,
-   index, sort, `truncated`, the `directoryProbe` re-check and `renames()` (returns empty when
-   either side is incomplete, fs_revision.hpp:161) are unchanged, and `apply()` keeps the last
-   complete baseline for the same scope (lines 226-229). Per-entry budget stays for listings
-   that might fit. Cancellation is still checked in the loop.
-   Consequence to state plainly: with the 16 MiB budget and about 500 B/entry in a long path,
-   folders above roughly 35k entries never get rename tracking, and the 100k stress folder
-   never does. That is a bound, not a bug, but "rename-safe selection" does not extend there.
-2. `takeResult()` (lines 190-194). Verified in the installed headers:
-   `QFutureInterface::takeResult` (qfutureinterface.h:423-440) does `waitForResult(-1)`, takes the
-   mutex, binds a non-const `ResultIteratorBase`, so `value<T>()` is `T&` (qresultstore.h:75) and
-   `move_if_noexcept` really moves; then `reset()` and `clear<T>()` free the stored object.
-   `QFuture::result()` (qfuture.h:309) returns by value from `resultReference(0)`: a deep copy of
-   the row vector plus a second copy retained until `deleteLater`. `finished` implies the
-   result is stored, so `waitForResult(-1)` does not block the GUI. One consumer, no
-   `future.cancel()` anywhere, the worker always returns one `Listing` (also when stop was
-   requested: `cancelled=true`), so result count is exactly 1 and `Q_ASSERT(isValid())` /
-   `Q_ASSERT(!hasException())` hold. A thrown worker exception would rethrow in both the old and
-   new code (same exposure). `static_assert(is_nothrow_move_constructible_v<Listing>)` compiles
-   and is the condition `move_if_noexcept` needs. Generation/stale/cancel flags, `inFlight`,
-   `pump()` and `apply(std::move)` are unchanged; stale results are still discarded by token.
-3. Test-only hook. `modelPublicationTiming` is `inline thread_local`, copied into
-   `Private::publicationTiming` at construction on the constructing (GUI) thread; both the
-   member and the timer are inside `GLANCELOT_FS_WATCH_TESTING`, defined only for
-   `fs_watch_tests` (cmake/FSWatchTests.cmake:11); `Private` lives in one TU per target so layout
-   cannot diverge. Lifetime is sound: `publications` outlives the model, `restoreTiming` is
-   declared before `viewer`/`grid`, the reporting guard after them. The new
-   `maxPublication<250` assert is additive; the 250 ms heartbeat, 30 s recovery and
-   exact-row checks are unchanged (no weakened timeout, no skip).
+## Evidence read (author-run, not mine)
+- `windows-r10-unique-final-size.txt`: FSWatchTests 3 passed, 0 failed, 0 skipped, 84285 ms on 825f7f2. Filter change 33 ms, filtered
+  publications 85/70/62 ms, filtered gap 86 ms, unfiltered max callback 160 ms, GUI gap 161 ms. All below 250 ms, but the
+  unfiltered 160 ms leaves about 90 ms headroom on a host the author discloses as shared. Only three filtered
+  publications were sampled, so this is bounded-cost evidence, not a margin proof.
+- `windows-r9-full-gate.txt`: 25/25 passed, 403.85 s, f20711e source, with `fs_watch` 149.52 s, `fs_watch_ui` 1.83 s and
+  `folder_grid` 151.63 s. **This is f20711e, not 825f7f2.** The author states this, and I agree the 25-target pass must not be
+  relabelled as a full gate of the later test revision. 825f7f2 has only the targeted 100k test run on Windows. Qt CTest
+  stdout is empty, so no per-case or zero-skip count is inferred from the full gate.
+- `windows-r9-ui.txt`: `fs_watch_ui_tests` 3/3, 0 failures, 0 skips, 1472 ms, via the real QML key route (preview/grid/combined F5,
+  text-input and settings-modal suppression). Offscreen/software with "No QRhi found" warnings. Pre-existing
+  `ShortcutCheatSheet.qml:327 keys` and `PhotoGrid.qml:298` warnings are not FS-WATCH changes and are not claimed fixed.
+- UI scope: the F5 contract is real QML key events, which this evidence covers. Physical keyboard, GPU/DPI and focus-ring visuals are
+  separate qualification that nobody has run; I do not treat that as a blocker and add no new visual design requirement.
 
-### Independent runtime (backend only, own build dir; no Docker, no grid/QML/input/full suite)
+## Findings
+No blocker. No major. No new finding.
 
-Build: `scripts/build.ps1 -BuildDir build-claude-review-fs-watch-01-r6` (no `-Test`)
-completed 237/237 in 5 min 24 s. Run: `fs_watch_tests.exe -o ...,txt`, QT_QPA_PLATFORM=offscreen,
-project `.tools` Qt. Outputs are `.cache/r6-full.txt` and `.cache/r6-100k-{1,2,3}.txt` (ignored,
-not committed). Host was shared: VS Code, cpptools and a Logitech agent were consuming CPU.
+**Minor (carried, not waived)**
+- G2: the final rename-follow assertions were never shown red against a baseline-replacing mutation. The budget assertion that
+  guards the same mechanism was shown red by the author.
+- G3: a stale or cancelled `Listing` is destroyed on the GUI thread. It is bounded by the row cap and inside the asserted `<250 ms`
+  publication window.
+- Real QML GridView delegate/relayout cost under an active filter at 100k rows is unmeasured. The filtered refresh still resets the whole
+  model (inherited behaviour).
+- Timing assertions ran on shared hosts: no exclusive-host qualification.
+- Bound, not a bug: roughly 35k+ entries per folder get no rename tracking (16 MiB identity budget).
 
-| Run | Result | setup | initial gap | writer/recovery gap | publications (n, max) |
-| --- | --- | --- | --- | --- | --- |
-| whole file | 49 passed, 0 failed, 0 skipped, 137.6 s | 41.8 s | 12 ms | 180 ms | 5, 179 ms |
-| 100k only #1 | 3 passed, 0 skipped | 68.2 s | 15 ms | 181 ms | 2, 170 ms |
-| 100k only #2 | 3 passed, 0 skipped | 33.5 s | 12 ms | 129 ms | 6, 128 ms |
-| 100k only #3 | 3 passed, 0 skipped | 43.3 s | 16 ms | 232 ms | 3, 232 ms |
+## Unexecuted by me
+All of: Windows build/CTest, the 100k test, `fs_watch_ui_tests`, Linux/Docker, native app, QML F5, and any
+combined-with-Cache build or test.
 
-4/4 executions passed here, versus 1/3 at 9bc891f in R5 (385 ms gap and a 30 s recovery
-timeout). That is real improvement evidence but not proof of the acceptance criterion:
+## Disposition
+- **Implementation/source disposition:** the f20711e..825f7f2 delta has no blocking issue. It is a test-only oracle
+  strengthening plus a marker relocation, with production behaviour unchanged. With R7 (no blocking implementation issue; own
+  Windows backend 52/52 zero skips and Linux QML F5 3/3) and R8, I consider the FS implementation acceptable for integration, subject to the gates below.
+- **Final packet approval: NOT GIVEN.** The packet is not done and no done claim is made.
 
-- The worst sustained gap equals the worst single publication callback in run #3 (232 ms vs
-  232 ms), i.e. the remaining GUI stall IS one apply, and it sits 18 ms under the 250 ms oracle.
-  Observed maxima 128/170/179/232 ms plus the author's 208 ms are a 128-232 ms spread; a
-  slower or more loaded host crosses 250 ms with no source change.
-- The author's pre-takeResult instrumented number (208 ms on 5e4fe9e, one run) and my
-  post-takeResult numbers (128-232 ms, four runs) do not show a measurable GUI-side gain from
-  the move. No A/B of copy vs move on the same host exists. The copy removal is correct and
-  verified statically; its effect on the callback is unquantified, and the remaining cost (merge
-  scan/`reset`, destruction of the replaced rows, `deleteLater`) is not itself bounded or sliced.
-- I did not weaken or skip anything and do not claim the passes are representative.
-
-### Concrete unresolved items
-
-- R6-1 (open, acceptance, N17): the 100k GUI publication is 128-232 ms against a 250 ms hard
-  oracle with no margin and no proof that `apply`/`merge`/`reset` cost is bounded for 100k rows.
-  Needs either a measured bound (per-phase timing of merge scan vs reset vs destruction, or
-  chunked/moved destruction off the GUI thread) or repeated runs on an isolated host
-  demonstrating headroom. The 30 s recovery oracle did not recur here but is not closed either.
-- R6-2 (test gap): the impossible-budget path has no committed regression test. The 34,380-file
-  before/after diagnostic is two one-line text files (`identity-budget-{before,after}.txt`) whose
-  harness is ignored/not in the repo, so I could not re-run it. The invariants it should pin are
-  rows unchanged, `identities.complete=false`, no retained prefix and last-complete baseline kept.
-  I verified them by reasoning above, not by running the author's diagnostic. The reported 1604 ms
-  vs 940 ms is uncontrolled-cache timing; only the 32,102 vs 0 retained-identities counts are a
-  stronger signal and I did not reproduce even those.
-- R6-3 (minor, not required): a stale or cancelled `Listing` is still destroyed on the GUI thread
-  (up to 100k rows). Not reached by the passing runs and not asked for in this packet.
-
-### Not run by me
-Docker; the full Windows `scripts/build.ps1 -Test`; grid/QML/input suites (native slot not
-released, as instructed); real F5 preview/grid/combined runtime; junction/symlink native probes;
-the filtered-main (Filter/History/Help) merge, which needs its own future review. I do not claim
-the author's running 2bd898d backend (36723) or Docker (24467) results, nor the retained
-9bc891f Docker 21/21 (204.40 s) as a gate for this source; the earlier 20/21 grid-delegate failure
-and its isolated passes remain as the author recorded them. The Filter integration doc's
-unfiltered identity-baseline preservation is described, not implemented, and is out of scope here.
-
-### Residual (unverified, hardware/platform)
-Registration ABA, coarse-timestamp identity collisions and physical/network/ReFS/cloud behavior
-remain unverified.
-
-### Required before approval
-1. Resolve R6-1 with measured per-phase GUI cost or isolated repeated runs showing headroom
-   under 250 ms, and keep the 250 ms heartbeat, 250 ms publication and 30 s recovery checks.
-2. Add (or point to) a committed regression for the impossible-budget path (R6-2).
-3. Full Docker and full Windows `scripts/build.ps1 -Test` on 2bd898d (or its successor) with
-   exact output; then independent real F5 runtime review once the native slot is released.
-4. Serial integration under the lock, merging current main (Filter/History/Help) first, with
-   checks on the integrated commit.
+## Remaining final gates
+1. Full Windows `scripts/build.ps1 -Test` (25 targets) on the exact integrated source. The existing pass covers f20711e only.
+2. Current-source Linux/Docker run (author's is in flight) and `docker build -t glancelot-browser:main .` on the integrated source.
+3. Serial integration under the lead lock: merge current main (Cache engine 8b28060), reconcile revision validation and
+   invalidation with the Cache hit path (the handoff note records `cacheKey` from path/size/mtime-ms only), and add generated
+   cross-folder replacement tests.
+4. Independent review of the combined source, then checks on the integrated commit.
+5. Unverified by anyone: physical keyboard/GPU, network/coarse-timestamp/ReFS/cloud filesystems, registration ABA.
