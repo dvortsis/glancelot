@@ -35,7 +35,8 @@ if(GLANCELOT_BUILD_VIEWER)
   add_library(glancelot_platform STATIC src/app/platform_integration.cpp include/glancelot/platform_integration.hpp
     src/app/io_scheduler.cpp include/glancelot/io_scheduler.hpp
     src/app/metadata_parser.cpp include/glancelot/metadata_parser.hpp
-    src/app/metadata_model.cpp include/glancelot/metadata_model.hpp)
+    src/app/metadata_model.cpp include/glancelot/metadata_model.hpp
+    src/app/animation_controller.cpp include/glancelot/animation_controller.hpp)
   target_include_directories(glancelot_platform PUBLIC include)
   target_link_libraries(glancelot_platform PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent)
   if(WIN32)
@@ -55,7 +56,7 @@ if(GLANCELOT_BUILD_VIEWER)
   target_link_libraries(glancelot PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
-    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml)
+    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml)
   # Interface typefaces (SIL OFL 1.1, assets/fonts/geist/OFL.txt), registered at startup.
   set(ui_fonts assets/fonts/geist/Geist-Light.ttf assets/fonts/geist/Geist-Regular.ttf assets/fonts/geist/Geist-Medium.ttf assets/fonts/geist/Geist-SemiBold.ttf assets/fonts/geist/GeistMono-Regular.ttf)
   qt_add_resources(glancelot ui_fonts PREFIX "/" BASE assets FILES ${ui_fonts})
@@ -208,6 +209,11 @@ if(GLANCELOT_BUILD_VIEWER)
     target_link_libraries(metadata_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_test(NAME metadata COMMAND metadata_tests -o -,txt)
     set_tests_properties(metadata PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
+    qt_add_executable(animation_tests tests/animation_tests.cpp)
+    target_include_directories(animation_tests PRIVATE include src/app)
+    target_link_libraries(animation_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
+    add_test(NAME animation COMMAND animation_tests -o -,txt)
+    set_tests_properties(animation PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
   endif()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)

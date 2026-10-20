@@ -128,6 +128,13 @@ const std::vector<Command> registry {
     {"toggle-filter-persistence", "Toggle filter persistence", ""},
     // META-HUD-01 (META-01 / UX-04)
     {"toggle-metadata", "Toggle metadata inspector", "I"},
+    // ANIM-01 (ADV-06 / FMT-03 / F036)
+    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
+    {"animation-next-frame", "Step to next frame / page", "."},
+    {"animation-previous-frame", "Step to previous frame / page", ","},
+    {"animation-speed-up", "Increase animation speed", "]"},
+    {"animation-speed-down", "Decrease animation speed", "["},
+    {"animation-toggle-loop", "Toggle animation loop", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -233,8 +240,10 @@ struct ViewerController::Private {
     MetadataModel metadataModel;
     bool metadataVisible{false};
     quint64 metadataGeneration{0};
+    glancelot::AnimationController animationController;
 
     void loadMetadata(const QString& targetPath, quint64 gen) {
+        animationController.load(targetPath, gen);
         if (targetPath.isEmpty()) {
             metadataModel.clear();
             return;
@@ -420,6 +429,7 @@ struct ViewerController::Private {
         emit q->ioStatsChanged();
     }
     void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
+        animationController.clear();
         cancelLookahead();
         finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
         deadline.stop();
@@ -1097,6 +1107,12 @@ void ViewerController::trigger(const QString& id){
     else if(id=="storage-profile-hdd") { setStorageProfile("hdd"); emit viewCommand(id); }
     else if(id=="storage-profile-network") { setStorageProfile("network"); emit viewCommand(id); }
     else if(id=="toggle-metadata") { toggleMetadata(); emit viewCommand(id); }
+    else if(id=="animation-toggle-play-pause") { d->animationController.togglePlayPause(); emit viewCommand(id); }
+    else if(id=="animation-next-frame") { d->animationController.nextFrame(); emit viewCommand(id); }
+    else if(id=="animation-previous-frame") { d->animationController.previousFrame(); emit viewCommand(id); }
+    else if(id=="animation-speed-up") { d->animationController.setSpeed(d->animationController.speed() * 1.5); emit viewCommand(id); }
+    else if(id=="animation-speed-down") { d->animationController.setSpeed(d->animationController.speed() / 1.5); emit viewCommand(id); }
+    else if(id=="animation-toggle-loop") { d->animationController.setLoop(!d->animationController.isLoop()); emit viewCommand(id); }
     else if(id=="quit")QCoreApplication::quit();
     else if(id=="copy-path") {
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
@@ -1425,6 +1441,10 @@ qint64 ViewerController::admittedIoBytes() const {
 
 MetadataModel* ViewerController::metadataModel() const {
     return &d->metadataModel;
+}
+
+glancelot::AnimationController* ViewerController::animationController() const {
+    return &d->animationController;
 }
 
 bool ViewerController::isMetadataVisible() const {

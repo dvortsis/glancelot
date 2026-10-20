@@ -567,6 +567,21 @@ tasks:
     outcome: Bounded asynchronous metadata HUD and accurate basic image/index status
     evidence: docs/verification/META-HUD-01.md; independent review approved; Windows scripts/build.ps1 -Test 25/25 (177.95s); Linux Docker Qt 25/25 (114.06s)
     acceptance: No parsing on UI/render thread; generation validation; malformed/large metadata fixtures; histogram remains M5
+  - id: ANIM-01
+    requirements: [ADV-06, FMT-03]
+    milestone: M3
+    priority: 6
+    owner_lane: gemini
+    state: implementing
+    branch: agent/anim-playback
+    worktree: .worktrees/anim-playback
+    build: build-anim-playback
+    plan: docs/ANIM-01-PLAN.md
+    memory_action: act_mvg6kcvb_2fd302d57885
+    owner: lead
+    depends: [META-HUD-01]
+    outcome: Multi-frame animated GIF / WebP / APNG playback bar and TIFF page navigation
+    acceptance: Asynchronous probing and decoding; frame delay and disposal respect; no invented timing for TIFF; speed scaling (0.25x-2.0x); bounded cache; generation validation
   - id: INPUT-02
     requirements: [IN-01, IN-02, IN-03, IN-05]
     milestone: M3
@@ -662,7 +677,7 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, INPUT-02, FORMAT-02]
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, INPUT-02, FORMAT-02]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
 priority_amendment:
   date: '2026-10-17'

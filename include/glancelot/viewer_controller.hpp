@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "glancelot/metadata_model.hpp"
+#include "glancelot/animation_controller.hpp"
 
 class ViewerController : public QObject {
     Q_OBJECT
@@ -47,6 +48,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(qint64 admittedIoBytes READ admittedIoBytes NOTIFY ioStatsChanged)
     Q_PROPERTY(MetadataModel* metadataModel READ metadataModel CONSTANT)
     Q_PROPERTY(bool metadataVisible READ isMetadataVisible WRITE setMetadataVisible NOTIFY metadataVisibleChanged)
+    Q_PROPERTY(glancelot::AnimationController* animationController READ animationController CONSTANT)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -137,6 +139,9 @@ public:
     bool isMetadataVisible() const;
     void setMetadataVisible(bool visible);
     Q_INVOKABLE void toggleMetadata();
+
+    // Animation & Multipage Playback (ANIM-01 / ADV-06 / FMT-03)
+    glancelot::AnimationController* animationController() const;
 
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
