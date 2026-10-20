@@ -1,0 +1,10 @@
+********* Start testing of FSWatchBudgetTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchBudgetTests::initTestCase()
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 117637 ms; initial GUI gap 23 ms; sustained-writer/recovery GUI gap 359 ms; writes 246 invalidations 2
+FAIL!  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() '!publications.isEmpty()&&maxPublication<250' returned FALSE. (actual model publication exceeded the unchanged 250ms GUI budget)
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_budget_tests.cpp(117) : failure location
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 54 identity 0 merge (includes disposal) 44 merge scan 13 reset 0 projection/raw mirror 9 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 281 identity 0 merge (includes disposal) 266 merge scan 177 reset 0 projection/raw mirror 15 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 358 identity 0 merge (includes disposal) 326 merge scan 227 reset 0 projection/raw mirror 31 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 5 maximum 358 ms; loading at exit false

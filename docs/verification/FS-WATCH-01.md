@@ -1,6 +1,18 @@
 # FS-WATCH-01 implementation evidence
 
-Status: reviewed source preparing integration; not integrated. Current measured
+Latest status: merged as2c38082 by another session, but acceptance remains open.
+Main-synced2414cd6 Windows rerun failed29/32 in776.35s: grid300s timeout,
+dense180s timeout and cache failure. Exact windows-main-synced-first-*.txt logs
+retain the failures. Dense setup117637ms completed; measured publication maximum
+358ms and GUI gap359ms exceeded the unchanged250ms limit before cleanup timeout.
+Backend81/81 and UI3/3 passed; these do not make the full suite green. Another
+session ran Windows and Docker verification concurrently during this run; no
+host-isolation claim is made. The diagnostic refused to overlap that suite.
+A narrow same-key/order refresh optimization and metadata/persistent-index
+regression are now being prepared in the assigned Codex tree; neither has been
+reviewed or qualified yet. Older green measurements below remain historical.
+
+Historical status before merge: reviewed source preparing integration. Measured
 source72f0afa includes the R12 L1 bookkeeping fix116dac3 and main's qualified
 replacement fixture334065e. Actual Claude R13 e93ad90 accepts that narrow fix,
 building on R11/R12 source review and the retained Linux startup-leak red/green
