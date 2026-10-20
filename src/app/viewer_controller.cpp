@@ -268,28 +268,49 @@ struct ViewerController::Private {
     MetadataModel metadataModel;
     bool metadataVisible{false};
     quint64 metadataGeneration{0};
+    struct MetadataJob {QString path;quint64 sourceGeneration{},revision{};};
+    bool metadataBusy{};
+    std::optional<MetadataJob> pendingMetadata;
     glancelot::AnimationController animationController;
     glancelot::MutationService mutationService;
     glancelot::CopyMoveService copyMoveService;
 
     void loadMetadata(const QString& targetPath, quint64 gen) {
+        if(gen!=generation)return;
         animationController.load(targetPath, gen);
+        if(gen!=generation)return;
+        const quint64 metaGen=++metadataGeneration;
+        pendingMetadata.reset();
         if (targetPath.isEmpty()) {
             metadataModel.clear();
             return;
         }
-        const quint64 metaGen = ++metadataGeneration;
         metadataModel.setLoading(true);
-        const QString resolved = targetPath;
-        QThreadPool::globalInstance()->start([this, resolved, metaGen, gen]() {
-            if (metaGen != metadataGeneration) return;
-            auto record = glancelot::MetadataParser::parse(resolved, metaGen);
-            QMetaObject::invokeMethod(q, [this, record, metaGen]() {
-                if (metaGen == metadataGeneration) {
-                    metadataModel.setRecord(record);
-                }
-            }, Qt::QueuedConnection);
+        if(gen!=generation||metaGen!=metadataGeneration)return;
+        MetadataJob job{targetPath,gen,metaGen};
+        if(metadataBusy){pendingMetadata=std::move(job);return;}
+        startMetadata(std::move(job));
+    }
+    void startMetadata(MetadataJob job) {
+        metadataBusy=true;
+        auto* future=new QFutureWatcher<MetadataRecord>(q);
+        QObject::connect(future,&QFutureWatcher<MetadataRecord>::finished,q,[this,future,job] {
+            auto record=future->future().takeResult();future->deleteLater();metadataBusy=false;
+            if(job.sourceGeneration==generation&&job.revision==metadataGeneration)
+                metadataModel.setRecord(record);
+            if(!metadataBusy&&pendingMetadata) {
+                auto next=std::move(*pendingMetadata);pendingMetadata.reset();
+                startMetadata(std::move(next));
+            }
         });
+        std::function<void(const QString&)> beforeParse;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks)beforeParse=testHooks->beforeMetadataParse;
+#endif
+        future->setFuture(QtConcurrent::run([job=std::move(job),beforeParse=std::move(beforeParse)] {
+            if(beforeParse)beforeParse(job.path);
+            return MetadataParser::parse(job.path,job.revision);
+        }));
     }
 
     explicit Private(ViewerController* owner):q(owner) {
@@ -532,6 +553,7 @@ struct ViewerController::Private {
         notifyIoStatsChanged();
     }
     void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
+        ++metadataGeneration;pendingMetadata.reset();metadataModel.clear();
         animationController.clear();
         cancelLookahead();
         finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
@@ -1716,53 +1738,23 @@ glancelot::MutationService* ViewerController::mutationService() const {
 }
 
 void ViewerController::reconcileRenamedPath(const QString& oldPath, const QString& newPath) {
-    if (oldPath.isEmpty() || newPath.isEmpty()) return;
-    d->cache.clear();
-    emit cacheChanged();
-
-    const QString cleanOld = QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
-    const QString cleanNew = QDir::cleanPath(QDir::fromNativeSeparators(newPath));
-
-    auto pathMatches = [](const QString& a, const QString& b) {
-#ifdef Q_OS_WIN
-        return a.compare(b, Qt::CaseInsensitive) == 0;
-#else
-        return a == b;
-#endif
+    if(oldPath.isEmpty()||newPath.isEmpty())return;
+    const auto old=QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
+    const auto replacement=QDir::cleanPath(QDir::fromNativeSeparators(newPath));
+    const auto remap=[&](const QString& value) -> QString {
+        if(fs_watch::key(value)==fs_watch::key(old))return replacement;
+        if(!value.isEmpty()&&insideRoot(old,value)) {
+            const auto prefix=old.endsWith('/')?old:old+'/';
+            return QDir::cleanPath(replacement+'/'+value.mid(prefix.size()));
+        }
+        return {};
     };
-
-    if (pathMatches(d->path, cleanOld)) {
-        d->path = cleanNew;
-        d->lastDecodedPath = cleanNew;
-        d->status = QStringLiteral("Renamed to %1").arg(QFileInfo(cleanNew).fileName());
-        std::error_code ec;
-        d->nav.open(nativePath(cleanNew), ec);
-        emit imageChanged();
-        emit stateChanged();
-    } else if (insideRoot(cleanOld, d->path)) {
-        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
-        const QString suffix = d->path.mid(prefix.length());
-        d->path = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
-        d->lastDecodedPath = d->path;
-        std::error_code ec;
-        d->nav.open(nativePath(d->path), ec);
-        emit stateChanged();
-    }
-
-    const QString currentDir = directory();
-    if (pathMatches(currentDir, cleanOld)) {
-        std::error_code ec;
-        d->nav.openDirectory(nativePath(cleanNew), ec);
-        emit stateChanged();
-    } else if (insideRoot(cleanOld, currentDir)) {
-        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
-        const QString suffix = currentDir.mid(prefix.length());
-        const QString newCurrentDir = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
-        std::error_code ec;
-        d->nav.openDirectory(nativePath(newCurrentDir), ec);
-        emit stateChanged();
-    }
-
+    d->cache.clear();d->notifyCacheChanged();
+    const auto image=remap(d->path);
+    const auto folder=remap(directory());
+    if(!image.isEmpty())open(image);
+    else if(!folder.isEmpty())navigateDirectory(folder);
+    else {d->observe();d->monitor->refresh();}
     emit filesInvalidated();
 }
 

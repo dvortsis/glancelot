@@ -44,6 +44,7 @@ struct ControllerTestHooks {
     std::function<std::optional<std::filesystem::path>(int,std::stop_token)> discover;
     std::function<void(int,int)> lookaheadState;
     std::function<void(std::function<void()>)> captureLookaheadRequest;
+    std::function<void(const QString&)> beforeMetadataParse;
 };
 inline thread_local const ControllerTestHooks* controllerTestHooks{};
 #endif

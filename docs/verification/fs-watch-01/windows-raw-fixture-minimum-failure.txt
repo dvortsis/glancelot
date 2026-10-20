@@ -1,0 +1,14 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+FAIL!  : FSWatchTests::rawWorkerRevisionProtocol(unchanged) Compared values are not the same
+   Actual   (probe.value("phase").toString()): "error"
+   Expected (QString("probe"))               : "probe"
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(474) : failure location
+FAIL!  : FSWatchTests::rawWorkerRevisionProtocol(replaced-after-probe) Compared values are not the same
+   Actual   (probe.value("phase").toString()): "error"
+   Expected (QString("probe"))               : "probe"
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(474) : failure location
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 220ms
+********* Finished testing of FSWatchTests *********

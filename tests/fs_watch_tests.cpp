@@ -10,6 +10,7 @@
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/io_scheduler.hpp"
 #include "glancelot/thumbnail_service.hpp"
+#include "glancelot/metadata_model.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
 #include <QSaveFile>
@@ -19,6 +20,7 @@
 #include <QSharedMemory>
 #include <QUuid>
 #include <QBuffer>
+#include <QDataStream>
 #include <QScopeGuard>
 #include <atomic>
 #include <thread>
@@ -242,6 +244,45 @@ private slots:
         QVERIFY(!gate->finished.load());gate->release.store(true);
         QTRY_VERIFY_WITH_TIMEOUT(gate->finished.load(),3000);
     }
+    void metadataAdapterKeepsLatestSelectionAndClosesSafely() {
+        Fixture fixture;QVERIFY(fixture.prepare());
+        struct Gate {std::atomic_bool release{},finished{};std::atomic_int calls{};};
+        auto gate=std::make_shared<Gate>();
+        fixture.hooks.beforeMetadataParse=[gate](const QString&){
+            ++gate->calls;while(!gate->release.load())QThread::msleep(2);
+            gate->finished.store(true);
+        };
+        HookScope scope(fixture.hooks);const auto unblock=qScopeGuard([gate]{gate->release.store(true);});
+        {
+            ViewerController viewer;viewer.setBoundaryMode("stop");viewer.open(fixture.path("a.png"));
+            QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+            QTRY_COMPARE_WITH_TIMEOUT(gate->calls.load(),1,3000);
+            viewer.open(fixture.path("b.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+            viewer.open(fixture.path("c.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+            QCOMPARE(gate->calls.load(),1);gate->release.store(true);
+            QTRY_COMPARE_WITH_TIMEOUT(viewer.metadataModel()->filePath(),fixture.path("c.png"),5000);
+            QCOMPARE(gate->calls.load(),2); // Superseded B never starts.
+        }
+        gate->release.store(false);gate->finished.store(false);gate->calls.store(0);
+        auto viewer=std::make_unique<ViewerController>();viewer->setBoundaryMode("stop");viewer->open(fixture.path("a.png"));
+        QTRY_COMPARE_WITH_TIMEOUT(gate->calls.load(),1,5000);
+        QElapsedTimer close;close.start();viewer.reset();QVERIFY(close.elapsed()<2000);
+        QVERIFY(!gate->finished.load());gate->release.store(true);
+        QTRY_VERIFY_WITH_TIMEOUT(gate->finished.load(),3000);QTest::qWait(100);
+    }
+    void mutationAdapterRearmsMonitorAndPreservesNewestOpen() {
+        QTemporaryDir media;QVERIFY(media.isValid());const auto a=media.filePath("a.png"),renamed=media.filePath("renamed.png"),c=media.filePath("c.png");
+        QVERIFY(png(a,Qt::red));QVERIFY(png(c,Qt::blue));
+        ViewerController viewer;viewer.setBoundaryMode("stop");viewer.open(a);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QVERIFY(QFile::rename(a,renamed));viewer.reconcileRenamedPath(a,renamed);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()==renamed&&viewer.imageReady()&&!viewer.loading(),5000);
+        QVERIFY(png(renamed,Qt::green));
+        QTRY_COMPARE_WITH_TIMEOUT(viewer.image().pixelColor(0,0),QColor(Qt::green),8000);
+        viewer.reconcileRenamedPath(renamed,media.filePath("missing.png"));viewer.open(c);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()==c&&viewer.imageReady()&&!viewer.loading(),5000);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+    }
     void thumbnailServicesOwnDistinctAdmissions_data() {
         QTest::addColumn<bool>("rotational");QTest::newRow("ssd")<<false;QTest::newRow("rotational")<<true;
     }
@@ -408,6 +449,46 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(process.state(),QProcess::NotRunning,5000);QCOMPARE(process.exitCode(),1);
         QVERIFY(!process.readAllStandardOutput().contains("\"decoded\""));
         QCOMPARE(hash(path),replacementHash);QCOMPARE(QImage(path).pixelColor(0,0),QColor(Qt::blue));
+    }
+    void rawWorkerRevisionProtocol_data() {
+        QTest::addColumn<bool>("changed");QTest::newRow("unchanged")<<false;QTest::newRow("replaced-after-probe")<<true;
+    }
+    void rawWorkerRevisionProtocol() {
+        QFETCH(bool,changed);QTemporaryDir media;QVERIFY(media.isValid());const auto path=media.filePath("sample.dng");
+        const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+        const auto raw=[&](Qt::GlobalColor color) {
+            QImage image(32,24,QImage::Format_RGB32);image.fill(color);
+            QByteArray jpeg;QBuffer buffer(&jpeg);if(!buffer.open(QIODevice::WriteOnly)||!image.save(&buffer,"JPEG"))return false;
+            buffer.close();if(jpeg.size()<1024)jpeg.append(QByteArray(1024-jpeg.size(),'\0'));
+            QByteArray bytes;QDataStream stream(&bytes,QIODevice::WriteOnly);stream.setByteOrder(QDataStream::LittleEndian);
+            stream.writeRawData("II",2);stream<<quint16(42)<<quint32(8)<<quint16(2);
+            stream<<quint16(0x201)<<quint16(4)<<quint32(1)<<quint32(38);
+            stream<<quint16(0x202)<<quint16(4)<<quint32(1)<<quint32(jpeg.size())<<quint32(0);
+            bytes+=jpeg;if(bytes.size()>4096)return false;bytes.append(QByteArray(4096-bytes.size(),'\0'));
+            if(!write(path,bytes))return false;
+            QFile file(path);return file.open(QIODevice::ReadWrite)&&file.setFileTime(stamp,QFileDevice::FileModificationTime);
+        };
+        QVERIFY(raw(Qt::red));const auto initial=fs_watch::probeSourceToken(path);QVERIFY(fs_watch::validSourceToken(initial));
+        QProcess process;process.start(decoder(),{path});
+        const auto terminate=qScopeGuard([&]{if(process.state()!=QProcess::NotRunning){process.kill();process.waitForFinished(1000);}});
+        QVERIFY(process.waitForStarted(2000));QTRY_VERIFY_WITH_TIMEOUT(process.canReadLine(),5000);
+        const auto probe=QJsonDocument::fromJson(process.readLine()).object();QCOMPARE(probe.value("phase").toString(),QString("probe"));
+        QCOMPARE(probe.value("bytes").toInteger(),qint64(3072));
+        if(changed){QVERIFY(raw(Qt::blue));QCOMPARE(QFileInfo(path).size(),qint64(4096));QCOMPARE(QFileInfo(path).lastModified(),stamp);}
+        const auto sourceHash=hash(path);
+        QSharedMemory transfer("Glancelot-raw-test-"+QUuid::createUuid().toString(QUuid::WithoutBraces));QVERIFY(transfer.create(3072));
+        process.write(QJsonDocument(QJsonObject{{"key",transfer.key()}}).toJson(QJsonDocument::Compact)+'\n');
+        QTRY_VERIFY_WITH_TIMEOUT(process.canReadLine(),5000);const auto reply=QJsonDocument::fromJson(process.readLine()).object();
+        if(changed) {
+            QCOMPARE(reply.value("phase").toString(),QString("error"));QVERIFY(reply.value("error").toString().contains("revision"));
+        } else {
+            QCOMPARE(reply.value("phase").toString(),QString("decoded"));QCOMPARE(reply.value("sourceToken").toString(),initial);
+            QVERIFY(transfer.lock());QImage image(static_cast<const uchar*>(transfer.constData()),32,24,128,QImage::Format_RGBA8888);
+            const auto pixel=image.pixelColor(0,0);transfer.unlock();QVERIFY(pixel.red()>200&&pixel.green()<30&&pixel.blue()<30);
+            process.write("ok\n");
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(process.state(),QProcess::NotRunning,5000);QCOMPARE(process.exitCode(),changed?1:0);
+        QCOMPARE(hash(path),sourceHash);
     }
     void unavailableNativeRegistrationFallsBack() {
         QTemporaryDir dir;QVERIFY(dir.isValid());QVector<fs_watch::Observation> values;
