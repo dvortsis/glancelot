@@ -268,7 +268,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
-    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible
+    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible || (renameFlow && renameFlow.modal)
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -323,6 +323,7 @@ ApplicationWindow {
                 "view-preview", "view-grid", "view-combined", "combined-orientation",
                 "reveal-in-file-manager", "open-terminal",
                 "copy-path", "copy-file", "copy-image",
+                "rename", "new-folder",
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
                 "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset",
@@ -401,6 +402,40 @@ ApplicationWindow {
                 deleteFlow.request([folder], "command", "")
             } else {
                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
+            }
+        }
+        else if (id === "rename") {
+            let target = ""
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (focusWithin(treePanel) && treeFolder.length > 0) {
+                target = treeFolder
+            } else if (focusWithin(photoGrid) || gridScope || (workspace._gridShown && fileGrid.count > 0)) {
+                if (photoGrid.selectedPath && photoGrid.selectedPath.length > 0) {
+                    target = photoGrid.selectedPath
+                } else {
+                    const targets = photoGrid.deletionTargets()
+                    if (targets.length > 0) target = targets[0]
+                    else if (workspace._previewShown && viewer.filePath.length > 0) target = viewer.filePath
+                }
+            } else if (viewer.filePath.length > 0) {
+                target = viewer.filePath
+            } else if (treeFolder.length > 0) {
+                target = treeFolder
+            }
+            if (target.length > 0) {
+                renameFlow.openRename(target)
+            }
+        }
+        else if (id === "new-folder") {
+            let folder = ""
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (focusWithin(treePanel) && treeFolder.length > 0) {
+                folder = treeFolder
+            } else {
+                folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            }
+            if (folder.length > 0) {
+                renameFlow.openNewFolder(folder)
             }
         }
         else if (id === "reveal-in-file-manager") {
@@ -1254,6 +1289,15 @@ ApplicationWindow {
         host: app
         anchors.fill: parent
         z: 25
+        onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
+    }
+    RenameFlow { // RENAME-01 (F018) in-browser rename and new folder dialogs
+        id: renameFlow
+        objectName: "renameFlow"
+        host: app
+        mutationService: viewer.mutationService
+        anchors.fill: parent
+        z: 26
         onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
     }
     Rectangle {

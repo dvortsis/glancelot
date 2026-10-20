@@ -135,6 +135,9 @@ const std::vector<Command> registry {
     {"animation-speed-up", "Increase animation speed", "]"},
     {"animation-speed-down", "Decrease animation speed", "["},
     {"animation-toggle-loop", "Toggle animation loop", ""},
+    // RENAME-01 (F018)
+    {"rename", "Rename current file or folder", "F2"},
+    {"new-folder", "Create new folder", "Ctrl+Shift+N"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -241,6 +244,7 @@ struct ViewerController::Private {
     bool metadataVisible{false};
     quint64 metadataGeneration{0};
     glancelot::AnimationController animationController;
+    glancelot::MutationService mutationService;
 
     void loadMetadata(const QString& targetPath, quint64 gen) {
         animationController.load(targetPath, gen);
@@ -285,6 +289,8 @@ struct ViewerController::Private {
         });
         QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
         QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
+        QObject::connect(&mutationService, &glancelot::MutationService::pathRenamed, q, &ViewerController::reconcileRenamedPath);
+        QObject::connect(&mutationService, &glancelot::MutationService::folderCreated, q, &ViewerController::reconcileCreatedFolder);
     }
     ~Private() {
         writePosition(true);
@@ -1459,4 +1465,65 @@ void ViewerController::setMetadataVisible(bool visible) {
 
 void ViewerController::toggleMetadata() {
     setMetadataVisible(!d->metadataVisible);
+}
+
+
+glancelot::MutationService* ViewerController::mutationService() const {
+    return &d->mutationService;
+}
+
+void ViewerController::reconcileRenamedPath(const QString& oldPath, const QString& newPath) {
+    if (oldPath.isEmpty() || newPath.isEmpty()) return;
+    d->cache.clear();
+    emit cacheChanged();
+
+    const QString cleanOld = QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
+    const QString cleanNew = QDir::cleanPath(QDir::fromNativeSeparators(newPath));
+
+    auto pathMatches = [](const QString& a, const QString& b) {
+#ifdef Q_OS_WIN
+        return a.compare(b, Qt::CaseInsensitive) == 0;
+#else
+        return a == b;
+#endif
+    };
+
+    if (pathMatches(d->path, cleanOld)) {
+        d->path = cleanNew;
+        d->lastDecodedPath = cleanNew;
+        d->status = QStringLiteral("Renamed to %1").arg(QFileInfo(cleanNew).fileName());
+        std::error_code ec;
+        d->nav.open(nativePath(cleanNew), ec);
+        emit imageChanged();
+        emit stateChanged();
+    } else if (insideRoot(cleanOld, d->path)) {
+        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
+        const QString suffix = d->path.mid(prefix.length());
+        d->path = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
+        d->lastDecodedPath = d->path;
+        std::error_code ec;
+        d->nav.open(nativePath(d->path), ec);
+        emit stateChanged();
+    }
+
+    const QString currentDir = directory();
+    if (pathMatches(currentDir, cleanOld)) {
+        std::error_code ec;
+        d->nav.openDirectory(nativePath(cleanNew), ec);
+        emit stateChanged();
+    } else if (insideRoot(cleanOld, currentDir)) {
+        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
+        const QString suffix = currentDir.mid(prefix.length());
+        const QString newCurrentDir = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
+        std::error_code ec;
+        d->nav.openDirectory(nativePath(newCurrentDir), ec);
+        emit stateChanged();
+    }
+
+    emit filesInvalidated();
+}
+
+void ViewerController::reconcileCreatedFolder(const QString& folderPath) {
+    Q_UNUSED(folderPath);
+    emit filesInvalidated();
 }
