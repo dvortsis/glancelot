@@ -144,22 +144,25 @@ ApplicationWindow {
         // which side (left/top) or end (right/bottom) of the split it takes.
         const gridEdge=state.grid.region,gridOn=gridMode||combinedMode,previewOn=!gridMode
         state.grid.region="center";state.preview.region="center"
-        const all=["topbar","statusbar","filmstrip","tree","preview","grid"]
+        const all=["topbar","statusbar","filmstrip","tree","preview","grid","metadata"]
         // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
         // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
         const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
             topbar:state.topbar.visible||frameless, statusbar:state.statusbar.visible,
             filmstrip:state.filmstrip.visible&&!gridOn&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
+            metadata:state.metadata&&state.metadata.visible&&(viewer.metadataVisible||state.metadata.frozen),
             preview:previewOn,grid:gridOn}
         const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
             topbar:shown.topbar&&(gridOn||state.topbar.frozen),
             statusbar:shown.statusbar&&(gridOn||state.statusbar.frozen),
             filmstrip:shown.filmstrip&&state.filmstrip.frozen,
+            metadata:shown.metadata&&(viewer.metadataVisible||state.metadata.frozen),
             preview:shown.preview,grid:shown.grid}
         const active={tree:shown.tree&&(docked.tree||hudVisible||frameless),
             topbar:shown.topbar&&(docked.topbar||hudVisible||frameless),
             statusbar:shown.statusbar&&(docked.statusbar||hudVisible),
             filmstrip:shown.filmstrip&&(docked.filmstrip||hudVisible||frameless),
+            metadata:shown.metadata&&(docked.metadata||hudVisible),
             preview:shown.preview,grid:shown.grid}
         const ids=all.filter(id=>active[id])
         function horizontal(id) { return ["top","bottom"].indexOf(state[id].region)>=0 }
@@ -167,6 +170,7 @@ ApplicationWindow {
         function minimum(id) {
             if(id==="topbar"||id==="statusbar")return horizontal(id)?48:200
             if(id==="tree")return 200
+            if(id==="metadata")return 260
             if(id==="filmstrip")return horizontal(id)?68:100
             return 120
         }
@@ -176,7 +180,7 @@ ApplicationWindow {
         // Decided on the HUD-independent set so recovery cannot flip on and off with auto-hide.
         let recovered=group(shownIds,true).reduce((n,id)=>n+minimum(id),0)>height-120 || group(shownIds,false).reduce((n,id)=>n+minimum(id),0)>width-reservedCenter
         if(recovered) {
-            const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640]}
+            const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640],metadata:["right",0,320]}
             for(const id of Object.keys(defaults)) {
                 state[id].region=defaults[id][0];state[id].order=defaults[id][1];state[id].extent=defaults[id][2]
             }
@@ -322,7 +326,7 @@ ApplicationWindow {
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
                 "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset",
-                "navigate-back", "navigate-forward", "shortcuts-help"].indexOf(id) >= 0
+                "navigate-back", "navigate-forward", "shortcuts-help", "toggle-metadata"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -358,6 +362,7 @@ ApplicationWindow {
         else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
+        else if (id === "toggle-metadata") { viewer.toggleMetadata(); wakeHud() }
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
             const treeFolder = treePanel.currentSelectedFolder()
@@ -461,6 +466,7 @@ ApplicationWindow {
         onActivated: {
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
+            if (viewer.metadataVisible) { viewer.metadataVisible = false; return }
             if (app.gridMode) app.showCanvas()
             else if (app.combinedMode && app.focusedPane === "preview" && app.visibility !== Window.FullScreen) app.focusPane("grid")
             else if (app.visibility === Window.FullScreen) app.showNormal()
@@ -1190,6 +1196,15 @@ ApplicationWindow {
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
         onDeleteRequested: path => deleteFlow.request([path], "tree", "")
     }
+    MetadataHud {
+        id: metadataPanel
+        objectName: "metadataHud"
+        x: app.paneRect("metadata").x; y: app.paneRect("metadata").y
+        width: app.paneRect("metadata").width; height: app.paneRect("metadata").height
+        visible: width > 0 && height > 0
+        model: viewer.metadataModel
+        onCloseRequested: { viewer.metadataVisible = false; app.focusContent() }
+    }
     DeleteFlow { // DELETE-01 confirmation, progress, notice and results
         id: deleteFlow
         objectName: "deleteFlow"
@@ -1261,6 +1276,13 @@ ApplicationWindow {
             }
             UiButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
             UiButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
+            UiButton {
+                text: "Info"
+                visible: !app.gridMode
+                variant: viewer.metadataVisible ? "primary" : "standard"
+                tip: "Toggle metadata inspector"
+                onClicked: app.invoke("toggle-metadata")
+            }
         }
         }
     }
