@@ -4,6 +4,7 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include "glancelot/viewer_controller.hpp"
+#include "glancelot/io_scheduler.hpp"
 #include "glancelot/filter_state.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
@@ -114,6 +115,11 @@ const std::vector<Command> registry {
     {"navigate-forward", "Go forward to next folder", "Alt+Right"},
     // SHORTCUTS-HELP-01 (F056)
     {"shortcuts-help", "Keyboard shortcuts cheat sheet", "F1"},
+    // IO-01 Storage Profile Commands
+    {"storage-profile-auto", "Set storage profile to Auto", ""},
+    {"storage-profile-ssd", "Set storage profile to SSD (Maximum concurrency)", ""},
+    {"storage-profile-hdd", "Set storage profile to HDD (Serialized background I/O)", ""},
+    {"storage-profile-network", "Set storage profile to Network (Throttled I/O)", ""},
     // FILTER-01
     {"filter", "Filter folder files", "Ctrl+F"},
     {"clear-filter", "Clear active filter", ""},
@@ -188,6 +194,7 @@ struct ViewerController::Private {
     qint64 admittedPixelBytes{};
     QByteArray output;
     QCache<QString,QImage> cache{128*1024}; // KiB, only source-revision keyed immutable RGBA pixels.
+    QString storageProfile{"auto"};
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool* navigationPool=new QThreadPool;
@@ -337,6 +344,13 @@ struct ViewerController::Private {
         } else textScale = 1.0;
         if (object.value("reducedMotion").isBool()) reducedMotion = object.value("reducedMotion").toBool();
         else reducedMotion = false;
+        if (object.value("storageProfile").isString()) {
+            storageProfile = object.value("storageProfile").toString();
+            IoScheduler::instance().setProfile(parseStorageProfile(storageProfile));
+        } else {
+            storageProfile = "auto";
+            IoScheduler::instance().setProfile(StorageProfile::Auto);
+        }
     }
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
@@ -354,6 +368,7 @@ struct ViewerController::Private {
                 else if (name=="treePinned") object[name]=treePin;
                 else if (name=="textScale") object[name]=textScale;
                 else if (name=="reducedMotion") object[name]=reducedMotion;
+                else if (name=="storageProfile") object[name]=storageProfile;
             }
         }).ok();
     }
@@ -372,9 +387,11 @@ struct ViewerController::Private {
             }
             prefetchWorker = nullptr;
         }
+        IoScheduler::instance().release(lookaheadGeneration);
         prefetchTransfer.reset();
         prefetchAdmittedBytes = 0;
         prefetchOutput.clear();
+        emit q->ioStatsChanged();
     }
     void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
         cancelLookahead();
@@ -388,11 +405,14 @@ struct ViewerController::Private {
             else { QObject::connect(worker,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),worker,&QObject::deleteLater); worker->kill(); }
             worker=nullptr;
         }
+        IoScheduler::instance().release(generation);
         transfer.reset(); admittedPixelBytes=0; output.clear();
+        emit q->ioStatsChanged();
     }
 
     void startPrefetch(const QString& file, quint64 token) {
         if (loading || worker || prefetchWorker) return;
+        if (!IoScheduler::instance().isPrefetchPermitted(file)) return;
         QString program = QCoreApplication::applicationDirPath() + "/glancelot-decoder";
 #ifdef Q_OS_WIN
         program += ".exe";
@@ -402,7 +422,7 @@ struct ViewerController::Private {
         prefetchWorker->setStandardErrorFile(QProcess::nullDevice());
         auto* process = prefetchWorker;
 
-        QObject::connect(process, &QProcess::readyReadStandardOutput, q, [this, token, process, key] {
+        QObject::connect(process, &QProcess::readyReadStandardOutput, q, [this, token, process, key, file] {
             if (token != lookaheadGeneration || process != prefetchWorker) return;
             prefetchOutput += process->readAllStandardOutput();
             if (prefetchOutput.size() > 65536) { cancelLookahead(); return; }
@@ -430,6 +450,10 @@ struct ViewerController::Private {
                     const quint64 admitted = quint64(bytes) * 4 + quint64(image.sizeInBytes()) + quint64(cache.totalCost()) * 1024;
                     if (admitted > allowance) { cancelLookahead(); return; }
 
+                    if (!IoScheduler::instance().tryAdmit(token, JobPriority::Prefetch, bytes, file)) {
+                        cancelLookahead(); return;
+                    }
+                    emit q->ioStatsChanged();
                     prefetchTransfer = std::make_unique<QSharedMemory>("Glancelot-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
                     if (!prefetchTransfer->create(bytes)) { cancelLookahead(); return; }
                     prefetchAdmittedBytes = bytes;
@@ -475,6 +499,8 @@ struct ViewerController::Private {
         if (loading || worker) return;
 
         const auto snapshot = nav.snapshot();
+        const QString currentDir = q->directory().isEmpty() ? QDir::currentPath() : q->directory();
+        if (!IoScheduler::instance().isPrefetchPermitted(currentDir)) return;
         const auto total = int(snapshot.files.size());
         const auto it = std::find(snapshot.files.begin(), snapshot.files.end(), snapshot.current);
         const auto current = (it == snapshot.files.end()) ? -1 : int(std::distance(snapshot.files.begin(), it));
@@ -566,7 +592,7 @@ struct ViewerController::Private {
             glancelot::perf::detail::finish(glancelot::perf::Stage::DecodeQueue,token,perfQueued,perfFlags);
             perfQueued = -1; perfDecoding = glancelot::perf::detail::begin();
         });
-        QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key]{
+        QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key,file]{
             trace("decode:message");
             if (token!=generation || process!=worker) return;
             output+=process->readAllStandardOutput();
@@ -591,6 +617,10 @@ struct ViewerController::Private {
                     // Include decoder source/converted buffers, shared transfer and parent copy.
                     const quint64 admitted=quint64(bytes)*4+quint64(image.sizeInBytes())+quint64(cache.totalCost())*1024;
                     if (admitted>allowance) { cache.clear(); if (quint64(bytes)*4+quint64(image.sizeInBytes())>allowance) { fail("Insufficient memory headroom for this image. Close other images or try a smaller file."); return; } }
+                    if (!IoScheduler::instance().tryAdmit(token, JobPriority::Foreground, bytes, file)) {
+                        fail("Storage admission limit exceeded."); return;
+                    }
+                    emit q->ioStatsChanged();
                     transfer=std::make_unique<QSharedMemory>("Glancelot-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
                     if (!transfer->create(bytes)) { fail("Cannot reserve the image transfer buffer: "+transfer->errorString()); return; }
                     admittedPixelBytes=bytes;
@@ -622,6 +652,8 @@ struct ViewerController::Private {
         QObject::connect(process,&QProcess::errorOccurred,q,[this,token](QProcess::ProcessError error){ if(token==generation && loading) fail(error==QProcess::FailedToStart ? "Decoder is missing. Keep glancelot-decoder next to the viewer." : "Decoder process failed; try another image."); });
         QObject::connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),q,[this,process,token](int code,QProcess::ExitStatus exit){
             if (token!=generation || process!=worker) return;
+            IoScheduler::instance().release(token);
+            emit q->ioStatsChanged();
             worker=nullptr; transfer.reset(); process->deleteLater();
             if (loading) { finishDecodeTrace(glancelot::perf::Failed); deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
             else if (imageReady && navigationReady) { scheduleLookahead(); }
@@ -669,7 +701,7 @@ struct ViewerController::Private {
                     emit q->filterChanged();
                 }
                 if(clearedImage)emit q->imageChanged();
-                navigationReady=true; emit q->stateChanged();
+                navigationReady=true; emit q->stateChanged(); emit q->currentStorageTypeChanged();
                 if(!loading && imageReady) scheduleLookahead();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
@@ -1032,6 +1064,10 @@ void ViewerController::trigger(const QString& id){
     else if(id=="tree")setTreeVisible(!d->tree);
     else if(id=="clear-filter")clearFilter();
     else if(id=="toggle-filter-persistence")toggleFilterPersistence();
+    else if(id=="storage-profile-auto") { setStorageProfile("auto"); emit viewCommand(id); }
+    else if(id=="storage-profile-ssd") { setStorageProfile("ssd"); emit viewCommand(id); }
+    else if(id=="storage-profile-hdd") { setStorageProfile("hdd"); emit viewCommand(id); }
+    else if(id=="storage-profile-network") { setStorageProfile("network"); emit viewCommand(id); }
     else if(id=="quit")QCoreApplication::quit();
     else if(id=="copy-path") {
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
@@ -1330,3 +1366,30 @@ qint64 ViewerController::decodedCacheBytes() const { return qint64(d->cache.tota
 int ViewerController::decodedCacheCount() const { return d->cache.count(); }
 bool ViewerController::isLastDecodeCacheHit() const { return d->lastDecodeCacheHit; }
 void ViewerController::clearDecodedCache() { d->cancelLookahead(); d->cache.clear(); emit cacheChanged(); }
+
+QString ViewerController::storageProfile() const {
+    return d->storageProfile;
+}
+
+void ViewerController::setStorageProfile(const QString& profile) {
+    const QString p = profile.trimmed().toLower();
+    d->storageProfile = (p == "ssd" || p == "hdd" || p == "rotational" || p == "network") ? p : "auto";
+    IoScheduler::instance().setProfile(parseStorageProfile(d->storageProfile));
+    d->save({"storageProfile"});
+    emit storageProfileChanged();
+    emit currentStorageTypeChanged();
+    emit ioStatsChanged();
+}
+
+QString ViewerController::currentStorageType() const {
+    const QString dir = directory().isEmpty() ? QDir::currentPath() : directory();
+    return QString::fromLatin1(storageDeviceTypeToString(IoScheduler::instance().effectiveStorageType(dir)));
+}
+
+int ViewerController::activeIoJobs() const {
+    return IoScheduler::instance().activeJobCount();
+}
+
+qint64 ViewerController::admittedIoBytes() const {
+    return IoScheduler::instance().admittedBytes();
+}
