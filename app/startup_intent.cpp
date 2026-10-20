@@ -14,9 +14,14 @@ namespace {
 const QStringList viewerOptions{"quit-after","screenshot","perf-report","report","theme","theme-mode","show-grid","show-settings","show-themes","frameless","reset-settings","no-resume","window-size","safe-mode"};
 const QStringList maintenanceOptions{"settings-backup","settings-diff","settings-restore"};
 const QStringList selectionOptions{"settings-scope","settings-slot","settings-source","settings-preview"};
+// QGuiApplication used to consume these before the viewer parser. Preserve
+// their separate-operand spelling while validating before GUI construction.
+const QStringList qtValues{"platform","platformpluginpath","platformtheme","plugin","qwindowgeometry","qwindowtitle","qwindowicon","session","display","geometry","title","icon","name","visual","ncols"};
+const QStringList qtFlags{"reverse","nograb","dograb","sync"};
 bool path(const QString& text) {return !text.isEmpty()&&!text.startsWith('-')&&!text.contains(QChar(0))&&text.size()<=32768;}
 }
 void configure(QCommandLineParser& parser) {
+    parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     parser.setApplicationDescription("A local-first native photo viewer. JPEG/PNG alpha.");
     parser.addHelpOption();parser.addVersionOption();
     parser.addPositionalArgument("image","Image to open.","[image]");
@@ -41,6 +46,10 @@ void configure(QCommandLineParser& parser) {
     parser.addOption({"settings-slot","Select an offline position/layout slot (1..1000000).","slot"});
     parser.addOption({"settings-source","Select primary or last-good package member.","member"});
     parser.addOption({"settings-preview","Required sf1 fingerprint from settings-diff before restore.","fingerprint"});
+    for(const auto& name:qtValues+qtFlags) {
+        QCommandLineOption option(name,"Qt GUI option.",qtValues.contains(name)?QStringLiteral("value"):QString{});
+        option.setFlags(QCommandLineOption::HiddenFromHelp);parser.addOption(option);
+    }
 }
 Intent parse(const QStringList& arguments,QCommandLineParser& parser) {
     Intent result;
@@ -49,8 +58,15 @@ Intent parse(const QStringList& arguments,QCommandLineParser& parser) {
     if(!parser.parse(arguments))return fail(parser.errorText());
     QSet<QString> seen;
     for(auto name:parser.optionNames()) {
-        if(name=="h")name="help";if(name=="v")name="version";
+        if(name=="h"||name=="help-all")name="help";if(name=="v")name="version";
+        if(name=="geometry")name="qwindowgeometry";if(name=="title")name="qwindowtitle";if(name=="icon")name="qwindowicon";
         if(seen.contains(name))return fail("Repeated option: "+name);seen.insert(name);
+    }
+    bool terminated=false;
+    for(const auto& argument:arguments.sliced(1)) {
+        if(argument=="--"){terminated=true;continue;}if(terminated)continue;
+        for(const auto& name:qtValues)if(argument.startsWith("--"+name+"=")||argument.startsWith("-"+name+"="))
+            return fail("Qt GUI options require a separate operand: "+name);
     }
     int verbs=0;QString verb;
     for(const auto& name:maintenanceOptions)if(parser.isSet(name)){++verbs;verb=name;}
@@ -58,12 +74,12 @@ Intent parse(const QStringList& arguments,QCommandLineParser& parser) {
     const bool help=parser.isSet("help")||parser.isSet("help-all"),version=parser.isSet("version");
     if(help||version) {
         if((help&&version)||verbs||!parser.positionalArguments().isEmpty())return fail("Help/version cannot be combined with a command.");
-        for(const auto& name:viewerOptions+selectionOptions)if(parser.isSet(name))return fail("Help/version cannot be combined with options.");
+        for(const auto& name:viewerOptions+selectionOptions+qtValues+qtFlags)if(parser.isSet(name))return fail("Help/version cannot be combined with options.");
         result.mode=help?Mode::Help:Mode::Version;return result;
     }
     if(verbs) {
         if(!parser.positionalArguments().isEmpty())return fail("Settings maintenance does not accept an image.");
-        for(const auto& name:viewerOptions)if(parser.isSet(name))return fail("Settings maintenance cannot use --"+name+".");
+        for(const auto& name:viewerOptions+qtValues+qtFlags)if(parser.isSet(name))return fail("Settings maintenance cannot use --"+name+".");
         const auto operand=parser.value(verb);if(!path(operand))return fail("Invalid or ambiguous package directory.");
         result.packageDirectory=QDir::cleanPath(QFileInfo(operand).absoluteFilePath());
         result.mode=verb=="settings-backup"?Mode::Backup:verb=="settings-diff"?Mode::Diff:Mode::Restore;

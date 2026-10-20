@@ -99,6 +99,9 @@ private slots:
         row("bad-window-size",{"--window-size","540xbig"});row("empty-output",{"--report="});
         row("help-verb",{"--help","--settings-backup","one"});row("version-reset",{"--version","--reset-settings"});
         row("alias-repeat",{"-h","--help"});
+        row("qt-maintenance",{"--settings-diff","one","-platform","offscreen"});
+        row("qt-inline-operand",{"--platform=offscreen"});
+        row("qt-alias-repeat",{"-qwindowtitle","one","-title","two"});
         for(const auto* name:{"safe-mode","no-resume","reset-settings","show-grid","show-settings","show-themes","frameless"})
             row(name,{"--settings-diff","one","--"+QString::fromLatin1(name)});
         for(const auto* name:{"quit-after","screenshot","perf-report","report","theme","theme-mode","window-size"})
@@ -120,6 +123,13 @@ private slots:
 #else
         QVERIFY(native.isEmpty());
 #endif
+    }
+    void earlyParserKeepsQtGuiOptionsBeforeConstruction() {
+        QCommandLineParser parser;glancelot::startup::configure(parser);
+        const auto intent=glancelot::startup::parse({"glancelot","-platform","offscreen","--qwindowtitle","Generated title","-reverse","--safe-mode"},parser);
+        QCOMPARE(intent.mode,glancelot::startup::Mode::Viewer);QVERIFY(intent.safeMode);
+        QCOMPARE(parser.value("platform"),QString("offscreen"));QVERIFY(parser.isSet("reverse"));
+        QVERIFY(!qobject_cast<QGuiApplication*>(QCoreApplication::instance()));
     }
     void earlyParserSelectsExactMaintenanceScopeAndFingerprint() {
         using namespace glancelot::startup;

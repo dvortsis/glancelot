@@ -390,12 +390,57 @@ and component project are safe-environment-* in safe-mode-01/. No GUI/RHI was
 created here; actual viewer dispatch, software device/frame/RGB and Linux remain
 unverified. Main still needs this early setup before constructing the viewer.
 
+## Real executable startup, maintenance and software RHI
+
+Main now uses the shared Unicode early parser before application construction.
+Help/version/maintenance use QCoreApplication only; invalid arguments return bounded
+schema1 ArgumentError JSON before a GUI. Normal viewing attaches the actual claim.
+Safe mode prepares its process-owned temporary namespace and renderer request before
+QGuiApplication and all settings/session/controller/theme/layout owners. Existing
+Qt GUI options such as -platform remain accepted but refuse in maintenance. The
+single option table serves both early validation and later viewer option access.
+
+Actual renderer evidence is sampled on the render thread from the window's QRhi,
+with bounded device name and actual backend/device type. The local report identifies
+whether software classification came from CPU device type or the Mesa renderer
+name, and records canvas geometry/zoom/error plus swap and decoded-image timing.
+The process verifier samples generated RGB stripes at the actual image center in
+the RHI canvas, excluding thumbnails. Flags alone cannot pass this test.
+
+Production release configured with BUILD_TESTING=OFF and built the actual viewer
+and decoder. The measured executable SHA256 is
+F76DC3E244F31FA4B436B895D11D3870EB15A3B348E29E5DD50FC4F8415659CB.
+Initial full and final incremental build/configure outputs, cache proof and hash
+are release-* here. Startup component passed59/59 zero skips352ms (CTest1/1 .57s).
+Actual scripts/verify-recovery.py then passed33 completed commands on that release:
+headless commands run with a deliberately invalid QPA platform and no controller
+trace; real Unicode package/image paths and --, checked backup/diff/restore,
+stale/no-change/backup-only conflict, tamper, future primary, explicit last-good,
+argument/help/version nonmutation, safe and no-resume original byte hashes,
+normal preference visibility after safe exit, live-owner offline refusal, process
+kill after a successful dirty checkpoint, new-claim lazy restart, historical clean
+offline restore and failed explicit-open precedence. Generated media hashes stay
+unchanged. Only the owned process is killed; this does not prove physical power loss.
+
+Both safe launches actually used QRhi backend3/D3D11 and CPU device type5,
+Microsoft Basic Render Driver. They recorded24 swaps each, first decoded-image
+swaps1495ms/1252ms, and canvas samples [255,0,0], [0,255,0], [0,0,255]. The screenshot
+is1180x780; exact samples are570/590/610 at y390. Original settings/bak/damaged/
+sessions bytes and their full generated namespace tree remain unchanged. All actual
+commands/stdout/stderr/traces/reports/screenshots/RGB and interruption evidence are
+process-windows/; process-windows-output.txt records the actual verifier result.
+
+Lead amendments188649e/production activationc29b69c and required-test activation
+564ecdc are now present: production sources are outside BUILD_TESTING, old provider
+consumers attach idempotently, and all four real recovery test targets are enabled
+without missing-file/opt-out guards. Full candidate gates and independent review
+have not yet run; this runtime milestone is not task completion.
+
 ## Remaining complete scope
 
-Executable early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
-verification and complete failure/cancellation/process-interruption coverage remain
-to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and
-RecoveryTests unconditionally with real sources before candidate qualification.
-No placeholder pass or partial API constitutes F064/F057 completion. Independent
-cross-lane review and full Windows/Docker plus integrated gates remain required.
+Full scripts/build.ps1 -Test, Docker/Linux software-RHI and process verification,
+independent cross-lane review, any resulting corrections and serial integrated
+checks remain required before F064/F057 completion. Re-audit all frozen requirements
+against actual full-gate results, including failure/cancellation and other-slot
+preservation; component/runtime milestones alone do not qualify the whole feature.
 Physical GPU/DPI/power-loss behavior remains unverified unless measured.
