@@ -1,5 +1,6 @@
 #include <QtTest>
 #include <QProcess>
+#include <QPointer>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QCryptographicHash>
@@ -8,6 +9,7 @@
 #include "fs_monitor.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/io_scheduler.hpp"
+#include "glancelot/thumbnail_service.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
 #include <QSaveFile>
@@ -52,6 +54,31 @@ class FSWatchTests : public QObject {
         explicit HookScope(const fs_watch::ControllerTestHooks& hooks){fs_watch::controllerTestHooks=&hooks;}
         ~HookScope(){fs_watch::controllerTestHooks=previous;}
     };
+    static QString decoder(const QString& name="glancelot-decoder") {
+        return QCoreApplication::applicationDirPath()+"/"+name+
+#ifdef Q_OS_WIN
+            ".exe";
+#else
+            "";
+#endif
+    }
+    struct Fixture {
+        QTemporaryDir media,control;
+        fs_watch::ControllerTestHooks hooks;
+        Fixture() {
+            // IPC tests await the real baseline; the separate registration tests
+            // exercise production's 100 ms fallback and late-baseline restart.
+            hooks.baselineDeadlineMs=5000;
+            hooks.decoderProgram=decoder("fs_watch_decoder_fixture");
+            hooks.decoderArguments={"--fixture-config",control.filePath("worker.json")};
+        }
+        bool configure(const QJsonObject& object={}) {
+            return write(control.filePath("worker.json"),QJsonDocument(object).toJson(QJsonDocument::Compact));
+        }
+        QString path(const char* name)const{return media.filePath(QString::fromLatin1(name));}
+        bool prepare(){return media.isValid()&&control.isValid()&&configure()&&
+            png(path("a.png"),Qt::red)&&png(path("b.png"),Qt::green)&&png(path("c.png"),Qt::blue);}
+    };
     QTemporaryDir config;
     static bool png(const QString& path,Qt::GlobalColor color,QSize size=QSize(32,24)) {
         QSaveFile target(path);if(!target.open(QIODevice::WriteOnly)) {
@@ -68,6 +95,172 @@ class FSWatchTests : public QObject {
     }
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+    void malformedRevisionReply_data() {
+        QTest::addColumn<QJsonObject>("reply");
+        QTest::newRow("missing")<<QJsonObject{{"omitRevisionToken",true}};
+        QTest::newRow("number")<<QJsonObject{{"revisionToken",17}};
+        QTest::newRow("null")<<QJsonObject{{"revisionToken",QJsonValue(QJsonValue::Null)}};
+        QTest::newRow("version")<<QJsonObject{{"revisionToken","r2:"+QString(64,'a')}};
+        QTest::newRow("length")<<QJsonObject{{"revisionToken","r1:aaa"}};
+        QTest::newRow("uppercase")<<QJsonObject{{"revisionToken","r1:"+QString(64,'A')}};
+    }
+    void malformedRevisionReply() {
+        QFETCH(QJsonObject,reply);Fixture fixture;QVERIFY(fixture.prepare());
+        int revisions=0;fixture.hooks.workerStarted=[&](QProcess*,const QString& purpose,const QString&){if(purpose=="revision")++revisions;};
+        HookScope scope(fixture.hooks);ViewerController viewer;viewer.setBoundaryMode("stop");
+        viewer.open(fixture.path("a.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QVERIFY(fixture.configure({{"color","#00ff00"}}));viewer.open(fixture.path("b.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::green));
+        QVERIFY(fixture.configure(reply));viewer.previous();
+        QTRY_COMPARE_WITH_TIMEOUT(revisions,1,5000);QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading(),5000);
+        QVERIFY(!viewer.imageReady());QVERIFY(!viewer.isLastDecodeCacheHit());
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::green));
+        QVERIFY(viewer.status().contains("Invalid source revision"));
+        QVERIFY(fixture.configure({{"color","blue"}}));viewer.open(fixture.path("c.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+    }
+    void emptyRevisionDecodesWithoutCacheAdmission() {
+        Fixture fixture;QVERIFY(fixture.prepare());int revisions=0;
+        fixture.hooks.workerStarted=[&](QProcess*,const QString& purpose,const QString&){if(purpose=="revision")++revisions;};
+        HookScope scope(fixture.hooks);ViewerController viewer;viewer.setBoundaryMode("stop");
+        viewer.open(fixture.path("a.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        viewer.open(fixture.path("b.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QCOMPARE(viewer.decodedCacheCount(),2);
+        QVERIFY(fixture.configure({{"sourceToken",""},{"color","blue"}}));viewer.previous();
+        QTRY_COMPARE_WITH_TIMEOUT(revisions,1,5000);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));QVERIFY(!viewer.isLastDecodeCacheHit());
+        QCOMPARE(viewer.decodedCacheCount(),1);
+    }
+    void revisionWorkerSupersededOrTimedOut_data() {
+        QTest::addColumn<bool>("timeout");QTest::newRow("superseded")<<false;QTest::newRow("deadline")<<true;
+    }
+    void revisionWorkerSupersededOrTimedOut() {
+        QFETCH(bool,timeout);Fixture fixture;QVERIFY(fixture.prepare());QPointer<QProcess> held;
+        fixture.hooks.foregroundDeadlineMs=timeout?500:5000;
+        fixture.hooks.workerStarted=[&](QProcess* process,const QString& purpose,const QString&){if(purpose=="revision")held=process;};
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        HookScope scope(fixture.hooks);ViewerController viewer;viewer.setBoundaryMode("stop");
+        viewer.open(fixture.path("a.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        viewer.open(fixture.path("b.png"));QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QVERIFY(fixture.configure({{"revisionDelayMs",timeout?60000:600}}));viewer.previous();
+        QTRY_VERIFY_WITH_TIMEOUT(held&&held->state()==QProcess::Running,5000);
+        if(timeout) {
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading(),3000);QVERIFY(viewer.status().contains("timed out"));
+            QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));
+        }
+        QVERIFY(fixture.configure({{"color","blue"}}));viewer.open(fixture.path("c.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!held||held->state()==QProcess::NotRunning,3000);
+        QTRY_COMPARE_WITH_TIMEOUT(scheduler.activeJobCount(),0,3000);
+        QTest::qWait(750);QCOMPARE(viewer.filePath(),fixture.path("c.png"));
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));QVERIFY(!viewer.isLastDecodeCacheHit());
+    }
+    void thumbnailMemoryReleaseWakesPendingWork() {
+        QTemporaryDir media;QVERIFY(media.isValid());const auto path=media.filePath("a.png");QVERIFY(png(path,Qt::red));
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        scheduler.setProfile(glancelot::StorageProfile::Ssd);scheduler.setMemoryLimit(4096);
+        const auto id=glancelot::allocateIoJobId();QVERIFY(scheduler.tryAdmit(id,glancelot::JobPriority::Foreground,4096,path));
+        ThumbnailService service(decoder());QSignalSpy ready(&service,&ThumbnailService::ready),failed(&service,&ThumbnailService::failed);
+        QVERIFY(service.request(path,32,service.epoch()));QTest::qWait(50);
+        QCOMPARE(service.active(),0);QCOMPARE(service.pending(),1);QCOMPARE(ready.count(),0);
+        scheduler.release(id);QTRY_COMPARE_WITH_TIMEOUT(ready.count(),1,5000);QCOMPARE(failed.count(),0);
+        QCOMPARE(scheduler.activeJobCount(),0);QCOMPARE(scheduler.admittedBytes(),qint64(0));service.shutdown();
+    }
+    void prefetchWorkerSupersededOrTimedOut_data() {
+        QTest::addColumn<bool>("timeout");QTest::newRow("superseded")<<false;QTest::newRow("deadline")<<true;
+    }
+    void prefetchWorkerSupersededOrTimedOut() {
+        QFETCH(bool,timeout);Fixture fixture;QVERIFY(fixture.prepare());
+        QVERIFY(QDir(fixture.media.path()).mkdir("next"));const auto target=fixture.path("next/z.png");QVERIFY(png(target,Qt::green));
+        QVERIFY(fixture.configure({{"files",QJsonObject{{"z.png",QJsonObject{{"decodeDelayMs",60000}}}}}}));
+        fixture.hooks.prefetchDeadlineMs=timeout?500:5000;
+        fixture.hooks.discover=[target](int,std::stop_token){return fs_watch::native(target);};
+        QPointer<QProcess> held;fixture.hooks.workerStarted=[&](QProcess* process,const QString& purpose,const QString&){if(purpose=="prefetch")held=process;};
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        HookScope scope(fixture.hooks);ViewerController viewer;viewer.setBoundaryMode("continue");viewer.open(fixture.path("a.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QTRY_VERIFY_WITH_TIMEOUT(held&&held->state()==QProcess::Running,5000);
+        QTRY_COMPARE_WITH_TIMEOUT(scheduler.admittedBytes(),qint64(3072),3000);
+        if(timeout)QTRY_VERIFY_WITH_TIMEOUT(!held||held->state()==QProcess::NotRunning,3000);
+        viewer.setBoundaryMode("stop");QVERIFY(fixture.configure({{"color","blue"}}));viewer.open(fixture.path("c.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!held||held->state()==QProcess::NotRunning,3000);
+        QTRY_COMPARE_WITH_TIMEOUT(scheduler.activeJobCount(),0,3000);
+        QTest::qWait(600);QCOMPARE(viewer.decodedCacheCount(),2);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));QCOMPARE(viewer.filePath(),fixture.path("c.png"));
+    }
+    void lookaheadDiscoveryKeepsOnlyLatestPendingRequest() {
+        Fixture fixture;QVERIFY(fixture.prepare());
+        QVERIFY(QDir(fixture.media.path()).mkdir("next"));const auto target=fixture.path("next/z.png");QVERIFY(png(target,Qt::green));
+        std::atomic_bool release{};std::atomic_int calls{},running{},maxRunning{};
+        fixture.hooks.discover=[&](int,std::stop_token) -> std::optional<std::filesystem::path> {
+            ++calls;const int active=++running;maxRunning.store(std::max(maxRunning.load(),active));
+            while(!release.load())QThread::msleep(2);
+            --running;return fs_watch::native(target);
+        };
+        int maxActive=0,maxPending=0,prefetches=0;std::function<void()> request;
+        fixture.hooks.lookaheadState=[&](int active,int pending){maxActive=std::max(maxActive,active);maxPending=std::max(maxPending,pending);};
+        fixture.hooks.captureLookaheadRequest=[&](std::function<void()> callback){request=std::move(callback);};
+        fixture.hooks.workerStarted=[&](QProcess*,const QString& purpose,const QString&){if(purpose=="prefetch")++prefetches;};
+        HookScope scope(fixture.hooks);
+        {
+            ViewerController viewer;
+            const auto unblock=qScopeGuard([&]{release.store(true);});
+            viewer.setBoundaryMode("continue");viewer.open(fixture.path("a.png"));
+            QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+            QTRY_COMPARE_WITH_TIMEOUT(calls.load(),1,5000);QVERIFY(bool(request));
+            for(int i=0;i<200;++i)request();
+            QCOMPARE(calls.load(),1);QCOMPARE(maxActive,1);QCOMPARE(maxPending,1);QCOMPARE(prefetches,0);
+            release.store(true);QTRY_COMPARE_WITH_TIMEOUT(calls.load(),2,5000);
+            QTRY_COMPARE_WITH_TIMEOUT(prefetches,1,5000);QTRY_COMPARE_WITH_TIMEOUT(viewer.decodedCacheCount(),2,5000);
+            QCOMPARE(maxRunning.load(),1);QTest::qWait(150);QCOMPARE(calls.load(),2);QCOMPARE(prefetches,1);
+        }
+        // The exposed closure cannot retain or dereference a destroyed controller.
+        request();
+    }
+    void blockedLookaheadDoesNotRetainControllerOnClose() {
+        Fixture fixture;QVERIFY(fixture.prepare());
+        struct Gate {std::atomic_bool entered{},release{},finished{};};
+        auto gate=std::make_shared<Gate>();
+        fixture.hooks.discover=[gate](int,std::stop_token) -> std::optional<std::filesystem::path> {
+            gate->entered.store(true);
+            while(!gate->release.load())QThread::msleep(2);
+            gate->finished.store(true);return std::nullopt;
+        };
+        HookScope scope(fixture.hooks);
+        const auto unblock=qScopeGuard([gate]{gate->release.store(true);});
+        auto viewer=std::make_unique<ViewerController>();viewer->setBoundaryMode("continue");viewer->open(fixture.path("a.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(gate->entered.load(),5000);
+        QElapsedTimer close;close.start();viewer.reset();
+        const auto elapsed=close.elapsed();qInfo()<<"blocked discovery controller close ms"<<elapsed;
+        QVERIFY2(elapsed<2000,"Controller shutdown must remain bounded while discovery is blocked");
+        QVERIFY(!gate->finished.load());gate->release.store(true);
+        QTRY_VERIFY_WITH_TIMEOUT(gate->finished.load(),3000);
+    }
+    void thumbnailServicesOwnDistinctAdmissions_data() {
+        QTest::addColumn<bool>("rotational");QTest::newRow("ssd")<<false;QTest::newRow("rotational")<<true;
+    }
+    void thumbnailServicesOwnDistinctAdmissions() {
+        QFETCH(bool,rotational);QTemporaryDir media;QVERIFY(media.isValid());
+        const auto a=media.filePath("a.png"),b=media.filePath("b.png");QVERIFY(png(a,Qt::red));QVERIFY(png(b,Qt::blue));
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        scheduler.setProfile(rotational?glancelot::StorageProfile::Rotational:glancelot::StorageProfile::Ssd);
+        ThumbnailService one(decoder()),two(decoder());
+        QSignalSpy first(&one,&ThumbnailService::ready),second(&two,&ThumbnailService::ready);
+        QSignalSpy failOne(&one,&ThumbnailService::failed),failTwo(&two,&ThumbnailService::failed);
+        QCOMPARE(one.request(a,32,one.epoch()),quint64(1));QCOMPARE(two.request(b,32,two.epoch()),quint64(1));
+        QCOMPARE(scheduler.activeJobCount(),rotational?1:2);
+        QCOMPARE(scheduler.admittedBytes(),qint64(rotational?4096:8192));
+        QTRY_COMPARE_WITH_TIMEOUT(first.count(),1,5000);QTRY_COMPARE_WITH_TIMEOUT(second.count(),1,5000);
+        QCOMPARE(failOne.count(),0);QCOMPARE(failTwo.count(),0);
+        QCOMPARE(scheduler.activeJobCount(),0);QCOMPARE(scheduler.admittedBytes(),qint64(0));one.shutdown();two.shutdown();
+    }
     void admissionIdentityCannotOverwriteAnotherJob() {
         auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
         const auto cleanup=qScopeGuard([&]{scheduler.reset();});

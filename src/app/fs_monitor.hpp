@@ -11,6 +11,9 @@
 #include <optional>
 #include <algorithm>
 #include <atomic>
+#include <QStringList>
+
+class QProcess;
 
 namespace fs_watch {
 struct Observation {
@@ -34,6 +37,13 @@ struct ControllerTestHooks {
     MonitorOptions options;
     std::function<bool()> deferReconciliation;
     std::function<void(const Observation&)> pending;
+    QString decoderProgram;
+    QStringList decoderArguments;
+    int foregroundDeadlineMs{},prefetchDeadlineMs{},baselineDeadlineMs{};
+    std::function<void(QProcess*,const QString&,const QString&)> workerStarted;
+    std::function<std::optional<std::filesystem::path>(int,std::stop_token)> discover;
+    std::function<void(int,int)> lookaheadState;
+    std::function<void(std::function<void()>)> captureLookaheadRequest;
 };
 inline thread_local const ControllerTestHooks* controllerTestHooks{};
 #endif

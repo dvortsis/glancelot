@@ -1,6 +1,7 @@
 #include "glancelot/perf_trace.hpp"
 #include "../core/perf_context.hpp"
 #include "fs_monitor.hpp"
+#include <QPointer>
 #include "fs_source_token.hpp"
 #include "io_job_lease.hpp"
 #include <QClipboard>
@@ -258,12 +259,25 @@ struct ViewerController::Private {
         deadline.setSingleShot(true); deadline.setInterval(15000);
         QObject::connect(&deadline,&QTimer::timeout,q,[this]{ fail("Decoder timed out. You can open another image or retry."); });
         prefetchDeadline.setSingleShot(true);prefetchDeadline.setInterval(15000);
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks) {
+            if(testHooks->foregroundDeadlineMs>0)deadline.setInterval(testHooks->foregroundDeadlineMs);
+            if(testHooks->prefetchDeadlineMs>0)prefetchDeadline.setInterval(testHooks->prefetchDeadlineMs);
+            if(testHooks->captureLookaheadRequest) {
+                QPointer<ViewerController> guard(q);
+                testHooks->captureLookaheadRequest([this,guard]{if(guard)scheduleLookahead();});
+            }
+        }
+#endif
         QObject::connect(&prefetchDeadline,&QTimer::timeout,q,[this]{cancelLookahead();});
         // Normally decode starts after native registration/baseline, closing the
         // open-to-watch race. A blocked filesystem never delays explicit decoding
         // indefinitely: the 100ms fallback starts it and a late baseline validates
         // it with one fresh decode after registration.
         decodeStart.setSingleShot(true);decodeStart.setInterval(100);
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks&&testHooks->baselineDeadlineMs>0)decodeStart.setInterval(testHooks->baselineDeadlineMs);
+#endif
         QObject::connect(&decodeStart,&QTimer::timeout,q,[this]{
             if(!decodeAwaitingBaseline||path.isEmpty())return;
             decodeAwaitingBaseline=false;decodeStartedWithoutBaseline=true;decode(path,generation);
@@ -552,7 +566,18 @@ struct ViewerController::Private {
             if (token == lookaheadGeneration&&process==prefetchWorker) cancelLookahead();
         });
 
-        prefetchDeadline.start();process->start(program, {file});
+        QStringList arguments{file};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks) {
+            if(!testHooks->decoderProgram.isEmpty())program=testHooks->decoderProgram;
+            arguments=testHooks->decoderArguments+arguments;
+            QObject::connect(process,&QProcess::started,q,[this,token,process,file]{
+                if(token==lookaheadGeneration&&process==prefetchWorker&&testHooks->workerStarted)
+                    testHooks->workerStarted(process,"prefetch",file);
+            });
+        }
+#endif
+        prefetchDeadline.start();process->start(program,arguments);
     }
 
     void scheduleLookahead() {
@@ -581,17 +606,24 @@ struct ViewerController::Private {
         auto cancelToken = lookaheadStop.get_token();
 
         LookaheadRequest request{nav,direction,token,cancelToken};
-        if(lookaheadBusy){pendingLookahead=std::move(request);return;}
+        if(lookaheadBusy){pendingLookahead=std::move(request);notifyLookaheadState();return;}
         startLookahead(std::move(request));
+    }
+    void notifyLookaheadState() {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks&&testHooks->lookaheadState)testHooks->lookaheadState(lookaheadBusy?1:0,pendingLookahead?1:0);
+#endif
     }
     void startLookahead(LookaheadRequest request) {
         lookaheadBusy=true;
+        notifyLookaheadState();
         const auto token=request.token;const auto cancelToken=request.stop;
         auto* futureWatcher = new QFutureWatcher<std::optional<std::filesystem::path>>(q);
         QObject::connect(futureWatcher, &QFutureWatcher<std::optional<std::filesystem::path>>::finished, q, [this, futureWatcher, token, cancelToken] {
             const auto result = futureWatcher->result();
             futureWatcher->deleteLater();
             lookaheadBusy=false;
+            notifyLookaheadState();
             if(!cancelToken.stop_requested()&&token==lookaheadGeneration&&result&&!result->empty()&&!loading&&!worker) {
                 const QString targetPath=displayPath(*result);
                 lookaheadCandidate=targetPath;
@@ -603,8 +635,13 @@ struct ViewerController::Private {
             }
         });
 
-        QFuture<std::optional<std::filesystem::path>> future = QtConcurrent::run(navigationPool, [navCopy = std::move(request.navigator), direction=request.direction, cancelToken]() mutable -> std::optional<std::filesystem::path> {
+        std::function<std::optional<std::filesystem::path>(int,std::stop_token)> discover;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks)discover=testHooks->discover;
+#endif
+        QFuture<std::optional<std::filesystem::path>> future = QtConcurrent::run(navigationPool, [navCopy = std::move(request.navigator), direction=request.direction, cancelToken,discover=std::move(discover)]() mutable -> std::optional<std::filesystem::path> {
             if (cancelToken.stop_requested()) return std::nullopt;
+            if(discover)return discover(direction,cancelToken);
             navCopy.setCancellation(cancelToken);
             return navCopy.folder(direction);
         });
@@ -722,8 +759,12 @@ struct ViewerController::Private {
         if(!initialAdmission){fail("Storage admission limit exceeded.");return;}
         decodeLease=std::move(initialAdmission);
         notifyIoStatsChanged();
-        QObject::connect(process,&QProcess::started,q,[this,token,process,revisionOnly] {
+        QObject::connect(process,&QProcess::started,q,[this,token,process,revisionOnly,file] {
             if (token != generation || process != worker) return;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            if(testHooks&&testHooks->workerStarted)testHooks->workerStarted(process,revisionOnly?"revision":"decode",file);
+            if(token!=generation||process!=worker)return;
+#endif
             if(revisionOnly){perfDecoding=perfQueued;perfQueued=-1;return;}
             glancelot::perf::detail::finish(glancelot::perf::Stage::DecodeQueue,token,perfQueued,perfFlags);
             perfQueued = -1; perfDecoding = glancelot::perf::detail::begin();
@@ -818,7 +859,14 @@ struct ViewerController::Private {
             if (loading) { finishDecodeTrace(glancelot::perf::Failed); deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
             else if (imageReady && navigationReady) { scheduleLookahead(); }
         });
-        deadline.start();process->start(program,revisionOnly?QStringList{"--source-revision",file}:QStringList{file});
+        QStringList arguments=revisionOnly?QStringList{"--source-revision",file}:QStringList{file};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks) {
+            if(!testHooks->decoderProgram.isEmpty())program=testHooks->decoderProgram;
+            arguments=testHooks->decoderArguments+arguments;
+        }
+#endif
+        deadline.start();process->start(program,arguments);
         trace("decode:started");
     }
     void submitNavigation(NavigationJob job) {
