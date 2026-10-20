@@ -106,3 +106,23 @@ destructive-styled primary action, a Cancel button and the file name shown.
     palettes (dark palettes are above 1.5:1). WCAG 1.4.11 asks 3:1 for the boundary of a control when the border is what
     identifies it (inputs, outlined buttons). Whether that applies depends on whether fills or labels also mark the control,
     so this is a design call; the screenshots were all taken in the default dark theme, so light-theme layouts were not viewed.
+
+## Third pass: light themes, full decoder protocol, startup traces
+- **Light and dark themes rendered** (5 families x light/dark x grid/photo = 20 screenshots; two committed). The layouts hold in
+  light themes: no overlap, readable text, "Viewing" badge and the selected cell are clear
+  (`theme-parchment-light-grid.png`, `theme-slate-ice-light-photo.png`). The theme-mode switch applied in all 20 cases.
+19. **Minor - "Preview unavailable" placeholder colour ignores the theme family**: it is a fixed cool blue-grey, so on warm
+    families (parchment, amber) the tiles clash with the palette. Take it from a theme token.
+20. **Minor - filmstrip labels break mid-word** when no thumbnail is available ("Photo 0.j / pg" in
+    `theme-slate-ice-light-photo.png`). Elide or break at word boundaries.
+- **Decoder worker, full protocol fuzz** (probe, shared-memory handshake, decoded, ok): 400 mutated, truncated, header-corrupted and
+  byte-inserted PNG/JPEG/BMP/TIFF files, 42 decoded end to end, 358 rejected cleanly, 0 crashes, 0 hangs (8 s limit).
+  GIF was not seeded because this Qt build cannot write GIF.
+- **`--window-size` trace:** cost scales with window area. 20000x20000 takes about 1 s, 32768x32768 1.6 s, 50000x50000 3.5 s
+  and 99999x99999 exceeds 25 s with no file (22.9 s and exit 3 with a file). With a file and a window of 32768x32768 or more the
+  load is still pending at the timed quit (exit code 3 means "still loading"). Only the software backend was tried.
+  Clamp the size to the screen.
+- **UNC trace (refines finding 17):** `\\nonexistent-host\share` as a directory argument exits in 0.9 s, but the file form
+  `\\nonexistent-host\share\a.jpg` takes 8.7 s and exits 3 (load still pending at the 0.5 s timed quit). `app/main.cpp:129`
+  calls `QFileInfo::exists(filePath)` synchronously before `viewer.open`. I could not separate time spent before the window
+  from time spent at shutdown.

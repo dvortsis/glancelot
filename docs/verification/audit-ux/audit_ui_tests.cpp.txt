@@ -27,6 +27,14 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QQmlApplicationEngine>
+#include <QProcess>
+#include <QSharedMemory>
+#include <QUuid>
+#include <QBuffer>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QRandomGenerator>
+#include <QElapsedTimer>
 #include <QQmlContext>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -276,6 +284,73 @@ private slots:
                 qInfo().noquote() << "AUDIT-DIALOG" << tag << "trigger=" << ok;
                 for (const auto& issue : probe(hs.window)) qWarning().noquote() << "AUDIT" << tag << issue;
             }
+    }
+
+    void themes_data() {
+        QTest::addColumn<QString>("family"); QTest::addColumn<QString>("mode"); QTest::addColumn<QString>("view");
+        for (const QString fam : {"slate-ice", "parchment", "amber", "graphite", "teal"})
+            for (const QString mode : {"light", "dark"})
+                for (const QString view : {"grid", "photo"})
+                    QTest::newRow(qPrintable(fam + "-" + mode + "-" + view)) << fam << mode << view;
+    }
+    void themes() {
+        QFETCH(QString, family); QFETCH(QString, mode); QFETCH(QString, view);
+        Harness hs(true); QVERIFY(hs.window); hs.window->resize(900, 600);
+        QTemporaryDir media; QVERIFY(media.isValid());
+        for (int i = 0; i < 12; ++i) { QImage img(800, 600, QImage::Format_RGB32); img.fill(QColor::fromHsv(i * 30, 160, 210)); QVERIFY(img.save(media.filePath(QString("Photo %1.jpg").arg(i)))); }
+        hs.theme.setFamily(family); hs.theme.setMode(mode);
+        hs.viewer.open(media.filePath("Photo 3.jpg")); QTRY_VERIFY_WITH_TIMEOUT(hs.viewer.fileCount() > 0, 10000);
+        if (view == "grid") hs.viewer.trigger("grid");
+        hs.window->requestActivate(); QTest::qWait(900);
+        QVERIFY(hs.window->grabWindow().save(".cache/audit/theme-" + family + "-" + mode + "-" + view + ".png"));
+        QVERIFY2(hs.theme.dark() == (mode == "dark"), "theme mode not applied");
+    }
+
+    // Full worker protocol: probe, shared-memory handshake, decoded, ok. Crash or hang fails.
+    void decoderProtocolFuzz() {
+        QString program = QCoreApplication::applicationDirPath() + "/glancelot-decoder.exe";
+        QVERIFY2(QFileInfo::exists(program), qPrintable(program));
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QList<QByteArray> seeds; QStringList exts{"png", "jpg", "bmp", "tif"};
+        for (const QString& ext : exts) { QImage img(160, 120, QImage::Format_RGB32); img.fill(Qt::darkCyan); QBuffer buf; buf.open(QIODevice::WriteOnly); QVERIFY(img.save(&buf, ext.toLatin1().constData())); seeds << buf.data(); }
+        QRandomGenerator rng(4242); int decoded = 0, rejected = 0, bad = 0; const int total = 400;
+        for (int n = 0; n < total; ++n) {
+            QByteArray data = seeds[n % seeds.size()];
+            const int mode = n % 4;
+            if (mode == 0) { for (int k = 0, c = 1 + rng.bounded(10); k < c; ++k) data[rng.bounded(data.size())] = char(rng.bounded(256)); }
+            else if (mode == 1) data.truncate(rng.bounded(1, data.size()));
+            else if (mode == 2) { for (int k = 0; k < 30; ++k) data[rng.bounded(qMin(data.size(), 64))] = char(rng.bounded(256)); }
+            else { const int at = rng.bounded(data.size()); data.insert(at, QByteArray(rng.bounded(1, 64), char(rng.bounded(256)))); }
+            const QString path = dir.filePath(QString("f%1.%2").arg(n).arg(exts[n % exts.size()]));
+            QFile f(path); QVERIFY(f.open(QIODevice::WriteOnly)); f.write(data); f.close();
+            QProcess p; p.setProgram(program); p.setArguments({path}); p.setStandardErrorFile(QProcess::nullDevice()); p.start();
+            if (!p.waitForStarted(5000)) { ++bad; qWarning() << "AUDIT-FUZZ start failed" << path; continue; }
+            std::unique_ptr<QSharedMemory> shm; QByteArray out; bool done = false, hang = false;
+            QElapsedTimer t; t.start();
+            while (!done) {
+                if (!p.waitForReadyRead(200) && p.state() == QProcess::NotRunning) { out += p.readAllStandardOutput(); break; }
+                out += p.readAllStandardOutput();
+                while (out.contains('\n')) {
+                    const int nl = out.indexOf('\n'); const auto line = out.left(nl); out.remove(0, nl + 1);
+                    const auto obj = QJsonDocument::fromJson(line).object(); const auto phase = obj.value("phase").toString();
+                    if (phase == "probe") {
+                        const qint64 bytes = obj.value("bytes").toInteger();
+                        if (bytes <= 0 || bytes > 64 * 1024 * 1024) { done = true; ++rejected; break; }
+                        shm = std::make_unique<QSharedMemory>("Glancelot-fuzz-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
+                        if (!shm->create(bytes)) { done = true; break; }
+                        p.write(QJsonDocument(QJsonObject{{"key", shm->key()}}).toJson(QJsonDocument::Compact) + '\n');
+                    } else if (phase == "decoded") { ++decoded; p.write("ok\n"); done = true; break; }
+                    else if (phase == "error") { ++rejected; done = true; break; }
+                }
+                if (t.elapsed() > 8000) { hang = true; break; }
+            }
+            if (hang) { ++bad; qWarning() << "AUDIT-FUZZ HANG" << path; p.kill(); }
+            p.waitForFinished(3000);
+            if (!hang && p.state() == QProcess::NotRunning && p.exitStatus() == QProcess::CrashExit) { ++bad; qWarning() << "AUDIT-FUZZ CRASH" << path << p.exitCode(); }
+            if (p.state() != QProcess::NotRunning) p.kill();
+        }
+        qInfo() << "AUDIT-FUZZ total" << total << "decoded" << decoded << "rejected" << rejected << "bad" << bad;
+        QCOMPARE(bad, 0);
     }
 };
 QTEST_MAIN(AuditUiTests)
