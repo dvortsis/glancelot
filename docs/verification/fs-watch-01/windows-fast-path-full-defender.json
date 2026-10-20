@@ -1,0 +1,45 @@
+{
+  "source": "80964f799cca1df542706b497e2cb012c92efe5f",
+  "observedUtc": "2026-10-20T17:06:49.1526657Z",
+  "scope": "Read-only repository test-binary records; no protection changes; not a machine-wide clean verdict",
+  "detections": [
+    {
+      "threatId": 2147738096,
+      "initialDetection": "2026-10-20T09:01:55.951-06:00",
+      "lastStatusChange": "2026-10-20T09:02:47.033-06:00",
+      "remediation": "2026-10-20T09:02:47.033-06:00",
+      "actionSuccess": true,
+      "resources": [
+        "file:_C:\\src\\Github\\Glancelot\\.worktrees\\monitor-output\\build-monitor-output\\platform_launcher_stub.exe"
+      ]
+    },
+    {
+      "threatId": 2147738096,
+      "initialDetection": "2026-10-20T09:02:18.321-06:00",
+      "lastStatusChange": "2026-10-20T09:02:47.172-06:00",
+      "remediation": "2026-10-20T09:02:47.172-06:00",
+      "actionSuccess": true,
+      "resources": [
+        "file:_C:\\src\\Github\\Glancelot\\.worktrees\\monitor-output\\build-monitor-output\\platform_launcher_stub.exe"
+      ]
+    },
+    {
+      "threatId": 2147738096,
+      "initialDetection": "2026-10-20T08:03:03.226-06:00",
+      "lastStatusChange": "2026-10-20T08:03:50.918-06:00",
+      "remediation": "2026-10-20T08:03:50.918-06:00",
+      "actionSuccess": true,
+      "resources": [
+        "file:_C:\\src\\Github\\Glancelot\\.worktrees\\codex-fs-watch-01\\build-codex-fs-watch-01\\platform_launcher_stub.exe"
+      ]
+    }
+  ],
+  "threats": [
+    {
+      "ThreatID": 2147738096,
+      "ThreatName": "Behavior:Win32/DefenseEvasion.A!ml",
+      "IsActive": false,
+      "DidThreatExecute": false
+    }
+  ]
+}

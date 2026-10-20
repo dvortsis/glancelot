@@ -1,5 +1,34 @@
 # FS-WATCH-01 implementation evidence
 
+Current candidate80964f7 passed full Windows32/32 in625.10s and full Linux Docker
+32/32 in233.88s; runtime image built. Product/tests match actual R14-reviewed
+4a86528 exactly. Corrected merge and integrated-commit gates are still pending;
+the earlier merge2c38082 does not contain this optimization.
+
+Exact windows-fast-path-full-*.txt/json logs retain backend82/82 zero skips80.815s,
+budget3/3 zero skips129.271s, UI3/3 zero skips3.694s, platform26/26 zero skips1170ms
+and the full CTest log (grid258.33s). Dense setup77565ms, initial GUI13ms,
+sustained-writer GUI72ms, max publication115ms and filtered GUI/publication115ms
+meet unchanged limits. The build-Test command returned0; its outer wrapper
+stopped before Docker solely because CTest's shorter success wording did not
+match a literal string. All32 individual Passed lines and the success summary
+were checked; Windows was not rerun for that wrapper error. Docker then ran on
+the same pinned80964f7. The corrected recognizer and result record are retained.
+
+Linux logs retain backend83/83 zero skips69.326s, budget3/3 zero skips21.998s,
+UI3/3 zero skips1.503s and actual failed-start QProcess::Starting. Dense setup4745ms,
+initial/sustained GUI31ms, filtered GUI66ms and max publication61ms meet bounds.
+Build-stage extraction reused the successful CTest layer; it did not rerun tests.
+See linux-fast-path-full-*.txt, ACCEPTANCE-AUDIT.md and the artifact SHA256 manifest.
+
+Known native suite overlap occurred earlier in the Windows run; exact duplicate
+review/monitor runner stop records are preserved under the user's reserved FS
+slot/monitor stop instructions. No full host isolation is claimed. Post-run
+repository-scoped Defender records contain only retired-helper detections with
+successful actions, inactive/nonexecuted; no replacement-helper detection appears
+in those inspected records. No protection changes, restore, exclusion, clean-machine
+or false-positive conclusion is used. Physical platform behavior remains unverified.
+
 Correction4a86528: actual Claude R14 review9851f03 accepts the narrow same-key/
 order metadata refresh optimization, subject fresh full/integrated gates. Exact
 claude-r14-review.md is retained. Windows build succeeded. Selected metadata
