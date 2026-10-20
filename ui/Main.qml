@@ -969,7 +969,7 @@ ApplicationWindow {
             host: app; commandId: "delete-selection"; iconName: "trash"; danger: true
             available: gridMenu.targets.length > 0
             label: gridMenu.targets.length === 1 ? "Move “" + app.menuName(app.leafName(gridMenu.targets[0])) + "” to the " + deleteFlow.trashName
-                : "Move " + gridMenu.targets.length + " items to the " + deleteFlow.trashName
+                : qsTr("Move %1 items to the %2").arg(gridMenu.targets.length).arg(deleteFlow.trashName)
         }
     }
     // ---- GRID-PREVIEW-01 combined view: split handle, explicit preview states, pane focus rings and notices.

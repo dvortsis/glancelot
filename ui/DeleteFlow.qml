@@ -73,7 +73,7 @@ Item {
     readonly property int shownNames: compactHeight ? 3 : 5
     readonly property string title: {
         if (phase === "executing") return "Moving to the " + trashName + "…"
-        if (phase === "planning") return requestedCount === 1 ? "Move this item to the " + trashName + "?" : "Move " + requestedCount + " items to the " + trashName + "?"
+        if (phase === "planning") return requestedCount === 1 ? qsTr("Move this item to the %1?").arg(trashName) : qsTr("Move %1 items to the %2?").arg(requestedCount).arg(trashName)
         if (targets.length === 0) return "Nothing can be moved"
         if (targets.length === 1) return "Move this " + (targets[0].kind === "folder" ? "folder" : "file") + " to the " + trashName + "?"
         return "Move " + count(targets.length, "item", "items") + " to the " + trashName + "?"
@@ -140,7 +140,7 @@ Item {
             flow.phase = ""
             if (confirmDialog.visible) confirmDialog.close()
             if (failed.length === 0)
-                flow.showNotice("Moved " + flow.count(moved, "item", "items") + " to the " + flow.trashName + ". You can restore " + (moved === 1 ? "it" : "them") + " from there.")
+                flow.showNotice(moved === 1 ? qsTr("Moved 1 item to the %1. You can restore it from there.").arg(flow.trashName) : qsTr("Moved %1 items to the %2. You can restore them from there.").arg(moved).arg(flow.trashName))
             else resultsDialog.open()
         }
     }
@@ -333,7 +333,7 @@ Item {
         anchors.centerIn: parent
         width: Math.min(520, (parent ? parent.width : 520) - 2 * Theme.gapLg)
         readonly property real maximumList: (parent ? parent.height : 600) - 2 * Theme.gapLg - topPadding - bottomPadding - implicitHeaderHeight - Theme.controlHeight - 120
-        title: flow.movedCount > 0 ? "Moved " + flow.movedCount + " of " + (flow.movedCount + flow.failures.length) + " items to the " + flow.trashName
+        title: flow.movedCount > 0 ? qsTr("Moved %1 of %2 items to the %3").arg(flow.movedCount).arg(flow.movedCount + flow.failures.length).arg(flow.trashName)
                                    : "Nothing was moved to the " + flow.trashName
         onOpened: closeResults.forceActiveFocus(Qt.TabFocusReason)
         onClosed: flow.flowClosed()
@@ -341,7 +341,7 @@ Item {
             anchors.fill: parent
             spacing: Theme.gapMd
             Label {
-                text: flow.failures.length === 1 ? "This item was left in place:" : "These " + flow.failures.length + " items were left in place:"
+                text: flow.failures.length === 1 ? qsTr("This item was left in place:") : qsTr("These %1 items were left in place:").arg(flow.failures.length)
                 color: Theme.text
                 font.pixelSize: Theme.textBody
                 wrapMode: Text.Wrap
@@ -388,7 +388,7 @@ Item {
                 Layout.fillWidth: true
                 spacing: Theme.gapMd
                 Caption { // recovery is honest: there is no in-app undo, the system trash restores
-                    text: flow.movedCount > 0 ? "Moved items can be restored from the " + flow.trashName + "." : "Nothing was deleted."
+                    text: flow.movedCount > 0 ? qsTr("Moved items can be restored from the %1.").arg(flow.trashName) : qsTr("Nothing was deleted.")
                     Layout.alignment: Qt.AlignVCenter
                 }
                 UiButton { id: closeResults; objectName: "deleteResultsClose"; variant: "primary"; text: qsTr("Close"); onClicked: resultsDialog.close() }

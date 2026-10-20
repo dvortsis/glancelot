@@ -285,7 +285,7 @@ Rectangle {
             Label {
                 objectName: "gridItemCount"
                 visible: fileGrid.count > 0 && panel.width >= 480
-                text: fileGrid.count === 1 ? "1 item" : fileGrid.count.toLocaleString(Qt.locale(), "f", 0) + " items"
+                text: fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0))
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.features: { "tnum": 1 }
