@@ -71,7 +71,7 @@ QImage makeThumbnail(const QString& path, int edge, QString& error) {
     reader.setDecideFormatFromContent(true);
     reader.setAutoTransform(true);
     const auto format = reader.format().toLower();
-    if (format != "jpeg" && format != "jpg" && format != "png") { error = "Unsupported format for thumbnails."; return {}; }
+    if (format != "jpeg" && format != "jpg" && format != "png" && format != "gif" && format != "webp" && format != "tiff" && format != "tif") { error = "Unsupported format for thumbnails."; return {}; }
     // Scale in the stored orientation; the EXIF transform is applied after decoding, so the final
     // aspect ratio is correct even when the orientation swaps the axes.
     const QSize stored = reader.size();
@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
     reader.setDecideFormatFromContent(true);
     reader.setAutoTransform(true);
     const auto format = reader.format().toLower();
-    if (format != "jpeg" && format != "jpg" && format != "png") return fail("This alpha supports JPEG and PNG images.");
+    if (format != "jpeg" && format != "jpg" && format != "png" && format != "gif" && format != "webp" && format != "tiff" && format != "tif") return fail("This alpha supports JPEG, PNG, GIF, WebP, and TIFF images.");
     const QSize size = reader.size();
     if (!size.isValid() || size.width() > 32768 || size.height() > 32768) return fail("Invalid or unsupported image dimensions.");
     const qint64 capacity = qint64(size.width()) * size.height() * 4;

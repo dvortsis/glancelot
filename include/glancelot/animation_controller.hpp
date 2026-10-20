@@ -57,6 +57,7 @@ Q_SIGNALS:
     void loopChanged();
     void frameImageChanged();
     void frameLabelChanged();
+    void loaded(quint64 generation);
 
 private:
     struct Private;

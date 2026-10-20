@@ -11,7 +11,7 @@ Rectangle {
     readonly property bool isPlaying: controller ? controller.playing : false
     readonly property int currentFrame: controller ? controller.currentFrame : 0
     readonly property int frameCount: controller ? controller.frameCount : 0
-    readonly property qreal speed: controller ? controller.speed : 1.0
+    readonly property real speed: controller ? controller.speed : 1.0
     readonly property bool isLoop: controller ? controller.loop : true
     readonly property string label: controller ? controller.frameLabel : ""
 
