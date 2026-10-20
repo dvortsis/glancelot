@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "agent/io", branch: "agent/io", started: "2026-10-19T21:06:00Z"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -473,7 +473,10 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: implementing
+    state: done
+    commit: 1f97893
+    evidence: docs/verification/IO-01.md; independent review approved; Windows scripts/build.ps1 -Test 24/24 (165.75s); Linux Docker Qt 24/24 (112.86s)
+    integrated_evidence: integrated 1f97893 Windows scripts/build.ps1 -Test 24/24 (163.34s) and Linux docker build 24/24 (112.86s)
     branch: agent/io
     worktree: .worktrees/io
     build: build-io
