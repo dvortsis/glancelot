@@ -47,7 +47,8 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp
     src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
     src/app/folder_history.cpp include/glancelot/folder_history.hpp
-    src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp)
+    src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp
+    src/app/io_scheduler.cpp include/glancelot/io_scheduler.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -194,6 +195,13 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(cache_tests glancelot-decoder)
     add_test(NAME cache COMMAND cache_tests -o -,txt)
     set_tests_properties(cache PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+    qt_add_executable(io_scheduler_tests tests/io_scheduler_tests.cpp src/app/io_scheduler.cpp include/glancelot/io_scheduler.hpp src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp)
+    target_include_directories(io_scheduler_tests PRIVATE include src/app)
+    target_compile_definitions(io_scheduler_tests PRIVATE GLANCELOT_DECODER_PATH="$<TARGET_FILE:glancelot-decoder>")
+    target_link_libraries(io_scheduler_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
+    add_dependencies(io_scheduler_tests glancelot-decoder)
+    add_test(NAME io_scheduler COMMAND io_scheduler_tests -o -,txt)
+    set_tests_properties(io_scheduler PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
   endif()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
