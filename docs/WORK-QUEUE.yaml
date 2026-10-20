@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead-fs-watch-cache-contract-sync, branch: codex/fs-watch-01, started: "2026-10-20T01:10:18Z"}
+integration_lock: {holder: "lead/codex-fs-watch-sync", branch: "codex/fs-watch-01", started: "2026-10-19T20:40:00-06:00"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -455,7 +455,12 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: implementing
+    state: review
+    commit: 8b28060
+    evidence: docs/verification/CACHE-01.md; independent review approved; Windows scripts/build.ps1 -Test 23/23 (206.74s); Linux Docker Qt 23/23 (135.07s)
+    integrated_evidence: integrated 8b28060 Windows scripts/build.ps1 -Test 23/23 (263.94s) and Linux docker build 23/23 (135.07s)
+    review_followup: Independent Codex16ef41f CHANGES REQUESTED; generated same-size/restored-mtime noncurrent navigation displays stale pixels; prior integrated gates preserved, correction and combined review required
+    integration_correction: Lead freezes narrow private FS revision-validation integration in FS-WATCH-01-PLAN.md; Cache policy/public API remain Gemini-owned
     branch: agent/cache
     worktree: .worktrees/cache
     build: build-cache
@@ -609,6 +614,8 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
+    integration_contract: Lead-frozen Cache amendment in FS-WATCH-01-PLAN.md; merge main after immutable current gate, preserve Cache features and add off-GUI source validation, then independent combined review and full gates
+    candidate_evidence: Source825f7f2 acceptable for integration per actual Claude f0bf272; Linux25/25 210.08s, current Windows gate running; no combined approval
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending

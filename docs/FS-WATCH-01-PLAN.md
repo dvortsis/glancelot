@@ -177,3 +177,53 @@ coverage from an unchanged string. Explicit navigation through another alias
 spelling of an existing directory resets selection; identity-following is reserved
 for a proven rename where the former spelling no longer denotes that identity.
 Physical/coarse-timestamp/network/reparse variants remain unverified until measured.
+
+## Lead-frozen Cache integration amendment
+
+Frozen under lead/codex-fs-watch-sync after mainb90163d releases the Cache lock.
+FS source825f7f2 is independently acceptable for integration (Claude f0bf272),
+but Cache main8b28060 introduces a navigation hit path that must participate in
+FS revision validation. Independent Codex review16ef41f reproduces wrong pixels
+after a noncurrent same-size/restored-mtime replacement. Preserve that review and
+the original Cache evidence; the older approval does not cover this new case.
+
+Assign the narrow private integration correction to the lead/Codex FS packet in
+its own worktree. This aligns FS changed-source guarantees with the imported
+Cache engine; it does not transfer ownership of Cache policy or start another
+implementation packet. Do not edit the Gemini worktree. Preserve real decoded
+hits, bidirectional traversal, cross-folder lookahead, metrics, capacity/admission
+policy and public Cache declarations. Disabling all hits is not completion.
+
+- Merge current main into the FS branch under the serial lock after its running
+  immutable Windows gate finishes. Resolve private controller integration in the
+  assigned FS worktree; retain newer main public declarations and feature tests.
+  Do not restore the old GUI filesystem watcher/debounce path.
+- Use private FS source revisions for both foreground cache reuse and prefetch
+  admission/publication. Path/size/mtime alone cannot validate pixels. Check native
+  identity/revision independently of notification delivery, off the GUI thread.
+  Unknown/ambiguous source evidence is a miss. Capture before decode and validate
+  again before publishing/admitting its result; scope/generation and source
+  revision are separate guards. Do not claim exclusion of an external writer
+  after the final check; later events/polling still reconcile subsequent changes.
+- Bound validation to one running job and one newest pending request per window,
+  with by-value lifetime and cancellation/generation checks. An uninterruptible
+  probe cannot block UI shutdown. Preserve at most three FS watches; do not add
+  per-cached-asset watches. Do not introduce a competing settings/catalog writer.
+- Keep foreground and prefetch worker memory/deadline bounds. The imported
+  prefetch path must honor its existing Cache packet's15s worker limit. Invalidate
+  old work before admitting a changed revision and retain cacheChanged metrics
+  notifications when stored pixels are purged. No scheduler/capacity redesign.
+
+Add the generated noncurrent replacement regression to the separate FS feature
+tests, not grid_ui_tests.cpp, while retaining original Cache tests. Require fresh
+blue pixels and a miss after the equal4096-byte/restored-mtime red-to-blue change;
+require genuine hits/lookahead for unchanged sources. Include cancellation/newer
+open, source change during decode/prefetch and watch-loss fallback without new
+original-media writes. Existing private test-only seams may be extended under
+GLANCELOT_FS_WATCH_TESTING only; no runtime hook or shared header change is frozen.
+No additional product QML change is permitted beyond the existing refresh token.
+
+Return the combined candidate to independent Claude review. Run full Windows and
+Docker gates on combined source, then complete the required serial no-ff merge
+and integrated-commit checks before either packet is done. Prior source-only
+passes are preserved as scoped evidence, not relabeled as combined approval.
