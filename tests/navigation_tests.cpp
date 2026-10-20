@@ -50,7 +50,12 @@ void naturalOrdering() {
         if (naturalLess(a, b) && naturalLess(b, c)) require(naturalLess(a, c), "comparator is not transitive");
     }
     require(isSupportedImage("photo.JPEG") && isSupportedImage("photo.PnG"), "extension case handling");
-    require(!isSupportedImage("photo.gif") && !isSupportedImage("photo.png.txt"), "unqualified extension supported");
+    require(isSupportedImage("photo.gif") && isSupportedImage("photo.WEBP") && isSupportedImage("photo.bmp") && isSupportedImage("photo.DNG"), "qualified format support");
+    require(!isSupportedImage("photo.txt") && !isSupportedImage("photo.png.txt") && !isSupportedImage("photo.pdf"), "unsupported extensions rejected");
+    require(imageCategory("photo.gif") == ImageFormatCategory::Animated, "gif is animated");
+    require(imageCategory("photo.dng") == ImageFormatCategory::Raw, "dng is raw");
+    require(imageCategory("photo.jpg") == ImageFormatCategory::Raster, "jpg is raster");
+    require(imageCategory("photo.pdf") == ImageFormatCategory::Unsupported, "pdf is unsupported");
 }
 void traversal() {
     Fixture f;
@@ -111,7 +116,7 @@ void rootAndBoundaries() {
     const auto before = nav.snapshot().current;
     require(!nav.open(f.root / "does-not-exist.jpg", ec) && ec, "missing input accepted");
     require(nav.snapshot().current == before, "failed open changed current");
-    require(!nav.open(f.file("unsupported.gif"), ec) && ec, "unsupported input accepted");
+    require(!nav.open(f.file("unsupported.txt"), ec) && ec, "unsupported input accepted");
     require(!nav.setRoot({}), "empty root accepted");
 #ifdef _WIN32
     require(nav.open(f.root / "1/A.JPG", ec), "Windows case-insensitive shell path rejected");
