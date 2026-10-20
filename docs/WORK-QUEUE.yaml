@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "agent/cache", branch: "agent/cache", started: "2026-10-19T20:03:00Z"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -455,7 +455,10 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: implementing
+    state: done
+    commit: 8b28060
+    evidence: docs/verification/CACHE-01.md; independent review approved; Windows scripts/build.ps1 -Test 23/23 (206.74s); Linux Docker Qt 23/23 (135.07s)
+    integrated_evidence: integrated 8b28060 Windows scripts/build.ps1 -Test 23/23 (263.94s) and Linux docker build 23/23 (135.07s)
     branch: agent/cache
     worktree: .worktrees/cache
     build: build-cache

@@ -110,6 +110,13 @@ Test project C:/src/Github/Glancelot/.worktrees/cache/build-cache
 Total Test time (real) = 206.74 sec
 ```
 
+### Integrated Test Run on main (commit 8b28060)
+
+- **Windows Native CTest (scripts/build.ps1 -Test)**:
+  - 23/23 tests passed cleanly (263.94 sec real time).
+- **Linux Docker Container (docker build -t glancelot-browser:main .)**:
+  - 23/23 tests passed cleanly (135.07 sec real time).
+
 ---
 
 ## 4. Architectural & Safety Review
