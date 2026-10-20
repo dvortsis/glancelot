@@ -710,3 +710,19 @@ on main8b28060, review16ef41f (CHANGES REQUESTED). See the Cache integration
 handoff note for exact generated same-size/restored-mtime navigation evidence.
 The Cache owner's correction and combined independent review remain necessary;
 neither this Linux pass nor FS source acceptance waives that demonstrated defect.
+
+## Exact current-source Windows gate before Cache sync
+
+scripts/build.ps1 -BuildDir build-codex-fs-watch-01 -Test on825f7f2 source
+passed25/25,409.58s,terminal0. Later commits changed documentation only.
+fs_watch177.25s,fs_watch_ui1.81s,folder_grid126.89s passed. The backend is close
+to its unchanged180s CTest timeout; this pass does not prove timing headroom on
+slower or loaded hosts. No timeout/oracle was raised. Output is
+fs-watch-01/windows-r10-full-gate.txt. Qt CTest stdout again contains no per-case
+counts, so zero skips is established only by the separately saved targeted
+Windows/current full Linux executions. No competing Windows UI suite was live.
+
+Both candidate platform gates now pass. Under lead lock9463943/main0212daa,
+the next step imports main and its frozen private Cache integration amendment.
+The combined source has not yet been reviewed or qualified; these passes remain
+evidence for the pre-Cache candidate, not for the upcoming correction.
