@@ -7,6 +7,7 @@
 #include "fs_revision.hpp"
 #include "fs_source_token.hpp"
 #include "fs_monitor.hpp"
+#include "io_job_lease.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/io_scheduler.hpp"
 #include "glancelot/thumbnail_service.hpp"
@@ -313,6 +314,36 @@ private slots:
         QCOMPARE(scheduler.admittedBytes(),qint64(1024));QCOMPARE(scheduler.activeJobCount(),1);
         scheduler.release(17);QCOMPARE(scheduler.admittedBytes(),qint64(0));
         QCOMPARE(scheduler.activeJobCount(),0);QCOMPARE(scheduler.activeForegroundJobs(),0);
+    }
+    void retiredWorkerReleasesAdmissionExactlyOnce_data() {
+        QTest::addColumn<bool>("unstartable");QTest::addColumn<bool>("destroyOwner");
+        QTest::newRow("failed-start")<<true<<false;
+        QTest::newRow("running")<<false<<false;
+        QTest::newRow("closed-owner")<<false<<true;
+    }
+    void retiredWorkerReleasesAdmissionExactlyOnce() {
+        QFETCH(bool,unstartable);QFETCH(bool,destroyOwner);
+        Fixture fixture;QVERIFY(fixture.prepare());
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto reset=qScopeGuard([&]{scheduler.reset();});
+        auto lease=glancelot::detail::admitIoJob(glancelot::JobPriority::Foreground,3072,fixture.media.path());QVERIFY(lease);
+        std::weak_ptr<glancelot::detail::IoJobLease> weak=lease;
+        auto owner=std::make_unique<QObject>();int released=0;
+        auto* process=new QProcess;QPointer<QProcess> observed(process);
+        const auto cleanup=qScopeGuard([&]{if(observed)delete observed.data();});
+        process->start(unstartable?fixture.control.filePath("no-such-decoder"):fixture.hooks.decoderProgram,
+            unstartable?QStringList{}:fixture.hooks.decoderArguments+QStringList{fixture.path("a.png")});
+        if(!unstartable)QVERIFY(process->waitForStarted(2000));
+        qInfo()<<"retired worker state"<<process->state()<<"unstartable"<<unstartable;
+#ifdef Q_OS_UNIX
+        if(unstartable)QCOMPARE(process->state(),QProcess::Starting);
+#endif
+        glancelot::detail::retireIoProcess(process,std::move(lease),owner.get(),[&]{++released;});
+        if(destroyOwner)owner.reset();
+        QTRY_VERIFY_WITH_TIMEOUT(!observed,3000);QVERIFY(weak.expired());
+        QTRY_COMPARE_WITH_TIMEOUT(released,destroyOwner?0:1,3000);
+        QTest::qWait(25);QCOMPARE(released,destroyOwner?0:1);
+        QCOMPARE(scheduler.activeJobCount(),0);QCOMPARE(scheduler.activeForegroundJobs(),0);QCOMPARE(scheduler.admittedBytes(),qint64(0));
     }
     void admissionRejectsInvalidEstimates() {
         auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
