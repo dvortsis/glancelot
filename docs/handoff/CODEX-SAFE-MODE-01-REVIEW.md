@@ -1,12 +1,11 @@
 # SAFE-MODE-01 independent review preparation
 
-Status: candidate gates passed; independent review and integrated checks remain open.
+Status: independent review corrections prepared; new candidate gates and fix review remain open.
 Implementing lane: Codex, branch `codex/safe-mode-01`, assigned worktree
 `.worktrees/codex-safe-mode-01`, build `build-codex-safe-mode-01`.
 The lead pins the source/evidence commit in the review request. A reviewer must come from another lane
 and use an isolated checkout/build. Do not review a moving branch as though it
-were the final candidate. Claude service review of this separate SAFE payload
-still needs the user's concrete authorization; PLATFORM/FS approvals do not cover it.
+were the final candidate. The user approved Claude SAFE review and packet follow-ups. Initial review and coverage reports are retained; corrected source requires a pinned follow-up review.
 
 ## Frozen scope
 

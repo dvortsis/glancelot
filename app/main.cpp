@@ -246,7 +246,9 @@ int main(int argc,char** argv) {
     if(parser.isSet("quit-after")) {
         bool valid=false;const int duration=parser.value("quit-after").toInt(&valid);
         if(!valid || duration<100 || duration>3600000)return 2;
-        QTimer::singleShot(duration,&app,[&]{
+        const auto quitTimerStartedMs=elapsed.elapsed();
+        QTimer::singleShot(duration,&app,[&,quitTimerStartedMs,duration]{
+            const auto quitCallbackMs=elapsed.elapsed();
             if(window&&parser.isSet("screenshot"))window->grabWindow().save(parser.value("screenshot"));
             if(parser.isSet("report")) {
                 QJsonObject actualRhi;
@@ -285,6 +287,7 @@ int main(int argc,char** argv) {
                     {"window",windowEvidence},
                     {"wheel_mode",viewer.wheelMode()},
                     {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
+                    {"quit_timer_started_ms",quitTimerStartedMs},{"quit_after_ms",duration},{"quit_callback_ms",quitCallbackMs},{"report_ms",elapsed.elapsed()},
                     {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
                     {"loading",viewer.loading()},{"status",viewer.status()},
                     {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},

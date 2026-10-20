@@ -16,7 +16,7 @@ const QStringList maintenanceOptions{"settings-backup","settings-diff","settings
 const QStringList selectionOptions{"settings-scope","settings-slot","settings-source","settings-preview"};
 // QGuiApplication used to consume these before the viewer parser. Preserve
 // their separate-operand spelling while validating before GUI construction.
-const QStringList qtValues{"platform","platformpluginpath","platformtheme","plugin","qwindowgeometry","qwindowtitle","qwindowicon","session","display","geometry","title","icon","name","visual","ncols"};
+const QStringList qtValues{"platform","platformpluginpath","platformtheme","plugin","qwindowgeometry","qwindowtitle","qwindowicon","session","display","geometry","title","icon","name","visual","ncols","qmljsdebugger"};
 const QStringList qtFlags{"reverse","nograb","dograb","sync"};
 bool path(const QString& text) {return !text.isEmpty()&&!text.startsWith('-')&&!text.contains(QChar(0))&&text.size()<=32768;}
 }
@@ -65,8 +65,9 @@ Intent parse(const QStringList& arguments,QCommandLineParser& parser) {
     bool terminated=false;
     for(const auto& argument:arguments.sliced(1)) {
         if(argument=="--"){terminated=true;continue;}if(terminated)continue;
-        for(const auto& name:qtValues)if(argument.startsWith("--"+name+"=")||argument.startsWith("-"+name+"="))
+        for(const auto& name:qtValues)if(name!="qmljsdebugger"&&(argument.startsWith("--"+name+"=")||argument.startsWith("-"+name+"=")))
             return fail("Qt GUI options require a separate operand: "+name);
+        if(argument=="-qmljsdebugger"||argument=="--qmljsdebugger")return fail("Qt QML debugging requires an inline operand.");
     }
     int verbs=0;QString verb;
     for(const auto& name:maintenanceOptions)if(parser.isSet(name)){++verbs;verb=name;}

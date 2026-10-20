@@ -596,3 +596,53 @@ attempt remain retained; this pass does not prove the cause of those failures.
 Source candidate now has both required complete candidate gates passed. Independent
 cross-lane review and serial integration with actual integrated checks remain open;
 SAFE-MODE-01 is not done or merged into main.
+
+## Independent review corrections (qualification pending)
+
+Claude reviewed pinned0580fe0 (product source d4f0e70). The full independent
+results are SAFE-MODE-01-CLAUDE-REVIEW.md and SAFE-MODE-01-CLAUDE-COVERAGE.md.
+The lead is correcting findings rather than waiving the preference contention
+regression. This new source has not yet passed complete candidate/integrated
+gates or received a fix review; the preceding37/37 results qualify d4f0e70 only.
+
+Ordinary SettingsStatus/updateSettings remain synchronous and unchanged. Private
+interactive preference adapters now capture edits by value and retry Busy on
+owner-thread timers, with one latest pending edit per channel,128channels maximum,
+and a four-second retry budget. Root namespaces are captured at submission.
+Controller preferences, sort/shortcut conflict validation, theme, layout and
+favorites use this adapter. Teardown attempts a bounded final batch without
+calling the dying owner. Neither pending acceptance nor UI application claims
+that a write has committed. Terminal errors use existing feedback.
+
+A failed begin retains fail-closed recovery mutations while a worker separately
+reads and validates a read-only saved position. Malformed/future recovery metadata
+therefore no longer blocks a valid lazy resume. Explicit-open precedence remains.
+Owned position restore changes the checkpoint revision without consuming the
+Session's next navigation sequence; an old clean acknowledgement still conflicts.
+Closing retains retry backoff. A layout absent from the restore source removes
+only owned values; unknown content retains supported version1 so a subsequent real
+PaneLayout edit preserves it. Empty known-only slot entries are removed. The
+policy hash includes an explicit semantics revision for that change.
+
+The executable verifier now exercises layout restore and Unicode configuration
+roots in maintenance, safe GUI and restart/offline runs. Namespace digests include
+empty directories. Additional report timestamps distinguish timer creation,
+callback and serialization; original frame/RGB assertions and timer are unchanged.
+The native Qt -qmljsdebugger= spelling is accepted by the early parser; it enables
+no debugging code. Qt's documented spelling is at
+https://doc.qt.io/qt-6.8/qqmldebuggingenabler.html and
+https://doc.qt.io/qt-6.8/ja/qtquick-debugging.html (inspected October20).
+Power-loss durability remains explicitly unverified, including the package
+flush/directory-sync limitation noted by Claude. No fsync guarantee is claimed.
+
+Intermediate working-tree runs are retained as diagnostics, not final pinned
+qualification: initial focused4/5 exposed layout Busy feedback and a doubled
+change signal (exact assertions in review-fixes-pane-failure.txt). Both corrected,
+the next focused run passed5/5 in17.59s. Expanded intermediate run passed7/8 in
+94.96s, including recovery137/137, startup61/61, controller15/15 zero skips and
+actual35-command executable verification30.01s. viewer_acceptance failed45.94s
+without stdout; identical isolated binary then passed21/21 zero skips7.465s.
+Cause is unproven. Persistent QtTest logging is now wired by the lead without
+changing assertions, platform settings or timeout. Final source also adds retry
+exhaustion/deletion and fresh foreign shortcut conflict regressions and guards
+synchronous completion signal compatibility; these await the next actual run.

@@ -10,6 +10,7 @@ public:
     struct Snapshot {
         bool beginFinished{},begun{},busy{},closing{},closed{};
         BeginResult beginning;
+        std::optional<ResumeState> readOnlyResume; // validated on the worker after a failed begin; never authorizes writes
         CheckpointResult lastAttempt;
         quint64 acceptedSequence{},persistedSequence{};
         Status finalStatus;

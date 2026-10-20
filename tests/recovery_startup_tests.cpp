@@ -101,6 +101,8 @@ private slots:
         row("alias-repeat",{"-h","--help"});
         row("qt-maintenance",{"--settings-diff","one","-platform","offscreen"});
         row("qt-inline-operand",{"--platform=offscreen"});
+        row("qml-debug-maintenance",{"--settings-diff","one","-qmljsdebugger=port:1234"});
+        row("qml-debug-separate-operand",{"-qmljsdebugger","port:1234"});
         row("qt-alias-repeat",{"-qwindowtitle","one","-title","two"});
         for(const auto* name:{"safe-mode","no-resume","reset-settings","show-grid","show-settings","show-themes","frameless"})
             row(name,{"--settings-diff","one","--"+QString::fromLatin1(name)});
@@ -130,6 +132,10 @@ private slots:
         QCOMPARE(intent.mode,glancelot::startup::Mode::Viewer);QVERIFY(intent.safeMode);
         QCOMPARE(parser.value("platform"),QString("offscreen"));QVERIFY(parser.isSet("reverse"));
         QVERIFY(!qobject_cast<QGuiApplication*>(QCoreApplication::instance()));
+        QCommandLineParser debugger;glancelot::startup::configure(debugger);
+        const auto debugIntent=glancelot::startup::parse({"glancelot","-qmljsdebugger=port:1234,host:127.0.0.1","--no-resume"},debugger);
+        QCOMPARE(debugIntent.mode,glancelot::startup::Mode::Viewer);
+        QCOMPARE(debugger.value("qmljsdebugger"),QString("port:1234,host:127.0.0.1"));
     }
     void earlyParserSelectsExactMaintenanceScopeAndFingerprint() {
         using namespace glancelot::startup;

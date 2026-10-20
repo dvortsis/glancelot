@@ -2,6 +2,7 @@
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
 #include "settings_raw.hpp"
+#include "settings_retry.hpp"
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QCoreApplication>
@@ -13,6 +14,10 @@
 #include <QStandardPaths>
 #include <QRandomGenerator>
 #include <QThread>
+#include <QTimer>
+#include <QPointer>
+#include <deque>
+#include <algorithm>
 
 namespace glancelot {
 namespace {
@@ -209,10 +214,11 @@ Result transact(const Request& input,const Editor& edit,const PreimageWriter& pr
 }
 }
 
-SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit,bool waitOnExit) {
+namespace {
+SettingsStatus updateAt(const QString& directory,const std::function<void(QJsonObject&)>& edit,bool waitOnExit,int timeoutMs=4000) {
     const bool retry=waitOnExit||!interactiveThread();
-    settings_detail::Request request;request.context.directory=settingsDirectory();
-    request.policy=settings_detail::Policy::Ordinary;request.options.lockTimeoutMs=retry?4000:0;
+    settings_detail::Request request;request.context.directory=directory;
+    request.policy=settings_detail::Policy::Ordinary;request.options.lockTimeoutMs=retry?std::clamp(timeoutMs,0,4000):0;
     request.retryReplacements=retry;
     const auto result=settings_detail::transact(request,[&](const settings_detail::View& view) {
         auto replacement=view.base;edit(replacement);
@@ -226,6 +232,79 @@ SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit,bool
     case recovery::Code::Busy:return {SettingsStatus::Busy};
     default:return {SettingsStatus::WriteFailed};
     }
+}
+class SettingsRetries final:public QObject {
+    struct Pending {
+        QString channel,directory;
+        std::function<void(QJsonObject&)> edit;
+        std::function<void(SettingsStatus)> completed;
+        QElapsedTimer elapsed;
+    };
+    std::deque<Pending> pending;
+    QTimer timer;
+public:
+    explicit SettingsRetries(QObject* owner):QObject(owner) {
+        timer.setSingleShot(true);timer.setInterval(25);
+        QObject::connect(&timer,&QTimer::timeout,this,[this]{run();});
+    }
+    ~SettingsRetries() override {
+        // Preferences accepted immediately before closing should get the same
+        // bounded final-write opportunity as legacy synchronous callers. No
+        // editor borrows the owner; its members may already be destroyed here.
+        timer.stop();QElapsedTimer budget;budget.start();
+        while(!pending.empty()&&budget.elapsed()<4000) {
+            const auto directory=pending.front().directory;
+            std::deque<Pending> batch;
+            for(auto it=pending.begin();it!=pending.end();) {
+                if(it->directory==directory){batch.push_back(std::move(*it));it=pending.erase(it);}else ++it;
+            }
+            const auto result=updateAt(directory,[&batch](QJsonObject& root){for(const auto& value:batch)value.edit(root);},true,int(4000-budget.elapsed()));
+            if(!result.ok())qWarning("Glancelot: pending preferences could not be saved during final teardown");
+        }
+    }
+    bool submit(Pending value) {
+        // Distinct channels merge independently. Moving a superseding edit to
+        // the end preserves its ordering relative to reset/other-field edits.
+        const auto previous=std::find_if(pending.begin(),pending.end(),[&](const auto& row){return row.channel==value.channel&&row.directory==value.directory;});
+        if(previous!=pending.end())pending.erase(previous);
+        if(pending.size()>=128) {
+            if(value.completed)value.completed({SettingsStatus::Busy});
+            return false;
+        }
+        value.elapsed.start();
+        if(pending.empty()) {
+            const auto result=updateAt(value.directory,value.edit,false);
+            if(result.code!=SettingsStatus::Busy) {
+                const bool ok=result.ok();if(value.completed)value.completed(result);return ok;
+            }
+        }
+        pending.push_back(std::move(value));if(!timer.isActive())timer.start();return true;
+    }
+    bool submit(QString channel,std::function<void(QJsonObject&)> edit,std::function<void(SettingsStatus)> completed) {
+        return submit({std::move(channel),QDir::cleanPath(QFileInfo(settingsDirectory()).absoluteFilePath()),std::move(edit),std::move(completed),{}});
+    }
+    void run() {
+        if(pending.empty())return;
+        auto value=std::move(pending.front());pending.pop_front();
+        const auto result=updateAt(value.directory,value.edit,false);
+        if(result.code==SettingsStatus::Busy&&value.elapsed.elapsed()<4000)pending.push_front(std::move(value));
+        else if(value.completed) {
+            const QPointer<SettingsRetries> alive(this);value.completed(result);if(!alive)return;
+        }
+        if(!pending.empty())timer.start();
+    }
+};
+}
+SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit,bool waitOnExit) {
+    return updateAt(settingsDirectory(),edit,waitOnExit);
+}
+bool settings_detail::saveWithRetry(QObject* owner,QString channel,std::function<void(QJsonObject&)> edit,
+                                  std::function<void(SettingsStatus)> completed) {
+    if(!owner||!edit||owner->thread()!=QThread::currentThread())return false;
+    SettingsRetries* retries=nullptr;
+    for(auto* child:owner->children())if((retries=dynamic_cast<SettingsRetries*>(child)))break;
+    if(!retries)retries=new SettingsRetries(owner);
+    return retries->submit(std::move(channel),std::move(edit),std::move(completed));
 }
 
 bool resetSettings(QString* movedTo) {

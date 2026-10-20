@@ -70,8 +70,10 @@ Status restoreCheckpoint(QJsonObject& replacement,const ownership::Guard& guard,
     quint64 sequence=0;
     if(guard.claim&&record.value("claimNonce").toString()==guard.claim->nonce) {
         bool valid=false;sequence=record.value("sequence").toString().toULongLong(&valid);
-        if(!valid||sequence==std::numeric_limits<quint64>::max())return status(Code::LimitExceeded,options);
-        ++sequence;
+        if(!valid||QString::number(sequence)!=record.value("sequence").toString())return status(Code::Corrupt,options);
+        // Restore changes the revision, invalidating any previous clean
+        // acknowledgement, but does not consume a navigation sequence from
+        // the live Session. Its next accepted checkpoint must still fit.
     }
     recovery["version"]=1;record["version"]=1;
     record["claimNonce"]=guard.claim?guard.claim->nonce:QString{};record["pid"]=guard.claim?guard.claim->pid:0;

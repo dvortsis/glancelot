@@ -29,8 +29,9 @@ def write_json(path, value):
 
 
 def digest_tree(root):
-    return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in root.rglob("*") if p.is_file()}
+    return {str(p.relative_to(root)): ("file:" + hashlib.sha256(p.read_bytes()).hexdigest()
+                                      if p.is_file() else "directory" if p.is_dir() else "other")
+            for p in root.rglob("*")}
 
 
 def members(root):
@@ -168,6 +169,8 @@ class Verification:
         self.run(args, config, gui=True, unsafe_renderer=safe, json_result=False)
         result = read_json(report)
         require(not result["loading"], "Viewer still loading at exit")
+        require(0 <= result["quit_timer_started_ms"] <= result["quit_callback_ms"] <= result["report_ms"]
+                and result["quit_after_ms"] == 2500, "Missing/inconsistent report timer diagnostics")
         if no_resume:
             require(result["window_slot"] == 0, "No-resume acquired a window slot")
         if image is not None:
@@ -190,7 +193,7 @@ class Verification:
         png(first)
         png(second, reverse=True)
         media_before = digest_tree(images)
-        source, target = self.root / "source", self.root / "target"
+        source, target = self.root / "source-配置-😀", self.root / "target-雪景-😀"
         source.mkdir(); target.mkdir()
         write_json(source / "settings.json", {"schema": 1, "wheel": "pan", "unknown": {"future": True}})
         write_json(target / "settings.json", {"schema": 1, "wheel": "zoom", "unknown": None, "windows": {"2": {"future": 7}}})
@@ -214,6 +217,19 @@ class Verification:
         (target / "settings.json.bak").write_bytes(b"changed backup only")
         self.run(restore + [fresh["fingerprint"]], target, 3)
         require(not (target / "sessions.json").exists(), "Global maintenance claimed a window")
+        layout_target = self.root / "layout-target-配置"
+        write_json(layout_target / "settings.json", {"schema": 1, "layouts": {
+            "1": {"version": 1, "locked": True, "panes": {"tree": {"extent": 350, "future": 7}, "future-pane": {"kind": 9}}},
+            "2": {"version": 1, "marker": "untouched"}}})
+        layout_selection = ["--settings-diff", package, "--settings-scope", "layout", "--settings-slot", "1"]
+        layout_plan = self.run(layout_selection, layout_target)
+        require(layout_plan["code"] == "Ok", "Layout defaults preview failed")
+        layout_apply = self.run(["--settings-restore", package, "--settings-scope", "layout", "--settings-slot", "1",
+                                 "--settings-preview", layout_plan["fingerprint"]], layout_target)
+        require(layout_apply["code"] == "Committed", "Layout restore did not commit")
+        layouts = read_json(layout_target / "settings.json")["layouts"]
+        require(layouts["1"] == {"version": 1, "panes": {"tree": {"future": 7}, "future-pane": {"kind": 9}}}
+                and layouts["2"] == {"version": 1, "marker": "untouched"}, "Layout defaults discarded unknowns/other slot")
         invalid = [["--settings-backup"], ["--settings-diff", package, "--safe-mode"], ["--safe-mode", "--reset-settings"],
                    ["--settings-restore", package], ["--settings-scope", "viewing"], ["--unknown"],
                    ["--settings-diff", package, "-platform", "offscreen"], ["--settings-diff", package, "--settings-preview", fresh["fingerprint"]]]
@@ -235,7 +251,7 @@ class Verification:
         require(self.run(["--settings-diff", backup_package, "--settings-source", "last-good"], target)["code"] == "Ok", "Explicit last-good source failed")
         (package / "settings.json").write_bytes((package / "settings.json").read_bytes() + b"\n")
         require(self.run(["--settings-diff", package], target, 6)["code"] == "Corrupt", "Package tampering accepted")
-        original = self.root / "safe-original";original.mkdir()
+        original = self.root / "safe-original-配置-😀";original.mkdir()
         write_json(original / "settings.json", {"schema": 1, "wheel": "pan", "layouts": {"1": {"version": 999}}})
         for name in ("settings.json.bak", "settings.json.damaged", "sessions.json"):
             (original / name).write_bytes(b"original diagnostic bytes\0" + name.encode())
@@ -252,7 +268,7 @@ class Verification:
         require(digest_tree(images) == media_before, "Viewing changed generated original media")
 
     def restart_and_offline(self, first, second):
-        config, source = self.root / "restart-config", self.root / "position-source"
+        config, source = self.root / "restart-config-雪景-😀", self.root / "position-source"
         config.mkdir()
         write_json(source / "settings.json", {"schema": 1, "windows": {"1": {"folder": str(second.parent), "image": str(second), "saved": 1}}})
         package = self.root / "position-package"

@@ -16,6 +16,7 @@
 #include "glancelot/filter_state.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
+#include "settings_retry.hpp"
 #include "glancelot/platform_integration.hpp"
 #include "glancelot/metadata_model.hpp"
 #include "glancelot/metadata_parser.hpp"
@@ -158,6 +159,7 @@ struct ViewerController::Private {
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
     bool sortSaved{true};
+    quint64 preferenceSequence{};
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
@@ -268,7 +270,11 @@ struct ViewerController::Private {
             }
             if(state.beginFinished&&!state.begun&&!state.busy&&!beginFailureReported) {
                 beginFailureReported=true;
+                recoveryResumeReady=true;
+                recoveryResume=state.readOnlyResume.value_or(recovery::ResumeState{});
                 status="Browsing recovery is unavailable. You can keep viewing images.";emit q->stateChanged();
+                if(!alive||epoch!=recoveryEpoch)return;
+                if(restorePending&&!explicitPositionIntent)q->restoreWindow();
                 if(!alive||epoch!=recoveryEpoch)return;
             }
             if(!state.busy&&state.acceptedSequence>state.persistedSequence&&reportedCheckpointFailure!=state.acceptedSequence) {
@@ -488,22 +494,29 @@ struct ViewerController::Private {
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
     bool save(std::initializer_list<const char*> keys,const QString& bindingId=QString()) {
-        return updateSettings([&](QJsonObject& object) {
-            for (const char* key: keys) {
-                const QString name=QString::fromLatin1(key);
+        QJsonObject values;QStringList channels;
+        for(const char* key:keys) {
+            const QString name=QString::fromLatin1(key);channels.append(name);
+            if(name=="bindings")values[name]=bindingId.isEmpty()?QJsonValue(bindings):bindings.value(bindingId);
+            else if(name=="boundary")values[name]=boundary;
+            else if(name=="wheel")values[name]=wheel;
+            else if(name=="filmstrip")values[name]=filmstrip;
+            else if(name=="tree")values[name]=tree;
+            else if(name=="treePinned")values[name]=treePin;
+            else if(name=="textScale")values[name]=textScale;
+            else if(name=="reducedMotion")values[name]=reducedMotion;
+            else if(name=="storageProfile")values[name]=storageProfile;
+        }
+        const auto deferred=std::make_shared<bool>(false);
+        const bool accepted=settings_detail::saveWithRetry(q,channels.join('/')+"/"+bindingId,[values,bindingId](QJsonObject& object) {
+            for (auto it=values.begin();it!=values.end();++it) {
+                const auto name=it.key();
                 // One changed shortcut is merged into the stored map, so another window's other edits survive.
-                if (name=="bindings" && !bindingId.isEmpty()) { auto stored=object.value(name).toObject(); stored[bindingId]=bindings.value(bindingId); object[name]=stored; }
-                else if (name=="bindings") object[name]=bindings;
-                else if (name=="boundary") object[name]=boundary;
-                else if (name=="wheel") object[name]=wheel;
-                else if (name=="filmstrip") object[name]=filmstrip;
-                else if (name=="tree") object[name]=tree;
-                else if (name=="treePinned") object[name]=treePin;
-                else if (name=="textScale") object[name]=textScale;
-                else if (name=="reducedMotion") object[name]=reducedMotion;
-                else if (name=="storageProfile") object[name]=storageProfile;
+                if (name=="bindings" && !bindingId.isEmpty()) { auto stored=object.value(name).toObject(); stored[bindingId]=it.value(); object[name]=stored; }
+                else object[name]=it.value();
             }
-        }).ok();
+        },[this,deferred](SettingsStatus result){if(*deferred&&!result.ok()){status="Preferences changed for this session; settings could not be saved.";emit q->stateChanged();}});
+        *deferred=true;return accepted;
     }
     void cancelLookahead() {
         lookaheadStop.request_stop();
@@ -1001,17 +1014,17 @@ struct ViewerController::Private {
         if (next==sortSpec) return;
         const auto previous=sortSpec;
         sortSpec=next;
-        sortSaved=updateSettings([&](QJsonObject& object){
-            // A stale window changes only the fields the user edited; other windows'
-            // key/direction/seed choices and unknown nested preferences survive.
-            auto stored=object.value("sort").toObject();
-            if(next.key!=previous.key)stored["key"]=sortKeyName(next.key);
-            if(next.descending!=previous.descending)stored["descending"]=next.descending;
-            if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))stored["seed"]=double(next.seed);
-            object["sort"]=stored;
-        }).ok();
+        QJsonObject fields;
+        if(next.key!=previous.key)fields["key"]=sortKeyName(next.key);
+        if(next.descending!=previous.descending)fields["descending"]=next.descending;
+        if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))fields["seed"]=double(next.seed);
+        const auto deferred=std::make_shared<bool>(false);
+        sortSaved=settings_detail::saveWithRetry(q,"sort/"+QString::number(++preferenceSequence),[fields](QJsonObject& object){
+            auto stored=object.value("sort").toObject();for(auto it=fields.begin();it!=fields.end();++it)stored[it.key()]=it.value();object["sort"]=stored;
+        },[this,deferred](SettingsStatus result){if(*deferred&&!result.ok()){sortSaved=false;status="File order changed for this session; settings could not be saved.";emit q->stateChanged();}});
+        *deferred=true;
         if (nav.snapshot().current.empty()) {
-            status=sortSaved?"File order saved.":"File order changed for this session; settings could not be saved.";
+            status=sortSaved?"File order updated.":"File order changed for this session; settings could not be saved.";
             emit q->stateChanged(); return;
         }
         status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
@@ -1423,10 +1436,11 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
     for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
-    QJsonObject merged=d->bindings;
-    merged[id]=normalized;
-    QString conflict;
-    const auto result=updateSettings([&](QJsonObject& object) {
+    struct BindingSave {QJsonObject merged;QString conflict;std::optional<SettingsStatus> result;bool deferred{};};
+    const auto pending=std::make_shared<BindingSave>();const auto before=d->bindings;
+    pending->merged=before;pending->merged[id]=normalized;
+    settings_detail::saveWithRetry(this,"bindings/"+id,[pending,id,normalized,parsed](QJsonObject& object) {
+        auto& merged=pending->merged;auto& conflict=pending->conflict;conflict.clear();
         auto stored=object.value("bindings").toObject();
         // Validate the effective map while holding the writer lock: another window may have
         // assigned this shortcut since our settings were loaded.
@@ -1436,11 +1450,22 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
             if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
+    },[this,pending,before,id,normalized](SettingsStatus result){
+        pending->result=result;if(!pending->deferred||d->bindings.value(id)!=QJsonValue(normalized))return;
+        if(!pending->conflict.isEmpty())d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";
+        else if(result.ok()) {
+            // Bring in foreign changes only where no newer local edit exists.
+            for(auto it=pending->merged.begin();it!=pending->merged.end();++it)
+                if(it.key()!=id&&d->bindings.value(it.key())==before.value(it.key()))d->bindings[it.key()]=it.value();
+            d->status="Shortcut saved.";
+        }else d->status="Shortcut changed for this session; settings could not be saved.";
+        emit bindingsChanged();emit stateChanged();
     });
-    if(!conflict.isEmpty()){d->status="Shortcut already assigned to "+conflict+" in another window. Clear it first.";emit stateChanged();return false;}
-    d->bindings=result.ok()?merged:d->bindings;
+    if(!pending->conflict.isEmpty()){d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";emit stateChanged();return false;}
+    if(pending->result&&pending->result->ok())d->bindings=pending->merged;
     d->bindings[id]=normalized;
-    d->status=result.ok()?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    d->status=!pending->result?"Saving shortcut…":pending->result->ok()?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    pending->deferred=true;
     emit bindingsChanged();emit stateChanged();return true;
 }
 void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save({"bindings"});d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}

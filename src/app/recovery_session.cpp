@@ -1,5 +1,11 @@
 #include "recovery_session.hpp"
 #include "settings_transaction.hpp"
+#include "settings_raw.hpp"
+#include "settings_policy.hpp"
+#include "window_claim_guard.hpp"
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
@@ -24,6 +30,28 @@ struct Session::State {
 namespace {
 bool success(Code code){return code==Code::Committed||code==Code::NoChange;}
 bool retryable(Code code){return code==Code::Busy||code==Code::WriteFailed;}
+std::optional<ResumeState> readOnlyPosition(const WindowClaim& identity) {
+    const auto claim=glancelot::detail::WindowClaimAccess::get(identity);
+    if(!claim||!claim->active.load())return {};
+    const auto read=[](const QString& path)->std::optional<RawMember> {
+        QFile file(path);if(!file.exists())return RawMember{};
+        if(!file.open(QIODevice::ReadOnly)||file.size()>MaxMemberBytes)return {};
+        auto bytes=file.read(MaxMemberBytes+1);
+        if(file.error()!=QFileDevice::NoError||bytes.size()>MaxMemberBytes)return {};
+        return raw::classify(std::move(bytes));
+    };
+    const auto path=QDir(claim->directory).filePath("settings.json");
+    auto member=read(path);if(!member)return {};
+    if(member->kind==ParseKind::Corrupt)member=read(path+".bak");
+    if(!member||member->kind!=ParseKind::Supported)return {};
+    const auto root=QJsonDocument::fromJson(member->bytes).object();
+    policy::Selection selected;selected.slot=claim->slot;selected.slotSection=SlotSection::Position;
+    if(policy::merge(root,root,selected,{}).status.code!=Code::Ok)return {};
+    const auto row=root.value("windows").toObject().value(QString::number(claim->slot)).toObject();
+    ResumeState result;result.folder=row.value("folder").toString();result.image=row.value("image").toString();
+    result.hasPosition=!result.folder.isEmpty()||!result.image.isEmpty();
+    return result;
+}
 }
 Session::Session(WindowClaim claim):state_(std::make_shared<State>(std::move(claim))) {start(state_);}
 Session::~Session(){close(0);}
@@ -64,8 +92,10 @@ void Session::run(const std::shared_ptr<State>& state) {
         for(int attempt=0;attempt<8&&retryable(result.status.code);++attempt) {
             std::unique_lock lock(state->mutex);
             if(sequence&&state->pending&&state->pending->sequence>sequence)break;
+            // Closing must not turn bounded retries into a tight loop. A
+            // newer checkpoint may still supersede this one immediately.
             state->changed.wait_for(lock,std::chrono::milliseconds(50),[&]{
-                return state->snapshot.closing||(sequence&&state->pending&&state->pending->sequence>sequence);
+                return sequence&&state->pending&&state->pending->sequence>sequence;
             });
             if(sequence&&state->pending&&state->pending->sequence>sequence)break;
             lock.unlock();result=operation();
@@ -76,8 +106,10 @@ void Session::run(const std::shared_ptr<State>& state) {
     {std::lock_guard lock(state->mutex);begun=state->snapshot.begun;}
     if(!begun) {
         const auto result=retry([&]{return beginWindow(state->claim,options);});
+        const auto fallback=success(result.status.code)?std::optional<ResumeState>{}:readOnlyPosition(state->claim);
         std::lock_guard lock(state->mutex);state->snapshot.beginFinished=true;state->snapshot.beginning=result;
         if(!success(result.status.code)) {
+            state->snapshot.readOnlyResume=fallback;
             state->snapshot.busy=false;
             if(state->snapshot.closing){state->snapshot.closed=true;state->snapshot.finalStatus=result.status;}
             state->changed.notify_all();return;

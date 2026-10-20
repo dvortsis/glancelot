@@ -53,6 +53,7 @@ QString revision() {
     const auto append=[&](const QByteArray& field){for(int shift=0;shift<64;shift+=8)bytes.append(char((quint64(field.size())>>shift)&255));bytes.append(field);};
     append(QJsonDocument(commands).toJson(QJsonDocument::Compact));append(themeCatalog());
     append(QJsonDocument(layout_detail::defaults()).toJson(QJsonDocument::Compact));
+    append(QByteArrayLiteral("known-fields-v2-layout-absence-retains-supported-unknowns"));
     return "policy1:"+QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
 }
 Result merge(const QJsonObject& current,const QJsonObject& source,Selection selection,Options options) {
@@ -132,6 +133,22 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
         const auto value=valueAt(source,field.path);
         if(!value.isUndefined()&&!field.valid(value))return refuse(Code::Corrupt,field.path,"Invalid selected source setting.");
         setAt(replacement,field.path,0,value);
+    }
+    if(selection.slotSection==SlotSection::Layout&&
+       valueAt(source,{"layouts",QString::number(selection.slot),"version"}).isUndefined()) {
+        // Removing owned values must leave unknown layout data readable by
+        // PaneLayout, otherwise its next edit would discard a versionless row.
+        auto layouts=replacement.value("layouts").toObject();const auto slot=QString::number(selection.slot);
+        auto layout=layouts.value(slot).toObject();
+        if(layout.value("center").isObject()&&layout.value("center").toObject().isEmpty())layout.remove("center");
+        if(layout.value("panes").isObject()) {
+            auto panes=layout.value("panes").toObject();
+            for(const auto& pane:layout_detail::defaults().keys())
+                if(panes.value(pane).isObject()&&panes.value(pane).toObject().isEmpty())panes.remove(pane);
+            if(panes.isEmpty())layout.remove("panes");else layout["panes"]=panes;
+        }
+        if(layout.isEmpty())layouts.remove(slot);else {layout["version"]=1;layouts[slot]=layout;}
+        if(!layouts.isEmpty()||replacement.contains("layouts"))replacement["layouts"]=layouts;
     }
     if(enabled(GlobalSection::Bindings)) {
         const auto resolved=resolveCommandBindings(replacement.value("bindings").toObject());

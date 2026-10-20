@@ -1,8 +1,12 @@
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/window_slot.hpp"
 #include "glancelot/settings_recovery.hpp"
+#include "glancelot/theme_manager.hpp"
+#include "glancelot/pane_layout.hpp"
+#include "glancelot/favorites_model.hpp"
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
+#include "settings_retry.hpp"
 #include <QScopeGuard>
 #include <QPointer>
 #include <condition_variable>
@@ -12,7 +16,9 @@
 #include <QDir>
 #include <QImage>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest>
 
 class RecoveryControllerTests final:public QObject {
@@ -29,6 +35,105 @@ class RecoveryControllerTests final:public QObject {
         const auto bytes=QJsonDocument(root).toJson();return file.open(QIODevice::WriteOnly)&&file.write(bytes)==bytes.size();
     }
 private slots:
+    void preferenceSavesRetryWhileOwnCheckpointHoldsWriter() {
+        struct Gate {std::mutex mutex;std::condition_variable changed;bool released{};std::atomic_bool entered{};std::atomic_int replacements{};};
+        const auto gate=std::make_shared<Gate>();glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[gate](glancelot::settings_detail::Stage stage){
+            if(stage!=glancelot::settings_detail::Stage::BeforeReplace||++gate->replacements!=2)return;
+            std::unique_lock lock(gate->mutex);gate->entered=true;gate->changed.wait(lock,[&]{return gate->released;});
+        };
+        const auto* previous=glancelot::settings_detail::transactionHooks;glancelot::settings_detail::transactionHooks=&hooks;
+        const auto restore=qScopeGuard([previous]{glancelot::settings_detail::transactionHooks=previous;});
+        QTemporaryDir config,media;QVERIFY(config.isValid()&&media.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        WindowSlot slot(config.path(),0);ViewerController viewer;
+        ThemeManager theme;PaneLayout layout;layout.setSlot(1);FavoritesModel favorites;
+        const auto release=qScopeGuard([gate]{std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();});
+        viewer.setWindowClaim(slot.claimIdentity());QTRY_COMPARE_WITH_TIMEOUT(record(config.path()).value("state"),QJsonValue("dirty"),3000);
+        viewer.navigateDirectory(media.path());QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),3000);viewer.flushWindowPosition();
+        QTRY_VERIFY_WITH_TIMEOUT(gate->entered.load(),3000);
+        const bool tree=!viewer.treeVisible();QElapsedTimer elapsed;elapsed.start();
+        viewer.setTreeVisible(tree);viewer.setWheelMode("pan");viewer.setWheelMode("zoom");
+        theme.setMode("light");QVERIFY(layout.resize("tree",400));QVERIFY(favorites.addFavorite(media.path(),"generated"));
+        viewer.setSortKey("size");viewer.setSortDescending(true);QVERIFY(viewer.setBinding("fullscreen","Ctrl+Alt+F11"));
+        QVERIFY(elapsed.elapsed()<250);QVERIFY(!viewer.status().contains("could not be saved"));
+        {std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();}
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("tree"),QJsonValue(tree),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheel"),QJsonValue("zoom"),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(folder(config.path()),media.path(),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("appearance").toObject().value("mode"),QJsonValue("light"),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("layouts").toObject().value("1").toObject().value("panes").toObject().value("tree").toObject().value("extent"),QJsonValue(400),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("favorites").toArray().size(),qsizetype(1),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("sort").toObject().value("key"),QJsonValue("size"),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("sort").toObject().value("descending"),QJsonValue(true),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("bindings").toObject().value("fullscreen"),QJsonValue("Ctrl+Alt+F11"),3000);
+        QTRY_VERIFY_WITH_TIMEOUT(layout.feedback().isEmpty(),3000);
+    }
+    void missingSourceLayoutKeepsUnknownsThroughActualLayoutEdit() {
+        using namespace glancelot::recovery;
+        QTemporaryDir config,source,packages;QVERIFY(config.isValid()&&source.isValid()&&packages.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        const QJsonObject original{{"schema",1},{"layouts",QJsonObject{{"1",QJsonObject{{"version",1},{"locked",true},{"future",QJsonObject{}},
+            {"center",QJsonObject{{"ratio",0.8},{"future",true}}},{"panes",QJsonObject{{"tree",QJsonObject{{"extent",350},{"future",7}}},{"future-pane",QJsonObject{{"kind",9}}}}}}},
+            {"2",QJsonObject{{"version",1},{"locked",true},{"panes",QJsonObject{{"tree",QJsonObject{{"extent",350}}}}}}}}}};
+        const auto write=[](const QString& path,const QJsonObject& root){QFile file(path);return file.open(QIODevice::WriteOnly)&&file.write(QJsonDocument(root).toJson())>0;};
+        QVERIFY(write(config.filePath("settings.json"),original));QVERIFY(write(source.filePath("settings.json"),{{"schema",1}}));
+        const auto captured=captureBackup({source.path()},packages.filePath("source"));QCOMPARE(captured.status.code,Code::Ok);
+        for(const int slot:{1,2}) {
+            const auto proposed=preview({config.path()},captured.destination,OfflineSlotScope{SlotSection::Layout,slot});QVERIFY(proposed.plan.applicable());
+            QCOMPARE(apply(proposed.plan).status.code,Code::Committed);
+        }
+        auto layouts=settings(config.path()).value("layouts").toObject();QVERIFY(!layouts.contains("2"));
+        QCOMPARE(layouts.value("1").toObject().value("version"),QJsonValue(1));
+        PaneLayout layout;layout.setSlot(1);QVERIFY(layout.feedback().isEmpty());QVERIFY(layout.resize("tree",420));
+        const auto current=settings(config.path()).value("layouts").toObject().value("1").toObject();
+        QVERIFY(current.contains("future"));QCOMPARE(current.value("center").toObject().value("future"),QJsonValue(true));
+        QCOMPARE(current.value("panes").toObject().value("tree").toObject().value("future"),QJsonValue(7));
+        QCOMPARE(current.value("panes").toObject().value("tree").toObject().value("extent"),QJsonValue(420));
+        QCOMPARE(current.value("panes").toObject().value("future-pane"),QJsonValue(QJsonObject{{"kind",9}}));
+    }
+    void deferredSaveRetainsNamespaceAndFinalizesWithoutDyingOwnerCallbacks() {
+        QTemporaryDir first,second;QVERIFY(first.isValid()&&second.isValid());qputenv("GLANCELOT_CONFIG_DIR",first.path().toUtf8());
+        FileLock held(first.filePath("settings.json.lock"));QVERIFY(held.acquire(0));QObject owner;
+        int completed=0;
+        QVERIFY(glancelot::settings_detail::saveWithRetry(&owner,"tree",[](QJsonObject& root){root["tree"]=false;},[&](auto result){QVERIFY(result.ok());++completed;}));
+        auto closing=std::make_unique<QObject>();int dyingCallbacks=0;
+        QVERIFY(glancelot::settings_detail::saveWithRetry(closing.get(),"wheel",[](QJsonObject& root){root["wheel"]="pan";},[&](auto){++dyingCallbacks;}));
+        qputenv("GLANCELOT_CONFIG_DIR",second.path().toUtf8());held.release();closing.reset();QCOMPARE(dyingCallbacks,0);
+        QTRY_COMPARE_WITH_TIMEOUT(completed,1,3000);QCOMPARE(settings(first.path()).value("tree"),QJsonValue(false));
+        QCOMPARE(settings(first.path()).value("wheel"),QJsonValue("pan"));QVERIFY(!QFile::exists(second.filePath("settings.json")));
+    }
+    void deferredShortcutStillChecksFreshForeignConflicts() {
+        QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        ViewerController viewer;viewer.resetBindings();FileLock held(config.filePath("settings.json.lock"));QVERIFY(held.acquire(0));
+        QVERIFY(viewer.setBinding("fullscreen","Ctrl+Alt+F11"));held.release();
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){auto bindings=root.value("bindings").toObject();bindings["rotate"]="Ctrl+Alt+F11";root["bindings"]=bindings;}).ok());
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("already assigned"),3000);
+        const auto bindings=settings(config.path()).value("bindings").toObject();
+        QCOMPARE(bindings.value("rotate"),QJsonValue("Ctrl+Alt+F11"));QCOMPARE(bindings.value("fullscreen"),QJsonValue("F11"));
+    }
+    void retryExhaustionReportsFailureAndCompletionMayDeleteOwner() {
+        QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["tree"]=true;}).ok());
+        auto viewer=std::make_unique<ViewerController>();QPointer<ViewerController> alive(viewer.get());
+        FileLock held(config.filePath("settings.json.lock"));QVERIFY(held.acquire(0));viewer->setTreeVisible(false);
+        connect(viewer.get(),&ViewerController::stateChanged,this,[&]{if(viewer&&viewer->status().contains("could not be saved"))viewer.reset();});
+        int ticks=0;QTimer heartbeat;heartbeat.setInterval(10);connect(&heartbeat,&QTimer::timeout,this,[&]{++ticks;});heartbeat.start();
+        QTRY_VERIFY_WITH_TIMEOUT(!alive,5000);QVERIFY(ticks>20);QCOMPARE(settings(config.path()).value("tree"),QJsonValue(true));
+    }
+    void malformedRecoveryStillAllowsValidatedReadOnlyResume_data() {
+        QTest::addColumn<QJsonValue>("recovery");
+        QTest::newRow("future")<<QJsonValue(QJsonObject{{"version",2}});
+        QTest::newRow("malformed-record")<<QJsonValue(QJsonObject{{"version",1},{"windows",QJsonObject{{"1","bad"}}}});
+    }
+    void malformedRecoveryStillAllowsValidatedReadOnlyResume() {
+        QFETCH(QJsonValue,recovery);QTemporaryDir config,media;QVERIFY(config.isValid()&&media.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        const auto imagePath=media.filePath("generated.png");QImage image(16,16,QImage::Format_RGB32);image.fill(Qt::green);QVERIFY(image.save(imagePath));
+        QVERIFY(writePosition(config.path(),media.path(),imagePath));auto root=settings(config.path());root["recovery"]=recovery;
+        {QFile file(config.filePath("settings.json"));QVERIFY(file.open(QIODevice::WriteOnly));QVERIFY(file.write(QJsonDocument(root).toJson())>0);}
+        WindowSlot slot(config.path(),0);
+        {ViewerController viewer;viewer.setWindowClaim(slot.claimIdentity());viewer.restoreWindow();
+         QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),5000);QCOMPARE(viewer.filePath(),imagePath);}
+        QCOMPARE(settings(config.path()).value("recovery"),recovery);QCOMPARE(folder(config.path()),media.path());
+    }
     void successfulEmptyDirectoryIsCheckpointedAndCleaned() {
         QTemporaryDir config,media;QVERIFY(config.isValid()&&media.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         WindowSlot slot(config.path(),0);

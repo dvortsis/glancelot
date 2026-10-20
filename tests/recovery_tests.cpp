@@ -1010,6 +1010,37 @@ private slots:
         const auto record=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object().value("recovery").toObject().value("windows").toObject().value("1").toObject();
         QCOMPARE(record.value("sequence"),QJsonValue("100"));QCOMPARE(record.value("state"),QJsonValue("clean"));
     }
+    void ownedRestoreDoesNotConsumeLiveSessionNavigationSequence() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());WindowSlot slot(dir.path(),0);
+        Session session(slot.claimIdentity());QVERIFY(session.waitForIdle(3000));QVERIFY(session.snapshot().begun);
+        for(quint64 sequence=1;sequence<=3;++sequence) {
+            QVERIFY(session.accept({dir.path(),{},sequence}));QVERIFY(session.waitForIdle(3000));
+            QCOMPARE(session.snapshot().lastAttempt.status.code,Code::Committed);
+        }
+        const QJsonObject saved{{"schema",1},{"windows",QJsonObject{{"1",QJsonObject{{"folder",source.path()},{"image",""},{"saved",1}}}}}};
+        QVERIFY(write(source.filePath("settings.json"),QJsonDocument(saved).toJson()));
+        const auto backup=captureBackup({source.path()},packages.filePath("source"));QCOMPARE(backup.status.code,Code::Ok);
+        const auto plan=preview({dir.path()},backup.destination,OwnedSlotScope{SlotSection::Position,slot.claimIdentity()});QVERIFY(plan.plan.applicable());
+        QCOMPARE(apply(plan.plan).status.code,Code::Committed);
+        auto record=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object().value("recovery").toObject().value("windows").toObject().value("1").toObject();
+        QCOMPARE(record.value("sequence"),QJsonValue("3"));QCOMPARE(record.value("origin"),QJsonValue("restore"));
+        QVERIFY(session.accept({dir.path(),{},4}));QVERIFY(session.waitForIdle(3000));QCOMPARE(session.snapshot().lastAttempt.status.code,Code::Committed);
+        QVERIFY(session.close(3000));
+        record=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object().value("recovery").toObject().value("windows").toObject().value("1").toObject();
+        QCOMPARE(record.value("sequence"),QJsonValue("4"));QCOMPARE(record.value("state"),QJsonValue("clean"));
+    }
+    void exitRetriesBackOffUntilContendingWriterReleases() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);Session session(slot.claimIdentity());QVERIFY(session.waitForIdle(3000));
+        std::mutex mutex;std::condition_variable changed;bool ready=false;std::atomic_bool acquired=false;
+        std::jthread contender([&]{
+            FileLock held(dir.filePath("settings.json.lock"));acquired=held.acquire(0);
+            {std::lock_guard lock(mutex);ready=true;changed.notify_all();}
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        });
+        {std::unique_lock lock(mutex);QVERIFY(changed.wait_for(lock,std::chrono::seconds(3),[&]{return ready;}));}
+        QVERIFY(acquired.load());QElapsedTimer elapsed;elapsed.start();QVERIFY(session.close(1000));
+        QVERIFY(elapsed.elapsed()>=100);QCOMPARE(session.snapshot().finalStatus.code,Code::Committed);
+    }
     void recoverySessionFailedLatestCheckpointNeverCleans() {
         const auto failing=std::make_shared<std::atomic_bool>(false);glancelot::settings_detail::TransactionHooks hooks;
         hooks.fail=[failing](glancelot::settings_detail::Stage stage){return failing->load()&&stage==glancelot::settings_detail::Stage::BeforeReplace;};
