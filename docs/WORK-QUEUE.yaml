@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead, branch: codex/safe-mode-01, purpose: review-writer-test-wiring}
+integration_lock: null
 gate_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine; set {holder, branch, started} before and clear after; targeted ctest -R runs exempt (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
