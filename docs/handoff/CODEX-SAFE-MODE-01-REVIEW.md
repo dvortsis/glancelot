@@ -32,7 +32,9 @@ to this packet. Hardware/physical power-loss qualification remains unverified.
   schema/policy/scope/package/namespace/revision revalidation, unknown nested data
   preservation, no applicable plan after truncation or unsupported input, and an
   exact sealed raw preimage before primary replacement. NoChange still checks both
-  primary and backup. Last-good use is explicit and cannot bypass future primary.
+  primary and backup. Selecting a package's last-good member is explicit. A corrupt
+  current primary may use its supported backup as the disclosed logical base;
+  a future current primary must still be refused.
 - Session guard before settings lock, nonce/PID/start/namespace claim identity,
   same-process reclaim revocation, offline refusal for live/ambiguous ownership,
   other-slot preservation, atomic checkpoint position/sequence/revision, and clean
