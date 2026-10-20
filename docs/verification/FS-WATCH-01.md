@@ -851,3 +851,17 @@ deadline, bounded-discovery and actual thumbnail wakeup fixtures remain required
 Newer main includes META-HUD contracts while its owner's controller wiring is
 still being prepared. Preserve that work and synchronize before final review and
 integrated gates; these branch-local results are not main's qualification.
+
+## Full combined backend checkpoint
+
+Direct fs_watch_tests file-logged execution on73737a2 passed59/59,zero
+failures/skips,142.879s: fs-watch-01/windows-cache-io-full-backend.txt. This
+includes Cache revision validation, admission ownership and existing FS cases.
+The100k case kept all250ms/30s oracles: initial GUI33ms,writer/recovery153ms,
+filtered change31ms,filtered publication72ms,filtered GUI84ms,maximum callback
+152ms. Generated file setup54.680s is excluded from GUI measurement. Native
+source hashes, baseline/rename recovery and failure/cancellation assertions pass.
+
+This is a full backend executable run, not scripts/build.ps1 -Test or a Linux/
+integrated gate. Source still needs controlled IPC fixtures, independent combined
+review and synchronization with newer main. No source was changed during this run.
