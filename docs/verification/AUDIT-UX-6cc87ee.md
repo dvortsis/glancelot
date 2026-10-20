@@ -133,3 +133,26 @@ destructive-styled primary action, a Cancel button and the file name shown.
   (`folder_grid` 153.7 s). No stray processes were left from my startup tests. The cause of the single timeout is not
   established: machine load from other agents is the likely explanation, but the rare UI hang seen earlier in this project
   cannot be ruled out from one occurrence.
+
+## Fourth pass: Linux suite output, GPU-path canvas, GIF seed, animation memory
+- **Linux CTest, real output** (`docker build --target build`, then `ctest --test-dir /build` in the container): 100% passed,
+  29 of 29, 140.5 s. The Dockerfile also runs ctest during the build (line 20), so every earlier `docker build` exit 0 on
+  this branch implied the same result.
+- **Canvas on a GL path (first time):** the runtime image with Xvnc, Mesa llvmpipe (`LIBGL_ALWAYS_SOFTWARE=1`) and the xcb
+  platform renders the photo canvas; no "No QRhi" warning. This is software GL, not a physical GPU, so it shows the render
+  path works but not GPU performance or colour. Checked: fit with letterbox bars for 3:2 (`land.jpg`), a 6:1 panorama
+  (`gpu-g3.png`) and a 32 px image shown at native size, centred. The empty state and the folder grid render in full with real
+  thumbnails (`gpu-h1_empty.png`, `gpu-h2_grid.png`); the "Preview unavailable" tiles seen earlier were a test-harness
+  artifact, except for the corrupt file.
+- **Photo mode hides the chrome by design:** on the GL path the photo fills the whole window with no toolbars
+  (`gpu-x1_framebuffer.png`, a real X framebuffer capture under openbox, not `grabWindow`). The QML has an auto-hiding HUD
+  (`hudVisible`, `hideHud` timer, "auto-hiding filmstrip"), so this is intended. I did not test the reveal on mouse move.
+  The `--screenshot` option therefore cannot show the chrome in photo mode on a GL backend.
+- **GIF seed:** static and 3-frame animated GIFs made with System.Drawing, 120 mutated variants through the decoder worker's probe
+  phase: 89 accepted, 31 rejected, 0 crashes, 0 hangs. The full pixel-transfer protocol on GIFs was not run (the C++ fuzz
+  seeds PNG, JPEG, BMP and TIFF only).
+- **Animation loader fuzz (in-process, `AnimationController::load`):** 150 mutated GIFs, 49 yielded frames, each exercised
+  with jump/next/previous, 0 crashes, every load signalled completion.
+21. **Major (confirms finding 1) - animated-image memory is unbounded.** A 97 MB GIF with 70 frames of 3000x2000 took 8.1 s to
+    load and raised the process peak working set from 23 MB to 1511 MB, about the 64 pre-decoded frames x 24 MB each,
+    in the viewer process. A larger or longer animation grows this without limit. Cap total frame bytes and decode in the worker.

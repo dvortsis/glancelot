@@ -27,6 +27,13 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QQmlApplicationEngine>
+#include <QRandomGenerator>
+#include <QElapsedTimer>
+#include <QSignalSpy>
+#define NOMINMAX
+#include <windows.h>
+#include <psapi.h>
+#include "glancelot/animation_controller.hpp"
 #include <QProcess>
 #include <QSharedMemory>
 #include <QUuid>
@@ -352,6 +359,36 @@ private slots:
         qInfo() << "AUDIT-FUZZ total" << total << "decoded" << decoded << "rejected" << rejected << "bad" << bad;
         QCOMPARE(bad, 0);
     }
+
+    void animationFuzz() {
+        const QString dir = qEnvironmentVariable("AUDIT_GIF_DIR"); QVERIFY(!dir.isEmpty());
+        QList<QByteArray> seeds; for (const QString n : {"static.gif", "anim.gif"}) { QFile f(dir + "/" + n); QVERIFY(f.open(QIODevice::ReadOnly)); seeds << f.readAll(); }
+        QTemporaryDir out; QRandomGenerator rng(99); int loadedOk = 0, total = 150;
+        glancelot::AnimationController anim;
+        for (int i = 0; i < total; ++i) {
+            QByteArray d = seeds[i % 2];
+            switch (i % 4) { case 0: for (int k = 0, c = 1 + rng.bounded(8); k < c; ++k) d[rng.bounded(d.size())] = char(rng.bounded(256)); break;
+                case 1: d.truncate(rng.bounded(1, d.size())); break;
+                case 2: for (int k = 0; k < 30; ++k) d[rng.bounded(qMin(d.size(), 40))] = char(rng.bounded(256)); break;
+                default: d.insert(rng.bounded(d.size()), QByteArray(rng.bounded(1, 50), char(rng.bounded(256)))); }
+            const QString path = out.filePath(QString("m%1.gif").arg(i)); QFile f(path); QVERIFY(f.open(QIODevice::WriteOnly)); f.write(d); f.close();
+            QSignalSpy spy(&anim, &glancelot::AnimationController::loaded);
+            anim.load(path, quint64(i + 1));
+            QVERIFY2(spy.wait(8000) || spy.count() > 0, qPrintable(QString("no loaded signal for %1").arg(path)));
+            if (anim.frameCount() > 0) { ++loadedOk; anim.jumpToFrame(anim.frameCount() / 2); anim.nextFrame(); anim.previousFrame(); }
+            anim.clear();
+        }
+        qInfo() << "AUDIT-ANIM-FUZZ total" << total << "with-frames" << loadedOk;
+    }
+    void animationMemory() {
+        const QString path = qEnvironmentVariable("AUDIT_BIG_GIF"); QVERIFY(QFileInfo::exists(path));
+        glancelot::AnimationController anim; QSignalSpy spy(&anim, &glancelot::AnimationController::loaded);
+        PROCESS_MEMORY_COUNTERS pmc{}; GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)); const SIZE_T before = pmc.PeakWorkingSetSize;
+        QElapsedTimer t; t.start(); anim.load(path, 1); const bool ok = spy.wait(120000);
+        GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+        qInfo() << "AUDIT-ANIM-MEM loaded" << ok << "frames" << anim.frameCount() << "ms" << t.elapsed() << "peakMB" << (pmc.PeakWorkingSetSize >> 20) << "beforeMB" << (before >> 20);
+    }
 };
+#pragma comment(lib, "psapi.lib")
 QTEST_MAIN(AuditUiTests)
 #include "audit_ui_tests.moc"
