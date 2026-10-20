@@ -117,7 +117,14 @@ Task `FORMAT-02` (Feature Opportunity `F035`) expands Glancelot's media handling
 Total Test time (real) = 210.32 sec
 ```
 
+### Linux Docker Build & CTest (docker build -t glancelot-browser:main .)
+```
+100% tests passed, 0 tests failed out of 29
+Total Test time (real) = 115.44 sec
+```
+
 ---
 
 ## 4. Verdict
 **APPROVED**. Ready for serial integration into `main`.
+
