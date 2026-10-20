@@ -4,6 +4,7 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include "glancelot/viewer_controller.hpp"
+#include "glancelot/filter_state.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
 #include "glancelot/platform_integration.hpp"
@@ -108,6 +109,10 @@ const std::vector<Command> registry {
     {"navigate-forward", "Go forward to next folder", "Alt+Right"},
     // SHORTCUTS-HELP-01 (F056)
     {"shortcuts-help", "Keyboard shortcuts cheat sheet", "F1"},
+    // FILTER-01
+    {"filter", "Filter folder files", "Ctrl+F"},
+    {"clear-filter", "Clear active filter", ""},
+    {"toggle-filter-persistence", "Toggle filter persistence", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -216,6 +221,7 @@ struct ViewerController::Private {
     bool highContrast{false}, largeTargets{false};
     quint64 generation{}, navigationGeneration{};
     Navigator nav;
+    glancelot::FilterSpec filter;
     QJsonObject bindings;
     // INPUT-02: explicit modifier -> action entries. "none" lives in `wheel`; an unset "alt" follows it.
     QJsonObject wheelModifiers{{"ctrl","zoom"},{"shift","pan-horizontal"}};
@@ -543,7 +549,14 @@ struct ViewerController::Private {
                     }
                 }
                 const bool clearedImage=result.directoryVisit&&!result.directoryFailed&&!result.destination;
+                const auto oldDir = displayPath(nav.snapshot().directory);
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
+                const auto newDir = displayPath(nav.snapshot().directory);
+                const bool folderCrossed = !oldDir.isEmpty() && !newDir.isEmpty() && QDir(oldDir) != QDir(newDir);
+                if (folderCrossed && !filter.isPersistent() && filter.isActive()) {
+                    filter.clear();
+                    emit q->filterChanged();
+                }
                 if(clearedImage)emit q->imageChanged();
                 navigationReady=true; emit q->stateChanged();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
@@ -615,9 +628,51 @@ struct ViewerController::Private {
         Navigator copy=nav;
         const auto cancellation=navigationStop.get_token();
         copy.setCancellation(cancellation);
-        submitNavigation({generation,++navigationGeneration,false,[copy,direction,folderOnly]() mutable {
-            const auto destination=folderOnly ? copy.folder(direction) : copy.step(direction);
-            return NavigationResult{std::move(copy),destination};
+        submitNavigation({generation,++navigationGeneration,false,[copy,direction,folderOnly,filter=filter]() mutable {
+            if (folderOnly || !filter.isActive()) {
+                const auto destination=folderOnly ? copy.folder(direction) : copy.step(direction);
+                return NavigationResult{std::move(copy),destination};
+            }
+            // Filter is active: intra-folder stepping obeys the filter (grid and traversal agreement)
+            copy.refresh();
+            const auto& allFiles = copy.snapshot().files;
+            std::vector<std::filesystem::path> matchedFiles;
+            matchedFiles.reserve(allFiles.size());
+            for (const auto& f : allFiles) {
+                const QString name = displayPath(f.filename());
+                if (filter.matches(name)) {
+                    matchedFiles.push_back(f);
+                }
+            }
+            if (matchedFiles.empty()) {
+                if (copy.snapshot().boundary == BoundaryMode::ContinueTree) {
+                    const auto destination = copy.folder(direction);
+                    return NavigationResult{std::move(copy), destination};
+                }
+                return NavigationResult{std::move(copy), std::nullopt};
+            }
+            auto found = std::find(matchedFiles.begin(), matchedFiles.end(), copy.snapshot().current);
+            std::optional<std::filesystem::path> destination;
+            if (found != matchedFiles.end()) {
+                if (direction > 0) {
+                    if (found + 1 != matchedFiles.end()) destination = *(found + 1);
+                } else {
+                    if (found != matchedFiles.begin()) destination = *(found - 1);
+                }
+            } else {
+                if (direction > 0) destination = matchedFiles.front();
+                else destination = matchedFiles.back();
+            }
+            if (!destination) {
+                if (copy.snapshot().boundary == BoundaryMode::LoopFolder) {
+                    destination = direction > 0 ? matchedFiles.front() : matchedFiles.back();
+                } else if (copy.snapshot().boundary == BoundaryMode::ContinueTree) {
+                    // Tree boundary crossed: candidate search evaluates directories without temporary filter (NAV-05)
+                    const auto crossDest = copy.folder(direction);
+                    return NavigationResult{std::move(copy), crossDest};
+                }
+            }
+            return NavigationResult{std::move(copy), destination};
         }});
     }
 };
@@ -967,7 +1022,17 @@ void ViewerController::open(const QString& value){
     trace("open:begin");
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
-    if(!d->navigationOpen)d->navigationIntents.clear();
+    if(!d->navigationOpen) {
+        d->navigationIntents.clear();
+        const QString oldDir = directory();
+        const QString newDir = QFileInfo(path).absolutePath();
+        if (!oldDir.isEmpty() && !newDir.isEmpty() && QDir(oldDir) != QDir(newDir)) {
+            if (!d->filter.isPersistent() && d->filter.isActive()) {
+                d->filter.clear();
+                emit filterChanged();
+            }
+        }
+    }
     d->removedPaths.clear();
     ++d->generation; d->cancel(); d->reload.stop();
     d->path=path;d->loading=true;d->imageReady=false;d->status=QCoreApplication::translate("Status","Opening %1…").arg(QFileInfo(path).fileName());
@@ -984,6 +1049,8 @@ void ViewerController::trigger(const QString& id){
     else if(id=="tab-new")newTab();else if(id=="tab-close")closeTab(d->tabList.size()<2?-1:d->activeTabIndex);
     else if(id=="tab-next"){if(d->tabList.size()>1)activateTab((d->activeTabIndex+1)%d->tabList.size());}
     else if(id=="tab-previous"){if(d->tabList.size()>1)activateTab((d->activeTabIndex+d->tabList.size()-1)%d->tabList.size());}
+    else if(id=="clear-filter")clearFilter();
+    else if(id=="toggle-filter-persistence")toggleFilterPersistence();
     else if(id=="quit")QCoreApplication::quit();
     else if(id=="copy-path") {
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
@@ -1274,4 +1341,35 @@ bool ViewerController::resetAllSettings() {
     emit stateChanged();
     emit bindingsChanged();
     return true;
+}
+
+QString ViewerController::filterPattern() const { return d->filter.pattern; }
+void ViewerController::setFilterPattern(const QString& pattern) {
+    if (d->filter.pattern == pattern) return;
+    d->filter.pattern = pattern;
+    emit filterChanged();
+}
+bool ViewerController::isFilterPersistent() const { return d->filter.isPersistent(); }
+void ViewerController::setFilterPersistent(bool persistent) {
+    const auto mode = persistent ? glancelot::FilterPersistence::Persistent : glancelot::FilterPersistence::Temporary;
+    if (d->filter.persistence == mode) return;
+    d->filter.persistence = mode;
+    emit filterChanged();
+}
+bool ViewerController::hasFilter() const { return d->filter.isActive(); }
+void ViewerController::setFilter(const QString& pattern, bool persistent) {
+    const auto mode = persistent ? glancelot::FilterPersistence::Persistent : glancelot::FilterPersistence::Temporary;
+    if (d->filter.pattern == pattern && d->filter.persistence == mode) return;
+    d->filter.pattern = pattern;
+    d->filter.persistence = mode;
+    emit filterChanged();
+}
+void ViewerController::clearFilter() {
+    if (!d->filter.isActive()) return;
+    d->filter.clear();
+    emit filterChanged();
+}
+void ViewerController::toggleFilterPersistence() {
+    d->filter.persistence = d->filter.isPersistent() ? glancelot::FilterPersistence::Temporary : glancelot::FilterPersistence::Persistent;
+    emit filterChanged();
 }
