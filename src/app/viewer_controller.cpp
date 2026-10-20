@@ -9,6 +9,8 @@
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
 #include "glancelot/platform_integration.hpp"
+#include "glancelot/metadata_model.hpp"
+#include "glancelot/metadata_parser.hpp"
 #include <QtConcurrent/QtConcurrentRun>
 #include <QCache>
 #include <QColorSpace>
@@ -124,6 +126,8 @@ const std::vector<Command> registry {
     {"filter", "Filter folder files", "Ctrl+F"},
     {"clear-filter", "Clear active filter", ""},
     {"toggle-filter-persistence", "Toggle filter persistence", ""},
+    // META-HUD-01 (META-01 / UX-04)
+    {"toggle-metadata", "Toggle metadata inspector", "I"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -226,6 +230,28 @@ struct ViewerController::Private {
     std::unique_ptr<QSharedMemory> prefetchTransfer;
     qint64 prefetchAdmittedBytes{};
     QByteArray prefetchOutput;
+    MetadataModel metadataModel;
+    bool metadataVisible{false};
+    quint64 metadataGeneration{0};
+
+    void loadMetadata(const QString& targetPath, quint64 gen) {
+        if (targetPath.isEmpty()) {
+            metadataModel.clear();
+            return;
+        }
+        const quint64 metaGen = ++metadataGeneration;
+        metadataModel.setLoading(true);
+        const QString resolved = targetPath;
+        QThreadPool::globalInstance()->start([this, resolved, metaGen, gen]() {
+            if (metaGen != metadataGeneration) return;
+            auto record = glancelot::MetadataParser::parse(resolved, metaGen);
+            QMetaObject::invokeMethod(q, [this, record, metaGen]() {
+                if (metaGen == metadataGeneration) {
+                    metadataModel.setRecord(record);
+                }
+            }, Qt::QueuedConnection);
+        });
+    }
 
     explicit Private(ViewerController* owner):q(owner) {
         trace("controller:construct");
@@ -542,7 +568,7 @@ struct ViewerController::Private {
         });
         futureWatcher->setFuture(future);
     }
-    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; status=message; emit q->stateChanged(); }
+    void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; metadataModel.clear(); status=message; emit q->stateChanged(); }
     void observe() {
         if (!watcher.files().isEmpty()) watcher.removePaths(watcher.files());
         if (!watcher.directories().isEmpty()) watcher.removePaths(watcher.directories());
@@ -572,6 +598,7 @@ struct ViewerController::Private {
             emit q->stateChanged();
             emit q->cacheChanged();
             scheduleLookahead();
+            loadMetadata(path, generation);
             return;
             }
         }
@@ -646,6 +673,7 @@ struct ViewerController::Private {
                     process->write("ok\n");
                     observe(); emit q->imageChanged(); emit q->stateChanged();
                     scheduleLookahead();
+            loadMetadata(path, generation);
                 } else { fail("Unknown decoder response."); return; }
             }
         });
@@ -681,7 +709,7 @@ struct ViewerController::Private {
                     if(result.directoryFailed) { status=result.message; emit q->stateChanged(); }
                     else if(!result.destination) {
                         ++generation; cancel(); reload.stop();
-                        path.clear(); image=QImage{}; imageReady=false; loading=false;
+                        path.clear(); image=QImage{}; imageReady=false; loading=false; metadataModel.clear();
                         lastDecodedPath.clear(); pendingImage.clear();
                         pendingFolder=displayPath(result.navigator.snapshot().directory);
                         positionRetries=0;positionDirty=slot>0;
@@ -1068,6 +1096,7 @@ void ViewerController::trigger(const QString& id){
     else if(id=="storage-profile-ssd") { setStorageProfile("ssd"); emit viewCommand(id); }
     else if(id=="storage-profile-hdd") { setStorageProfile("hdd"); emit viewCommand(id); }
     else if(id=="storage-profile-network") { setStorageProfile("network"); emit viewCommand(id); }
+    else if(id=="toggle-metadata") { toggleMetadata(); emit viewCommand(id); }
     else if(id=="quit")QCoreApplication::quit();
     else if(id=="copy-path") {
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyFilePath();
@@ -1392,4 +1421,22 @@ int ViewerController::activeIoJobs() const {
 
 qint64 ViewerController::admittedIoBytes() const {
     return IoScheduler::instance().admittedBytes();
+}
+
+MetadataModel* ViewerController::metadataModel() const {
+    return &d->metadataModel;
+}
+
+bool ViewerController::isMetadataVisible() const {
+    return d->metadataVisible;
+}
+
+void ViewerController::setMetadataVisible(bool visible) {
+    if (d->metadataVisible == visible) return;
+    d->metadataVisible = visible;
+    emit metadataVisibleChanged();
+}
+
+void ViewerController::toggleMetadata() {
+    setMetadataVisible(!d->metadataVisible);
 }

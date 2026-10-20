@@ -6,6 +6,8 @@
 #include <QVariantList>
 #include <memory>
 
+#include "glancelot/metadata_model.hpp"
+
 class ViewerController : public QObject {
     Q_OBJECT
     Q_PROPERTY(QImage image READ image NOTIFY imageChanged)
@@ -43,6 +45,8 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString currentStorageType READ currentStorageType NOTIFY currentStorageTypeChanged)
     Q_PROPERTY(int activeIoJobs READ activeIoJobs NOTIFY ioStatsChanged)
     Q_PROPERTY(qint64 admittedIoBytes READ admittedIoBytes NOTIFY ioStatsChanged)
+    Q_PROPERTY(MetadataModel* metadataModel READ metadataModel CONSTANT)
+    Q_PROPERTY(bool metadataVisible READ isMetadataVisible WRITE setMetadataVisible NOTIFY metadataVisibleChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -128,11 +132,18 @@ public:
     int activeIoJobs() const;
     qint64 admittedIoBytes() const;
 
+    // Metadata Inspector (META-HUD-01 / META-01 / UX-04)
+    MetadataModel* metadataModel() const;
+    bool isMetadataVisible() const;
+    void setMetadataVisible(bool visible);
+    Q_INVOKABLE void toggleMetadata();
+
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
     void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged(); void cacheChanged();
     void storageProfileChanged(); void currentStorageTypeChanged(); void ioStatsChanged();
+    void metadataVisibleChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
     // The folder tree was just shown by command; the UI should move keyboard focus into it.

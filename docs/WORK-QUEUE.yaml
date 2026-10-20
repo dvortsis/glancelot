@@ -552,8 +552,14 @@ tasks:
     requirements: [META-01, UX-04, UX-05]
     milestone: M3
     priority: 6
+    owner_lane: gemini
+    state: implementing
+    branch: agent/meta-hud
+    worktree: .worktrees/meta-hud
+    build: build-meta-hud
+    plan: docs/META-HUD-01-PLAN.md
+    memory_action: act_mvg4afvd_8d253a0e781b
     owner: lead
-    state: ready
     depends: [IO-01]
     outcome: Bounded asynchronous metadata HUD and accurate basic image/index status
     acceptance: No parsing on UI/render thread; generation validation; malformed/large metadata fixtures; histogram remains M5
