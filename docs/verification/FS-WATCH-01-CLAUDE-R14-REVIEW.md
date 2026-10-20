@@ -20,3 +20,6 @@ New test `metadataOnlyRefreshPreservesPersistentRowsAndSelection` asserts zero `
 
 ## Limits
 Concurrent lane activity means no host isolation is claimed. No physical-hardware or clean-machine claims. First targeted run exited 0xc0000135 (my environment lacked the Qt bin directory on PATH, which showed a system dialog); corrected and rerun.
+
+## Addendum: folder_grid rerun
+Finding 2 is resolved for Windows: `folder_grid` alone on `4a86528` (no other Windows test lane running; Codex's Docker build was running concurrently) passed in 168.70 s, `ctest -R ^folder_grid$` exit 0. The earlier 299.99 s timeout was load from another lane's full ctest. 168.7 s is still more than half of the 300 s limit, so the margin is load-sensitive. Linux remains unrun by this reviewer; Codex's concurrent Docker gate is the Linux evidence to collect.
