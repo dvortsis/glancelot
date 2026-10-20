@@ -462,3 +462,14 @@ and an invalidated observation, despite previously sampled CPU device details
 frame requirements or sampling assertions were weakened; the unchanged executable
 passed the repeat with no competing viewer/test process present. The failed run
 remains part of qualification evidence, not a passing gate.
+
+## First full candidate build attempt
+
+The actual required Docker command stopped at pane_layout_tests linking: its
+settings_file.cpp now calls the raw recovery reader, but the lead-frozen consumer
+attachment predicate matches only viewer_controller/window_slot providers. Existing
+settings-only consumers pane_layout_tests and favorites_tests need attachment too.
+The failed actual command output is candidate-docker-first.txt. No Linux CTest or
+runtime image pass is claimed. The shared amendment must match settings_file.cpp
+under the integration lock; it cannot be applied while Gemini holds that lock for
+agent/monitor-output. Existing targets and tests must remain enabled.
