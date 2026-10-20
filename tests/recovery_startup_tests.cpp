@@ -1,11 +1,17 @@
 #include "glancelot/command_registry.hpp"
 #include "startup_intent.hpp"
+#include "startup_environment.hpp"
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QFile>
 #include <QJsonArray>
 #include <QSet>
 #include <QTemporaryDir>
+#include <QProcess>
+#include <QProcessEnvironment>
+#include <QStandardPaths>
+#include <QJsonDocument>
+#include <cstdio>
 #include <QtTest>
 
 namespace {
@@ -132,11 +138,69 @@ private slots:
             const auto result=parse(args,other);QVERIFY(result.mode!=Mode::Error);
         }
     }
+    void safeEnvironmentRunsBeforeApplicationAndRetainsUnicodePrivateRoot() {
+        QTemporaryDir generated;QVERIFY(generated.isValid());
+        const auto parent=generated.filePath(QString::fromUtf8("private-配置-😀"));const auto original=generated.filePath(QString::fromUtf8("original-雪景-😀"));
+        QVERIFY(QDir().mkpath(parent));QVERIFY(QDir().mkpath(original));
+        for(const auto* name:{"settings.json","settings.json.bak","settings.json.damaged","sessions.json"}) {
+            QFile file(QDir(original).filePath(QLatin1String(name)));QVERIFY(file.open(QIODevice::WriteOnly));QCOMPARE(file.write("original corrupt diagnostic bytes"),qint64(33));
+        }
+        QProcess process;auto environment=QProcessEnvironment::systemEnvironment();environment.insert("GLANCELOT_CONFIG_DIR",original);
+        environment.insert("QT_QUICK_BACKEND","software");environment.insert("QMLSCENE_DEVICE","softwarecontext");environment.insert("QSG_RHI_BACKEND","null");environment.insert("QT_D3D_ADAPTER_INDEX","9999");
+        process.setProcessEnvironment(environment);process.start(QCoreApplication::applicationFilePath(),{"--safe-env-helper",parent});
+        QVERIFY(process.waitForStarted(3000));QVERIFY(process.waitForFinished(5000));QCOMPARE(process.exitStatus(),QProcess::NormalExit);QCOMPARE(process.exitCode(),0);
+        const auto bytes=process.readAllStandardOutput();const auto report=QJsonDocument::fromJson(bytes).object();QVERIFY2(!report.isEmpty(),bytes.constData());
+        QCOMPARE(report.value("status").toInt(),int(glancelot::recovery::Code::Ok));QCOMPARE(report.value("original_config").toString(),original);
+        QVERIFY(!report.value("original_default").toBool());QVERIFY(report.value("no_gui_app").toBool());QVERIFY(report.value("redirect_exact").toBool());
+        QVERIFY(report.value("root_exists_before").toBool());QVERIFY(report.value("root_exists_held").toBool());QVERIFY(!report.value("root_exists_after").toBool());
+        QVERIFY(report.value("private_write").toBool());QVERIFY(report.value("root_path").toString().startsWith(parent+"/Glancelot-safe-"));
+        QCOMPARE(report.value("late_status").toInt(),int(glancelot::recovery::Code::Conflict));QVERIFY(report.value("quick_backend").toString().isEmpty());QVERIFY(report.value("old_device").toString().isEmpty());
+        QCOMPARE(report.value("prefer_software").toString(),QString("1"));QCOMPARE(report.value("opengl").toString(),QString("software"));
+#ifdef Q_OS_WIN
+        QCOMPARE(report.value("requested_backend").toString(),QString("d3d11-warp"));QCOMPARE(report.value("rhi_backend").toString(),QString("d3d11"));
+#else
+        QCOMPARE(report.value("requested_backend").toString(),QString("opengl-software"));QCOMPARE(report.value("rhi_backend").toString(),QString("opengl"));
+#endif
+        for(const auto* name:{"settings.json","settings.json.bak","settings.json.damaged","sessions.json"}) {
+            QFile file(QDir(original).filePath(QLatin1String(name)));QVERIFY(file.open(QIODevice::ReadOnly));QCOMPARE(file.readAll(),QByteArray("original corrupt diagnostic bytes"));
+        }
+    }
+    void safeEnvironmentDefaultDescriptorAndInvalidParent() {
+        QTemporaryDir generated;QVERIFY(generated.isValid());
+        for(const bool invalid:{false,true}) {
+            QProcess process;auto environment=QProcessEnvironment::systemEnvironment();environment.remove("GLANCELOT_CONFIG_DIR");process.setProcessEnvironment(environment);
+            process.start(QCoreApplication::applicationFilePath(),{"--safe-env-helper",invalid?generated.filePath("missing-parent"):generated.path()});
+            QVERIFY(process.waitForStarted(3000));QVERIFY(process.waitForFinished(5000));QCOMPARE(process.exitCode(),0);
+            const auto bytes=process.readAllStandardOutput();const auto report=QJsonDocument::fromJson(bytes).object();QVERIFY2(!report.isEmpty(),bytes.constData());
+            QCOMPARE(report.value("status").toInt(),int(invalid?glancelot::recovery::Code::WriteFailed:glancelot::recovery::Code::Ok));
+            QVERIFY(report.value("original_default").toBool());QCOMPARE(report.value("original_config"),report.value("default_namespace"));
+            if(invalid)QVERIFY(report.value("root_path").toString().isEmpty());
+        }
+    }
     void cleanupTestCase() {
         for(const auto* name:{"settings.json","settings.json.bak","settings.json.damaged","sessions.json"})
             QVERIFY(!QFile::exists(config.filePath(QLatin1String(name))));
         QVERIFY(!qobject_cast<QGuiApplication*>(QCoreApplication::instance()));
     }
 };
-QTEST_GUILESS_MAIN(RecoveryStartupTests)
+int main(int argc,char** argv) {
+    const auto arguments=glancelot::startup::originalArguments(argc,argv);
+    if(arguments.value(1)=="--safe-env-helper") {
+        const auto original=glancelot::startup::captureOriginalConfig();
+        auto prepared=glancelot::startup::prepareSafeEnvironment(arguments.value(2));
+        const auto path=prepared.context.directory;QJsonObject report{{"status",int(prepared.status.code)},{"root_path",path},{"requested_backend",prepared.requestedBackend},
+            {"original_default",original.useDefault},{"root_exists_before",!path.isEmpty()&&QDir(path).exists()},{"redirect_exact",!path.isEmpty()&&qEnvironmentVariable("GLANCELOT_CONFIG_DIR")==path}};
+        bool written=false;
+        if(!path.isEmpty()){QFile file(QDir(path).filePath("settings.json"));written=file.open(QIODevice::WriteOnly)&&file.write("private settings")==16;}
+        report["private_write"]=written;auto held=prepared.context;prepared.context={};report["root_exists_held"]=!path.isEmpty()&&QDir(path).exists();held={};
+        report["root_exists_after"]=!path.isEmpty()&&QDir(path).exists();
+        QCoreApplication app(argc,argv);QCoreApplication::setApplicationName("Glancelot");QCoreApplication::setOrganizationName("Glancelot");
+        report["original_config"]=glancelot::startup::resolveOriginalConfig(original);report["default_namespace"]=QDir::cleanPath(QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)).absoluteFilePath());
+        report["no_gui_app"]=!qobject_cast<QGuiApplication*>(QCoreApplication::instance());report["late_status"]=int(glancelot::startup::prepareSafeEnvironment(arguments.value(2)).status.code);
+        for(const auto& pair:std::initializer_list<std::pair<const char*,const char*>>{{"quick_backend","QT_QUICK_BACKEND"},{"old_device","QMLSCENE_DEVICE"},{"rhi_backend","QSG_RHI_BACKEND"},{"prefer_software","QSG_RHI_PREFER_SOFTWARE_RENDERER"},{"opengl","QT_OPENGL"}})
+            report[QLatin1String(pair.first)]=qEnvironmentVariable(pair.second);
+        const auto bytes=QJsonDocument(report).toJson(QJsonDocument::Compact);std::fwrite(bytes.constData(),1,size_t(bytes.size()),stdout);return 0;
+    }
+    QCoreApplication app(argc,argv);RecoveryStartupTests tests;return QTest::qExec(&tests,argc,argv);
+}
 #include "recovery_startup_tests.moc"

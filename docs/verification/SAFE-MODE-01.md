@@ -366,6 +366,30 @@ destruction-flush and disabled-slot cases. Actual production-flavor component
 project and configure/build/CTest/case outputs are legacy-slots-* in safe-mode-01/.
 It remains a targeted regression, not the full scripts/build.ps1 -Test gate.
 
+## Pre-application safe environment
+
+app/startup_environment captures an original override/default descriptor before
+redirection, resolves default namespaces only after application metadata, and
+establishes a QTemporaryDir-owned private root before any application/settings
+owner. It refuses preparation after application construction. Windows override
+setting uses the wide CRT environment API, matching Qt's lossless wide reader;
+narrow UTF8 environment assignment is insufficient outside the ANSI code page
+([Qt6.8.3 environment implementation](https://github.com/qt/qtbase/blob/v6.8.3/src/corelib/global/qtenvironmentvariables.cpp)).
+Process-local setup removes incompatible Quick adaptation/device/debug overrides
+and requests D3D11/software on Windows or Mesa software OpenGL on Linux, preserving
+the RHI canvas. Request flags are not actual renderer qualification.
+
+Actual Windows startup component passed55/55 zero skips299ms, CTest1/1 in0.46s
+(test0.40s). Its real native subprocess calls preparation before QCoreApplication,
+passes Unicode/supplementary-character temporary/original directories, verifies
+exact redirection, retained/released private-root lifetime, isolated generated
+settings writes, byte-identical original primary/backup/damaged/sessions, cleared
+inherited adaptation and requested renderer flags. Default descriptor resolution,
+invalid temporary parent and late preparation refusal also pass. Actual outputs
+and component project are safe-environment-* in safe-mode-01/. No GUI/RHI was
+created here; actual viewer dispatch, software device/frame/RGB and Linux remain
+unverified. Main still needs this early setup before constructing the viewer.
+
 ## Remaining complete scope
 
 Executable early Unicode/maintenance/safe startup, actual software-RHI frame/RGB

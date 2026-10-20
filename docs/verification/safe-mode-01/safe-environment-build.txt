@@ -1,0 +1,10 @@
+[1/23] Automatic MOC for target recovery_component_core
+[2/21] Automatic MOC for target recovery_component_platform
+[3/19] Automatic MOC for target recovery_raw_component
+[4/17] Automatic MOC for target glancelot-decoder
+[5/15] Automatic MOC for target recovery_controller_component
+[6/13] Automatic MOC for target recovery_legacy_slot_component
+[7/11] Automatic MOC for target recovery_registry_component
+[8/10] Building CXX object CMakeFiles\recovery_registry_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\app\startup_environment.cpp.obj
+[9/10] Building CXX object CMakeFiles\recovery_registry_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_startup_tests.cpp.obj
+[10/10] Linking CXX executable recovery_registry_component.exe
