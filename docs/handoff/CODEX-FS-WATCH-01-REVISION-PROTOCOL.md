@@ -1,8 +1,8 @@
 # FS/Cache private revision protocol implementation contract
 
-Lead proposal for the frozen Cache integration amendment. Freeze its exact
-worker extension under the integration lock before changing worker/controller
-protocol code. No public header, external plugin ABI or thumbnail wire change.
+Frozen by the user-appointed lead under lead/codex-fs-revision-protocol for the
+Cache integration amendment, before changing worker/controller protocol code.
+No public header, external plugin ABI or thumbnail wire change.
 
 ## Use the existing process boundary for uninterruptible probes
 
