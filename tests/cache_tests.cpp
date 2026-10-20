@@ -3,6 +3,10 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QImage>
+#include <QDateTime>
+#include <QFileInfo>
+#include <QSaveFile>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -27,6 +31,7 @@ private slots:
     void crossFolderLookaheadPrefetch();
     void lookaheadCancellationOnReversal();
     void lookaheadCancellationOnFilterChange();
+    void noncurrentSameSizeTimestampReplacementRejectsStaleHit();
 };
 
 void CacheTests::cacheDefaults() {
@@ -276,6 +281,43 @@ void CacheTests::lookaheadCancellationOnFilterChange() {
     QCOMPARE(controller.filterPattern(), QString("nonexistent"));
     controller.clearFilter();
     QCOMPARE(controller.filterPattern(), QString());
+}
+
+void CacheTests::noncurrentSameSizeTimestampReplacementRejectsStaleHit() {
+    QTemporaryDir files,config;QVERIFY(files.isValid());QVERIFY(config.isValid());
+    const bool hadOverride=qEnvironmentVariableIsSet("GLANCELOT_CONFIG_DIR");
+    const auto previousOverride=qgetenv("GLANCELOT_CONFIG_DIR");
+    const auto restore=qScopeGuard([&]{if(hadOverride)qputenv("GLANCELOT_CONFIG_DIR",previousOverride);else qunsetenv("GLANCELOT_CONFIG_DIR");});
+    qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+    QVERIFY(QDir(files.path()).mkdir("sub"));
+    const auto a=files.filePath("a.png"),b=files.filePath("sub/b.png");
+    const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+    const auto replace=[&](QColor color) {
+        QImage image(32,24,QImage::Format_RGB32);image.fill(color);
+        QSaveFile output(a);
+        if(!output.open(QIODevice::WriteOnly)||!image.save(&output,"PNG")||!output.commit())return false;
+        QFile file(a);
+        return file.open(QIODevice::ReadWrite)&&file.size()<=4096&&file.resize(4096)&&
+            file.setFileTime(stamp,QFileDevice::FileModificationTime);
+    };
+    QVERIFY(replace(Qt::red));QVERIFY(createTestImage(b,32,24,Qt::green));
+    ViewerController controller;controller.setBoundaryMode("continue");controller.open(a);
+    QTRY_VERIFY_WITH_TIMEOUT(controller.imageReady()&&!controller.loading()&&controller.fileCount()==1,10000);
+    QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::red));
+    controller.next();
+    QTRY_VERIFY_WITH_TIMEOUT(controller.filePath()==QFileInfo(b).absoluteFilePath()&&controller.imageReady()&&!controller.loading(),10000);
+    QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::green));
+    QTRY_VERIFY_WITH_TIMEOUT(controller.decodedCacheCount()>=2,5000);
+    QTest::qWait(400); // Drain events before changing the now-unwatched parent image.
+    QVERIFY(replace(Qt::blue));
+    QCOMPARE(QFileInfo(a).size(),qint64(4096));QCOMPARE(QFileInfo(a).lastModified(),stamp);
+    QCOMPARE(QImage(a).pixelColor(0,0),QColor(Qt::blue));
+    controller.previous(); // Exercise the hit-eligible navigation route, never explicit open.
+    QTRY_VERIFY_WITH_TIMEOUT(controller.filePath()==QFileInfo(a).absoluteFilePath()&&controller.imageReady()&&!controller.loading(),10000);
+    qInfo()<<"generated source pixel"<<QImage(a).pixelColor(0,0)<<"displayed pixel"<<controller.image().pixelColor(0,0)
+           <<"cache hit"<<controller.isLastDecodeCacheHit()<<"size"<<QFileInfo(a).size()<<"mtime"<<QFileInfo(a).lastModified();
+    QCOMPARE(controller.image().pixelColor(0,0),QColor(Qt::blue));
+    QVERIFY(!controller.isLastDecodeCacheHit());
 }
 
 QTEST_MAIN(CacheTests)
