@@ -310,6 +310,38 @@
         <source>Open a photo</source>
         <translation>[Õpéñ à phõtõ]</translation>
     </message>
+    <message>
+        <source>Photo</source>
+        <translation>[Phõtõ]</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation>[Grîd]</translation>
+    </message>
+    <message>
+        <source>Both</source>
+        <translation>[Bõth]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñàmé]</translation>
+    </message>
+    <message>
+        <source>Date</source>
+        <translation>[Dàté]</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>[Sîzé]</translation>
+    </message>
+    <message>
+        <source>Shuffle</source>
+        <translation>[Shûfflé]</translation>
+    </message>
+    <message>
+        <source>No photo open</source>
+        <translation>[Ñõ phõtõ õpéñ]</translation>
+    </message>
 </context>
 <context>
     <name>PaneArrangement</name>

@@ -38,9 +38,9 @@ ApplicationWindow {
     property string splitMessage: ""
     readonly property bool modeCompact: width < 760 || !topPanel.horizontalBar || topPanel.modeSpace < modeSelector.implicitWidth + barGridtopbar.columnSpacing
     readonly property var contentModes: [
-        { id: "preview", command: "view-preview", label: "Photo", icon: "image", tip: qsTr("Photo only") },
-        { id: "grid", command: "view-grid", label: "Grid", icon: "grid", tip: qsTr("Folder grid only") },
-        { id: "combined", command: "view-combined", label: "Both", icon: "split", tip: qsTr("Grid and photo together") }
+        { id: "preview", command: "view-preview", label: qsTr("Photo"), icon: "image", tip: qsTr("Photo only") },
+        { id: "grid", command: "view-grid", label: qsTr("Grid"), icon: "grid", tip: qsTr("Folder grid only") },
+        { id: "combined", command: "view-combined", label: qsTr("Both"), icon: "split", tip: qsTr("Grid and photo together") }
     ]
     // Explicit state of the combined preview: "" shows the decoded photo; "loading" keeps the canvas under a delayed
     // indicator; every other state covers the canvas so a stale photo is never presented as the cursor's item.
@@ -1288,7 +1288,7 @@ ApplicationWindow {
             Layout.maximumWidth: emptyState.width
             Layout.minimumWidth: 0
             variant: "primary"
-            text: emptyState.compactContent ? "Open" : "Open a photo"
+            text: emptyState.compactContent ? qsTr("Open") : qsTr("Open a photo")
             Accessible.name: "Open a photo"
             tip: "Open a photo" + app.shortcutHint("open")
             onClicked: app.invoke("open")
@@ -1461,7 +1461,7 @@ ApplicationWindow {
                 objectName: "sortButton"
                 visible: topPanel.fitSort
                 iconName: viewer.sortDescending ? "arrow-down" : "arrow-up"
-                text: ({ name: "Name", modified: "Date", size: "Size", shuffle: "Shuffle" }[viewer.sortKey])
+                text: ({ name: qsTr("Name"), modified: qsTr("Date"), size: qsTr("Size"), shuffle: qsTr("Shuffle") }[viewer.sortKey])
                 enabled: viewer.fileCount > 0
                 onClicked: app.invoke("sort")
                 tip: "Cycle file order" + app.shortcutHint("sort") + (viewer.bindingFor("sort-reverse").length ? "; reverse with " + viewer.bindingFor("sort-reverse") : "")
@@ -1517,7 +1517,7 @@ ApplicationWindow {
             Label {
                 objectName: "topBarTitle"
                 visible: viewer.tabs.length < 2
-                text: viewer.fileName || "No photo open"
+                text: viewer.fileName || qsTr("No photo open")
                 elide: Text.ElideMiddle
                 Layout.fillWidth: true
                 // Like a native caption, an inactive window shows its title in the muted role (still >= 4.5:1).
@@ -1626,7 +1626,7 @@ ApplicationWindow {
             UiButton { text: qsTr("Previous"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
             BarLabel {
                 visible: !app.gridMode && !app.combinedMode
-                text: viewer.fileCount > 0 ? viewer.currentIndex + " of " + viewer.fileCount : "No photo"
+                text: viewer.fileCount > 0 ? qsTr("%1 of %2").arg(viewer.currentIndex).arg(viewer.fileCount) : qsTr("No photo")
                 Layout.leftMargin: Theme.gapXs; Layout.rightMargin: Theme.gapXs
             }
             UiButton { text: qsTr("Next"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
