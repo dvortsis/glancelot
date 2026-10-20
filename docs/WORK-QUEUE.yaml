@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: null, branch: null, started: null}
+integration_lock: {holder: gemini, branch: agent/copy-move, started: "2026-10-20T00:26:30Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -607,11 +607,12 @@ tasks:
     milestone: M3
     priority: 6
     owner_lane: gemini
-    state: implementing
+    state: integration
     branch: agent/copy-move
     worktree: .worktrees/copy-move
     build: build-copy-move
     plan: docs/COPY-MOVE-01-PLAN.md
+    evidence: docs/verification/COPY-MOVE-01.md
     memory_action: act_mvg9x5co_b84238ed618a
     owner: lead
     depends: [RENAME-01]
