@@ -41,8 +41,17 @@ native-versus-controlled limits are in platform-fixture-security/RUNTIME.md.
 Defender snapshots still show only the earlier inactive/nonexecuted detection.
 This is scoped evidence, not a false-positive or clean-machine conclusion.
 
-Integrated-commit checks are pending and the security hold remains. The first
+Integrated-commit checks passed and the hold is released only for snapshots
+containing qualified replacement334065e. The old fixture stays permanently
+retired; old snapshots and runners remain blocked. The first
 root Windows configure was stopped after Qt scanned an unrelated sibling
 worktree's malformed QML. Windows qualification now runs on the exact integrated
 commit in .worktrees/codex-platform-fixture-integrated with its assigned build;
 the Docker integrated gate runs from main with sibling worktrees excluded.
+
+Integrated Windows29/29 passed364.45s; its platform suite passed26/26 with zero
+skips in748ms. A fresh Docker compile and full29/29 test run passed305.76s and
+built the runtime image. Post-run Defender records again show only the original
+inactive/nonexecuted threat. Exact evidence and limits are recorded in
+platform-fixture-security/INTEGRATED.md. No exclusions, restoration or protection
+changes were made, and no clean-machine or false-positive determination is made.

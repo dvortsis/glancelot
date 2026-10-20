@@ -1,9 +1,9 @@
 schema: 1
 project: glancelot
 integration_branch: main
-windows_native_fixture_hold: Defender Behavior:Win32/DefenseEvasion.A!ml; old platform_launcher_stub is retired; no restore/exclusions or old-fixture Windows gates; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "lead/platform-fixture-security", branch: "codex/platform-fixture-security", started: "2026-10-20T14:20:36.421189+00:00"}
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -743,7 +743,7 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     requirements: [SYS-04, SYS-05]
     owner: lead
     owner_lane: codex
-    state: integration
+    state: done
     branch: codex/platform-fixture-security
     worktree: .worktrees/codex-platform-fixture-security
     build: build-codex-platform-fixture-security
@@ -751,4 +751,4 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     memory_action: act_mvgrfsa8_be3125ae52b0
     evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
     acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
-    outcome: Replacement independently reviewed by Claude752758c/e7afce5 and merged334065e; candidate Windows29/29 and Linux29/29 after retained grid flake; integrated checks pending, security hold stays; product adapter unchanged
+    outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged
