@@ -726,3 +726,33 @@ Both candidate platform gates now pass. Under lead lock9463943/main0212daa,
 the next step imports main and its frozen private Cache integration amendment.
 The combined source has not yet been reviewed or qualified; these passes remain
 evidence for the pre-Cache candidate, not for the upcoming correction.
+
+## Combined branch baseline and navigation intent correction
+
+Merge68c3731 imports Cache and the frozen private integration amendment. Two
+private controller conflicts retain FS baseline/monitor lifetime and cancel(),
+which now also cancels imported Cache lookahead. Public headers are unchanged
+from that main snapshot. The combined source is not qualified by earlier gates.
+
+A new generated FS regression places the noncurrent image outside all three
+watches (root/a.png vs root/sub/leaf/b.png), first requiring a real unchanged
+navigation hit, then replacing the original at equal4096-byte size/restoredmtime.
+The initial merged target compiled, but failed its unchanged-hit assertion:
+2 passed,1 failed,0 skipped,635ms. This exposes the synchronous navigationOpen
+marker expiring before the new registration-delayed decode begins. Actual output
+is fs-watch-01/windows-cache-combined-intent-red.txt.
+
+Persist that consumed one-shot intent through deferred decode; nested explicit
+opens do not inherit it, and the late-baseline fresh decode bypasses reuse.
+After rebuilding, the unchanged hit succeeds and the regression reaches the
+intended source-revision failure: source blue, display red, cache-hit true;
+2 passed,1 failed,0 skipped,1.089s. Source and unrelated-image hashes remain
+unchanged. Output is fs-watch-01/windows-cache-combined-revision-red.txt.
+This intermediate branch intentionally remains red until the source validation
+correction is implemented and independently reviewed; it is not a done candidate.
+
+The root lock release and candidate-evidence update were included in another
+session's93dea6b IO contract commit while the lead's release was being committed.
+Verified the intended queue delta and clear lock; no IO files were reverted or
+staged by this lane. That newer IO contract still needs branch synchronization
+before combined final qualification. Preserve its owner implementation work.

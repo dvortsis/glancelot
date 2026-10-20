@@ -34,6 +34,7 @@
 #include <functional>
 #include <deque>
 #include <stop_token>
+#include <utility>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -203,7 +204,7 @@ struct ViewerController::Private {
     QThreadPool* navigationPool=new QThreadPool;
     bool navigationBusy{}, navigationReady{};
     std::deque<std::pair<int,bool>> navigationIntents;
-    bool navigationOpen{};
+    bool navigationOpen{},cacheReuseAllowed{};
     std::optional<NavigationJob> pendingNavigation;
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
@@ -261,7 +262,7 @@ struct ViewerController::Private {
                 if(decodeAwaitingBaseline) {
                     decodeStart.stop();decodeAwaitingBaseline=false;decode(path,generation);
                 } else if(decodeStartedWithoutBaseline) {
-                    decodeStartedWithoutBaseline=false;++generation;cancel();scan(path,generation);decode(path,generation);
+                    decodeStartedWithoutBaseline=false;++generation;cancel();cacheReuseAllowed=false;scan(path,generation);decode(path,generation);
                 }
             }
             if(pendingObservation&&pendingObservation->scope==value.scope) {
@@ -647,7 +648,7 @@ struct ViewerController::Private {
         cancelLookahead();
         const auto key=[&] { glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,token); return cacheKey(file); }();
 
-        if (navigationOpen && cache.contains(key)) {
+        if (cacheReuseAllowed && cache.contains(key)) {
             if (const auto* cached = cache.object(key)) {
             trace("decode:cache-hit");
             perfGeneration = token;
@@ -1124,9 +1125,12 @@ QString ViewerController::boundaryMode() const{return d->boundary;}
 QString ViewerController::wheelMode() const{return d->wheel;}
 void ViewerController::open(const QString& value){
     trace("open:begin");
+    // Consume the caller's intent once: decode may wait for registration, while
+    // a nested explicit open must not inherit the navigation-only cache policy.
+    const bool fromNavigation=std::exchange(d->navigationOpen,false);
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
-    if(!d->navigationOpen) {
+    if(!fromNavigation) {
         d->navigationIntents.clear();
         const QString oldDir = directory();
         const QString newDir = QFileInfo(path).absolutePath();
@@ -1139,6 +1143,7 @@ void ViewerController::open(const QString& value){
     }
     d->removedPaths.clear();
     ++d->generation; d->cancel();
+    d->cacheReuseAllowed=fromNavigation;
     d->path=path;d->loading=true;d->imageReady=false;d->status="Opening "+QFileInfo(path).fileName()+"…";
     d->observe(true);d->pendingObservation.reset();
     d->decodeAwaitingBaseline=true;d->decodeStartedWithoutBaseline=false;d->decodeStart.start();

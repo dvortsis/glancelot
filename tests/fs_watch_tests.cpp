@@ -10,6 +10,7 @@
 #include "file_grid_wiring.hpp"
 #include <QSaveFile>
 #include <QImage>
+#include <QDateTime>
 #include <QScopeGuard>
 #include <atomic>
 #include <thread>
@@ -183,6 +184,40 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(invalidations.count()>prior,10000);
         QCOMPARE(viewer.filePath(),image);QVERIFY(viewer.imageReady());
         QVERIFY(!viewer.directoryError().isEmpty());
+    }
+    void noncurrentSameTupleReplacementInvalidatesCache() {
+        QTemporaryDir files;QVERIFY(files.isValid());QVERIFY(QDir(files.path()).mkpath("sub/leaf"));
+        const auto a=files.filePath("a.png"),b=files.filePath("sub/leaf/b.png");
+        const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+        const auto replace=[&](Qt::GlobalColor color) {
+            if(!png(a,color))return false;
+            QFile file(a);
+            return file.open(QIODevice::ReadWrite)&&file.size()<=4096&&file.resize(4096)&&
+                file.setFileTime(stamp,QFileDevice::FileModificationTime);
+        };
+        QVERIFY(replace(Qt::red));QVERIFY(png(b,Qt::green));const auto bHash=hash(b);
+        ViewerController viewer;viewer.setBoundaryMode("continue");viewer.open(a);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading()&&viewer.fileCount()==1,10000);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));
+        const auto awaitPath=[&](const QString& expected) {
+            return viewer.filePath()==QFileInfo(expected).absoluteFilePath()&&viewer.imageReady()&&!viewer.loading();
+        };
+        viewer.next();QTRY_VERIFY_WITH_TIMEOUT(awaitPath(b),10000);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.decodedCacheCount()>=2,5000);
+        viewer.previous();QTRY_VERIFY_WITH_TIMEOUT(awaitPath(a),10000);
+        QVERIFY(viewer.isLastDecodeCacheHit()); // Preserve genuine unchanged-source hits.
+        viewer.next();QTRY_VERIFY_WITH_TIMEOUT(awaitPath(b),10000);
+        QTest::qWait(400);
+        // A is outside current directory, parent and image watches, even with FS enabled.
+        QVERIFY(replace(Qt::blue));const auto replacementHash=hash(a);
+        QCOMPARE(QFileInfo(a).size(),qint64(4096));QCOMPARE(QFileInfo(a).lastModified(),stamp);
+        QCOMPARE(QImage(a).pixelColor(0,0),QColor(Qt::blue));
+        viewer.previous();QTRY_VERIFY_WITH_TIMEOUT(awaitPath(a),10000);
+        QCOMPARE(hash(a),replacementHash);QCOMPARE(hash(b),bHash);
+        qInfo()<<"noncurrent replacement: source"<<QImage(a).pixelColor(0,0)
+               <<"display"<<viewer.image().pixelColor(0,0)<<"cache hit"<<viewer.isLastDecodeCacheHit();
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+        QVERIFY(!viewer.isLastDecodeCacheHit());
     }
     void hundredThousandEntriesSustainedWriterKeepsGuiResponsive() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("000000.png");
