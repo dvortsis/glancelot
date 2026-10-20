@@ -4,6 +4,10 @@ integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock: null
+gate_lock: null
+gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine; set {holder, branch, started} before and clear after; targeted ctest -R runs exempt (AGENTS.md, October 20 2026)
+lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
+review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/monitor-output-fix ae1b7e4; Gemini reviews stacked Claude packets F002, F037, F031, F040, F049, F009, F014, F051 in stack order, each only for its own changes on top of the previous branch, then a short confirmation pass after the stack is updated onto integrated main; Claude lane reviews SAFE-MODE-01 follow-up; Gemini never reviews MONITOR-OUTPUT-01 fixes
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -651,6 +655,7 @@ tasks:
     review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
     review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
     review_request: Codex-lane re-review requested of exact candidate claude/input-02 87b063d, which addresses the five findings in INPUT-02-FINAL-CODEX-REVIEW.md (evidence in docs/verification/INPUT-02.md; author Windows input_ui 16/16, grid_ui 72/72, window_slots 34/34; Linux Docker not rerun). Do not merge main into the reviewed snapshot; trial merge against main conflicts in CMakeLists.txt, viewer_controller.cpp, worker/main.cpp and ui/Main.qml (b10354a, re-confirmed after FS-WATCH 1bd4461) and goes to the Claude lane only after approval. Stacked packets F002, F037, F009, F014, F031, F040, F049, F051 wait behind it.
+    stacked_review: Gemini lane reviews stacked F002, F037, F031, F040, F049, F009, F014, F051 now, each only for its own changes on top of the previous branch (e.g. git diff claude/input-02..claude/f002); Claude lane fixes findings in place; Claude lane rehearses the main conflict resolution on throwaway claude/input-02-mainsync, never on the reviewed snapshot
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01
@@ -781,5 +786,24 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     plan: docs/PLATFORM-FIXTURE-SECURITY-01-PLAN.md
     memory_action: act_mvgrfsa8_be3125ae52b0
     evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+
+  - id: EXPORT-CSV-01
+    requirements: [SYS-06, SYS-02]
+    feature: F070
+    milestone: M4
+    priority: 6
+    owner: lead
+    owner_lane: gemini
+    reviewer_lane: codex or claude (first free reviewer slot; never gemini)
+    state: ready
+    depends: [DELETE-01]
+    branch: agent/export-csv
+    worktree: .worktrees/export-csv
+    build: build-export-csv
+    plan: docs/EXPORT-CSV-01-PLAN.md
+    contract: include/glancelot/selection_export.hpp; cmake/ExportTests.cmake (included when src/core/selection_export.cpp exists)
+    outcome: Selection CSV and path-list export engine for downstream tools (engine only; UI is a later Claude packet; JSON manifest stays with F030)
+    acceptance: RFC 4180 quoting; formula-injection neutralization; Unicode round-trip; relative-root policy with outside-root skip; revalidated snapshot; never overwrites an exported item; atomic temp-and-rename; cancellation leaves nothing behind; bounded items; generation echoed
+    verification: tests/selection_export_tests.cpp per plan section 4; actual ctest output; full Windows and Docker gates under gate_lock
     acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
     outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged

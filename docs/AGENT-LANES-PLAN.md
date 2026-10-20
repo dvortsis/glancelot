@@ -7,6 +7,23 @@ Lead decision, October 18, 2026, approved by the user. Three agent tools work co
   - F001, F004, F010, F011, F018, F020, F036, F056 and F067.
 - **Claude Code and Codex lanes:** everything else, as assigned below.
 - **Authority:** docs/REQUIREMENTS.md, docs/WORK-QUEUE.yaml and the verification records remain authoritative. A row below becomes active only when the lead freezes its contracts and promotes it in the queue.
+
+## Amendment, October 20, 2026 (lead decision, approved by the user)
+
+- **Tools per lane.**
+  - Claude lane: Claude Code Sonnet 5.5.
+  - Codex lane: Codex 6.1 Sol.
+  - Gemini lane: Antigravity 3.8 Flash.
+  - Lead/integrator: the Claude Code Opus session, which implements no lane tasks.
+- **Why.** The bottleneck is review capacity. Nine Claude packets are stacked behind INPUT-02 (INPUT-02 → F002 → F037 → F031 → F040 → F049 → F009 → F014 → F051), and every one of them was waiting on Codex. Meanwhile the Gemini lane was idle.
+- **Reviewer routing.**
+  - The Gemini lane may now review Claude and Codex branches. It never reviews fixes to code it originally wrote.
+  - Codex keeps the INPUT-02 re-review, for continuity, and the MONITOR-OUTPUT-01 fix review.
+  - Gemini reviews the stacked packets F002 through F051. Each review covers only that packet's changes on top of the previous branch in the stack. A short confirmation pass follows once the stack is updated onto integrated `main`.
+  - The Claude lane takes the SAFE-MODE-01 follow-up review.
+- **Reassignment.** F070 (CSV and manifest export) moves from Codex Wave 5 to the Gemini lane as EXPORT-CSV-01. It is engine-only; the UI stays with the Claude lane. The JSON manifest format stays with F030.
+- **Gate lock.** Only one full gate (`scripts/build.ps1 -Test` or `docker build`) runs at a time. Holders set `gate_lock` in docs/WORK-QUEUE.yaml.
+
 ## Lane strengths, which decide every assignment
 
 - **Claude Code lane (`claude/*`):** design and interaction work.
@@ -111,7 +128,7 @@ Gates on Gemini-owned work are marked ⛔<task>. A packet starts only after that
 | Codex | F066 | Open-with argument arrays and tool slots. |
 | Codex | F068 | Shell associations and single-instance IPC. |
 | Codex | F069 | Command-line entry points. |
-| Codex | F070 | CSV and manifest export. |
+| Gemini | F070 (EXPORT-CSV-01) | CSV and path-list export engine. Reassigned from Codex on October 20, 2026; the UI is a later Claude packet. |
 | Claude | F019 UI | Before/after preview. |
 | Claude | F017 + F062 UI | Operation center and undo UI. |
 | Claude | F061 | Recovery UX for unavailable shares, corrupt images and missing codecs. |
