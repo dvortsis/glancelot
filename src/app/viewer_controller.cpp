@@ -2,6 +2,7 @@
 #include "../core/perf_context.hpp"
 #include "fs_monitor.hpp"
 #include "fs_source_token.hpp"
+#include "io_job_lease.hpp"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -181,6 +182,8 @@ struct ViewerController::Private {
     glancelot::FilterSpec filter;
     QJsonObject bindings;
     QProcess* worker{};
+    std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
+    quint64 workerGeneration{};
     qint64 perfQueued{-1}, perfDecoding{-1};
     quint64 perfGeneration{};
     bool perfFirstDecode{true},perfRevisionProbe{};
@@ -188,7 +191,7 @@ struct ViewerController::Private {
     std::uint8_t perfFlags{};
     void finishDecodeTrace(std::uint8_t flags, std::uint64_t bytes = 0) {
         using namespace glancelot::perf;
-        detail::finish(perfRevisionProbe ? Stage::CacheLookup : perfDecoding >= 0 ? Stage::Decode : Stage::DecodeQueue, perfGeneration,
+        glancelot::perf::detail::finish(perfRevisionProbe ? Stage::CacheLookup : perfDecoding >= 0 ? Stage::Decode : Stage::DecodeQueue, perfGeneration,
             perfDecoding >= 0 ? perfDecoding : perfQueued, std::uint8_t(perfFlags | flags), bytes);
         perfQueued = perfDecoding = -1;
     }
@@ -206,7 +209,7 @@ struct ViewerController::Private {
     QByteArray output;
     struct CachedImage { QImage pixels; QString sourceToken; };
     QCache<QString,CachedImage> cache{128*1024}; // KiB of verified immutable RGBA pixels.
-    bool cacheNotificationPending{};
+    bool cacheNotificationPending{},ioNotificationPending{};
     QString storageProfile{"auto"};
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
@@ -340,6 +343,10 @@ struct ViewerController::Private {
         cacheNotificationPending=true;
         QMetaObject::invokeMethod(q,[this]{cacheNotificationPending=false;emit q->cacheChanged();},Qt::QueuedConnection);
     }
+    void notifyIoStatsChanged() {
+        if(ioNotificationPending)return;ioNotificationPending=true;
+        QMetaObject::invokeMethod(q,[this]{ioNotificationPending=false;emit q->ioStatsChanged();},Qt::QueuedConnection);
+    }
     static std::optional<QString> responseSourceToken(const QJsonObject& message) {
         const auto value=message.value("sourceToken");
         if(!value.isString())return std::nullopt;
@@ -435,22 +442,13 @@ struct ViewerController::Private {
         pendingLookahead.reset();prefetchDeadline.stop();
         lookaheadCandidate.clear();
         if (prefetchWorker) {
-            prefetchWorker->disconnect(q);
-            prefetchWorker->setParent(nullptr);
-            if (prefetchWorker->state() == QProcess::NotRunning) {
-                prefetchWorker->deleteLater();
-            } else {
-                QObject::connect(prefetchWorker, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
-                                 prefetchWorker, &QObject::deleteLater);
-                prefetchWorker->kill();
-            }
-            prefetchWorker = nullptr;
+            glancelot::detail::retireIoProcess(std::exchange(prefetchWorker,nullptr),std::move(prefetchLease),q,[this]{notifyIoStatsChanged();});
         }
-        IoScheduler::instance().release(lookaheadGeneration);
+        else prefetchLease.reset();
         prefetchTransfer.reset();
         prefetchAdmittedBytes = 0;
         prefetchOutput.clear();
-        emit q->ioStatsChanged();
+        notifyIoStatsChanged();
     }
     void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
         cancelLookahead();
@@ -458,16 +456,15 @@ struct ViewerController::Private {
         deadline.stop();
         decodeStart.stop();
         if (worker) {
-            worker->disconnect(q);
-            worker->setParent(nullptr);
-            // No wait on UI thread; QProcess is deleted only after the process has stopped.
-            if (worker->state()==QProcess::NotRunning) worker->deleteLater();
-            else { QObject::connect(worker,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),worker,&QObject::deleteLater); worker->kill(); }
-            worker=nullptr;
+            const auto retiredGeneration=workerGeneration;
+            glancelot::detail::retireIoProcess(std::exchange(worker,nullptr),std::move(decodeLease),q,[this,retiredGeneration]{
+                notifyIoStatsChanged();
+                if(retiredGeneration==generation&&!loading&&imageReady&&navigationReady)scheduleLookahead();
+            });
         }
-        IoScheduler::instance().release(generation);
+        else decodeLease.reset();
         transfer.reset(); admittedPixelBytes=0; output.clear();
-        emit q->ioStatsChanged();
+        notifyIoStatsChanged();
     }
 
     void startPrefetch(const QString& file, quint64 token) {
@@ -510,10 +507,12 @@ struct ViewerController::Private {
                     const quint64 admitted = quint64(bytes) * 4 + quint64(image.sizeInBytes()) + quint64(cache.totalCost()) * 1024;
                     if (admitted > allowance) { cancelLookahead(); return; }
 
-                    if (!IoScheduler::instance().tryAdmit(token, JobPriority::Prefetch, bytes, file)) {
+                    auto admission=glancelot::detail::admitIoJob(JobPriority::Prefetch,bytes,file);
+                    if(token!=lookaheadGeneration||process!=prefetchWorker)return;
+                    if (!admission) {
                         cancelLookahead(); return;
                     }
-                    emit q->ioStatsChanged();
+                    prefetchLease=std::move(admission);notifyIoStatsChanged();
                     prefetchTransfer = std::make_unique<QSharedMemory>("Glancelot-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
                     if (!prefetchTransfer->create(bytes)) { cancelLookahead(); return; }
                     prefetchAdmittedBytes = bytes;
@@ -553,7 +552,7 @@ struct ViewerController::Private {
             if (token == lookaheadGeneration&&process==prefetchWorker) cancelLookahead();
         });
 
-        process->start(program, {file});prefetchDeadline.start();
+        prefetchDeadline.start();process->start(program, {file});
     }
 
     void scheduleLookahead() {
@@ -698,7 +697,8 @@ struct ViewerController::Private {
             emit q->stateChanged();
         }
     }
-    void decode(const QString& file,quint64 token,bool fresh=false) {
+    void decode(QString file,quint64 token,bool fresh=false) {
+        if(token!=generation||file!=path)return;
         trace("decode:begin");
         cancelLookahead();
         const auto key=[&] { glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,token); return cacheKey(file); }();
@@ -716,6 +716,12 @@ struct ViewerController::Private {
         worker=new QProcess(q);
         worker->setStandardErrorFile(QProcess::nullDevice()); // bound memory even if a codec floods diagnostics
         auto* process=worker;
+        workerGeneration=token;
+        auto initialAdmission=glancelot::detail::admitIoJob(JobPriority::Foreground,0,file);
+        if(token!=generation||process!=worker)return;
+        if(!initialAdmission){fail("Storage admission limit exceeded.");return;}
+        decodeLease=std::move(initialAdmission);
+        notifyIoStatsChanged();
         QObject::connect(process,&QProcess::started,q,[this,token,process,revisionOnly] {
             if (token != generation || process != worker) return;
             if(revisionOnly){perfDecoding=perfQueued;perfQueued=-1;return;}
@@ -768,10 +774,12 @@ struct ViewerController::Private {
                     // Include decoder source/converted buffers, shared transfer and parent copy.
                     const quint64 admitted=quint64(bytes)*4+quint64(image.sizeInBytes())+quint64(cache.totalCost())*1024;
                     if (admitted>allowance) { cache.clear();notifyCacheChanged(); if (quint64(bytes)*4+quint64(image.sizeInBytes())>allowance) { fail("Insufficient memory headroom for this image. Close other images or try a smaller file."); return; } }
-                    if (!IoScheduler::instance().tryAdmit(token, JobPriority::Foreground, bytes, file)) {
+                    auto admission=glancelot::detail::admitIoJob(JobPriority::Foreground,bytes,file);
+                    if(token!=generation||process!=worker)return;
+                    if (!admission) {
                         fail("Storage admission limit exceeded."); return;
                     }
-                    emit q->ioStatsChanged();
+                    decodeLease=std::move(admission);notifyIoStatsChanged();
                     transfer=std::make_unique<QSharedMemory>("Glancelot-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
                     if (!transfer->create(bytes)) { fail("Cannot reserve the image transfer buffer: "+transfer->errorString()); return; }
                     admittedPixelBytes=bytes;
@@ -805,13 +813,12 @@ struct ViewerController::Private {
         QObject::connect(process,&QProcess::errorOccurred,q,[this,token,process](QProcess::ProcessError error){ if(token==generation&&process==worker&&loading) fail(error==QProcess::FailedToStart ? "Decoder is missing. Keep glancelot-decoder next to the viewer." : "Decoder process failed; try another image."); });
         QObject::connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),q,[this,process,token](int code,QProcess::ExitStatus exit){
             if (token!=generation || process!=worker) return;
-            IoScheduler::instance().release(token);
-            emit q->ioStatsChanged();
+            decodeLease.reset();notifyIoStatsChanged();
             worker=nullptr; transfer.reset(); process->deleteLater();
             if (loading) { finishDecodeTrace(glancelot::perf::Failed); deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
             else if (imageReady && navigationReady) { scheduleLookahead(); }
         });
-        process->start(program,revisionOnly?QStringList{"--source-revision",file}:QStringList{file}); deadline.start();
+        deadline.start();process->start(program,revisionOnly?QStringList{"--source-revision",file}:QStringList{file});
         trace("decode:started");
     }
     void submitNavigation(NavigationJob job) {

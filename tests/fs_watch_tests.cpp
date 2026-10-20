@@ -90,6 +90,43 @@ private slots:
         QVERIFY(!scheduler.tryAdmit(19,glancelot::JobPriority::Foreground,1,config.path()));
         scheduler.release(18);QCOMPARE(scheduler.admittedBytes(),qint64(0));QCOMPARE(scheduler.activeJobCount(),0);
     }
+    void admissionAvailabilityIsQueuedAndCoalesced() {
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        QSignalSpy available(&scheduler,&glancelot::IoScheduler::admissionAvailable);
+        bool readUnlocked=false;QObject receiver;
+        QObject::connect(&scheduler,&glancelot::IoScheduler::admissionAvailable,&receiver,[&]{
+            readUnlocked=scheduler.activeJobCount()==0&&scheduler.admittedBytes()==0;
+        });
+        for(int i=0;i<32;++i) {
+            const auto id=glancelot::allocateIoJobId();QVERIFY(id);
+            QVERIFY(scheduler.tryAdmit(id,glancelot::JobPriority::Foreground,0,config.path()));scheduler.release(id);
+        }
+        QCOMPARE(available.count(),0);QTRY_COMPARE_WITH_TIMEOUT(available.count(),1,2000);
+        QVERIFY(readUnlocked);QCOMPARE(scheduler.activeForegroundJobs(),0);
+    }
+    void controllerCannotReleaseForeignAdmissions() {
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        QTemporaryDir files;QVERIFY(files.isValid());const auto a=files.filePath("a.png"),b=files.filePath("b.png");
+        QVERIFY(png(a,Qt::red));QVERIFY(png(b,Qt::green));
+        QVERIFY(scheduler.tryAdmit(1,glancelot::JobPriority::Thumbnail,1024,files.path()));
+        {
+            ViewerController viewer;viewer.open(a);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),10000);
+            viewer.next();QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()==b&&viewer.imageReady()&&!viewer.loading(),10000);
+            QTRY_COMPARE_WITH_TIMEOUT(scheduler.activeForegroundJobs(),0,5000);
+            QCOMPARE(scheduler.activeJobCount(),1);QCOMPARE(scheduler.admittedBytes(),qint64(1024));
+            // IDs1 and3 match the independent counters the old controller released.
+            QVERIFY(scheduler.tryAdmit(3,glancelot::JobPriority::Foreground,2048,files.path()));
+            viewer.previous();QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()==a&&viewer.imageReady()&&!viewer.loading(),10000);
+            QVERIFY(viewer.isLastDecodeCacheHit());
+            QTRY_COMPARE_WITH_TIMEOUT(scheduler.activeJobCount(),2,5000);
+            QCOMPARE(scheduler.activeForegroundJobs(),1);QCOMPARE(scheduler.admittedBytes(),qint64(3072));
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(scheduler.activeJobCount(),2,5000);
+        QCOMPARE(scheduler.admittedBytes(),qint64(3072));QCOMPARE(scheduler.activeForegroundJobs(),1);
+        scheduler.release(1);scheduler.release(3);QCOMPARE(scheduler.activeJobCount(),0);
+    }
     void revisionOnlyWorkerDistinguishesAtomicReplacement() {
         QTemporaryDir files;QVERIFY(files.isValid());
         const auto path=files.filePath("a.png");

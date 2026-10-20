@@ -797,3 +797,57 @@ in5.220s; it did not test the revision assertion. Preserve that output in
 fs-watch-01/windows-open-source-fixture-failure.txt. The fixture now performs an
 allowed same-length shared-write edit for that boundary; the separate noncurrent
 Cache regression and metadata-token comparison retain atomic replacement.
+
+## Controller cache validation and IO ownership integration
+
+Source2b97ad0 replaces GUI path/size/mtime cache lookup with a pure text path key
+and cached pixels plus verified sourceToken. Navigation returns probe through the
+isolated worker before reuse. Unknown/mismatched revisions reject the candidate
+and decode freshly; malformed/missing token replies cannot admit pixels. Explicit
+opens still decode. Ordinary and prefetch admission require verified worker tokens;
+prefetch has its15s deadline and discovery has one running/one latest pending task.
+Cache notifications coalesce safely on the GUI event loop. Cache-hit trace flags
+are recorded only after validation, with the probe measured as CacheLookup.
+
+The real noncurrent equal-size/restored-mtime regression passed3/3,zero skips,
+1.319s (windows-cache-r1-first-green.txt): unchanged source first hits, then new
+blue pixels display with cache-hit false. IO merge663fb19 retains the delivered
+storage profile/admission interface and original Cache behavior. Original Cache
+tests10/10 passed3.640s before the following ownership corrections; output is
+windows-cache-original-io-merged.txt. These are scoped passes, not final approval.
+
+The imported IO ledger accepted the same ID twice and charged3072 bytes to one
+entry; it also accepted a negative estimate. Regression4c11c50 recorded2 passed,
+2 failed,0 skipped,5ms in windows-io-admission-red.txt. Lead froze correction
+contract3aef7c9 and linkable opaque allocator b2cbe0b; root lock release54eae8f
+keeps IO in review. Existing IO evidence remains preserved. This integration does
+not redesign storage classification, profile/capacity policy or physical limits.
+
+Private io_job_lease.hpp now binds successful admissions to work completion,
+with process-retirement release independent of a destroyed UI owner. Selection,
+lookahead and thumbnail wire counters are separate from opaque process-unique
+IDs. The allocator uses a high ID namespace to avoid legacy ordinals during
+migration, never resets/reuses IDs, and fails closed on exhaustion. Zero-byte
+revision probes have foreground ownership; fresh image admission replaces that
+lease with its pixel reservation. Cancelled/stale thumbnails keep their lease
+until completion/exit. Duplicate/zero IDs, negative estimates and overflow fail
+without altering the ledger. Availability notification and consumer retry are
+queued/coalesced, outside the scheduler mutex. Deadlines arm before start so a
+synchronous startup failure cannot restart an obsolete timer. Admission callbacks
+recheck process/generation before altering state.
+
+Latest focused Windows run passed9/9,zero failures/skips,4.532s in
+windows-io-ownership-green.txt. It covers the red ledger cases,32 coalesced
+availability releases with getters called from the notification, and a real
+controller cold/open/navigation/cache-hit/teardown sequence preserving unrelated
+reservations whose IDs match the old counters. Newer-open/live cancellation and
+the stale-pixel regression also pass. Latest original suites passed Cache10/10
+4.122s,Thumbnail36/36 6.779s,IoScheduler12/12 0.068s,all zero skips; outputs are
+windows-io-final-cache.txt,windows-io-final-thumbnail.txt and
+windows-io-final-scheduler.txt. No full combined gate or independent review has
+yet run. Controlled malformed/unknown-reply, mid-probe/prefetch cancellation,
+deadline, bounded-discovery and actual thumbnail wakeup fixtures remain required.
+
+Newer main includes META-HUD contracts while its owner's controller wiring is
+still being prepared. Preserve that work and synchronize before final review and
+integrated gates; these branch-local results are not main's qualification.
