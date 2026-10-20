@@ -30,7 +30,7 @@ The task implements the frozen contract in `include/glancelot/selection_export.h
 - **Unicode.** Paths are converted to UTF-8 with `path::u8string`. Invalid UTF-8 in metadata becomes U+FFFD, and neither crashes nor silently drops data.
 - **Relative paths.** With `RelativeToRoot`, paths use `/` separators relative to `root`. Items outside `root` are skipped as `OutsideRoot` and never fall back to absolute. Compare lexically on normal paths; Windows compares drive letters case-insensitively.
 - **PathList format.** One path per line with LF line endings. A path containing CR or LF is skipped as `Unrepresentable`.
-- **Revalidation.** Each item is re-snapshotted. A missing item is skipped as `Missing`, and an item whose identity or size/modified changed is skipped as `Changed`. Items with the same identity are written once (`Duplicate`).
+- **Revalidation.** Each item is re-snapshotted. A missing item is skipped as `Missing`, and an item whose identity or size/modified changed is skipped as `Changed`. Duplicates are written once (`Duplicate`). Two items are duplicates when both identities are known (non-zero) and equal. When either identity is `{0,0}`, they are duplicates only if their lexically normal paths are equal, so items without an identity are never collapsed together.
 - **Destination safety.**
   - `DestinationIsItem`: the destination is the same file as any item (identity or equivalent path). This applies even when `overwrite` is set.
   - `DestinationExists`: the destination already exists and `overwrite` is not set.
@@ -47,7 +47,7 @@ The task implements the frozen contract in `include/glancelot/selection_export.h
 2. Formula injection: all six prefixes, with neutralization on and off. A negative number such as `-5` is still prefixed when on (documented behaviour).
 3. Unicode: CJK, emoji and RTL file names round-trip byte-exact. Invalid-UTF-8 metadata becomes U+FFFD.
 4. Relative-root handling: inside, nested and outside the root, the root itself, and a sibling with a common prefix (`/a/b` vs `/a/bc`).
-5. Revalidation: a file deleted after the snapshot (Missing), a file replaced with the same name (Changed), and a duplicate identity.
+5. Revalidation: a file deleted after the snapshot (Missing), a file replaced with the same name (Changed), and a duplicate identity. With `revalidate=false`, distinct paths that all have `{0,0}` identity are each written.
 6. Destination: refuse an existing file without overwrite, replace with overwrite, refuse the destination when it is one of the items even with overwrite, and refuse a destination directory that doesn't exist (Failed).
 7. Cancellation before and mid-export (use a stop source triggered from `progress`). There must be no destination file and no temp file left over, and an earlier destination file must be unchanged.
 8. `maxItems` exceeded writes nothing, and the generation is echoed on every status.
@@ -55,4 +55,4 @@ The task implements the frozen contract in `include/glancelot/selection_export.h
 
 The handoff must include:
 - Actual Windows output for `ctest -R selection_export`.
-- A full `scripts/build.ps1 -Test` run and `docker build -t glancelot-browser:main .`. Run these only while holding `gate_lock` in docs/WORK-QUEUE.yaml.
+- A full `scripts/build.ps1 -Test` run, which takes the machine gate lock itself, and `docker build -t glancelot-browser:main .` run through `scripts/gate-lock.ps1 -Run { ... }`.

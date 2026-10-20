@@ -4,8 +4,7 @@ integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
 integration_lock: null
-gate_lock: null
-gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine; set {holder, branch, started} before and clear after; targeted ctest -R runs exempt (AGENTS.md, October 20 2026)
+gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/monitor-output-fix ae1b7e4; Gemini reviews stacked Claude packets F002, F037, F031, F040, F049, F009, F014, F051 in stack order, each only for its own changes on top of the previous branch, then a short confirmation pass after the stack is updated onto integrated main; Claude lane reviews SAFE-MODE-01 follow-up; Gemini never reviews MONITOR-OUTPUT-01 fixes
 memory_action: act_mvcridmt_bdf1947ea9e7
@@ -655,7 +654,7 @@ tasks:
     review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
     review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
     review_request: Codex-lane re-review requested of exact candidate claude/input-02 87b063d, which addresses the five findings in INPUT-02-FINAL-CODEX-REVIEW.md (evidence in docs/verification/INPUT-02.md; author Windows input_ui 16/16, grid_ui 72/72, window_slots 34/34; Linux Docker not rerun). Do not merge main into the reviewed snapshot; trial merge against main conflicts in CMakeLists.txt, viewer_controller.cpp, worker/main.cpp and ui/Main.qml (b10354a, re-confirmed after FS-WATCH 1bd4461) and goes to the Claude lane only after approval. Stacked packets F002, F037, F009, F014, F031, F040, F049, F051 wait behind it.
-    stacked_review: Gemini lane reviews stacked F002, F037, F031, F040, F049, F009, F014, F051 now, each only for its own changes on top of the previous branch (e.g. git diff claude/input-02..claude/f002); Claude lane fixes findings in place; Claude lane rehearses the main conflict resolution on throwaway claude/input-02-mainsync, never on the reviewed snapshot
+    stacked_review: Gemini lane reviews stacked F002, F037, F031, F040, F049, F009, F014, F051 now, each only for its own changes, at pinned SHAs (git diff <predecessor SHA merged into the packet> <packet SHA>, recorded in the review); Claude lane fixes findings in place and merges each earlier-packet fix forward through the stack before a later packet's review counts as final; Claude lane rehearses the main conflict resolution on throwaway claude/input-02-mainsync, never on the reviewed snapshot
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01

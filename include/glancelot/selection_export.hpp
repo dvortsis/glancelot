@@ -40,7 +40,9 @@ enum class PathPolicy {
 };
 struct ExportRequest {
     std::uint64_t generation{};      // echoed in the result; the caller drops results whose generation is stale
-    std::vector<ExportItem> items;   // written in this order; duplicates (same identity) are written once
+    // Written in this order; duplicates are written once. Two items are duplicates when both identities are known
+    // (non-zero) and equal, or, when either identity is unknown ({0,0}), when their lexically normal paths are equal.
+    std::vector<ExportItem> items;
     std::filesystem::path destination;
     ExportFormat format{ExportFormat::Csv};
     std::vector<ExportColumn> columns{ExportColumn::Path, ExportColumn::Name, ExportColumn::Kind,

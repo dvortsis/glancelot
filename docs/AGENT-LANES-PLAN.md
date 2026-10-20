@@ -19,10 +19,12 @@ Lead decision, October 18, 2026, approved by the user. Three agent tools work co
 - **Reviewer routing.**
   - The Gemini lane may now review Claude and Codex branches. It never reviews fixes to code it originally wrote.
   - Codex keeps the INPUT-02 re-review, for continuity, and the MONITOR-OUTPUT-01 fix review.
-  - Gemini reviews the stacked packets F002 through F051. Each review covers only that packet's changes on top of the previous branch in the stack. A short confirmation pass follows once the stack is updated onto integrated `main`.
+  - Gemini reviews the stacked packets F002 through F051. Each review covers only that packet's own changes, at pinned SHAs: `git diff <predecessor SHA merged into the packet> <packet SHA>`, recorded in the review.
+  - A fix to an earlier packet is merged forward through the stack before a later packet's review counts as final.
+  - A short confirmation pass follows once the stack is updated onto integrated `main`.
   - The Claude lane takes the SAFE-MODE-01 follow-up review.
 - **Reassignment.** F070 (CSV and manifest export) moves from Codex Wave 5 to the Gemini lane as EXPORT-CSV-01. It is engine-only; the UI stays with the Claude lane. The JSON manifest format stays with F030.
-- **Gate lock.** Only one full gate (`scripts/build.ps1 -Test` or `docker build`) runs at a time. Holders set `gate_lock` in docs/WORK-QUEUE.yaml.
+- **Gate lock.** Only one full gate (`scripts/build.ps1 -Test` or `docker build`) runs at a time, enforced by the machine-local `scripts/gate-lock.ps1` (see AGENTS.md).
 
 ## Lane strengths, which decide every assignment
 
