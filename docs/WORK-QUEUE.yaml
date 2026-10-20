@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: null, branch: null, started: null}
+integration_lock: {holder: gemini, branch: agent/format, started: "2026-10-20T01:02:45Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -708,11 +708,12 @@ tasks:
     milestone: M3
     priority: 5
     owner_lane: gemini
-    state: implementing
+    state: integration
     branch: agent/format
     worktree: .worktrees/format
     build: build-format
     plan: docs/FORMAT-02-PLAN.md
+    evidence: docs/verification/FORMAT-02.md
     memory_action: act_mvgbiqwz_f6226e0de873
     owner: lead
     depends: [IO-01]
