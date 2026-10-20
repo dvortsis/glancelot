@@ -707,8 +707,14 @@ tasks:
     requirements: [FMT-02, FMT-03, FMT-06, PERF-03]
     milestone: M3
     priority: 5
+    owner_lane: gemini
+    state: implementing
+    branch: agent/format
+    worktree: .worktrees/format
+    build: build-format
+    plan: docs/FORMAT-02-PLAN.md
+    memory_action: act_mvgbiqwz_f6226e0de873
     owner: lead
-    state: ready
     depends: [IO-01]
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
