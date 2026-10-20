@@ -1,70 +1,75 @@
-[
-  {
-    "file": "linux-fast-path-full-backend.txt",
-    "sha256": "CAD16BCC22255999ABDE7877342149D504B0980077E1BA23A35977663382A6E5"
-  },
-  {
-    "file": "linux-fast-path-full-budget.txt",
-    "sha256": "09BF66823D1762F17CCB9D1F8ADBEA6A2B3B8FFD10F117B8E0E2BDD7D73A7D24"
-  },
-  {
-    "file": "linux-fast-path-full-cases.txt",
-    "sha256": "77A760A2F58D903E2EAA77851C2B4531F7A7212F3AF581C699A05A14EEC9EC07"
-  },
-  {
-    "file": "linux-fast-path-full-full.txt",
-    "sha256": "5130CC9E95E577E8D76DDA5E84F20103DE5910B4B0C64CE5B3809D8879C3EC9E"
-  },
-  {
-    "file": "linux-fast-path-full-image.txt",
-    "sha256": "6B072CE2A110545D94F6B639D79C3C97931CCEB7A19D6A4E8128728DABFD76F6"
-  },
-  {
-    "file": "linux-fast-path-full-stage.txt",
-    "sha256": "2D338FA5010E09705C119ED41C6DF0548F325861496FC1BB46DA62E291192654"
-  },
-  {
-    "file": "linux-fast-path-full-ui.txt",
-    "sha256": "FB6591544438CE25A0DB0033E1F7C7F04130EA68FD6D96A6FBF9FC96BC7C62EB"
-  },
-  {
-    "file": "windows-fast-path-full-backend.txt",
-    "sha256": "1FBDD772FFA1EEB7EA0466A87396D356FF1073A50E563D7AC25BF01CC7B8892C"
-  },
-  {
-    "file": "windows-fast-path-full-budget.txt",
-    "sha256": "E756A6F1B6FC24716BE2D7746A3CB1AE2B08755C45DC9F16259EB5CCDA4098DB"
-  },
-  {
-    "file": "windows-fast-path-full-cases.txt",
-    "sha256": "E13CCEF8B0B1BB37113BF6FFFA33E1A122F61F25085E910FA642E3C3071020D5"
-  },
-  {
-    "file": "windows-fast-path-full-defender.json",
-    "sha256": "194738074714E33B7B74C49D3967D995B73D138E99EF8C2CCBBB47344DCAD0A4"
-  },
-  {
-    "file": "windows-fast-path-full-duplicate-review-stop.json",
-    "sha256": "DB8B665239396EDDF4E3656C18B099162B503338088B3E855553F9499A8F1054"
-  },
-  {
-    "file": "windows-fast-path-full-full.txt",
-    "sha256": "690C03514AD3215B44CB056C7F982E45BE64BB3787F1D97CF8C775D6288F04ED"
-  },
-  {
-    "file": "windows-fast-path-full-monitor-stop.json",
-    "sha256": "9E52A6C5701BFA4775C6A1D3AAC7E82A4A01BDF6A1F2351B961D551BBEA71CAC"
-  },
-  {
-    "file": "windows-fast-path-full-platform.txt",
-    "sha256": "BB712A3BD5DF3296BE348527CEF19CED186163715E4C4BFBB79212567C6AA86B"
-  },
-  {
-    "file": "windows-fast-path-full-ui.txt",
-    "sha256": "1AAA686EBBA310057206B2399DD81EF9A7E9536B1438A04DD4A0024AFD0486E3"
-  },
-  {
-    "file": "windows-fast-path-full-wrapper-result.json",
-    "sha256": "EA07C7BBD6BE285401CB117EC97BADE603B99CBDBA685558CD016C509BBA09BE"
-  }
-]
+{
+  "schema": 1,
+  "source": "80964f799cca1df542706b497e2cb012c92efe5f",
+  "normalization": "UTF-8 text with CRLF and CR normalized to LF, for cross-platform Git checkouts",
+  "artifacts": [
+    {
+      "file": "linux-fast-path-full-backend.txt",
+      "sha256": "CAD16BCC22255999ABDE7877342149D504B0980077E1BA23A35977663382A6E5"
+    },
+    {
+      "file": "linux-fast-path-full-budget.txt",
+      "sha256": "09BF66823D1762F17CCB9D1F8ADBEA6A2B3B8FFD10F117B8E0E2BDD7D73A7D24"
+    },
+    {
+      "file": "linux-fast-path-full-cases.txt",
+      "sha256": "77A760A2F58D903E2EAA77851C2B4531F7A7212F3AF581C699A05A14EEC9EC07"
+    },
+    {
+      "file": "linux-fast-path-full-full.txt",
+      "sha256": "ECFB22B81C64FB9936A989C86B39C0DFFBFF24361E7B71E0A26C412242F6CD74"
+    },
+    {
+      "file": "linux-fast-path-full-image.txt",
+      "sha256": "0760DCDE90420907ECACF2786A115AF2D5E87CB2BBD16C25D79C71A177075228"
+    },
+    {
+      "file": "linux-fast-path-full-stage.txt",
+      "sha256": "A7C23D4515D7D02DFB2062556B1FB33D8EBAAF8E7C62B9DA410A5C4D740CB9F6"
+    },
+    {
+      "file": "linux-fast-path-full-ui.txt",
+      "sha256": "FB6591544438CE25A0DB0033E1F7C7F04130EA68FD6D96A6FBF9FC96BC7C62EB"
+    },
+    {
+      "file": "windows-fast-path-full-backend.txt",
+      "sha256": "6EA1F81AE40908C999E6D72C2B4B4DFA0FD055B80EDA09F403056A569DE9D7D4"
+    },
+    {
+      "file": "windows-fast-path-full-budget.txt",
+      "sha256": "4CE69F2F8DF68639F8FDE761FD9142E779BD7A9F86679A134CAA66D42C9D955E"
+    },
+    {
+      "file": "windows-fast-path-full-cases.txt",
+      "sha256": "AEBECE3BA20A257920EE0F675DDE60B18A999E7DCE7299320B6CAEE96175A82D"
+    },
+    {
+      "file": "windows-fast-path-full-defender.json",
+      "sha256": "DB0F09189E2400E4B671407E67D0A950BAE941117814C650AD95918979E51EA5"
+    },
+    {
+      "file": "windows-fast-path-full-duplicate-review-stop.json",
+      "sha256": "3A6047E39CF7480A31DDE18F31154DD17D449BCA0D2DD37126361172042C4C76"
+    },
+    {
+      "file": "windows-fast-path-full-full.txt",
+      "sha256": "278B6BE9D0A74AE72F92084ADD6C6C15EC279BB38CE163FF3D79D4AF3246A313"
+    },
+    {
+      "file": "windows-fast-path-full-monitor-stop.json",
+      "sha256": "893153C850F8707E7B0E8F8494ED1F32B6BA8987FCCD7C5FC37D827BC0FD1041"
+    },
+    {
+      "file": "windows-fast-path-full-platform.txt",
+      "sha256": "B2346DA7776BB6A721319DCA6B10ED8F831024A0F91E52EF20F74031AAB2B64F"
+    },
+    {
+      "file": "windows-fast-path-full-ui.txt",
+      "sha256": "A20A18C78C160FC07889E57FC058DCC67ABD4EB20A64D16A70575599ABF3DAF2"
+    },
+    {
+      "file": "windows-fast-path-full-wrapper-result.json",
+      "sha256": "0C69AEDF2606623243853DB59D5B115C9C3FE6F0D9D4147AC0E89F5B527D0D77"
+    }
+  ]
+}
