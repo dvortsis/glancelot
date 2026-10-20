@@ -9,6 +9,7 @@
 #include "glancelot/metadata_model.hpp"
 #include "glancelot/animation_controller.hpp"
 #include "glancelot/mutation_service.hpp"
+#include "glancelot/copy_move_service.hpp"
 
 class ViewerController : public QObject {
     Q_OBJECT
@@ -51,6 +52,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(bool metadataVisible READ isMetadataVisible WRITE setMetadataVisible NOTIFY metadataVisibleChanged)
     Q_PROPERTY(glancelot::AnimationController* animationController READ animationController CONSTANT)
     Q_PROPERTY(glancelot::MutationService* mutationService READ mutationService CONSTANT)
+    Q_PROPERTY(glancelot::CopyMoveService* copyMoveService READ copyMoveService CONSTANT)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -149,6 +151,9 @@ public:
     glancelot::MutationService* mutationService() const;
     Q_INVOKABLE void reconcileRenamedPath(const QString& oldPath, const QString& newPath);
     Q_INVOKABLE void reconcileCreatedFolder(const QString& folderPath);
+
+    // Copy / Move Service (COPY-MOVE-01 / F020 / META-07 / SYS-06)
+    glancelot::CopyMoveService* copyMoveService() const;
 
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
