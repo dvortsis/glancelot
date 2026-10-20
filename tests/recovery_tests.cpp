@@ -1,6 +1,10 @@
 #include "glancelot/settings_recovery.hpp"
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
+#include "settings_package.hpp"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QScopeGuard>
 #include "glancelot/settings_file.hpp"
 #include <QCryptographicHash>
 #include <QDir>
@@ -241,6 +245,101 @@ private slots:
         QCOMPARE(result.status.code,Code::Committed);QVERIFY(stop.stop_requested());QVERIFY(result.revision!=before.snapshot->revision);
         const auto current=readRaw({dir.path()});QVERIFY(current.snapshot);QCOMPARE(result.revision,current.snapshot->revision);
         QVERIFY(read(dir.filePath("settings.json")).contains("zoom"));QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
+    }
+    void captureRetainsExactDiagnosticMembersAndSealedRevision() {
+        QTemporaryDir source,target;QVERIFY(source.isValid()&&target.isValid());
+        const QByteArray primary("corrupt retained bytes"),backup("{ \"schema\":2,\"future\":true }");
+        QVERIFY(write(source.filePath("settings.json"),primary));QVERIFY(write(source.filePath("settings.json.bak"),backup));
+        const auto captured=captureBackup({source.path()},target.filePath("capture"));QCOMPARE(captured.status.code,Code::Ok);
+        const auto loaded=package::read(captured.destination);QCOMPARE(loaded.status.code,Code::Ok);QVERIFY(loaded.data);
+        QCOMPARE(loaded.data->primary.bytes,primary);QCOMPARE(loaded.data->primary.kind,ParseKind::Corrupt);
+        QCOMPARE(loaded.data->lastGood.bytes,backup);QCOMPARE(loaded.data->lastGood.kind,ParseKind::Unsupported);
+        QCOMPARE(loaded.data->revision,captured.packageRevision);QVERIFY(captured.packageRevision.startsWith("sp1:"));
+        QCOMPARE(read(source.filePath("settings.json")),primary);QCOMPARE(read(source.filePath("settings.json.bak")),backup);
+        QVERIFY(!QFile::exists(source.filePath("settings.json.damaged")));
+        QVERIFY(!QFile::exists(QDir(captured.destination).filePath(".manifest-seal")));
+    }
+    void captureAbsentAndEmptyRemainDistinct() {
+        QTemporaryDir source,target;QVERIFY(source.isValid()&&target.isValid());
+        const auto absent=captureBackup({source.path()},target.filePath("absent"));QCOMPARE(absent.status.code,Code::Ok);
+        const auto first=package::read(absent.destination);QVERIFY(first.data);QVERIFY(!first.data->primary.present);
+        QVERIFY(write(source.filePath("settings.json"),{}));
+        const auto empty=captureBackup({source.path()},target.filePath("empty"));QCOMPARE(empty.status.code,Code::Ok);
+        const auto second=package::read(empty.destination);QVERIFY(second.data);QVERIFY(second.data->primary.present);
+        QVERIFY(first.data->revision!=second.data->revision);
+        const auto collision=captureBackup({source.path()},target.filePath("absent"));QCOMPARE(collision.status.code,Code::Conflict);
+        const auto unchanged=package::read(absent.destination);QVERIFY(unchanged.data);QCOMPARE(unchanged.data->revision,absent.packageRevision);
+    }
+    void destinationWorkDoesNotHoldSettingsLock() {
+        QTemporaryDir source,target;QVERIFY(source.isValid()&&target.isValid());
+        const QByteArray before("{\"schema\":1,\"version\":\"captured\"}"),after("{\"schema\":1,\"version\":\"newer\"}");
+        QVERIFY(write(source.filePath("settings.json"),before));bool acquired=false,updated=false;
+        package::Hooks hooks;hooks.observe=[&](package::Stage stage){
+            if(stage!=package::Stage::DirectoryCreated)return;
+            FileLock lock(source.filePath("settings.json.lock"));acquired=lock.acquire(0);
+            if(acquired)updated=write(source.filePath("settings.json"),after);
+        };
+        const auto old=package::hooks;package::hooks=&hooks;const auto restore=qScopeGuard([&]{package::hooks=old;});
+        const auto captured=captureBackup({source.path()},target.filePath("capture"));QCOMPARE(captured.status.code,Code::Ok);
+        QVERIFY(acquired);QVERIFY(updated);const auto loaded=package::read(captured.destination);QVERIFY(loaded.data);
+        QCOMPARE(loaded.data->primary.bytes,before);QCOMPARE(read(source.filePath("settings.json")),after);
+    }
+    void packageTamperingRefuses_data() {
+        QTest::addColumn<QString>("mutation");
+        for(const auto* name:{"bytes","missing","extra","unsealed","future","path","duplicate","length","hash","undeclared","manifest-overflow"})
+            QTest::newRow(name)<<QString::fromLatin1(name);
+    }
+    void packageTamperingRefuses() {
+        QFETCH(QString,mutation);QTemporaryDir source,target;QVERIFY(source.isValid()&&target.isValid());
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1}"));
+        const auto captured=captureBackup({source.path()},target.filePath("capture"));QCOMPARE(captured.status.code,Code::Ok);
+        const QDir dir(captured.destination);const auto manifestPath=dir.filePath("manifest.json");
+        auto manifest=QJsonDocument::fromJson(read(manifestPath)).object();auto members=manifest.value("members").toArray();
+        if(mutation=="bytes")QVERIFY(write(dir.filePath("settings.json"),"changed"));
+        else if(mutation=="missing")QVERIFY(QFile::remove(dir.filePath("settings.json")));
+        else if(mutation=="extra")QVERIFY(write(dir.filePath("surprise"),"unexpected"));
+        else if(mutation=="undeclared")QVERIFY(write(dir.filePath("settings.json.bak"),"unexpected backup"));
+        else if(mutation=="manifest-overflow")QVERIFY(write(manifestPath,QByteArray(MaxManifestBytes+1,' ')));
+        else {
+            if(mutation=="unsealed")manifest["sealed"]=false;
+            else if(mutation=="future")manifest["schema"]=2;
+            else if(mutation=="duplicate")members[1]=members[0];
+            else {
+                auto member=members[0].toObject();
+                if(mutation=="path")member["name"]="../settings.json";
+                if(mutation=="length")member["bytes"]=0.5;
+                if(mutation=="hash")member["sha256"]=QString(64,'f');
+                members[0]=member;
+            }
+            manifest["members"]=members;QVERIFY(write(manifestPath,QJsonDocument(manifest).toJson(QJsonDocument::Compact)));
+        }
+        const auto loaded=package::read(dir.path());QVERIFY(!loaded.data);
+        QCOMPARE(loaded.status.code,mutation=="future"?Code::Unsupported:mutation=="manifest-overflow"?Code::LimitExceeded:Code::Corrupt);
+        QCOMPARE(read(source.filePath("settings.json")),QByteArray("{\"schema\":1}"));
+    }
+    void packageCancellationAtSeal_data() {
+        QTest::addColumn<int>("point");
+        for(const auto stage:{package::Stage::DirectoryCreated,package::Stage::PrimaryWritten,package::Stage::BackupWritten,package::Stage::BeforeSeal,package::Stage::AfterSeal})
+            QTest::newRow(QByteArray::number(int(stage)).constData())<<int(stage);
+    }
+    void packageCancellationAtSeal() {
+        QFETCH(int,point);QTemporaryDir source,target;QVERIFY(source.isValid()&&target.isValid());
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1}"));
+        std::stop_source stop;Options options;options.cancellation=stop.get_token();options.generation=51;
+        package::Hooks hooks;hooks.observe=[&](package::Stage stage){if(int(stage)==point)stop.request_stop();};
+        const auto old=package::hooks;package::hooks=&hooks;const auto restore=qScopeGuard([&]{package::hooks=old;});
+        const auto captured=captureBackup({source.path()},target.filePath("capture"),options);
+        QCOMPARE(captured.status.generation,quint64(51));
+        const auto loaded=package::read(target.filePath("capture"));
+        if(point==int(package::Stage::AfterSeal)) {QCOMPARE(captured.status.code,Code::Ok);QVERIFY(loaded.data);QCOMPARE(loaded.data->revision,captured.packageRevision);}
+        else {QCOMPARE(captured.status.code,Code::Cancelled);QVERIFY(!loaded.data);QVERIFY(captured.packageRevision.isEmpty());}
+    }
+    void failedPackageWriteLeavesNoApplicableSeal() {
+        QTemporaryDir source,target;QVERIFY(source.isValid()&&target.isValid());QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1}"));
+        package::Hooks hooks;hooks.fail=[](package::Stage stage){return stage==package::Stage::BeforeSeal;};
+        const auto old=package::hooks;package::hooks=&hooks;const auto restore=qScopeGuard([&]{package::hooks=old;});
+        const auto captured=captureBackup({source.path()},target.filePath("capture"));QCOMPARE(captured.status.code,Code::WriteFailed);
+        const auto loaded=package::read(captured.destination);QVERIFY(!loaded.data);QVERIFY(!QFile::exists(QDir(captured.destination).filePath("manifest.json")));
     }
 };
 QTEST_GUILESS_MAIN(RecoveryTests)

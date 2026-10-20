@@ -91,9 +91,42 @@ package revalidation and public apply facade are not implemented or qualified by
 those callbacks. Full old settings/window/controller suites, Linux, feature
 build wiring and independent review remain required. This is component evidence.
 
+## Sealed raw backup packages
+
+captureBackup now captures a consistent raw pair under the existing lock, releases
+that lock and writes into an exclusively created new destination. Only fixed
+settings.json/settings.json.bak members are written with NewOnly; a staged manifest
+is flushed and renamed to manifest.json last. Cancel/failure before seal leaves
+an inert partial directory, never an applicable package. Cancel after publication
+reports Ok. Captured corrupt/future bytes remain diagnostic, not an applicable
+restore source selected by silent substitution.
+
+Private package validation reads at most8KiB manifest and1MiB per member, checks
+schema/seal, exactly two ordered fixed-name descriptors, presence/length/lowercase
+hashes and actual bytes, rejects unexpected/undeclared/nonregular members, and
+uses bounded root-only enumeration. sp1 binds exact manifest and member hashes
+using the frozen encoding. It does not execute paths or recursively inspect data.
+Destination collisions never overwrite the existing package. Source originals
+remain unchanged; destination work does not retain the settings lock.
+
+Windows component CTest passed2/2 in0.84s; raw/transaction/package53/53 zero skips
+620ms, registry7/7 zero skips12ms. Actual tests cover corrupt/future exact bytes,
+absent/empty capture, revision stability, existing-destination collision, modified/
+missing/unexpected/undeclared members, unsealed/future/arbitrary-path/duplicate-name/
+fractional-length/hash/oversized-manifest refusals, cancellation at five stages,
+pre-seal failure, and another cooperating writer acquiring the source lock and
+changing settings during destination work while the captured package retains the
+old bytes. Exact outputs and component project are package-* in safe-mode-01/.
+
+The package writer can be reused for real transaction preimages, but public apply,
+source-selection policy and plan/package revalidation are still pending. These
+tests do not establish physical power-loss durability, every filesystem alias/
+permission variant, exclusion of hostile noncooperating writes, Linux behavior
+or the complete SAFE-MODE gate.
+
 ## Remaining complete scope
 
-Package validation, real sealed exclusive preimages and public checked restore,
+Real restore-preimage integration and public checked restore,
 bounded configuration diff/restore, claim-nonce/session guards, dirty/clean atomic
 checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
