@@ -357,6 +357,15 @@ process interruption or full legacy/platform regression. Lead build amendment
 4745c0e prepares real source lists and the required dedicated controller target;
 release and full test wiring still need enablement before any candidate gate.
 
+The unchanged tests/window_slot_tests.cpp was then separately compiled against
+the actual controller/recovery sources without GLANCELOT_RECOVERY_TESTING. Its
+Windows regression passed31/31, zero skips24360ms; CTest1/1 in24.55s (test24.47s).
+This includes existing ordinary settings failure/backup/unknown-key, cross-process
+slot coordination, late-claim, successful/failed decode, empty-folder, explicit-open,
+destruction-flush and disabled-slot cases. Actual production-flavor component
+project and configure/build/CTest/case outputs are legacy-slots-* in safe-mode-01/.
+It remains a targeted regression, not the full scripts/build.ps1 -Test gate.
+
 ## Remaining complete scope
 
 Executable early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
