@@ -40,7 +40,33 @@ project does not replace the required production/test wiring or full feature gat
 
 ## Outstanding complete scope
 
-Raw snapshot/revision/package validation, checked writer and exclusive preimages,
+## Raw settings pair
+
+readRaw now resolves an explicit absolute namespace, acquires the existing
+settings.json.lock with bounded/cancellable waiting and reads each raw member
+at most1MiB+1 bytes. It distinguishes absent/present-empty, supported/corrupt/
+future classifications, rejects nonregular members and retains exact primary
+and backup bytes without last-good substitution. sr1 uses the frozen domain,
+presence, uint64LE length and SHA256 encoding; ns1 separately binds the resolved
+namespace. It never changes primary, backup or damaged evidence. A missing
+configuration directory and the ordinary lock file may be created for coordination.
+
+Actual Windows Qt6.8.3 component execution passed2/2 CTest in0.54s, with raw16/16
+zero skips246ms and registry7/7 zero skips14ms. The raw cases include an independent
+absent-pair wire-vector check, corrupt bytes plus valid backup without substitution,
+format/key-order and backup-only revision changes, future/fractional/missing/wrong
+schema classification, exact1MiB and oversize limits, directory-member refusal,
+equal bytes across different namespaces, relative/invalid requests, precancel,
+Busy and cancellation during held-lock contention. Exact outputs and the actual
+component CMake project are in safe-mode-01/raw-*.txt.
+
+This is cooperative-writer locking and bounded reads, not exclusion of hostile
+noncooperating filesystem changes, network-call cancellation or physical-media
+qualification. Linux execution and the complete feature gates are pending.
+
+## Remaining complete scope
+
+Package validation, checked writer and exclusive preimages,
 bounded configuration diff/restore, claim-nonce/session guards, dirty/clean atomic
 checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
