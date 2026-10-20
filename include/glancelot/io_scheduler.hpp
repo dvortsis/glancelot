@@ -96,3 +96,4 @@ inline StorageProfile parseStorageProfile(const QString& str) {
 }
 
 } // namespace glancelot
+
