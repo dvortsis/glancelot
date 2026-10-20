@@ -122,6 +122,12 @@ Task `COPY-MOVE-01` introduces a non-blocking, safe asynchronous file copy and m
 Total Test time (real) = 200.80 sec
 ```
 
+### Linux Docker Build & CTest (docker build -t glancelot-browser:main .)
+```
+100% tests passed, 0 tests failed out of 28
+Total Test time (real) = 116.69 sec
+```
+
 ---
 
 ## 4. Architectural & Safety Notes
@@ -136,3 +142,4 @@ Total Test time (real) = 200.80 sec
 
 ## 5. Verdict
 **APPROVED**. Ready for serial integration into `main`.
+
