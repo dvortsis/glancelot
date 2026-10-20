@@ -1,5 +1,23 @@
 # FS-WATCH-01 implementation evidence
 
+Correction4a86528: actual Claude R14 review9851f03 accepts the narrow same-key/
+order metadata refresh optimization, subject fresh full/integrated gates. Exact
+claude-r14-review.md is retained. Windows build succeeded. Selected metadata
+regression3/3 zero skips131ms and cache10/10 zero skips4418ms passed. The unchanged
+100k budget passed3/3 zero skips159381ms: setup97386ms, maximum publication152ms,
+initial GUI gap60ms, sustained-writer gap154ms, active-filter GUI gap140ms and
+publication139ms. This observed run meets250ms/180s; it is not a performance
+guarantee under arbitrary load or a full-suite qualification.
+
+The auxiliary direct grid diagnostic omitted CTest's QT_QUICK_BACKEND=software;
+it timed out300s and recorded the directory-link navigation assertion. Preserve
+windows-fast-path-grid.txt and outcomes.json as failures under that different
+configuration. The selected assertion under the actual software renderer passed
+3/3 zero skips4452ms (windows-fast-path-grid-software-target.txt); that does not
+prove the entire grid suite or explain the earlier full-suite timeout. No
+controller/QML change is made on that evidence. New full Windows/Linux and final
+integrated gates remain required. No assertions, bounds or timeouts were relaxed.
+
 Latest status: merged as2c38082 by another session, but acceptance remains open.
 Main-synced2414cd6 Windows rerun failed29/32 in776.35s: grid300s timeout,
 dense180s timeout and cache failure. Exact windows-main-synced-first-*.txt logs
