@@ -29,6 +29,8 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterChanged)
     Q_PROPERTY(bool filterPersistent READ isFilterPersistent WRITE setFilterPersistent NOTIFY filterChanged)
     Q_PROPERTY(bool hasFilter READ hasFilter NOTIFY filterChanged)
+    // F042 type chip: "" shows everything; "folder", "image" or "file" shows only that kind. Combines with the name filter.
+    Q_PROPERTY(QString kindFilter READ kindFilter WRITE setKindFilter NOTIFY filterChanged)
 public:
     enum Role { NameRole = Qt::UserRole + 1, PathRole, KindRole, LinkRole, HiddenRole, SizeRole, ModifiedRole,
                 SelectedRole, CursorRole, CurrentRole };
@@ -77,6 +79,7 @@ public:
     bool isFilterPersistent() const;
     void setFilterPersistent(bool persistent);
     bool hasFilter() const;
+    QString kindFilter() const; void setKindFilter(const QString& kind);
     Q_INVOKABLE void setFilter(const QString& pattern, bool persistent = false);
     Q_INVOKABLE void clearFilter();
     Q_INVOKABLE void toggleFilterPersistence();

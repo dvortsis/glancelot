@@ -109,6 +109,8 @@ struct DirectoryEntryModel::Private {
     QHash<QString, int> index;
     Listing rawListing;
     glancelot::FilterSpec filter;
+    int kindWanted{-1}; // -1: every kind; otherwise a glancelot::EntryKind value (F042 type chip)
+    bool filtering() const { return filter.isActive() || kindWanted >= 0; }
     QSet<QString> selected;
     QString anchorKey, cursorKey;
     glancelot::SortSpec sort;
@@ -131,14 +133,14 @@ struct DirectoryEntryModel::Private {
         q->beginResetModel();
         rows.clear();
         index.clear();
-        if (!filter.isActive()) {
+        if (!filtering()) {
             rows = rawListing.rows;
             index = rawListing.index;
         } else {
             rows.reserve(rawListing.rows.size());
             index.reserve(rawListing.index.size());
             for (const auto& row : rawListing.rows) {
-                if (filter.matches(row.name)) {
+                if ((!filter.isActive() || filter.matches(row.name)) && (kindWanted < 0 || int(row.kind) == kindWanted)) {
                     index.insert(row.key, int(rows.size()));
                     rows.push_back(row);
                 }
@@ -182,7 +184,7 @@ struct DirectoryEntryModel::Private {
         const bool wasAccessible = accessible, wasTruncated = truncated;
         accessible = listing.accessible; truncated = listing.truncated;
         const int oldCount = int(rows.size());
-        if (!filter.isActive()) {
+        if (!filtering()) {
             merge(std::move(listing));
             rawListing.rows = rows;
             rawListing.index = index;
@@ -522,7 +524,16 @@ void DirectoryEntryModel::setFilterPersistent(bool persistent) {
     d->filter.persistence = mode;
     emit filterChanged();
 }
-bool DirectoryEntryModel::hasFilter() const { return d->filter.isActive(); }
+bool DirectoryEntryModel::hasFilter() const { return d->filtering(); }
+QString DirectoryEntryModel::kindFilter() const {
+    return d->kindWanted == int(glancelot::EntryKind::Folder) ? QStringLiteral("folder") : d->kindWanted == int(glancelot::EntryKind::Image) ? QStringLiteral("image") : d->kindWanted == int(glancelot::EntryKind::File) ? QStringLiteral("file") : QString();
+}
+void DirectoryEntryModel::setKindFilter(const QString& kind) {
+    const int wanted = kind == "folder" ? int(glancelot::EntryKind::Folder) : kind == "image" ? int(glancelot::EntryKind::Image) : kind == "file" ? int(glancelot::EntryKind::File) : -1;
+    if (wanted == d->kindWanted) return;
+    d->kindWanted = wanted;
+    d->applyFilter();
+}
 void DirectoryEntryModel::setFilter(const QString& pattern, bool persistent) {
     const auto mode = persistent ? glancelot::FilterPersistence::Persistent : glancelot::FilterPersistence::Temporary;
     if (d->filter.pattern == pattern && d->filter.persistence == mode) return;
@@ -531,8 +542,9 @@ void DirectoryEntryModel::setFilter(const QString& pattern, bool persistent) {
     d->applyFilter();
 }
 void DirectoryEntryModel::clearFilter() {
-    if (!d->filter.isActive()) return;
+    if (!d->filtering()) return;
     d->filter.clear();
+    d->kindWanted = -1;
     d->applyFilter();
 }
 void DirectoryEntryModel::toggleFilterPersistence() {

@@ -288,6 +288,29 @@ Rectangle {
                 font.weight: Font.Medium
                 Accessible.name: "Folder " + panel.folderPath
             }
+            Row { // F042 type chips: show only folders, photos or other files; a second click (or Esc) clears
+                objectName: "gridKindChips"
+                visible: panel.width >= 600 && fileGrid.directory.length > 0
+                spacing: Theme.gapXxs
+                Accessible.role: Accessible.Grouping
+                Accessible.name: qsTr("Show only")
+                Repeater {
+                    model: [{ id: "folder", label: qsTr("Folders") }, { id: "image", label: qsTr("Photos") }, { id: "file", label: qsTr("Other files") }]
+                    delegate: UiButton {
+                        required property var modelData
+                        objectName: "gridKind-" + modelData.id
+                        text: modelData.label
+                        selected: fileGrid.kindFilter === modelData.id
+                        implicitHeight: Theme.controlHeight - Theme.gapSm
+                        focusPolicy: Qt.NoFocus
+                        Accessible.role: Accessible.CheckBox
+                        Accessible.checkable: true
+                        Accessible.checked: selected
+                        Accessible.name: qsTr("Show only %1").arg(modelData.label)
+                        onClicked: fileGrid.kindFilter = (fileGrid.kindFilter === modelData.id ? "" : modelData.id)
+                    }
+                }
+            }
             Label {
                 objectName: "gridItemCount"
                 visible: fileGrid.count > 0 && panel.width >= 480

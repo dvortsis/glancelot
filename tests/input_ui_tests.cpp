@@ -663,6 +663,33 @@ private slots:
         QTRY_VERIFY(!strip->isVisible()); QTRY_VERIFY(title->isVisible());
         QTRY_VERIFY(h.viewer.imageReady());
     }
+    // F042 type chips: folders, photos or other files, combined with the name filter; clicking again or Esc clears.
+    void kindChipsFilterTheGridByType() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkpath("sub1") && QDir(dir.path()).mkpath("sub2"));
+        QImage image(32, 24, QImage::Format_RGB32); image.fill(Qt::red);
+        QVERIFY(image.save(dir.filePath("a.png")) && image.save(dir.filePath("b.png")) && image.save(dir.filePath("c.png")));
+        for (const char* name : {"notes.txt", "todo.txt"}) { QFile f(dir.filePath(name)); QVERIFY(f.open(QIODevice::WriteOnly)); f.close(); }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.open(dir.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
+        QTRY_COMPARE(h.fileGrid.count(), 7); // 2 folders, 3 photos, 2 other files
+        auto chip = [&](const char* id) { return named(h.window, QString("gridKind-") + id); };
+        QQuickItem* photos = chip("image"); QVERIFY(photos); QTRY_VERIFY(photos->isVisible());
+        auto click = [&](QQuickItem* item) { QTest::mouseMove(h.window, sceneCenter(item)); QTest::qWait(50); QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(item), 60); };
+        click(photos);
+        QTRY_COMPARE(h.fileGrid.count(), 3); QCOMPARE(h.fileGrid.kindFilter(), QString("image")); QVERIFY(h.fileGrid.hasFilter());
+        click(chip("folder")); QTRY_COMPARE(h.fileGrid.count(), 2); QCOMPARE(h.fileGrid.kindFilter(), QString("folder"));
+        click(chip("file")); QTRY_COMPARE(h.fileGrid.count(), 2);
+        click(chip("file")); QTRY_COMPARE(h.fileGrid.count(), 7); QVERIFY(!h.fileGrid.hasFilter()); // second click clears
+        // Combined with the name filter, and Esc clears both.
+        h.fileGrid.setKindFilter("image"); h.fileGrid.setFilter("a", false);
+        QTRY_COMPARE(h.fileGrid.count(), 1);
+        h.fileGrid.clearFilter();
+        QTRY_COMPARE(h.fileGrid.count(), 7); QCOMPARE(h.fileGrid.kindFilter(), QString());
+    }
+
     // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
     void gridBadgesAreLabelledAndDoNotOverlap() {
         Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
