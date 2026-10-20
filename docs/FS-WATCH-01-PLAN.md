@@ -227,3 +227,27 @@ Return the combined candidate to independent Claude review. Run full Windows and
 Docker gates on combined source, then complete the required serial no-ff merge
 and integrated-commit checks before either packet is done. Prior source-only
 passes are preserved as scoped evidence, not relabeled as combined approval.
+
+## Private worker revision extension freeze
+
+Under lead/codex-fs-revision-protocol, freeze the exact private implementation
+contract docs/handoff/CODEX-FS-WATCH-01-REVISION-PROTOCOL.md. It uses the existing
+isolated decoder process for cancellable metadata validation, rather than letting
+an uninterruptible probe strand a new in-process validation queue. Add the
+revision-only mode and additive verified sourceToken on normal decoded replies;
+retain thumbnail framing, allocation checks and the lock-free transfer/ack rule.
+This is an explicitly authorized private worker/controller extension for the
+FS/Cache correction, with no public-header or stable external-ABI change.
+
+Require exact token validation, captured navigation intent, fresh explicit opens,
+bounded lookahead discovery, existing15s deadlines, source-change/cancellation
+regressions and original Cache features. Final combined independent review and
+full platform/integrated checks remain mandatory. No prior green result is
+approval of this still-unimplemented protocol extension.
+
+The concurrent IO header freeze adds ViewerController properties before its
+owner's scheduler wiring is imported. Lead-owned linkable defaults preserve
+the shared declarations during this integration: auto/Unknown/zero and a no-op
+setter, with no filesystem work or claim of IO functionality. The IO owner
+replaces that explicit default block in its packet. Preserve its uncommitted
+work; FS does not implement the scheduler or change its policy/API.

@@ -121,3 +121,4 @@ Shared header: `include/glancelot/io_scheduler.hpp`
    - Merge `agent/io` into `main`.
    - Run root Windows test (`build.ps1 -Test`) and Linux Docker (`docker build`).
    - Record evidence, release lock, and commit.
+

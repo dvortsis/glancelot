@@ -246,3 +246,4 @@ private slots:
 
 QTEST_MAIN(IoSchedulerTests)
 #include "io_scheduler_tests.moc"
+
