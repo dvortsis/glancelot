@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "codex/fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T13:15:51.0526391Z"}
+integration_lock: {holder: "codex/fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T13:27:04.7631026Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -683,7 +683,7 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates
-    candidate_evidence: Pre-Cache825f7f2 Windows25/25 409.58s and Linux25/25 210.08s; Claude f0bf272 accepts that source. Cache revision fix2b97ad0 turns R1 green and imported Cache tests10/10 pass; IO sync663fb19 and ownership correction implementing under contract3aef7c9; no combined approval
+    candidate_evidence: Source73737a2 backend59/59 plus Cache10/10 Thumbnail36/36 IO12/12; controlled IPC6af2858 focused18/18 zero skips13.492s. Current-main merge6d033c0 preserves imported features; private metadata/mutation/RAW adapters under98a7448 implementing. Combined full gates and independent review pending
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
