@@ -480,3 +480,14 @@ output is candidate-windows-first.txt; Windows CTest did not start. This confirm
 the shared consumer attachment omission on both platforms. Dedicated recovery
 CMake targets are being checked separately; they cannot substitute for either
 required full gate.
+
+Actual dedicated CMake targets linked successfully. CTest returned1: recovery114
+passed/13failed/zero skips12075ms; startup59/59 zero skips178ms; controller10/10
+zero skips1706ms (CTest3 tests14.41s). The policy failures return Unreadable because
+the generated recovery_test_catalog.qrc combines PREFIX /themes with the existing
+source alias themes/catalog.json, yielding /themes/themes/catalog.json. Use the
+production resource declaration PREFIX / BASE assets for all three recovery
+catalogs; the resource alias must remain /themes/catalog.json. Actual per-test
+results and generated qrc are candidate-*-first artifacts. These two lead build
+corrections remain pending the current Gemini integration lock; no test assertion
+or fail-closed production catalog handling should be weakened.
