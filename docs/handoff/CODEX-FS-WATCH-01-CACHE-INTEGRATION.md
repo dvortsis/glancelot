@@ -40,3 +40,20 @@ rapid reversal cases. Explicit open alone is insufficient because the observed
 owner code limits hits to navigation-open. Keep the frozen GUI responsiveness,
 worker memory/deadline and full-platform gates. Physical/coarse-timestamp and
 network filesystem coverage stays unverified unless measured.
+
+## Recheck after Cache integration
+
+Main8b28060 now commits the Cache engine. Static inspection of that exact commit
+still finds cacheKey(path) formed only from absoluteFilePath, size and mtime in
+milliseconds, with navigation-open directly publishing cache.object(key).
+startPrefetch captures this tuple before decoding and inserts decoded pixels
+under it without a second source-revision validation. This confirms the earlier
+proof obligations apply to the committed engine; it is not a runtime reproduction
+of stale pixels. Cache's integration lock remains held by agent/cache, so this
+FS branch has neither merged main nor modified the owner's implementation.
+
+The FS candidate deliberately had no cache-hit path before that merge. Integration
+must preserve the delivered Cache behavior while adding the required revision
+validation/invalidation synchronization; removing lookahead or disabling all hits
+would not complete both contracts. Reconcile under the lead lock and have Claude
+review the combined source and generated cross-folder replacement evidence.
