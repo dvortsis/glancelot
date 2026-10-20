@@ -573,3 +573,26 @@ The specific cache-hit case then passed20 consecutive quiet isolated executions
 Actual isolated QtTest/CTest logs are windows-isolated-*. These do not replace a
 required complete Windows pass; it must be rerun. The cache-miss cause remains
 unproven. Product, test, build and script inputs still exactly match d4f0e70.
+
+## Complete native rerun passed
+
+With product/test/build/script inputs still exactly matching d4f0e70, the actual
+scripts/build.ps1 -BuildDir build-codex-safe-mode-01 -Test rerun passed37/37 in
+578.32s. Original assertions, renderer settings and timeouts were unchanged.
+folder_grid passed207.74s; fs_watch82/82 zero skips83724ms; dense budget3/3 zero
+skips122739ms with maximum publication79ms below the unchanged250ms bound.
+Recovery135/135 zero skips12767ms; startup59/59 zero skips134ms;
+controller10/10 zero skips1401ms. Actual mandatory process test33commands passed
+27.23s. Its first safe launch used actual D3D11 backend3 CPU device5 Microsoft
+Basic Render Driver,22swaps, first decoded-image swap2890ms, exposed/visible window,
+zero invalidations and exact RGB. These are software-profile Qt swap measurements,
+not physical GPU/DPI or input-to-photon qualification. The tested viewer SHA256 is
+6827BDE87ACFCA38C5D762BC14561B935F046853755AA3BF4E1ABD3B3E1D33CA.
+
+Actual complete command output is candidate-windows-quiet.txt, per-test/CTest
+reports are windows-quiet-*, and raw process evidence is
+process-windows/quiet-full-run-lbm1hvj2. The earlier35/37 result and zero-frame
+attempt remain retained; this pass does not prove the cause of those failures.
+Source candidate now has both required complete candidate gates passed. Independent
+cross-lane review and serial integration with actual integrated checks remain open;
+SAFE-MODE-01 is not done or merged into main.

@@ -1,6 +1,6 @@
 # SAFE-MODE-01 independent review preparation
 
-Status: concrete review snapshot; complete native qualification remains open.
+Status: candidate gates passed; independent review and integrated checks remain open.
 Implementing lane: Codex, branch `codex/safe-mode-01`, assigned worktree
 `.worktrees/codex-safe-mode-01`, build `build-codex-safe-mode-01`.
 The lead pins the source/evidence commit in the review request. A reviewer must come from another lane
@@ -75,19 +75,21 @@ noncurrentSameTupleReplacementInvalidatesCache (81other cases passed). Every oth
 test passed, including all recovery targets and the actual33-command process test.
 The unchanged grid binary then passed isolated under identical renderer settings
 and timeout:74passed,4existing opt-in capture skips,206.56s. The selected cache-hit
-case passed20 consecutive isolated runs (28.41s). These do not establish the cause
-or replace a complete Windows pass. A quiet full rerun remains required; its first
-start precondition refused when a separate monitor-output fix build occupied the
-slot. No tests or budgets were weakened.
+case passed20 consecutive isolated runs (28.41s). These did not establish the cause
+or replace a complete Windows pass. A subsequent complete unchanged-source native
+rerun passed37/37 in578.32s, including folder_grid207.74s and fs_watch82/82 zero
+skips83.724s. Recovery135/135, startup59/59 and controller10/10 again had zero skips;
+the mandatory33-command process test passed27.23s. The earlier failed run remains
+retained. No tests or budgets were weakened. Native executable SHA256 is
+6827BDE87ACFCA38C5D762BC14561B935F046853755AA3BF4E1ABD3B3E1D33CA.
 
 Both complete gate logs, actual per-test results and raw generated package/RHI/RGB
 artifacts are committed under docs/verification/safe-mode-01. Start with the updated
 SAFE-MODE-01 verification narrative and inspect the source/tests, rather than
 treating this handoff or green components as approval. Review the whole frozen
 engine contract and interactions with inherited code; report any source defect
-that could explain the native failures. An independent source review can proceed
-while native qualification is investigated, but the packet cannot be merged or
-marked done until all required gates and integrated checks pass.
+that could explain the earlier native failures. The packet cannot be merged or
+marked done until independent review and all integrated checks pass.
 
 Required before this packet can become done: all required
 Windows and Docker/Linux tests including actual software-RHI process proof,
