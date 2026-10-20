@@ -3,8 +3,8 @@
 Status: preparation only, not a qualified candidate or review approval.
 Implementing lane: Codex, branch `codex/safe-mode-01`, assigned worktree
 `.worktrees/codex-safe-mode-01`, build `build-codex-safe-mode-01`.
-The lead must pin the final source/evidence commit after the pending shared build
-corrections and required candidate gates. A reviewer must come from another lane
+The lead must pin the final source/evidence commit after the current required
+candidate gates. A reviewer must come from another lane
 and use an isolated checkout/build. Do not review a moving branch as though it
 were the final candidate. Claude service review of this separate SAFE payload
 still needs the user's concrete authorization; PLATFORM/FS approvals do not cover it.
@@ -62,10 +62,15 @@ are process-death checks, not filesystem durability or physical power-loss proof
 First full Windows and Docker builds failed because settings-only consumers were
 not attached to the recovery engine. Dedicated recovery CMake tests then exposed
 a doubled catalog resource alias;13 policy cases fail closed as Unreadable.
-Both shared build corrections await the serial integration lock. Startup59/59 and
-controller10/10 passed; these are not substitutes for the complete candidate gates.
+Both shared build corrections are now committed by the lead in main as f17a2a3
+and synchronized into the feature with monitor-output in candidate d4f0e70.
+The generated resource now has prefix / and alias themes/catalog.json. All229
+registry literal/flag/platform tokens match integrated main, including its five
+presentation commands. Full corrected Windows and Docker gates are running;
+neither has a result yet. Earlier startup59/59 and controller10/10 results are not
+substitutes for the complete candidate gates.
 
-Required before this packet can become done: both shared corrections, all required
+Required before this packet can become done: all required
 Windows and Docker/Linux tests including actual software-RHI process proof,
 independent cross-lane review of a pinned candidate, any resulting fixes, serial
 main merge and actual integrated checks. Report failed runs and unavailable physical

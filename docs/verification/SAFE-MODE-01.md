@@ -524,3 +524,15 @@ state, dimensions and bounded screen geometry/DPI metadata to diagnose another
 occurrence. The verifier includes those fields in renderer-failure diagnostics.
 The actual release rebuild passed (renderer-diagnostics-release-build.txt); runtime
 qualification of this diagnostic change remains pending the synchronized full gates.
+
+## Corrected shared wiring and monitor synchronization
+
+Lead amendment f17a2a3 attaches settings_file-only consumers and uses production
+resource aliases for all recovery catalogs. The actual regenerated qrc now has
+prefix / and alias themes/catalog.json (candidate-catalog-corrected.qrc).
+Main's independently integrated monitor-output source is synchronized into the
+assigned Codex tree. Conflicts preserve both CMake target sets and startup wiring;
+all229 command literal/flag/platform tokens exactly match integrated main, with
+its five presentation commands retained in the extracted registry. Actual comparison
+output is monitor-registry-sync.txt. Source candidate d4f0e70 begins the corrected
+full scripts/build.ps1 -Test and Docker gates. No result is claimed until completion.
