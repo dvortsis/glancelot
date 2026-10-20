@@ -716,7 +716,7 @@ tasks:
     evidence_candidate: af611ea4f9f8b53487a659cdb6a52bf7adff02af
     review_snapshot: 0580fe05a47fc75e8cdba0f4dc050a76c1b03686
     candidate_checks: Actual complete Windows37/37 578.32s and Docker Linux37/37 257.43s; recovery135/startup59/controller10 zero skips on both; actual software-RHI frame and RGB process proof; earlier native failures retained
-    review_gate: Independent Claude source review awaits separate SAFE payload authorization; snapshot product inputs equal source candidate; not integrated or done
+    review_gate: User approved SAFE review and packet follow-ups; independent read-only Claude review of pinned0580fe0 running (session78674dbb-7268-4ed5-8b7c-8a1c93643e9d); final candidate Windows37/37 evidence supplied; not integrated or done
     evidence: docs/verification/SAFE-MODE-01.md; docs/handoff/CODEX-SAFE-MODE-01-REVIEW.md
     worktree: .worktrees/codex-safe-mode-01
     build: build-codex-safe-mode-01
