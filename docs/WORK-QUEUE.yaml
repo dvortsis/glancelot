@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Defender Behavior:Win32/DefenseEvasion.A!ml; old platform_launcher_stub is retired; no restore/exclusions or old-fixture Windows gates; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "codex/fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T13:50:00.4513474Z"}
+integration_lock: {holder: "lead/platform-fixture-security", branch: "codex/platform-fixture-security", started: "2026-10-20T14:20:36.421189+00:00"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -738,3 +738,17 @@ theme_task:
   outcome: Supplied Slate and Ice branding plus 40 families and 80 built-in variants
   acceptance: Exact supplied tokens, persisted settings, contrast, live search, compact layout, portable smoke
 remaining_waves: [browsing, culling, format_completion, hardening, expansions]
+
+  - id: PLATFORM-FIXTURE-SECURITY-01
+    requirements: [SYS-04, SYS-05]
+    owner: lead
+    owner_lane: codex
+    state: implementing
+    branch: codex/platform-fixture-security
+    worktree: .worktrees/codex-platform-fixture-security
+    build: build-codex-platform-fixture-security
+    plan: docs/PLATFORM-FIXTURE-SECURITY-01-PLAN.md
+    memory_action: act_mvgrfsa8_be3125ae52b0
+    evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+    acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
+    outcome: Required corrective prerequisite for FS and all Windows gates; product adapter unchanged
