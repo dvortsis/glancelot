@@ -13,15 +13,6 @@ QString clean(const QString& path) {
     return QDir::cleanPath(QDir::fromNativeSeparators(path));
 }
 
-QString fold(const QString& path) {
-    const QString c = clean(path);
-#ifdef Q_OS_WIN
-    return c.toLower();
-#else
-    return c;
-#endif
-}
-
 bool isWindowsReservedStem(const QString& stem) {
     static const QStringList reserved = {
         QStringLiteral("CON"),  QStringLiteral("PRN"),  QStringLiteral("AUX"),  QStringLiteral("NUL"),
@@ -114,7 +105,7 @@ QVariantMap MutationService::validateTargetName(const QString& parentDirectory,
             return result;
         }
 
-        if (fold(cleanCurrent) == fold(targetPath)) {
+        if (cleanCurrent.compare(targetPath, Qt::CaseInsensitive) == 0) {
             // Case-only rename of the current item - valid!
             result[QStringLiteral("valid")] = true;
             result[QStringLiteral("isCaseOnly")] = true;
