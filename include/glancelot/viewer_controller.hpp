@@ -39,6 +39,10 @@ class ViewerController : public QObject {
     Q_PROPERTY(qint64 decodedCacheBytes READ decodedCacheBytes NOTIFY cacheChanged)
     Q_PROPERTY(int decodedCacheCount READ decodedCacheCount NOTIFY cacheChanged)
     Q_PROPERTY(bool isLastDecodeCacheHit READ isLastDecodeCacheHit NOTIFY imageChanged)
+    Q_PROPERTY(QString storageProfile READ storageProfile WRITE setStorageProfile NOTIFY storageProfileChanged)
+    Q_PROPERTY(QString currentStorageType READ currentStorageType NOTIFY currentStorageTypeChanged)
+    Q_PROPERTY(int activeIoJobs READ activeIoJobs NOTIFY ioStatsChanged)
+    Q_PROPERTY(qint64 admittedIoBytes READ admittedIoBytes NOTIFY ioStatsChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -117,10 +121,18 @@ public:
     bool isLastDecodeCacheHit() const;
     Q_INVOKABLE void clearDecodedCache();
 
+    // Storage & I/O Scheduling (IO-01 / PERF-05 / SYS-02)
+    QString storageProfile() const;
+    void setStorageProfile(const QString& profile);
+    QString currentStorageType() const;
+    int activeIoJobs() const;
+    qint64 admittedIoBytes() const;
+
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
     void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged(); void cacheChanged();
+    void storageProfileChanged(); void currentStorageTypeChanged(); void ioStatsChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
     // The folder tree was just shown by command; the UI should move keyboard focus into it.
