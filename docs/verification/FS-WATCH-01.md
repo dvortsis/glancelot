@@ -574,3 +574,13 @@ EF98B855BAC510F45CB02862D017FCD0060723F05BEF45AEDF3F740593A0FAEA.
 Git confirmed no source delta from the committed green variant. The current
 full backend run uses that restored green target; no result claimed yet. No
 product/test deadline or limit was weakened and no temporary red source remains.
+
+After exact green restoration, the full current backend executable passed52/52,
+zero failures or skips,155.267s (direct fs_watch_tests,QT_QPA_PLATFORM=offscreen).
+This includes expanded admission/baseline recovery, Filter compatibility, source
+hashes, cancellation and repeated replacement. Actual output is
+fs-watch-01/windows-r8-backend-full.txt. It is not the full25-target Windows suite.
+The current25-target Docker build is now running; no result is claimed yet.
+Actual independent Claude R7 has fixed5e2b0dc in its own new worktree, reviewing
+merged contracts and both R6 follow-ups, with backend-only runtime authorized.
+Native input/QML/full Windows runtime remains subject to an exclusive slot.
