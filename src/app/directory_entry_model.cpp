@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <chrono>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -186,7 +187,11 @@ struct DirectoryEntryModel::Private {
             QElapsedTimer publicationClock;publicationClock.start();
 #endif
             { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
-            auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
+            // Single consumer, reached only after finished: move the rows out
+            // instead of deep-copying a 100k-row vector on the GUI thread and
+            // leaving a second copy for deferred watcher destruction.
+            static_assert(std::is_nothrow_move_constructible_v<Listing>);
+            auto listing = watcher->future().takeResult(); watcher->deleteLater(); --inFlight;
             publication.setBytes(listing.rows.size());
             if (token != generation || !active) publication.setFlags(glancelot::perf::Stale);
             else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);

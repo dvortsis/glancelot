@@ -439,3 +439,18 @@ fs_watch73.86s/fs_watch_ui1.35s,terminal0, image
 366bca519f794349a82349844cc256dfdf44009239435d2e26bdd3e417e5271b.
 Its first failing grid run and diagnostic passes remain recorded above. The new
 budget optimization and publication timing postdate that gate and need new gates.
+
+The early-admission-only instrumented100k run on5e4fe9e passed3/3,zero skips,
+102.771s: setup67.339s,initial GUI45ms,sustained226ms,267 writes,1 invalidation;
+actual GUI publication callbacks2,maximum208ms,final loadingfalse. Exact output
+fs-watch-01/windows-r6-100k-stress.txt. This is one filtered run, not a full gate.
+
+Installed Qt6.8.3 qfuture.h result() returns the result reference by value,
+copying Listing's std::vector of rows on the GUI thread. Its qfutureinterface.h
+takeResult() instead uses move_if_noexcept and clears retained result storage.
+The model has exactly one consumer, called only from QFutureWatcher::finished;
+it now uses watcher->future().takeResult() and a compile-time nothrow-move assertion
+for Listing. This removes the deep row copy and its duplicate deferred destruction,
+without blocking on an unfinished job or changing generation/cancellation logic.
+Required build.ps1 build passed, including the assertion. Full backend regression
+is running; no result claimed. New source needs independent review/full gates.
