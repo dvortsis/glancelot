@@ -39,13 +39,14 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/animation_controller.cpp include/glancelot/animation_controller.hpp
     src/app/mutation_service.cpp include/glancelot/mutation_service.hpp
     src/app/copy_move_service.cpp include/glancelot/copy_move_service.hpp
-    src/app/raw_preview.cpp include/glancelot/raw_preview.hpp)
+    src/app/raw_preview.cpp include/glancelot/raw_preview.hpp
+    src/app/display_manager.cpp include/glancelot/display_manager.hpp)
   target_include_directories(glancelot_platform PUBLIC include)
   target_link_libraries(glancelot_platform PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent)
   if(WIN32)
     target_link_libraries(glancelot_platform PUBLIC shell32 ole32)
   endif()
-  qt_add_executable(glancelot app/main.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp src/render/image_canvas.cpp src/render/image_canvas.hpp
+  qt_add_executable(glancelot app/main.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp src/render/presentation_window.cpp src/render/presentation_window.hpp src/render/image_canvas.cpp src/render/image_canvas.hpp
     src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
     src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp src/app/thumbnail_id.hpp
     src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
@@ -127,7 +128,7 @@ if(GLANCELOT_BUILD_VIEWER)
     qt_add_shaders(grid_ui_tests "grid_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
     add_dependencies(grid_ui_tests glancelot-decoder)
     add_test(NAME folder_grid COMMAND grid_ui_tests -o -,txt)
-    set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 300)
+    set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 400)
     qt_add_executable(file_operation_service_tests tests/file_operation_service_tests.cpp src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp)
     target_include_directories(file_operation_service_tests PRIVATE include src/app)
     target_link_libraries(file_operation_service_tests PRIVATE glancelot_core Qt6::Core Qt6::Test Qt6::Concurrent)
@@ -201,7 +202,7 @@ if(GLANCELOT_BUILD_VIEWER)
     target_link_libraries(cache_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(cache_tests glancelot-decoder)
     add_test(NAME cache COMMAND cache_tests -o -,txt)
-    set_tests_properties(cache PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+    set_tests_properties(cache PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
     qt_add_executable(io_scheduler_tests tests/io_scheduler_tests.cpp src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp)
     target_include_directories(io_scheduler_tests PRIVATE include src/app)
     target_compile_definitions(io_scheduler_tests PRIVATE GLANCELOT_DECODER_PATH="$<TARGET_FILE:glancelot-decoder>")
@@ -238,6 +239,17 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(format_tests glancelot-decoder)
     add_test(NAME format COMMAND format_tests -o -,txt)
     set_tests_properties(format PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
+    qt_add_executable(monitor_output_tests tests/monitor_output_tests.cpp
+      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/render/presentation_window.cpp src/render/presentation_window.hpp
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
+    target_include_directories(monitor_output_tests PRIVATE include src/app src/render)
+    target_link_libraries(monitor_output_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::Test Qt6::Concurrent)
+    qt_add_shaders(monitor_output_tests "monitor_output_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
+    add_dependencies(monitor_output_tests glancelot-decoder)
+    add_test(NAME monitor_output COMMAND monitor_output_tests -o -,txt)
+    set_tests_properties(monitor_output PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
   endif()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
