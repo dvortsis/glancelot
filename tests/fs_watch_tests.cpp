@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QCryptographicHash>
 #include "fs_revision.hpp"
+#include "fs_source_token.hpp"
 #include "fs_monitor.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/directory_entry_model.hpp"
@@ -11,6 +12,10 @@
 #include <QSaveFile>
 #include <QImage>
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QSharedMemory>
+#include <QUuid>
+#include <QBuffer>
 #include <QScopeGuard>
 #include <atomic>
 #include <thread>
@@ -62,6 +67,95 @@ class FSWatchTests : public QObject {
     }
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+    void revisionOnlyWorkerDistinguishesAtomicReplacement() {
+        QTemporaryDir files;QVERIFY(files.isValid());
+        const auto path=files.filePath("a.png");
+        QString program=QCoreApplication::applicationDirPath()+"/glancelot-decoder";
+#ifdef Q_OS_WIN
+        program+=".exe";
+#endif
+        const auto invoke=[&](const QStringList& arguments,int expectedExit=0) {
+            QProcess process;process.setWorkingDirectory(files.path());process.start(program,arguments);
+            if(!process.waitForStarted(2000)||!process.waitForFinished(5000)) {
+                process.kill();process.waitForFinished(1000);return QJsonObject{};
+            }
+            const auto output=process.readAllStandardOutput();
+            if(process.exitStatus()!=QProcess::NormalExit||process.exitCode()!=expectedExit||output.size()>65536||output.count('\n')!=1)return QJsonObject{};
+            return QJsonDocument::fromJson(output).object();
+        };
+        const auto run=[&](const QString& source,int expectedExit=0){return invoke({"--source-revision",source},expectedExit);};
+        const auto missing=run(path);QCOMPARE(missing.value("phase").toString(),QString("revision"));
+        QVERIFY(missing.value("sourceToken").isString());QVERIFY(missing.value("sourceToken").toString().isEmpty());
+        QVERIFY(!missing.contains("width"));QVERIFY(!missing.contains("bytes"));
+        QCOMPARE(run("relative.png",1).value("phase").toString(),QString("error"));
+        QCOMPARE(run(QString{},1).value("phase").toString(),QString("error"));
+        // A malformed mode must not decode a same-named file from its working directory.
+        QVERIFY(png(files.filePath("--source-revision"),Qt::green));
+        QCOMPARE(invoke({"--source-revision"},1).value("phase").toString(),QString("error"));
+        const auto directory=run(files.path());QCOMPARE(directory.value("phase").toString(),QString("revision"));
+        QVERIFY(directory.value("sourceToken").isString());QVERIFY(directory.value("sourceToken").toString().isEmpty());
+#ifndef Q_OS_WIN
+        const auto fifo=files.filePath("stream.png");QVERIFY(::mkfifo(fs_watch::native(fifo).c_str(),0600)==0);
+        const auto stream=run(fifo);QCOMPARE(stream.value("phase").toString(),QString("revision"));
+        QVERIFY(stream.value("sourceToken").isString());QVERIFY(stream.value("sourceToken").toString().isEmpty());
+#endif
+        const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+        const auto replace=[&](Qt::GlobalColor color) {
+            if(!png(path,color))return false;
+            QFile file(path);return file.open(QIODevice::ReadWrite)&&file.resize(4096)&&file.setFileTime(stamp,QFileDevice::FileModificationTime);
+        };
+        QVERIFY(replace(Qt::red));const auto originalHash=hash(path);
+        const auto first=run(path).value("sourceToken").toString();
+        QCOMPARE(hash(path),originalHash);
+        if(first.isEmpty())QSKIP("Native identity unavailable: empty missing-source probe qualified, cache token comparison unqualified");
+        QVERIFY(fs_watch::validSourceToken(first));QCOMPARE(run(path).value("sourceToken").toString(),first);
+        QVERIFY(replace(Qt::blue));const auto replacementHash=hash(path);
+        QCOMPARE(QFileInfo(path).size(),qint64(4096));QCOMPARE(QFileInfo(path).lastModified(),stamp);
+        const auto second=run(path).value("sourceToken").toString();
+        QVERIFY(fs_watch::validSourceToken(second));QVERIFY(second!=first);
+        QCOMPARE(hash(path),replacementHash);QCOMPARE(QImage(path).pixelColor(0,0),QColor(Qt::blue));
+    }
+    void decodeRejectsSameTupleEditAfterAdmissionProbe() {
+        QTemporaryDir files;QVERIFY(files.isValid());const auto path=files.filePath("a.png");
+        const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+        const auto replace=[&](Qt::GlobalColor color) {
+            if(!png(path,color))return false;
+            QFile file(path);return file.open(QIODevice::ReadWrite)&&file.resize(4096)&&file.setFileTime(stamp,QFileDevice::FileModificationTime);
+        };
+        QVERIFY(replace(Qt::red));
+        QString program=QCoreApplication::applicationDirPath()+"/glancelot-decoder";
+#ifdef Q_OS_WIN
+        program+=".exe";
+#endif
+        QProcess process;process.start(program,{path});
+        const auto terminate=qScopeGuard([&]{if(process.state()!=QProcess::NotRunning){process.kill();process.waitForFinished(1000);}});
+        QVERIFY(process.waitForStarted(2000));QTRY_VERIFY_WITH_TIMEOUT(process.canReadLine(),5000);
+        const auto probe=QJsonDocument::fromJson(process.readLine()).object();
+        QCOMPARE(probe.value("phase").toString(),QString("probe"));
+        QCOMPARE(probe.value("bytes").toInteger(),qint64(32*24*4));
+        QSharedMemory transfer("Glancelot-revision-test-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+        QVERIFY(transfer.create(32*24*4));
+        // The worker has opened the old source and now waits for admission.
+        // Its old size/mtime check alone would accept this in-place edit.
+        QImage changed(32,24,QImage::Format_RGB32);changed.fill(Qt::blue);
+        QByteArray bytes;QBuffer buffer(&bytes);QVERIFY(buffer.open(QIODevice::WriteOnly));
+        QVERIFY(changed.save(&buffer,"PNG"));buffer.close();QVERIFY(bytes.size()<=4096);
+        bytes.append(QByteArray(4096-bytes.size(),'\0'));
+        QFile edit(path);QVERIFY(edit.open(QIODevice::ReadWrite));
+        QCOMPARE(edit.write(bytes),qint64(4096));QVERIFY(edit.flush());
+        QVERIFY(edit.setFileTime(stamp,QFileDevice::FileModificationTime));edit.close();
+        const auto replacementHash=hash(path);
+        QCOMPARE(QFileInfo(path).size(),qint64(4096));QCOMPARE(QFileInfo(path).lastModified(),stamp);
+        const auto admission=QJsonDocument(QJsonObject{{"key",transfer.key()}}).toJson(QJsonDocument::Compact)+'\n';
+        QCOMPARE(process.write(admission),qint64(admission.size()));
+        QTRY_VERIFY_WITH_TIMEOUT(process.canReadLine(),5000);
+        const auto response=QJsonDocument::fromJson(process.readLine()).object();
+        QCOMPARE(response.value("phase").toString(),QString("error"));
+        QVERIFY(response.value("error").toString().contains("revision"));
+        QTRY_COMPARE_WITH_TIMEOUT(process.state(),QProcess::NotRunning,5000);QCOMPARE(process.exitCode(),1);
+        QVERIFY(!process.readAllStandardOutput().contains("\"decoded\""));
+        QCOMPARE(hash(path),replacementHash);QCOMPARE(QImage(path).pixelColor(0,0),QColor(Qt::blue));
+    }
     void unavailableNativeRegistrationFallsBack() {
         QTemporaryDir dir;QVERIFY(dir.isValid());QVector<fs_watch::Observation> values;
         fs_watch::MonitorOptions options;options.registerNative=false;

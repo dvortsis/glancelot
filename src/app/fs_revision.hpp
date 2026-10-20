@@ -54,7 +54,7 @@ inline QString key(const QString& path) {
 struct Revision {
     std::uint64_t volume{}, object{}, size{}, modified{}, changed{}, born{};
     std::uint32_t links{};
-    bool known{}, directory{}, link{};
+    bool known{}, directory{}, link{}, regular{};
     bool operator==(const Revision&) const = default;
     QString identity() const {
         if(!known || !object || !born || link || (!directory && links!=1))return {};
@@ -78,6 +78,7 @@ inline Revision probe(const std::filesystem::path& path) {
         result.links=info.nNumberOfLinks;
         result.directory=(info.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=0;
         result.link=(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)!=0;
+        result.regular=!result.directory&&!result.link&&GetFileType(handle)==FILE_TYPE_DISK;
         FILE_BASIC_INFO basic{};
         if(GetFileInformationByHandleEx(handle,FileBasicInfo,&basic,sizeof(basic)))
             result.changed=std::uint64_t(basic.ChangeTime.QuadPart);
@@ -90,7 +91,7 @@ inline Revision probe(const std::filesystem::path& path) {
         result.size=std::uint64_t(info.st_size);result.links=std::uint32_t(info.st_nlink);
         result.modified=std::uint64_t(info.st_mtim.tv_sec)*1000000000ULL+std::uint64_t(info.st_mtim.tv_nsec);
         result.changed=std::uint64_t(info.st_ctim.tv_sec)*1000000000ULL+std::uint64_t(info.st_ctim.tv_nsec);
-        result.directory=S_ISDIR(info.st_mode);result.link=S_ISLNK(info.st_mode);
+        result.directory=S_ISDIR(info.st_mode);result.link=S_ISLNK(info.st_mode);result.regular=S_ISREG(info.st_mode);
 #ifdef Q_OS_LINUX
         struct statx extended{};
         if(::statx(AT_FDCWD,path.c_str(),AT_SYMLINK_NOFOLLOW,STATX_BTIME,&extended)==0&&(extended.stx_mask&STATX_BTIME))

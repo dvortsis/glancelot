@@ -756,3 +756,44 @@ session's93dea6b IO contract commit while the lead's release was being committed
 Verified the intended queue delta and clear lock; no IO files were reverted or
 staged by this lane. That newer IO contract still needs branch synchronization
 before combined final qualification. Preserve its owner implementation work.
+
+## Frozen protocol and worker-side source validation
+
+Lead protocol freeze is maina82c5ac; shared IO property definitions are kept
+linkable by lead060e83b defaults, imported in branch1dd803a. The defaults expose
+no IO implementation and do no filesystem work. Root lock is released8fe8e0f;
+the IO owner's concurrent source edits remain untouched. Newer main CMake work
+still needs synchronization before combined final gates.
+
+Worker now implements the frozen --source-revision absolute-path mode and r1
+metadata token encoding in private fs_source_token.hpp. Missing/directory or
+ambiguous/weak revision evidence returns an empty token. Cache eligibility
+requires a regular file, unambiguous identity and nonzero native change revision;
+stream/special entries cannot gain a cache token. A private regular classification
+is captured with the same native handle/stat, not a separate GUI filesystem query.
+No token claims a media-content hash or exclusion of later external writes.
+
+Normal decoding captures native revision before opening and rechecks after
+conversion/copy, before decoded publication. A known changed/lost revision returns
+an error without decoded; an unchanged eligible source carries its verified token.
+Existing allocation checks, thumbnail framing and lock-free worker transfer/ack
+are preserved. The controller has not yet adopted this token: its hit/admission
+correction, prefetch deadline and bounded discovery remain open. R1 is not closed.
+
+Windows target build and focused file-logged run passed9/9,zero failures/skips,
+5.691s: fs-watch-01/windows-revision-worker-focused.txt. Tests qualify missing and
+directory probes, malformed/relative/empty mode arguments (including a generated
+PNG named --source-revision), stable tokens and equal-size/restored-mtime atomic
+replacement; they also qualify a same-size/restored-mtime in-place source edit
+after the real decoder probe but before shared-memory admission. That worker
+returns a revision error/exit1 without publishing decoded pixels, while generated
+source hashes remain correct. Original newer-open, live large cancellation and
+replacement regressions pass in the same targeted run. No full suite/combined
+review is claimed. The POSIX FIFO assertion is present but not executed on Windows.
+
+The first admission-boundary fixture attempted QSaveFile replacement while the
+worker held its source and failed setup with Windows Access denied,8 pass/1 fail
+in5.220s; it did not test the revision assertion. Preserve that output in
+fs-watch-01/windows-open-source-fixture-failure.txt. The fixture now performs an
+allowed same-length shared-write edit for that boundary; the separate noncurrent
+Cache regression and metadata-token comparison retain atomic replacement.
