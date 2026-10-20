@@ -9,6 +9,13 @@ product/shared/CMake/queue edits, no merge or push, no Docker, no grid/QML/input
 
 ## Disposition: NOT APPROVED as a final packet. R6-1 and R6-2 are resolved; native/Docker/F5 runtime gates are still outstanding.
 
+### Disposition split (updated after the Linux F5 release)
+- Source/implementation review: no blocking source or test finding remains in the 5e2b0dc packet
+  (R6-1 and R6-2 resolved; G1-G3 below are non-blocking test gaps). Later author commits through
+  eff0aee are documentation only (`git diff 5e2b0dc eff0aee` over src/include/ui/tests/cmake/CMake/Dockerfile is empty).
+- Final packet approval: NOT given. Full current Windows `scripts/build.ps1 -Test` and the serial
+  integrated checks are still pending and are not waived.
+
 ### Resolved R6 findings
 - R6-1 (phase cost): `ModelPublicationStats` exists only under GLANCELOT_FS_WATCH_TESTING, which
   cmake/FSWatchTests.cmake defines for `fs_watch_tests` only. `directory_entry_model.cpp` is
@@ -77,6 +84,34 @@ it. Static review does not establish the runtime result.
   partial one (the red run stopped before them). I did not mutate product source to check this.
 - G3 (minor, unchanged R6-3): a stale/cancelled `Listing` is destroyed on the GUI thread.
 - Bound, not a bug: roughly 35k+ entries per folder never get rename tracking (16 MiB budget).
+
+### Linux real-QML F5 runtime (my own execution, released isolated container only)
+Read application-interface-design (dialog/keyboard/focus rules); the change adds no visuals, tokens or
+branding. Command: `wsl -d Ubuntu -- docker build --target build -t glancelot-review-fs-watch-r7-tests .`
+from this worktree (exit 0, 491.7 s; context layers #3,#8-#19 CACHED, but the configure/build stage #21,
+271 s, and #22, 215.7 s, actually executed, so the fs_watch_ui_tests binary was compiled by me from
+5e2b0dc source; image sha256:1be68ac28ec4d78f3a0b54facf97b928b8c6416ad2110eefac2446cefc6f3fba).
+Then `docker run --rm --network none -e QT_QPA_PLATFORM=offscreen -e QT_QUICK_BACKEND=software
+glancelot-review-fs-watch-r7-tests /build/fs_watch_ui_tests -o -,txt`: **3 passed, 0 failed, 0 skipped,
+922 ms**, exit 0 (`workspaceRefreshAndTextModalPrecedence` PASS: real F5 key clicks in preview, grid
+and combined raise `filesInvalidated`; F5 with a focused TextInput and with the settings modal open does
+not). No host mounts, no network, generated media only. This is Linux offscreen/software-scenegraph
+command-route evidence, not GPU/DPI or Windows native key qualification; the log notes "No QRhi found".
+Output: `.cache/r7-linux-ui.txt`, build log `.cache/r7-docker-build.log` (git-ignored).
+
+Non-FS-WATCH observation from that run (files identical to f708068/main, so not this packet's code):
+~40 `ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined` warnings (the `Repeater { model: keys }`
+resolves `keys` declared on the parent RowLayout) and one `PhotoGrid.qml:298:25: Unable to assign
+[undefined] to int`. Reproduce: run `/build/fs_watch_ui_tests` as above. Owners: SHORTCUTS-HELP-01 / FILTER-01.
+The test passes despite them; I recommend those owners fix them.
+
+### Author's Linux full gate (integrator-run evidence, content-reviewed, not my execution)
+From eff0aee `linux-r8-gate-summary.txt` and `linux-r8-fs-details.json`: terminal 0, 25/25 CTest,
+206.78 s, fs_watch 76.11 s (53 passed/0 failed/0 skipped; 53 vs my Windows 52 is the POSIX-only
+alias-to-file case), fs_watch_ui 2.63 s (3/0/0), image sha256:c1457164...abb43; source/product inputs
+identical to 5e2b0dc (my diff check). The build-stage log was CACHED, so it does not show new compilation.
+Linux 100k: gap 79 ms, publications max 68 ms, observed/accepted identities 0/1. Consistent with my
+Windows runs; it is not a Windows gate.
 
 ### Not run / still required (exact remaining gates)
 1. Full current-source Windows `scripts/build.ps1 -Test` (25 targets) in an exclusive native slot,
