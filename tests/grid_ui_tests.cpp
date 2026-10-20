@@ -1163,7 +1163,9 @@ private slots:
         h.fill(20); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         commands.clear();
         h.viewer.trigger("palette"); QTRY_VERIFY(search->hasActiveFocus());
-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        // A longer query so that only the canvas command matches; global commands (for example "Add current folder to favorites")
+        // are runnable from the grid and would otherwise match "rotat" too.
+        for (const char c : std::string("rotate v")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTest::qWait(50);
         QVERIFY(!commands.contains(QVariantList{QString("rotate")}));
