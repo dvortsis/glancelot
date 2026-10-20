@@ -244,6 +244,9 @@ struct DirectoryEntryModel::Private {
 #ifdef GLANCELOT_FS_WATCH_TESTING
         QElapsedTimer phase;phase.start();
 #endif
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.applied=true;publicationStats.filtered=filter.isActive();
+#endif
         const bool wasAccessible = accessible, wasTruncated = truncated;
         accessible = listing.accessible; truncated = listing.truncated;
         // Identity matching was bounded and performed on the listing worker. Keep

@@ -199,7 +199,8 @@ private slots:
                 if(value.rows==100000)qInfo()<<"100k publication ms: total"<<value.totalMs<<"identity"<<value.identityMs
                     <<"merge (includes disposal)"<<value.mergeMs<<"merge scan"<<value.mergeScanMs<<"reset"<<value.resetMs
                     <<"projection/raw mirror"<<value.projectionMs<<"selection"<<value.selectionMs
-                    <<"observed/accepted identities"<<value.observedIdentities<<value.acceptedIdentities;
+                    <<"observed/accepted identities"<<value.observedIdentities<<value.acceptedIdentities
+                    <<"applied/filtered"<<value.applied<<value.filtered;
             }
             qInfo()<<"GUI publication callbacks"<<publications.size()<<"maximum"<<maximum<<"ms; loading at exit"<<grid.loading();
         });
@@ -242,7 +243,7 @@ private slots:
         qint64 maxPublication=-1;bool admittedWithoutPrefix=false;
         for(const auto& value:publications) {
             maxPublication=std::max(maxPublication,value.totalMs);
-            if(value.rows==100000&&!value.complete&&value.observedIdentities==0&&value.acceptedIdentities==1)
+            if(value.applied&&value.rows==100000&&!value.complete&&value.observedIdentities==0&&value.acceptedIdentities==1)
                 admittedWithoutPrefix=true;
         }
         QVERIFY2(admittedWithoutPrefix,"100k rows must publish without a partial identity prefix and retain the one-entry complete baseline");
@@ -251,6 +252,43 @@ private slots:
         QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));QCOMPARE(hash(image),original);
         QVERIFY2(initialGap<250,qPrintable(QString("100k initial publication GUI gap %1 ms").arg(initialGap)));
         QVERIFY2(worst<250,qPrintable(QString("100k sustained writer GUI gap %1 ms").arg(worst)));
+        // Exercise the real active-filter projection at the same dense row limit.
+        // "0" matches every generated name; it cannot hide publication costs.
+        const auto firstFilteredPublication=publications.size();
+        worst=0;previous=clock.elapsed();heartbeat.start();
+        QElapsedTimer filterChange;filterChange.start();viewer.setFilter("0",true);
+        const auto filterChangeMs=filterChange.elapsed();
+        QCOMPARE(grid.count(),100000);QVERIFY(grid.hasFilter());
+        std::atomic_int filteredWrites{};std::atomic_bool filteredFailure{};
+        std::atomic<qint64> filteredSize{};
+        std::jthread filteredWriter([&](std::stop_token stop){
+            while(!stop.stop_requested()) {
+                QSaveFile file(destination);
+                const auto bytes=QByteArray::number(filteredWrites.load())+" filtered generated changed bytes";
+                if(!file.open(QIODevice::WriteOnly)||file.write(bytes)!=bytes.size()||!file.commit()){filteredFailure=true;return;}
+                filteredSize=bytes.size();++filteredWrites;
+                std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            }
+        });
+        QTest::qWait(2000);filteredWriter.request_stop();filteredWriter.join();
+        QVERIFY(!filteredFailure.load());QVERIFY(filteredWrites.load()>20);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(destination)>=0&&
+            grid.data(grid.index(grid.rowOf(destination)),DirectoryEntryModel::SizeRole).toLongLong()==filteredSize.load(),30000);
+        heartbeat.stop();worst=std::max(worst,clock.elapsed()-previous);
+        qint64 filteredMaximum=-1;bool filteredPublished=false;
+        for(auto i=firstFilteredPublication;i<publications.size();++i) {
+            const auto& value=publications[i];
+            if(value.applied&&value.filtered&&value.rows==100000) {
+                filteredPublished=true;filteredMaximum=std::max(filteredMaximum,value.totalMs);
+            }
+        }
+        qInfo()<<"100k active filter: change"<<filterChangeMs<<"ms; GUI gap"<<worst
+               <<"ms; publication"<<filteredMaximum<<"ms; writes"<<filteredWrites.load();
+        QVERIFY(filteredPublished);
+        QVERIFY2(filterChangeMs<250,"100k filter change exceeded the unchanged 250ms GUI budget");
+        QVERIFY2(filteredMaximum<250,"100k filtered publication exceeded the unchanged 250ms GUI budget");
+        QVERIFY2(worst<250,"100k filtered writer exceeded the unchanged 250ms GUI budget");
+        viewer.clearFilter();
         // Return to a complete observation and rename the selected original.
         // Keeping a partial baseline instead of the original complete one loses it.
         for(int i=1;i<100000;++i)

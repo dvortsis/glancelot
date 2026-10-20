@@ -26,7 +26,7 @@ namespace fs_watch {
 struct ModelPublicationStats {
     qint64 totalMs{},identityMs{},mergeMs{},mergeScanMs{},resetMs{},projectionMs{},selectionMs{};
     qsizetype rows{},observedIdentities{},acceptedIdentities{};
-    bool complete{};
+    bool complete{},applied{},filtered{};
 };
 inline thread_local std::function<void(const ModelPublicationStats&)> modelPublicationTiming;
 #endif

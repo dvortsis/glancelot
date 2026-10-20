@@ -607,3 +607,29 @@ initial GUI33ms,writer79ms,maxpublication68ms,observed/accepted identities0/1.
 These are Linux Qt offscreen software-scenegraph tests, not physical GPU/DPI,
 network or other filesystem qualification. Independent review and full current
 Windows/integrated gates remain required.
+
+## R7 independent review and active-filter coverage
+
+Actual Claude report3e98077 is preserved verbatim in
+fs-watch-01/claude-r7-review.md. It found no blocking source issue on5e2b0dc,
+independently ran the Windows backend52/52 and two isolated100k repetitions,
+and compiled/executed Linux real-QML F5 routes3/3 with zero skips. Final packet
+approval remains withheld pending full Windows and integrated checks. Its Linux
+F5 run is software-scenegraph evidence, not native Windows/GPU qualification.
+
+The moderate G1 coverage gap now has a committed regression: reuse the generated
+100k fixture with an active persistent filter matching every row, perform real
+atomic replacements on the writer thread, await the final metadata size, and
+measure actual applied filtered publications plus the GUI heartbeat. Keep all
+250ms limits and30s recovery unchanged. Test-only statistics distinguish applied
+results from discarded callbacks. Then clear the filter and retain the original
+complete-baseline/selected-rename assertions. No product filtering behavior changes.
+
+Windows targeted execution passed3/3, zero failures/skips,72.495s. Filter change
+29ms, filtered publication62ms, filtered GUI gap63ms; unfiltered writer GUI136ms,
+all callbacks at most135ms. Exact output: fs-watch-01/windows-r9-active-filter.txt.
+The generated setup49.199s is excluded from the GUI measurement. Another lane's
+F051 Windows suite was live during this backend-only run, so this is not an
+exclusive-host performance qualification or the full25-target gate. The user's
+next-slot reservation is recorded in the root native-suite marker; the already
+running suite is allowed to finish. No other lane process is terminated.
