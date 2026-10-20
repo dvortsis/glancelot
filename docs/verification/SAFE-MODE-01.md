@@ -217,11 +217,37 @@ closure, guarded restore/checkpoint ordering, process restart or UI teardown;
 those must be exercised in the completed feature, with the held sessions guard
 preceding the settings lock and no borrowed controller state.
 
+## Public immutable preview and guarded restore
+
+The public facade now constructs an opaque value-owned plan only after package,
+source member, current logical base, selected policy, ownership, bounded diff and
+the writer's exact indented output-size checks succeed. Its sf1 fingerprint binds
+namespace, raw pair, package, policy, scope, slot and source member. Editing the
+public preview fields cannot change the plan. Explicit last-good selection and
+corrupt-current recovery disclose loss of reconstructable unknown logical fields.
+
+Apply holds the sessions guard through the shared writer when scoped to a slot,
+checks raw revisions before no-change, and revalidates package/policy/captured
+claim immediately before replacement. A real exclusive sealed raw preimage is
+mandatory before primary replacement; original backup/damaged files remain exact.
+Failed or cancelled preimages and later failures retain the diagnostic destination.
+Position restores include an explicit restoration checkpoint in the preview,
+with an offline clean historical record or the owned claim's dirty identity.
+
+Actual Windows component CTest passed2/2 in4.51s, recovery105/105 zero skips4339ms,
+registry7/7 zero skips10ms. Cases include exact sealed preimages, stale plan replay,
+no-change, backup-only revision conflict, package changes before apply and after
+preimage, invalid/truncated/future previews, immutable plan fields, corrupt current
+with explicit last-good source, preimage failure/cancellation, claim revocation
+immediately before replacement and oversized merged output from bounded inputs.
+Actual outputs/project are restore-* in safe-mode-01/. The two compile corrections
+(QStringList append ambiguity and a test aggregate field order) remain recorded.
+This is a component gate, not full feature, process or platform qualification.
+
 ## Remaining complete scope
 
-Real restore-preimage integration and public checked restore,
-immutable preview/fingerprint/ownership integration, dirty/clean atomic
-checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
+Dirty/clean atomic navigation and lifecycle checkpoints,
+early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
 to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and
 RecoveryTests unconditionally with real sources before candidate qualification.

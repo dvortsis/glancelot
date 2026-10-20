@@ -13,6 +13,7 @@ struct Request {
     Policy policy{Policy::Checkpoint};
     bool retryReplacements{};
     QString expectedRevision, expectedNamespace;
+    std::function<recovery::Status()> validate; // private, bounded, under held guards; no recursive writer
 };
 struct View {
     QJsonObject base;

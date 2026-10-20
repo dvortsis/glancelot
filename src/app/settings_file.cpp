@@ -164,6 +164,7 @@ Result transact(const Request& input,const Editor& edit,const PreimageWriter& pr
     result.recovered=view.recovered;
     if(stage(Stage::AfterRead))return finish(Code::WriteFailed);
     if(cancelled())return finish(Code::Cancelled);
+    if(request.validate) {const auto checked=request.validate();if(checked.code!=Code::Ok)return finish(checked.code,checked.detail);}
     if(!edit)return finish(Code::Corrupt);
     auto decision=edit(view);
     // Compare raw revisions BEFORE the editor/no-change path. No abort/no-op
@@ -178,6 +179,7 @@ Result transact(const Request& input,const Editor& edit,const PreimageWriter& pr
     if(bytes.size()>kMaxSettingsBytes)return finish(ordinary?Code::WriteFailed:Code::LimitExceeded);
     if(stage(Stage::BeforeEvidence))return finish(Code::WriteFailed);
     if(cancelled())return finish(Code::Cancelled);
+    if(request.validate) {const auto checked=request.validate();if(checked.code!=Code::Ok)return finish(checked.code,checked.detail);}
     if(request.policy==Policy::Restore) {
         const auto sealed=preimageWriter(*view.raw);result.preimage=sealed.path;
         if(sealed.status.code!=Code::Ok) {
@@ -193,6 +195,8 @@ Result transact(const Request& input,const Editor& edit,const PreimageWriter& pr
         if(view.recovered&&!replaceFile(path+".damaged",primaryBytes,request.retryReplacements))return finish(Code::WriteFailed);
     }
     if(stage(Stage::BeforeReplace))return finish(Code::WriteFailed);
+    if(cancelled())return finish(Code::Cancelled);
+    if(request.validate) {const auto checked=request.validate();if(checked.code!=Code::Ok)return finish(checked.code,checked.detail);}
     if(cancelled())return finish(Code::Cancelled);
     if(!replaceFile(path,bytes,request.retryReplacements))return finish(Code::WriteFailed);
     if(view.raw) {

@@ -594,6 +594,147 @@ private slots:
         }
         QVERIFY(weak.expired());
     }
+    void publicPreviewApplyCreatesExactSealedPreimage() {
+        QTemporaryDir dir,backupSource,packages;QVERIFY(dir.isValid()&&backupSource.isValid()&&packages.isValid());
+        const QByteArray primary("{ \"schema\":1,\"wheel\":\"zoom\",\"unknown\":{\"future\":5} }"),lastGood("retained diagnostic backup"),damaged("old damaged bytes");
+        QVERIFY(write(dir.filePath("settings.json"),primary));QVERIFY(write(dir.filePath("settings.json.bak"),lastGood));QVERIFY(write(dir.filePath("settings.json.damaged"),damaged));
+        QVERIFY(write(backupSource.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"pan\",\"unknown\":\"not applied\"}"));
+        const auto captured=captureBackup({backupSource.path()},packages.filePath("source"));QCOMPARE(captured.status.code,Code::Ok);
+        const auto proposed=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing});
+        QCOMPARE(proposed.status.code,Code::Ok);QVERIFY(proposed.plan.applicable());QVERIFY(!proposed.truncated);QVERIFY(proposed.fingerprint.startsWith("sf1:"));
+        auto plan=proposed.plan;const auto applied=apply(plan);QCOMPARE(applied.status.code,Code::Committed);QVERIFY(!applied.preimage.isEmpty());
+        const auto previous=package::read(applied.preimage);QVERIFY(previous.data);QCOMPARE(previous.data->primary.bytes,primary);QCOMPARE(previous.data->lastGood.bytes,lastGood);
+        QCOMPARE(read(dir.filePath("settings.json.bak")),lastGood);QCOMPARE(read(dir.filePath("settings.json.damaged")),damaged);
+        const auto current=readRaw({dir.path()});QVERIFY(current.snapshot);QCOMPARE(current.snapshot->revision,applied.resultingRevision);
+        const auto object=QJsonDocument::fromJson(current.snapshot->primary.bytes).object();QCOMPARE(object.value("wheel"),QJsonValue("pan"));
+        QCOMPARE(object.value("unknown").toObject().value("future"),QJsonValue(5));
+        QCOMPARE(apply(plan).status.code,Code::Conflict); // cannot reuse a stale immutable plan
+    }
+    void publicNoChangeAndBackupOnlyConflictNeverCreatePreimages() {
+        QTemporaryDir dir,packages;QVERIFY(dir.isValid()&&packages.isValid());const QByteArray primary("{ \"schema\":1, \"wheel\":\"pan\" }");
+        QVERIFY(write(dir.filePath("settings.json"),primary));const auto captured=captureBackup({dir.path()},packages.filePath("source"));QCOMPARE(captured.status.code,Code::Ok);
+        const auto proposed=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing});QVERIFY(proposed.plan.applicable());
+        const auto noop=apply(proposed.plan);QCOMPARE(noop.status.code,Code::NoChange);QVERIFY(noop.preimage.isEmpty());QCOMPARE(read(dir.filePath("settings.json")),primary);
+        QVERIFY(!QFile::exists(dir.filePath("recovery-preimages")));
+        QVERIFY(write(dir.filePath("settings.json.bak"),"{\"schema\":1}"));
+        QCOMPARE(apply(proposed.plan).status.code,Code::Conflict);QVERIFY(!QFile::exists(dir.filePath("recovery-preimages")));
+    }
+    void changedPackageAfterPreviewAndAfterPreimageRefuses_data() {
+        QTest::addColumn<bool>("afterPreimage");QTest::newRow("before-apply")<<false;QTest::newRow("after-preimage")<<true;
+    }
+    void changedPackageAfterPreviewAndAfterPreimageRefuses() {
+        QFETCH(bool,afterPreimage);QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray primary("{\"schema\":1,\"wheel\":\"zoom\"}");QVERIFY(write(dir.filePath("settings.json"),primary));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"pan\"}"));const auto captured=captureBackup({source.path()},packages.filePath("source"));
+        const auto proposed=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing});QVERIFY(proposed.plan.applicable());
+        const auto manifest=QDir(captured.destination).filePath("manifest.json");const auto original=read(manifest);bool changed=false;
+        glancelot::settings_detail::TransactionHooks hooks;hooks.observe=[&](glancelot::settings_detail::Stage stage){
+            if(afterPreimage&&stage==glancelot::settings_detail::Stage::AfterPreimage)changed=write(manifest,original+"\n");};Hooks installed(hooks);
+        if(!afterPreimage)changed=write(manifest,original+"\n");
+        const auto result=apply(proposed.plan);QVERIFY(changed);QCOMPARE(result.status.code,Code::Conflict);QCOMPARE(read(dir.filePath("settings.json")),primary);
+        if(afterPreimage){QVERIFY(!result.preimage.isEmpty());QVERIFY(package::read(result.preimage).data);}
+        else QVERIFY(result.preimage.isEmpty());
+    }
+    void invalidTruncatedAndFuturePreviewNeverYieldsPlan() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        QVERIFY(write(dir.filePath("settings.json"),"{\"schema\":1}"));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"surprise\"}"));
+        const auto invalid=captureBackup({source.path()},packages.filePath("invalid"));const auto invalidPreview=preview({dir.path()},invalid.destination);
+        QCOMPARE(invalidPreview.status.code,Code::Corrupt);QVERIFY(!invalidPreview.plan.applicable());QVERIFY(!invalidPreview.rows.isEmpty());QCOMPARE(invalidPreview.rows.first().treatment,Treatment::Invalid);
+        QJsonObject large{{"schema",1}};for(int i=0;i<MaxDiffRows+1;++i)large[QString::number(i)]=i;
+        QVERIFY(write(source.filePath("settings.json"),QJsonDocument(large).toJson(QJsonDocument::Compact)));
+        const auto captured=captureBackup({source.path()},packages.filePath("large"));const auto limited=preview({dir.path()},captured.destination);
+        QCOMPARE(limited.status.code,Code::LimitExceeded);QVERIFY(limited.truncated);QVERIFY(!limited.plan.applicable());
+        QVERIFY(write(dir.filePath("settings.json"),"{\"schema\":3}"));
+        const auto future=preview({dir.path()},captured.destination);QCOMPARE(future.status.code,Code::Unsupported);QVERIFY(!future.plan.applicable());
+        QVERIFY(!QFile::exists(dir.filePath("recovery-preimages")));
+    }
+    void oversizedMergedReplacementNeverYieldsPlan() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        const auto original=QJsonDocument(QJsonObject{{"schema",1},{"unknown",QString(int(MaxMemberBytes)-1024,'x')}}).toJson(QJsonDocument::Compact);
+        QVERIFY(original.size()<MaxMemberBytes);QVERIFY(write(dir.filePath("settings.json"),original));
+#ifdef Q_OS_WIN
+        const QString folder="C:/"+QString(32760,'x');
+#else
+        const QString folder="/"+QString(32760,'x');
+#endif
+        const auto saved=QJsonDocument(QJsonObject{{"schema",1},{"windows",QJsonObject{{"1",QJsonObject{{"folder",folder},{"image",folder},{"saved",1}}}}}}).toJson(QJsonDocument::Compact);
+        QVERIFY(saved.size()<MaxMemberBytes);QVERIFY(write(source.filePath("settings.json"),saved));
+        const auto captured=captureBackup({source.path()},packages.filePath("source"));QCOMPARE(captured.status.code,Code::Ok);
+        const auto proposed=preview({dir.path()},captured.destination,OfflineSlotScope{SlotSection::Position,1});
+        QCOMPARE(proposed.status.code,Code::LimitExceeded);QVERIFY(!proposed.plan.applicable());
+        QCOMPARE(read(dir.filePath("settings.json")),original);QVERIFY(!QFile::exists(dir.filePath("recovery-preimages")));
+    }
+    void publicOwnedAndOfflinePositionRestoreKeepOtherSlots() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+#ifdef Q_OS_WIN
+        const QString folder="C:/generated",image="C:/generated/a.png";
+#else
+        const QString folder="/generated",image="/generated/a.png";
+#endif
+        QVERIFY(write(dir.filePath("settings.json"),"{\"schema\":1,\"windows\":{\"2\":{\"image\":\"untouched\",\"future\":true}}}"));
+        const QJsonObject saved{{"schema",1},{"windows",QJsonObject{{"1",QJsonObject{{"folder",folder},{"image",image},{"saved",1}}}}}};
+        QVERIFY(write(source.filePath("settings.json"),QJsonDocument(saved).toJson(QJsonDocument::Compact)));
+        const auto captured=captureBackup({source.path()},packages.filePath("source"));WindowSlot slot(dir.path(),0);QCOMPARE(slot.number(),1);
+        const auto proposed=preview({dir.path()},captured.destination,OwnedSlotScope{SlotSection::Position,slot.claimIdentity()});QCOMPARE(proposed.status.code,Code::Ok);QVERIFY(proposed.plan.applicable());
+        QCOMPARE(apply(proposed.plan).status.code,Code::Committed);
+        auto raw=readRaw({dir.path()});QVERIFY(raw.snapshot);auto current=QJsonDocument::fromJson(raw.snapshot->primary.bytes).object();
+        QCOMPARE(current.value("windows").toObject().value("2").toObject().value("image"),QJsonValue("untouched"));
+        QCOMPARE(current.value("recovery").toObject().value("windows").toObject().value("1").toObject().value("origin"),QJsonValue("restore"));
+        slot.release();const auto offline=preview({dir.path()},captured.destination,OfflineSlotScope{SlotSection::Position,1});QVERIFY(offline.plan.applicable());
+        QCOMPARE(apply(offline.plan).status.code,Code::Committed);raw=readRaw({dir.path()});QVERIFY(raw.snapshot);current=QJsonDocument::fromJson(raw.snapshot->primary.bytes).object();
+        const auto record=current.value("recovery").toObject().value("windows").toObject().value("1").toObject();
+        QCOMPARE(record.value("state"),QJsonValue("clean"));QCOMPARE(record.value("pid").toInteger(),qint64(0));QVERIFY(record.value("claimNonce").toString().isEmpty());
+    }
+    void immutablePlanIgnoresEditedPreviewFieldsAndBindsScope() {
+        QTemporaryDir dir,other,source,packages;QVERIFY(dir.isValid()&&other.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray primary("{\"schema\":1,\"wheel\":\"zoom\"}");QVERIFY(write(dir.filePath("settings.json"),primary));QVERIFY(write(other.filePath("settings.json"),primary));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"pan\"}"));
+        const auto captured=captureBackup({source.path()},packages.filePath("source"));auto proposed=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing});
+        QVERIFY(proposed.plan.applicable());const auto differentNamespace=preview({other.path()},captured.destination,GlobalScope{GlobalSection::Viewing});
+        QVERIFY(differentNamespace.plan.applicable());QVERIFY(proposed.fingerprint!=differentNamespace.fingerprint);
+        const auto differentScope=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Browsing});QVERIFY(differentScope.plan.applicable());QVERIFY(proposed.fingerprint!=differentScope.fingerprint);
+        proposed.rows.clear();proposed.expectedCurrentRevision="forged";proposed.namespaceId="forged";proposed.fingerprint="forged";proposed.truncated=true;
+        QCOMPARE(apply(proposed.plan).status.code,Code::Committed);QCOMPARE(read(other.filePath("settings.json")),primary);
+        QVERIFY(read(dir.filePath("settings.json")).contains("pan"));QCOMPARE(apply(RestorePlan{}).status.code,Code::Corrupt);
+    }
+    void lastGoodSourceIsExplicitAndCorruptCurrentIsPreserved() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray damaged("corrupt original bytes"),backup("{\"schema\":1,\"unknown\":17,\"wheel\":\"zoom\"}");
+        QVERIFY(write(dir.filePath("settings.json"),damaged));QVERIFY(write(dir.filePath("settings.json.bak"),backup));
+        QVERIFY(write(source.filePath("settings.json"),"diagnostic corrupt package primary"));QVERIFY(write(source.filePath("settings.json.bak"),"{\"schema\":1,\"wheel\":\"pan\"}"));
+        const auto captured=captureBackup({source.path()},packages.filePath("source"));
+        const auto noSubstitution=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing});QCOMPARE(noSubstitution.status.code,Code::Corrupt);QVERIFY(!noSubstitution.plan.applicable());
+        const auto proposed=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing},SourceMember::LastGood);
+        QCOMPARE(proposed.status.code,Code::Ok);QVERIFY(proposed.plan.applicable());QVERIFY(!proposed.status.detail.isEmpty());
+        const auto restored=apply(proposed.plan);QCOMPARE(restored.status.code,Code::Committed);
+        const auto preimage=package::read(restored.preimage);QVERIFY(preimage.data);QCOMPARE(preimage.data->primary.bytes,damaged);QCOMPARE(preimage.data->lastGood.bytes,backup);
+        QCOMPARE(read(dir.filePath("settings.json.bak")),backup);const auto object=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object();
+        QCOMPARE(object.value("unknown").toInt(),17);QCOMPARE(object.value("wheel"),QJsonValue("pan"));
+    }
+    void publicPreimageFailureAndCancellationKeepOriginal() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray primary("{\"schema\":1,\"wheel\":\"zoom\"}");QVERIFY(write(dir.filePath("settings.json"),primary));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"pan\"}"));const auto captured=captureBackup({source.path()},packages.filePath("source"));
+        const auto proposed=preview({dir.path()},captured.destination,GlobalScope{GlobalSection::Viewing});QVERIFY(proposed.plan.applicable());
+        QVERIFY(write(dir.filePath("recovery-preimages"),"block root"));const auto blocked=apply(proposed.plan);QCOMPARE(blocked.status.code,Code::WriteFailed);
+        QCOMPARE(read(dir.filePath("settings.json")),primary);QVERIFY(QFile::remove(dir.filePath("recovery-preimages")));
+        std::stop_source stop;Options options;options.cancellation=stop.get_token();package::Hooks hooks;
+        hooks.observe=[&](package::Stage stage){if(stage==package::Stage::BeforeSeal)stop.request_stop();};
+        const auto old=package::hooks;package::hooks=&hooks;const auto restore=qScopeGuard([&]{package::hooks=old;});
+        const auto cancelled=apply(proposed.plan,options);QCOMPARE(cancelled.status.code,Code::Cancelled);QCOMPARE(read(dir.filePath("settings.json")),primary);
+        QVERIFY(!cancelled.preimage.isEmpty());QVERIFY(!package::read(cancelled.preimage).data);
+    }
+    void revokedOwnerImmediatelyBeforeReplaceCannotApply() {
+        QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray primary("{\"schema\":1}");QVERIFY(write(dir.filePath("settings.json"),primary));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1}"));const auto captured=captureBackup({source.path()},packages.filePath("source"));
+        WindowSlot slot(dir.path(),0);const auto proposed=preview({dir.path()},captured.destination,OwnedSlotScope{SlotSection::Position,slot.claimIdentity()});QVERIFY(proposed.plan.applicable());
+        bool revoked=false;glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[&](glancelot::settings_detail::Stage stage){if(stage==glancelot::settings_detail::Stage::BeforeReplace){slot.release();revoked=true;}};
+        Hooks installed(hooks);const auto refused=apply(proposed.plan);QVERIFY(revoked);QCOMPARE(refused.status.code,Code::Conflict);
+        QCOMPARE(read(dir.filePath("settings.json")),primary);QVERIFY(!refused.preimage.isEmpty());QVERIFY(package::read(refused.preimage).data);
+    }
 };
 QTEST_GUILESS_MAIN(RecoveryTests)
 #include "recovery_tests.moc"
