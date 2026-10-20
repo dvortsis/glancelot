@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: claude, branch: claude/review-cache-io + claude/review-monitor-output (docs only), started: "2026-10-20T16:30:00-06:00"}
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -425,7 +425,10 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: gemini
-    state: done
+    state: implementing
+    owner_lane_override: claude, since (Gemini lane finished; user authorized Claude to complete Gemini leftovers)
+    reopened: Independent Claude review CHANGES REQUIRED (docs/verification/MONITOR-OUTPUT-01-CLAUDE-REVIEW.md, 77f67ab) for unstable display identity, half-implemented comparison, no aggregate memory cap, untested hotplug, hard-coded keys
+    fix_branch: claude/monitor-output-fix ae1b7e4 (worktree .worktrees/claude-monitor-output-fix); 24 monitor_output tests pass; needs Codex review, full Windows/Docker gates, lead sign-off on IPresentationWindow::setFitMode and ImageCanvas texture budget accessors; per-output zoom/pan/color/scale not done
     commit: 76b1979
     integrated_evidence: integrated 76b1979 Windows scripts/build.ps1 -Test 33/33 (642.45s) and Linux docker build 33/33 (240.07s)
     evidence: docs/verification/MONITOR-OUTPUT-01.md; independent review approved; Windows scripts/build.ps1 -Test 33/33 (642.45s); Linux Docker Qt 33/33 (240.07s)
@@ -465,7 +468,9 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: review
+    state: done
+    claude_review: Independent Claude cross-lane review APPROVED on main a395ca5 (docs/verification/CACHE-IO-CLAUDE-REVIEW.md, fab990e); stale-pixel defect fixed by FS revision validation (noncurrentSameTupleReplacementInvalidatesCache); targeted tests 6/6
+    follow_up: no eviction-pressure/aggregate-headroom test for cache (needs a lead CMake target); metadata token cannot detect content-only edits preserving id/size/mtime/ctime
     commit: 8b28060
     evidence: docs/verification/CACHE-01.md; independent review approved; Windows scripts/build.ps1 -Test 23/23 (206.74s); Linux Docker Qt 23/23 (135.07s)
     integrated_evidence: integrated 8b28060 Windows scripts/build.ps1 -Test 23/23 (263.94s) and Linux docker build 23/23 (135.07s)
@@ -483,7 +488,9 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: review
+    state: done
+    claude_review: Independent Claude cross-lane review APPROVED on main a395ca5 (docs/verification/CACHE-IO-CLAUDE-REVIEW.md, fab990e); duplicate-ID/negative-estimate/ownership defects fixed and regression-tested; targeted tests 6/6; physical SSD/HDD/SMB unverified
+    follow_up: no eviction-pressure/aggregate-headroom test for cache (needs a lead CMake target)
     commit: 1f97893
     evidence: docs/verification/IO-01.md; independent review approved; Windows scripts/build.ps1 -Test 24/24 (165.75s); Linux Docker Qt 24/24 (112.86s)
     integrated_evidence: integrated 1f97893 Windows scripts/build.ps1 -Test 24/24 (163.34s) and Linux docker build 24/24 (112.86s)
