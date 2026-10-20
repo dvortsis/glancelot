@@ -174,6 +174,7 @@ struct ViewerController::Private {
     qint64 perfQueued{-1}, perfDecoding{-1};
     quint64 perfGeneration{};
     bool perfFirstDecode{true};
+    bool lastDecodeCacheHit{false};
     std::uint8_t perfFlags{};
     void finishDecodeTrace(std::uint8_t flags, std::uint64_t bytes = 0) {
         using namespace glancelot::perf;
@@ -1131,3 +1132,7 @@ void ViewerController::toggleFilterPersistence() {
     d->filter.persistence = d->filter.isPersistent() ? glancelot::FilterPersistence::Temporary : glancelot::FilterPersistence::Persistent;
     emit filterChanged();
 }
+qint64 ViewerController::decodedCacheBytes() const { return qint64(d->cache.totalCost()) * 1024; }
+int ViewerController::decodedCacheCount() const { return d->cache.count(); }
+bool ViewerController::isLastDecodeCacheHit() const { return d->lastDecodeCacheHit; }
+void ViewerController::clearDecodedCache() { d->cache.clear(); emit cacheChanged(); }

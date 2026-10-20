@@ -455,7 +455,11 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: ready
+    state: implementing
+    branch: agent/cache
+    worktree: .worktrees/cache
+    build: build-cache
+    plan: docs/CACHE-01-PLAN.md
     depends: [REVIEW-ALL-01]
     outcome: Revision-validated bidirectional decoded cache and cancellable cross-folder lookahead
     acceptance: Actual hit path; stale revisions discarded; shared admission counts current/worker/staging/cache; reversal and pressure tests
