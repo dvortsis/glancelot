@@ -278,6 +278,11 @@ void CacheTests::lookaheadCancellationOnFilterChange() {
     QCOMPARE(controller.filterPattern(), QString());
 }
 
-QTEST_MAIN(CacheTests)
+int main(int argc, char** argv) {
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QGuiApplication app(argc, argv);
+    CacheTests tests;
+    return QTest::qExec(&tests, argc, argv);
+}
 #include "cache_tests.moc"
 

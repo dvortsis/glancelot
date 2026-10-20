@@ -142,6 +142,12 @@ const std::vector<Command> registry {
     {"cut-selection", "Cut selected files", "Ctrl+X"},
     {"copy-selection", "Copy selected files", ""},
     {"paste", "Paste files to current folder", "Ctrl+V"},
+    // MONITOR-OUTPUT-01 (UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
+    {"presentation-toggle", "Toggle second display presentation", "F5"},
+    {"presentation-mirror", "Presentation: Mirror current photo", ""},
+    {"presentation-pin", "Presentation: Pin current photo", ""},
+    {"presentation-compare", "Presentation: Comparison mode", ""},
+    {"presentation-close", "Close presentation display", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -250,6 +256,7 @@ struct ViewerController::Private {
     glancelot::AnimationController animationController;
     glancelot::MutationService mutationService;
     glancelot::CopyMoveService copyMoveService;
+    glancelot::DisplayManager displayManager;
 
     void loadMetadata(const QString& targetPath, quint64 gen) {
         animationController.load(targetPath, gen);
@@ -315,6 +322,12 @@ struct ViewerController::Private {
             cache.clear();
             emit q->cacheChanged();
             emit q->filesInvalidated();
+        });
+        QObject::connect(&displayManager, &glancelot::DisplayManager::presentationActiveChanged, q, [this](bool) {
+            emit q->presentationChanged();
+        });
+        QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
+            emit q->presentationChanged();
         });
     }
     ~Private() {
@@ -635,6 +648,7 @@ struct ViewerController::Private {
             glancelot::perf::detail::finish(glancelot::perf::Stage::Decode, token, hitStart,
                 glancelot::perf::Flag::CacheHit, std::uint64_t(image.sizeInBytes()));
             observe();
+            displayManager.updateImage(path, image, generation);
             emit q->imageChanged();
             emit q->stateChanged();
             emit q->cacheChanged();
@@ -712,6 +726,7 @@ struct ViewerController::Private {
                     status=message.value("color").toString()+" · display profile not yet managed";
                     notePosition(path);
                     process->write("ok\n");
+                    displayManager.updateImage(path, image, generation);
                     observe(); emit q->imageChanged(); emit q->stateChanged();
                     scheduleLookahead();
             loadMetadata(path, generation);
@@ -751,6 +766,7 @@ struct ViewerController::Private {
                     else if(!result.destination) {
                         ++generation; cancel(); reload.stop();
                         path.clear(); image=QImage{}; imageReady=false; loading=false; metadataModel.clear();
+                        displayManager.updateImage(QString(), QImage(), generation);
                         lastDecodedPath.clear(); pendingImage.clear();
                         pendingFolder=displayPath(result.navigator.snapshot().directory);
                         positionRetries=0;positionDirty=slot>0;
@@ -1157,6 +1173,11 @@ void ViewerController::trigger(const QString& id){
         if(receivers(SIGNAL(viewCommand(QString))) == 0) copyImageBitmap();
         emit viewCommand(id);
     }
+    else if(id=="presentation-toggle") { togglePresentation(); emit viewCommand(id); }
+    else if(id=="presentation-mirror") { d->displayManager.setPresentationMode("mirror"); emit viewCommand(id); }
+    else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
+    else if(id=="presentation-compare") { d->displayManager.setPresentationMode("comparison"); emit viewCommand(id); }
+    else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
     else if(d->bindings.contains(id))emit viewCommand(id);
 }
 QString ViewerController::bindingFor(const QString& id) const{return d->bindings.value(id).toString();}
@@ -1556,4 +1577,39 @@ void ViewerController::reconcileCreatedFolder(const QString& folderPath) {
 
 glancelot::CopyMoveService* ViewerController::copyMoveService() const {
     return &d->copyMoveService;
+}
+
+glancelot::DisplayManager* ViewerController::displayManager() const {
+    return &d->displayManager;
+}
+
+bool ViewerController::isPresentationActive() const {
+    return d->displayManager.isPresentationActive();
+}
+
+QString ViewerController::presentationMode() const {
+    return d->displayManager.presentationModeString();
+}
+
+void ViewerController::togglePresentation() {
+    d->displayManager.togglePresentation();
+}
+
+void ViewerController::openPresentation(const QString& displayId, const QString& mode) {
+    auto m = glancelot::PresentationMode::Mirror;
+    if (mode == QStringLiteral("pinned")) m = glancelot::PresentationMode::Pinned;
+    else if (mode == QStringLiteral("comparison")) m = glancelot::PresentationMode::Comparison;
+    d->displayManager.openPresentation(displayId, m);
+}
+
+void ViewerController::closePresentation() {
+    d->displayManager.closePresentation();
+}
+
+void ViewerController::pinPresentationImage() {
+    d->displayManager.pinCurrentImage();
+}
+
+void ViewerController::unpinPresentationImage() {
+    d->displayManager.unpin();
 }

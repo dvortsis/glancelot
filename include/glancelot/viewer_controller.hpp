@@ -10,6 +10,7 @@
 #include "glancelot/animation_controller.hpp"
 #include "glancelot/mutation_service.hpp"
 #include "glancelot/copy_move_service.hpp"
+#include "glancelot/display_manager.hpp"
 
 class ViewerController : public QObject {
     Q_OBJECT
@@ -53,6 +54,9 @@ class ViewerController : public QObject {
     Q_PROPERTY(glancelot::AnimationController* animationController READ animationController CONSTANT)
     Q_PROPERTY(glancelot::MutationService* mutationService READ mutationService CONSTANT)
     Q_PROPERTY(glancelot::CopyMoveService* copyMoveService READ copyMoveService CONSTANT)
+    Q_PROPERTY(glancelot::DisplayManager* displayManager READ displayManager CONSTANT)
+    Q_PROPERTY(bool presentationActive READ isPresentationActive NOTIFY presentationChanged)
+    Q_PROPERTY(QString presentationMode READ presentationMode NOTIFY presentationChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -156,11 +160,22 @@ public:
     glancelot::CopyMoveService* copyMoveService() const;
 
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
+    // Presentation & Second Display (MONITOR-OUTPUT-01 / UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
+    glancelot::DisplayManager* displayManager() const;
+    bool isPresentationActive() const;
+    QString presentationMode() const;
+    Q_INVOKABLE void togglePresentation();
+    Q_INVOKABLE void openPresentation(const QString& displayId = QString(), const QString& mode = QStringLiteral("mirror"));
+    Q_INVOKABLE void closePresentation();
+    Q_INVOKABLE void pinPresentationImage();
+    Q_INVOKABLE void unpinPresentationImage();
+
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
     void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged(); void cacheChanged();
     void storageProfileChanged(); void currentStorageTypeChanged(); void ioStatsChanged();
     void metadataVisibleChanged();
+    void presentationChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
     // The folder tree was just shown by command; the UI should move keyboard focus into it.
