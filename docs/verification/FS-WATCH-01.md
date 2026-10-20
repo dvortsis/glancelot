@@ -1,8 +1,34 @@
 # FS-WATCH-01 implementation evidence
 
-Status: implementing, not independently approved or integrated. Frozen contract
-c063236; assigned codex/fs-watch-01, .worktrees/codex-fs-watch-01,
-build-codex-fs-watch-01. The all-Codex lane goal remains active.
+Status: reviewed source preparing integration; not integrated. Current measured
+source72f0afa includes the R12 L1 bookkeeping fix116dac3 and main's qualified
+replacement fixture334065e. Actual Claude R13 e93ad90 accepts that narrow fix,
+building on R11/R12 source review and the retained Linux startup-leak red/green
+probe. Frozen contract c063236 plus committed amendments; assigned
+codex/fs-watch-01, .worktrees/codex-fs-watch-01, build-codex-fs-watch-01.
+The all-Codex lane goal remains active.
+
+Latest Windows scripts/build.ps1 -Test passed32/32 in592.95s. Exact logs are
+fs-watch-01/windows-qualified-platform-*.txt: backend81/81 zero skips85.505s,
+100k budget3/3 zero skips166.724s, QML3/3 zero skips3.074s, replacement platform
+26/26 zero skips811ms. The 100k test observed maximum GUI gap234ms and publication
+callback233ms against the unchanged250ms limit. Another lane's native tests
+overlapped, so no host isolation or hardware qualification is claimed.
+Full Linux Docker passed32/32 in240.15s and built the runtime image. Exact
+linux-qualified-platform-*.txt logs retain backend82/82 zero skips69.769s,
+100k budget3/3 zero skips22.094s, and QML3/3 zero skips1.364s. The failed-start
+lease case actually observed QProcess::Starting on Linux. The 100k case measured
+83ms sustained-writer/recovery GUI gap and73ms maximum publication callback.
+The build-stage extraction reused the successful CTest layer; it did not rerun
+tests. Checks on the eventual merged commit remain pending.
+Historical failed/older-source runs below do not transfer to this candidate.
+
+The old Defender-triggering launcher fixture is permanently retired; this source
+uses the separately reviewed replacement. Post-run Defender records show the
+earlier retired FS and monitor helper detections, inactive/nonexecuted, with
+successful actions; no replacement detection appears in the inspected records.
+No exclusions/restores or false-positive/clean-machine conclusions are used.
+See windows-qualified-platform-defender.txt and main's fixture security report.
 
 ## Implementation and bounds
 
