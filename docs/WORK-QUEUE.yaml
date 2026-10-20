@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead, branch: codex/safe-mode-01, purpose: independent-review-corrections}
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -709,14 +709,14 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: codex
-    state: review
+    state: implementing
     depends: [WINDOW-RESUME-01]
     branch: codex/safe-mode-01
     source_candidate: d4f0e707c8bb2d209ea1620fae6617fa0933ed02
     evidence_candidate: af611ea4f9f8b53487a659cdb6a52bf7adff02af
     review_snapshot: 0580fe05a47fc75e8cdba0f4dc050a76c1b03686
     candidate_checks: Actual complete Windows37/37 578.32s and Docker Linux37/37 257.43s; recovery135/startup59/controller10 zero skips on both; actual software-RHI frame and RGB process proof; earlier native failures retained
-    review_gate: User approved SAFE review and packet follow-ups; independent read-only Claude review of pinned0580fe0 running (session78674dbb-7268-4ed5-8b7c-8a1c93643e9d); final candidate Windows37/37 evidence supplied; not integrated or done
+    review_gate: Claude review695f43d requires preference-save contention correction and decisions on resume/live-restore/exit retries; approved SAFE follow-up review will cover fixes and initial inspection omissions; earlier green candidate retained, new source requires qualification
     evidence: docs/verification/SAFE-MODE-01.md; docs/handoff/CODEX-SAFE-MODE-01-REVIEW.md
     worktree: .worktrees/codex-safe-mode-01
     build: build-codex-safe-mode-01
