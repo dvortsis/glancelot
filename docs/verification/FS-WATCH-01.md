@@ -467,3 +467,32 @@ skips,2.940s, output fs-watch-01/windows-r7-replacement-repro.txt. No cause is y
 proven and no complete native pass is claimed. Productdecoder already uses
 read/write/delete sharing and closes source before publication; no product write
 or arbitrary retry was added to mask this generated-media failure.
+
+## Filter/History/Help synchronization checks
+
+Merge65eab86 brought committed main through a657a30 into the assigned FS branch,
+retaining physical complete identity reconciliation before Filter projection,
+raw-index selection pruning, temporary-filter crossing semantics and all task
+commands. No frozen header was edited by this merge resolution. Main.qml differs
+from that base by exactly the permitted refresh allow-list token. The full native
+build passed140/140 build steps. New targeted backend compatibility cases passed
+6/6,zero skips,4.039s: hidden selected rename restored after filter clear,
+watched current rename retaining temporary and persistent filters, plus repeated
+atomic replacement. Original Filter backend tests passed13/13,zero skips,2.433s.
+Exact outputs are fs-watch-01/windows-filter-{compat,original-tests}.txt. These
+are scoped backend checks, not a full native or merged-source Docker gate.
+
+While these checks ran, main advanced to CACHE-01 header freeze f708068. The
+FS branch intentionally still has the earlier header contracts, so it is not
+header-identical to that newer main and these checks cannot qualify CACHE APIs.
+Keep the owner implementation/final synchronization separate; do not copy new
+unimplemented declarations into this tested candidate or implement another
+lane's cache packet. Re-review and full gates remain required after final sync.
+
+On fixed performance candidate2bd898d (before Filter synchronization), the full
+Docker gate passed21/21,214.61s,fs_watch76.59s/fs_watch_ui2.21s,terminal0,image
+9ab1f30f5ee44a90113274d90a45711ba44fb8d151d1b7631509ae874fd0ef26.
+Actual Claude R6 independently built and ran the whole backend:49/49,zero skips,
+137.622s,100k GUI gap180ms,publicationmax179ms. Its first isolated repeat passed
+3/3,97.937s,gap181ms/publication170ms. Further repeats and its final disposition
+are still pending; neither these nor old Docker results approve the new merge.

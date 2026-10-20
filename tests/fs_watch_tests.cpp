@@ -100,6 +100,37 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(target+"/sub/a.png")>=0,5000);
         QVERIFY(grid.selectedPaths().isEmpty());QCOMPARE(grid.cursorRow(),-1);
     }
+    void hiddenSelectedRenameUsesUnfilteredIdentityBaseline() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());
+        const auto keep=dir.filePath("keep.png"),hidden=dir.filePath("hidden.png"),renamed=dir.filePath("renamed.png");
+        QVERIFY(png(keep,Qt::red));QVERIFY(png(hidden,Qt::blue));const auto original=hash(hidden);
+        DirectoryEntryModel grid;grid.setDirectory(dir.path());grid.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==2,5000);
+        grid.select(grid.rowOf(hidden));grid.setFilter("keep",true);
+        QCOMPARE(grid.count(),1);QCOMPARE(grid.selectedCount(),0);
+        QVERIFY(QFile::rename(hidden,renamed));grid.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading(),5000);
+        QCOMPARE(grid.count(),1);QCOMPARE(grid.filterPattern(),QString("keep"));QVERIFY(grid.isFilterPersistent());
+        grid.clearFilter();QCOMPARE(grid.count(),2);
+        QCOMPARE(grid.selectedPaths(),QStringList{renamed});QCOMPARE(grid.cursorRow(),grid.rowOf(renamed));
+        QCOMPARE(hash(renamed),original);
+    }
+    void watchedCurrentRenameRetainsFilter_data() {
+        QTest::addColumn<bool>("persistent");QTest::newRow("temporary")<<false;QTest::newRow("persistent")<<true;
+    }
+    void watchedCurrentRenameRetainsFilter() {
+        QFETCH(bool,persistent);QTemporaryDir dir;QVERIFY(dir.isValid());
+        const auto a=dir.filePath("keep.png"),b=dir.filePath("keep-renamed.png");
+        QVERIFY(png(a,Qt::red));QVERIFY(png(dir.filePath("hidden.png"),Qt::blue));const auto original=hash(a);
+        ViewerController viewer;DirectoryEntryModel grid;file_grid_wiring::followViewer(viewer,grid);grid.setActive(true);
+        viewer.open(a);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!grid.loading()&&grid.count()==2,10000);
+        viewer.setFilter("keep",persistent);QCOMPARE(grid.count(),1);
+        QVERIFY(QFile::rename(a,b));
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()==b&&viewer.imageReady()&&!grid.loading()&&grid.rowOf(b)>=0,10000);
+        QCOMPARE(viewer.filterPattern(),QString("keep"));QCOMPARE(viewer.isFilterPersistent(),persistent);
+        QCOMPARE(grid.filterPattern(),QString("keep"));QCOMPARE(grid.isFilterPersistent(),persistent);
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));QCOMPARE(hash(b),original);
+    }
     void renamedDirectorySelectionWithFormerPathReuse_data() {
         QTest::addColumn<int>("reuse");
         QTest::newRow("missing-old-name")<<0;QTest::newRow("different-object")<<1;QTest::newRow("alias-to-renamed-object")<<2;

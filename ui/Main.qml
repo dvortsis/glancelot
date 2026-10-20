@@ -323,7 +323,6 @@ ApplicationWindow {
                 "select-all", "clear-selection", "invert-selection",
                 "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh",
                 "navigate-back", "navigate-forward", "shortcuts-help"].indexOf(id) >= 0
-
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
