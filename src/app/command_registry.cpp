@@ -65,6 +65,12 @@ static const std::vector<Command> registry {
     {"cut-selection", "Cut selected files", "Ctrl+X"},
     {"copy-selection", "Copy selected files", ""},
     {"paste", "Paste files to current folder", "Ctrl+V"},
+    // MONITOR-OUTPUT-01 (UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
+    {"presentation-toggle", "Toggle second display presentation", "F8"},
+    {"presentation-mirror", "Presentation: Mirror current photo", ""},
+    {"presentation-pin", "Presentation: Pin current photo", ""},
+    {"presentation-compare", "Presentation: Comparison mode", ""},
+    {"presentation-close", "Close presentation display", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},

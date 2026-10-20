@@ -40,7 +40,7 @@ function(glancelot_attach_recovery_consumers)
   foreach(recovery_target IN LISTS recovery_existing_targets)
     get_target_property(recovery_existing_sources ${recovery_target} SOURCES)
     if(recovery_target STREQUAL "glancelot" OR
-       "${recovery_existing_sources}" MATCHES "(viewer_controller|window_slot)[.]cpp")
+       "${recovery_existing_sources}" MATCHES "(viewer_controller|window_slot|settings_file)[.]cpp")
       glancelot_attach_recovery(${recovery_target})
     endif()
   endforeach()

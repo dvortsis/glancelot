@@ -20,6 +20,7 @@
 #include "startup_intent.hpp"
 #include "startup_environment.hpp"
 #include "settings_maintenance.hpp"
+#include "presentation_window.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -100,6 +101,7 @@ int main(int argc,char** argv) {
     applicationMetadata();
     const auto settingsNamespace=intent.safeMode?safeEnvironment.context.directory:glancelot::startup::resolveOriginalConfig(originalConfig);
     QQuickStyle::setStyle("Basic");
+    glancelot::registerPresentationWindowFactory();
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
         if(QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)))<0)

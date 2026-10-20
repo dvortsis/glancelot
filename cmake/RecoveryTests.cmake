@@ -13,8 +13,8 @@ target_include_directories(recovery_tests PRIVATE include src/app app)
 target_link_libraries(recovery_tests PRIVATE glancelot_core glancelot_platform
   Qt6::Gui Qt6::Test Qt6::Concurrent Threads::Threads)
 add_dependencies(recovery_tests glancelot-decoder)
-qt_add_resources(recovery_tests recovery_test_catalog PREFIX "/themes"
-  BASE assets/themes FILES assets/themes/catalog.json)
+qt_add_resources(recovery_tests recovery_test_catalog PREFIX "/"
+  BASE assets FILES assets/themes/catalog.json)
 add_test(NAME recovery COMMAND recovery_tests
   -o "${CMAKE_CURRENT_BINARY_DIR}/recovery-results.txt,txt" -o -,txt)
 set_tests_properties(recovery PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
@@ -24,8 +24,8 @@ qt_add_executable(recovery_startup_tests tests/recovery_startup_tests.cpp
 target_include_directories(recovery_startup_tests PRIVATE include src/app app)
 target_link_libraries(recovery_startup_tests PRIVATE glancelot_core glancelot_platform
   Qt6::Gui Qt6::Test Qt6::Concurrent)
-qt_add_resources(recovery_startup_tests recovery_startup_catalog PREFIX "/themes"
-  BASE assets/themes FILES assets/themes/catalog.json)
+qt_add_resources(recovery_startup_tests recovery_startup_catalog PREFIX "/"
+  BASE assets FILES assets/themes/catalog.json)
 add_test(NAME recovery_startup COMMAND recovery_startup_tests
   -o "${CMAKE_CURRENT_BINARY_DIR}/recovery-startup-results.txt,txt" -o -,txt)
 set_tests_properties(recovery_startup PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
@@ -39,8 +39,8 @@ target_include_directories(recovery_controller_tests PRIVATE include src/app)
 target_link_libraries(recovery_controller_tests PRIVATE glancelot_core glancelot_platform
   Qt6::Gui Qt6::Test Qt6::Concurrent Threads::Threads)
 add_dependencies(recovery_controller_tests glancelot-decoder)
-qt_add_resources(recovery_controller_tests recovery_controller_catalog PREFIX "/themes"
-  BASE assets/themes FILES assets/themes/catalog.json)
+qt_add_resources(recovery_controller_tests recovery_controller_catalog PREFIX "/"
+  BASE assets FILES assets/themes/catalog.json)
 add_test(NAME recovery_controller COMMAND recovery_controller_tests
   -o "${CMAKE_CURRENT_BINARY_DIR}/recovery-controller-results.txt,txt" -o -,txt)
 set_tests_properties(recovery_controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
