@@ -584,3 +584,26 @@ The current25-target Docker build is now running; no result is claimed yet.
 Actual independent Claude R7 has fixed5e2b0dc in its own new worktree, reviewing
 merged contracts and both R6 follow-ups, with backend-only runtime authorized.
 Native input/QML/full Windows runtime remains subject to an exclusive slot.
+
+## Current merged-source full Linux gate
+
+Required docker build on source candidate5e2b0dc (product/tests2b2579d) passed
+25/25 targets,206.78s,terminal0. fs_watch76.11s and fs_watch_ui2.63s passed;
+resulting runtime image
+c1457164a141dfa5a885ccd97c3f626e4e81169fd1016dd40b043ad2888abb43.
+Actual excerpts are fs-watch-01/linux-r8-gate-summary.txt. Documentation-only
+commits afterward do not change any Docker input/product/test source; checked
+with git diff against5e2b0dc across all copied source/build inputs.
+
+The saved CTest LastTest.log from that exact successful build layer was inspected
+through a cached build-stage image b691c71bd1d967f45af727e9fa20d860d9fa578f6408fb1b98e7491ba6ded7c3.
+The layer was CACHED: no second test execution is claimed. Exact extracted
+backend/F5 evidence is fs-watch-01/linux-r8-fs-details.json. Backend53 passed,
+zero failures/skips,76.083s; F5 real-QML suite3 passed,zero failures/skips,2.558s.
+This includes POSIX directory aliases, alias-to-regular-file rejection, dangling
+targets, A-B/A-B-A scan rejection, the committed100k admission/baseline recovery,
+and preview/grid/combined F5 plus text/modal precedence. The100k case recorded
+initial GUI33ms,writer79ms,maxpublication68ms,observed/accepted identities0/1.
+These are Linux Qt offscreen software-scenegraph tests, not physical GPU/DPI,
+network or other filesystem qualification. Independent review and full current
+Windows/integrated gates remain required.
