@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstring>
 #include <QDateTime>
+#include "../app/fs_source_token.hpp"
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <fcntl.h>
@@ -152,8 +153,15 @@ int thumbnailServer() {
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     if (app.arguments().size() == 2 && app.arguments().at(1) == "--thumbnail-server") return thumbnailServer();
+    if (app.arguments().size() >= 2 && app.arguments().at(1) == "--source-revision") {
+        if(app.arguments().size()!=3||!QDir::isAbsolutePath(app.arguments().at(2)))return fail("Expected an absolute source path.");
+        send({{"phase","revision"},{"sourceToken",fs_watch::probeSourceToken(app.arguments().at(2))}});
+        return 0;
+    }
     if (app.arguments().size() != 2) return fail("Expected one image path.");
     const QString path = app.arguments().at(1);
+    const auto initialRevision=fs_watch::probe(fs_watch::native(path));
+    const auto initialToken=fs_watch::sourceToken(initialRevision);
 
     if (glancelot::RawPreviewExtractor::isRawExtension(path)) {
         QElapsedTimer timer;
@@ -198,13 +206,15 @@ int main(int argc, char** argv) {
         if (image.isNull() || image.format() != QImage::Format_RGBA8888) return fail("Cannot convert source pixels to the SDR working format.");
         const qint64 bytes = qint64(image.width()) * image.height() * 4;
         if (bytes > transfer.size() || bytes != capacity) return fail("Decoded dimensions exceed the admitted transfer.");
-        if (!transfer.lock()) return fail("Cannot lock pixel transfer buffer.");
         auto* output = static_cast<unsigned char*>(transfer.data());
         for (int y=0; y<image.height(); ++y) std::memcpy(output+qint64(y)*image.width()*4, image.constScanLine(y), size_t(image.width())*4);
-        transfer.unlock();
+        const auto finalRevision=fs_watch::probe(fs_watch::native(path));
+        if(initialRevision.known&&initialRevision!=finalRevision)
+            return fail("Source revision changed while decoding; retry when the writer finishes.");
+        const auto verifiedToken=initialRevision==finalRevision?initialToken:QString{};
         send({{"phase", "decoded"}, {"width", image.width()}, {"height", image.height()}, {"stride", image.width()*4},
               {"color", tagged ? "Embedded profile converted to sRGB" : "RAW embedded preview sRGB"},
-              {"extractUs", double(extractUs)}});
+              {"extractUs", double(extractUs)}, {"sourceToken",verifiedToken}});
         if (!std::fgets(request, sizeof(request), stdin)) return 1;
         return 0;
     }
@@ -243,12 +253,16 @@ int main(int argc, char** argv) {
     if (image.isNull() || image.format() != QImage::Format_RGBA8888) return fail("Cannot convert source pixels to the SDR working format.");
     const qint64 bytes = qint64(image.width()) * image.height() * 4;
     if (bytes > transfer.size() || bytes != capacity) return fail("Decoded dimensions exceed the admitted transfer.");
-    if (!transfer.lock()) return fail("Cannot lock pixel transfer buffer.");
+    // No lock: the parent maps the buffer but reads it only after the "decoded" message below, so nothing races. Holding the
+    // system semaphore here let a parent that cancelled (killed this process) mid-copy block forever when it detached.
     auto* output = static_cast<unsigned char*>(transfer.data());
     for (int y=0; y<image.height(); ++y) std::memcpy(output+qint64(y)*image.width()*4, image.constScanLine(y), size_t(image.width())*4);
-    transfer.unlock();
+    const auto finalRevision=fs_watch::probe(fs_watch::native(path));
+    if(initialRevision.known&&initialRevision!=finalRevision)
+        return fail("Source revision changed while decoding; retry when the writer finishes.");
+    const auto verifiedToken=initialRevision==finalRevision?initialToken:QString{};
     send({{"phase", "decoded"}, {"width", image.width()}, {"height", image.height()}, {"stride", image.width()*4},
-          {"color", tagged ? "Embedded profile converted to sRGB" : "Untagged source assumed sRGB"}});
+          {"color", tagged ? "Embedded profile converted to sRGB" : "Untagged source assumed sRGB"}, {"sourceToken",verifiedToken}});
     // Parent copies the immutable pixels before acknowledging. No original file handle is held here.
     if (!std::fgets(request, sizeof(request), stdin)) return 1;
     return 0;

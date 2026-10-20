@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.25)
+project(lease_probe LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+add_executable(lease_probe probe.cpp io_scheduler.cpp include/glancelot/io_scheduler.hpp)
+target_include_directories(lease_probe PRIVATE include)
+target_link_libraries(lease_probe PRIVATE Qt6::Core)

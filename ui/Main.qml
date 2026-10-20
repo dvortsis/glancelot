@@ -327,7 +327,7 @@ ApplicationWindow {
                 "cut-selection", "copy-selection", "paste",
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
-                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset",
+                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh",
                 "navigate-back", "navigate-forward", "shortcuts-help", "toggle-metadata"].indexOf(id) >= 0
     }
     function fuzzyMatch(text, query) {

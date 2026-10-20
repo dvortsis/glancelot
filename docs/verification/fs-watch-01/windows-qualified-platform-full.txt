@@ -1,0 +1,132 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (7.9s)
+-- Generating done (1.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+[1/155] Automatic MOC and UIC for target glancelot_test_argv_capture
+[2/155] Automatic MOC and UIC for target glancelot_platform
+[3/153] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[4/151] Automatic MOC and UIC for target pane_layout_tests
+[5/149] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\glancelot_test_argv_capture_autogen\mocs_compilation.cpp.obj
+[6/149] Automatic MOC and UIC for target glancelot-decoder
+[7/147] Automatic MOC and UIC for target glancelot
+[8/146] Automatic MOC and UIC for target theme_tests
+[9/144] Running AUTOMOC file extraction for target glancelot
+[10/144] Automatic MOC and UIC for target grid_ui_tests
+[11/142] Automatic MOC and UIC for target fs_watch_ui_tests
+[12/140] Running moc --collect-json for target glancelot
+[13/94] Automatic MOC and UIC for target acceptance_tests
+[14/92] Automatic MOC and UIC for target folder_tree_tests
+[15/90] Automatic MOC and UIC for target thumbnail_tests
+[16/89] Automatic MOC and UIC for target window_slot_tests
+[17/87] Automatic MOC and UIC for target file_operation_service_tests
+[18/85] Automatic MOC and UIC for target directory_model_tests
+[19/83] Automatic MOC and UIC for target canvas_tests
+[20/81] Automatic MOC and UIC for target grid_search_tests
+[21/79] Automatic MOC and UIC for target grid_density_tests
+[22/77] Automatic MOC and UIC for target ui_settings_tests
+[23/75] Automatic MOC and UIC for target fs_watch_tests
+[24/74] Automatic MOC and UIC for target fs_watch_budget_tests
+[25/73] Automatic MOC and UIC for target favorites_tests
+[26/71] Automatic MOC and UIC for target folder_history_tests
+[27/69] Automatic MOC and UIC for target shortcuts_help_tests
+[28/67] Automatic MOC and UIC for target filter_tests
+[29/65] Automatic MOC and UIC for target cache_tests
+[30/63] Automatic MOC and UIC for target io_scheduler_tests
+[31/62] Automatic MOC and UIC for target metadata_tests
+[32/60] Automatic MOC and UIC for target animation_tests
+[33/58] Automatic MOC and UIC for target mutation_tests
+[34/56] Automatic MOC and UIC for target copy_move_tests
+[35/54] Automatic MOC and UIC for target format_tests
+[36/52] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\tests\platform_argv_capture.cpp.obj
+[37/52] Linking CXX executable "native argv ☂ 🧪\glancelot_test_argv_capture.exe"
+[38/52] Automatic MOC and UIC for target platform_integration_tests
+[39/52] Building CXX object CMakeFiles\platform_integration_tests.dir\platform_integration_tests_autogen\mocs_compilation.cpp.obj
+[40/52] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\thumbnail_service.cpp.obj
+[41/52] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_service.cpp.obj
+[42/52] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\thumbnail_service.cpp.obj
+[43/52] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_tests.cpp.obj
+[44/52] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_test_adapter.cpp.obj
+[45/52] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\thumbnail_service.cpp.obj
+[46/52] Linking CXX executable thumbnail_tests.exe
+[47/52] Linking CXX executable platform_integration_tests.exe
+[48/52] Linking CXX executable glancelot.exe
+[49/52] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\thumbnail_service.cpp.obj
+[50/52] Linking CXX executable fs_watch_tests.exe
+[51/52] Linking CXX executable fs_watch_budget_tests.exe
+[52/52] Linking CXX executable io_scheduler_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+      Start  1: perf_trace
+ 1/32 Test  #1: perf_trace .......................   Passed    0.10 sec
+      Start  2: navigation
+ 2/32 Test  #2: navigation .......................   Passed    3.60 sec
+      Start  3: directory_listing
+ 3/32 Test  #3: directory_listing ................   Passed   21.75 sec
+      Start  4: file_operations
+ 4/32 Test  #4: file_operations ..................   Passed    0.25 sec
+      Start  5: viewer_acceptance
+ 5/32 Test  #5: viewer_acceptance ................   Passed    8.56 sec
+      Start  6: thumbnails
+ 6/32 Test  #6: thumbnails .......................   Passed    6.88 sec
+      Start  7: folder_tree
+ 7/32 Test  #7: folder_tree ......................   Passed    8.37 sec
+      Start  8: pane_layout
+ 8/32 Test  #8: pane_layout ......................   Passed    0.57 sec
+      Start  9: window_slots
+ 9/32 Test  #9: window_slots .....................   Passed   25.88 sec
+      Start 10: folder_grid
+10/32 Test #10: folder_grid ......................   Passed  203.75 sec
+      Start 11: file_operation_service
+11/32 Test #11: file_operation_service ...........   Passed    1.33 sec
+      Start 12: directory_model
+12/32 Test #12: directory_model ..................   Passed   43.02 sec
+      Start 13: viewport
+13/32 Test #13: viewport .........................   Passed    0.13 sec
+      Start 14: themes
+14/32 Test #14: themes ...........................   Passed    0.28 sec
+      Start 15: platform_integration
+15/32 Test #15: platform_integration .............   Passed    0.89 sec
+      Start 16: grid_search
+16/32 Test #16: grid_search ......................   Passed    0.36 sec
+      Start 17: grid_density
+17/32 Test #17: grid_density .....................   Passed    0.25 sec
+      Start 18: ui_settings
+18/32 Test #18: ui_settings ......................   Passed    0.37 sec
+      Start 19: fs_watch
+19/32 Test #19: fs_watch .........................   Passed   85.63 sec
+      Start 20: fs_watch_budget
+20/32 Test #20: fs_watch_budget ..................   Passed  166.88 sec
+      Start 21: fs_watch_ui
+21/32 Test #21: fs_watch_ui ......................   Passed    3.22 sec
+      Start 22: favorites
+22/32 Test #22: favorites ........................   Passed    0.44 sec
+      Start 23: folder_history
+23/32 Test #23: folder_history ...................   Passed    0.08 sec
+      Start 24: shortcuts_help
+24/32 Test #24: shortcuts_help ...................   Passed    0.13 sec
+      Start 25: filter
+25/32 Test #25: filter ...........................   Passed    2.67 sec
+      Start 26: cache
+26/32 Test #26: cache ............................   Passed    4.45 sec
+      Start 27: io_scheduler
+27/32 Test #27: io_scheduler .....................   Passed    0.21 sec
+      Start 28: metadata
+28/32 Test #28: metadata .........................   Passed    0.17 sec
+      Start 29: animation
+29/32 Test #29: animation ........................   Passed    0.50 sec
+      Start 30: mutation
+30/32 Test #30: mutation .........................   Passed    0.13 sec
+      Start 31: copy_move
+31/32 Test #31: copy_move ........................   Passed    0.17 sec
+      Start 32: format
+32/32 Test #32: format ...........................   Passed    0.24 sec
+
+100% tests passed out of 32
+
+Total Test time (real) = 592.95 sec
