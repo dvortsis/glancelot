@@ -363,6 +363,12 @@ ApplicationWindow {
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
         else if (id === "toggle-metadata") { viewer.toggleMetadata(); wakeHud() }
+        else if (id === "animation-toggle-play-pause") { if (viewer.animationController) viewer.animationController.togglePlayPause() }
+        else if (id === "animation-next-frame") { if (viewer.animationController) viewer.animationController.nextFrame() }
+        else if (id === "animation-previous-frame") { if (viewer.animationController) viewer.animationController.previousFrame() }
+        else if (id === "animation-speed-up") { if (viewer.animationController) viewer.animationController.setSpeed(viewer.animationController.speed * 1.5) }
+        else if (id === "animation-speed-down") { if (viewer.animationController) viewer.animationController.setSpeed(viewer.animationController.speed / 1.5) }
+        else if (id === "animation-toggle-loop") { if (viewer.animationController) viewer.animationController.setLoop(!viewer.animationController.loop) }
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
             const treeFolder = treePanel.currentSelectedFolder()
@@ -549,7 +555,7 @@ ApplicationWindow {
         objectName: "canvas"
         x: app.paneRect("preview").x; y: app.paneRect("preview").y
         width: app.paneRect("preview").width; height: app.paneRect("preview").height
-        image: viewer.image
+        image: viewer.animationController && viewer.animationController.active && !viewer.animationController.frameImage.isNull ? viewer.animationController.frameImage : viewer.image
         background: "#191919" // photo backdrop, deliberately independent of the interface palette
         focus: !app.gridMode
         visible: app.workspace._previewShown
@@ -561,7 +567,36 @@ ApplicationWindow {
             event.accepted = true
         }
         // Combined view: F6 returns to the grid; Tab continues to the split handle (its keyboard resize), then the grid.
-        Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true } }
+        Keys.onPressed: event => {
+            if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true; return }
+            if (viewer.animationController && viewer.animationController.active) {
+                if (event.key === Qt.Key_Space && viewer.animationController.isAnimated) {
+                    viewer.animationController.togglePlayPause()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Period) {
+                    viewer.animationController.nextFrame()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Comma) {
+                    viewer.animationController.previousFrame()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_BracketRight) {
+                    viewer.animationController.setSpeed(viewer.animationController.speed * 1.5)
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_BracketLeft) {
+                    viewer.animationController.setSpeed(viewer.animationController.speed / 1.5)
+                    event.accepted = true
+                    return
+                }
+            }
+        }
         Keys.onTabPressed: event => {
             if (app.combinedMode) {
                 if (splitHandle.visible) splitHandle.forceActiveFocus(Qt.TabFocusReason); else app.focusPane("grid")
@@ -575,6 +610,14 @@ ApplicationWindow {
         }
         Accessible.name: "Photo canvas"
         Accessible.description: viewer.fileName.length ? viewer.fileName + ", " + viewer.imageWidth + " by " + viewer.imageHeight + " pixels" : "Open or drop a photo to begin"
+    }
+    AnimationBar {
+        id: animationBar
+        anchors.horizontalCenter: canvas.horizontalCenter
+        anchors.bottom: canvas.bottom
+        anchors.bottomMargin: Theme.paddingLg
+        z: 20
+        visible: viewer.animationController && viewer.animationController.active && app.workspace._previewShown && !app.gridMode
     }
     MouseArea {
         id: interaction

@@ -5,6 +5,8 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QFileInfo>
+#include <QColorSpace>
+#include <QPointer>
 #include <algorithm>
 
 namespace glancelot {
@@ -90,6 +92,7 @@ AnimationController::AnimationController(QObject* parent)
     : QObject(parent), d(std::make_unique<Private>(this)) {}
 
 AnimationController::~AnimationController() {
+    d->currentGeneration++;
     d->playbackTimer.stop();
 }
 
@@ -268,22 +271,27 @@ void AnimationController::load(const QString& filePath, quint64 generation) {
 
     if (filePath.isEmpty() || !QFileInfo::exists(filePath)) {
         clear();
+        emit loaded(d->currentGeneration);
         return;
     }
 
     d->filePath = filePath;
     const quint64 token = generation;
+    QPointer<AnimationController> self(this);
 
-    QThreadPool::globalInstance()->start([this, filePath, token]() {
+    QThreadPool::globalInstance()->start([self, filePath, token]() {
+        if (!self) return;
+
         QImageReader reader(filePath);
         reader.setDecideFormatFromContent(true);
         const QString fmt = QString::fromLatin1(reader.format()).toLower();
         const int count = reader.imageCount();
 
         if (count <= 1) {
-            QMetaObject::invokeMethod(this, [this, token]() {
-                if (token != d->currentGeneration) return;
-                clear();
+            QMetaObject::invokeMethod(self.data(), [self, token]() {
+                if (!self || token != self->d->currentGeneration) return;
+                self->clear();
+                emit self->loaded(token);
             }, Qt::QueuedConnection);
             return;
         }
@@ -291,53 +299,55 @@ void AnimationController::load(const QString& filePath, quint64 generation) {
         const bool isTiff = (fmt == "tiff" || fmt == "tif");
         const bool animated = !isTiff && (reader.supportsAnimation() || fmt == "gif" || fmt == "webp" || fmt == "png");
 
+        // Pre-decode initial frames (up to 64 frames for bounded memory) and collect exact delays
+        const int predecodeCount = std::min(count, 64);
         QVector<int> delays;
         delays.reserve(count);
+        QVector<QImage> cache(count);
+
         for (int i = 0; i < count; ++i) {
             reader.jumpToImage(i);
             int delay = reader.nextImageDelay();
+            if (i < predecodeCount) {
+                QImage frame = reader.read();
+                if (!frame.isNull()) {
+                    if (!frame.colorSpace().isValid()) frame.setColorSpace(QColorSpace::SRgb);
+                    cache[i] = frame;
+                }
+                const int dAfter = reader.nextImageDelay();
+                if (dAfter > 0) delay = dAfter;
+            }
             if (delay <= 0) delay = 100;
             delays.append(delay);
         }
 
-        // Pre-decode initial frames (up to 64 frames for bounded memory)
-        const int predecodeCount = std::min(count, 64);
-        QVector<QImage> cache(count);
-        for (int i = 0; i < predecodeCount; ++i) {
-            reader.jumpToImage(i);
-            QImage frame = reader.read();
-            if (!frame.isNull()) {
-                if (!frame.colorSpace().isValid()) frame.setColorSpace(QColorSpace::SRgb);
-                cache[i] = frame;
-            }
-        }
+        QMetaObject::invokeMethod(self.data(), [self, token, count, animated, delays = std::move(delays), cache = std::move(cache)]() mutable {
+            if (!self || token != self->d->currentGeneration) return;
 
-        QMetaObject::invokeMethod(this, [this, token, count, animated, delays = std::move(delays), cache = std::move(cache)]() mutable {
-            if (token != d->currentGeneration) return;
-
-            d->active = true;
-            d->isAnimated = animated;
-            d->frameCount = count;
-            d->currentFrame = 0;
-            d->currentDelayMs = !delays.isEmpty() ? delays[0] : 100;
-            d->frameDelays = std::move(delays);
+            self->d->active = true;
+            self->d->isAnimated = animated;
+            self->d->frameCount = count;
+            self->d->currentFrame = 0;
+            self->d->currentDelayMs = !delays.isEmpty() ? delays[0] : 100;
+            self->d->frameDelays = std::move(delays);
 
             {
-                QMutexLocker locker(&d->mutex);
-                d->frameCache = std::move(cache);
-                d->frameImage = !d->frameCache.isEmpty() ? d->frameCache[0] : QImage();
+                QMutexLocker locker(&self->d->mutex);
+                self->d->frameCache = std::move(cache);
+                self->d->frameImage = !self->d->frameCache.isEmpty() ? self->d->frameCache[0] : QImage();
             }
 
-            d->updateFrameLabel();
-            emit activeChanged();
-            emit isAnimatedChanged();
-            emit frameCountChanged();
-            emit currentFrameChanged();
-            emit frameImageChanged();
+            self->d->updateFrameLabel();
+            emit self->activeChanged();
+            emit self->isAnimatedChanged();
+            emit self->frameCountChanged();
+            emit self->currentFrameChanged();
+            emit self->frameImageChanged();
+            emit self->loaded(token);
 
             // Auto-play animated GIFs / WebPs by default
-            if (d->isAnimated) {
-                play();
+            if (self->d->isAnimated) {
+                self->play();
             }
         }, Qt::QueuedConnection);
     });
