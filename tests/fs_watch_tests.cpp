@@ -7,6 +7,7 @@
 #include "fs_source_token.hpp"
 #include "fs_monitor.hpp"
 #include "glancelot/viewer_controller.hpp"
+#include "glancelot/io_scheduler.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
 #include <QSaveFile>
@@ -67,6 +68,28 @@ class FSWatchTests : public QObject {
     }
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+    void admissionIdentityCannotOverwriteAnotherJob() {
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        QVERIFY(scheduler.tryAdmit(17,glancelot::JobPriority::Foreground,1024,config.path()));
+        const bool duplicate=scheduler.tryAdmit(17,glancelot::JobPriority::Thumbnail,2048,config.path());
+        qInfo()<<"duplicate admitted"<<duplicate<<"bytes"<<scheduler.admittedBytes()
+               <<"jobs"<<scheduler.activeJobCount()<<"foreground"<<scheduler.activeForegroundJobs();
+        QVERIFY2(!duplicate,"A second job cannot overwrite the first job's admission identity");
+        QCOMPARE(scheduler.admittedBytes(),qint64(1024));QCOMPARE(scheduler.activeJobCount(),1);
+        scheduler.release(17);QCOMPARE(scheduler.admittedBytes(),qint64(0));
+        QCOMPARE(scheduler.activeJobCount(),0);QCOMPARE(scheduler.activeForegroundJobs(),0);
+    }
+    void admissionRejectsInvalidEstimates() {
+        auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+        const auto cleanup=qScopeGuard([&]{scheduler.reset();});
+        QVERIFY(!scheduler.tryAdmit(17,glancelot::JobPriority::Foreground,-1,config.path()));
+        QVERIFY(!scheduler.tryAdmit(0,glancelot::JobPriority::Foreground,1,config.path()));
+        scheduler.setMemoryLimit(std::numeric_limits<qint64>::max());
+        QVERIFY(scheduler.tryAdmit(18,glancelot::JobPriority::Foreground,std::numeric_limits<qint64>::max(),config.path()));
+        QVERIFY(!scheduler.tryAdmit(19,glancelot::JobPriority::Foreground,1,config.path()));
+        scheduler.release(18);QCOMPARE(scheduler.admittedBytes(),qint64(0));QCOMPARE(scheduler.activeJobCount(),0);
+    }
     void revisionOnlyWorkerDistinguishesAtomicReplacement() {
         QTemporaryDir files;QVERIFY(files.isValid());
         const auto path=files.filePath("a.png");
