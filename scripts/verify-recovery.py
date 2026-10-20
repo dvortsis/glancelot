@@ -175,9 +175,10 @@ class Verification:
         if safe:
             require(result["safe_mode"] and result["status"].startswith("Safe mode"), "Missing safe-mode state/feedback")
             require(Path(result["settings_directory"]) != config and not Path(result["settings_directory"]).exists(), "Private safe settings root was not cleaned")
-            require(result["rhi"]["observed"] and result["rhi"]["software_detection"] != "not-detected", f"No actual software device evidence: {result['rhi']}")
+            render_state = f"rhi={result['rhi']}; window={result.get('window')}; frames={result['frames']}; first_image_frame_ms={result['first_image_frame_ms']}"
+            require(result["rhi"]["observed"] and result["rhi"]["software_detection"] != "not-detected", f"No actual software device evidence: {render_state}")
             require(result["rhi"]["backend"] == (3 if os.name == "nt" else 2), f"Unexpected actual safe RHI backend: {result['rhi']}")
-            require(result["frames"] > 0 and result["first_image_frame_ms"] >= 0, "No actual decoded-image frame swaps")
+            require(result["frames"] > 0 and result["first_image_frame_ms"] >= 0, f"No actual decoded-image frame swaps: {render_state}")
             require(result["width"] == 60 and result["height"] == 36, "Generated image was not decoded")
             if screenshot:
                 write_json(self.root / (name + "-rgb.json"), screenshot_rgb(capture, result))

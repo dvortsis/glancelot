@@ -25,6 +25,7 @@
 #include <QQmlContext>
 #include <QQmlProperty>
 #include <QQuickWindow>
+#include <QScreen>
 #include <QQuickStyle>
 #include <QCommandLineParser>
 #include <QElapsedTimer>
@@ -68,6 +69,7 @@ int startupError(const QString& code,const QString& detail,int exitCode) {
 }
 struct GraphicsEvidence {
     std::atomic_bool observed{};
+    std::atomic<quint64> renderCallbacks{},invalidations{};
     std::mutex mutex;
     int backend{-1},deviceType{-1};
     QString deviceName;
@@ -188,6 +190,7 @@ int main(int argc,char** argv) {
     const auto graphicsEvidence=std::make_shared<GraphicsEvidence>();
     if(window) {
         QObject::connect(window,&QQuickWindow::beforeRendering,&app,[window,graphicsEvidence]{
+            ++graphicsEvidence->renderCallbacks;
             if(graphicsEvidence->observed.load())return;
             auto* rhi=static_cast<QRhi*>(window->rendererInterface()->getResource(window,QSGRendererInterface::RhiResource));
             if(!rhi)return;
@@ -196,7 +199,9 @@ int main(int argc,char** argv) {
             graphicsEvidence->backend=int(rhi->backend());graphicsEvidence->deviceType=int(info.deviceType);
             graphicsEvidence->deviceName=QString::fromUtf8(info.deviceName.left(256));graphicsEvidence->observed=true;
         },Qt::DirectConnection);
-        QObject::connect(window,&QQuickWindow::sceneGraphInvalidated,&app,[graphicsEvidence]{graphicsEvidence->observed=false;},Qt::DirectConnection);
+        QObject::connect(window,&QQuickWindow::sceneGraphInvalidated,&app,[graphicsEvidence]{
+            ++graphicsEvidence->invalidations;graphicsEvidence->observed=false;
+        },Qt::DirectConnection);
     }
     if(window&&parser.isSet("window-size")) { const auto dimensions=parser.value("window-size").split('x'); if(dimensions.size()==2)window->resize(qMax(540,dimensions[0].toInt()),qMax(360,dimensions[1].toInt())); }
     if(window&&parser.isSet("frameless"))window->setProperty("frameless",true);
@@ -250,7 +255,21 @@ int main(int argc,char** argv) {
                     const bool softwareName=name.contains("llvmpipe")||name.contains("softpipe")||name.contains("swrast");
                     actualRhi={{"observed",graphicsEvidence->observed.load()},{"backend",graphicsEvidence->backend},
                         {"device_type",graphicsEvidence->deviceType},{"device_name",graphicsEvidence->deviceName},
+                        {"render_callbacks",double(graphicsEvidence->renderCallbacks.load())},
+                        {"scenegraph_invalidations",double(graphicsEvidence->invalidations.load())},
                         {"software_detection",cpu?"cpu-device-type":softwareName?"renderer-name":"not-detected"}};
+                }
+                QJsonObject windowEvidence;
+                if(window) {
+                    windowEvidence={{"visible",window->isVisible()},{"exposed",window->isExposed()},
+                        {"visibility",int(window->visibility())},{"state",int(window->windowState())},
+                        {"width",window->width()},{"height",window->height()}};
+                    if(const auto* screen=window->screen()) {
+                        const auto geometry=screen->geometry();
+                        windowEvidence["screen"]=QJsonObject{{"name",screen->name().left(256)},
+                            {"x",geometry.x()},{"y",geometry.y()},{"width",geometry.width()},{"height",geometry.height()},
+                            {"device_pixel_ratio",screen->devicePixelRatio()},{"logical_dpi",screen->logicalDotsPerInch()}};
+                    }
                 }
                 auto* canvas=engine.rootObjects().first()->findChild<ImageCanvas*>("canvas");
                 const auto origin=canvas?canvas->mapToScene(QPointF{}):QPointF{};
@@ -261,6 +280,7 @@ int main(int argc,char** argv) {
                 QJsonObject report{{"version",QCoreApplication::applicationVersion()},{"qt",qVersion()},
                     {"safe_mode",intent.safeMode},{"settings_directory",settingsNamespace},
                     {"requested_backend",safeEnvironment.requestedBackend},{"rhi",actualRhi},{"canvas",canvasEvidence},
+                    {"window",windowEvidence},
                     {"wheel_mode",viewer.wheelMode()},
                     {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
                     {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},

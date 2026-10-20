@@ -1,0 +1,8 @@
+[1/61] Automatic MOC and UIC for target glancelot_recovery_common
+[2/59] Automatic MOC and UIC for target glancelot_platform
+[3/57] Automatic MOC and UIC for target glancelot-decoder
+[4/55] Automatic MOC and UIC for target glancelot
+[5/54] Running AUTOMOC file extraction for target glancelot
+[6/54] Running moc --collect-json for target glancelot
+[7/8] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[8/8] Linking CXX executable glancelot.exe

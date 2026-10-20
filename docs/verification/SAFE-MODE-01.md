@@ -516,3 +516,11 @@ restore-interruption-supported-and-corrupt.txt. For corrupt-primary recovery,
 pre-commit death keeps exact corrupt primary and last-good bytes; post-commit death
 leaves the complete checked replacement based on last-good, retaining its unknown
 and other-slot fields plus an exact sealed copy of the original corrupt pair.
+
+The retained zero-swap screenshot visibly contains the generated RGB image; it
+still fails the unchanged swap/observed-device gate. Additive local report fields
+now record render-callback/invalidation counts and window visibility/exposure,
+state, dimensions and bounded screen geometry/DPI metadata to diagnose another
+occurrence. The verifier includes those fields in renderer-failure diagnostics.
+The actual release rebuild passed (renderer-diagnostics-release-build.txt); runtime
+qualification of this diagnostic change remains pending the synchronized full gates.
