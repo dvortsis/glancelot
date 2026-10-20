@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "lead/codex-fs-revision-protocol", branch: "codex/fs-watch-01", started: "2026-10-19T20:55:00-06:00"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -618,8 +618,8 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
-    integration_contract: Lead-frozen Cache amendment in FS-WATCH-01-PLAN.md; merge main after immutable current gate, preserve Cache features and add off-GUI source validation, then independent combined review and full gates
-    candidate_evidence: Pre-Cache source825f7f2 acceptable per actual Claude f0bf272; Windows25/25 409.58s and Linux25/25 210.08s; branch sync68c3731 imports Cache and frozen correction contract, combined source remains unqualified
+    integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates
+    candidate_evidence: Pre-Cache825f7f2 Windows25/25 409.58s and Linux25/25 210.08s; Claude f0bf272 accepts that source. Sync1dd803a preserves Cache and IO declarations/defaults; navigation intent corrected b198442, generated stale-hit regression deliberately red pending revision checks; no combined approval
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
