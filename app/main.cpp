@@ -56,6 +56,7 @@ int main(int argc,char** argv) {
         const bool loaded=(!requested.isEmpty()&&translator.load(QStringLiteral("glancelot_")+requested,QStringLiteral(":/i18n")))
             ||translator.load(locale,QStringLiteral("glancelot"),QStringLiteral("_"),QStringLiteral(":/i18n"));
         if(loaded)app.installTranslator(&translator);
+        else if(!requested.isEmpty())std::fprintf(stderr,"Glancelot: no translation catalog for GLANCELOT_LANGUAGE=%s; the interface stays English\n",qPrintable(requested));
     }
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
