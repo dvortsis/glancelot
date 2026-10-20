@@ -536,3 +536,40 @@ all229 command literal/flag/platform tokens exactly match integrated main, with
 its five presentation commands retained in the extracted registry. Actual comparison
 output is monitor-registry-sync.txt. Source candidate d4f0e70 begins the corrected
 full scripts/build.ps1 -Test and Docker gates. No result is claimed until completion.
+
+## Corrected complete candidate results
+
+Actual source d4f0e70 passed docker build -t glancelot-browser:main .:37/37 tests,
+257.43s, then exported runtime config SHA256
+f2aba5cc7ee1be0589b5b4f7bce389549a4aa88bab8f090f3885844af3a6180a.
+The matching cached build-stage image1983cc0937718cf190b55a5653e8e65685fea557377b8be73b119389e6e182ce
+retains actual reports, extracted with a new stopped container removed afterwards.
+Actual full command output is candidate-docker-corrected.txt, cache/materialization
+proof candidate-linux-evidence-image.txt, and linux-corrected-* reports/CTest log.
+Linux recovery135/135 zero skips10844ms, startup59/59 zero skips31ms,
+controller10/10 zero skips1131ms. Mandatory process test passed21.04s,33commands.
+Raw generated evidence is process-linux/run-azgvnfyf. Its first safe launch used
+actual QRhi backend2 Mesa llvmpipe,18 swaps, first image frame817ms, exposed/visible
+window, zero scenegraph invalidations and exact RGB red/green/blue canvas samples.
+
+The same source's actual full Windows command completed35/37 in919.59s, with
+folder_grid hitting its original400s timeout and fs_watch81passed/1failed/zero skips
+(cache-hit assertion noncurrentSameTupleReplacementInvalidatesCache). All remaining
+tests passed, including recovery135/135 zero skips13490ms, startup59/59 zero skips
+141ms, controller10/10 zero skips1504ms, and process33commands28.06s. Actual first
+safe launch used backend3 Microsoft Basic Render Driver CPU device5,35 swaps,
+first image frame1150ms, exposed/visible window, zero invalidations and exact RGB.
+Full failed command/CTest and per-test results are windows-corrected-* and
+candidate-windows-corrected.txt; raw process evidence is
+process-windows/corrected-full-run-1k6x8tks. This is a failed complete gate.
+
+After both full runs terminated and no native compiler/CTest process was present,
+the unchanged grid binary passed in206.56s under the identical offscreen/software
+backend, working directory and original400s timeout, with added file logging:
+74passed/0failed/4skipped206358ms. All four existing skips are opt-in review-capture
+cases requesting GLANCELOT_REVIEW_CAPTURE; no assertion/backend was changed.
+The specific cache-hit case then passed20 consecutive quiet isolated executions
+(28.41s total); its last run has3passes including init/cleanup, zero skips.
+Actual isolated QtTest/CTest logs are windows-isolated-*. These do not replace a
+required complete Windows pass; it must be rerun. The cache-miss cause remains
+unproven. Product, test, build and script inputs still exactly match d4f0e70.
