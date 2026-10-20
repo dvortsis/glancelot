@@ -1,11 +1,12 @@
-# FS-WATCH acceptance audit for80964f7
+# FS-WATCH acceptance audit for corrected merge1bd4461
 
-Candidate audit, not integrated completion. Source is the R14-reviewed4a86528
+Completed software-packet audit. Source is the R14-reviewed4a86528
 product/test tree with documentation-only main synchronization. Current Windows
 full32 pass is625.10s; Linux full32 passed233.88s and built the runtime image.
 Linux backend83/83, budget3/3 and UI3/3 have zero skips; the failed-start lease
-case actually observed QProcess::Starting. Checks on
-the eventual corrected merge remain pending. Retain all earlier failures.
+case actually observed QProcess::Starting. Actual merged1bd4461 Windows32/32
+passed580.54s and fresh Linux32/32 passed323.97s, with backend82/83, budget3 and
+UI3 zero skips. See INTEGRATED.md and integrated-* outputs. Retain earlier failures.
 
 Original frozen behavior maps to these current feature cases and implementations:
 
@@ -49,13 +50,14 @@ Original frozen behavior maps to these current feature cases and implementations
 - Dense GUI publication: required separate100k case retains all250ms GUI and
   publication,30s recovery,180s backend/budget and90s QML limits. R7 closed the R6
   missing-budget-test finding. R14 accepts the new same-key/order shortcut by
-  equivalence to the prior merge. Current Windows full case passed3/3 zero skips
-  129.271s, publication max115ms; selected diagnostic passed159.381s/max152ms.
+  equivalence to the prior merge. Candidate Windows full case passed3/3 zero skips
+  129.271s/max115ms; selected diagnostic passed159.381s/max152ms. Integrated
+  Windows passed136.737s/max88ms and fresh Linux31.070s/max198ms, all zero skips.
   These are measured runs, not an arbitrary-host timing guarantee or PERF-ENUM.
 - Command route: fs_watch_ui_tests sends actual F5 in preview/grid/combined and
   checks text/settings-modal precedence through the existing dispatcher. R7 own
-  Linux runtime and R9 assessed native real-QML evidence exist; fresh Windows UI
-  result is3/3 zero skips3.694s. No physical keyboard/GPU/DPI qualification follows.
+  Linux runtime and R9 assessed native real-QML evidence exist; integrated UI is
+  3/3 zero skips3.606s Windows/3.244s Linux. No physical keyboard/GPU/DPI qualification follows.
 
 Independent review chain: R7 closes R6-1/R6-2 in source/tests; R9 accepts the FS
 implementation for integration subject gates; R11 reviews combined cache/IO and
@@ -71,9 +73,7 @@ rotational detection/adaptive/physical-media evidence and hard-ceiling policy,
 and physical watcher/render/driver/DPI/power-loss variants. The FS job-ID, lease
 and source-revision fixes do not establish those broader Gemini-owned requirements.
 
-Candidate Linux full32 and exact backend/budget/UI logs, including Starting, are
-now retained. Final disposition still needs serial corrected merge under the held lock and actual
-integrated-commit Windows/Docker checks. Retained independent source acceptance
-remains conditional on those gates; request further review if new findings or
-source changes require it.
-No done claim or lock release is authorized by this draft alone.
+Candidate and actual integrated checks, including fresh Linux Starting execution,
+are now retained and satisfy the independent reviews' remaining software gates.
+Close FS-WATCH-01 and release its lock after committing this evidence. Broader
+Cache/IO/hardware requirements and all remaining Codex packets stay open.
