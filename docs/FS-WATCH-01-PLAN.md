@@ -244,3 +244,10 @@ bounded lookahead discovery, existing15s deadlines, source-change/cancellation
 regressions and original Cache features. Final combined independent review and
 full platform/integrated checks remain mandatory. No prior green result is
 approval of this still-unimplemented protocol extension.
+
+The concurrent IO header freeze adds ViewerController properties before its
+owner's scheduler wiring is imported. Lead-owned linkable defaults preserve
+the shared declarations during this integration: auto/Unknown/zero and a no-op
+setter, with no filesystem work or claim of IO functionality. The IO owner
+replaces that explicit default block in its packet. Preserve its uncommitted
+work; FS does not implement the scheduler or change its policy/API.
