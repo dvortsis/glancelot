@@ -9,9 +9,9 @@ qt_add_executable(recovery_tests tests/recovery_tests.cpp
   src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
   src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp)
 target_compile_definitions(recovery_tests PRIVATE GLANCELOT_RECOVERY_TESTING)
-target_include_directories(recovery_tests PRIVATE include src/app)
+target_include_directories(recovery_tests PRIVATE include src/app app)
 target_link_libraries(recovery_tests PRIVATE glancelot_core glancelot_platform
-  Qt6::Gui Qt6::Test Qt6::Concurrent)
+  Qt6::Gui Qt6::Test Qt6::Concurrent Threads::Threads)
 add_dependencies(recovery_tests glancelot-decoder)
 qt_add_resources(recovery_tests recovery_test_catalog PREFIX "/themes"
   BASE assets/themes FILES assets/themes/catalog.json)
@@ -29,6 +29,21 @@ qt_add_resources(recovery_startup_tests recovery_startup_catalog PREFIX "/themes
 add_test(NAME recovery_startup COMMAND recovery_startup_tests
   -o "${CMAKE_CURRENT_BINARY_DIR}/recovery-startup-results.txt,txt" -o -,txt)
 set_tests_properties(recovery_startup PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+
+qt_add_executable(recovery_controller_tests tests/recovery_controller_tests.cpp
+  src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+  src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
+  ${glancelot_recovery_provider_sources} ${glancelot_recovery_implementation_sources})
+target_compile_definitions(recovery_controller_tests PRIVATE GLANCELOT_RECOVERY_TESTING)
+target_include_directories(recovery_controller_tests PRIVATE include src/app)
+target_link_libraries(recovery_controller_tests PRIVATE glancelot_core glancelot_platform
+  Qt6::Gui Qt6::Test Qt6::Concurrent Threads::Threads)
+add_dependencies(recovery_controller_tests glancelot-decoder)
+qt_add_resources(recovery_controller_tests recovery_controller_catalog PREFIX "/themes"
+  BASE assets/themes FILES assets/themes/catalog.json)
+add_test(NAME recovery_controller COMMAND recovery_controller_tests
+  -o "${CMAKE_CURRENT_BINARY_DIR}/recovery-controller-results.txt,txt" -o -,txt)
+set_tests_properties(recovery_controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
 
 # Existing controller/slot consumers retain one definition of each source. This
 # is enabled for the feature branch only; private fault hooks remain test-only.
