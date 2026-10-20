@@ -404,3 +404,38 @@ setup58.204s. These independently observed mixed results preserve the performanc
 failure and require a clean full native gate; neither repeated passing nor a
 loaded host explanation waives it. Reviewer-owned second stress rerun is active;
 its final disposition is pending. Other lane native jobs remain active.
+
+## R5 final review and measured early identity admission
+
+Actual Claude R5 report1398061 is preserved unchanged. It withheld approval on
+N17 after independent100k runs passed only1/3:385ms GUI gap,129ms isolated pass,
+then final-listing recovery beyond30s. No threshold or deadline is weakened.
+A small worker optimization now refuses native identity probing up front when
+entryCount times the minimum per-entry storage cost already exceeds16MiB.
+Every visible/listing row still publishes, identity completeness stays false,
+and the last complete baseline remains protected. Native probes of an unusable
+large prefix and its retained allocation are avoided; no new identity evidence
+is claimed. Existing per-entry checks remain for listings that might fit.
+
+The ignored actual-model before/after diagnostic generated34,380 local one-byte
+files. Both builds published exactly34,380 rows and an incomplete identity map.
+Before:32,102 retained identities,1,604ms worker time,diagnostic exit2.
+After:zero retained identities,940ms worker time,exit0. Outputs are under
+fs-watch-01/identity-budget-{before,after}.txt. The before diagnostic compiles the
+previous committed model bytes; the after diagnostic includes actual current
+source. Only the impossible-budget optimization differs; fresh generated media
+and uncontrolled warm caches/concurrent compiler load mean timings are descriptive,
+not an isolated speedup claim. Counts prove unchanged rows and avoided storage.
+
+Test-only instrumentation now times the actual model publication callback,
+including apply, cleanup and pump, and reports its maximum in the100k case even
+on failure. It adds a strict<250ms publication assertion alongside the unchanged
+heartbeat<250ms and final-listing30s checks. The hook is copied at model creation
+and exists only under the backend test macro, not the product binary. Required
+build.ps1 build passed. Instrumented stress is running; no result claimed yet.
+
+Separately, the unchanged9bc891f full Docker retry passed21/21 in204.40s,
+fs_watch73.86s/fs_watch_ui1.35s,terminal0, image
+366bca519f794349a82349844cc256dfdf44009239435d2e26bdd3e417e5271b.
+Its first failing grid run and diagnostic passes remain recorded above. The new
+budget optimization and publication timing postdate that gate and need new gates.

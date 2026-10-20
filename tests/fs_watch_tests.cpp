@@ -152,7 +152,15 @@ private slots:
         for(int i=1;i<100000;++i)
             QVERIFY(write(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0'))),"generated"));
         const auto setupMs=setup.elapsed();
+        QVector<qint64> publications;
+        const auto priorTiming=fs_watch::modelPublicationTiming;
+        fs_watch::modelPublicationTiming=[&](qint64 ms){publications.push_back(ms);};
+        const auto restoreTiming=qScopeGuard([&]{fs_watch::modelPublicationTiming=priorTiming;});
         ViewerController viewer;DirectoryEntryModel grid;file_grid_wiring::followViewer(viewer,grid);grid.setActive(true);
+        const auto reportPublications=qScopeGuard([&] {
+            const auto maximum=publications.isEmpty()?qint64(-1):*std::max_element(publications.cbegin(),publications.cend());
+            qInfo()<<"GUI publication callbacks"<<publications.size()<<"maximum"<<maximum<<"ms; loading at exit"<<grid.loading();
+        });
         QElapsedTimer clock;clock.start();qint64 previous=0,worst=0;
         QTimer heartbeat;heartbeat.setInterval(1);
         QObject::connect(&heartbeat,&QTimer::timeout,this,[&]{const auto now=clock.elapsed();worst=std::max(worst,now-previous);previous=now;});
@@ -179,6 +187,8 @@ private slots:
         heartbeat.stop();worst=std::max(worst,clock.elapsed()-previous);
         qInfo()<<"100000 entries: generated setup"<<setupMs<<"ms; initial GUI gap"<<initialGap
                <<"ms; sustained-writer/recovery GUI gap"<<worst<<"ms; writes"<<writes.load()<<"invalidations"<<invalidations.count();
+        const auto maxPublication=publications.isEmpty()?qint64(-1):*std::max_element(publications.cbegin(),publications.cend());
+        QVERIFY2(!publications.isEmpty()&&maxPublication<250,"actual model publication exceeded the unchanged 250ms GUI budget");
         QCOMPARE(grid.count(),100000);QVERIFY(viewer.imageReady());QCOMPARE(viewer.filePath(),image);
         QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));QCOMPARE(hash(image),original);
         QVERIFY2(initialGap<250,qPrintable(QString("100k initial publication GUI gap %1 ms").arg(initialGap)));

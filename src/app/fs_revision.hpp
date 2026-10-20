@@ -21,6 +21,10 @@
 #endif
 
 namespace fs_watch {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+// Copied at model construction; measures the actual GUI publication callback.
+inline thread_local std::function<void(qint64)> modelPublicationTiming;
+#endif
 inline std::filesystem::path native(const QString& path) {
 #ifdef Q_OS_WIN
     return std::filesystem::path(path.toStdWString());

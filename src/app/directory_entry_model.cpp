@@ -8,6 +8,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFutureWatcher>
+#ifdef GLANCELOT_FS_WATCH_TESTING
+#include <QElapsedTimer>
+#endif
 #include <QHash>
 #include <QThreadPool>
 #include <QtConcurrent/QtConcurrentRun>
@@ -95,6 +98,12 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
     result.identities.revision=directoryRevision;result.identities.entryRevision=directoryEntryRevision;
     result.identities.complete=listing.accessible&&!listing.truncated&&directoryRevision.known&&
         directoryRevision.directory&&!directoryRevision.link;
+    // Even an empty filename costs at least this much identity storage. If the
+    // whole listing cannot fit, probing a large prefix cannot establish a
+    // complete rename baseline and only adds avoidable native I/O and memory.
+    const auto minimumIdentityCost=fs_watch::entryBytes(base);
+    if(listing.entries.size()>fs_watch::IdentityByteBudget/minimumIdentityCost)
+        result.identities.complete=false;
     std::size_t identityBytes=0;
     for (const auto& entry : listing.entries) {
         if (cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
@@ -130,6 +139,9 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
 
 struct DirectoryEntryModel::Private {
     DirectoryEntryModel* q;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+    std::function<void(qint64)> publicationTiming=fs_watch::modelPublicationTiming;
+#endif
     QString directory, directoryKey, currentImage, currentKey;
     std::vector<Row> rows;
     QHash<QString, int> index;
@@ -170,6 +182,9 @@ struct DirectoryEntryModel::Private {
         const quint64 token = generation;
         auto* watcher = new QFutureWatcher<Listing>(q);
         QObject::connect(watcher, &QFutureWatcher<Listing>::finished, q, [this, watcher, token] {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            QElapsedTimer publicationClock;publicationClock.start();
+#endif
             { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
             auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
             publication.setBytes(listing.rows.size());
@@ -177,6 +192,9 @@ struct DirectoryEntryModel::Private {
             else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);
             else { if (!listing.accessible) publication.setFlags(glancelot::perf::Failed); apply(std::move(listing)); } }
             pump();
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            if(publicationTiming)publicationTiming(publicationClock.elapsed());
+#endif
         });
         watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token, prior=identities] {
             glancelot::perf::detail::GenerationContext context(token);
