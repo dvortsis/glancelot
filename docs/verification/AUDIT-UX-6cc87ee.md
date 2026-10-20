@@ -98,3 +98,11 @@ Probe hits for grid rows below the viewport and the pane-resize handle at the wi
 
 Seen working: Move-to-Recycle-Bin dialog (`dialog-delete-current-file-540x360.png`) is clear at the minimum size, with a
 destructive-styled primary action, a Cancel button and the file name shown.
+
+## Theme catalog contrast (all 40 families, dark and light, computed from `assets/themes/catalog.json`)
+- Text pairs pass in all 80 palettes: text/background and text/surface, muted/background and muted/surface at 4.5:1 or better,
+  onPrimary/primary at 4.5:1, primary/background and danger/surface at 3:1.
+18. **Minor - light-theme borders are very faint**: border/background is only 1.18 to 1.3:1 in every one of the 40 light
+    palettes (dark palettes are above 1.5:1). WCAG 1.4.11 asks 3:1 for the boundary of a control when the border is what
+    identifies it (inputs, outlined buttons). Whether that applies depends on whether fills or labels also mark the control,
+    so this is a design call; the screenshots were all taken in the default dark theme, so light-theme layouts were not viewed.
