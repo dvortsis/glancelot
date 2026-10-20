@@ -51,7 +51,11 @@ int main(int argc,char** argv) {
     {
         const QString requested=qEnvironmentVariable("GLANCELOT_LANGUAGE");
         const QLocale locale=requested.isEmpty()?QLocale::system():QLocale(requested);
-        if(translator.load(locale,QStringLiteral("glancelot"),QStringLiteral("_"),QStringLiteral(":/i18n")))app.installTranslator(&translator);
+        // An explicit GLANCELOT_LANGUAGE names a catalog file directly (so the pseudo-locale en_XA, which is not a real QLocale,
+        // can be tried); otherwise the system locale picks one.
+        const bool loaded=(!requested.isEmpty()&&translator.load(QStringLiteral("glancelot_")+requested,QStringLiteral(":/i18n")))
+            ||translator.load(locale,QStringLiteral("glancelot"),QStringLiteral("_"),QStringLiteral(":/i18n"));
+        if(loaded)app.installTranslator(&translator);
     }
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
