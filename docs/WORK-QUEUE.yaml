@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "lead/codex-fs-io-sync", branch: "codex/fs-watch-01", started: "2026-10-19T21:24:25.9044225-06:00"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -473,10 +473,11 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: done
+    state: review
     commit: 1f97893
     evidence: docs/verification/IO-01.md; independent review approved; Windows scripts/build.ps1 -Test 24/24 (165.75s); Linux Docker Qt 24/24 (112.86s)
     integrated_evidence: integrated 1f97893 Windows scripts/build.ps1 -Test 24/24 (163.34s) and Linux docker build 24/24 (112.86s)
+    review_followup: FS regression4c11c50 proves duplicate-ID overwrite and negative-estimate acceptance; lead-frozen ownership correction3aef7c9 and linkable allocator b2cbe0b, combined independent review and new gates required
     branch: agent/io
     worktree: .worktrees/io
     build: build-io
@@ -628,7 +629,7 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates
-    candidate_evidence: Pre-Cache825f7f2 Windows25/25 409.58s and Linux25/25 210.08s; Claude f0bf272 accepts that source. Sync1dd803a preserves Cache and IO declarations/defaults; navigation intent corrected b198442, generated stale-hit regression deliberately red pending revision checks; no combined approval
+    candidate_evidence: Pre-Cache825f7f2 Windows25/25 409.58s and Linux25/25 210.08s; Claude f0bf272 accepts that source. Cache revision fix2b97ad0 turns R1 green and imported Cache tests10/10 pass; IO sync663fb19 and ownership correction implementing under contract3aef7c9; no combined approval
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
