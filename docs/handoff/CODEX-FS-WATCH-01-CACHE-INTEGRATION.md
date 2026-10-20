@@ -57,3 +57,23 @@ must preserve the delivered Cache behavior while adding the required revision
 validation/invalidation synchronization; removing lookahead or disabling all hits
 would not complete both contracts. Reconcile under the lead lock and have Claude
 review the combined source and generated cross-folder replacement evidence.
+
+## Independent generated reproduction
+
+The risk is now reproduced, not merely predicted. Independent Codex review of
+Gemini's exact main8b28060 is committed as16ef41f on codex/review-cache-01 in its
+own worktree/build. No product source or owner worktree changed. The deliberately
+red generated regression warms red root/a.png, navigates into sub/b.png, then
+atomically replaces noncurrent a.png with blue while retaining4096 byte size
+and mtime1700000000 UTC. previous() returns to a.png with cache-hit true and
+red displayed pixels, while the source decodes blue. Windows targeted execution
+is2 passed,1 failed,0 skipped,816ms,exit1; the assertion is the wrong displayed
+pixel after successful setup/navigation. Report and raw output are
+docs/verification/CACHE-01-CODEX-REVISION-REVIEW.md and
+docs/verification/cache-01/noncurrent-same-size-time-red.txt in16ef41f.
+
+Disposition is CHANGES REQUESTED for Cache revision validation. The review-only
+test is not a green implementation to cherry-pick wholesale into main. Have the
+Cache owner port it with the correction, preserve actual hits and lookahead,
+then review the combined source and run full integrated gates. The prior Cache
+approval did not exercise this case. FS source approval alone cannot waive it.
