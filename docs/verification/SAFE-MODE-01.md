@@ -265,6 +265,25 @@ and cancellation after commit still acknowledging the persisted UUID. This prove
 the engine component; controller worker scheduling, real decode/navigation success
 selection and process interruption/restart are not yet qualified.
 
+## Early startup parser component
+
+app/startup_intent provides one option definition table and a non-exiting parser
+usable before application construction. It validates maintenance combinations,
+required restore fingerprint, selected scope/source/slot, duplicate/unknown/missing
+options, incompatible viewer flags and explicit -- image operands. Windows native
+argument capture uses GetCommandLineW/CommandLineToArgvW and QString directly,
+avoiding narrow argv for Unicode paths. Package operands resolve to absolute paths
+before being handed to the explicit-namespace recovery facade.
+
+Actual Windows component CTest passed2/2 in8.19s, startup53/53 zero skips15ms plus
+recovery118/118 zero skips. The QCore-only startup executable exercises malformed
+combinations, every forbidden maintenance/viewer option, all global scopes,
+offline slot/source/fingerprint selection, Unicode/supplementary characters,
+explicit -- dash-leading image names and native argument capture. It confirms no
+GUI application or settings/session files were constructed. Actual outputs/project
+are startup-parser-* in safe-mode-01/. Main still needs to consume this parser;
+this component does not prove actual executable Unicode arguments or startup order.
+
 ## Remaining complete scope
 
 Controller integration of the atomic navigation and lifecycle checkpoints,
