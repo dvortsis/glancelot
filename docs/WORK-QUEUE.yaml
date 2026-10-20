@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "lead/codex-fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T16:21:00Z"}
+integration_lock: {holder: gemini, branch: agent/monitor-output, started: "2026-10-20T14:28:00-06:00"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -424,7 +424,14 @@ tasks:
     milestone: M5
     priority: 7
     owner: lead
-    state: ready
+    owner_lane: gemini
+    state: integration
+    branch: agent/monitor-output
+    worktree: .worktrees/monitor-output
+    build: build-monitor-output
+    plan: docs/MONITOR-OUTPUT-01-PLAN.md
+    evidence: docs/verification/MONITOR-OUTPUT-01.md
+    memory_action: act_mvh4wm12_cea4af8ff6b3
     depends: [GRID-PREVIEW-01, PLATFORM-01, CACHE-01]
     outcome: Explicit second-display output lifecycle and clean image routing
     acceptance: Native display capabilities and stable-identity fallback; mirror, pinned reference and comparison output; output-specific viewport/color/scale; shared decode and bounded aggregate CPU/GPU ownership; closing output leaves controller usable
@@ -625,7 +632,7 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: ready
+    state: review
     depends: [REVIEW-ALL-01]
     branch: claude/input-02
     worktree: .worktrees/claude-input-02
@@ -633,6 +640,7 @@ tasks:
     scope_addition: F055 context menus with command-route parity
     review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
     review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
+    review_request: Codex-lane re-review requested of exact candidate claude/input-02 87b063d, which addresses the five findings in INPUT-02-FINAL-CODEX-REVIEW.md (evidence in docs/verification/INPUT-02.md; author Windows input_ui 16/16, grid_ui 72/72, window_slots 34/34; Linux Docker not rerun). Do not merge main into the reviewed snapshot; trial merge against main conflicts in CMakeLists.txt, viewer_controller.cpp, worker/main.cpp and ui/Main.qml (b10354a, re-confirmed after FS-WATCH 1bd4461) and goes to the Claude lane only after approval. Stacked packets F002, F037, F009, F014, F031, F040, F049, F051 wait behind it.
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01
@@ -675,7 +683,8 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: integration
+    state: done
+    commit: 1bd44616d801f09b61f1191724d918f7decd8992
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -684,7 +693,7 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates including fs_watch, fs_watch_budget and fs_watch_ui
-    integrated_evidence: Corrected reviewed branch3ffcc6b merged --no-ff as1bd4461 under heldFSlock after both full candidate gates. Actual checks on merged1bd4461 pending in isolated codex/verify-fs-watch-integrated; do not transfer ancestor2c38082/e819d4e results or mark done until terminal Windows/Docker success. Physical watcher/storage/render variants unverified; broader Cache/IO acceptance remains review.
+    integrated_evidence: DONE on reviewed corrected merge1bd4461; actual Windows build-Test32/32 580.54s, backend82/budget3/UI3 zero skips, maxpublication88ms. Docker runtimebuild returned0 with cachedCTest; fresh matching-build-image CTest32/32 323.97s, backend83/budget3/UI3 zero skips and Starting observed, maxpublication198ms. Exact input equivalence and containerexit0 retained in docs/verification/fs-watch-01/INTEGRATED.md and integrated-* artifacts. Physical variants unverified; broader Cache/IO review stays open.
     candidate_evidence: Reviewed correction4a86528 syncedmain80964f7 passed Windows32/32 625.10s and LinuxDocker32/32 233.88s with runtimeimage; Windowsbackend82/budget3/UI3 and Linuxbackend83/budget3/UI3 zero skips, Linux Starting edge observed. Dense maxpublication115ms Windows/61ms Linux below unchanged250ms. ActualClaudeR14 acceptance9851f03 builds on R7-R13 closure; full evidence032bf43 plus normalized text hashes3ffcc6b. Earlier failed29/32 and auxiliary different-renderer grid failure preserved.
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Qualified replacement334065e with actual Claude source/final review and integrated Windows29/Linux29; old launcher fixture permanently retired; require exact replacement source and ancestry before combined gates

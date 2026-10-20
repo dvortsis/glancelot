@@ -1,5 +1,17 @@
 # FS-WATCH-01 implementation evidence
 
+Status: software packet done on corrected merge1bd4461. Actual integrated Windows
+32/32 passed580.54s and fresh Linux32/32 passed323.97s after a successful cached
+Docker runtime build. Backend82 Windows/83 Linux, dense3 and UI3 each have zero
+skips; Linux Starting is observed. Maximum publication88ms Windows/198ms Linux
+meets unchanged250ms. See fs-watch-01/INTEGRATED.md and integrated-* outputs for
+exact methods, source equivalence, counts and cached-versus-fresh distinction.
+Independent source reviews are retained. Hardware and wider Cache/IO acceptance
+remain explicitly unverified/open. The all-Codex goal continues with SAFE-MODE-01.
+
+The following candidate/pending/failure notices are historical milestones; they
+do not supersede the integrated qualification above.
+
 Current candidate80964f7 passed full Windows32/32 in625.10s and full Linux Docker
 32/32 in233.88s; runtime image built. Product/tests match actual R14-reviewed
 4a86528 exactly. Corrected merge and integrated-commit gates are still pending;
