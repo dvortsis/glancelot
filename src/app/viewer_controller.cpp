@@ -467,7 +467,7 @@ struct ViewerController::Private {
                 const auto message=QJsonDocument::fromJson(line,&parse).object();
                 if (parse.error!=QJsonParseError::NoError) { fail("Invalid decoder response."); return; }
                 const auto phase=message.value("phase").toString();
-                if (phase=="error") { fail(message.value("error").toString()); return; }
+                if (phase=="error") { fail(QCoreApplication::translate("Decoder",message.value("error").toString().toUtf8().constData())); return; } // the decoder process speaks English; the viewer translates its fixed messages
                 if (phase=="probe") {
                     const qint64 width=message.value("width").toInteger(),height=message.value("height").toInteger();
                     const qint64 bytes=message.value("bytes").toInteger();

@@ -1,4 +1,5 @@
 #include "glancelot/perf_trace.hpp"
+#include <QCoreApplication>
 #include "../core/perf_context.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/directory_listing.hpp"
@@ -167,7 +168,7 @@ struct DirectoryEntryModel::Private {
         if (int(rows.size()) != oldCount) emit q->countChanged();
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
         emit q->selectionChanged();
-        if (!accessible) emit q->listingFailed(QStringLiteral("This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
+        if (!accessible) emit q->listingFailed(QCoreApplication::translate("Grid","This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
     }
     // Same folder relisted: remove vanished rows and insert new ones in place when the surviving order is
     // unchanged, so delegates, scroll position and in-flight previews survive a refresh. Otherwise reset.
@@ -423,9 +424,9 @@ QString DirectoryEntryModel::selectedSummary() const {
     const qint64 bytes = selectedBytes();
     const QString countStr = QString::number(count) + (count == 1 ? QStringLiteral(" item") : QStringLiteral(" items"));
     if (bytes > 0) {
-        return QStringLiteral("Selected: %1 (%2)").arg(countStr, selectedBytesFormatted());
+        return QCoreApplication::translate("Grid","Selected: %1 (%2)").arg(countStr, selectedBytesFormatted());
     }
-    return QStringLiteral("Selected: %1").arg(countStr);
+    return QCoreApplication::translate("Grid","Selected: %1").arg(countStr);
 }
 int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
