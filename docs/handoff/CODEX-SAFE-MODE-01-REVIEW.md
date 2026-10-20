@@ -1,10 +1,9 @@
 # SAFE-MODE-01 independent review preparation
 
-Status: preparation only, not a qualified candidate or review approval.
+Status: concrete review snapshot; complete native qualification remains open.
 Implementing lane: Codex, branch `codex/safe-mode-01`, assigned worktree
 `.worktrees/codex-safe-mode-01`, build `build-codex-safe-mode-01`.
-The lead must pin the final source/evidence commit after the current required
-candidate gates. A reviewer must come from another lane
+The lead pins the source/evidence commit in the review request. A reviewer must come from another lane
 and use an isolated checkout/build. Do not review a moving branch as though it
 were the final candidate. Claude service review of this separate SAFE payload
 still needs the user's concrete authorization; PLATFORM/FS approvals do not cover it.
@@ -66,9 +65,29 @@ Both shared build corrections are now committed by the lead in main as f17a2a3
 and synchronized into the feature with monitor-output in candidate d4f0e70.
 The generated resource now has prefix / and alias themes/catalog.json. All229
 registry literal/flag/platform tokens match integrated main, including its five
-presentation commands. Full corrected Windows and Docker gates are running;
-neither has a result yet. Earlier startup59/59 and controller10/10 results are not
-substitutes for the complete candidate gates.
+presentation commands. The corrected Docker gate passed37/37 in257.43s, with
+recovery135/135, startup59/59, controller10/10 and the actual software-RHI process
+test all passing. New recovery targets have zero skips on both platforms.
+
+The corrected complete Windows gate finished35/37 in919.59s: folder_grid hit its
+original400s timeout, and fs_watch failed the unchanged-cache-hit assertion in
+noncurrentSameTupleReplacementInvalidatesCache (81other cases passed). Every other
+test passed, including all recovery targets and the actual33-command process test.
+The unchanged grid binary then passed isolated under identical renderer settings
+and timeout:74passed,4existing opt-in capture skips,206.56s. The selected cache-hit
+case passed20 consecutive isolated runs (28.41s). These do not establish the cause
+or replace a complete Windows pass. A quiet full rerun remains required; its first
+start precondition refused when a separate monitor-output fix build occupied the
+slot. No tests or budgets were weakened.
+
+Both complete gate logs, actual per-test results and raw generated package/RHI/RGB
+artifacts are committed under docs/verification/safe-mode-01. Start with the updated
+SAFE-MODE-01 verification narrative and inspect the source/tests, rather than
+treating this handoff or green components as approval. Review the whole frozen
+engine contract and interactions with inherited code; report any source defect
+that could explain the native failures. An independent source review can proceed
+while native qualification is investigated, but the packet cannot be merged or
+marked done until all required gates and integrated checks pass.
 
 Required before this packet can become done: all required
 Windows and Docker/Linux tests including actual software-RHI process proof,
