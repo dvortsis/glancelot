@@ -251,3 +251,34 @@ the shared declarations during this integration: auto/Unknown/zero and a no-op
 setter, with no filesystem work or claim of IO functionality. The IO owner
 replaces that explicit default block in its packet. Preserve its uncommitted
 work; FS does not implement the scheduler or change its policy/API.
+
+## Lead-frozen IO admission ownership correction
+
+Under lead/codex-fs-io-sync, extend the narrow integration scope to reservation
+identity/lifetime correctness required by source-validation workers. Imported
+IO1f97893 uses independent selection/lookahead/thumbnail counters in one shared
+ledger, and cancel can release the new selection's ID instead of the old worker's
+reservation. Focused regression4c11c50 also proves duplicate-ID overwrite
+(3072 bytes charged to one entry) and negative-estimate acceptance,2 pass/2 fail.
+The original IO review/gates did not exercise these cases; preserve that evidence.
+
+Freeze glancelot::allocateIoJobId() in io_scheduler.hpp: nonzero process-unique
+opaque IDs, never reused even by reset(); zero means exhausted. This is a free
+function, not a new virtual policy method. Reject duplicate/zero IDs, negative
+estimates and arithmetic overflow without changing existing reservations. Preserve
+existing profile, detector, concurrency and capacity policy; this is not a new
+IO scheduler implementation packet.
+
+Every foreground/revision-only/prefetch/thumbnail worker owns a separate private
+admission lease, distinct from source generations and thumbnail wire request IDs.
+Only successful admission can create a lease; cancellation cannot release another
+job. Keep reservations until actual job completion or retired-process exit,
+including cancelled/stale thumbnail work. A metadata-only foreground probe owns
+zero pixel bytes; fresh image admission replaces that lease with its pixel cost.
+
+Freeze IoScheduler::admissionAvailable(), emitted outside its mutex after release
+or capacity increase, so deferred consumers can retry. Thumbnail retries must be
+coalesced/bounded and must not recurse into pump during worker retirement. Add
+real ownership/cancellation/wakeup regressions in FS feature tests, preserve
+original IO/Cache tests, and return the combined source to independent Claude
+review and full platform/integrated gates. No new product QML is permitted.
