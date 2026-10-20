@@ -16,28 +16,28 @@ Rectangle {
     readonly property string label: controller ? controller.frameLabel : ""
 
     visible: hasAnimation
-    implicitWidth: Math.min(layout.implicitWidth + Theme.paddingLg * 2, parent ? parent.width - Theme.paddingLg * 2 : 500)
-    implicitHeight: Theme.controlHeight + Theme.paddingSm * 2
-    radius: Theme.radiusLg
-    color: Theme.surfaceOverlay
+    implicitWidth: Math.min(layout.implicitWidth + Theme.gapMd * 2, parent ? parent.width - Theme.gapMd * 2 : 500)
+    implicitHeight: Theme.controlHeight + Theme.gapXs * 2
+    radius: Theme.radiusCard
+    color: Theme.surface
     border.color: Theme.border
     border.width: Theme.borderWidth
 
     RowLayout {
         id: layout
         anchors.fill: parent
-        anchors.leftMargin: Theme.paddingMd
-        anchors.rightMargin: Theme.paddingMd
+        anchors.leftMargin: Theme.gapMd
+        anchors.rightMargin: Theme.gapMd
         spacing: Theme.gapSm
 
         // Play / Pause Button (Only for animated formats)
         Rectangle {
             id: playPauseBtn
             visible: root.isAnimated
-            implicitWidth: Theme.controlHeight - Theme.paddingSm
-            implicitHeight: Theme.controlHeight - Theme.paddingSm
-            radius: Theme.radiusSm
-            color: playPauseHover.hovered ? Theme.surfaceHover : "transparent"
+            implicitWidth: Theme.controlHeight - Theme.gapXs
+            implicitHeight: Theme.controlHeight - Theme.gapXs
+            radius: Theme.radiusSmall
+            color: playPauseHover.hovered ? Theme.hover : "transparent"
 
             Canvas {
                 id: playIconCanvas
@@ -48,11 +48,9 @@ Rectangle {
                     ctx.reset()
                     ctx.fillStyle = Theme.text
                     if (root.isPlaying) {
-                        // Pause icon: two vertical bars
                         ctx.fillRect(2, 1, 3, 12)
                         ctx.fillRect(9, 1, 3, 12)
                     } else {
-                        // Play icon: right-pointing triangle
                         ctx.beginPath()
                         ctx.moveTo(3, 1)
                         ctx.lineTo(13, 7)
@@ -77,16 +75,17 @@ Rectangle {
         // Previous Frame / Page Button
         Rectangle {
             id: prevBtn
-            implicitWidth: Theme.controlHeight - Theme.paddingSm
-            implicitHeight: Theme.controlHeight - Theme.paddingSm
-            radius: Theme.radiusSm
-            color: prevHover.hovered ? Theme.surfaceHover : "transparent"
+            implicitWidth: Theme.controlHeight - Theme.gapXs
+            implicitHeight: Theme.controlHeight - Theme.gapXs
+            radius: Theme.radiusSmall
+            color: prevHover.hovered ? Theme.hover : "transparent"
 
             Text {
                 anchors.centerIn: parent
                 text: "◀"
                 color: Theme.text
-                font.pixelSize: Theme.fontSizeSm
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSmall
             }
 
             HoverHandler { id: prevHover }
@@ -98,16 +97,17 @@ Rectangle {
         // Next Frame / Page Button
         Rectangle {
             id: nextBtn
-            implicitWidth: Theme.controlHeight - Theme.paddingSm
-            implicitHeight: Theme.controlHeight - Theme.paddingSm
-            radius: Theme.radiusSm
-            color: nextHover.hovered ? Theme.surfaceHover : "transparent"
+            implicitWidth: Theme.controlHeight - Theme.gapXs
+            implicitHeight: Theme.controlHeight - Theme.gapXs
+            radius: Theme.radiusSmall
+            color: nextHover.hovered ? Theme.hover : "transparent"
 
             Text {
                 anchors.centerIn: parent
                 text: "▶"
                 color: Theme.text
-                font.pixelSize: Theme.fontSizeSm
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSmall
             }
 
             HoverHandler { id: nextHover }
@@ -121,8 +121,8 @@ Rectangle {
             id: labelText
             text: root.label
             color: Theme.text
-            font.family: Theme.bodyFont
-            font.pixelSize: Theme.fontSizeSm
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.textSmall
             font.bold: true
             Layout.minimumWidth: 80
             horizontalAlignment: Text.AlignHCenter
@@ -179,16 +179,16 @@ Rectangle {
             id: speedBtn
             visible: root.isAnimated
             implicitWidth: 48
-            implicitHeight: Theme.controlHeight - Theme.paddingSm
-            radius: Theme.radiusSm
-            color: speedHover.hovered ? Theme.surfaceHover : "transparent"
+            implicitHeight: Theme.controlHeight - Theme.gapXs
+            radius: Theme.radiusSmall
+            color: speedHover.hovered ? Theme.hover : "transparent"
 
             Text {
                 anchors.centerIn: parent
                 text: root.speed.toFixed(root.speed === Math.floor(root.speed) ? 1 : 2) + "x"
                 color: Theme.text
-                font.family: Theme.bodyFont
-                font.pixelSize: Theme.fontSizeXs
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textCaption
                 font.bold: true
             }
 
@@ -196,7 +196,6 @@ Rectangle {
             TapHandler {
                 onTapped: {
                     if (!root.controller) return
-                    // Cycle 0.25x -> 0.5x -> 1.0x -> 1.5x -> 2.0x -> 0.25x
                     var speeds = [0.25, 0.5, 1.0, 1.5, 2.0]
                     var current = root.speed
                     var next = 1.0
@@ -216,16 +215,16 @@ Rectangle {
             id: loopBtn
             visible: root.isAnimated
             implicitWidth: 36
-            implicitHeight: Theme.controlHeight - Theme.paddingSm
-            radius: Theme.radiusSm
-            color: root.isLoop ? Theme.accentMuted : loopHover.hovered ? Theme.surfaceHover : "transparent"
+            implicitHeight: Theme.controlHeight - Theme.gapXs
+            radius: Theme.radiusSmall
+            color: root.isLoop ? Qt.alpha(Theme.accent, 0.2) : loopHover.hovered ? Theme.hover : "transparent"
             border.color: root.isLoop ? Theme.accent : "transparent"
             border.width: 1
 
             Text {
                 anchors.centerIn: parent
                 text: "🔁"
-                font.pixelSize: Theme.fontSizeXs
+                font.pixelSize: Theme.textCaption
                 opacity: root.isLoop ? 1.0 : 0.5
             }
 

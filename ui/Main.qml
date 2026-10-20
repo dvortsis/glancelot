@@ -615,7 +615,7 @@ ApplicationWindow {
         id: animationBar
         anchors.horizontalCenter: canvas.horizontalCenter
         anchors.bottom: canvas.bottom
-        anchors.bottomMargin: Theme.paddingLg
+        anchors.bottomMargin: Theme.gapLg
         z: 20
         visible: viewer.animationController && viewer.animationController.active && app.workspace._previewShown && !app.gridMode
     }

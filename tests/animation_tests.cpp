@@ -2,6 +2,7 @@
 #include <QTemporaryDir>
 #include <QFile>
 #include <QImage>
+#include <QImageReader>
 #include <QSignalSpy>
 #include "glancelot/animation_controller.hpp"
 
@@ -232,6 +233,9 @@ void AnimationTests::testLoopToggle() {
 }
 
 void AnimationTests::testMultipageTiffNavigation() {
+    if (!QImageReader::supportedImageFormats().contains("tiff") && !QImageReader::supportedImageFormats().contains("tif")) {
+        QSKIP("TIFF format not supported by current Qt image formats plugins on this platform");
+    }
     glancelot::AnimationController controller;
     QSignalSpy loadedSpy(&controller, &glancelot::AnimationController::loaded);
     controller.load(m_tiffPath, 4);
