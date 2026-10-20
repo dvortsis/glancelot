@@ -2,6 +2,7 @@
 #include "../core/perf_context.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/directory_listing.hpp"
+#include "glancelot/filter_state.hpp"
 #include "thumbnail_id.hpp"
 #include <QDateTime>
 #include <QDir>
@@ -105,6 +106,8 @@ struct DirectoryEntryModel::Private {
     QString directory, directoryKey, currentImage, currentKey;
     std::vector<Row> rows;
     QHash<QString, int> index;
+    Listing rawListing;
+    glancelot::FilterSpec filter;
     QSet<QString> selected;
     QString anchorKey, cursorKey;
     glancelot::SortSpec sort;
@@ -123,6 +126,28 @@ struct DirectoryEntryModel::Private {
     }
     int rowOfKey(const QString& key) const { return key.isEmpty() ? -1 : index.value(key, -1); }
     void setLoading(bool value) { if (loading != value) { loading = value; emit q->loadingChanged(); } }
+    void applyFilter() {
+        q->beginResetModel();
+        rows.clear();
+        index.clear();
+        if (!filter.isActive()) {
+            rows = rawListing.rows;
+            index = rawListing.index;
+        } else {
+            rows.reserve(rawListing.rows.size());
+            index.reserve(rawListing.index.size());
+            for (const auto& row : rawListing.rows) {
+                if (filter.matches(row.name)) {
+                    index.insert(row.key, int(rows.size()));
+                    rows.push_back(row);
+                }
+            }
+        }
+        q->endResetModel();
+        emit q->countChanged();
+        emit q->filterChanged();
+        emit q->selectionChanged();
+    }
     // Newest request wins: stale work is cancelled; at most kMaxConcurrentListings run and one request waits.
     void request() {
         if (!active || directory.isEmpty()) return;
@@ -154,17 +179,22 @@ struct DirectoryEntryModel::Private {
     }
     void apply(Listing listing) {
         const bool wasAccessible = accessible, wasTruncated = truncated;
-        const int oldCount = int(rows.size());
         accessible = listing.accessible; truncated = listing.truncated;
-        merge(std::move(listing));
-        // Selection, anchor and cursor are keys: keep those that still exist, drop the rest. A failed listing of the
-        // same folder (a transient share or permission error) proves nothing about which entries exist, so the keys
-        // are kept for the next successful listing, as setActive(false) does. They are not counted meanwhile.
-        if (accessible) for (auto it = selected.begin(); it != selected.end();) { if (index.contains(*it)) ++it; else it = selected.erase(it); }
-        if (accessible && !index.contains(anchorKey)) anchorKey.clear();
-        if (accessible && !index.contains(cursorKey)) cursorKey.clear();
+        const int oldCount = int(rows.size());
+        if (!filter.isActive()) {
+            merge(std::move(listing));
+            rawListing.rows = rows;
+            rawListing.index = index;
+            if (int(rows.size()) != oldCount) emit q->countChanged();
+        } else {
+            rawListing = std::move(listing);
+            applyFilter();
+        }
+        // Selection, anchor and cursor are keys: keep those that still exist, drop the rest.
+        if (accessible) for (auto it = selected.begin(); it != selected.end();) { if (rawListing.index.contains(*it)) ++it; else it = selected.erase(it); }
+        if (accessible && !rawListing.index.contains(anchorKey)) anchorKey.clear();
+        if (accessible && !rawListing.index.contains(cursorKey)) cursorKey.clear();
         setLoading(false);
-        if (int(rows.size()) != oldCount) emit q->countChanged();
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
         emit q->selectionChanged();
         if (!accessible) emit q->listingFailed(QStringLiteral("This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
@@ -233,7 +263,15 @@ struct DirectoryEntryModel::Private {
         q->endResetModel();
     }
     void release() {
-        if (!rows.empty()) { q->beginResetModel(); rows.clear(); index.clear(); q->endResetModel(); emit q->countChanged(); }
+        if (!rows.empty() || !rawListing.rows.empty()) {
+            q->beginResetModel();
+            rows.clear();
+            index.clear();
+            rawListing.rows.clear();
+            rawListing.index.clear();
+            q->endResetModel();
+            emit q->countChanged();
+        }
     }
     void changedRows(const QSet<QString>& keys, const QList<int>& roles) {
         int first = -1, last = -1, n = 0;
@@ -286,6 +324,10 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     const QString key = keyFor(directory);
     if (key == d->directoryKey) { refresh(); return; }
     const QString previous = d->directoryKey;
+    if (!d->filter.isPersistent() && d->filter.isActive()) {
+        d->filter.clear();
+        emit filterChanged();
+    }
     d->stop.request_stop(); ++d->generation; d->wanted = false;
     d->directory = directory; d->directoryKey = key;
     d->accessible = true; d->truncated = false;
@@ -403,7 +445,14 @@ int DirectoryEntryModel::matchIndex(const QString& query, int row) const {
     }
     return index;
 }
-int DirectoryEntryModel::selectedCount() const { return d->accessible ? int(d->selected.size()) : 0; }
+int DirectoryEntryModel::selectedCount() const {
+    if (!d->accessible || d->selected.isEmpty()) return 0;
+    int count = 0;
+    for (const auto& row : d->rows) {
+        if (d->selected.contains(row.key)) ++count;
+    }
+    return count;
+}
 qint64 DirectoryEntryModel::selectedBytes() const {
     if (!d->accessible || d->selected.isEmpty()) return 0;
     qint64 total = 0;
@@ -457,4 +506,35 @@ void DirectoryEntryModel::invalidate() { ++d->epoch; emit epochChanged(); }
 QString DirectoryEntryModel::thumbnailSource(int row, int edge) const {
     if (row < 0 || row >= count() || d->rows[std::size_t(row)].kind != glancelot::EntryKind::Image) return {};
     return "image://thumb/" + thumbnail_id::encode(d->epoch, edge, d->rows[std::size_t(row)].path);
+}
+
+QString DirectoryEntryModel::filterPattern() const { return d->filter.pattern; }
+void DirectoryEntryModel::setFilterPattern(const QString& pattern) {
+    if (d->filter.pattern == pattern) return;
+    d->filter.pattern = pattern;
+    d->applyFilter();
+}
+bool DirectoryEntryModel::isFilterPersistent() const { return d->filter.isPersistent(); }
+void DirectoryEntryModel::setFilterPersistent(bool persistent) {
+    const auto mode = persistent ? glancelot::FilterPersistence::Persistent : glancelot::FilterPersistence::Temporary;
+    if (d->filter.persistence == mode) return;
+    d->filter.persistence = mode;
+    emit filterChanged();
+}
+bool DirectoryEntryModel::hasFilter() const { return d->filter.isActive(); }
+void DirectoryEntryModel::setFilter(const QString& pattern, bool persistent) {
+    const auto mode = persistent ? glancelot::FilterPersistence::Persistent : glancelot::FilterPersistence::Temporary;
+    if (d->filter.pattern == pattern && d->filter.persistence == mode) return;
+    d->filter.pattern = pattern;
+    d->filter.persistence = mode;
+    d->applyFilter();
+}
+void DirectoryEntryModel::clearFilter() {
+    if (!d->filter.isActive()) return;
+    d->filter.clear();
+    d->applyFilter();
+}
+void DirectoryEntryModel::toggleFilterPersistence() {
+    d->filter.persistence = d->filter.isPersistent() ? glancelot::FilterPersistence::Temporary : glancelot::FilterPersistence::Persistent;
+    emit filterChanged();
 }

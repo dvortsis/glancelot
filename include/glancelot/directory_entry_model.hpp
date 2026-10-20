@@ -26,6 +26,9 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(int cursorRow READ cursorRow NOTIFY selectionChanged)
     Q_PROPERTY(QString currentImage READ currentImage WRITE setCurrentImage NOTIFY currentImageChanged)
     Q_PROPERTY(quint64 epoch READ epoch NOTIFY epochChanged)
+    Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterChanged)
+    Q_PROPERTY(bool filterPersistent READ isFilterPersistent WRITE setFilterPersistent NOTIFY filterChanged)
+    Q_PROPERTY(bool hasFilter READ hasFilter NOTIFY filterChanged)
 public:
     enum Role { NameRole = Qt::UserRole + 1, PathRole, KindRole, LinkRole, HiddenRole, SizeRole, ModifiedRole,
                 SelectedRole, CursorRole, CurrentRole };
@@ -68,6 +71,16 @@ public:
     Q_INVOKABLE int matchCount(const QString& query) const;
     Q_INVOKABLE int matchIndex(const QString& query, int row) const;
 
+    // Filtering (FILTER-01 / NAV-05 / UX-02)
+    QString filterPattern() const;
+    void setFilterPattern(const QString& pattern);
+    bool isFilterPersistent() const;
+    void setFilterPersistent(bool persistent);
+    bool hasFilter() const;
+    Q_INVOKABLE void setFilter(const QString& pattern, bool persistent = false);
+    Q_INVOKABLE void clearFilter();
+    Q_INVOKABLE void toggleFilterPersistence();
+
     QString currentImage() const; void setCurrentImage(const QString& path);
     quint64 epoch() const;
     void invalidate();                                 // content changed on disk; thumbnails must re-request
@@ -75,7 +88,7 @@ public:
     Q_INVOKABLE QString thumbnailSource(int row, int edge) const;
 signals:
     void directoryChanged(); void countChanged(); void loadingChanged(); void selectionChanged();
-    void currentImageChanged(); void epochChanged();
+    void currentImageChanged(); void epochChanged(); void filterChanged();
     // Listing failed or the folder became inaccessible; message is user-facing.
     void listingFailed(const QString& message);
 private:
