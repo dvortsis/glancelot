@@ -86,7 +86,11 @@ struct ThumbnailService::Private {
             if (wait&&process->waitForFinished(3000)) { admission.reset();delete process;return; }
             // Deleted only after the process has really exited; shutdown() waits for any still listed here.
             retiring.append(process);
-            glancelot::detail::retireIoProcess(process,std::move(admission),q,[this,process]{retiring.removeAll(process);schedulePump();});
+            glancelot::detail::retireIoProcess(process,std::move(admission),q,[this,retired=QPointer<QProcess>(process)]{
+                // Deferred deletion may clear the pointer before this queued notification.
+                retiring.removeIf([retired](const QPointer<QProcess>& entry){return !entry||entry==retired;});
+                schedulePump();
+            });
         }
     }
     void stopWorkers(bool wait) {
