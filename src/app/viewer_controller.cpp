@@ -149,7 +149,7 @@ const std::vector<Command> registry {
     {"copy-selection", "Copy selected files", ""},
     {"paste", "Paste files to current folder", "Ctrl+V"},
     // MONITOR-OUTPUT-01 (UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
-    {"presentation-toggle", "Toggle second display presentation", "F5"},
+    {"presentation-toggle", "Toggle second display presentation", "F8"},
     {"presentation-mirror", "Presentation: Mirror current photo", ""},
     {"presentation-pin", "Presentation: Pin current photo", ""},
     {"presentation-compare", "Presentation: Comparison mode", ""},

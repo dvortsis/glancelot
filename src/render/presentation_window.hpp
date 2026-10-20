@@ -4,9 +4,12 @@
 #include <QKeyEvent>
 #include <QCloseEvent>
 #include <QResizeEvent>
-#include "image_canvas.hpp"
+
+class ImageCanvas;
 
 namespace glancelot {
+
+class DisplayManager;
 
 class PresentationWindow : public QQuickWindow {
     Q_OBJECT
@@ -41,6 +44,8 @@ private:
     bool m_comparisonMode{false};
     QString m_fitMode{"shrink"};
 };
+
+void registerPresentationWindowFactory();
 
 } // namespace glancelot
 

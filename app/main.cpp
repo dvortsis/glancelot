@@ -17,6 +17,7 @@
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
 #include "native_title_bar.hpp"
+#include "presentation_window.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -43,6 +44,7 @@ int main(int argc,char** argv) {
     QCoreApplication::setOrganizationName("Glancelot");
     QCoreApplication::setApplicationVersion("0.1.0-alpha.1");
     QQuickStyle::setStyle("Basic");
+    glancelot::registerPresentationWindowFactory();
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
         if(QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)))<0)

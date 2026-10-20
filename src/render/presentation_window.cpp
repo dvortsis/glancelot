@@ -1,6 +1,9 @@
 #include "presentation_window.hpp"
+#include "image_canvas.hpp"
+#include "glancelot/display_manager.hpp"
 #include <QQuickItem>
 #include <QColor>
+#include <QPointer>
 
 namespace glancelot {
 
@@ -79,7 +82,7 @@ void PresentationWindow::updateLayout() {
 }
 
 void PresentationWindow::keyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_Escape || event->key() == Qt::Key_F5) {
+    if (event->key() == Qt::Key_Escape || event->key() == Qt::Key_F8) {
         event->accept();
         emit escapePressed();
         close();
@@ -97,5 +100,43 @@ void PresentationWindow::resizeEvent(QResizeEvent* event) {
     QQuickWindow::resizeEvent(event);
     updateLayout();
 }
+
+class DefaultPresentationWindowWrapper : public IPresentationWindow {
+public:
+    explicit DefaultPresentationWindowWrapper(DisplayManager* owner) {
+        m_window = new PresentationWindow();
+        if (owner) {
+            QObject::connect(m_window.data(), &PresentationWindow::escapePressed, owner, &DisplayManager::closePresentation);
+            QObject::connect(m_window.data(), &PresentationWindow::closedByUser, owner, &DisplayManager::closePresentation);
+        }
+    }
+    void setScreen(QScreen* screen) override { if (m_window) m_window->setScreen(screen); }
+    void setGeometry(const QRect& geom) override { if (m_window) m_window->setGeometry(geom); }
+    void show() override { if (m_window) m_window->show(); }
+    void hide() override { if (m_window) m_window->hide(); }
+    void deleteLater() override { if (m_window) { m_window->deleteLater(); m_window = nullptr; } }
+    void setComparisonMode(bool comparison) override { if (m_window) m_window->setComparisonMode(comparison); }
+    void setPrimaryImage(const QImage& image) override { if (m_window) m_window->setPrimaryImage(image); }
+    void setSecondaryImage(const QImage& image) override { if (m_window) m_window->setSecondaryImage(image); }
+    QQuickWindow* quickWindow() override { return m_window.data(); }
+
+private:
+    QPointer<PresentationWindow> m_window;
+};
+
+void registerPresentationWindowFactory() {
+    DisplayManager::setPresentationWindowFactory([](DisplayManager* owner) -> std::unique_ptr<IPresentationWindow> {
+        return std::make_unique<DefaultPresentationWindowWrapper>(owner);
+    });
+}
+
+namespace {
+struct PresentationWindowAutoRegister {
+    PresentationWindowAutoRegister() {
+        registerPresentationWindowFactory();
+    }
+};
+static PresentationWindowAutoRegister s_autoRegister;
+} // namespace
 
 } // namespace glancelot

@@ -8,11 +8,14 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <memory>
+#include <functional>
 
 class QScreen;
 class QQuickWindow;
 
 namespace glancelot {
+
+class DisplayManager;
 
 enum class PresentationMode {
     Mirror,      // Follows current controller photo
@@ -40,6 +43,22 @@ struct DisplayInfo {
     QVariantMap toVariantMap() const;
 };
 
+class IPresentationWindow {
+public:
+    virtual ~IPresentationWindow() = default;
+    virtual void setScreen(QScreen* screen) = 0;
+    virtual void setGeometry(const QRect& geom) = 0;
+    virtual void show() = 0;
+    virtual void hide() = 0;
+    virtual void deleteLater() = 0;
+    virtual void setComparisonMode(bool comparison) = 0;
+    virtual void setPrimaryImage(const QImage& image) = 0;
+    virtual void setSecondaryImage(const QImage& image) = 0;
+    virtual QQuickWindow* quickWindow() = 0;
+};
+
+using PresentationWindowFactory = std::function<std::unique_ptr<IPresentationWindow>(DisplayManager* owner)>;
+
 class DisplayManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool presentationActive READ isPresentationActive NOTIFY presentationActiveChanged)
@@ -55,6 +74,9 @@ class DisplayManager : public QObject {
 public:
     explicit DisplayManager(QObject* parent = nullptr);
     ~DisplayManager() override;
+
+    // Presentation window factory hook
+    static void setPresentationWindowFactory(PresentationWindowFactory factory);
 
     // Display enumeration & stable identities
     QList<DisplayInfo> displays() const;
@@ -107,4 +129,3 @@ private:
 };
 
 } // namespace glancelot
-

@@ -4,6 +4,7 @@
 #include "glancelot/display_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "presentation_window.hpp"
+#include "image_canvas.hpp"
 
 class MonitorOutputTests : public QObject {
     Q_OBJECT
@@ -17,6 +18,7 @@ class MonitorOutputTests : public QObject {
 private slots:
     void initTestCase() {
         QVERIFY(qApp != nullptr);
+        glancelot::registerPresentationWindowFactory();
     }
 
     void testDisplayEnumeration() {
@@ -240,7 +242,7 @@ private slots:
         QVERIFY(hasCommand("presentation-compare"));
         QVERIFY(hasCommand("presentation-close"));
 
-        QCOMPARE(controller.bindingFor("presentation-toggle"), QStringLiteral("F5"));
+        QCOMPARE(controller.bindingFor("presentation-toggle"), QStringLiteral("F8"));
 
         // Trigger toggle command
         controller.trigger("presentation-toggle");

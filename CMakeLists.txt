@@ -40,15 +40,13 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/mutation_service.cpp include/glancelot/mutation_service.hpp
     src/app/copy_move_service.cpp include/glancelot/copy_move_service.hpp
     src/app/raw_preview.cpp include/glancelot/raw_preview.hpp
-    src/app/display_manager.cpp include/glancelot/display_manager.hpp
-    src/render/presentation_window.cpp src/render/presentation_window.hpp
-    src/render/image_canvas.cpp src/render/image_canvas.hpp)
-  target_include_directories(glancelot_platform PUBLIC include src/render)
-  target_link_libraries(glancelot_platform PUBLIC Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::Concurrent)
+    src/app/display_manager.cpp include/glancelot/display_manager.hpp)
+  target_include_directories(glancelot_platform PUBLIC include)
+  target_link_libraries(glancelot_platform PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent)
   if(WIN32)
     target_link_libraries(glancelot_platform PUBLIC shell32 ole32)
   endif()
-  qt_add_executable(glancelot app/main.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
+  qt_add_executable(glancelot app/main.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp src/render/presentation_window.cpp src/render/presentation_window.hpp src/render/image_canvas.cpp src/render/image_canvas.hpp
     src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
     src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp src/app/thumbnail_id.hpp
     src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
@@ -119,7 +117,7 @@ if(GLANCELOT_BUILD_VIEWER)
       src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
       src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
       src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp
-)
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
     target_include_directories(grid_ui_tests PRIVATE include src/render)
     target_compile_definitions(grid_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(grid_ui_tests PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
@@ -243,9 +241,12 @@ if(GLANCELOT_BUILD_VIEWER)
     set_tests_properties(format PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     qt_add_executable(monitor_output_tests tests/monitor_output_tests.cpp
       src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-      src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/render/presentation_window.cpp src/render/presentation_window.hpp
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
     target_include_directories(monitor_output_tests PRIVATE include src/app src/render)
-    target_link_libraries(monitor_output_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Quick Qt6::Test Qt6::Concurrent)
+    target_link_libraries(monitor_output_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::GuiPrivate Qt6::Quick Qt6::Test Qt6::Concurrent)
+    qt_add_shaders(monitor_output_tests "monitor_output_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
     add_dependencies(monitor_output_tests glancelot-decoder)
     add_test(NAME monitor_output COMMAND monitor_output_tests -o -,txt)
     set_tests_properties(monitor_output PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)

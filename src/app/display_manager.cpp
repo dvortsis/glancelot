@@ -1,5 +1,4 @@
 #include "glancelot/display_manager.hpp"
-#include "presentation_window.hpp"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -9,6 +8,12 @@
 #include <algorithm>
 
 namespace glancelot {
+
+static PresentationWindowFactory s_presentationWindowFactory = nullptr;
+
+void DisplayManager::setPresentationWindowFactory(PresentationWindowFactory factory) {
+    s_presentationWindowFactory = std::move(factory);
+}
 
 QVariantMap DisplayInfo::toVariantMap() const {
     QVariantMap map;
@@ -50,7 +55,7 @@ struct DisplayManager::Private {
     QImage comparisonImage;
     quint64 comparisonGeneration{0};
 
-    QPointer<PresentationWindow> presentationWindow;
+    std::unique_ptr<IPresentationWindow> presentationWindow;
     QPointer<QScreen> presentationScreen;
 
     explicit Private(DisplayManager* owner) : q(owner) {}
@@ -203,7 +208,7 @@ QString DisplayManager::computeDisplayId(const QScreen* screen) {
 }
 
 bool DisplayManager::isPresentationActive() const {
-    return d->active && d->presentationWindow;
+    return d->active;
 }
 
 PresentationMode DisplayManager::presentationMode() const {
@@ -266,16 +271,17 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
     d->mode = mode;
 
     if (!d->presentationWindow) {
-        d->presentationWindow = new PresentationWindow();
-        connect(d->presentationWindow.data(), &PresentationWindow::escapePressed, this, &DisplayManager::closePresentation);
-        connect(d->presentationWindow.data(), &PresentationWindow::closedByUser, this, &DisplayManager::closePresentation);
+        if (s_presentationWindowFactory) {
+            d->presentationWindow = s_presentationWindowFactory(this);
+        }
     }
 
-    d->presentationWindow->setScreen(targetScreen);
-    d->presentationWindow->setGeometry(targetScreen->geometry());
-
-    d->applyImagesToWindow();
-    d->presentationWindow->show();
+    if (d->presentationWindow) {
+        d->presentationWindow->setScreen(targetScreen);
+        d->presentationWindow->setGeometry(targetScreen->geometry());
+        d->applyImagesToWindow();
+        d->presentationWindow->show();
+    }
 
     d->active = true;
     emit activeDisplayIdChanged(d->activeId);
@@ -295,7 +301,7 @@ void DisplayManager::closePresentation() {
     if (d->presentationWindow) {
         d->presentationWindow->hide();
         d->presentationWindow->deleteLater();
-        d->presentationWindow = nullptr;
+        d->presentationWindow.reset();
     }
 
     emit activeDisplayIdChanged(d->activeId);
@@ -311,10 +317,10 @@ void DisplayManager::togglePresentation() {
     }
 }
 
-void DisplayManager::setPresentationMode(const QString& modeStr) {
-    if (modeStr == QStringLiteral("pinned")) {
+void DisplayManager::setPresentationMode(const QString& mode) {
+    if (mode == QStringLiteral("pinned")) {
         setMode(PresentationMode::Pinned);
-    } else if (modeStr == QStringLiteral("comparison")) {
+    } else if (mode == QStringLiteral("comparison")) {
         setMode(PresentationMode::Comparison);
     } else {
         setMode(PresentationMode::Mirror);
@@ -329,18 +335,14 @@ void DisplayManager::setMode(PresentationMode mode) {
 }
 
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
-    if (generation < d->currentGeneration) return; // Discard stale async decode
+    if (generation < d->currentGeneration) return;
 
     d->currentPath = path;
     d->currentImage = image;
     d->currentGeneration = generation;
 
-    if (isPresentationActive()) {
-        if (d->mode == PresentationMode::Mirror) {
-            d->presentationWindow->setPrimaryImage(image);
-        } else if (d->mode == PresentationMode::Comparison) {
-            d->presentationWindow->setPrimaryImage(image);
-        }
+    if (d->mode == PresentationMode::Mirror || d->mode == PresentationMode::Comparison) {
+        d->applyImagesToWindow();
     }
     emit imageRouted(path, generation);
 }
@@ -373,8 +375,7 @@ void DisplayManager::setComparisonImage(const QString& path, const QImage& image
 }
 
 QQuickWindow* DisplayManager::presentationWindow() const {
-    return d->presentationWindow.data();
+    return d->presentationWindow ? d->presentationWindow->quickWindow() : nullptr;
 }
 
 } // namespace glancelot
-
