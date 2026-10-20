@@ -324,6 +324,7 @@ ApplicationWindow {
                 "reveal-in-file-manager", "open-terminal",
                 "copy-path", "copy-file", "copy-image",
                 "rename", "new-folder",
+                "cut-selection", "copy-selection", "paste",
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
                 "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset",
@@ -436,6 +437,30 @@ ApplicationWindow {
             }
             if (folder.length > 0) {
                 renameFlow.openNewFolder(folder)
+            }
+        }
+        else if (id === "cut-selection") {
+            const targets = photoGrid.deletionTargets()
+            if (targets.length > 0) {
+                viewer.copyMoveService.markCut(targets)
+            } else if (viewer.filePath.length > 0) {
+                viewer.copyMoveService.markCut([viewer.filePath])
+            }
+        }
+        else if (id === "copy-selection") {
+            const targets = photoGrid.deletionTargets()
+            if (targets.length > 0) {
+                viewer.copyMoveService.markCopy(targets)
+            } else if (viewer.filePath.length > 0) {
+                viewer.copyMoveService.markCopy([viewer.filePath])
+            }
+        }
+        else if (id === "paste") {
+            let dest = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (focusWithin(treePanel) && treeFolder.length > 0) dest = treeFolder
+            if (dest.length > 0) {
+                viewer.copyMoveService.pasteTo(dest)
             }
         }
         else if (id === "reveal-in-file-manager") {
@@ -1299,6 +1324,15 @@ ApplicationWindow {
         anchors.fill: parent
         z: 26
         onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
+    }
+    TransferHud { // COPY-MOVE-01 (F020) async file copy and move progress HUD
+        id: transferHud
+        objectName: "transferHud"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.gapXl
+        service: viewer.copyMoveService
+        z: 23
     }
     Rectangle {
         id: bottomPanel
