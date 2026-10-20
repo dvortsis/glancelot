@@ -633,3 +633,27 @@ F051 Windows suite was live during this backend-only run, so this is not an
 exclusive-host performance qualification or the full25-target gate. The user's
 next-slot reservation is recorded in the root native-suite marker; the already
 running suite is allowed to finish. No other lane process is terminated.
+
+## Reserved full Windows gate
+
+The user-reserved next Windows slot completed successfully on f20711e source:
+scripts/build.ps1 -BuildDir build-codex-fs-watch-01 -Test,25/25 targets,
+403.85s,terminal0. No other Windows UI suite was active during this gate; the
+pre-existing exact QtCore-only filter/file_operation_service orphan was left
+untouched. This is shared-host evidence, not isolated CPU/IO benchmarking.
+folder_grid151.63s,fs_watch149.52s,fs_watch_ui1.83s all passed. Subsequent commits
+026bafb contain documentation only, with an empty diff across product/build/test
+inputs. Output is fs-watch-01/windows-r9-full-gate.txt and the exact FS CTest
+sections are windows-r9-fs-details.txt. These Windows Qt CTest sections contain
+no per-case stdout, so no per-case/skip count is inferred from them.
+
+A separate direct Windows fs_watch_ui_tests execution with a file logger passed
+3/3,zero failures/skips,1.472s: fs-watch-01/windows-r9-ui.txt. The real-QML key
+test covers preview/grid/combined F5 and text-input/settings-modal suppression.
+It uses Qt offscreen/software scene graph, not physical keyboard/GPU/DPI
+qualification. Existing ShortcutCheatSheet keys and PhotoGrid undefined-value
+warnings also reproduce on Windows; no new UI fix is claimed by FS-WATCH.
+
+Final integration remains open: main now contains Cache engine8b28060 and its
+owner still holds the serial lock. The combined source, revision-validation
+compatibility, Docker and integrated-commit gates have not been approved or run.
