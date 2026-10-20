@@ -1,6 +1,7 @@
 #include "glancelot/settings_recovery.hpp"
 #include "glancelot/recovery_checkpoint.hpp"
 #include "settings_maintenance.hpp"
+#include "recovery_session.hpp"
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
 #include "settings_package.hpp"
@@ -19,6 +20,8 @@
 #include <QtTest>
 #include <atomic>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 
 using namespace glancelot::recovery;
 class RecoveryTests final : public QObject {
@@ -922,6 +925,68 @@ private slots:
         using namespace glancelot::startup;
         const std::pair<Code,int> expected[]={{Code::Ok,0},{Code::NoChange,0},{Code::Committed,0},{Code::Conflict,3},{Code::Cancelled,4},{Code::Unsupported,5},{Code::Corrupt,6},{Code::LimitExceeded,6},{Code::Busy,7},{Code::Unreadable,7},{Code::WriteFailed,7}};
         QSet<QString> names;for(const auto& [code,value]:expected){QCOMPARE(exitCode(code),value);QVERIFY(!names.contains(codeName(code)));names.insert(codeName(code));}
+    }
+    void recoverySessionBoundsWorkToActiveAndLatestPending() {
+        struct Gate {std::mutex mutex;std::condition_variable changed;bool entered{},released{};std::atomic_bool enabled{};std::atomic_int replacements{};};
+        const auto gate=std::make_shared<Gate>();
+        glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[gate](glancelot::settings_detail::Stage stage){
+            if(stage!=glancelot::settings_detail::Stage::BeforeReplace||!gate->enabled)return;
+            if(++gate->replacements!=1)return;
+            std::unique_lock lock(gate->mutex);gate->entered=true;gate->changed.notify_all();gate->changed.wait(lock,[&]{return gate->released;});
+        };
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);Hooks installed(hooks);Session session(slot.claimIdentity());
+        QVERIFY(session.waitForIdle(3000));QVERIFY(session.snapshot().begun);gate->enabled=true;
+        // Ensure assertion failures cannot leave a blocked background writer.
+        const auto release=qScopeGuard([gate]{std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();});
+        QVERIFY(session.accept({{},{},1}));
+        {std::unique_lock lock(gate->mutex);QVERIFY(gate->changed.wait_for(lock,std::chrono::seconds(3),[&]{return gate->entered;}));}
+        for(quint64 sequence=2;sequence<=100;++sequence)QVERIFY(session.accept({{},{},sequence}));
+        QCOMPARE(session.snapshot().acceptedSequence,quint64(100));QVERIFY(!session.accept({{},{},99}));
+        QVERIFY(!session.close(0));QVERIFY(!session.accept({{},{},101}));
+        {std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();}
+        QVERIFY(session.waitForIdle(3000));const auto state=session.snapshot();QVERIFY(state.closed);QCOMPARE(state.finalStatus.code,Code::Committed);
+        QCOMPARE(state.persistedSequence,quint64(100));QCOMPARE(gate->replacements.load(),3); // checkpoint1, checkpoint100, clean
+        const auto record=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object().value("recovery").toObject().value("windows").toObject().value("1").toObject();
+        QCOMPARE(record.value("sequence"),QJsonValue("100"));QCOMPARE(record.value("state"),QJsonValue("clean"));
+    }
+    void recoverySessionFailedLatestCheckpointNeverCleans() {
+        const auto failing=std::make_shared<std::atomic_bool>(false);glancelot::settings_detail::TransactionHooks hooks;
+        hooks.fail=[failing](glancelot::settings_detail::Stage stage){return failing->load()&&stage==glancelot::settings_detail::Stage::BeforeReplace;};
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);Hooks installed(hooks);Session session(slot.claimIdentity());
+        QVERIFY(session.waitForIdle(3000));QVERIFY(session.snapshot().begun);const auto original=read(dir.filePath("settings.json"));
+        *failing=true;QVERIFY(session.accept({{},{},1}));QVERIFY(session.waitForIdle(3000));
+        QCOMPARE(session.snapshot().lastAttempt.status.code,Code::WriteFailed);QVERIFY(!session.close(3000));
+        const auto state=session.snapshot();QVERIFY(state.closed);QCOMPARE(state.persistedSequence,quint64(0));QCOMPARE(state.finalStatus.code,Code::WriteFailed);
+        QCOMPARE(read(dir.filePath("settings.json")),original);
+    }
+    void recoverySessionRetainsPrivateLifetimeAfterOwnerTeardown() {
+        struct Gate {std::mutex mutex;std::condition_variable changed;bool entered{},released{};std::atomic_bool enabled{};};
+        const auto gate=std::make_shared<Gate>();glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[gate](glancelot::settings_detail::Stage stage){
+            if(stage!=glancelot::settings_detail::Stage::BeforeReplace||!gate->enabled)return;
+            std::unique_lock lock(gate->mutex);gate->entered=true;gate->changed.notify_all();gate->changed.wait(lock,[&]{return gate->released;});
+        };
+        QTemporaryDir dir;QVERIFY(dir.isValid());auto lifetime=std::make_shared<int>(1);std::weak_ptr<const void> weak=lifetime;
+        auto slot=std::make_unique<WindowSlot>(dir.path(),0,lifetime);lifetime.reset();Hooks installed(hooks);auto session=std::make_unique<Session>(slot->claimIdentity());
+        QVERIFY(session->waitForIdle(3000));QVERIFY(session->snapshot().begun);const auto original=read(dir.filePath("settings.json"));gate->enabled=true;
+        const auto release=qScopeGuard([gate]{std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();});
+        QVERIFY(session->accept({{},{},1}));
+        {std::unique_lock lock(gate->mutex);QVERIFY(gate->changed.wait_for(lock,std::chrono::seconds(3),[&]{return gate->entered;}));}
+        session.reset();slot.reset();QVERIFY(!weak.expired());
+        {std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();}
+        // Both controller session and slot are gone; only the running job owns
+        // the private-root lifetime until its failed transaction has returned.
+        QTRY_VERIFY_WITH_TIMEOUT(([&]{FileLock lock(dir.filePath("settings.json.lock"));return lock.acquire(0);})(),3000);
+        QTRY_VERIFY_WITH_TIMEOUT(weak.expired(),3000);
+        QCOMPARE(read(dir.filePath("settings.json")),original);
+    }
+    void recoverySessionNoNavigationCanCloseAndInvalidClaimCannotBegin() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);Session session(slot.claimIdentity());
+        QVERIFY(session.close(3000));const auto state=session.snapshot();QVERIFY(state.closed&&state.begun);QCOMPARE(state.acceptedSequence,quint64(0));
+        QCOMPARE(state.finalStatus.code,Code::Committed);
+        Session invalid(glancelot::WindowClaim{});QVERIFY(invalid.waitForIdle(3000));QVERIFY(!invalid.snapshot().begun);
+        QCOMPARE(invalid.snapshot().beginning.status.code,Code::Conflict);QVERIFY(!invalid.close(3000));
     }
     void revokedOwnerImmediatelyBeforeReplaceCannotApply() {
         QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());

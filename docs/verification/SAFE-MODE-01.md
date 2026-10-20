@@ -304,6 +304,26 @@ Actual outputs/project are maintenance-* in safe-mode-01/. This QCore-only facad
 does not yet prove executable dispatch avoids QGuiApplication; main wiring and
 actual CLI process evidence are pending.
 
+## Value-owned controller recovery worker
+
+Private recovery::Session serializes begin, position checkpoints and final clean
+marking on a worker. It admits one active operation and replaces only one latest
+pending checkpoint. Transient Busy/WriteFailed retries are bounded. Close stops
+new accepts and cleans only after the latest accepted sequence actually persisted.
+Timeout/failure never reports clean success. Detached work retains immutable claim
+and private-root ownership without QObject/controller/startup-stack references;
+revocation still prevents replacement after the owner releases its claim.
+
+Actual Windows component CTest passed2/2 in12.50s, recovery126/126 zero skips12284ms
+and startup53/53 zero skips17ms. Deterministic gates show100 accepted sequence
+requests collapse to checkpoint1 then100 and one clean transaction; stale accepts
+and post-close submits refuse. Injected latest-write failure stays dirty. Destroying
+both Session and WindowSlot while the worker is blocked retains the private owner
+until the revoked transaction returns, leaves original primary unchanged, and then
+releases the owner. No-navigation clean and invalid-claim refusal also pass.
+Actual outputs/project are session-* in safe-mode-01/. This tests the real worker
+and engine, not yet controller decode/navigation integration or whole-app teardown.
+
 ## Remaining complete scope
 
 Controller integration of the atomic navigation and lifecycle checkpoints,
