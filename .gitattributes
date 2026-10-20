@@ -1,2 +1,2 @@
 # Sealed recovery packages and raw preimages must retain their exact bytes.
-docs/verification/safe-mode-01/process-windows/** binary
+docs/verification/safe-mode-01/process-*/** binary
