@@ -678,3 +678,35 @@ tests after the reserved full gate ended, so this backend-only result is not an
 isolated-host benchmark. The saved25-target pass proves f20711e source; it is not
 relabeled as a full gate of this later test revision. Current-source Linux and
 combined Cache/integrated gates and review follow-up remain open.
+
+## Current-source Linux and independent source disposition
+
+Full docker build -t glancelot-browser:main . on825f7f2 product/test inputs
+passed25/25,210.08s,terminal0. Configure/compile279.0s and CTest actually ran;
+they were not cached in this gate. Runtime image is
+ec829ac89cbeab34b0eaac8756be8a450bbac2c0064753b0797bb3c6b5b95c64.
+Summary output: fs-watch-01/linux-r10-gate-summary.txt. Later commits contain
+documentation only, confirmed by empty source/build/test input diff.
+
+Extracted saved CTest output from the exact successful layer through cached
+build-stage image8ba4115c953e7c8dd36561ed892b57338292ec8dc4a32b504406378519da4f58;
+this extraction did not run tests again. fs-watch-01/linux-r10-fs-details.json
+records53 passed,0 failed,0 skipped,77.112s for backend and3/0/0,1.344s for QML.
+The53rd case is POSIX-specific. The strengthened100k final-size/rename regression
+passed with filtered change16ms,publication42ms,GUI gap52ms; unfiltered writer
+gap71ms and maximum callback60ms. No physical GPU/network filesystem claim.
+
+Actual Claude independent R9 f0bf272 accepted825f7f2 source for integration with
+no blocker,major or new finding. Verbatim report: fs-watch-01/claude-r9-review.md.
+It resolved G4 and G5 naming, retained the documented timing/view limitations,
+and accepted Windows QML F5 evidence as covering the required real-key route.
+This review was static only; its own runtime remains the earlier R7 runs. Final
+packet approval is withheld for combined Cache compatibility, serial integration
+and integrated-commit Windows/Docker checks. A full Windows gate of825f7f2 is
+running separately; the earlier f20711e pass is not relabeled.
+
+Independent Codex review of the Gemini Cache engine now reproduces stale pixels
+on main8b28060, review16ef41f (CHANGES REQUESTED). See the Cache integration
+handoff note for exact generated same-size/restored-mtime navigation evidence.
+The Cache owner's correction and combined independent review remain necessary;
+neither this Linux pass nor FS source acceptance waives that demonstrated defect.
