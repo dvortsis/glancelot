@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "lead/codex-fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T15:03:16.728Z"}
+integration_lock: {holder: "lead/codex-fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T16:21:00Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -675,7 +675,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: integration
+    state: implementing
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -684,7 +684,8 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates including fs_watch, fs_watch_budget and fs_watch_ui
-    candidate_evidence: Source116dac3 synced main through58fa807; actual Claude R13 e93ad90 accepts L1 weak-pointer cleanup, R12 accepts source after Linux startup leak fix with red/green probe. Prior1b6c031 Windows31/32 failed Defender fixture despite backend81/budget3/UI3 zero-skip passes. Qualified replacement334065e now available; fresh combined Windows32/Linux32 and merged gates required
+    integrated_evidence: Existing merge2c38082 retained; acceptance reopened after2414cd6 Windows failure. Claude result on integrated descendant e819d4e (clean worktree, Windows and Docker run concurrently): Windows scripts/build.ps1 -Test 100% 32/32 in 636.38s, exit 0; docker build -t glancelot-browser:main . exit 0, Linux ctest 32/32 in 241.04s. Passed under overlap where 2414cd6 timed out, so the publication-budget margin is load-sensitive; this does not clear the reopened correction. Original note: Another session verifies integrated descendant e819d4e in isolated Claude tree, with Windows and Docker overlapping; collect actual terminal evidence without transfer to forthcoming correction. Required correction review and integrated checks remain pending.
+    candidate_evidence: Main-synced2414cd6 Windows rerun29/32 in776.35s; grid300s timeout, dense180s timeout with measured358ms publication above250ms, cache failure. Prior72f0afa green32 Windows/Linux remains historical. Narrow same-key/order publication optimization and persistent-index/metadata regression now in assigned Codex tree; build/review/new gates pending. Preserve exact failed logs and broader Cache/IO review states.
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Qualified replacement334065e with actual Claude source/final review and integrated Windows29/Linux29; old launcher fixture permanently retired; require exact replacement source and ancestry before combined gates
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
