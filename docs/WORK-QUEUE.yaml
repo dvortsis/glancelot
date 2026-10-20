@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock: {holder: "lead/codex-fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T16:21:00Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -675,7 +675,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: done
+    state: integration
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -684,7 +684,7 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates including fs_watch, fs_watch_budget and fs_watch_ui
-    integrated_evidence: Merged 2c38082 (--no-ff) of codex/fs-watch-01 2414cd6; tree identical to the gated source. Windows build.ps1 -Test 32/32 (592.95s) and Linux Docker 32/32 (240.15s, runtime image built) incl. backend 82, budget and UI zero-skip suites; independent Claude R11/R12/R13 reviews; replacement fixture 334065e. Physical watcher behavior unverified.
+    integrated_evidence: Merged 2c38082 (--no-ff) of codex/fs-watch-01 2414cd6; integrated-commit checks pending. Earlier source72f0afa Windows32/32 (592.95s) and Linux32/32 (240.15s) are candidate evidence only, not executions on2c38082. Main-synced candidate Windows gate52273 and sequential Linux2198 remain live. Independent Claude R11/R12/R13 reviews and replacement fixture334065e retained. Physical watcher behavior unverified.
     candidate_evidence: Source116dac3 synced main through58fa807; actual Claude R13 e93ad90 accepts L1 weak-pointer cleanup, R12 accepts source after Linux startup leak fix with red/green probe. Prior1b6c031 Windows31/32 failed Defender fixture despite backend81/budget3/UI3 zero-skip passes. Qualified replacement334065e now available; fresh combined Windows32/Linux32 and merged gates required
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Qualified replacement334065e with actual Claude source/final review and integrated Windows29/Linux29; old launcher fixture permanently retired; require exact replacement source and ancestry before combined gates
