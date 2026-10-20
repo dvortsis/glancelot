@@ -126,3 +126,10 @@ destructive-styled primary action, a Cancel button and the file name shown.
   `\\nonexistent-host\share\a.jpg` takes 8.7 s and exits 3 (load still pending at the 0.5 s timed quit). `app/main.cpp:129`
   calls `QFileInfo::exists(filePath)` synchronously before `viewer.open`. I could not separate time spent before the window
   from time spent at shutdown.
+
+## Suite re-run on the audit branch (`claude/audit-ux`, only docs differ from main 6cc87ee)
+- Windows `scripts/build.ps1 -Test`: first run 28 of 29, with `folder_grid` timing out at 300 s (it normally takes about 150 s). A
+  second run alone took 156 s and passed (74 passed, 4 skipped), and a full second run passed 29 of 29 in 240 s
+  (`folder_grid` 153.7 s). No stray processes were left from my startup tests. The cause of the single timeout is not
+  established: machine load from other agents is the likely explanation, but the rare UI hang seen earlier in this project
+  cannot be ruled out from one occurrence.
