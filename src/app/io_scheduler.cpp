@@ -6,6 +6,9 @@
 #include <algorithm>
 
 #ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <winioctl.h>
 #else
@@ -129,7 +132,7 @@ public:
             if (it->priority == JobPriority::Foreground) {
                 if (activeForeground_ > 0) activeForeground_--;
             }
-            admittedBytes_ = std::max(qint64(0), admittedBytes_ - it->bytes);
+            admittedBytes_ = (std::max)(qint64(0), admittedBytes_ - it->bytes);
             activeJobs_.erase(it);
         }
     }
