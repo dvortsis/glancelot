@@ -523,3 +523,36 @@ pass; logs .cache/fs-watch-current-full-windows.log and cancel-reason preserve
 actual output. The user was asked to coordinate one uninterrupted5-8minute native
 slot because reservations have repeatedly been overlapped. Independent regression
 work can continue while that scheduling answer is pending.
+
+## R6 review follow-up: phase timing and committed budget regression
+
+The backend-only publication hook now reports total, identity reconciliation,
+merge total (including result disposal), merge scan, reset, raw projection/mirror
+and selection-pruning times. Scan/reset are subphases of merge, not additive
+independent totals; allocator cleanup inside merge is included in its total.
+All hooks remain under GLANCELOT_FS_WATCH_TESTING; no public header, product
+setting, user flow or runtime timing behavior is added. The original250ms
+heartbeat/publication limits and30s recovery deadline remain unchanged.
+
+The existing100k stress case is now also a committed behavioral budget regression:
+first establish a real complete one-entry model baseline and selection, then
+generate99,999 unsupported files. Assert the full100,000 rows publish with an
+incomplete identity observation, zero retained prefix identities and the previous
+one-entry complete baseline still accepted. After the writer stops, remove the
+generated extras, rename the selected original, and require selection/cursor and
+source hash to follow that identity on the next complete listing. This uses the
+public model API and real native identities, without a private/public macro,
+synthetic listings or the ignored diagnostic harness. A filesystem with no native
+identity explicitly skips the final rename qualification after budget assertions;
+that is never counted as a pass.
+
+Required full build passed64/64 steps. The expanded Windows case passed3/3,
+zero skips,71.387s. Setup49.322s precedes GUI measurement. Initial GUI gap20ms;
+writer/recovery130ms,274 atomic writes,8 invalidations. Thirteen publication
+callbacks had maximum129ms. Nine100k callbacks showed merge total15-112ms,
+merge scan4-72ms, projection/raw mirror4-17ms, identity/selection0ms at integer
+resolution, no reset on those samples, and observed/accepted identity counts0/1.
+The recovery and selected-original rename assertions passed. Exact output is
+fs-watch-01/windows-r8-phases-budget.txt. Concurrent lane native jobs were present;
+this is measured loaded-host evidence, not an isolated hardware benchmark or
+independent review. Full current gates and independent re-review remain pending.

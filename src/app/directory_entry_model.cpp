@@ -142,7 +142,8 @@ Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, 
 struct DirectoryEntryModel::Private {
     DirectoryEntryModel* q;
 #ifdef GLANCELOT_FS_WATCH_TESTING
-    std::function<void(qint64)> publicationTiming=fs_watch::modelPublicationTiming;
+    std::function<void(const fs_watch::ModelPublicationStats&)> publicationTiming=fs_watch::modelPublicationTiming;
+    fs_watch::ModelPublicationStats publicationStats;
 #endif
     QString directory, directoryKey, currentImage, currentKey;
     std::vector<Row> rows;
@@ -210,6 +211,7 @@ struct DirectoryEntryModel::Private {
         QObject::connect(watcher, &QFutureWatcher<Listing>::finished, q, [this, watcher, token] {
 #ifdef GLANCELOT_FS_WATCH_TESTING
             QElapsedTimer publicationClock;publicationClock.start();
+            publicationStats={};
 #endif
             { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
             // Single consumer, reached only after finished: move the rows out
@@ -217,13 +219,20 @@ struct DirectoryEntryModel::Private {
             // leaving a second copy for deferred watcher destruction.
             static_assert(std::is_nothrow_move_constructible_v<Listing>);
             auto listing = watcher->future().takeResult(); watcher->deleteLater(); --inFlight;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            publicationStats.rows=qsizetype(listing.rows.size());
+            publicationStats.observedIdentities=listing.identities.entries.size();
+            publicationStats.complete=listing.identities.complete;
+#endif
             publication.setBytes(listing.rows.size());
             if (token != generation || !active) publication.setFlags(glancelot::perf::Stale);
             else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);
             else { if (!listing.accessible) publication.setFlags(glancelot::perf::Failed); apply(std::move(listing)); } }
             pump();
 #ifdef GLANCELOT_FS_WATCH_TESTING
-            if(publicationTiming)publicationTiming(publicationClock.elapsed());
+            publicationStats.totalMs=publicationClock.elapsed();
+            publicationStats.acceptedIdentities=identities.entries.size();
+            if(publicationTiming)publicationTiming(publicationStats);
 #endif
         });
         watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token, prior=identities] {
@@ -232,6 +241,9 @@ struct DirectoryEntryModel::Private {
         }));
     }
     void apply(Listing listing) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        QElapsedTimer phase;phase.start();
+#endif
         const bool wasAccessible = accessible, wasTruncated = truncated;
         accessible = listing.accessible; truncated = listing.truncated;
         // Identity matching was bounded and performed on the listing worker. Keep
@@ -251,12 +263,18 @@ struct DirectoryEntryModel::Private {
         // for this scope. Do not carry that baseline across unrelated navigation.
         if(listing.identities.complete)identities=listing.identities;
         else if(keyFor(identities.directory)!=directoryKey)identities={};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.identityMs=phase.restart();
+#endif
         const int oldCount = int(rows.size());
         // Filtering is a projection: identity matching/pruning uses the full
         // physical listing, never just the visible rows.
         if (!truncated || (filter.isActive() ? rawListing.rows.empty() : rows.empty())) {
             if (!filter.isActive()) {
                 merge(std::move(listing));
+#ifdef GLANCELOT_FS_WATCH_TESTING
+                publicationStats.mergeMs=phase.restart();
+#endif
                 rawListing.rows = rows;
                 rawListing.index = index;
                 if (int(rows.size()) != oldCount) emit q->countChanged();
@@ -265,6 +283,9 @@ struct DirectoryEntryModel::Private {
                 applyFilter();
             }
         }
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.projectionMs=phase.restart();
+#endif
         if (accessible && !truncated) {
             for (auto it = selected.begin(); it != selected.end();) {
                 if (rawListing.index.contains(*it)) ++it; else it = selected.erase(it);
@@ -272,6 +293,9 @@ struct DirectoryEntryModel::Private {
             if (!rawListing.index.contains(anchorKey)) anchorKey.clear();
             if (!rawListing.index.contains(cursorKey)) cursorKey.clear();
         }
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.selectionMs=phase.elapsed();
+#endif
 
         setLoading(false);
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
@@ -281,6 +305,9 @@ struct DirectoryEntryModel::Private {
     // Same folder relisted: remove vanished rows and insert new ones in place when the surviving order is
     // unchanged, so delegates, scroll position and in-flight previews survive a refresh. Otherwise reset.
     void merge(Listing listing) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        QElapsedTimer scanClock;scanClock.start();
+#endif
         auto& incoming = listing.rows;
         if (rows.empty() || incoming.empty()) { reset(std::move(listing)); return; }
         std::vector<int> survivors;
@@ -290,7 +317,12 @@ struct DirectoryEntryModel::Private {
         int last = -1;
         for (int i : survivors) {
             const int at = listing.index.value(rows[std::size_t(i)].key);
-            if (at <= last) { reset(std::move(listing)); return; }
+            if (at <= last) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+                publicationStats.mergeScanMs=scanClock.elapsed();
+#endif
+                reset(std::move(listing)); return;
+            }
             last = at;
         }
         // Every removal or insertion run costs an O(rows) vector move plus one model signal on the GUI thread, so
@@ -301,6 +333,9 @@ struct DirectoryEntryModel::Private {
             if (!listing.index.contains(rows[std::size_t(i)].key) && (i == 0 || listing.index.contains(rows[std::size_t(i - 1)].key))) ++runs;
         for (int i = 0; i < int(incoming.size()); ++i)
             if (!index.contains(incoming[std::size_t(i)].key) && (i == 0 || index.contains(incoming[std::size_t(i - 1)].key))) ++runs;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.mergeScanMs=scanClock.elapsed();
+#endif
         if (runs > kMaxMergeRuns) { reset(std::move(listing)); return; }
         // Removals, back to front in contiguous runs.
         for (int i = int(rows.size()) - 1; i >= 0;) {
@@ -336,10 +371,16 @@ struct DirectoryEntryModel::Private {
         if (firstChanged >= 0) emit q->dataChanged(q->index(firstChanged), q->index(lastChanged));
     }
     void reset(Listing listing) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        QElapsedTimer resetClock;resetClock.start();
+#endif
         q->beginResetModel();
         rows = std::move(listing.rows);
         index = std::move(listing.index);
         q->endResetModel();
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.resetMs+=resetClock.elapsed();
+#endif
     }
     void release() {
         if (!rows.empty() || !rawListing.rows.empty()) {

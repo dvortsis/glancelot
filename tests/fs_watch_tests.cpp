@@ -187,23 +187,36 @@ private slots:
     void hundredThousandEntriesSustainedWriterKeepsGuiResponsive() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("000000.png");
         QVERIFY(png(image,Qt::red));const auto original=hash(image);
+        QVector<fs_watch::ModelPublicationStats> publications;
+        const auto priorTiming=fs_watch::modelPublicationTiming;
+        fs_watch::modelPublicationTiming=[&](const auto& value){publications.push_back(value);};
+        const auto restoreTiming=qScopeGuard([&]{fs_watch::modelPublicationTiming=priorTiming;});
+        ViewerController viewer;DirectoryEntryModel grid;file_grid_wiring::followViewer(viewer,grid);grid.setActive(true);
+        const auto reportPublications=qScopeGuard([&] {
+            qint64 maximum=-1;
+            for(const auto& value:publications) {
+                maximum=std::max(maximum,value.totalMs);
+                if(value.rows==100000)qInfo()<<"100k publication ms: total"<<value.totalMs<<"identity"<<value.identityMs
+                    <<"merge (includes disposal)"<<value.mergeMs<<"merge scan"<<value.mergeScanMs<<"reset"<<value.resetMs
+                    <<"projection/raw mirror"<<value.projectionMs<<"selection"<<value.selectionMs
+                    <<"observed/accepted identities"<<value.observedIdentities<<value.acceptedIdentities;
+            }
+            qInfo()<<"GUI publication callbacks"<<publications.size()<<"maximum"<<maximum<<"ms; loading at exit"<<grid.loading();
+        });
+        // Establish a real complete baseline, then exceed the identity budget.
+        // Reuse this fixture for the admission and last-complete-baseline regression.
+        viewer.open(image);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!grid.loading()&&grid.count()==1,10000);
+        grid.select(0);QCOMPARE(grid.selectedPaths(),QStringList{image});
+        const auto nativeIdentity=fs_watch::probe(fs_watch::native(image)).identity();
         QElapsedTimer setup;setup.start();
         for(int i=1;i<100000;++i)
             QVERIFY(write(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0'))),"generated"));
         const auto setupMs=setup.elapsed();
-        QVector<qint64> publications;
-        const auto priorTiming=fs_watch::modelPublicationTiming;
-        fs_watch::modelPublicationTiming=[&](qint64 ms){publications.push_back(ms);};
-        const auto restoreTiming=qScopeGuard([&]{fs_watch::modelPublicationTiming=priorTiming;});
-        ViewerController viewer;DirectoryEntryModel grid;file_grid_wiring::followViewer(viewer,grid);grid.setActive(true);
-        const auto reportPublications=qScopeGuard([&] {
-            const auto maximum=publications.isEmpty()?qint64(-1):*std::max_element(publications.cbegin(),publications.cend());
-            qInfo()<<"GUI publication callbacks"<<publications.size()<<"maximum"<<maximum<<"ms; loading at exit"<<grid.loading();
-        });
+        publications.clear();
         QElapsedTimer clock;clock.start();qint64 previous=0,worst=0;
         QTimer heartbeat;heartbeat.setInterval(1);
         QObject::connect(&heartbeat,&QTimer::timeout,this,[&]{const auto now=clock.elapsed();worst=std::max(worst,now-previous);previous=now;});
-        heartbeat.start();viewer.open(image);
+        heartbeat.start();grid.refresh();
         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==100000&&viewer.imageReady(),30000);
         const auto initialGap=worst;worst=0;previous=clock.elapsed();
         QSignalSpy invalidations(&viewer,&ViewerController::filesInvalidated);
@@ -226,12 +239,29 @@ private slots:
         heartbeat.stop();worst=std::max(worst,clock.elapsed()-previous);
         qInfo()<<"100000 entries: generated setup"<<setupMs<<"ms; initial GUI gap"<<initialGap
                <<"ms; sustained-writer/recovery GUI gap"<<worst<<"ms; writes"<<writes.load()<<"invalidations"<<invalidations.count();
-        const auto maxPublication=publications.isEmpty()?qint64(-1):*std::max_element(publications.cbegin(),publications.cend());
+        qint64 maxPublication=-1;bool admittedWithoutPrefix=false;
+        for(const auto& value:publications) {
+            maxPublication=std::max(maxPublication,value.totalMs);
+            if(value.rows==100000&&!value.complete&&value.observedIdentities==0&&value.acceptedIdentities==1)
+                admittedWithoutPrefix=true;
+        }
+        QVERIFY2(admittedWithoutPrefix,"100k rows must publish without a partial identity prefix and retain the one-entry complete baseline");
         QVERIFY2(!publications.isEmpty()&&maxPublication<250,"actual model publication exceeded the unchanged 250ms GUI budget");
         QCOMPARE(grid.count(),100000);QVERIFY(viewer.imageReady());QCOMPARE(viewer.filePath(),image);
         QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::red));QCOMPARE(hash(image),original);
         QVERIFY2(initialGap<250,qPrintable(QString("100k initial publication GUI gap %1 ms").arg(initialGap)));
         QVERIFY2(worst<250,qPrintable(QString("100k sustained writer GUI gap %1 ms").arg(worst)));
+        // Return to a complete observation and rename the selected original.
+        // Keeping a partial baseline instead of the original complete one loses it.
+        for(int i=1;i<100000;++i)
+            QVERIFY(QFile::remove(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0')))));
+        const auto renamed=dir.filePath("renamed.png");QVERIFY(QFile::rename(image,renamed));grid.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==1&&grid.rowOf(renamed)>=0,10000);
+        for(const auto& value:publications)
+            QVERIFY2(value.totalMs<250,"model publication exceeded 250ms while recovering the complete baseline");
+        if(nativeIdentity.isEmpty())QSKIP("No native identity: budget assertions ran, rename retention is unqualified");
+        QCOMPARE(grid.selectedPaths(),QStringList{renamed});QCOMPARE(grid.cursorRow(),grid.rowOf(renamed));
+        QCOMPARE(hash(renamed),original);
     }
     void retargetDuringEnumerationRefusesCompleteMembership_data() {
         QTest::addColumn<bool>("backToA");QTest::newRow("A-B")<<false;QTest::newRow("A-B-A")<<true;
