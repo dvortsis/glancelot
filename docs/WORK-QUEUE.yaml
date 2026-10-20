@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "agent/rename", branch: "agent/rename", started: "2026-10-19T23:37:00Z"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -589,11 +589,14 @@ tasks:
     milestone: M3
     priority: 6
     owner_lane: gemini
-    state: implementing
+    state: done
+    commit: d1e5461
+    integrated_evidence: integrated d1e5461 Windows scripts/build.ps1 -Test 27/27 (200.60s) and Linux docker build 27/27 (122.21s)
     branch: agent/rename
     worktree: .worktrees/rename
     build: build-rename
     plan: docs/RENAME-01-PLAN.md
+    evidence: docs/verification/RENAME-01.md
     memory_action: act_mvg8jdxp_be1746b241cb
     owner: lead
     depends: [ANIM-01]
