@@ -1,0 +1,29 @@
+{
+  "source": "1bd44616d801f09b61f1191724d918f7decd8992",
+  "candidate": "80964f799cca1df542706b497e2cb012c92efe5f",
+  "compiledInputPaths": [
+    ".dockerignore",
+    "Dockerfile",
+    "CMakeLists.txt",
+    "cmake",
+    "app",
+    "assets",
+    "include",
+    "src",
+    "ui",
+    "tests"
+  ],
+  "compiledInputsGitDiffExit": 0,
+  "buildImage": "sha256:05d62c8f34a377e86308a7e02b976c8f41163b6de741aad5423953d29c1a0d17",
+  "windowsBuildTestExit": 0,
+  "windowsTests": 32,
+  "windowsSeconds": 580.54,
+  "dockerBuildExit": 0,
+  "dockerCTestLayer": "cached",
+  "outerRunnerExit": 1,
+  "outerRunnerFailure": "No new Linux CTest summary from cached layer",
+  "freshLinuxTests": 32,
+  "freshLinuxSeconds": 323.97,
+  "freshLinuxContainerExit": 0,
+  "physicalQualification": "unverified"
+}
