@@ -1,4 +1,5 @@
 #include "glancelot/settings_recovery.hpp"
+#include "glancelot/recovery_checkpoint.hpp"
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
 #include "settings_package.hpp"
@@ -724,6 +725,142 @@ private slots:
         const auto old=package::hooks;package::hooks=&hooks;const auto restore=qScopeGuard([&]{package::hooks=old;});
         const auto cancelled=apply(proposed.plan,options);QCOMPARE(cancelled.status.code,Code::Cancelled);QCOMPARE(read(dir.filePath("settings.json")),primary);
         QVERIFY(!cancelled.preimage.isEmpty());QVERIFY(!package::read(cancelled.preimage).data);
+    }
+    void checkpointLifecyclePreservesUnknownsAndEmptyFolder() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());
+#ifdef Q_OS_WIN
+        const QString folder="C:/generated-empty";
+#else
+        const QString folder="/generated-empty";
+#endif
+        const QJsonObject initial{{"schema",1},{"future",9},{"windows",QJsonObject{{"1",QJsonObject{{"future",true}}},{"2",QJsonObject{{"image","untouched"}}}}}};
+        QVERIFY(write(dir.filePath("settings.json"),QJsonDocument(initial).toJson()));WindowSlot slot(dir.path(),0);QVERIFY(slot.claimIdentity().hasIdentity());
+        const auto begun=beginWindow(slot.claimIdentity());QCOMPARE(begun.status.code,Code::Committed);QVERIFY(!begun.previous.hasPosition);QVERIFY(!begun.previous.priorDirty);
+        const auto saved=checkpoint(slot.claimIdentity(),{folder,{},1});QCOMPARE(saved.status.code,Code::Committed);QCOMPARE(saved.sequence,quint64(1));QVERIFY(!saved.checkpointRevision.isEmpty());
+        const auto root=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object();
+        const auto windows=root.value("windows").toObject();const auto position=windows.value("1").toObject();
+        QCOMPARE(position.value("folder"),QJsonValue(folder));QCOMPARE(position.value("image"),QJsonValue(""));QCOMPARE(position.value("future"),QJsonValue(true));
+        QCOMPARE(root.value("future"),QJsonValue(9));QCOMPARE(windows.value("2"),initial.value("windows").toObject().value("2"));
+        auto record=root.value("recovery").toObject().value("windows").toObject().value("1").toObject();
+        QCOMPARE(record.value("state"),QJsonValue("dirty"));QCOMPARE(record.value("origin"),QJsonValue("navigation"));QCOMPARE(record.value("sequence"),QJsonValue("1"));
+        QCOMPARE(record.value("checkpointRevision"),QJsonValue(saved.checkpointRevision));
+        QCOMPARE(finishWindow(slot.claimIdentity(),saved.checkpointRevision,1).code,Code::Committed);
+        QCOMPARE(finishWindow(slot.claimIdentity(),saved.checkpointRevision,1).code,Code::NoChange);
+        QVERIFY(!QFile::exists(dir.filePath("recovery-preimages")));QVERIFY(QFile::exists(dir.filePath("settings.json.bak")));
+    }
+    void checkpointStaleCompletionCannotCleanNewerPosition() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::Committed);
+        const auto first=checkpoint(slot.claimIdentity(),{{},{},1});QCOMPARE(first.status.code,Code::Committed);
+        const auto second=checkpoint(slot.claimIdentity(),{{},{},3});QCOMPARE(second.status.code,Code::Committed);
+        const auto bytes=read(dir.filePath("settings.json"));
+        QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},2}).status.code,Code::Conflict);
+        QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},3}).status.code,Code::Conflict);
+        QCOMPARE(finishWindow(slot.claimIdentity(),first.checkpointRevision,1).code,Code::Conflict);
+        QCOMPARE(finishWindow(slot.claimIdentity(),second.checkpointRevision,2).code,Code::Conflict);
+        QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::NoChange); // cannot reset sequence3
+        QCOMPARE(read(dir.filePath("settings.json")),bytes);
+        QCOMPARE(finishWindow(slot.claimIdentity(),second.checkpointRevision,3).code,Code::Committed);
+        QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},4}).status.code,Code::Conflict); // finalized claim
+    }
+    void beginCapturesDirtyPayloadBeforeNewClaimAndNoNavigationExit() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());QString checkpointId;
+        {
+            WindowSlot old(dir.path(),0);QCOMPARE(beginWindow(old.claimIdentity()).status.code,Code::Committed);
+#ifdef Q_OS_WIN
+            const QString folder="C:/generated";
+#else
+            const QString folder="/generated";
+#endif
+            const auto saved=checkpoint(old.claimIdentity(),{folder,{},7});QCOMPARE(saved.status.code,Code::Committed);checkpointId=saved.checkpointRevision;
+        } // simulate dirty exit: release the session claim without finishWindow
+        WindowSlot next(dir.path(),0);QCOMPARE(next.number(),1);
+        const auto begun=beginWindow(next.claimIdentity());QCOMPARE(begun.status.code,Code::Committed);
+        QVERIFY(begun.previous.hasPosition);QVERIFY(begun.previous.priorDirty);QCOMPARE(begun.previous.checkpointRevision,checkpointId);
+        QCOMPARE(finishWindow(next.claimIdentity(),checkpointId,0).code,Code::Committed);
+        const auto root=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object();
+        const auto row=root.value("recovery").toObject().value("windows").toObject().value("1").toObject();
+        QCOMPARE(row.value("sequence"),QJsonValue("0"));QCOMPARE(row.value("state"),QJsonValue("clean"));QCOMPARE(row.value("checkpointRevision"),QJsonValue(checkpointId));
+    }
+    void checkpointFailureLeavesPrimaryDirtyAndCannotAcknowledge() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::Committed);
+        const auto before=read(dir.filePath("settings.json"));
+        glancelot::settings_detail::TransactionHooks hooks;hooks.fail=[](glancelot::settings_detail::Stage stage){return stage==glancelot::settings_detail::Stage::BeforeReplace;};
+        {
+            Hooks installed(hooks);const auto failed=checkpoint(slot.claimIdentity(),{{},{},1});QCOMPARE(failed.status.code,Code::WriteFailed);
+            QVERIFY(failed.checkpointRevision.isEmpty());QCOMPARE(failed.sequence,quint64(0));QCOMPARE(read(dir.filePath("settings.json")),before);
+            QCOMPARE(finishWindow(slot.claimIdentity(),{},0).code,Code::WriteFailed);QCOMPARE(read(dir.filePath("settings.json")),before);
+        }
+        const auto succeeded=checkpoint(slot.claimIdentity(),{{},{},1});QCOMPARE(succeeded.status.code,Code::Committed);
+        QCOMPARE(finishWindow(slot.claimIdentity(),succeeded.checkpointRevision,1).code,Code::Committed);
+    }
+    void checkpointInvalidInputContentionAndCancellationDoNotWrite() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);
+        QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},1}).status.code,Code::Conflict);QVERIFY(!QFile::exists(dir.filePath("settings.json")));
+        QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::Committed);const auto before=read(dir.filePath("settings.json"));
+        QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},0}).status.code,Code::Corrupt);
+        QCOMPARE(checkpoint(slot.claimIdentity(),{"relative",{},1}).status.code,Code::Corrupt);
+        QCOMPARE(checkpoint(slot.claimIdentity(),{QString(32769,'x'),{},1}).status.code,Code::Corrupt);
+        Options options;options.lockTimeoutMs=0;options.generation=91;
+        {
+            FileLock held(dir.filePath("settings.json.lock"));QVERIFY(held.acquire(0));
+            QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},1},options).status.code,Code::Busy);
+            QCOMPARE(finishWindow(slot.claimIdentity(),{},0,options).code,Code::Busy);
+        }
+        std::stop_source stop;stop.request_stop();options.cancellation=stop.get_token();
+        const auto cancelled=checkpoint(slot.claimIdentity(),{{},{},1},options);QCOMPARE(cancelled.status.code,Code::Cancelled);QCOMPARE(cancelled.status.generation,quint64(91));
+        QCOMPARE(read(dir.filePath("settings.json")),before);
+        const auto stale=slot.claimIdentity();slot.release();QCOMPARE(beginWindow(stale).status.code,Code::Conflict);
+        QCOMPARE(checkpoint(stale,{{},{},1}).status.code,Code::Conflict);QCOMPARE(finishWindow(stale,{},0).code,Code::Conflict);
+    }
+    void checkpointKeepsUnknownRecoveryAndOtherSlots() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);
+        QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::Committed);
+        auto root=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object();
+        auto recovery=root.value("recovery").toObject();recovery["future"]=QJsonObject{{"flag",true}};
+        auto windows=recovery.value("windows").toObject();auto own=windows.value("1").toObject();own["future"]=QJsonObject{{"value",5}};
+        const QJsonObject other{{"version",99},{"unknown","preserve"}};windows["1"]=own;windows["2"]=other;recovery["windows"]=windows;root["recovery"]=recovery;
+        QVERIFY(write(dir.filePath("settings.json"),QJsonDocument(root).toJson()));
+        const auto saved=checkpoint(slot.claimIdentity(),{{},{},1});QCOMPARE(saved.status.code,Code::Committed);
+        QCOMPARE(finishWindow(slot.claimIdentity(),saved.checkpointRevision,1).code,Code::Committed);
+        const auto current=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object().value("recovery").toObject();
+        QCOMPARE(current.value("future"),recovery.value("future"));QCOMPARE(current.value("windows").toObject().value("2"),QJsonValue(other));
+        QCOMPARE(current.value("windows").toObject().value("1").toObject().value("future"),own.value("future"));
+    }
+    void checkpointCancellationAfterCommitStillAcknowledgesRevision() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::Committed);
+        std::stop_source stop;Options options;options.cancellation=stop.get_token();
+        glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[&](glancelot::settings_detail::Stage stage){if(stage==glancelot::settings_detail::Stage::AfterReplace)stop.request_stop();};
+        CheckpointResult saved;
+        {Hooks installed(hooks);saved=checkpoint(slot.claimIdentity(),{{},{},1},options);}
+        QVERIFY(stop.stop_requested());QCOMPARE(saved.status.code,Code::Committed);QCOMPARE(saved.sequence,quint64(1));QVERIFY(!saved.checkpointRevision.isEmpty());
+        QCOMPARE(finishWindow(slot.claimIdentity(),saved.checkpointRevision,1).code,Code::Committed);
+    }
+    void checkpointRevokedBeforeReplaceLeavesDirtyOriginal() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);const auto claim=slot.claimIdentity();
+        QCOMPARE(beginWindow(claim).status.code,Code::Committed);const auto original=read(dir.filePath("settings.json"));
+        glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[&](glancelot::settings_detail::Stage stage){if(stage==glancelot::settings_detail::Stage::BeforeReplace)slot.release();};
+        {Hooks installed(hooks);const auto refused=checkpoint(claim,{{},{},1});QCOMPARE(refused.status.code,Code::Conflict);QVERIFY(refused.checkpointRevision.isEmpty());}
+        QCOMPARE(read(dir.filePath("settings.json")),original);QCOMPARE(finishWindow(claim,{},0).code,Code::Conflict);
+        QVERIFY(slot.claim(0));QCOMPARE(beginWindow(slot.claimIdentity()).status.code,Code::Committed);
+        QCOMPARE(checkpoint(claim,{{},{},1}).status.code,Code::Conflict); // same process, new nonce
+        QCOMPARE(finishWindow(slot.claimIdentity(),{},0).code,Code::Committed); // no-navigation exit
+    }
+    void checkpointFutureAndMalformedRecoveryPreserved_data() {
+        QTest::addColumn<QJsonValue>("recovery");QTest::addColumn<Code>("expected");
+        QTest::newRow("future-root")<<QJsonValue(QJsonObject{{"version",2}})<<Code::Unsupported;
+        QTest::newRow("malformed-root")<<QJsonValue("broken")<<Code::Corrupt;
+        QTest::newRow("missing-version")<<QJsonValue(QJsonObject{{"future",true}})<<Code::Corrupt;
+        QTest::newRow("future-slot")<<QJsonValue(QJsonObject{{"version",1},{"windows",QJsonObject{{"1",QJsonObject{{"version",2}}}}}})<<Code::Unsupported;
+        QTest::newRow("malformed-sequence")<<QJsonValue(QJsonObject{{"version",1},{"windows",QJsonObject{{"1",QJsonObject{{"version",1},{"sequence","01"}}}}}})<<Code::Corrupt;
+    }
+    void checkpointFutureAndMalformedRecoveryPreserved() {
+        QFETCH(QJsonValue,recovery);QFETCH(Code,expected);QTemporaryDir dir;QVERIFY(dir.isValid());
+        const auto bytes=QJsonDocument(QJsonObject{{"schema",1},{"recovery",recovery}}).toJson();QVERIFY(write(dir.filePath("settings.json"),bytes));
+        WindowSlot slot(dir.path(),0);const auto begun=beginWindow(slot.claimIdentity());QCOMPARE(begun.status.code,expected);QVERIFY(!begun.previous.hasPosition);
+        QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},1}).status.code,expected);QCOMPARE(finishWindow(slot.claimIdentity(),{},0).code,expected);
+        QCOMPARE(read(dir.filePath("settings.json")),bytes);QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
     }
     void revokedOwnerImmediatelyBeforeReplaceCannotApply() {
         QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());

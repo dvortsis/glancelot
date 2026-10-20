@@ -244,9 +244,30 @@ Actual outputs/project are restore-* in safe-mode-01/. The two compile correctio
 (QStringList append ambiguity and a test aggregate field order) remain recorded.
 This is a component gate, not full feature, process or platform qualification.
 
+## Lifecycle checkpoint engine
+
+The actual beginWindow/checkpoint/finishWindow facade now captures the prior own
+slot before installing a new claim's dirty marker, preserves the prior payload,
+and never resets a repeated same-claim sequence. Navigation stores known position
+fields and a new UUID/monotonic sequence in the same shared-writer transaction.
+Empty-folder positions remain valid. Finish requires exact claim/revision/sequence
+and leaves failed or contended final writes dirty. No-navigation exit may clean
+sequence0. Session guards precede settings locks and remain held through commit;
+revocation is checked again immediately before replacement. Ordinary checkpoints
+use the bounded last-good backup and never create exclusive restore preimages.
+
+Actual Windows component CTest passed2/2 in8.42s, recovery118/118 and registry7/7
+with zero skips. Actual checkpoint-* outputs/project include stale sequences and
+final acknowledgments, dirty prior-payload capture, no-navigation exit, empty-folder
+save, injected write failure, contention/cancellation, release/reclaim and immediate
+precommit revocation, future/malformed records, unknown data/other-slot preservation,
+and cancellation after commit still acknowledging the persisted UUID. This proves
+the engine component; controller worker scheduling, real decode/navigation success
+selection and process interruption/restart are not yet qualified.
+
 ## Remaining complete scope
 
-Dirty/clean atomic navigation and lifecycle checkpoints,
+Controller integration of the atomic navigation and lifecycle checkpoints,
 early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
 to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and
