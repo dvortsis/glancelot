@@ -1,5 +1,9 @@
 #include "glancelot/perf_trace.hpp"
 #include "../core/perf_context.hpp"
+#include "fs_monitor.hpp"
+#include <QPointer>
+#include "fs_source_token.hpp"
+#include "io_job_lease.hpp"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -18,7 +22,6 @@
 #include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
-#include <QFileSystemWatcher>
 #include <QFutureWatcher>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -36,6 +39,7 @@
 #include <functional>
 #include <deque>
 #include <stop_token>
+#include <utility>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -110,6 +114,8 @@ const std::vector<Command> registry {
     {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
     {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
     {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
+    // FS-WATCH-01: workspace command; generic routing preserves text/modal precedence.
+    {"refresh", "Refresh", "F5"},
     // FAVORITES-01 (F003)
     {"add-to-favorites", "Add current folder to favorites", ""},
     // FOLDER-HISTORY-01 (F001)
@@ -191,7 +197,7 @@ struct ViewerController::Private {
     ViewerController* q;
     QImage image;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
-    QString directoryError;
+    QString directoryError,monitorError;
     bool directoryPending{};
     bool loading{}, imageReady{}, filmstrip{true}, tree{}, treePin{};
     qreal textScale{1.0};
@@ -201,30 +207,41 @@ struct ViewerController::Private {
     glancelot::FilterSpec filter;
     QJsonObject bindings;
     QProcess* worker{};
+    std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
+    quint64 workerGeneration{};
     qint64 perfQueued{-1}, perfDecoding{-1};
     quint64 perfGeneration{};
-    bool perfFirstDecode{true};
+    bool perfFirstDecode{true},perfRevisionProbe{};
     bool lastDecodeCacheHit{false};
     std::uint8_t perfFlags{};
     void finishDecodeTrace(std::uint8_t flags, std::uint64_t bytes = 0) {
         using namespace glancelot::perf;
-        detail::finish(perfDecoding >= 0 ? Stage::Decode : Stage::DecodeQueue, perfGeneration,
+        glancelot::perf::detail::finish(perfRevisionProbe ? Stage::CacheLookup : perfDecoding >= 0 ? Stage::Decode : Stage::DecodeQueue, perfGeneration,
             perfDecoding >= 0 ? perfDecoding : perfQueued, std::uint8_t(perfFlags | flags), bytes);
         perfQueued = perfDecoding = -1;
     }
-    QTimer deadline, reload;
-    QFileSystemWatcher watcher;
+    QTimer deadline,decodeStart;
+    bool decodeAwaitingBaseline{},decodeStartedWithoutBaseline{};
+    std::unique_ptr<fs_watch::Monitor> monitor;
+    std::optional<fs_watch::Observation> pendingObservation;
+    quint64 observationRevision{};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+    std::optional<fs_watch::ControllerTestHooks> testHooks=fs_watch::controllerTestHooks?
+        std::optional{*fs_watch::controllerTestHooks}:std::nullopt;
+#endif
     std::unique_ptr<QSharedMemory> transfer;
     qint64 admittedPixelBytes{};
     QByteArray output;
-    QCache<QString,QImage> cache{128*1024}; // KiB, only source-revision keyed immutable RGBA pixels.
+    struct CachedImage { QImage pixels; QString sourceToken; };
+    QCache<QString,CachedImage> cache{128*1024}; // KiB of verified immutable RGBA pixels.
+    bool cacheNotificationPending{},ioNotificationPending{};
     QString storageProfile{"auto"};
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool* navigationPool=new QThreadPool;
     bool navigationBusy{}, navigationReady{};
     std::deque<std::pair<int,bool>> navigationIntents;
-    bool navigationOpen{};
+    bool navigationOpen{},cacheReuseAllowed{};
     std::optional<NavigationJob> pendingNavigation;
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
@@ -250,32 +267,57 @@ struct ViewerController::Private {
     std::unique_ptr<QSharedMemory> prefetchTransfer;
     qint64 prefetchAdmittedBytes{};
     QByteArray prefetchOutput;
+    QTimer prefetchDeadline;
+    struct LookaheadRequest { Navigator navigator; int direction{}; quint64 token{}; std::stop_token stop; };
+    bool lookaheadBusy{};
+    std::optional<LookaheadRequest> pendingLookahead;
     MetadataModel metadataModel;
     bool metadataVisible{false};
     quint64 metadataGeneration{0};
+    struct MetadataJob {QString path;quint64 sourceGeneration{},revision{};};
+    bool metadataBusy{};
+    std::optional<MetadataJob> pendingMetadata;
     glancelot::AnimationController animationController;
     glancelot::MutationService mutationService;
     glancelot::CopyMoveService copyMoveService;
     glancelot::DisplayManager displayManager;
 
     void loadMetadata(const QString& targetPath, quint64 gen) {
+        if(gen!=generation)return;
         animationController.load(targetPath, gen);
+        if(gen!=generation)return;
+        const quint64 metaGen=++metadataGeneration;
+        pendingMetadata.reset();
         if (targetPath.isEmpty()) {
             metadataModel.clear();
             return;
         }
-        const quint64 metaGen = ++metadataGeneration;
         metadataModel.setLoading(true);
-        const QString resolved = targetPath;
-        QThreadPool::globalInstance()->start([this, resolved, metaGen, gen]() {
-            if (metaGen != metadataGeneration) return;
-            auto record = glancelot::MetadataParser::parse(resolved, metaGen);
-            QMetaObject::invokeMethod(q, [this, record, metaGen]() {
-                if (metaGen == metadataGeneration) {
-                    metadataModel.setRecord(record);
-                }
-            }, Qt::QueuedConnection);
+        if(gen!=generation||metaGen!=metadataGeneration)return;
+        MetadataJob job{targetPath,gen,metaGen};
+        if(metadataBusy){pendingMetadata=std::move(job);return;}
+        startMetadata(std::move(job));
+    }
+    void startMetadata(MetadataJob job) {
+        metadataBusy=true;
+        auto* future=new QFutureWatcher<MetadataRecord>(q);
+        QObject::connect(future,&QFutureWatcher<MetadataRecord>::finished,q,[this,future,job] {
+            auto record=future->future().takeResult();future->deleteLater();metadataBusy=false;
+            if(job.sourceGeneration==generation&&job.revision==metadataGeneration)
+                metadataModel.setRecord(record);
+            if(!metadataBusy&&pendingMetadata) {
+                auto next=std::move(*pendingMetadata);pendingMetadata.reset();
+                startMetadata(std::move(next));
+            }
         });
+        std::function<void(const QString&)> beforeParse;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks)beforeParse=testHooks->beforeMetadataParse;
+#endif
+        future->setFuture(QtConcurrent::run([job=std::move(job),beforeParse=std::move(beforeParse)] {
+            if(beforeParse)beforeParse(job.path);
+            return MetadataParser::parse(job.path,job.revision);
+        }));
     }
 
     explicit Private(ViewerController* owner):q(owner) {
@@ -288,19 +330,66 @@ struct ViewerController::Private {
         QObject::connect(&positionTimer,&QTimer::timeout,q,[this]{ writePosition(); });
         deadline.setSingleShot(true); deadline.setInterval(15000);
         QObject::connect(&deadline,&QTimer::timeout,q,[this]{ fail("Decoder timed out. You can open another image or retry."); });
-        reload.setSingleShot(true); reload.setInterval(120);
-        QObject::connect(&reload,&QTimer::timeout,q,[this]{
-            cache.clear();
-            emit q->cacheChanged();
-            emit q->filesInvalidated();
-            // A removal this window reconciled itself is already being handled; stepping again would skip a photo.
-            if (removedCovers(path) || removedCovers(path.isEmpty() ? displayPath(nav.snapshot().directory) : QString{})) return;
-            if (QFileInfo::exists(path)) { const QString target=path; q->open(target); }
-            else if(path.isEmpty()&&!nav.snapshot().directory.empty())q->navigateDirectory(displayPath(nav.snapshot().directory));
-            else { navigate(1, false); }
+        prefetchDeadline.setSingleShot(true);prefetchDeadline.setInterval(15000);
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks) {
+            if(testHooks->foregroundDeadlineMs>0)deadline.setInterval(testHooks->foregroundDeadlineMs);
+            if(testHooks->prefetchDeadlineMs>0)prefetchDeadline.setInterval(testHooks->prefetchDeadlineMs);
+            if(testHooks->captureLookaheadRequest) {
+                QPointer<ViewerController> guard(q);
+                testHooks->captureLookaheadRequest([this,guard]{if(guard)scheduleLookahead();});
+            }
+        }
+#endif
+        QObject::connect(&prefetchDeadline,&QTimer::timeout,q,[this]{cancelLookahead();});
+        // Normally decode starts after native registration/baseline, closing the
+        // open-to-watch race. A blocked filesystem never delays explicit decoding
+        // indefinitely: the 100ms fallback starts it and a late baseline validates
+        // it with one fresh decode after registration.
+        decodeStart.setSingleShot(true);decodeStart.setInterval(100);
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks&&testHooks->baselineDeadlineMs>0)decodeStart.setInterval(testHooks->baselineDeadlineMs);
+#endif
+        QObject::connect(&decodeStart,&QTimer::timeout,q,[this]{
+            if(!decodeAwaitingBaseline||path.isEmpty())return;
+            decodeAwaitingBaseline=false;decodeStartedWithoutBaseline=true;decode(path,generation);
         });
-        QObject::connect(&watcher,&QFileSystemWatcher::fileChanged,q,[this]{ reload.start(); });
-        QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
+        fs_watch::MonitorOptions monitorOptions;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks)monitorOptions=testHooks->options;
+#endif
+        monitorOptions.manualBaseline=true;
+        monitor=std::make_unique<fs_watch::Monitor>(q,[this](fs_watch::Observation value){
+            if(value.scope!=monitor->generation()||value.revision<=observationRevision)return;
+            observationRevision=value.revision;
+            if(!path.isEmpty()&&value.image==path&&value.baseline) {
+                if(decodeAwaitingBaseline) {
+                    decodeStart.stop();decodeAwaitingBaseline=false;decode(path,generation);
+                } else if(decodeStartedWithoutBaseline) {
+                    decodeStartedWithoutBaseline=false;++generation;cancel();cacheReuseAllowed=false;scan(path,generation);decode(path,generation);
+                }
+            }
+            if(pendingObservation&&pendingObservation->scope==value.scope) {
+                const auto earliestComplete=[](const auto& pendingBefore,const auto& workerBefore,const auto& pendingAfter) {
+                    if(pendingBefore&&pendingBefore->complete)return pendingBefore;
+                    if(workerBefore&&workerBefore->complete)return workerBefore;
+                    return pendingAfter&&pendingAfter->complete?pendingAfter:workerBefore;
+                };
+                value.before=earliestComplete(pendingObservation->before,value.before,pendingObservation->after);
+                value.parentBefore=earliestComplete(pendingObservation->parentBefore,value.parentBefore,pendingObservation->parentAfter);
+                value.fileEvent=value.fileEvent||pendingObservation->fileEvent;
+                value.forced=value.forced||pendingObservation->forced;
+                value.baseline=value.baseline||pendingObservation->baseline;
+                value.subsequent=value.subsequent||pendingObservation->subsequent;
+                if(pendingObservation->imageBefore.known)value.imageBefore=pendingObservation->imageBefore;
+            }
+            pendingObservation=std::move(value);
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            if(testHooks&&testHooks->pending)testHooks->pending(*pendingObservation);
+#endif
+            reconcileObservation();
+        },std::move(monitorOptions));
+
         QObject::connect(&mutationService, &glancelot::MutationService::pathRenamed, q, &ViewerController::reconcileRenamedPath);
         QObject::connect(&mutationService, &glancelot::MutationService::folderCreated, q, &ViewerController::reconcileCreatedFolder);
         QObject::connect(&copyMoveService, &glancelot::CopyMoveService::pathsMutated, q, [this](const QStringList& sources, const QStringList& destinations, bool isMove) {
@@ -331,10 +420,7 @@ struct ViewerController::Private {
         });
     }
     ~Private() {
-        writePosition(true);
-        navigationStop.request_stop();
-        cancelLookahead();
-        cancel();
+        monitor.reset();writePosition(true);navigationStop.request_stop();cancel();
         // A blocked filesystem call cannot honor cancellation. Jobs own only by-value
         // captures, so a stalled thread can be abandoned rather than freezing window close.
         if(navigationPool->waitForDone(1000))delete navigationPool;
@@ -365,8 +451,23 @@ struct ViewerController::Private {
         return result.ok();
     }
     QString cacheKey(const QString& file) const {
-        const QFileInfo info(file);
-        return info.absoluteFilePath() + '|' + QString::number(info.size()) + '|' + QString::number(info.lastModified().toMSecsSinceEpoch());
+        return fs_watch::key(file); // Pure text; worker tokens validate the source.
+    }
+    void notifyCacheChanged() {
+        if(cacheNotificationPending)return;
+        cacheNotificationPending=true;
+        QMetaObject::invokeMethod(q,[this]{cacheNotificationPending=false;emit q->cacheChanged();},Qt::QueuedConnection);
+    }
+    void notifyIoStatsChanged() {
+        if(ioNotificationPending)return;ioNotificationPending=true;
+        QMetaObject::invokeMethod(q,[this]{ioNotificationPending=false;emit q->ioStatsChanged();},Qt::QueuedConnection);
+    }
+    static std::optional<QString> responseSourceToken(const QJsonObject& message) {
+        const auto value=message.value("sourceToken");
+        if(!value.isString())return std::nullopt;
+        const auto token=value.toString();
+        if(!token.isEmpty()&&!fs_watch::validSourceToken(token))return std::nullopt;
+        return token;
     }
     void load() {
         QJsonObject object;
@@ -453,41 +554,34 @@ struct ViewerController::Private {
     }
     void cancelLookahead() {
         lookaheadStop.request_stop();
+        pendingLookahead.reset();prefetchDeadline.stop();
         lookaheadCandidate.clear();
         if (prefetchWorker) {
-            prefetchWorker->disconnect(q);
-            prefetchWorker->setParent(nullptr);
-            if (prefetchWorker->state() == QProcess::NotRunning) {
-                prefetchWorker->deleteLater();
-            } else {
-                QObject::connect(prefetchWorker, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
-                                 prefetchWorker, &QObject::deleteLater);
-                prefetchWorker->kill();
-            }
-            prefetchWorker = nullptr;
+            glancelot::detail::retireIoProcess(std::exchange(prefetchWorker,nullptr),std::move(prefetchLease),q,[this]{notifyIoStatsChanged();});
         }
-        IoScheduler::instance().release(lookaheadGeneration);
+        else prefetchLease.reset();
         prefetchTransfer.reset();
         prefetchAdmittedBytes = 0;
         prefetchOutput.clear();
-        emit q->ioStatsChanged();
+        notifyIoStatsChanged();
     }
     void cancel(std::uint8_t traceFlags = glancelot::perf::Cancelled) {
+        ++metadataGeneration;pendingMetadata.reset();metadataModel.clear();
         animationController.clear();
         cancelLookahead();
         finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
         deadline.stop();
+        decodeStart.stop();
         if (worker) {
-            worker->disconnect(q);
-            worker->setParent(nullptr);
-            // No wait on UI thread; QProcess is deleted only after the process has stopped.
-            if (worker->state()==QProcess::NotRunning) worker->deleteLater();
-            else { QObject::connect(worker,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),worker,&QObject::deleteLater); worker->kill(); }
-            worker=nullptr;
+            const auto retiredGeneration=workerGeneration;
+            glancelot::detail::retireIoProcess(std::exchange(worker,nullptr),std::move(decodeLease),q,[this,retiredGeneration]{
+                notifyIoStatsChanged();
+                if(retiredGeneration==generation&&!loading&&imageReady&&navigationReady)scheduleLookahead();
+            });
         }
-        IoScheduler::instance().release(generation);
+        else decodeLease.reset();
         transfer.reset(); admittedPixelBytes=0; output.clear();
-        emit q->ioStatsChanged();
+        notifyIoStatsChanged();
     }
 
     void startPrefetch(const QString& file, quint64 token) {
@@ -530,15 +624,19 @@ struct ViewerController::Private {
                     const quint64 admitted = quint64(bytes) * 4 + quint64(image.sizeInBytes()) + quint64(cache.totalCost()) * 1024;
                     if (admitted > allowance) { cancelLookahead(); return; }
 
-                    if (!IoScheduler::instance().tryAdmit(token, JobPriority::Prefetch, bytes, file)) {
+                    auto admission=glancelot::detail::admitIoJob(JobPriority::Prefetch,bytes,file);
+                    if(token!=lookaheadGeneration||process!=prefetchWorker)return;
+                    if (!admission) {
                         cancelLookahead(); return;
                     }
-                    emit q->ioStatsChanged();
+                    prefetchLease=std::move(admission);notifyIoStatsChanged();
                     prefetchTransfer = std::make_unique<QSharedMemory>("Glancelot-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
                     if (!prefetchTransfer->create(bytes)) { cancelLookahead(); return; }
                     prefetchAdmittedBytes = bytes;
                     process->write(QJsonDocument(QJsonObject{{"key", prefetchTransfer->key()}}).toJson(QJsonDocument::Compact) + '\n');
                 } else if (phase == "decoded") {
+                    const auto source=responseSourceToken(message);
+                    if(!source){cancelLookahead();return;}
                     const int width = message.value("width").toInt();
                     const int height = message.value("height").toInt();
                     const int stride = message.value("stride").toInt();
@@ -552,25 +650,37 @@ struct ViewerController::Private {
                     if (!owned.isNull()) {
                         owned.setColorSpace(QColorSpace::SRgb);
                         const int cost = int((owned.sizeInBytes() + 1023) / 1024);
-                        if (cost <= cache.maxCost()) {
-                            cache.insert(key, new QImage(owned), cost);
-                            emit q->cacheChanged();
+                        if (!source->isEmpty() && cost <= cache.maxCost()) {
+                            cache.insert(key, new CachedImage{std::move(owned),*source}, cost);
+                            notifyCacheChanged();
                         }
                     }
                     process->write("ok\n");
                     cancelLookahead();
-                }
+                    return;
+                } else {cancelLookahead();return;}
             }
         });
 
-        QObject::connect(process, &QProcess::errorOccurred, q, [this, token](QProcess::ProcessError) {
-            if (token == lookaheadGeneration) cancelLookahead();
+        QObject::connect(process, &QProcess::errorOccurred, q, [this, token,process](QProcess::ProcessError) {
+            if (token == lookaheadGeneration&&process==prefetchWorker) cancelLookahead();
         });
-        QObject::connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), q, [this, token](int, QProcess::ExitStatus) {
-            if (token == lookaheadGeneration) cancelLookahead();
+        QObject::connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), q, [this, token,process](int, QProcess::ExitStatus) {
+            if (token == lookaheadGeneration&&process==prefetchWorker) cancelLookahead();
         });
 
-        process->start(program, {file});
+        QStringList arguments{file};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks) {
+            if(!testHooks->decoderProgram.isEmpty())program=testHooks->decoderProgram;
+            arguments=testHooks->decoderArguments+arguments;
+            QObject::connect(process,&QProcess::started,q,[this,token,process,file]{
+                if(token==lookaheadGeneration&&process==prefetchWorker&&testHooks->workerStarted)
+                    testHooks->workerStarted(process,"prefetch",file);
+            });
+        }
+#endif
+        prefetchDeadline.start();process->start(program,arguments);
     }
 
     void scheduleLookahead() {
@@ -598,83 +708,171 @@ struct ViewerController::Private {
         const auto token = ++lookaheadGeneration;
         auto cancelToken = lookaheadStop.get_token();
 
+        LookaheadRequest request{nav,direction,token,cancelToken};
+        if(lookaheadBusy){pendingLookahead=std::move(request);notifyLookaheadState();return;}
+        startLookahead(std::move(request));
+    }
+    void notifyLookaheadState() {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks&&testHooks->lookaheadState)testHooks->lookaheadState(lookaheadBusy?1:0,pendingLookahead?1:0);
+#endif
+    }
+    void startLookahead(LookaheadRequest request) {
+        lookaheadBusy=true;
+        notifyLookaheadState();
+        const auto token=request.token;const auto cancelToken=request.stop;
         auto* futureWatcher = new QFutureWatcher<std::optional<std::filesystem::path>>(q);
         QObject::connect(futureWatcher, &QFutureWatcher<std::optional<std::filesystem::path>>::finished, q, [this, futureWatcher, token, cancelToken] {
             const auto result = futureWatcher->result();
             futureWatcher->deleteLater();
-            if (cancelToken.stop_requested() || token != lookaheadGeneration) return;
-            if (!result || result->empty()) return;
-
-            const QString targetPath = displayPath(*result);
-            lookaheadCandidate = targetPath;
-            const auto key = cacheKey(targetPath);
-            if (cache.contains(key)) return;
-
-            if (!loading && !worker) {
-                startPrefetch(targetPath, token);
+            lookaheadBusy=false;
+            notifyLookaheadState();
+            if(!cancelToken.stop_requested()&&token==lookaheadGeneration&&result&&!result->empty()&&!loading&&!worker) {
+                const QString targetPath=displayPath(*result);
+                lookaheadCandidate=targetPath;
+                if(!cache.contains(cacheKey(targetPath)))startPrefetch(targetPath,token);
+            }
+            if(!lookaheadBusy&&pendingLookahead) {
+                auto next=std::move(*pendingLookahead);pendingLookahead.reset();
+                startLookahead(std::move(next));
             }
         });
 
-        QFuture<std::optional<std::filesystem::path>> future = QtConcurrent::run(navigationPool, [navCopy = nav, direction, cancelToken]() mutable -> std::optional<std::filesystem::path> {
+        std::function<std::optional<std::filesystem::path>(int,std::stop_token)> discover;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks)discover=testHooks->discover;
+#endif
+        QFuture<std::optional<std::filesystem::path>> future = QtConcurrent::run(navigationPool, [navCopy = std::move(request.navigator), direction=request.direction, cancelToken,discover=std::move(discover)]() mutable -> std::optional<std::filesystem::path> {
             if (cancelToken.stop_requested()) return std::nullopt;
+            if(discover)return discover(direction,cancelToken);
             navCopy.setCancellation(cancelToken);
             return navCopy.folder(direction);
         });
         futureWatcher->setFuture(future);
     }
     void fail(const QString& message) { trace(qPrintable("failure: "+message)); cancel(glancelot::perf::Failed); loading=false; imageReady=false; metadataModel.clear(); status=message; emit q->stateChanged(); }
-    void observe() {
-        if (!watcher.files().isEmpty()) watcher.removePaths(watcher.files());
-        if (!watcher.directories().isEmpty()) watcher.removePaths(watcher.directories());
-        if (QFileInfo::exists(path)) watcher.addPath(path);
-        if (QFileInfo(QFileInfo(path).absolutePath()).isDir()) watcher.addPath(QFileInfo(path).absolutePath());
+    void observe(bool restart=false) {
+        monitor->setScope(path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path,restart);
     }
-    void decode(const QString& file,quint64 token) {
+    void reconcileObservation() {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks&&testHooks->deferReconciliation&&testHooks->deferReconciliation())return;
+#endif
+        if(!pendingObservation||navigationBusy||pendingNavigation||!navigationIntents.empty())return;
+        auto value=std::move(*pendingObservation);pendingObservation.reset();
+        if(value.scope!=monitor->generation())return;
+        monitor->acknowledge(value);
+        const auto& current=*value.after;
+        // A proven original identity wins even when a new object already reused
+        // its former pathname. Matching was performed on the monitor worker.
+        if(!value.renamedDirectory.isEmpty()) {
+            if(path.isEmpty())q->navigateDirectory(value.renamedDirectory);
+            else q->open(QDir(value.renamedDirectory).filePath(QFileInfo(path).fileName()));
+            return;
+        }
+        if(!current.complete) {
+            // A parent identity match can prove a renamed directory even when its
+            // previous spelling is now missing. Unknown/incomplete evidence cannot.
+            if(current.missing&&value.parentBefore&&value.parentAfter) {
+                if(value.before&&value.before->complete&&value.parentAfter->complete&&
+                   !value.parentAfter->entries.contains(fs_watch::key(value.directory))) {
+                    if(!removedCovers(value.directory))q->reconcileRemovedPaths({value.directory});
+                    return;
+                }
+            }
+            setMonitorError(current.missing?"The watched folder is missing. Press F5 to retry or open another folder.":
+                "Folder monitoring could not obtain a complete snapshot. Press F5 to retry.");
+            // A bounded/failed membership scan cannot prove deletion or rename.
+            // The independent current-file probe can still establish a revision,
+            // and explicit refresh must remain useful in a larger directory.
+            if(value.subsequent||value.forced)emit q->filesInvalidated();
+            const bool changed=value.imageBefore.known&&value.imageAfter.known&&!(value.imageBefore==value.imageAfter);
+            if(!path.isEmpty()&&value.imageAfter.known&&(value.forced||value.fileEvent||changed)) {
+                cache.clear();notifyCacheChanged();const auto target=path;q->open(target);
+            }
+            return;
+        }
+        setMonitorError(value.coverage?QString{}:QStringLiteral("Folder monitoring is degraded; periodic refresh and F5 remain available."));
+        if(!value.before&&!value.forced&&!value.fileEvent)return;
+        const bool changed=value.before&&value.before->entries!=current.entries;
+        if(!changed&&!value.fileEvent&&!value.forced)return;
+        cache.clear();notifyCacheChanged();emit q->filesInvalidated();
+        if(removedCovers(path)||removedCovers(path.isEmpty()?value.directory:QString{}))return;
+        if(!path.isEmpty()) {
+            const auto oldKey=fs_watch::key(path);
+            if(!value.renamedImage.isEmpty()) {q->open(value.renamedImage);return;}
+            const auto at=current.entries.constFind(oldKey);
+            if(at==current.entries.cend()) {
+                q->reconcileRemovedPaths({path});return;
+            }
+            // Windows case-only renames keep the same lookup key. Publish the
+            // directory's actual spelling so navigation still finds the current row.
+            if(path!=at->path&&fs_watch::key(path)==fs_watch::key(at->path)) {
+                q->open(at->path);return;
+            }
+            const bool revisionChanged=value.before&&value.before->entries.contains(oldKey)&&
+                !(value.before->entries[oldKey].revision==at->revision);
+            if(revisionChanged||value.fileEvent||value.forced) {
+                const auto target=path;q->open(target);return;
+            }
+        }
+        // Unrelated membership changes refresh navigation without reopening the
+        // unchanged current image or widening its traversal root.
+        Navigator copy=nav;const auto folder=value.directory;
+        const auto stop=navigationStop.get_token();copy.setCancellation(stop);
+        submitNavigation({generation,++navigationGeneration,true,[copy,folder,stop]() mutable {
+            const auto check=fs_watch::snapshot(folder,stop);
+            if(!check.complete)return NavigationResult{std::move(copy),std::nullopt,"Folder refresh was incomplete; retaining the previous location."};
+            copy.refresh();return NavigationResult{std::move(copy),std::nullopt};
+        }});
+    }
+    void setMonitorError(const QString& message) {
+        if(message==monitorError&&(message.isEmpty()||directoryError==message))return;
+        const bool owns=directoryError.isEmpty()||directoryError==monitorError;
+        monitorError=message;
+        // A successful background observation must not erase an explicit failed
+        // address visit, which belongs to the user's navigation request.
+        if(owns) {
+            directoryError=message;if(!message.isEmpty())status=message;
+            emit q->stateChanged();
+        }
+    }
+    void decode(QString file,quint64 token,bool fresh=false) {
+        if(token!=generation||file!=path)return;
         trace("decode:begin");
         cancelLookahead();
         const auto key=[&] { glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,token); return cacheKey(file); }();
 
-        if (navigationOpen && cache.contains(key)) {
-            if (const auto* cached = cache.object(key)) {
-            trace("decode:cache-hit");
-            perfGeneration = token;
-            lastDecodeCacheHit = true;
-            image = *cached;
-            loading = false;
-            imageReady = true;
-            status = "Cached · display profile not yet managed";
-            notePosition(path);
-            const auto hitStart = glancelot::perf::detail::begin();
-            glancelot::perf::detail::finish(glancelot::perf::Stage::Decode, token, hitStart,
-                glancelot::perf::Flag::CacheHit, std::uint64_t(image.sizeInBytes()));
-            observe();
-            displayManager.updateImage(path, image, generation);
-            emit q->imageChanged();
-            emit q->stateChanged();
-            emit q->cacheChanged();
-            scheduleLookahead();
-            loadMetadata(path, generation);
-            return;
-            }
-        }
-
+        const bool revisionOnly=!fresh&&cacheReuseAllowed&&cache.contains(key);
         lastDecodeCacheHit = false;
         QString program=QCoreApplication::applicationDirPath()+"/glancelot-decoder";
 #ifdef Q_OS_WIN
         program+=".exe";
 #endif
         perfGeneration = token; perfQueued = glancelot::perf::detail::begin();
+        perfRevisionProbe=revisionOnly;
         perfDecoding = -1; perfFlags = perfFirstDecode ? glancelot::perf::Cold : glancelot::perf::None;
         perfFirstDecode = false;
         worker=new QProcess(q);
         worker->setStandardErrorFile(QProcess::nullDevice()); // bound memory even if a codec floods diagnostics
         auto* process=worker;
-        QObject::connect(process,&QProcess::started,q,[this,token,process] {
+        workerGeneration=token;
+        auto initialAdmission=glancelot::detail::admitIoJob(JobPriority::Foreground,0,file);
+        if(token!=generation||process!=worker)return;
+        if(!initialAdmission){fail("Storage admission limit exceeded.");return;}
+        decodeLease=std::move(initialAdmission);
+        notifyIoStatsChanged();
+        QObject::connect(process,&QProcess::started,q,[this,token,process,revisionOnly,file] {
             if (token != generation || process != worker) return;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            if(testHooks&&testHooks->workerStarted)testHooks->workerStarted(process,revisionOnly?"revision":"decode",file);
+            if(token!=generation||process!=worker)return;
+#endif
+            if(revisionOnly){perfDecoding=perfQueued;perfQueued=-1;return;}
             glancelot::perf::detail::finish(glancelot::perf::Stage::DecodeQueue,token,perfQueued,perfFlags);
             perfQueued = -1; perfDecoding = glancelot::perf::detail::begin();
         });
-        QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key,file]{
+        QObject::connect(process,&QProcess::readyReadStandardOutput,q,[this,token,process,key,file,revisionOnly]{
             trace("decode:message");
             if (token!=generation || process!=worker) return;
             output+=process->readAllStandardOutput();
@@ -687,6 +885,29 @@ struct ViewerController::Private {
                 if (parse.error!=QJsonParseError::NoError) { fail("Invalid decoder response."); return; }
                 const auto phase=message.value("phase").toString();
                 if (phase=="error") { fail(message.value("error").toString()); return; }
+                if(revisionOnly) {
+                    const auto source=responseSourceToken(message);
+                    if(phase!="revision"||!source){fail("Invalid source revision response.");return;}
+                    const auto* cached=cache.object(key);
+                    const QImage reused=cached&&!source->isEmpty()&&cached->sourceToken==*source?cached->pixels:QImage{};
+                    finishDecodeTrace(glancelot::perf::None);
+                    cancel(); // Retire this process before callbacks can select another image.
+                    if(reused.isNull()) {
+                        if(cache.remove(key))notifyCacheChanged();
+                        if(token==generation)decode(file,token,true);
+                        return;
+                    }
+                    const auto hitStart=glancelot::perf::detail::begin();
+                    image=reused;lastDecodeCacheHit=true;loading=false;imageReady=true;
+                    status="Cached · display profile not yet managed";notePosition(path);
+                    glancelot::perf::detail::finish(glancelot::perf::Stage::Decode,token,hitStart,
+                        glancelot::perf::Flag::CacheHit,std::uint64_t(image.sizeInBytes()));
+                    displayManager.updateImage(path, image, generation);
+                    observe();notifyCacheChanged();emit q->imageChanged();emit q->stateChanged();
+                    if(token==generation)scheduleLookahead();
+                    if(token==generation)loadMetadata(path,token);
+                    return;
+                }
                 if (phase=="probe") {
                     const qint64 width=message.value("width").toInteger(),height=message.value("height").toInteger();
                     const qint64 bytes=message.value("bytes").toInteger();
@@ -698,16 +919,20 @@ struct ViewerController::Private {
 #endif
                     // Include decoder source/converted buffers, shared transfer and parent copy.
                     const quint64 admitted=quint64(bytes)*4+quint64(image.sizeInBytes())+quint64(cache.totalCost())*1024;
-                    if (admitted>allowance) { cache.clear(); if (quint64(bytes)*4+quint64(image.sizeInBytes())>allowance) { fail("Insufficient memory headroom for this image. Close other images or try a smaller file."); return; } }
-                    if (!IoScheduler::instance().tryAdmit(token, JobPriority::Foreground, bytes, file)) {
+                    if (admitted>allowance) { cache.clear();notifyCacheChanged(); if (quint64(bytes)*4+quint64(image.sizeInBytes())>allowance) { fail("Insufficient memory headroom for this image. Close other images or try a smaller file."); return; } }
+                    auto admission=glancelot::detail::admitIoJob(JobPriority::Foreground,bytes,file);
+                    if(token!=generation||process!=worker)return;
+                    if (!admission) {
                         fail("Storage admission limit exceeded."); return;
                     }
-                    emit q->ioStatsChanged();
+                    decodeLease=std::move(admission);notifyIoStatsChanged();
                     transfer=std::make_unique<QSharedMemory>("Glancelot-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
                     if (!transfer->create(bytes)) { fail("Cannot reserve the image transfer buffer: "+transfer->errorString()); return; }
                     admittedPixelBytes=bytes;
                     process->write(QJsonDocument(QJsonObject{{"key",transfer->key()}}).toJson(QJsonDocument::Compact)+'\n');
                 } else if (phase=="decoded") {
+                    const auto source=responseSourceToken(message);
+                    if(!source){fail("Invalid decoded source revision.");return;}
                     const int width=message.value("width").toInt(),height=message.value("height").toInt(),stride=message.value("stride").toInt();
                     if (!transfer || width<=0 || height<=0 || width>32768 || height>32768 || stride!=width*4 || qint64(stride)*height!=admittedPixelBytes || admittedPixelBytes>transfer->size()) { fail("Decoder returned invalid image geometry."); return; }
                     if (!transfer->lock()) { fail("Cannot read decoded pixels."); return; }
@@ -717,10 +942,9 @@ struct ViewerController::Private {
                     image=std::move(owned);
                     image.setColorSpace(QColorSpace::SRgb);
                     const int cost=int((image.sizeInBytes()+1023)/1024);
-                    if (cost<=cache.maxCost()) {
-                        cache.insert(key,new QImage(image),cost);
-                        emit q->cacheChanged();
-                    }
+                    if (!source->isEmpty()&&cost<=cache.maxCost())cache.insert(key,new CachedImage{image,*source},cost);
+                    else cache.remove(key);
+                    notifyCacheChanged();
                     finishDecodeTrace(glancelot::perf::None,std::uint64_t(image.sizeInBytes()));
                     loading=false; imageReady=true; deadline.stop();
                     status=message.value("color").toString()+" · display profile not yet managed";
@@ -728,21 +952,28 @@ struct ViewerController::Private {
                     process->write("ok\n");
                     displayManager.updateImage(path, image, generation);
                     observe(); emit q->imageChanged(); emit q->stateChanged();
-                    scheduleLookahead();
-            loadMetadata(path, generation);
+                    if(token==generation)scheduleLookahead();
+                    if(token==generation)loadMetadata(path,token);
+                    return;
                 } else { fail("Unknown decoder response."); return; }
             }
         });
-        QObject::connect(process,&QProcess::errorOccurred,q,[this,token](QProcess::ProcessError error){ if(token==generation && loading) fail(error==QProcess::FailedToStart ? "Decoder is missing. Keep glancelot-decoder next to the viewer." : "Decoder process failed; try another image."); });
+        QObject::connect(process,&QProcess::errorOccurred,q,[this,token,process](QProcess::ProcessError error){ if(token==generation&&process==worker&&loading) fail(error==QProcess::FailedToStart ? "Decoder is missing. Keep glancelot-decoder next to the viewer." : "Decoder process failed; try another image."); });
         QObject::connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),q,[this,process,token](int code,QProcess::ExitStatus exit){
             if (token!=generation || process!=worker) return;
-            IoScheduler::instance().release(token);
-            emit q->ioStatsChanged();
+            decodeLease.reset();notifyIoStatsChanged();
             worker=nullptr; transfer.reset(); process->deleteLater();
             if (loading) { finishDecodeTrace(glancelot::perf::Failed); deadline.stop(); loading=false; status=(exit==QProcess::CrashExit || code!=0) ? "Decoder failed; the previous valid image is preserved." : "Decoder returned no image."; emit q->stateChanged(); }
             else if (imageReady && navigationReady) { scheduleLookahead(); }
         });
-        process->start(program,{file}); deadline.start();
+        QStringList arguments=revisionOnly?QStringList{"--source-revision",file}:QStringList{file};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        if(testHooks) {
+            if(!testHooks->decoderProgram.isEmpty())program=testHooks->decoderProgram;
+            arguments=testHooks->decoderArguments+arguments;
+        }
+#endif
+        deadline.start();process->start(program,arguments);
         trace("decode:started");
     }
     void submitNavigation(NavigationJob job) {
@@ -764,21 +995,19 @@ struct ViewerController::Private {
                     directoryError=result.directoryFailed?result.message:QString{};
                     if(result.directoryFailed) { status=result.message; emit q->stateChanged(); }
                     else if(!result.destination) {
-                        ++generation; cancel(); reload.stop();
+                        ++generation; cancel();
                         path.clear(); image=QImage{}; imageReady=false; loading=false; metadataModel.clear();
                         displayManager.updateImage(QString(), QImage(), generation);
                         lastDecodedPath.clear(); pendingImage.clear();
                         pendingFolder=displayPath(result.navigator.snapshot().directory);
                         positionRetries=0;positionDirty=slot>0;
                         if(positionDirty)positionTimer.start();
-                        if(!watcher.files().isEmpty())watcher.removePaths(watcher.files());
-                        if(!watcher.directories().isEmpty())watcher.removePaths(watcher.directories());
-                        watcher.addPath(displayPath(result.navigator.snapshot().directory));
                     }
                 }
                 const bool clearedImage=result.directoryVisit&&!result.directoryFailed&&!result.destination;
                 const auto oldDir = displayPath(nav.snapshot().directory);
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
+                observe();
                 const auto newDir = displayPath(nav.snapshot().directory);
                 const bool folderCrossed = !oldDir.isEmpty() && !newDir.isEmpty() && QDir(oldDir) != QDir(newDir);
                 if (folderCrossed && !filter.isPersistent() && filter.isActive()) {
@@ -796,6 +1025,7 @@ struct ViewerController::Private {
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
+            if(!navigationBusy)reconcileObservation();
         });
         future->setFuture(QtConcurrent::run(navigationPool,[work=std::move(job.work),sequence]() mutable { glancelot::perf::detail::GenerationContext context(sequence); return work(); }));
     }
@@ -840,11 +1070,13 @@ struct ViewerController::Private {
         const auto oldRoot=nav.snapshot().root;
         navigationStop.request_stop(); navigationStop=std::stop_source{};
         const auto cancellation=navigationStop.get_token();
-        submitNavigation({token,++navigationGeneration,true,[file,oldRoot,cancellation,spec=sortSpec]{
+        Navigator fallback=nav;fallback.setCancellation(cancellation);
+        submitNavigation({token,++navigationGeneration,true,[file,oldRoot,cancellation,spec=sortSpec,fallback=std::move(fallback)]() mutable {
             Navigator result; std::error_code error;
             result.setCancellation(cancellation);
             result.setSort(spec); // nothing is listed yet, so this is free
-            if (result.open(nativePath(file),error) && !oldRoot.empty()) result.setRoot(oldRoot);
+            if(!result.open(nativePath(file),error))return NavigationResult{std::move(fallback),std::nullopt};
+            if(!oldRoot.empty())result.setRoot(oldRoot);
             return NavigationResult{std::move(result),std::nullopt};
         }});
     }
@@ -1121,9 +1353,12 @@ QString ViewerController::boundaryMode() const{return d->boundary;}
 QString ViewerController::wheelMode() const{return d->wheel;}
 void ViewerController::open(const QString& value){
     trace("open:begin");
+    // Consume the caller's intent once: decode may wait for registration, while
+    // a nested explicit open must not inherit the navigation-only cache policy.
+    const bool fromNavigation=std::exchange(d->navigationOpen,false);
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
-    if(!d->navigationOpen) {
+    if(!fromNavigation) {
         d->navigationIntents.clear();
         const QString oldDir = directory();
         const QString newDir = QFileInfo(path).absolutePath();
@@ -1135,14 +1370,18 @@ void ViewerController::open(const QString& value){
         }
     }
     d->removedPaths.clear();
-    ++d->generation; d->cancel(); d->reload.stop();
+    ++d->generation; d->cancel();
+    d->cacheReuseAllowed=fromNavigation;
     d->path=path;d->loading=true;d->imageReady=false;d->status="Opening "+QFileInfo(path).fileName()+"…";
-    emit stateChanged(); d->scan(path,d->generation); d->decode(path,d->generation);
+    d->observe(true);d->pendingObservation.reset();
+    d->decodeAwaitingBaseline=true;d->decodeStartedWithoutBaseline=false;d->decodeStart.start();
+    emit stateChanged(); d->scan(path,d->generation);
 }
 void ViewerController::next(){d->navigate(1,false);}void ViewerController::previous(){d->navigate(-1,false);}
 void ViewerController::nextFolder(){d->navigate(1,true);}void ViewerController::previousFolder(){d->navigate(-1,true);}
 void ViewerController::trigger(const QString& id){
     if(id=="next")next();else if(id=="previous")previous();else if(id=="next-folder")nextFolder();else if(id=="previous-folder")previousFolder();
+    else if(id=="refresh"){d->observe();d->monitor->refresh();}
     else if(id=="filmstrip")setFilmstripVisible(!d->filmstrip);
     else if(id=="sort"){const char* cycle[]={"name","modified","size","shuffle"};int at=0;for(int i=0;i<4;++i)if(sortKey()==cycle[i])at=i;setSortKey(cycle[(at+1)%4]);}
     else if(id=="sort-reverse")setSortDescending(!d->sortSpec.descending);
@@ -1294,14 +1533,14 @@ void ViewerController::reconcileRemovedPaths(const QStringList& paths) {
     if(paths.isEmpty())return;
     d->removedPaths=paths;
     // Thumbnails and cached pixels of removed paths are stale; the grid and filmstrip relist (newest generation wins).
-    d->cache.clear();
+    d->cache.clear();d->notifyCacheChanged();
     emit filesInvalidated();
     const QString folder=directory();
     const bool folderRemoved=d->removedCovers(folder);
     const bool imageRemoved=d->removedCovers(d->path);
     if(!folderRemoved&&!imageRemoved)return;
     // This window steps exactly once; a pending watcher reload or queued key repeat must not step again.
-    d->reload.stop(); d->navigationIntents.clear();
+    d->pendingObservation.reset(); d->navigationIntents.clear();
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     const auto cancellation=d->navigationStop.get_token();
     Navigator copy=d->nav; copy.setCancellation(cancellation);
@@ -1332,6 +1571,7 @@ void ViewerController::reconcileRemovedPaths(const QStringList& paths) {
         for(int depth=0;depth<256&&!candidate.empty()&&!cancellation.stop_requested();++depth) {
             Navigator target; target.setCancellation(cancellation); target.setSort(sort); std::error_code error;
             if(target.openDirectory(candidate,error)) {
+                if(!copy.snapshot().root.empty())target.setRoot(copy.snapshot().root);
                 const auto current=target.snapshot().current;
                 return Private::NavigationResult{std::move(target),current.empty()?std::nullopt:std::optional(current),"No supported images in this folder.",true,false};
             }
@@ -1519,53 +1759,23 @@ glancelot::MutationService* ViewerController::mutationService() const {
 }
 
 void ViewerController::reconcileRenamedPath(const QString& oldPath, const QString& newPath) {
-    if (oldPath.isEmpty() || newPath.isEmpty()) return;
-    d->cache.clear();
-    emit cacheChanged();
-
-    const QString cleanOld = QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
-    const QString cleanNew = QDir::cleanPath(QDir::fromNativeSeparators(newPath));
-
-    auto pathMatches = [](const QString& a, const QString& b) {
-#ifdef Q_OS_WIN
-        return a.compare(b, Qt::CaseInsensitive) == 0;
-#else
-        return a == b;
-#endif
+    if(oldPath.isEmpty()||newPath.isEmpty())return;
+    const auto old=QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
+    const auto replacement=QDir::cleanPath(QDir::fromNativeSeparators(newPath));
+    const auto remap=[&](const QString& value) -> QString {
+        if(fs_watch::key(value)==fs_watch::key(old))return replacement;
+        if(!value.isEmpty()&&insideRoot(old,value)) {
+            const auto prefix=old.endsWith('/')?old:old+'/';
+            return QDir::cleanPath(replacement+'/'+value.mid(prefix.size()));
+        }
+        return {};
     };
-
-    if (pathMatches(d->path, cleanOld)) {
-        d->path = cleanNew;
-        d->lastDecodedPath = cleanNew;
-        d->status = QStringLiteral("Renamed to %1").arg(QFileInfo(cleanNew).fileName());
-        std::error_code ec;
-        d->nav.open(nativePath(cleanNew), ec);
-        emit imageChanged();
-        emit stateChanged();
-    } else if (insideRoot(cleanOld, d->path)) {
-        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
-        const QString suffix = d->path.mid(prefix.length());
-        d->path = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
-        d->lastDecodedPath = d->path;
-        std::error_code ec;
-        d->nav.open(nativePath(d->path), ec);
-        emit stateChanged();
-    }
-
-    const QString currentDir = directory();
-    if (pathMatches(currentDir, cleanOld)) {
-        std::error_code ec;
-        d->nav.openDirectory(nativePath(cleanNew), ec);
-        emit stateChanged();
-    } else if (insideRoot(cleanOld, currentDir)) {
-        const QString prefix = cleanOld.endsWith(QLatin1Char('/')) ? cleanOld : (cleanOld + QLatin1Char('/'));
-        const QString suffix = currentDir.mid(prefix.length());
-        const QString newCurrentDir = QDir::cleanPath(cleanNew + QLatin1Char('/') + suffix);
-        std::error_code ec;
-        d->nav.openDirectory(nativePath(newCurrentDir), ec);
-        emit stateChanged();
-    }
-
+    d->cache.clear();d->notifyCacheChanged();
+    const auto image=remap(d->path);
+    const auto folder=remap(directory());
+    if(!image.isEmpty())open(image);
+    else if(!folder.isEmpty())navigateDirectory(folder);
+    else {d->observe();d->monitor->refresh();}
     emit filesInvalidated();
 }
 

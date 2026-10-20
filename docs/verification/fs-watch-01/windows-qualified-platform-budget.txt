@@ -1,0 +1,15 @@
+********* Start testing of FSWatchBudgetTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchBudgetTests::initTestCase()
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 104697 ms; initial GUI gap 24 ms; sustained-writer/recovery GUI gap 234 ms; writes 186 invalidations 3
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 55 ms; GUI gap 118 ms; publication 115 ms; writes 58
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 33 identity 0 merge (includes disposal) 25 merge scan 7 reset 0 projection/raw mirror 8 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 228 identity 0 merge (includes disposal) 212 merge scan 139 reset 0 projection/raw mirror 15 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 233 identity 0 merge (includes disposal) 207 merge scan 135 reset 0 projection/raw mirror 25 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 115 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 115 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 103 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 103 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 10 maximum 233 ms; loading at exit false
+PASS   : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchBudgetTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 166724ms
+********* Finished testing of FSWatchBudgetTests *********

@@ -4,16 +4,21 @@
 #include "glancelot/directory_listing.hpp"
 #include "glancelot/filter_state.hpp"
 #include "thumbnail_id.hpp"
+#include "fs_revision.hpp"
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFutureWatcher>
+#ifdef GLANCELOT_FS_WATCH_TESTING
+#include <QElapsedTimer>
+#endif
 #include <QHash>
 #include <QThreadPool>
 #include <QtConcurrent/QtConcurrentRun>
 #include <algorithm>
 #include <chrono>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -75,40 +80,80 @@ struct Listing {
     std::vector<Row> rows;
     QHash<QString, int> index;
     bool accessible{true}, cancelled{}, truncated{};
+    fs_watch::Snapshot identities;
+    QHash<QString,QString> renamed;
+    bool renamedDirectory{};
 };
-Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, bool hidden, std::stop_token cancel, std::size_t limit) {
+Listing buildListing(const QString& directory, const glancelot::SortSpec& sort, bool hidden, std::stop_token cancel, std::size_t limit,
+                     const fs_watch::Snapshot& prior) {
     Listing result;
-    auto listing = glancelot::listDirectory(nativePath(directory), sort, hidden, cancel, limit);
+    fs_watch::Revision directoryEntryRevision;fs::path resolvedDirectory;
+    const auto directoryRevision=fs_watch::directoryProbe(nativePath(directory),&directoryEntryRevision,&resolvedDirectory);
+    auto listing = glancelot::listDirectory(resolvedDirectory.empty()?nativePath(directory):resolvedDirectory, sort, hidden, cancel, limit);
     result.accessible = listing.accessible; result.cancelled = listing.cancelled; result.truncated = listing.truncated;
     if (listing.cancelled || cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
     QString base = QDir::cleanPath(QDir::fromNativeSeparators(directory));
     if (!base.endsWith('/')) base += '/';
     result.rows.reserve(listing.entries.size());
     result.index.reserve(qsizetype(listing.entries.size()));
+    result.identities.directory=directory;
+    result.identities.revision=directoryRevision;result.identities.entryRevision=directoryEntryRevision;
+    result.identities.complete=listing.accessible&&!listing.truncated&&directoryRevision.known&&
+        directoryRevision.directory&&!directoryRevision.link;
+    // Even an empty filename costs at least this much identity storage. If the
+    // whole listing cannot fit, probing a large prefix cannot establish a
+    // complete rename baseline and only adds avoidable native I/O and memory.
+    const auto minimumIdentityCost=fs_watch::entryBytes(base);
+    if(listing.entries.size()>fs_watch::IdentityByteBudget/minimumIdentityCost)
+        result.identities.complete=false;
+    std::size_t identityBytes=0;
     for (const auto& entry : listing.entries) {
         if (cancel.stop_requested()) { result = Listing{}; result.cancelled = true; return result; }
         Row row;
         row.name = displayPath(entry.path.filename());
         row.path = base + row.name;
         row.key = keyFor(row.path);
+        const auto identityCost=fs_watch::entryBytes(row.path);
+        if(identityCost>fs_watch::IdentityByteBudget-identityBytes)result.identities.complete=false;
+        if(result.identities.complete) {
+            const auto revision=fs_watch::probe(entry.path);
+            result.identities.complete=revision.known;identityBytes+=identityCost;
+            result.identities.entries.insert(row.key,{row.path,revision});
+        }
         row.kind = entry.kind; row.link = entry.link; row.hidden = entry.hidden;
         if (entry.meta.known && entry.kind != glancelot::EntryKind::Folder) row.size = qint64(entry.meta.size);
         row.modified = modifiedMs(entry.meta);
         result.index.insert(row.key, int(result.rows.size()));
         result.rows.push_back(std::move(row));
     }
+    result.identities.complete=result.identities.complete&&
+        fs_watch::directoryProbe(nativePath(directory))==directoryRevision&&
+        fs_watch::probe(nativePath(directory))==directoryEntryRevision;
+    const auto directoryIdentity=directoryEntryRevision.identity();
+    result.renamedDirectory=keyFor(prior.directory)!=keyFor(directory)&&!directoryIdentity.isEmpty()&&
+        directoryIdentity==prior.entryRevision.identity()&&
+        fs_watch::directoryProbe(nativePath(prior.directory)).identity()!=directoryIdentity;
+    if(keyFor(prior.directory)==keyFor(directory)||result.renamedDirectory)
+        result.renamed=fs_watch::renames(prior,result.identities);
     return result;
 }
 }
 
 struct DirectoryEntryModel::Private {
     DirectoryEntryModel* q;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+    std::function<void(const fs_watch::ModelPublicationStats&)> publicationTiming=fs_watch::modelPublicationTiming;
+    fs_watch::ModelPublicationStats publicationStats;
+#endif
     QString directory, directoryKey, currentImage, currentKey;
     std::vector<Row> rows;
     QHash<QString, int> index;
     Listing rawListing;
     glancelot::FilterSpec filter;
     QSet<QString> selected;
+    QSet<QString> previousSelection;
+    QString previousAnchor,previousCursor;
+    fs_watch::Snapshot identities;
     QString anchorKey, cursorKey;
     glancelot::SortSpec sort;
     bool includeHidden{}, active{}, loading{}, accessible{true}, truncated{}, wanted{};
@@ -164,36 +209,97 @@ struct DirectoryEntryModel::Private {
         const quint64 token = generation;
         auto* watcher = new QFutureWatcher<Listing>(q);
         QObject::connect(watcher, &QFutureWatcher<Listing>::finished, q, [this, watcher, token] {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            QElapsedTimer publicationClock;publicationClock.start();
+            publicationStats={};
+#endif
             { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
-            auto listing = watcher->result(); watcher->deleteLater(); --inFlight;
+            // Single consumer, reached only after finished: move the rows out
+            // instead of deep-copying a 100k-row vector on the GUI thread and
+            // leaving a second copy for deferred watcher destruction.
+            static_assert(std::is_nothrow_move_constructible_v<Listing>);
+            auto listing = watcher->future().takeResult(); watcher->deleteLater(); --inFlight;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            publicationStats.rows=qsizetype(listing.rows.size());
+            publicationStats.observedIdentities=listing.identities.entries.size();
+            publicationStats.complete=listing.identities.complete;
+#endif
             publication.setBytes(listing.rows.size());
             if (token != generation || !active) publication.setFlags(glancelot::perf::Stale);
             else if (listing.cancelled) publication.setFlags(glancelot::perf::Cancelled);
             else { if (!listing.accessible) publication.setFlags(glancelot::perf::Failed); apply(std::move(listing)); } }
             pump();
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            publicationStats.totalMs=publicationClock.elapsed();
+            publicationStats.acceptedIdentities=identities.entries.size();
+            if(publicationTiming)publicationTiming(publicationStats);
+#endif
         });
-        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token] {
+        watcher->setFuture(QtConcurrent::run(pool, [directory = directory, sort = sort, hidden = includeHidden, cancel = stop.get_token(), token, prior=identities] {
             glancelot::perf::detail::GenerationContext context(token);
-            return buildListing(directory, sort, hidden, cancel, kMaxEntries);
+            return buildListing(directory, sort, hidden, cancel, kMaxEntries,prior);
         }));
     }
     void apply(Listing listing) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        QElapsedTimer phase;phase.start();
+#endif
         const bool wasAccessible = accessible, wasTruncated = truncated;
         accessible = listing.accessible; truncated = listing.truncated;
-        const int oldCount = int(rows.size());
-        if (!filter.isActive()) {
-            merge(std::move(listing));
-            rawListing.rows = rows;
-            rawListing.index = index;
-            if (int(rows.size()) != oldCount) emit q->countChanged();
-        } else {
-            rawListing = std::move(listing);
-            applyFilter();
+        // Identity matching was bounded and performed on the listing worker. Keep
+        // selection/cursor/anchor on a proven renamed object, including noncurrent rows.
+        if(listing.identities.complete) {
+            if(listing.renamedDirectory) {
+                selected=previousSelection;anchorKey=previousAnchor;cursorKey=previousCursor;
+            }
+            QSet<QString> renamedSelection;
+            for(const auto& value:selected)renamedSelection.insert(listing.renamed.contains(value)?keyFor(listing.renamed[value]):value);
+            selected=std::move(renamedSelection);
+            if(listing.renamed.contains(anchorKey))anchorKey=keyFor(listing.renamed[anchorKey]);
+            if(listing.renamed.contains(cursorKey))cursorKey=keyFor(listing.renamed[cursorKey]);
+            previousSelection.clear();previousAnchor.clear();previousCursor.clear();
         }
-        // Selection, anchor and cursor are keys: keep those that still exist, drop the rest.
-        if (accessible) for (auto it = selected.begin(); it != selected.end();) { if (rawListing.index.contains(*it)) ++it; else it = selected.erase(it); }
-        if (accessible && !rawListing.index.contains(anchorKey)) anchorKey.clear();
-        if (accessible && !rawListing.index.contains(cursorKey)) cursorKey.clear();
+        // An incomplete identity scan cannot replace the last complete baseline
+        // for this scope. Do not carry that baseline across unrelated navigation.
+        if(listing.identities.complete)identities=listing.identities;
+        else if(keyFor(identities.directory)!=directoryKey)identities={};
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.identityMs=phase.restart();
+#endif
+        const int oldCount = int(rows.size());
+        // Filtering is a projection: identity matching/pruning uses the full
+        // physical listing, never just the visible rows.
+        if (!truncated || (filter.isActive() ? rawListing.rows.empty() : rows.empty())) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            publicationStats.applied=true;publicationStats.filtered=filter.isActive();
+#endif
+            if (!filter.isActive()) {
+                merge(std::move(listing));
+#ifdef GLANCELOT_FS_WATCH_TESTING
+                publicationStats.mergeMs=phase.restart();
+#endif
+                rawListing.rows = rows;
+                rawListing.index = index;
+                if (int(rows.size()) != oldCount) emit q->countChanged();
+            } else {
+                rawListing = std::move(listing);
+                applyFilter();
+            }
+        }
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.projectionMs=phase.restart();
+#endif
+        if (accessible && !truncated) {
+            for (auto it = selected.begin(); it != selected.end();) {
+                if (rawListing.index.contains(*it)) ++it; else it = selected.erase(it);
+            }
+            if (!rawListing.index.contains(anchorKey)) anchorKey.clear();
+            if (!rawListing.index.contains(cursorKey)) cursorKey.clear();
+        }
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.selectionMs=phase.elapsed();
+#endif
+
         setLoading(false);
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
         emit q->selectionChanged();
@@ -202,6 +308,9 @@ struct DirectoryEntryModel::Private {
     // Same folder relisted: remove vanished rows and insert new ones in place when the surviving order is
     // unchanged, so delegates, scroll position and in-flight previews survive a refresh. Otherwise reset.
     void merge(Listing listing) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        QElapsedTimer scanClock;scanClock.start();
+#endif
         auto& incoming = listing.rows;
         if (rows.empty() || incoming.empty()) { reset(std::move(listing)); return; }
         std::vector<int> survivors;
@@ -211,7 +320,12 @@ struct DirectoryEntryModel::Private {
         int last = -1;
         for (int i : survivors) {
             const int at = listing.index.value(rows[std::size_t(i)].key);
-            if (at <= last) { reset(std::move(listing)); return; }
+            if (at <= last) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+                publicationStats.mergeScanMs=scanClock.elapsed();
+#endif
+                reset(std::move(listing)); return;
+            }
             last = at;
         }
         // Every removal or insertion run costs an O(rows) vector move plus one model signal on the GUI thread, so
@@ -222,6 +336,9 @@ struct DirectoryEntryModel::Private {
             if (!listing.index.contains(rows[std::size_t(i)].key) && (i == 0 || listing.index.contains(rows[std::size_t(i - 1)].key))) ++runs;
         for (int i = 0; i < int(incoming.size()); ++i)
             if (!index.contains(incoming[std::size_t(i)].key) && (i == 0 || index.contains(incoming[std::size_t(i - 1)].key))) ++runs;
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.mergeScanMs=scanClock.elapsed();
+#endif
         if (runs > kMaxMergeRuns) { reset(std::move(listing)); return; }
         // Removals, back to front in contiguous runs.
         for (int i = int(rows.size()) - 1; i >= 0;) {
@@ -257,10 +374,16 @@ struct DirectoryEntryModel::Private {
         if (firstChanged >= 0) emit q->dataChanged(q->index(firstChanged), q->index(lastChanged));
     }
     void reset(Listing listing) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        QElapsedTimer resetClock;resetClock.start();
+#endif
         q->beginResetModel();
         rows = std::move(listing.rows);
         index = std::move(listing.index);
         q->endResetModel();
+#ifdef GLANCELOT_FS_WATCH_TESTING
+        publicationStats.resetMs+=resetClock.elapsed();
+#endif
     }
     void release() {
         if (!rows.empty() || !rawListing.rows.empty()) {
@@ -324,6 +447,9 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     const QString key = keyFor(directory);
     if (key == d->directoryKey) { refresh(); return; }
     const QString previous = d->directoryKey;
+    // Only a worker-proven renamed directory may restore these values. Ordinary
+    // navigation continues to start with a new selection.
+    d->previousSelection=d->selected;d->previousAnchor=d->anchorKey;d->previousCursor=d->cursorKey;
     if (!d->filter.isPersistent() && d->filter.isActive()) {
         d->filter.clear();
         emit filterChanged();

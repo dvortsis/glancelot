@@ -97,7 +97,8 @@ public:
 
     bool tryAdmit(quint64 jobId, JobPriority priority, qint64 estimatedBytes, const QString& path) override {
         QMutexLocker locker(&mutex_);
-        if (jobId == 0) return false;
+        if (jobId == 0 || estimatedBytes<0 || activeJobs_.contains(jobId) ||
+            estimatedBytes>std::numeric_limits<qint64>::max()-admittedBytes_) return false;
 
         if (priority == JobPriority::Foreground) {
             if (memoryLimit_ > 0 && admittedBytes_ + estimatedBytes > memoryLimit_ && admittedBytes_ > 0) {
@@ -146,12 +147,15 @@ public:
             }
             admittedBytes_ = (std::max)(qint64(0), admittedBytes_ - it->bytes);
             activeJobs_.erase(it);
+            locker.unlock();notifyAdmissionAvailable();
         }
     }
 
     void setMemoryLimit(qint64 bytes) override {
         QMutexLocker locker(&mutex_);
-        memoryLimit_ = bytes;
+        const auto previous=memoryLimit_;memoryLimit_ = bytes;
+        locker.unlock();
+        if(bytes<=0||(previous>0&&bytes>previous))notifyAdmissionAvailable();
     }
 
     qint64 memoryLimit() const override {
@@ -274,6 +278,11 @@ private:
         return detectStorageTypeLocked(path);
     }
 
+    void notifyAdmissionAvailable() {
+        if(notificationQueued_.exchange(true,std::memory_order_relaxed))return;
+        QMetaObject::invokeMethod(this,[this]{notificationQueued_.store(false,std::memory_order_relaxed);emit admissionAvailable();},Qt::QueuedConnection);
+    }
+    std::atomic_bool notificationQueued_{};
     mutable QMutex mutex_;
     StorageProfile profile_{StorageProfile::Auto};
     QMap<QString, StorageDeviceType> pathOverrides_;
