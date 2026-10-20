@@ -78,5 +78,5 @@ integrated command success. Earlier full Linux and native results remain above.
 
 The fixture prerequisite is independently reviewed and checked on its integrated
 commit. The integration lock is released after recording these results. PLATFORM
-software close-out remains pending a final independent evidence audit; historical
+software close-out is independently approved91b3e11; historical
 model stall causes are not established by this pass. Physical gates remain open.
