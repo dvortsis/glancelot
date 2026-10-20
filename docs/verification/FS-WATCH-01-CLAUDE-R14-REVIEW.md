@@ -23,3 +23,5 @@ Concurrent lane activity means no host isolation is claimed. No physical-hardwar
 
 ## Addendum: folder_grid rerun
 Finding 2 is resolved for Windows: `folder_grid` alone on `4a86528` (no other Windows test lane running; Codex's Docker build was running concurrently) passed in 168.70 s, `ctest -R ^folder_grid$` exit 0. The earlier 299.99 s timeout was load from another lane's full ctest. 168.7 s is still more than half of the 300 s limit, so the margin is load-sensitive. Linux remains unrun by this reviewer; Codex's concurrent Docker gate is the Linux evidence to collect.
+
+Linux: Docker build of 4a86528 from this worktree exit 0, in-container ctest 100% 32/32, Total Test time 278.56 s (log r14-docker.log, not committed). Linux is therefore measured for this candidate by the reviewer; hardware and clean-machine claims remain out of scope.
