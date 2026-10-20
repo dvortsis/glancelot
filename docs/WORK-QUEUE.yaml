@@ -584,6 +584,21 @@ tasks:
     depends: [META-HUD-01]
     outcome: Multi-frame animated GIF / WebP / APNG playback bar and TIFF page navigation
     acceptance: Asynchronous probing and decoding; frame delay and disposal respect; no invented timing for TIFF; speed scaling (0.25x-2.0x); bounded cache; generation validation
+  - id: RENAME-01
+    requirements: [SYS-06, F018]
+    milestone: M3
+    priority: 6
+    owner_lane: gemini
+    state: implementing
+    branch: agent/rename
+    worktree: .worktrees/rename
+    build: build-rename
+    plan: docs/RENAME-01-PLAN.md
+    memory_action: act_mvg8jdxp_be1746b241cb
+    owner: lead
+    depends: [ANIM-01]
+    outcome: In-browser atomic file and folder rename (F2) and new folder creation (Ctrl+Shift+N)
+    acceptance: Strict filename validation (reserved device names, forbidden characters, trailing dots/spaces, length); case-only rename support; collision handling; new folder auto-naming; atomic ViewerController and FolderHistory reconciliation; native RenameFlow dialog
   - id: INPUT-02
     requirements: [IN-01, IN-02, IN-03, IN-05]
     milestone: M3
@@ -679,7 +694,7 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, INPUT-02, FORMAT-02]
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, INPUT-02, FORMAT-02]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
 priority_amendment:
   date: '2026-10-17'
