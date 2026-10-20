@@ -496,3 +496,30 @@ Actual Claude R6 independently built and ran the whole backend:49/49,zero skips,
 137.622s,100k GUI gap180ms,publicationmax179ms. Its first isolated repeat passed
 3/3,97.937s,gap181ms/publication170ms. Further repeats and its final disposition
 are still pending; neither these nor old Docker results approve the new merge.
+
+## Current contract snapshot and native overlap
+
+Mergef384955 carried main's frozen CACHE-01 interfaces and default scaffolding
+without taking its owner implementation. Shared headers are identical to that
+main contract; QML delta remains only refresh. Required build passed119/119
+steps. Root synchronization locks are released; no FS-WATCH integration occurred.
+
+Actual independent Claude R6 reporte2e10cf is preserved unchanged: NOT APPROVED,
+noting correct early budget admission and no-copy result ownership,49/49 whole
+backend pass and3/3 passing isolated100k runs (gaps181/129/232ms; publication
+170/128/232ms). It still requests per-phase GUI cost evidence/headroom, a committed
+impossible-budget regression and full current-source/realF5 gates. These requests
+remain open; four passing runs are not treated as independent packet approval.
+
+The required Windows full gate on exactf384955 was started with no other full
+or native-input suite observed. The old Filter20064 process was verified QtCore-
+only (QTEST_GUILESS_MAIN), uses exclusively generated QTemporaryDir media and has
+no live parent, so it was left untouched and did not count as an input/clipboard
+conflict. While owned CTest51668/48672 and grid50896 ran, Cache started full
+CTest46160/32388. Only verified owned wrapper51668 and descendants were stopped.
+First9 targets had passed; stopped duringfolder_grid. Other owner Cache and the
+QtCore-only orphan were not stopped. The partial attempt is not a full native
+pass; logs .cache/fs-watch-current-full-windows.log and cancel-reason preserve
+actual output. The user was asked to coordinate one uninterrupted5-8minute native
+slot because reservations have repeatedly been overlapped. Independent regression
+work can continue while that scheduling answer is pending.
