@@ -384,6 +384,35 @@ Rectangle {
             Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
             Layout.bottomMargin: Theme.gapXs
             spacing: Theme.gapXs
+
+            PanelButton {
+                id: historyBackButton
+                objectName: "historyBack"
+                iconName: "chevron-left"
+                iconOnly: true
+                text: "Back"
+                tip: typeof folderHistory !== "undefined" && folderHistory.backDirectory.length > 0
+                     ? ("Back to " + folderHistory.backDirectory + " (Alt+Left)")
+                     : "Back (Alt+Left)"
+                enabled: typeof folderHistory !== "undefined" && folderHistory.canGoBack
+                visible: typeof folderHistory !== "undefined"
+                onClicked: if (typeof folderHistory !== "undefined") folderHistory.navigateBack()
+            }
+
+            PanelButton {
+                id: historyForwardButton
+                objectName: "historyForward"
+                iconName: "chevron-right"
+                iconOnly: true
+                text: "Forward"
+                tip: typeof folderHistory !== "undefined" && folderHistory.forwardDirectory.length > 0
+                     ? ("Forward to " + folderHistory.forwardDirectory + " (Alt+Right)")
+                     : "Forward (Alt+Right)"
+                enabled: typeof folderHistory !== "undefined" && folderHistory.canGoForward
+                visible: typeof folderHistory !== "undefined"
+                onClicked: if (typeof folderHistory !== "undefined") folderHistory.navigateForward()
+            }
+
             UiTextField {
                 id: address
                 objectName: "folderAddress"
@@ -862,6 +891,10 @@ Rectangle {
                 if (typeof favoritesModel !== "undefined" && viewer.directory.length > 0) {
                     favoritesModel.addFavorite(viewer.directory)
                 }
+            } else if (command === "navigate-back") {
+                if (typeof folderHistory !== "undefined") folderHistory.navigateBack()
+            } else if (command === "navigate-forward") {
+                if (typeof folderHistory !== "undefined") folderHistory.navigateForward()
             }
         }
     }

@@ -264,7 +264,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
-    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal
+    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -321,7 +321,9 @@ ApplicationWindow {
                 "copy-path", "copy-file", "copy-image",
                 "delete-selection", "delete-current-file", "delete-current-folder",
                 "select-all", "clear-selection", "invert-selection",
-                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh"].indexOf(id) >= 0
+                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh",
+                "navigate-back", "navigate-forward", "shortcuts-help"].indexOf(id) >= 0
+
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -336,6 +338,8 @@ ApplicationWindow {
     function shortcutHint(id) { const binding = viewer.bindingFor(id); return binding.length ? " (" + binding + ")" : "" }
     // Kept for --show-themes: appearance now lives in Settings.
     function openThemes() { settingsDialog.openSection("appearance", false) }
+    function openSettings(section, focusSearch) { settingsDialog.openSection(section || "appearance", focusSearch || false) }
+    function openShortcutsHelp() { shortcutsCheatSheet.open() }
     function handleViewCommand(id) {
         canvas.endLoupe()
         if (id === "grid") { gridMode = !gridMode; wakeHud(); if (!gridMode) canvas.forceActiveFocus() }
@@ -343,6 +347,7 @@ ApplicationWindow {
         else if (id === "fullscreen") visibility = visibility === Window.FullScreen ? Window.Windowed : Window.FullScreen
         else if (id === "palette") settingsDialog.openSection("controls", true)
         else if (id === "settings") settingsDialog.openSection(settingsDialog.section, false)
+        else if (id === "shortcuts-help") shortcutsCheatSheet.open()
         else if (id === "fit") canvas.fit("shrink")
         else if (id === "actual") canvas.actualSize()
         else if (id === "zoom-in") canvas.zoomAt(1.25, pointerX, pointerY)
@@ -428,6 +433,8 @@ ApplicationWindow {
         else if (id === "grid-zoom-in") { if (workspace._gridShown || gridScope) photoGrid.zoomIn() }
         else if (id === "grid-zoom-out") { if (workspace._gridShown || gridScope) photoGrid.zoomOut() }
         else if (id === "grid-zoom-reset") { if (workspace._gridShown || gridScope) photoGrid.resetZoom() }
+        else if (id === "navigate-back") { if (typeof folderHistory !== "undefined") folderHistory.navigateBack() }
+        else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) canvas.endLoupe()
@@ -460,6 +467,13 @@ ApplicationWindow {
             else if (app.visibility === Window.FullScreen) app.showNormal()
             else app.wakeHud()
         }
+    }
+    Shortcut {
+        sequence: "?"
+        context: Qt.WindowShortcut
+        autoRepeat: false
+        enabled: !app.modalOpen && !app.editingText
+        onActivated: app.openShortcutsHelp()
     }
     Timer {
         id: hideHud
@@ -561,7 +575,7 @@ ApplicationWindow {
         id: interaction
         visible: app.workspace._previewShown
         anchors.fill: canvas
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton | Qt.BackButton | Qt.ForwardButton
         hoverEnabled: true
         property real lastX: 0
         property real lastY: 0
@@ -573,6 +587,8 @@ ApplicationWindow {
             app.wakeHud()
         }
         onPressed: mouse => {
+            if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
+            if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
             canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
             if (mouse.button === Qt.RightButton) canvas.beginLoupe(mouse.x,mouse.y)
         }
@@ -1291,6 +1307,12 @@ ApplicationWindow {
         anchors.centerIn: parent
         width: Math.min(800, app.width - 2 * Theme.gapLg)
         height: Math.min(640, app.height - 2 * Theme.gapLg)
+        onClosed: app.focusContent()
+    }
+    ShortcutCheatSheet {
+        id: shortcutsCheatSheet
+        host: app
+        anchors.centerIn: parent
         onClosed: app.focusContent()
     }
     // Native system resizing remains available even in the optional frameless mode.
