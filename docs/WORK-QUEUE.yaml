@@ -429,6 +429,7 @@ tasks:
     owner_lane_override: claude, since (Gemini lane finished; user authorized Claude to complete Gemini leftovers)
     reopened: Independent Claude review CHANGES REQUIRED (docs/verification/MONITOR-OUTPUT-01-CLAUDE-REVIEW.md, 77f67ab) for unstable display identity, half-implemented comparison, no aggregate memory cap, untested hotplug, hard-coded keys
     fix_branch: claude/monitor-output-fix ae1b7e4 (worktree .worktrees/claude-monitor-output-fix); 24 monitor_output tests pass; needs Codex review, full Windows/Docker gates, lead sign-off on IPresentationWindow::setFitMode and ImageCanvas texture budget accessors; per-output zoom/pan/color/scale not done and split to follow-up MONITOR-CUSTOM-01 scope
+    review_request: Codex-lane independent review requested of claude/monitor-output-fix ae1b7e4 against docs/verification/MONITOR-OUTPUT-01-CLAUDE-REVIEW.md. Lead accepts additive IPresentationWindow setFitMode and ImageCanvas textureBudget accessors with the 256 MiB default unchanged. Full Windows and Docker gates follow approval.
     commit: 76b1979
     integrated_evidence: integrated 76b1979 Windows scripts/build.ps1 -Test 33/33 (642.45s) and Linux docker build 33/33 (240.07s)
     evidence: docs/verification/MONITOR-OUTPUT-01.md; independent review approved; Windows scripts/build.ps1 -Test 33/33 (642.45s); Linux Docker Qt 33/33 (240.07s)
