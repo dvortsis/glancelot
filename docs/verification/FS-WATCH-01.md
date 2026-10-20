@@ -367,3 +367,23 @@ hardware qualification is inferred from QFileSystemWatcher's path strings. N16's
 1.5s event bound remains intentionally below2s polling; a loaded-host failure is
 a real failed test result, never silently converted to a pass or skipped. The
 first-baseline timer/cancellation cases retain their exact decode-count checks.
+
+## Current-source full Linux gate failure, October 19 R5
+
+The required full docker build on fixed9bc891f finished20/21 tests passed,
+236.08s; terminal exit1 (CTest8). The only failed target was folder_grid:
+GridUiTests::reviewCompactCellsSnapToWholeRows expected live<=columns*8 but saw
+9 delegates for1 column at300x440 (tests/grid_ui_tests.cpp:280). Its QtTest
+subtotal was73 passed,1 failed,4 skipped. fs_watch passed75.34s and fs_watch_ui
+passed1.45s; these narrow target passes do not qualify the complete Docker gate.
+Actual output is .cache/fs-watch-r5-full-docker.log. No image/gate success is
+claimed for this attempt. The earlier9177b15 image remains separately scoped.
+
+An ignored diagnostic Dockerfile is preparing a build-stage image from the same
+compiled9bc891f sources, omitting automatic CTest only so the individual failing
+assertion can be reproduced. It is not a replacement gate or a product Dockerfile
+change. No product UI or test bound has been changed. Independent actual ClaudeR5
+backend runtime is still active in its own worktree; no report/approval yet.
+The native full-suite wait coordinator ended without starting while another
+lane's tests occupied the slot. Main's integration lock is currently held by
+Gemini agent/filter, so no main synchronization or integration was attempted.
