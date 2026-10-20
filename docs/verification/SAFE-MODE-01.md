@@ -473,3 +473,10 @@ The failed actual command output is candidate-docker-first.txt. No Linux CTest o
 runtime image pass is claimed. The shared amendment must match settings_file.cpp
 under the integration lock; it cannot be applied while Gemini holds that lock for
 agent/monitor-output. Existing targets and tests must remain enabled.
+
+The actual full Windows scripts/build.ps1 -Test attempt also stopped at
+pane_layout_tests linking with the same four missing raw-reader symbols. Actual
+output is candidate-windows-first.txt; Windows CTest did not start. This confirms
+the shared consumer attachment omission on both platforms. Dedicated recovery
+CMake targets are being checked separately; they cannot substitute for either
+required full gate.
