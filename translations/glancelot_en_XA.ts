@@ -203,6 +203,14 @@
 <context>
     <name>Main</name>
     <message>
+        <source>%1 of %2</source>
+        <translation>[%1 õf %2]</translation>
+    </message>
+    <message>
+        <source>No photo</source>
+        <translation>[Ñõ phõtõ]</translation>
+    </message>
+    <message>
         <source>Photo only</source>
         <translation>[Phõtõ õñlý]</translation>
     </message>

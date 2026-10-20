@@ -36,3 +36,6 @@ Update: the decoder's fixed English messages are translated in the viewer (`Deco
 ## Runtime evidence
 
 `docs/verification/F054-pseudo-locale.png` is the empty main window rendered in the Linux build image with `GLANCELOT_LANGUAGE=en_XA` (offscreen, 900x600). Two English runs are byte-identical and the `en_XA` run differs; the picture shows translated text (Open, Folders, Settings, Previous, Next, Fit, Rotate, the title and tagline) in brackets with accents, and, as intended, the strings that are still not translatable stay plain: the Photo/Grid/Both view switch, the sort button label, "No photo open", "Open a photo" in the empty state, and the zoom percentage. Those are the next strings to wrap (some are built in ternaries or JS objects).
+
+
+Update: the shell strings the first pseudo-locale run exposed (Photo/Grid/Both, sort button, empty state, status bar "N of M"/"No photo") are now wrapped; the catalog has 219 entries. The screenshot docs/verification/F054-pseudo-locale.png shows the state before the status-bar wrap. Windows 24/24 and the Linux Docker build pass on this branch.
