@@ -11,6 +11,7 @@
 #include "glancelot/mutation_service.hpp"
 #include "glancelot/copy_move_service.hpp"
 #include "glancelot/display_manager.hpp"
+namespace glancelot { class WindowClaim; }
 
 class ViewerController : public QObject {
     Q_OBJECT
@@ -116,6 +117,11 @@ public:
     // Per-window position memory (UX-12). Slot 0 disables it. The last folder and image are written (debounced,
     // atomically, through the shared settings writer) only after an image decodes successfully.
     int windowSlot() const; void setWindowSlot(int slot);
+    // SAFE-MODE-01: application attaches its real claim for guarded checkpoints.
+    // Numeric setWindowSlot retains ordinary legacy position-memory behavior,
+    // but never authorizes recovery metadata, restore, or clean-exit marking.
+    void setWindowClaim(const glancelot::WindowClaim& claim);
+    void setSafeMode(bool enabled); // startup-only, session feedback; never persisted
     // Reopens this slot's saved image, or the first image of its saved folder, unless something is already open;
     // an explicit open() always wins. A missing folder reports an actionable status and never erases the saved slot.
     Q_INVOKABLE void restoreWindow();

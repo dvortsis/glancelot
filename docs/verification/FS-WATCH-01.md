@@ -1,6 +1,65 @@
 # FS-WATCH-01 implementation evidence
 
-Status: reviewed source preparing integration; not integrated. Current measured
+Current candidate80964f7 passed full Windows32/32 in625.10s and full Linux Docker
+32/32 in233.88s; runtime image built. Product/tests match actual R14-reviewed
+4a86528 exactly. Corrected merge and integrated-commit gates are still pending;
+the earlier merge2c38082 does not contain this optimization.
+
+Exact windows-fast-path-full-*.txt/json logs retain backend82/82 zero skips80.815s,
+budget3/3 zero skips129.271s, UI3/3 zero skips3.694s, platform26/26 zero skips1170ms
+and the full CTest log (grid258.33s). Dense setup77565ms, initial GUI13ms,
+sustained-writer GUI72ms, max publication115ms and filtered GUI/publication115ms
+meet unchanged limits. The build-Test command returned0; its outer wrapper
+stopped before Docker solely because CTest's shorter success wording did not
+match a literal string. All32 individual Passed lines and the success summary
+were checked; Windows was not rerun for that wrapper error. Docker then ran on
+the same pinned80964f7. The corrected recognizer and result record are retained.
+
+Linux logs retain backend83/83 zero skips69.326s, budget3/3 zero skips21.998s,
+UI3/3 zero skips1.503s and actual failed-start QProcess::Starting. Dense setup4745ms,
+initial/sustained GUI31ms, filtered GUI66ms and max publication61ms meet bounds.
+Build-stage extraction reused the successful CTest layer; it did not rerun tests.
+See linux-fast-path-full-*.txt, ACCEPTANCE-AUDIT.md and the artifact SHA256 manifest.
+
+Known native suite overlap occurred earlier in the Windows run; exact duplicate
+review/monitor runner stop records are preserved under the user's reserved FS
+slot/monitor stop instructions. No full host isolation is claimed. Post-run
+repository-scoped Defender records contain only retired-helper detections with
+successful actions, inactive/nonexecuted; no replacement-helper detection appears
+in those inspected records. No protection changes, restore, exclusion, clean-machine
+or false-positive conclusion is used. Physical platform behavior remains unverified.
+
+Correction4a86528: actual Claude R14 review9851f03 accepts the narrow same-key/
+order metadata refresh optimization, subject fresh full/integrated gates. Exact
+claude-r14-review.md is retained. Windows build succeeded. Selected metadata
+regression3/3 zero skips131ms and cache10/10 zero skips4418ms passed. The unchanged
+100k budget passed3/3 zero skips159381ms: setup97386ms, maximum publication152ms,
+initial GUI gap60ms, sustained-writer gap154ms, active-filter GUI gap140ms and
+publication139ms. This observed run meets250ms/180s; it is not a performance
+guarantee under arbitrary load or a full-suite qualification.
+
+The auxiliary direct grid diagnostic omitted CTest's QT_QUICK_BACKEND=software;
+it timed out300s and recorded the directory-link navigation assertion. Preserve
+windows-fast-path-grid.txt and outcomes.json as failures under that different
+configuration. The selected assertion under the actual software renderer passed
+3/3 zero skips4452ms (windows-fast-path-grid-software-target.txt); that does not
+prove the entire grid suite or explain the earlier full-suite timeout. No
+controller/QML change is made on that evidence. New full Windows/Linux and final
+integrated gates remain required. No assertions, bounds or timeouts were relaxed.
+
+Latest status: merged as2c38082 by another session, but acceptance remains open.
+Main-synced2414cd6 Windows rerun failed29/32 in776.35s: grid300s timeout,
+dense180s timeout and cache failure. Exact windows-main-synced-first-*.txt logs
+retain the failures. Dense setup117637ms completed; measured publication maximum
+358ms and GUI gap359ms exceeded the unchanged250ms limit before cleanup timeout.
+Backend81/81 and UI3/3 passed; these do not make the full suite green. Another
+session ran Windows and Docker verification concurrently during this run; no
+host-isolation claim is made. The diagnostic refused to overlap that suite.
+A narrow same-key/order refresh optimization and metadata/persistent-index
+regression are now being prepared in the assigned Codex tree; neither has been
+reviewed or qualified yet. Older green measurements below remain historical.
+
+Historical status before merge: reviewed source preparing integration. Measured
 source72f0afa includes the R12 L1 bookkeeping fix116dac3 and main's qualified
 replacement fixture334065e. Actual Claude R13 e93ad90 accepts that narrow fix,
 building on R11/R12 source review and the retained Linux startup-leak red/green

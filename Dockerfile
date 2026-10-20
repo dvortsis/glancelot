@@ -7,6 +7,7 @@ ENV PATH=/opt/Qt/6.8.3/gcc_64/bin:$PATH CMAKE_PREFIX_PATH=/opt/Qt/6.8.3/gcc_64
 RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
 RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
 FROM qt AS build
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY CMakeLists.txt ./
 COPY cmake cmake
@@ -16,6 +17,7 @@ COPY include include
 COPY src src
 COPY ui ui
 COPY tests tests
+COPY scripts scripts
 RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
 RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
 
