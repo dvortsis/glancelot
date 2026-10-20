@@ -1,5 +1,8 @@
 #include "../core/perf_context.hpp"
 #include "glancelot/thumbnail_service.hpp"
+#include "glancelot/io_scheduler.hpp"
+
+using namespace glancelot;
 #include <QCache>
 #include <QHash>
 #include <QJsonDocument>
@@ -102,6 +105,7 @@ struct ThumbnailService::Private {
         glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,job.epoch,job.started,flags,std::uint64_t(image.sizeInBytes()));
         worker.busy = false; worker.buffer.clear(); worker.bodyBytes = -1;
         if (worker.deadline) worker.deadline->stop();
+        IoScheduler::instance().release(job.id);
         if (deliverable(job)) {
             if (error.isEmpty()) {
                 cache.insert(key(job.path, job.edge), new QImage(image), int(std::min<qint64>(image.sizeInBytes(), kCacheBytes)));
@@ -117,6 +121,7 @@ struct ThumbnailService::Private {
         if (hadJob) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,job.epoch,job.started,
             std::uint8_t(glancelot::perf::Failed | (job.cancelled ? glancelot::perf::Cancelled : 0) | (job.epoch != epoch ? glancelot::perf::Stale : 0)));
         retire(worker, false);
+        if (hadJob) IoScheduler::instance().release(job.id);
         if (hadJob && deliverable(job)) emit q->failed(job.id, error);
         // Defer removal so pump() cannot reuse this slot and the vector is not mutated mid-iteration.
         QTimer::singleShot(0, q, [this] {
@@ -191,13 +196,25 @@ struct ThumbnailService::Private {
     static QString missingMessage() { return "Thumbnail worker is missing. Keep glancelot-decoder next to the viewer."; }
     void pump() {
         while (!pending.empty()) {
+            const auto& candidate = pending.front();
+            const auto targetPath = candidate.path;
+            const int storageWorkerCap = IoScheduler::instance().maxConcurrentBackgroundWorkers(targetPath);
+            const int effectiveMax = std::min(workerCount, storageWorkerCap);
+            const int deadline = std::min(deadlineMs, IoScheduler::instance().recommendedThumbnailDeadlineMs(targetPath));
+
             std::shared_ptr<Worker> idleWorker;
             for (auto& worker : workers) if (worker->process && !worker->busy) { idleWorker = worker; break; }
             if (!idleWorker) {
                 const int live = int(std::count_if(workers.begin(), workers.end(), [](const auto& w) { return w->process != nullptr; }));
-                if (live >= workerCount) break;
+                if (live >= effectiveMax) break;
                 idleWorker = spawn();
             }
+
+            const qint64 estimatedBytes = qint64(candidate.edge) * candidate.edge * 4;
+            if (!IoScheduler::instance().tryAdmit(candidate.id, JobPriority::Thumbnail, estimatedBytes, targetPath)) {
+                break;
+            }
+
             idleWorker->job = pending.front(); pending.pop_front();
             glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,idleWorker->job.epoch,idleWorker->job.queued);
             idleWorker->job.started = glancelot::perf::detail::begin();
@@ -211,7 +228,7 @@ struct ThumbnailService::Private {
             const auto request = QJsonDocument(QJsonObject{{"id", double(idleWorker->job.id)}, {"path", idleWorker->job.path}, {"edge", idleWorker->job.edge}})
                                      .toJson(QJsonDocument::Compact) + '\n';
             idleWorker->process->write(request);
-            idleWorker->deadline->start(deadlineMs);
+            idleWorker->deadline->start(deadline);
         }
         if (pending.empty() && activeCount() == 0) idle.start();
         else idle.stop();
@@ -255,13 +272,18 @@ void ThumbnailService::cancel(quint64 id) {
         d->pending.erase(it);
     }
     for (auto& worker : d->workers) if (worker->busy && worker->job.id == id) worker->job.cancelled = true;
+    IoScheduler::instance().release(id);
     if (d->pending.empty() && d->activeCount() == 0) d->idle.start();
 }
 
 void ThumbnailService::setEpoch(quint64 epoch) {
     if (epoch == d->epoch) return;
     d->epoch = epoch;
-    for (const auto& job : d->pending) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Stale);
+    for (const auto& job : d->pending) {
+        IoScheduler::instance().release(job.id);
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Stale);
+    }
+    for (auto& worker : d->workers) if (worker->busy) IoScheduler::instance().release(worker->job.id);
     d->cache.clear(); d->pending.clear(); d->immediate.clear();
     // In-flight jobs finish on their workers but fail the deliverable() epoch check.
 }
@@ -272,9 +294,14 @@ int ThumbnailService::pending() const { return int(d->pending.size()); }
 int ThumbnailService::active() const { return d->activeCount(); }
 qint64 ThumbnailService::cacheBytes() const { return d->cache.totalCost(); }
 void ThumbnailService::shutdown() {
-    for (const auto& job : d->pending) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Cancelled);
-    for (const auto& worker : d->workers) if (worker->busy)
+    for (const auto& job : d->pending) {
+        IoScheduler::instance().release(job.id);
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Cancelled);
+    }
+    for (const auto& worker : d->workers) if (worker->busy) {
+        IoScheduler::instance().release(worker->job.id);
         glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,worker->job.epoch,worker->job.started,glancelot::perf::Cancelled);
+    }
     d->pending.clear(); d->immediate.clear(); d->idle.stop();
     d->stopWorkers(true);
 }

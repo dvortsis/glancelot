@@ -1,6 +1,13 @@
 #include "glancelot/io_scheduler.hpp"
+#include "glancelot/thumbnail_service.hpp"
+#include "glancelot/viewer_controller.hpp"
 #include <QTest>
 #include <QSignalSpy>
+#include <QTemporaryDir>
+
+#ifndef GLANCELOT_DECODER_PATH
+#define GLANCELOT_DECODER_PATH ""
+#endif
 
 using namespace glancelot;
 
@@ -166,6 +173,74 @@ private slots:
         QCOMPARE(parseStorageProfile("smb"), StorageProfile::Network);
         QCOMPARE(parseStorageProfile("nfs"), StorageProfile::Network);
         QCOMPARE(parseStorageProfile("invalid"), StorageProfile::Auto);
+    }
+
+    void testThumbnailServiceIntegration() {
+        auto& sched = IoScheduler::instance();
+        sched.setPathOverride("/slow_disk", StorageDeviceType::Rotational);
+
+        ThumbnailService thumbs(GLANCELOT_DECODER_PATH);
+        thumbs.setWorkerCount(2);
+
+        // Request a thumbnail on Rotational disk
+        const quint64 id1 = thumbs.request("/slow_disk/img1.png", 64, thumbs.epoch());
+        QVERIFY(id1 > 0);
+
+        // Admission ledger reflects job or attempt
+        thumbs.cancel(id1);
+        QCOMPARE(sched.activeForegroundJobs(), 0);
+
+        thumbs.shutdown();
+    }
+
+    void testViewerControllerIntegration() {
+        ViewerController controller;
+        auto& sched = IoScheduler::instance();
+
+        // Check defaults
+        QCOMPARE(controller.storageProfile(), "auto");
+        QCOMPARE(sched.profile(), StorageProfile::Auto);
+
+        // Setting profile
+        controller.setStorageProfile("ssd");
+        QCOMPARE(controller.storageProfile(), "ssd");
+        QCOMPARE(sched.profile(), StorageProfile::Ssd);
+
+        // Commands
+        controller.trigger("storage-profile-hdd");
+        QCOMPARE(controller.storageProfile(), "hdd");
+        QCOMPARE(sched.profile(), StorageProfile::Rotational);
+
+        controller.trigger("storage-profile-network");
+        QCOMPARE(controller.storageProfile(), "network");
+        QCOMPARE(sched.profile(), StorageProfile::Network);
+
+        controller.trigger("storage-profile-auto");
+        QCOMPARE(controller.storageProfile(), "auto");
+        QCOMPARE(sched.profile(), StorageProfile::Auto);
+
+        // Current storage type
+        QVERIFY(!controller.currentStorageType().isEmpty());
+    }
+
+    void testLookaheadStorageGating() {
+        auto& sched = IoScheduler::instance();
+        sched.setPathOverride("//remote_share/folder", StorageDeviceType::Network);
+        sched.setPathOverride("/local_hdd/folder", StorageDeviceType::Rotational);
+        sched.setPathOverride("/local_ssd/folder", StorageDeviceType::Ssd);
+
+        // Network: Lookahead prefetch is completely disallowed to prevent remote congestion
+        QVERIFY(!sched.isPrefetchPermitted("//remote_share/folder/item.jpg"));
+
+        // SSD: Lookahead permitted when idle
+        QVERIFY(sched.isPrefetchPermitted("/local_ssd/folder/item.jpg"));
+
+        // Rotational: Lookahead permitted when idle, but disallowed when any I/O is active
+        QVERIFY(sched.isPrefetchPermitted("/local_hdd/folder/item.jpg"));
+        sched.tryAdmit(500, JobPriority::Thumbnail, 2048, "/local_hdd/folder/thumb.jpg");
+        QVERIFY(!sched.isPrefetchPermitted("/local_hdd/folder/item.jpg"));
+        sched.release(500);
+        QVERIFY(sched.isPrefetchPermitted("/local_hdd/folder/item.jpg"));
     }
 };
 
