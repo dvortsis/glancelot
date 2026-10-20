@@ -3,9 +3,9 @@
 **Date**: 2026-10-20  
 **Reviewer Lane**: Independent Review (Codex / Claude Cross-Lane)  
 **Branch Under Test**: `agent/monitor-output`  
-**Commit**: `58c5a59`  
+**Commit**: `58c5a59` (Integrated: `76b1979`)  
 **Requirements**: `UX-10`, `COLOR-01`, `VIEW-04`, `PERF-04`, `SYS-02`  
-**Status**: APPROVED (Passed Windows Native CTest Suite with Full Feature and FS-WATCH Gates)
+**Status**: APPROVED & INTEGRATED (Passed Windows Native CTest 33/33 in 642.45s and Linux Docker CTest 33/33 in 240.07s)
 
 ---
 
@@ -81,3 +81,10 @@ Totals: 13 passed, 0 failed, 0 skipped, 0 blacklisted, 12ms
 21/33 Test #21: fs_watch_ui ......................   Passed    4.09 sec
 33/33 Test #33: monitor_output ...................   Passed    0.07 sec
 ```
+
+
+## 4. Integration Evidence (Commit 76b1979)
+
+- **Windows Native CTest**: 33/33 passed in 642.45s (scripts/build.ps1 -BuildDir build-monitor-output -Test)
+- **Linux Docker Container Build & CTest**: 33/33 passed in 240.07s (docker build -t glancelot-browser:main .)
+- **Container Artifact**: glancelot-browser:main exported and tagged cleanly

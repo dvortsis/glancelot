@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: gemini, branch: agent/monitor-output, started: "2026-10-20T14:28:00-06:00"}
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -425,12 +425,14 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: gemini
-    state: integration
+    state: done
+    commit: 76b1979
+    integrated_evidence: integrated 76b1979 Windows scripts/build.ps1 -Test 33/33 (642.45s) and Linux docker build 33/33 (240.07s)
+    evidence: docs/verification/MONITOR-OUTPUT-01.md; independent review approved; Windows scripts/build.ps1 -Test 33/33 (642.45s); Linux Docker Qt 33/33 (240.07s)
     branch: agent/monitor-output
     worktree: .worktrees/monitor-output
     build: build-monitor-output
     plan: docs/MONITOR-OUTPUT-01-PLAN.md
-    evidence: docs/verification/MONITOR-OUTPUT-01.md
     memory_action: act_mvh4wm12_cea4af8ff6b3
     depends: [GRID-PREVIEW-01, PLATFORM-01, CACHE-01]
     outcome: Explicit second-display output lifecycle and clean image routing
@@ -736,7 +738,7 @@ tasks:
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
 next_milestone: M3
-priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02]
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02, MONITOR-OUTPUT-01]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
 priority_amendment:
   date: '2026-10-17'
