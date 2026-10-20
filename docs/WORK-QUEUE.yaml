@@ -698,11 +698,16 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: codex
-    state: ready
+    state: implementing
     depends: [WINDOW-RESUME-01]
+    branch: codex/safe-mode-01
+    worktree: .worktrees/codex-safe-mode-01
+    build: build-codex-safe-mode-01
+    plan: docs/SAFE-MODE-01-PLAN.md
+    test_target_contract: cmake/RecoverySources.cmake and cmake/RecoveryTests.cmake
     memory_action: act_mvfhyfit_af2798dd4e13
     contract_proposal: docs/handoff/CODEX-SAFE-MODE-01-CONTRACT-PROPOSAL.md
-    contract_gate: Planning only; freeze shared checked-transaction API, known-section schema, startup intent and required tests before implementation; no second active Codex implementation
+    contract_gate: Lead-frozen complete F064/F057 contract and shared value APIs; production/test fragments must be enabled unconditionally once real feature sources exist before candidate gates. Sole Codex implementation while prior FS source is in pinned integration; serialize any renewed FS correction. No SAFE merge while FS integration lock remains held.
     outcome: Safe mode, configuration diff, settings backup/restore and crash-recovery restore engine (F064, F057 engine)
     acceptance: Recover without deleting originals or unknown preferences; isolate bad layout or renderer overrides; preserve last-good state; restore lazily with explicit-open precedence; corrupted state and interrupted migration tests
   - id: FORMAT-02
