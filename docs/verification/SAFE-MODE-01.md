@@ -157,10 +157,35 @@ plan. It does not yet produce the bounded preview or authorize slot writes.
 Those remaining checks must precede real transaction application. No product
 layout, geometry, theme tokens, command precedence or QML behavior changed.
 
+## Bounded diff reports
+
+Private settings_diff now compares applied current-to-replacement changes and
+preserved/unapplied current-to-source differences using component paths. It
+distinguishes absence, JSON null, empty strings and empty objects; type-changing
+object replacements produce one row rather than duplicating their subtrees.
+Paths and rows have stable lexical ordering independent of source insertion order.
+
+Depth64,4096 rows and aggregate3MiB conservative output accounting are enforced
+before row allocation/serialization. Accounting includes UTF16/JSON escape costs,
+container/row overhead and8KiB for report metadata; repeated long path prefixes
+are charged on every emitted row. Inputs are bounded/checked independently,
+including unchanged subtrees, so equality cannot hide excessive depth. Limit
+failure returns LimitExceeded and a marked bounded partial diagnostic. Cancellation
+does not become a usable success. This helper has no RestorePlan constructor.
+
+Actual Windows component CTest passed2/2 in0.71s, recovery78/78 zero skips522ms
+and registry7/7 zero skips10ms. New cases cover apply/preserve classification,
+absence/null/empty distinctions, unambiguous path components, exact4096 versus4097
+rows, depth64 versus65 (including identical over-deep input), repeated long paths
+hitting aggregate bytes before row count, single-row object type replacement and
+cancellation/generation. See safe-mode-01/diff-* actual outputs and component
+project. This is not yet the public immutable preview, JSON CLI serializer or
+proof of complete restore authorization. Full feature wiring remains pending.
+
 ## Remaining complete scope
 
 Real restore-preimage integration and public checked restore,
-bounded configuration diff/preview, claim-nonce/session guards, dirty/clean atomic
+immutable preview/fingerprint integration, claim-nonce/session guards, dirty/clean atomic
 checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
 to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and

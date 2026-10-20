@@ -3,6 +3,7 @@
 #include "settings_transaction.hpp"
 #include "settings_package.hpp"
 #include "settings_policy.hpp"
+#include "settings_diff.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QScopeGuard>
@@ -429,6 +430,75 @@ private slots:
     }
     void policyRevisionIsStableAndCoversShippedData() {
         const auto revision=policy::revision();QVERIFY(revision.startsWith("policy1:"));QCOMPARE(revision.size(),qsizetype(72));QCOMPARE(revision,policy::revision());
+    }
+    void diffSeparatesAppliedAndPreservedSourceChanges() {
+        const QJsonObject current{{"schema",1},{"wheel","zoom"},{"unknown",QJsonObject{{"keep",true},{"remove",4}}}};
+        const QJsonObject source{{"schema",1},{"wheel","pan"},{"unknown",QJsonObject{{"keep",true},{"added",8}}}};
+        policy::Selection selection;selection.global=GlobalSection::Viewing;
+        const auto merged=policy::merge(current,source,selection);QVERIFY(merged.replacement);
+        const auto report=diff::build(current,source,*merged.replacement,merged.ownedPaths);
+        QCOMPARE(report.status.code,Code::Ok);QVERIFY(!report.truncated);QCOMPARE(report.rows.size(),qsizetype(3));
+        int applied=0,preserved=0;
+        for(const auto& row:report.rows) {
+            if(row.path==QStringList{"wheel"}){QCOMPARE(row.treatment,Treatment::Apply);QCOMPARE(row.before,QJsonValue("zoom"));QCOMPARE(row.after,QJsonValue("pan"));++applied;}
+            else {QCOMPARE(row.treatment,Treatment::Preserve);QCOMPARE(row.path.first(),QString("unknown"));++preserved;}
+        }
+        QCOMPARE(applied,1);QCOMPARE(preserved,2);QCOMPARE(merged.replacement->value("unknown"),current.value("unknown"));
+    }
+    void diffDistinguishesMissingNullAndEmpty() {
+        const QJsonObject current{{"null-to-absent",QJsonValue(QJsonValue::Null)},{"empty-to-null",""},{"empty-object",QJsonObject{}}};
+        const QJsonObject source{{"absent-to-null",QJsonValue(QJsonValue::Null)},{"empty-to-null",QJsonValue(QJsonValue::Null)}};
+        const auto report=diff::build(current,source,current,{});QCOMPARE(report.status.code,Code::Ok);QCOMPARE(report.rows.size(),qsizetype(4));
+        for(const auto& row:report.rows) {
+            if(row.path==QStringList{"absent-to-null"}){QVERIFY(!row.hadBefore);QVERIFY(row.hasAfter);QVERIFY(row.after.isNull());QCOMPARE(row.change,Change::Added);}
+            if(row.path==QStringList{"null-to-absent"}){QVERIFY(row.hadBefore);QVERIFY(!row.hasAfter);QVERIFY(row.before.isNull());QCOMPARE(row.change,Change::Removed);}
+            if(row.path==QStringList{"empty-to-null"}){QVERIFY(row.hadBefore&&row.hasAfter);QVERIFY(row.before.isString());QVERIFY(row.after.isNull());}
+            if(row.path==QStringList{"empty-object"}){QVERIFY(row.before.isObject());QVERIFY(!row.hasAfter);}
+        }
+    }
+    void diffUsesPathComponentsNotDottedNames() {
+        const QJsonObject source{{"a.b",QJsonObject{{"c/d",1}}},{"a",QJsonObject{{"b.c/d",2}}}};
+        const auto report=diff::build({},source,{},{});QCOMPARE(report.status.code,Code::Ok);QCOMPARE(report.rows.size(),qsizetype(2));
+        QVERIFY(report.rows[0].path!=report.rows[1].path);
+        QVERIFY(report.rows[0].path==QStringList({"a","b.c/d"}));QVERIFY(report.rows[1].path==QStringList({"a.b","c/d"}));
+    }
+    void diffRowBoundary_data() {
+        QTest::addColumn<int>("count");QTest::newRow("limit")<<MaxDiffRows;QTest::newRow("over")<<(MaxDiffRows+1);
+    }
+    void diffRowBoundary() {
+        QFETCH(int,count);QJsonObject source;for(int i=0;i<count;++i)source[QString::number(i)]=i;
+        const auto report=diff::build({},source,{},{});
+        if(count==MaxDiffRows){QCOMPARE(report.status.code,Code::Ok);QVERIFY(!report.truncated);QCOMPARE(report.rows.size(),qsizetype(count));}
+        else {QCOMPARE(report.status.code,Code::LimitExceeded);QVERIFY(report.truncated);QCOMPARE(report.rows.size(),qsizetype(MaxDiffRows));}
+        QVERIFY(report.accountedBytes<=MaxPreviewBytes);
+    }
+    void diffDepthBoundary_data() {
+        QTest::addColumn<int>("depth");QTest::newRow("limit")<<MaxDiffDepth;QTest::newRow("over")<<(MaxDiffDepth+1);
+    }
+    void diffDepthBoundary() {
+        QFETCH(int,depth);QJsonValue nested=1;for(int i=0;i<depth;++i)nested=QJsonObject{{"n",nested}};
+        const auto report=diff::build({},nested.toObject(),{},{});
+        if(depth==MaxDiffDepth){QCOMPARE(report.status.code,Code::Ok);QCOMPARE(report.rows.size(),qsizetype(1));QCOMPARE(report.rows.first().path.size(),qsizetype(depth));}
+        else {QCOMPARE(report.status.code,Code::LimitExceeded);QVERIFY(report.truncated);QVERIFY(report.rows.isEmpty());}
+        // Equality must not bypass the depth check.
+        if(depth>MaxDiffDepth){const auto same=diff::build(nested.toObject(),nested.toObject(),nested.toObject(),{});QCOMPARE(same.status.code,Code::LimitExceeded);}
+    }
+    void repeatedLongAncestorPathsHitAggregateBound() {
+        QJsonObject leaves;for(int i=0;i<300;++i)leaves[QString::number(i)]=i;
+        const QJsonObject source{{QString(4000,'x'),leaves}};
+        QVERIFY(QJsonDocument(source).toJson(QJsonDocument::Compact).size()<MaxMemberBytes);
+        const auto report=diff::build({},source,{},{});QCOMPARE(report.status.code,Code::LimitExceeded);QVERIFY(report.truncated);
+        QVERIFY(!report.rows.isEmpty());QVERIFY(report.rows.size()<MaxDiffRows);QVERIFY(report.accountedBytes<=MaxPreviewBytes);
+    }
+    void objectTypeReplacementDoesNotDuplicateSubtrees() {
+        const QJsonObject current{{"unknown",QJsonObject{{"a",1},{"b",2}}}};
+        const QJsonObject source{{"unknown","now a string"}};
+        const auto report=diff::build(current,source,current,{});QCOMPARE(report.status.code,Code::Ok);QCOMPARE(report.rows.size(),qsizetype(1));
+        QCOMPARE(report.rows.first().path,QStringList{"unknown"});QVERIFY(report.rows.first().before.isObject());
+    }
+    void diffCancellationReturnsNoUsableSuccess() {
+        std::stop_source stop;stop.request_stop();Options options;options.cancellation=stop.get_token();options.generation=88;
+        const auto report=diff::build({},{{"unknown",1}},{},{},options);QCOMPARE(report.status.code,Code::Cancelled);QCOMPARE(report.status.generation,quint64(88));QVERIFY(report.rows.isEmpty());
     }
 };
 QTEST_GUILESS_MAIN(RecoveryTests)
