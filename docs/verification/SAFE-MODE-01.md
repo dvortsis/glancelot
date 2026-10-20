@@ -284,6 +284,26 @@ GUI application or settings/session files were constructed. Actual outputs/proje
 are startup-parser-* in safe-mode-01/. Main still needs to consume this parser;
 this component does not prove actual executable Unicode arguments or startup order.
 
+## Headless maintenance adapter
+
+app/settings_maintenance calls the real capture/preview/apply facade with an
+explicit context and emits schema1 JSON with stable enum code names and frozen
+exit mapping. Diff rows encode component arrays, presence flags, values and
+apply/preserve/invalid classification. uint64 generation is emitted as a decimal
+string. Restore recomputes the preview and requires an exact current sf1 match;
+position/layout maintenance uses offline guards. Serialization includes the
+newline in its3MiB bound and reserves final preimage/revision diagnostic space
+before mutation. Non-maintenance intent returns ArgumentError/exit2.
+
+Actual Windows component CTest passed2/2 in8.46s, recovery122/122 zero skips8169ms
+and startup53/53 zero skips12ms. Real generated-file cases exercise backup/diff/
+checked restore, exact preimage, stale fingerprint, no-change, null presence and
+unknown preservation, decimal generation, offline live refusal and historical
+clean restore, truncated output/cancellation and every stable exit category.
+Actual outputs/project are maintenance-* in safe-mode-01/. This QCore-only facade
+does not yet prove executable dispatch avoids QGuiApplication; main wiring and
+actual CLI process evidence are pending.
+
 ## Remaining complete scope
 
 Controller integration of the atomic navigation and lifecycle checkpoints,

@@ -1,5 +1,6 @@
 #include "glancelot/settings_recovery.hpp"
 #include "glancelot/recovery_checkpoint.hpp"
+#include "settings_maintenance.hpp"
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
 #include "settings_package.hpp"
@@ -861,6 +862,66 @@ private slots:
         WindowSlot slot(dir.path(),0);const auto begun=beginWindow(slot.claimIdentity());QCOMPARE(begun.status.code,expected);QVERIFY(!begun.previous.hasPosition);
         QCOMPARE(checkpoint(slot.claimIdentity(),{{},{},1}).status.code,expected);QCOMPARE(finishWindow(slot.claimIdentity(),{},0).code,expected);
         QCOMPARE(read(dir.filePath("settings.json")),bytes);QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
+    }
+    void headlessMaintenanceBackupDiffAndCheckedRestore() {
+        using namespace glancelot::startup;QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray original("{\"schema\":1,\"wheel\":\"zoom\",\"unknown\":null}");QVERIFY(write(dir.filePath("settings.json"),original));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"pan\",\"unknown\":{\"slash/key.dot\":true}}"));
+        Intent command;command.mode=Mode::Backup;command.packageDirectory=packages.filePath("source");
+        auto result=maintenance(command,{source.path()});QCOMPARE(result.exitCode,0);QVERIFY(result.json.size()<=MaxPreviewBytes);
+        auto json=QJsonDocument::fromJson(result.json).object();QCOMPARE(json.value("schema"),QJsonValue(1));QCOMPARE(json.value("code"),QJsonValue("Ok"));
+        QVERIFY(!json.value("package_revision").toString().isEmpty());
+        command.mode=Mode::Diff;command.global=GlobalSection::Viewing;Options options;options.generation=18446744073709551615ULL;
+        result=maintenance(command,{dir.path()},options);QCOMPARE(result.exitCode,0);json=QJsonDocument::fromJson(result.json).object();
+        QCOMPARE(json.value("generation").toString(),QStringLiteral("18446744073709551615"));QVERIFY(!json.value("truncated").toBool());
+        bool applied=false,preservedNull=false;
+        for(const auto& value:json.value("rows").toArray()) {
+            const auto row=value.toObject();QVERIFY(row.value("path").isArray());
+            if(row.value("path").toArray()==QJsonArray{"wheel"}) {QCOMPARE(row.value("treatment"),QJsonValue("apply"));QCOMPARE(row.value("change"),QJsonValue("changed"));applied=true;}
+            if(row.value("path").toArray()==QJsonArray{"unknown"}) {QVERIFY(row.value("had_before").toBool());QVERIFY(row.value("before").isNull());QCOMPARE(row.value("treatment"),QJsonValue("preserve"));preservedNull=true;}
+        }
+        QVERIFY(applied&&preservedNull);command.mode=Mode::Restore;command.expectedFingerprint=json.value("fingerprint").toString();
+        const auto accepted=maintenance(command,{dir.path()});QCOMPARE(accepted.exitCode,0);json=QJsonDocument::fromJson(accepted.json).object();
+        QCOMPARE(json.value("code"),QJsonValue("Committed"));const auto preimage=package::read(json.value("preimage").toString());QVERIFY(preimage.data);QCOMPARE(preimage.data->primary.bytes,original);
+        const auto restored=QJsonDocument::fromJson(read(dir.filePath("settings.json"))).object();QCOMPARE(restored.value("wheel"),QJsonValue("pan"));QVERIFY(restored.value("unknown").isNull());
+        QCOMPARE(maintenance(command,{dir.path()}).exitCode,3); // old CLI fingerprint is no longer current
+        command.mode=Mode::Diff;result=maintenance(command,{dir.path()});json=QJsonDocument::fromJson(result.json).object();command.expectedFingerprint=json.value("fingerprint").toString();
+        command.mode=Mode::Restore;result=maintenance(command,{dir.path()});QCOMPARE(result.exitCode,0);json=QJsonDocument::fromJson(result.json).object();
+        QCOMPARE(json.value("code"),QJsonValue("NoChange"));QVERIFY(json.value("preimage").toString().isEmpty());
+        QVERIFY(!QCoreApplication::instance()->inherits("QGuiApplication"));
+    }
+    void headlessMaintenanceOfflineRestoreUsesHistoricalCleanRecord() {
+        using namespace glancelot::startup;QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+#ifdef Q_OS_WIN
+        const QString folder="C:/generated";
+#else
+        const QString folder="/generated";
+#endif
+        const auto saved=QJsonDocument(QJsonObject{{"schema",1},{"windows",QJsonObject{{"1",QJsonObject{{"folder",folder},{"image",""},{"saved",1}}}}}}).toJson();
+        QVERIFY(write(source.filePath("settings.json"),saved));const auto captured=captureBackup({source.path()},packages.filePath("source"));QCOMPARE(captured.status.code,Code::Ok);
+        Intent command;command.mode=Mode::Diff;command.packageDirectory=captured.destination;command.slotSection=SlotSection::Position;command.slot=1;
+        {WindowSlot live(dir.path(),0);QCOMPARE(maintenance(command,{dir.path()}).exitCode,7);QVERIFY(!QFile::exists(dir.filePath("settings.json")));}
+        auto result=maintenance(command,{dir.path()});QCOMPARE(result.exitCode,0);command.expectedFingerprint=QJsonDocument::fromJson(result.json).object().value("fingerprint").toString();
+        command.mode=Mode::Restore;result=maintenance(command,{dir.path()});QCOMPARE(result.exitCode,0);
+        WindowSlot next(dir.path(),0);const auto resumed=beginWindow(next.claimIdentity());QCOMPARE(resumed.status.code,Code::Committed);
+        QVERIFY(resumed.previous.hasPosition);QVERIFY(!resumed.previous.priorDirty);QCOMPARE(resumed.previous.folder,folder);
+    }
+    void headlessMaintenanceTruncationAndCancellationHaveBoundedErrors() {
+        using namespace glancelot::startup;QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
+        Intent command;QCOMPARE(maintenance(command,{dir.path()}).exitCode,2);QVERIFY(!QFile::exists(dir.filePath("settings.json")));
+        command.mode=Mode::Backup;command.packageDirectory=packages.filePath("cancelled");std::stop_source stop;stop.request_stop();Options options;options.cancellation=stop.get_token();
+        const auto cancelled=maintenance(command,{dir.path()},options);QCOMPARE(cancelled.exitCode,4);QCOMPARE(QJsonDocument::fromJson(cancelled.json).object().value("code"),QJsonValue("Cancelled"));
+        QVERIFY(!QFile::exists(command.packageDirectory));
+        QJsonObject large{{"schema",1}};for(int i=0;i<MaxDiffRows+1;++i)large[QString::number(i)]=i;
+        QVERIFY(write(source.filePath("settings.json"),QJsonDocument(large).toJson()));const auto captured=captureBackup({source.path()},packages.filePath("source"));QCOMPARE(captured.status.code,Code::Ok);
+        command.mode=Mode::Diff;command.packageDirectory=captured.destination;const auto limited=maintenance(command,{dir.path()});QCOMPARE(limited.exitCode,6);QVERIFY(limited.json.size()<=MaxPreviewBytes);
+        const auto json=QJsonDocument::fromJson(limited.json).object();QCOMPARE(json.value("code"),QJsonValue("LimitExceeded"));QVERIFY(json.value("truncated").toBool());
+        QVERIFY(json.value("fingerprint").toString().isEmpty());QVERIFY(json.value("rows").toArray().size()<=MaxDiffRows);QVERIFY(!QFile::exists(dir.filePath("settings.json")));
+    }
+    void maintenanceExitCodesRemainStable() {
+        using namespace glancelot::startup;
+        const std::pair<Code,int> expected[]={{Code::Ok,0},{Code::NoChange,0},{Code::Committed,0},{Code::Conflict,3},{Code::Cancelled,4},{Code::Unsupported,5},{Code::Corrupt,6},{Code::LimitExceeded,6},{Code::Busy,7},{Code::Unreadable,7},{Code::WriteFailed,7}};
+        QSet<QString> names;for(const auto& [code,value]:expected){QCOMPARE(exitCode(code),value);QVERIFY(!names.contains(codeName(code)));names.insert(codeName(code));}
     }
     void revokedOwnerImmediatelyBeforeReplaceCannotApply() {
         QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
