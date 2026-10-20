@@ -17,8 +17,11 @@
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
+#include <QProcess>
 #include <QtTest>
 #include <atomic>
+#include <chrono>
+#include <cstdio>
 #include <thread>
 #include <condition_variable>
 #include <mutex>
@@ -42,6 +45,57 @@ class RecoveryTests final : public QObject {
         request.options.lockTimeoutMs=0;return request;
     }
 private slots:
+    void interruptedRestoreProcessPreservesAtomicState_data() {
+        using glancelot::settings_detail::Stage;
+        QTest::addColumn<int>("point");
+        QTest::newRow("before-evidence")<<int(Stage::BeforeEvidence);
+        QTest::newRow("after-sealed-preimage")<<int(Stage::AfterPreimage);
+        QTest::newRow("before-primary-replacement")<<int(Stage::BeforeReplace);
+        QTest::newRow("after-primary-replacement")<<int(Stage::AfterReplace);
+    }
+    void interruptedRestoreProcessPreservesAtomicState() {
+        using glancelot::settings_detail::Stage;
+        QFETCH(int,point);
+        QTemporaryDir target,source,packages;
+        QVERIFY(target.isValid()&&source.isValid()&&packages.isValid());
+        const QByteArray primary("{ \"schema\":1,\"wheel\":\"zoom\",\"unknown\":{\"future\":5},\"windows\":{\"2\":{\"image\":\"retain\"}} }");
+        const QByteArray backup("exact diagnostic backup"),damaged("exact damaged evidence");
+        QVERIFY(write(target.filePath("settings.json"),primary));
+        QVERIFY(write(target.filePath("settings.json.bak"),backup));
+        QVERIFY(write(target.filePath("settings.json.damaged"),damaged));
+        QVERIFY(write(source.filePath("settings.json"),"{\"schema\":1,\"wheel\":\"pan\"}"));
+        const auto captured=captureBackup({source.path()},packages.filePath("source"));
+        QCOMPARE(captured.status.code,Code::Ok);
+        QProcess child;
+        const auto cleanup=qScopeGuard([&]{if(child.state()!=QProcess::NotRunning){child.kill();child.waitForFinished(5000);}});
+        child.start(QCoreApplication::applicationFilePath(),{"--restore-crash-helper",target.path(),captured.destination,QString::number(point)});
+        QVERIFY2(child.waitForStarted(5000),qPrintable(child.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT(child.canReadLine()||child.state()==QProcess::NotRunning,10000);
+        const auto message=child.readLine();
+        QVERIFY2(message.trimmed()==QByteArray("restore-stage-ready"),child.readAllStandardError().constData());
+        QVERIFY(child.state()!=QProcess::NotRunning);
+        child.kill();
+        QVERIFY(child.waitForFinished(5000));
+        QCOMPARE(child.exitStatus(),QProcess::CrashExit);
+        // A killed writer must release its OS lock without deleting lock files.
+        const auto actual=readRaw({target.path()});
+        QCOMPARE(actual.status.code,Code::Ok);QVERIFY(actual.snapshot);
+        QCOMPARE(actual.snapshot->lastGood.bytes,backup);
+        QCOMPARE(read(target.filePath("settings.json.damaged")),damaged);
+        if(point==int(Stage::AfterReplace)) {
+            auto expected=QJsonDocument::fromJson(primary).object();expected["wheel"]="pan";
+            QCOMPARE(QJsonDocument::fromJson(actual.snapshot->primary.bytes).object(),expected);
+        }else QCOMPARE(actual.snapshot->primary.bytes,primary);
+        const QDir preimages(target.filePath("recovery-preimages"));
+        const auto names=preimages.entryList(QDir::Dirs|QDir::NoDotAndDotDot);
+        if(point==int(Stage::BeforeEvidence))QVERIFY(names.isEmpty());
+        else {
+            QCOMPARE(names.size(),1);
+            const auto sealed=package::read(preimages.filePath(names.first()));
+            QCOMPARE(sealed.status.code,Code::Ok);QVERIFY(sealed.data);
+            QCOMPARE(sealed.data->primary.bytes,primary);QCOMPARE(sealed.data->lastGood.bytes,backup);
+        }
+    }
     void absentAndPresentEmptyHaveDifferentRevisions() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const Context context{dir.path()};
         const auto absent=readRaw(context);QCOMPARE(absent.status.code,Code::Ok);QVERIFY(absent.snapshot);
@@ -1005,5 +1059,27 @@ private slots:
         QCOMPARE(read(dir.filePath("settings.json")),primary);QVERIFY(!refused.preimage.isEmpty());QVERIFY(package::read(refused.preimage).data);
     }
 };
-QTEST_GUILESS_MAIN(RecoveryTests)
+int main(int argc,char** argv) {
+    QCoreApplication app(argc,argv);
+    const auto arguments=app.arguments();
+    if(arguments.size()==5&&arguments.at(1)=="--restore-crash-helper") {
+        bool valid=false;const int point=arguments.at(4).toInt(&valid);
+        if(!valid||point<int(glancelot::settings_detail::Stage::BeforeEvidence)||point>int(glancelot::settings_detail::Stage::AfterReplace))return 80;
+        const auto proposed=preview({arguments.at(2)},arguments.at(3),GlobalScope{GlobalSection::Viewing});
+        if(proposed.status.code!=Code::Ok||!proposed.plan.applicable())return 81;
+        glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe=[&](glancelot::settings_detail::Stage stage) {
+            if(int(stage)!=point)return;
+            std::fputs("restore-stage-ready\n",stdout);std::fflush(stdout);
+            // Only the parent test terminates this owned child after the real
+            // transaction reaches the selected boundary with its lock held.
+            for(;;)std::this_thread::sleep_for(std::chrono::seconds(1));
+        };
+        glancelot::settings_detail::transactionHooks=&hooks;
+        apply(proposed.plan);
+        return 82;
+    }
+    RecoveryTests tests;
+    return QTest::qExec(&tests,argc,argv);
+}
 #include "recovery_tests.moc"

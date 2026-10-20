@@ -491,3 +491,20 @@ catalogs; the resource alias must remain /themes/catalog.json. Actual per-test
 results and generated qrc are candidate-*-first artifacts. These two lead build
 corrections remain pending the current Gemini integration lock; no test assertion
 or fail-closed production catalog handling should be weakened.
+
+## Actual interruption inside restore transactions
+
+The recovery executable now has a private test-only child mode that uses the
+actual public preview/apply facade with existing transaction fault observers.
+Four generated-media-independent cases launch an owned child and wait for a
+bounded stdout handshake while its real transaction lock is held, then kill only
+that child before evidence, after sealed preimage, before primary replacement,
+and after primary replacement. All four passed on Windows. They verify exact old
+primary before replacement, complete new primary after replacement with unknown
+and other-slot fields preserved, unchanged backup/damaged bytes, exact sealed raw
+preimages after seal, and successful lock reacquisition after process death.
+No production helper mode or hook was added. This does not prove physical power loss.
+Actual updated recovery output is restore-interruption-cases.txt:118passed,
+13known catalog-path failures, zero skips13561ms; CTest still returns1 (17.18s)
+because shared resource wiring remains uncorrected. The new crash cases do not
+substitute for the required full Windows/Linux gates.
