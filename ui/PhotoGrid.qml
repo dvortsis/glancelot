@@ -21,6 +21,12 @@ Rectangle {
     property var resetViewport: null
     property string searchQuery: ""
     property int preSearchRow: -1
+    property bool filterExpanded: false
+    function openFilter() {
+        filterExpanded = true
+        filterInput.forceActiveFocus()
+        filterInput.selectAll()
+    }
     // A host that pairs the grid with another pane takes Tab (GRID-PREVIEW-01); null keeps the focus chain.
     property var tabHandler: null
     // Thumbnail size buckets (F010): 96, 128, 160 (default), 220, 320
@@ -264,10 +270,98 @@ Rectangle {
             Label {
                 objectName: "gridItemCount"
                 visible: fileGrid.count > 0 && panel.width >= 480
-                text: fileGrid.count === 1 ? "1 item" : fileGrid.count.toLocaleString(Qt.locale(), "f", 0) + " items"
+                text: fileGrid.hasFilter ? (fileGrid.count === 1 ? "1 match" : fileGrid.count.toLocaleString(Qt.locale(), "f", 0) + " matches")
+                                         : (fileGrid.count === 1 ? "1 item" : fileGrid.count.toLocaleString(Qt.locale(), "f", 0) + " items")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.features: { "tnum": 1 }
+            }
+            // FILTER-01: Filter bar / pill
+            Rectangle {
+                id: filterBar
+                objectName: "gridFilterBar"
+                visible: fileGrid.hasFilter || filterInput.activeFocus || panel.filterExpanded
+                Layout.preferredHeight: Theme.controlHeight - Theme.gapXs
+                Layout.preferredWidth: Math.min(260, Math.max(160, filterRow.implicitWidth + Theme.gapSm))
+                radius: Theme.radiusControl
+                color: Theme.surface
+                border.width: Theme.borderWidth
+                border.color: filterInput.activeFocus ? Theme.focusRing : (fileGrid.hasFilter ? Theme.primary : Theme.border)
+                RowLayout {
+                    id: filterRow
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.gapXs
+                    anchors.rightMargin: Theme.gapXs
+                    spacing: Theme.gapXxs
+                    UiIcon {
+                        name: "search"
+                        size: Theme.iconSizeSmall
+                        color: fileGrid.hasFilter ? Theme.primary : Theme.muted
+                    }
+                    TextInput {
+                        id: filterInput
+                        objectName: "gridFilterInput"
+                        Layout.fillWidth: true
+                        text: fileGrid.filterPattern
+                        color: Theme.text
+                        font.pixelSize: Theme.textSmall
+                        selectByMouse: true
+                        clip: true
+                        onTextEdited: fileGrid.setFilter(text, fileGrid.filterPersistent)
+                        Keys.onEscapePressed: {
+                            fileGrid.clearFilter()
+                            panel.filterExpanded = false
+                            panel.focusGrid()
+                        }
+                        Keys.onReturnPressed: panel.focusGrid()
+                        Keys.onEnterPressed: panel.focusGrid()
+                    }
+                    UiButton {
+                        id: filterPinButton
+                        objectName: "gridFilterPersistenceButton"
+                        iconName: "pin"
+                        iconOnly: true
+                        text: fileGrid.filterPersistent ? "Persistent" : "Temporary"
+                        tip: fileGrid.filterPersistent ? "Filter is persistent (pinned across folders). Click to make temporary." : "Filter is temporary (clears on crossing folders). Click to pin."
+                        focusPolicy: Qt.NoFocus
+                        implicitHeight: Theme.controlHeight - Theme.gapSm
+                        implicitWidth: implicitHeight
+                        background: Rectangle {
+                            radius: Theme.radiusControl
+                            color: fileGrid.filterPersistent ? Theme.selection : (filterPinButton.hovered ? Theme.hover : "transparent")
+                        }
+                        onClicked: fileGrid.toggleFilterPersistence()
+                    }
+                    UiButton {
+                        id: filterClearButton
+                        objectName: "gridFilterClearButton"
+                        visible: fileGrid.hasFilter || filterInput.text.length > 0
+                        iconName: "close"
+                        iconOnly: true
+                        text: "Clear filter"
+                        tip: "Clear filter (Esc)"
+                        focusPolicy: Qt.NoFocus
+                        implicitHeight: Theme.controlHeight - Theme.gapSm
+                        implicitWidth: implicitHeight
+                        onClicked: {
+                            filterInput.text = ""
+                            fileGrid.clearFilter()
+                            panel.filterExpanded = false
+                            panel.focusGrid()
+                        }
+                    }
+                }
+            }
+            UiButton {
+                id: openFilterBtn
+                objectName: "gridOpenFilterButton"
+                visible: !filterBar.visible
+                iconName: "search"
+                iconOnly: true
+                text: "Filter files"
+                tip: "Filter files in folder (Ctrl+F)"
+                focusPolicy: Qt.NoFocus
+                onClicked: panel.openFilter()
             }
             Rectangle { // selection count: visible only for a multi-selection, with its clear action beside it
                 objectName: "gridSelectionCount"
@@ -407,6 +501,17 @@ Rectangle {
             if (panel.keyAction(event).length) event.accepted = true
         }
         Keys.onPressed: event => {
+            if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_F) {
+                panel.openFilter()
+                event.accepted = true
+                return
+            }
+            if (event.key === Qt.Key_Escape && fileGrid.hasFilter) {
+                fileGrid.clearFilter()
+                panel.filterExpanded = false
+                event.accepted = true
+                return
+            }
             const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
 
             // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
@@ -796,6 +901,27 @@ Rectangle {
                 color: fileGrid.matchCount(panel.searchQuery) > 0 ? Theme.muted : Theme.danger
                 font.pixelSize: Theme.textSmall
                 font.features: { "tnum": 1 }
+            }
+        }
+    }
+
+    Connections {
+        target: fileGrid
+        function onFilterChanged() {
+            if (filterInput.text !== fileGrid.filterPattern && !filterInput.activeFocus) {
+                filterInput.text = fileGrid.filterPattern
+            }
+            if (!fileGrid.hasFilter && !filterInput.activeFocus) {
+                panel.filterExpanded = false
+            }
+        }
+    }
+
+    Connections {
+        target: viewer
+        function onViewCommand(id) {
+            if (id === "filter") {
+                panel.openFilter()
             }
         }
     }

@@ -64,6 +64,7 @@ UiDialog {
             name: "Selection & Files",
             icon: "folder",
             items: [
+                { id: "filter", label: "Filter folder files", defaultKeys: "Ctrl+F" },
                 { id: "select-all", label: "Select all in grid", defaultKeys: "Ctrl+A" },
                 { id: "clear-selection", label: "Clear selection", defaultKeys: "Ctrl+D" },
                 { id: "invert-selection", label: "Invert selection", defaultKeys: "Ctrl+I" },
