@@ -2,6 +2,7 @@
 #include "file_lock.hpp"
 #include "settings_transaction.hpp"
 #include "settings_package.hpp"
+#include "settings_policy.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QScopeGuard>
@@ -340,6 +341,94 @@ private slots:
         const auto old=package::hooks;package::hooks=&hooks;const auto restore=qScopeGuard([&]{package::hooks=old;});
         const auto captured=captureBackup({source.path()},target.filePath("capture"));QCOMPARE(captured.status.code,Code::WriteFailed);
         const auto loaded=package::read(captured.destination);QVERIFY(!loaded.data);QVERIFY(!QFile::exists(QDir(captured.destination).filePath("manifest.json")));
+    }
+    void globalPolicyPreservesUnknownAndPerSlotData() {
+        const QJsonObject current{{"schema",1},{"unknown",QJsonObject{{"next",5}}},{"boundary","stop"},
+            {"sort",QJsonObject{{"key","modified"},{"future",17}}},{"appearance",QJsonObject{{"mode","dark"},{"future",false}}},
+            {"bindings",QJsonObject{{"future-command",QJsonObject{{"v",2}}},{"next","N"}}},
+            {"windows",QJsonObject{{"1",QJsonObject{{"image","keep"}}}}},{"layouts",QJsonObject{{"9",QJsonObject{{"version",99}}}}},
+            {"recovery",QJsonObject{{"version",3}}}};
+        const QJsonObject source{{"schema",1},{"boundary","loop"},{"sort",QJsonObject{{"key","size"},{"newSourceUnknown",true}}},
+            {"appearance",QJsonObject{{"family","slate-ice"},{"mode","light"}}},{"bindings",QJsonObject{{"next","J"},{"future-command","Escape"}}},
+            {"storageProfile","hdd"},{"windows",QJsonObject{{"1",QJsonObject{{"image","overwrite"}}}}}};
+        const auto merged=policy::merge(current,source,{});QCOMPARE(merged.status.code,Code::Ok);QVERIFY(merged.replacement);
+        const auto result=*merged.replacement;
+        QCOMPARE(result.value("boundary").toString(),QString("loop"));QCOMPARE(result.value("storageProfile").toString(),QString("hdd"));
+        QCOMPARE(result.value("unknown"),current.value("unknown"));QCOMPARE(result.value("windows"),current.value("windows"));
+        QCOMPARE(result.value("layouts"),current.value("layouts"));QCOMPARE(result.value("recovery"),current.value("recovery"));
+        QCOMPARE(result.value("sort").toObject().value("future").toInt(),17);QVERIFY(!result.value("sort").toObject().contains("newSourceUnknown"));
+        QCOMPARE(result.value("bindings").toObject().value("future-command"),current.value("bindings").toObject().value("future-command"));
+        QCOMPARE(result.value("bindings").toObject().value("next").toString(),QString("J"));
+    }
+    void missingSelectedKnownValuesResetOnlyTheirKeys() {
+        const QJsonObject current{{"schema",1},{"wheel","zoom"},{"boundary","stop"},{"textScale",1.5},
+            {"sort",QJsonObject{{"key","modified"},{"future",true}}}};
+        policy::Selection selection;selection.global=GlobalSection::Browsing;
+        const auto result=policy::merge(current,{{"schema",1}},selection);QVERIFY(result.replacement);
+        QCOMPARE(result.replacement->value("wheel"),current.value("wheel"));QCOMPARE(result.replacement->value("textScale"),current.value("textScale"));
+        QVERIFY(!result.replacement->value("sort").toObject().contains("key"));QVERIFY(result.replacement->value("sort").toObject().value("future").toBool());
+    }
+    void selectedInvalidValuesRejectWholeMerge_data() {
+        QTest::addColumn<QJsonObject>("source");
+        QTest::newRow("bad-boundary")<<QJsonObject{{"schema",1},{"boundary","surprise"}};
+        QTest::newRow("wrong-bool")<<QJsonObject{{"schema",1},{"filmstrip",1}};
+        QTest::newRow("fractional-seed")<<QJsonObject{{"schema",1},{"sort",QJsonObject{{"seed",1.5}}}};
+        QTest::newRow("oversize-scale")<<QJsonObject{{"schema",1},{"textScale",3}};
+        QTest::newRow("unknown-family")<<QJsonObject{{"schema",1},{"appearance",QJsonObject{{"family","not-shipped"}}}};
+        QTest::newRow("bad-profile")<<QJsonObject{{"schema",1},{"storageProfile","magnetic-tape"}};
+        QTest::newRow("escape")<<QJsonObject{{"schema",1},{"bindings",QJsonObject{{"next","Escape"}}}};
+        QTest::newRow("wrong-binding-type")<<QJsonObject{{"schema",1},{"bindings",QJsonObject{{"next",true}}}};
+        QTest::newRow("prefix-conflict")<<QJsonObject{{"schema",1},{"bindings",QJsonObject{{"next","Ctrl+K"},{"previous","Ctrl+K, Ctrl+C"}}}};
+    }
+    void selectedInvalidValuesRejectWholeMerge() {
+        QFETCH(QJsonObject,source);const QJsonObject current{{"schema",1},{"unknown",true}};
+        const auto result=policy::merge(current,source,{});QCOMPARE(result.status.code,Code::Corrupt);QVERIFY(!result.replacement);QVERIFY(!result.invalidPath.isEmpty());
+        QCOMPARE(current.value("unknown"),QJsonValue(true));
+    }
+    void unrelatedMalformedSectionsAreUntouched() {
+        const QJsonObject current{{"schema",1},{"appearance","invalid retained object"},{"bindings",5},{"unknown",true}};
+        const QJsonObject source{{"schema",1},{"wheel","pan"},{"appearance",QJsonObject{{"family","unknown"}}},{"sort",false}};
+        policy::Selection selection;selection.global=GlobalSection::Viewing;
+        const auto result=policy::merge(current,source,selection);QVERIFY(result.replacement);
+        QCOMPARE(result.replacement->value("appearance"),current.value("appearance"));QCOMPARE(result.replacement->value("bindings"),current.value("bindings"));
+        QCOMPARE(result.replacement->value("wheel"),QJsonValue("pan"));
+        selection.global=GlobalSection::Appearance;
+        const auto refused=policy::merge(current,source,selection);QCOMPARE(refused.status.code,Code::Corrupt);QVERIFY(!refused.replacement);
+    }
+    void positionPolicyTouchesOnlySelectedKnownSlotFields() {
+        const QJsonObject current{{"schema",1},{"windows",QJsonObject{{"1",QJsonObject{{"folder","C:/old"},{"image","C:/old/a.png"},{"future",7}}},
+            {"2",QJsonObject{{"future",true},{"image","retain"}}}}}};
+#ifdef Q_OS_WIN
+        const QString folder="C:/new",image="C:/new/b.png";
+#else
+        const QString folder="/new",image="/new/b.png";
+#endif
+        const QJsonObject source{{"schema",1},{"windows",QJsonObject{{"1",QJsonObject{{"folder",folder},{"image",image},{"saved",1},{"newUnknown",false}}}}}};
+        policy::Selection selection;selection.slotSection=SlotSection::Position;selection.slot=1;
+        const auto result=policy::merge(current,source,selection);QVERIFY(result.replacement);
+        const auto windows=result.replacement->value("windows").toObject();QCOMPARE(windows.value("2"),current.value("windows").toObject().value("2"));
+        QCOMPARE(windows.value("1").toObject().value("future").toInt(),7);QVERIFY(!windows.value("1").toObject().contains("newUnknown"));
+        QCOMPARE(windows.value("1").toObject().value("image").toString(),image);
+        auto bad=source;bad["windows"]=QJsonObject{{"1",QJsonObject{{"image","relative.png"}}}};
+        const auto refused=policy::merge(current,bad,selection);QVERIFY(!refused.replacement);QCOMPARE(refused.status.code,Code::Corrupt);
+    }
+    void layoutPolicyPreservesUnknownPanesAndFutureSlots() {
+        const QJsonObject current{{"schema",1},{"layouts",QJsonObject{{"1",QJsonObject{{"version",1},{"future",7},
+            {"center",QJsonObject{{"ratio",0.5},{"future",true}}},{"panes",QJsonObject{{"tree",QJsonObject{{"extent",280},{"future",4}}},{"future-pane",QJsonObject{{"v",7}}}}}}},
+            {"2",QJsonObject{{"version",99},{"future",true}}}}}};
+        const QJsonObject source{{"schema",1},{"layouts",QJsonObject{{"1",QJsonObject{{"version",1},{"locked",true},
+            {"center",QJsonObject{{"ratio",0.6},{"orientation","vertical"},{"mode","combined"}}},
+            {"panes",QJsonObject{{"tree",QJsonObject{{"extent",320},{"region","left"},{"order",0},{"visible",false},{"frozen",true}}}}}}}}}};
+        policy::Selection selection;selection.slotSection=SlotSection::Layout;selection.slot=1;
+        const auto result=policy::merge(current,source,selection);QCOMPARE(result.status.code,Code::Ok);QVERIFY(result.replacement);
+        const auto layouts=result.replacement->value("layouts").toObject();QCOMPARE(layouts.value("2"),current.value("layouts").toObject().value("2"));
+        const auto slot=layouts.value("1").toObject();QCOMPARE(slot.value("future").toInt(),7);QVERIFY(slot.value("center").toObject().value("future").toBool());
+        const auto panes=slot.value("panes").toObject();QCOMPARE(panes.value("tree").toObject().value("future").toInt(),4);
+        QCOMPARE(panes.value("tree").toObject().value("extent").toInt(),320);QVERIFY(panes.contains("future-pane"));
+        selection.slot=2;const auto refused=policy::merge(current,source,selection);QCOMPARE(refused.status.code,Code::Unsupported);QVERIFY(!refused.replacement);
+    }
+    void policyRevisionIsStableAndCoversShippedData() {
+        const auto revision=policy::revision();QVERIFY(revision.startsWith("policy1:"));QCOMPARE(revision.size(),qsizetype(72));QCOMPARE(revision,policy::revision());
     }
 };
 QTEST_GUILESS_MAIN(RecoveryTests)

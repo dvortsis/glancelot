@@ -124,10 +124,43 @@ tests do not establish physical power-loss durability, every filesystem alias/
 permission variant, exclusion of hostile noncooperating writes, Linux behavior
 or the complete SAFE-MODE gate.
 
+## Known-field restore policy
+
+Private settings_policy now merges the full frozen global sections (viewing,
+browsing, appearance, bindings, performance) or one explicit position/layout
+slot. Missing selected source keys remove only owned keys to use ordinary
+defaults. Unknown current nested fields, future binding IDs, unknown panes,
+other slots and recovery/session state survive. Unknown source values are not
+made authoritative. Invalid selected known values reject the whole replacement;
+unrelated malformed sections remain untouched. An incompatible selected current
+container refuses rather than silently discarding it. Future selected layout
+versions are never downgraded.
+
+Validation uses the actual shipped command/binding logic and bundled catalog
+through a QCore-only component; no viewer/theme/layout construction or saved-path
+scan. Pane defaults are extracted unchanged into a shared private data helper;
+layout-defaults-move.json records an exact normalized-body comparison to frozen
+3149b6a. The policy revision binds a versioned domain, shipped command/default
+semantics, catalog and pane data. Changing supported field/range semantics must
+also bump its policy version.
+
+Windows component CTest passed2/2 in0.77s: recovery68/68 zero skips485ms and
+registry7/7 zero skips9ms. New cases cover complete global merge with unknown
+nested data/per-slot isolation, missing selected known keys, nine invalid-value
+rows, unrelated malformed section retention, strict bindings including Escape/
+prefix conflicts, selected position paths/unknown fields, known layout pane
+updates with unknown panes/other future slots preserved, and policy revision
+stability. Actual configure/build/cases/project outputs are policy-*.
+
+This helper is a schema merge, not an ownership capability or a public restore
+plan. It does not yet produce the bounded preview or authorize slot writes.
+Those remaining checks must precede real transaction application. No product
+layout, geometry, theme tokens, command precedence or QML behavior changed.
+
 ## Remaining complete scope
 
 Real restore-preimage integration and public checked restore,
-bounded configuration diff/restore, claim-nonce/session guards, dirty/clean atomic
+bounded configuration diff/preview, claim-nonce/session guards, dirty/clean atomic
 checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
 to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and
