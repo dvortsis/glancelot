@@ -282,3 +282,13 @@ scripts/build.ps1 -Test plus docker build -t glancelot-browser:main . on candida
 serial merge and actual integrated checks are required before done. Hardware
 limitations and failed runs remain explicit. Contracts return to the lead if
 implementation needs a shared interface change.
+
+Lead build correction, October20,2026: attach recovery to every existing target
+that compiles settings_file.cpp as well as viewer_controller/window_slot. In
+particular pane_layout_tests and favorites_tests need the real raw reader through
+the shared engine. Preserve their original tests. Declare all three recovery
+catalogs with PREFIX / and BASE assets, matching the production resource alias
+/themes/catalog.json; an existing source QT_RESOURCE_ALIAS themes/catalog.json
+must not be prefixed with /themes again. Actual first full Windows/Linux linkage
+failures and dedicated policy failures are retained in SAFE-MODE-01 verification.
+These corrections fix the required wiring, not test assertions or product policy.
