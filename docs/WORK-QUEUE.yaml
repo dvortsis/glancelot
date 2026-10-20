@@ -625,7 +625,7 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: ready
+    state: review
     depends: [REVIEW-ALL-01]
     branch: claude/input-02
     worktree: .worktrees/claude-input-02
@@ -633,6 +633,7 @@ tasks:
     scope_addition: F055 context menus with command-route parity
     review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
     review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
+    review_request: Codex-lane re-review requested of exact candidate claude/input-02 87b063d, which addresses the five findings in INPUT-02-FINAL-CODEX-REVIEW.md (evidence in docs/verification/INPUT-02.md; author Windows input_ui 16/16, grid_ui 72/72, window_slots 34/34; Linux Docker not rerun). Do not merge main into the reviewed snapshot; trial merge against main conflicts in CMakeLists.txt, viewer_controller.cpp, worker/main.cpp and ui/Main.qml (b10354a, re-confirmed after FS-WATCH 1bd4461) and goes to the Claude lane only after approval. Stacked packets F002, F037, F009, F014, F031, F040, F049, F051 wait behind it.
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01
