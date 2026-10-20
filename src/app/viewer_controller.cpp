@@ -138,6 +138,10 @@ const std::vector<Command> registry {
     // RENAME-01 (F018)
     {"rename", "Rename current file or folder", "F2"},
     {"new-folder", "Create new folder", "Ctrl+Shift+N"},
+    // COPY-MOVE-01 (F020)
+    {"cut-selection", "Cut selected files", "Ctrl+X"},
+    {"copy-selection", "Copy selected files", ""},
+    {"paste", "Paste files to current folder", "Ctrl+V"},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -245,6 +249,7 @@ struct ViewerController::Private {
     quint64 metadataGeneration{0};
     glancelot::AnimationController animationController;
     glancelot::MutationService mutationService;
+    glancelot::CopyMoveService copyMoveService;
 
     void loadMetadata(const QString& targetPath, quint64 gen) {
         animationController.load(targetPath, gen);
@@ -291,6 +296,26 @@ struct ViewerController::Private {
         QObject::connect(&watcher,&QFileSystemWatcher::directoryChanged,q,[this]{ reload.start(); });
         QObject::connect(&mutationService, &glancelot::MutationService::pathRenamed, q, &ViewerController::reconcileRenamedPath);
         QObject::connect(&mutationService, &glancelot::MutationService::folderCreated, q, &ViewerController::reconcileCreatedFolder);
+        QObject::connect(&copyMoveService, &glancelot::CopyMoveService::pathsMutated, q, [this](const QStringList& sources, const QStringList& destinations, bool isMove) {
+            auto pathMatches = [](const QString& a, const QString& b) {
+#ifdef Q_OS_WIN
+                return a.compare(b, Qt::CaseInsensitive) == 0;
+#else
+                return a == b;
+#endif
+            };
+            if (isMove && !path.isEmpty()) {
+                for (int i = 0; i < sources.size(); ++i) {
+                    if (pathMatches(path, sources[i])) {
+                        q->reconcileRenamedPath(sources[i], destinations.value(i));
+                        break;
+                    }
+                }
+            }
+            cache.clear();
+            emit q->cacheChanged();
+            emit q->filesInvalidated();
+        });
     }
     ~Private() {
         writePosition(true);
@@ -1526,4 +1551,9 @@ void ViewerController::reconcileRenamedPath(const QString& oldPath, const QStrin
 void ViewerController::reconcileCreatedFolder(const QString& folderPath) {
     Q_UNUSED(folderPath);
     emit filesInvalidated();
+}
+
+
+glancelot::CopyMoveService* ViewerController::copyMoveService() const {
+    return &d->copyMoveService;
 }
