@@ -1,0 +1,69 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (15.7s)
+-- Generating done (2.3s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+[1/159] Automatic MOC and UIC for target glancelot_test_argv_capture
+[2/157] Automatic MOC and UIC for target glancelot_platform
+[3/155] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[4/153] Automatic MOC and UIC for target pane_layout_tests
+[5/151] Automatic MOC and UIC for target file_operation_service_tests
+[6/149] Automatic MOC and UIC for target glancelot-decoder
+[7/147] Automatic MOC and UIC for target glancelot
+[8/146] Automatic MOC and UIC for target theme_tests
+[9/144] Running AUTOMOC file extraction for target glancelot
+[10/144] Automatic MOC and UIC for target directory_model_tests
+[11/143] Automatic MOC and UIC for target grid_ui_tests
+[12/142] Automatic MOC and UIC for target fs_watch_ui_tests
+[13/141] Running moc --collect-json for target glancelot
+[14/95] Automatic MOC and UIC for target acceptance_tests
+[15/93] Automatic MOC and UIC for target thumbnail_tests
+[16/91] Automatic MOC and UIC for target folder_tree_tests
+[17/89] Automatic MOC and UIC for target window_slot_tests
+[18/87] Automatic MOC and UIC for target canvas_tests
+[19/85] Automatic MOC and UIC for target platform_integration_tests
+[20/83] Automatic MOC and UIC for target grid_search_tests
+[21/82] Automatic MOC and UIC for target grid_density_tests
+[22/81] Automatic MOC and UIC for target ui_settings_tests
+[23/79] Automatic MOC and UIC for target favorites_tests
+[24/77] Automatic MOC and UIC for target fs_watch_budget_tests
+[25/76] Automatic MOC and UIC for target folder_history_tests
+[26/74] Automatic MOC and UIC for target shortcuts_help_tests
+[27/72] Automatic MOC and UIC for target filter_tests
+[28/71] Automatic MOC and UIC for target cache_tests
+[29/70] Automatic MOC and UIC for target io_scheduler_tests
+[30/69] Automatic MOC and UIC for target metadata_tests
+[31/67] Automatic MOC and UIC for target animation_tests
+[32/65] Automatic MOC and UIC for target mutation_tests
+[33/63] Automatic MOC and UIC for target copy_move_tests
+[34/61] Automatic MOC and UIC for target format_tests
+[35/59] Automatic MOC and UIC for target fs_watch_tests
+[36/58] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[37/58] Building CXX object CMakeFiles\glancelot.dir\src\app\directory_entry_model.cpp.obj
+[38/58] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[39/58] Building CXX object CMakeFiles\directory_model_tests.dir\src\app\directory_entry_model.cpp.obj
+[40/58] Building CXX object CMakeFiles\grid_density_tests.dir\src\app\directory_entry_model.cpp.obj
+[41/58] Building CXX object CMakeFiles\grid_search_tests.dir\src\app\directory_entry_model.cpp.obj
+[42/58] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\directory_entry_model.cpp.obj
+[43/58] Building CXX object CMakeFiles\fs_watch_tests.dir\tests\fs_watch_tests.cpp.obj
+[44/58] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\directory_entry_model.cpp.obj
+[45/58] Building CXX object CMakeFiles\filter_tests.dir\src\app\directory_entry_model.cpp.obj
+[46/58] Linking CXX executable grid_ui_tests.exe
+[47/58] Linking CXX executable glancelot.exe
+[48/58] Linking CXX executable directory_model_tests.exe
+[49/58] Linking CXX executable grid_search_tests.exe
+[50/58] Linking CXX executable grid_density_tests.exe
+[51/58] Linking CXX executable fs_watch_tests.exe
+[52/58] Linking CXX executable fs_watch_budget_tests.exe
+[53/58] Linking CXX executable fs_watch_ui_tests.exe
+[54/58] Linking CXX executable filter_tests.exe
+[55/58] Building CXX object CMakeFiles\cache_tests.dir\src\app\directory_entry_model.cpp.obj
+[56/58] Linking CXX executable cache_tests.exe
+[57/58] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\directory_entry_model.cpp.obj
+[58/58] Linking CXX executable io_scheduler_tests.exe

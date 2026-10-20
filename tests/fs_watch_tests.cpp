@@ -98,6 +98,23 @@ class FSWatchTests : public QObject {
     }
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+    void metadataOnlyRefreshPreservesPersistentRowsAndSelection() {
+        QTemporaryDir media;QVERIFY(media.isValid());
+        const auto selected=media.filePath("b.dat");
+        QVERIFY(write(media.filePath("a.dat"),"first"));QVERIFY(write(selected,"old"));
+        DirectoryEntryModel grid;grid.setActive(true);grid.setDirectory(media.path());
+        QTRY_VERIFY(!grid.loading()&&grid.count()==2);
+        grid.select(grid.rowOf(selected));
+        const QPersistentModelIndex retained(grid.index(grid.rowOf(selected)));
+        QSignalSpy resets(&grid,&QAbstractItemModel::modelReset),changed(&grid,&QAbstractItemModel::dataChanged);
+        QVERIFY(write(selected,"updated metadata bytes"));grid.refresh();
+        QTRY_VERIFY(!grid.loading());
+        QVERIFY(retained.isValid());QCOMPARE(resets.count(),0);QVERIFY(changed.count()>0);
+        QCOMPARE(retained.data(DirectoryEntryModel::PathRole).toString(),selected);
+        QCOMPARE(retained.data(DirectoryEntryModel::SizeRole).toLongLong(),qint64(22));
+        QCOMPARE(grid.selectedPaths(),QStringList{selected});QCOMPARE(grid.selectedBytes(),qint64(22));
+        QCOMPARE(grid.cursorRow(),retained.row());
+    }
     void malformedRevisionReply_data() {
         QTest::addColumn<QJsonObject>("reply");
         QTest::newRow("missing")<<QJsonObject{{"omitRevisionToken",true}};

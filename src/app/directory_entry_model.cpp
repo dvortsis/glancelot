@@ -313,6 +313,17 @@ struct DirectoryEntryModel::Private {
 #endif
         auto& incoming = listing.rows;
         if (rows.empty() || incoming.empty()) { reset(std::move(listing)); return; }
+        // A file-content notification usually leaves membership and order intact.
+        // Prove that directly before building survivors and repeatedly hashing
+        // every path to discover that no insertion/removal is needed.
+        if (rows.size() == incoming.size() && std::equal(rows.cbegin(), rows.cend(), incoming.cbegin(),
+                [](const Row& oldRow, const Row& newRow) { return oldRow.key == newRow.key; })) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            publicationStats.mergeScanMs=scanClock.elapsed();
+#endif
+            updateMetadata(listing);
+            return;
+        }
         std::vector<int> survivors;
         survivors.reserve(incoming.size());
         for (int i = 0; i < int(rows.size()); ++i) if (listing.index.contains(rows[std::size_t(i)].key)) survivors.push_back(i);
@@ -361,7 +372,12 @@ struct DirectoryEntryModel::Private {
             q->endInsertRows();
             i = end;
         }
-        // Metadata or type may have changed for surviving rows.
+        updateMetadata(listing);
+    }
+    // Both merge paths have established identical row keys and order here.
+    // Preserve delegates and publish changed metadata through the same signal.
+    void updateMetadata(Listing& listing) {
+        const auto& incoming = listing.rows;
         int firstChanged = -1, lastChanged = -1;
         for (int i = 0; i < int(rows.size()); ++i) {
             if (!(rows[std::size_t(i)] == incoming[std::size_t(i)])) {
