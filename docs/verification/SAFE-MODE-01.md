@@ -508,3 +508,11 @@ Actual updated recovery output is restore-interruption-cases.txt:118passed,
 13known catalog-path failures, zero skips13561ms; CTest still returns1 (17.18s)
 because shared resource wiring remains uncorrected. The new crash cases do not
 substitute for the required full Windows/Linux gates.
+
+The same real process-interruption matrix now covers both supported primary and
+corrupt primary with an exact supported last-good base. All eight boundary cases
+passed (QtTest10/10 including init/cleanup, zero skips1571ms), actual output
+restore-interruption-supported-and-corrupt.txt. For corrupt-primary recovery,
+pre-commit death keeps exact corrupt primary and last-good bytes; post-commit death
+leaves the complete checked replacement based on last-good, retaining its unknown
+and other-slot fields plus an exact sealed copy of the original corrupt pair.

@@ -48,18 +48,24 @@ private slots:
     void interruptedRestoreProcessPreservesAtomicState_data() {
         using glancelot::settings_detail::Stage;
         QTest::addColumn<int>("point");
-        QTest::newRow("before-evidence")<<int(Stage::BeforeEvidence);
-        QTest::newRow("after-sealed-preimage")<<int(Stage::AfterPreimage);
-        QTest::newRow("before-primary-replacement")<<int(Stage::BeforeReplace);
-        QTest::newRow("after-primary-replacement")<<int(Stage::AfterReplace);
+        QTest::addColumn<bool>("corruptPrimary");
+        for(const bool corrupt:{false,true}) {
+            const QByteArray prefix=corrupt?"corrupt-primary-":"supported-primary-";
+            QTest::newRow((prefix+"before-evidence").constData())<<int(Stage::BeforeEvidence)<<corrupt;
+            QTest::newRow((prefix+"after-sealed-preimage").constData())<<int(Stage::AfterPreimage)<<corrupt;
+            QTest::newRow((prefix+"before-primary-replacement").constData())<<int(Stage::BeforeReplace)<<corrupt;
+            QTest::newRow((prefix+"after-primary-replacement").constData())<<int(Stage::AfterReplace)<<corrupt;
+        }
     }
     void interruptedRestoreProcessPreservesAtomicState() {
         using glancelot::settings_detail::Stage;
-        QFETCH(int,point);
+        QFETCH(int,point);QFETCH(bool,corruptPrimary);
         QTemporaryDir target,source,packages;
         QVERIFY(target.isValid()&&source.isValid()&&packages.isValid());
-        const QByteArray primary("{ \"schema\":1,\"wheel\":\"zoom\",\"unknown\":{\"future\":5},\"windows\":{\"2\":{\"image\":\"retain\"}} }");
-        const QByteArray backup("exact diagnostic backup"),damaged("exact damaged evidence");
+        const QByteArray validBase("{ \"schema\":1,\"wheel\":\"zoom\",\"unknown\":{\"future\":5},\"windows\":{\"2\":{\"image\":\"retain\"}} }");
+        const QByteArray primary=corruptPrimary?QByteArray("corrupt primary bytes"):validBase;
+        const QByteArray backup=corruptPrimary?validBase:QByteArray("exact diagnostic backup");
+        const QByteArray damaged("exact damaged evidence");
         QVERIFY(write(target.filePath("settings.json"),primary));
         QVERIFY(write(target.filePath("settings.json.bak"),backup));
         QVERIFY(write(target.filePath("settings.json.damaged"),damaged));
@@ -83,7 +89,7 @@ private slots:
         QCOMPARE(actual.snapshot->lastGood.bytes,backup);
         QCOMPARE(read(target.filePath("settings.json.damaged")),damaged);
         if(point==int(Stage::AfterReplace)) {
-            auto expected=QJsonDocument::fromJson(primary).object();expected["wheel"]="pan";
+            auto expected=QJsonDocument::fromJson(validBase).object();expected["wheel"]="pan";
             QCOMPARE(QJsonDocument::fromJson(actual.snapshot->primary.bytes).object(),expected);
         }else QCOMPARE(actual.snapshot->primary.bytes,primary);
         const QDir preimages(target.filePath("recovery-preimages"));
