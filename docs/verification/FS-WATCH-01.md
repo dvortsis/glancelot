@@ -865,3 +865,43 @@ source hashes, baseline/rename recovery and failure/cancellation assertions pass
 This is a full backend executable run, not scripts/build.ps1 -Test or a Linux/
 integrated gate. Source still needs controlled IPC fixtures, independent combined
 review and synchronization with newer main. No source was changed during this run.
+
+## Current-main IPC and lifetime checkpoint
+
+Controlled fixture6af2858 passed18/18,zero skips13.492s. Current-main merge6d033c0
+preserves metadata/animation/rename/copy-move/RAW. Private adapters bound metadata
+to one active/one latest value-owned parse and route rename reconciliation through
+async navigation. Adapter/IPC20/20 passed15.810s before final reentrancy guards;
+final native RAW unchanged/replaced and metadata/mutation6/6 passed2.567s.
+See windows-ipc-focused.txt and windows-current-main-{adapters,native-adapters}.txt.
+
+Actual Claude R11 report10f49fb reviewed0cab319 statically: source acceptable
+subject to uncompleted gates, with a medium failed-start retirement followup.
+Reports R10ec649b4 (rejected older68c3731) and R11 are preserved verbatim.
+R11's suspected Linux edge was reproduced using the actual helper: Starting
+retirement left one job/3072 bytes reserved. c48b77c makes retirement idempotent
+across stopped-state/error/finished signals while preserving owner-independent
+release and guarded notifications. The same Linux probe now returns process
+deleted/lease expired/callback1/jobs0/bytes0. Windows5/5,zero skips291ms covers
+failed-start/running/closed-owner cases; missing startup is synchronous there.
+The lease-probe directory records the exact reproducible generated-only probe.
+
+The immutable0cab319 Windows scripts/build.ps1 -Test checkpoint passed30/31
+targets in524.14s, with fs_watch timing out at179.99s; this is a failure, not a
+qualified gate. The later unchanged single100k case on c48b77c passed3/3,zero
+skips79.396s: generated setup54.626s, initial GUI12ms, writer GUI125ms, filter
+change25ms, filtered GUI74ms, maximum publication124ms. The method is moved
+unchanged to required fs_watch_budget_tests/fs_watch_budget under lead b6d2b73;
+its SHA256 move proof is retained. Both backend targets keep180s timeouts and all
+250ms GUI/30s recovery oracles. Required full gates now include both and FS QML.
+
+The16MiB identity limit is per snapshot, not a whole-window or process RSS cap.
+Current/parent baselines, bounded publications and model history can retain
+several such budgets, often shared through pointers/COW. Aggregate shared resource
+accounting belongs to the later Codex PERF-RESOURCE packet. Non-birth-time and
+ambiguous-link filesystems conservatively decode uncached and cannot prove rename
+identity. Poll metadata cost, physical GPU, HDD/network/ReFS and power behavior
+remain unqualified. These limitations are not changed to obtain passing tests.
+
+New complete Windows/Docker gates, independent followup review and serial
+integration with checks on the integrated commit remain pending.
