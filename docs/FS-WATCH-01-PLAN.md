@@ -310,3 +310,15 @@ rename reconciliation through existing asynchronous controller navigation/monito
 paths instead of synchronous Navigator scans. Apply the frozen source revision
 and lock-free shared-memory completion protocol to imported RAW decode as well.
 These are private integration adapters, not new Gemini implementation packets.
+
+### Required dense-folder test isolation
+
+The full current-main Windows checkpoint passed 30/31 targets but the combined
+FS backend exceeded its 180 s runtime. An unchanged single dense-folder case on
+c48b77c passed in 79.396 s (setup 54.626 s; maximum GUI publication 124 ms).
+Freeze a separate required fs_watch_budget_tests executable and fs_watch_budget
+CTest entry containing that entire case unchanged. Both backend entries retain
+180 s timeouts; keep every assertion, 100k files, 250 ms GUI and 30 s recovery
+limits. This splits fixture runtime, not product behavior or acceptance. Require
+both plus fs_watch_ui in Windows, Docker and integrated gates. File and stdout
+QtTest sinks must preserve actual case counts/failures on Windows.
