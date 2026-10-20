@@ -264,7 +264,11 @@ private slots:
         std::jthread filteredWriter([&](std::stop_token stop){
             while(!stop.stop_requested()) {
                 QSaveFile file(destination);
-                const auto bytes=QByteArray::number(filteredWrites.load())+" filtered generated changed bytes";
+                const auto sequence=filteredWrites.load();
+                // Unique bounded sizes make the final metadata oracle distinguish
+                // the last atomic replacement from every earlier publication.
+                if(sequence>=4096){filteredFailure=true;return;}
+                const auto bytes=QByteArray(128+sequence,'x');
                 if(!file.open(QIODevice::WriteOnly)||file.write(bytes)!=bytes.size()||!file.commit()){filteredFailure=true;return;}
                 filteredSize=bytes.size();++filteredWrites;
                 std::this_thread::sleep_for(std::chrono::milliseconds(25));

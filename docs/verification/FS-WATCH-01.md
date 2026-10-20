@@ -657,3 +657,24 @@ warnings also reproduce on Windows; no new UI fix is claimed by FS-WATCH.
 Final integration remains open: main now contains Cache engine8b28060 and its
 owner still holds the serial lock. The combined source, revision-validation
 compatibility, Docker and integrated-commit gates have not been approved or run.
+
+## R8 minor regression-oracle corrections
+
+After the immutable candidate's full gate finished, strengthen the filtered
+writer's final-size oracle: every committed replacement now has a distinct
+128+sequence byte length, capped at4096 writes. The final expected size cannot
+match an earlier replacement. Move the test-only applied/filtered markers inside
+the real model publication guard, so a retained truncated listing is not counted
+as a projection. Production behavior remains unchanged; these markers compile
+only into fs_watch_tests. This addresses the concrete G4 and G5 naming findings,
+without claiming QML delegate/layout timing from a model-only regression.
+
+Build passed and the strengthened targeted Windows regression passed3/3,zero
+failures/skips,84.285s. Active filter change33ms,publication85ms,GUI gap86ms;
+unfiltered writer GUI161ms,maximum callback160ms. Original complete-baseline,
+selected-rename and source-hash assertions also passed. Exact output is
+fs-watch-01/windows-r10-unique-final-size.txt. Another lane had resumed Windows
+tests after the reserved full gate ended, so this backend-only result is not an
+isolated-host benchmark. The saved25-target pass proves f20711e source; it is not
+relabeled as a full gate of this later test revision. Current-source Linux and
+combined Cache/integrated gates and review follow-up remain open.

@@ -244,9 +244,6 @@ struct DirectoryEntryModel::Private {
 #ifdef GLANCELOT_FS_WATCH_TESTING
         QElapsedTimer phase;phase.start();
 #endif
-#ifdef GLANCELOT_FS_WATCH_TESTING
-        publicationStats.applied=true;publicationStats.filtered=filter.isActive();
-#endif
         const bool wasAccessible = accessible, wasTruncated = truncated;
         accessible = listing.accessible; truncated = listing.truncated;
         // Identity matching was bounded and performed on the listing worker. Keep
@@ -273,6 +270,9 @@ struct DirectoryEntryModel::Private {
         // Filtering is a projection: identity matching/pruning uses the full
         // physical listing, never just the visible rows.
         if (!truncated || (filter.isActive() ? rawListing.rows.empty() : rows.empty())) {
+#ifdef GLANCELOT_FS_WATCH_TESTING
+            publicationStats.applied=true;publicationStats.filtered=filter.isActive();
+#endif
             if (!filter.isActive()) {
                 merge(std::move(listing));
 #ifdef GLANCELOT_FS_WATCH_TESTING
