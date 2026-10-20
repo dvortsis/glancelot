@@ -20,7 +20,7 @@ add_test(NAME recovery COMMAND recovery_tests
 set_tests_properties(recovery PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
 
 qt_add_executable(recovery_startup_tests tests/recovery_startup_tests.cpp
-  app/startup_intent.cpp ${glancelot_recovery_provider_sources})
+  app/startup_intent.cpp app/startup_environment.cpp ${glancelot_recovery_provider_sources})
 target_include_directories(recovery_startup_tests PRIVATE include src/app app)
 target_link_libraries(recovery_startup_tests PRIVATE glancelot_core glancelot_platform
   Qt6::Gui Qt6::Test Qt6::Concurrent)
@@ -47,14 +47,7 @@ set_tests_properties(recovery_controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM
 
 # Existing controller/slot consumers retain one definition of each source. This
 # is enabled for the feature branch only; private fault hooks remain test-only.
-get_property(recovery_existing_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-foreach(recovery_target IN LISTS recovery_existing_targets)
-  get_target_property(recovery_existing_sources ${recovery_target} SOURCES)
-  if(recovery_target STREQUAL "glancelot" OR
-     "${recovery_existing_sources}" MATCHES "(viewer_controller|window_slot)[.]cpp")
-    glancelot_attach_recovery(${recovery_target})
-  endif()
-endforeach()
+glancelot_attach_recovery_consumers()
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(recovery_process_args --executable "$<TARGET_FILE:glancelot>"

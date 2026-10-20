@@ -241,6 +241,11 @@ existing tests. Thread linkage is explicit. Controller tests compile the actual
 feature worker with private hooks for deterministic blocked-transaction/reassignment
 coverage; viewer and ordinary consumers keep the production common engine with
 no private hooks. This preparation is not a gate result or feature completion.
+The startup environment implementation is an actual viewer/startup-test source.
+Production RecoverySources is included outside BUILD_TESTING, with idempotent
+provider-consumer attachment after ordinary target creation even before the full
+process-test fragment is enabled. The required process test remains mandatory
+before candidate qualification; early release builds are not that gate.
 
 Lead-prepared cmake/RecoverySources.cmake is enabled for the actual feature outside
 BUILD_TESTING so release builds receive the same engine and startup code. It
