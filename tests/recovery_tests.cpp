@@ -1,5 +1,7 @@
 #include "glancelot/settings_recovery.hpp"
 #include "file_lock.hpp"
+#include "settings_transaction.hpp"
+#include "glancelot/settings_file.hpp"
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -15,6 +17,17 @@ class RecoveryTests final : public QObject {
         QFile file(path);return file.open(QIODevice::WriteOnly)&&file.write(bytes)==bytes.size();
     }
     static QByteArray read(const QString& path) {QFile file(path);return file.open(QIODevice::ReadOnly)?file.readAll():QByteArray{};}
+    struct Hooks {
+        const glancelot::settings_detail::TransactionHooks* old=glancelot::settings_detail::transactionHooks;
+        explicit Hooks(const glancelot::settings_detail::TransactionHooks& hooks){glancelot::settings_detail::transactionHooks=&hooks;}
+        ~Hooks(){glancelot::settings_detail::transactionHooks=old;}
+    };
+    static glancelot::settings_detail::Request restoreRequest(const RawSnapshot& snapshot) {
+        glancelot::settings_detail::Request request;
+        request.context.directory=snapshot.directory;request.expectedNamespace=snapshot.namespaceId;
+        request.expectedRevision=snapshot.revision;request.policy=glancelot::settings_detail::Policy::Restore;
+        request.options.lockTimeoutMs=0;return request;
+    }
 private slots:
     void absentAndPresentEmptyHaveDifferentRevisions() {
         QTemporaryDir dir;QVERIFY(dir.isValid());const Context context{dir.path()};
@@ -112,6 +125,122 @@ private slots:
         QTRY_VERIFY(entered.load());QTest::qWait(20);stop.request_stop();worker.join();
         QCOMPARE(result.status.code,Code::Cancelled);QVERIFY(!result.snapshot);
         QCOMPARE(read(dir.filePath("settings.json")),original);QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
+    }
+    void ordinaryWriterStillMergesAndKeepsExactLastGood() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());qputenv("GLANCELOT_CONFIG_DIR",dir.path().toUtf8());
+        const QByteArray original("{ \"schema\":1, \"unknown\":{\"future\":true},\"boundary\":\"stop\" }");
+        QVERIFY(write(dir.filePath("settings.json"),original));
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["wheel"]="zoom";}).ok());
+        QCOMPARE(read(dir.filePath("settings.json.bak")),original);
+        QJsonObject result;QVERIFY(glancelot::readSettings(result).ok());
+        QCOMPARE(result.value("wheel").toString(),QString("zoom"));QCOMPARE(result.value("boundary").toString(),QString("stop"));
+        QVERIFY(result.value("unknown").toObject().value("future").toBool());
+    }
+    void ordinaryWriterRecoversCorruptButRefusesFuture() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());qputenv("GLANCELOT_CONFIG_DIR",dir.path().toUtf8());
+        const QByteArray damaged("broken bytes"),backup("{\"schema\":1,\"unknown\":7}");
+        QVERIFY(write(dir.filePath("settings.json"),damaged));QVERIFY(write(dir.filePath("settings.json.bak"),backup));
+        const auto saved=glancelot::updateSettings([](QJsonObject& root){root["wheel"]="pan";});
+        QVERIFY(saved.ok());QVERIFY(saved.recovered);QCOMPARE(read(dir.filePath("settings.json.damaged")),damaged);
+        QCOMPARE(read(dir.filePath("settings.json.bak")),backup);
+        const QByteArray future("{\"schema\":3}");QVERIFY(write(dir.filePath("settings.json"),future));
+        bool called=false;const auto refused=glancelot::updateSettings([&](QJsonObject&){called=true;});
+        QCOMPARE(refused.code,glancelot::SettingsStatus::Unsupported);QVERIFY(!called);
+        QCOMPARE(read(dir.filePath("settings.json")),future);QCOMPARE(read(dir.filePath("settings.json.bak")),backup);
+    }
+    void ordinaryBackupFailureAndOversizeLeavePrimaryUntouched() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());qputenv("GLANCELOT_CONFIG_DIR",dir.path().toUtf8());
+        const QByteArray primary("{\"schema\":1,\"unknown\":true}");QVERIFY(write(dir.filePath("settings.json"),primary));
+        QVERIFY(QDir(dir.path()).mkdir("settings.json.bak"));
+        const auto failed=glancelot::updateSettings([](QJsonObject& root){root["wheel"]="zoom";});
+        QCOMPARE(failed.code,glancelot::SettingsStatus::WriteFailed);QCOMPARE(read(dir.filePath("settings.json")),primary);
+        QVERIFY(QDir(dir.path()).rmdir("settings.json.bak"));
+        const auto large=glancelot::updateSettings([](QJsonObject& root){root["oversized"]=QString(int(MaxMemberBytes),'x');});
+        QCOMPARE(large.code,glancelot::SettingsStatus::WriteFailed);QCOMPARE(read(dir.filePath("settings.json")),primary);
+        QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
+    }
+    void restoreMustHaveRawGuardsAndPreimageWriter() {
+        using namespace glancelot::settings_detail;
+        QTemporaryDir dir;QVERIFY(dir.isValid());const QByteArray primary("{\"schema\":1}");
+        QVERIFY(write(dir.filePath("settings.json"),primary));const auto snapshot=readRaw({dir.path()});QVERIFY(snapshot.snapshot);
+        auto request=restoreRequest(*snapshot.snapshot);bool edited=false;
+        auto editor=[&](const View& view){edited=true;return Edit{Code::Committed,view.base};};
+        QCOMPARE(transact(request,editor).status.code,Code::Corrupt);QVERIFY(!edited);
+        request.expectedRevision.clear();
+        QCOMPARE(transact(request,editor,[](const RawSnapshot&){return Seal{{Code::Ok},"pretend"};}).status.code,Code::Corrupt);
+        QVERIFY(!edited);QCOMPARE(read(dir.filePath("settings.json")),primary);
+    }
+    void failedPreimageNeverReplacesPrimary() {
+        using namespace glancelot::settings_detail;
+        QTemporaryDir dir;QVERIFY(dir.isValid());const QByteArray primary("{\"schema\":1}");QVERIFY(write(dir.filePath("settings.json"),primary));
+        const auto before=readRaw({dir.path()});QVERIFY(before.snapshot);
+        const auto result=transact(restoreRequest(*before.snapshot),[](const View& view){auto changed=view.base;changed["wheel"]="zoom";return Edit{Code::Committed,changed};},
+            [](const RawSnapshot&){return Seal{{Code::WriteFailed},QString{}};});
+        QCOMPARE(result.status.code,Code::WriteFailed);QVERIFY(result.preimage.isEmpty());
+        QCOMPARE(read(dir.filePath("settings.json")),primary);QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
+    }
+    void preimageCannotClaimPrimaryWasAlreadyCommitted() {
+        using namespace glancelot::settings_detail;
+        QTemporaryDir dir;QVERIFY(dir.isValid());const QByteArray primary("{\"schema\":1}");QVERIFY(write(dir.filePath("settings.json"),primary));
+        const auto before=readRaw({dir.path()});QVERIFY(before.snapshot);
+        const auto result=transact(restoreRequest(*before.snapshot),[](const View& view){auto changed=view.base;changed["wheel"]="zoom";return Edit{Code::Committed,changed};},
+            [](const RawSnapshot&){return Seal{{Code::Committed},QString{}};});
+        QCOMPARE(result.status.code,Code::WriteFailed);QCOMPARE(read(dir.filePath("settings.json")),primary);
+    }
+    void staleRestoreConflictsBeforeNoChangeOrPreimage() {
+        using namespace glancelot::settings_detail;
+        QTemporaryDir dir;QVERIFY(dir.isValid());QVERIFY(write(dir.filePath("settings.json"),"{\"schema\":1}"));
+        const auto before=readRaw({dir.path()});QVERIFY(before.snapshot);auto request=restoreRequest(*before.snapshot);
+        QVERIFY(write(dir.filePath("settings.json.bak"),"{\"schema\":1,\"changed\":true}"));
+        bool edited=false,sealed=false;
+        const auto result=transact(request,[&](const View&){edited=true;return Edit{};},[&](const RawSnapshot&){sealed=true;return Seal{};});
+        QCOMPARE(result.status.code,Code::Conflict);QVERIFY(!edited);QVERIFY(!sealed);QVERIFY(result.preimage.isEmpty());
+    }
+    void checkedNoChangeDoesNotRewriteEvidence() {
+        using namespace glancelot::settings_detail;
+        QTemporaryDir dir;QVERIFY(dir.isValid());const QByteArray primary("{ \"schema\":1 }"),backup("old diagnostic bytes"),damaged("keep damaged");
+        QVERIFY(write(dir.filePath("settings.json"),primary));QVERIFY(write(dir.filePath("settings.json.bak"),backup));QVERIFY(write(dir.filePath("settings.json.damaged"),damaged));
+        const auto before=readRaw({dir.path()});QVERIFY(before.snapshot);bool sealed=false;
+        const auto result=transact(restoreRequest(*before.snapshot),[](const View&){return Edit{};},[&](const RawSnapshot&){sealed=true;return Seal{};});
+        QCOMPARE(result.status.code,Code::NoChange);QVERIFY(!sealed);QCOMPARE(result.revision,before.snapshot->revision);
+        QCOMPARE(read(dir.filePath("settings.json")),primary);QCOMPARE(read(dir.filePath("settings.json.bak")),backup);QCOMPARE(read(dir.filePath("settings.json.damaged")),damaged);
+    }
+    void restoreFailureAndCancelRetainOriginals_data() {
+        QTest::addColumn<int>("point");QTest::addColumn<bool>("cancel");
+        for(const auto stage:{glancelot::settings_detail::Stage::AfterRead,glancelot::settings_detail::Stage::BeforeEvidence,
+                             glancelot::settings_detail::Stage::AfterPreimage,glancelot::settings_detail::Stage::BeforeReplace}) {
+            const auto label=QByteArray::number(int(stage));
+            QTest::newRow((label+"-failure").constData())<<int(stage)<<false;
+            QTest::newRow((label+"-cancel").constData())<<int(stage)<<true;
+        }
+    }
+    void restoreFailureAndCancelRetainOriginals() {
+        using namespace glancelot::settings_detail;QFETCH(int,point);QFETCH(bool,cancel);
+        QTemporaryDir dir;QVERIFY(dir.isValid());const QByteArray primary("{\"schema\":1,\"unknown\":4}"),backup("{\"schema\":1}"),damaged("existing damaged");
+        QVERIFY(write(dir.filePath("settings.json"),primary));QVERIFY(write(dir.filePath("settings.json.bak"),backup));QVERIFY(write(dir.filePath("settings.json.damaged"),damaged));
+        const auto before=readRaw({dir.path()});QVERIFY(before.snapshot);auto request=restoreRequest(*before.snapshot);
+        std::stop_source stop;request.options.cancellation=stop.get_token();TransactionHooks hooks;
+        hooks.observe=[&](Stage stage){if(cancel&&int(stage)==point)stop.request_stop();};
+        hooks.fail=[&](Stage stage){return !cancel&&int(stage)==point;};Hooks installed(hooks);
+        const auto preimage=dir.filePath("generated-preimage");
+        const auto result=transact(request,[](const View& view){auto changed=view.base;changed["wheel"]="zoom";return Edit{Code::Committed,changed};},
+            [&](const RawSnapshot& raw){const bool stored=write(preimage,raw.primary.bytes);return Seal{{stored?Code::Ok:Code::WriteFailed},stored?preimage:QString{}};});
+        QCOMPARE(result.status.code,cancel?Code::Cancelled:Code::WriteFailed);
+        QCOMPARE(read(dir.filePath("settings.json")),primary);QCOMPARE(read(dir.filePath("settings.json.bak")),backup);QCOMPARE(read(dir.filePath("settings.json.damaged")),damaged);
+        if(point>=int(Stage::AfterPreimage)){QCOMPARE(result.preimage,preimage);QCOMPARE(read(preimage),primary);}
+        else {QVERIFY(result.preimage.isEmpty());QVERIFY(!QFile::exists(preimage));}
+    }
+    void cancelAfterReplacementIsCommitted() {
+        using namespace glancelot::settings_detail;
+        QTemporaryDir dir;QVERIFY(dir.isValid());QVERIFY(write(dir.filePath("settings.json"),"{\"schema\":1}"));
+        const auto before=readRaw({dir.path()});QVERIFY(before.snapshot);auto request=restoreRequest(*before.snapshot);
+        std::stop_source stop;request.options.cancellation=stop.get_token();TransactionHooks hooks;
+        hooks.observe=[&](Stage stage){if(stage==Stage::AfterReplace)stop.request_stop();};Hooks installed(hooks);
+        const auto result=transact(request,[](const View& view){auto changed=view.base;changed["wheel"]="zoom";return Edit{Code::Committed,changed};},
+            [&](const RawSnapshot& snapshot){const auto path=dir.filePath("preimage");const bool ok=write(path,snapshot.primary.bytes);return Seal{{ok?Code::Ok:Code::WriteFailed},ok?path:QString{}};});
+        QCOMPARE(result.status.code,Code::Committed);QVERIFY(stop.stop_requested());QVERIFY(result.revision!=before.snapshot->revision);
+        const auto current=readRaw({dir.path()});QVERIFY(current.snapshot);QCOMPARE(result.revision,current.snapshot->revision);
+        QVERIFY(read(dir.filePath("settings.json")).contains("zoom"));QVERIFY(!QFile::exists(dir.filePath("settings.json.bak")));
     }
 };
 QTEST_GUILESS_MAIN(RecoveryTests)

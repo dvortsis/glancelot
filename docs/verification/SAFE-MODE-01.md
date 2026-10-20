@@ -38,8 +38,6 @@ Reproduction project/runner and actual outputs live in safe-mode-01/. The compon
 build uses build-codex-safe-mode-01/registry-component. This narrow component
 project does not replace the required production/test wiring or full feature gate.
 
-## Outstanding complete scope
-
 ## Raw settings pair
 
 readRaw now resolves an explicit absolute namespace, acquires the existing
@@ -64,9 +62,38 @@ This is cooperative-writer locking and bounded reads, not exclusion of hostile
 noncooperating filesystem changes, network-call cancellation or physical-media
 qualification. Linux execution and the complete feature gates are pending.
 
+## Shared checked writer
+
+The private settings_transaction pipeline now owns the existing settings lock,
+logical-base selection, bounded serialization and atomic primary replacement.
+Ordinary updateSettings adapts its existing void editor into that pipeline;
+normal last-good/damaged behavior and SettingsStatus codes remain. Ordinary
+parsing still ignores an unused malformed backup when the primary is valid.
+
+Checked requests use the exact raw pair under that same lock and compare both
+namespace and revision before calling the editor or returning NoChange. Future
+primary schemas refuse writes. Restore policy requires nonempty expected guards
+and a preimage writer; preimage failure/invalid success status cannot replace the
+primary. Restore leaves .bak/.damaged intact. Failure/cancellation after a preimage
+keeps its reported path; cancellation after primary replacement returns Committed.
+Private copied fault callbacks are compiled only with GLANCELOT_RECOVERY_TESTING.
+
+Windows component CTest passed2/2 in0.46s: raw/transaction33/33 zero skips318ms,
+registry7/7 zero skips8ms. Actual cases cover ordinary unknown-key merge/exact
+last-good bytes, corrupt recovery/future refusal, failed backup/oversized edit,
+stale backup-only revision before no-op, no-change evidence integrity, missing
+restore guards, failed/invalid preimage status, injected failure and cancellation
+at four pre-commit stages, and cancellation after commit. See transaction-* logs.
+
+Preimage callbacks in these pipeline tests use disposable generated files to
+verify ordering and failure behavior. The real bounded sealed package writer,
+package revalidation and public apply facade are not implemented or qualified by
+those callbacks. Full old settings/window/controller suites, Linux, feature
+build wiring and independent review remain required. This is component evidence.
+
 ## Remaining complete scope
 
-Package validation, checked writer and exclusive preimages,
+Package validation, real sealed exclusive preimages and public checked restore,
 bounded configuration diff/restore, claim-nonce/session guards, dirty/clean atomic
 checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
