@@ -556,3 +556,21 @@ The recovery and selected-original rename assertions passed. Exact output is
 fs-watch-01/windows-r8-phases-budget.txt. Concurrent lane native jobs were present;
 this is measured loaded-host evidence, not an isolated hardware benchmark or
 independent review. Full current gates and independent re-review remain pending.
+
+The committed regression was challenged by temporarily removing only the early
+identity-admission block from the assigned model source, keeping all per-entry
+limits, row publication and baseline-retention logic. The actual backend test
+failed exactly at admittedWithoutPrefix:2 passed,1 failed,zero skips,132.510s;
+observed identity prefix35,544 versus accepted complete baseline1. Heartbeat191ms
+and callback179ms stayed below250ms, so this red distinguishes admission rather
+than failing an unrelated timing assertion. Exact output is
+fs-watch-01/windows-r8-budget-red.txt.
+
+A PowerShell finally restored the exact green source bytes and successfully
+rebuilt the backend target. A subsequent wrapper evidence check had a positional
+Select-String argument error after restoration; corrected read-only checks found
+the intended assertion, executable exit1 and matching source/backup SHA256
+EF98B855BAC510F45CB02862D017FCD0060723F05BEF45AEDF3F740593A0FAEA.
+Git confirmed no source delta from the committed green variant. The current
+full backend run uses that restored green target; no result claimed yet. No
+product/test deadline or limit was weakened and no temporary red source remains.
