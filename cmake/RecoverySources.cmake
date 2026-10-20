@@ -30,4 +30,18 @@ function(glancelot_attach_recovery recovery_target)
   set_property(TARGET ${recovery_target} PROPERTY GLANCELOT_RECOVERY_ATTACHED TRUE)
 endfunction()
 glancelot_attach_recovery(glancelot)
-target_sources(glancelot PRIVATE app/startup_intent.cpp)
+target_sources(glancelot PRIVATE app/startup_intent.cpp app/startup_environment.cpp)
+
+# Call after target creation even when feature process tests are not enabled yet.
+# Production providers and ordinary tests must never depend on BUILD_TESTING for
+# their actual engine definitions. Attachment remains idempotent.
+function(glancelot_attach_recovery_consumers)
+  get_property(recovery_existing_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(recovery_target IN LISTS recovery_existing_targets)
+    get_target_property(recovery_existing_sources ${recovery_target} SOURCES)
+    if(recovery_target STREQUAL "glancelot" OR
+       "${recovery_existing_sources}" MATCHES "(viewer_controller|window_slot)[.]cpp")
+      glancelot_attach_recovery(${recovery_target})
+    endif()
+  endforeach()
+endfunction()
