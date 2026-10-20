@@ -182,10 +182,45 @@ cancellation/generation. See safe-mode-01/diff-* actual outputs and component
 project. This is not yet the public immutable preview, JSON CLI serializer or
 proof of complete restore authorization. Full feature wiring remains pending.
 
+## Claim identity and held session guards
+
+WindowSlot now records a random per-claim UUID nonce with the existing pid/start
+and opening-order slot. A captured WindowClaim owns immutable identity values
+and the optional private-root owner, not a WindowSlot pointer. Release revokes
+the captured state; a same-process release/reclaim of slot1 cannot reuse the old
+capability. Ordinary opening order, next-number behavior and unknown root/live
+record fields are retained. Ambiguous process identity is not treated as death;
+legacy/unknown-start records remain live blockers rather than recovery authority.
+
+Private ownership guards resolve/check namespace, acquire sessions.json.lock
+first, validate the exact live slot/pid/start/nonce and retain that lock for the
+caller through its settings transaction. Offline guards authorize no window
+claim: they refuse live/ambiguous, malformed/future/oversized or nonregular
+bookkeeping and never prune records/reset counters/rewrite sessions. Cancellation
+and lock contention return explicit refusal; claims/guards retain temporary-root
+lifetime by value. Source ownership does not itself construct a RestorePlan or
+perform a settings mutation; final facade/checkpoint integration is still pending.
+
+Actual Windows component CTest passed2/2 in0.95s, recovery94/94 zero skips809ms,
+registry7/7 zero skips8ms. New cases cover actual claims and held-lock exclusion,
+offline refusal with live records, same-process nonce reuse prevention, two slots
+in one process, namespace substitution, changed nonce/start/legacy/unknown-start
+records, damaged/future/fractional/invalid/oversized sessions, read-only offline
+inspection, Busy/cancellation, nonregular bookkeeping and captured private-root
+lifetime. The first compile found a Qt slots-macro variable collision and a test
+namespace typo; that failed compile is retained separately. Corrected build and
+actual case outputs/project are ownership-* in safe-mode-01/.
+
+Linux/native privilege-denied process variants and the full existing window-slot
+suite still need execution. This component does not prove final pre-commit owner
+closure, guarded restore/checkpoint ordering, process restart or UI teardown;
+those must be exercised in the completed feature, with the held sessions guard
+preceding the settings lock and no borrowed controller state.
+
 ## Remaining complete scope
 
 Real restore-preimage integration and public checked restore,
-immutable preview/fingerprint integration, claim-nonce/session guards, dirty/clean atomic
+immutable preview/fingerprint/ownership integration, dirty/clean atomic
 checkpoints, early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
 to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and

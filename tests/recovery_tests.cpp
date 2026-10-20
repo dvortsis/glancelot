@@ -4,6 +4,8 @@
 #include "settings_package.hpp"
 #include "settings_policy.hpp"
 #include "settings_diff.hpp"
+#include "window_claim_guard.hpp"
+#include "glancelot/window_slot.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QScopeGuard>
@@ -499,6 +501,98 @@ private slots:
     void diffCancellationReturnsNoUsableSuccess() {
         std::stop_source stop;stop.request_stop();Options options;options.cancellation=stop.get_token();options.generation=88;
         const auto report=diff::build({},{{"unknown",1}},{},{},options);QCOMPARE(report.status.code,Code::Cancelled);QCOMPARE(report.status.generation,quint64(88));QVERIFY(report.rows.isEmpty());
+    }
+    void realClaimOwnsOneSlotAndBlocksOfflineRestore() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);QCOMPARE(slot.number(),1);
+        const auto identity=slot.claimIdentity();QVERIFY(identity.hasIdentity());Options immediate;immediate.lockTimeoutMs=0;
+        {
+            auto guard=ownership::acquire(identity,{dir.path()},immediate);QVERIFY(guard.held());QCOMPARE(guard.slot,1);
+            FileLock competing(dir.filePath("sessions.json.lock"));QVERIFY(!competing.acquire(0));QVERIFY(competing.contended());
+        }
+        const auto offline=ownership::acquireOffline(1,{dir.path()},immediate);QVERIFY(!offline.held());QCOMPARE(offline.status.code,Code::Busy);
+        QVERIFY(!ownership::acquire(glancelot::WindowClaim{},{dir.path()},immediate).held());
+    }
+    void sameProcessReleaseReclaimRevokesOldNonce() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);QCOMPARE(slot.number(),1);
+        const auto old=slot.claimIdentity();QVERIFY(old.hasIdentity());
+        slot.release();QVERIFY(slot.claim(0));QCOMPARE(slot.number(),1);const auto current=slot.claimIdentity();
+        Options immediate;immediate.lockTimeoutMs=0;
+        const auto stale=ownership::acquire(old,{dir.path()},immediate);QCOMPARE(stale.status.code,Code::Conflict);QVERIFY(!stale.held());
+        const auto live=ownership::acquire(current,{dir.path()},immediate);QVERIFY(live.held());
+    }
+    void claimsInSameProcessAndOtherNamespacesStayDistinct() {
+        QTemporaryDir dir,other;QVERIFY(dir.isValid()&&other.isValid());
+        WindowSlot first(dir.path(),0),second(dir.path(),0);QCOMPARE(first.number(),1);QCOMPARE(second.number(),2);
+        Options immediate;immediate.lockTimeoutMs=0;
+        {const auto guard=ownership::acquire(first.claimIdentity(),{dir.path()},immediate);QVERIFY(guard.held());QCOMPARE(guard.slot,1);}
+        {const auto guard=ownership::acquire(second.claimIdentity(),{dir.path()},immediate);QVERIFY(guard.held());QCOMPARE(guard.slot,2);}
+        const auto substituted=ownership::acquire(first.claimIdentity(),{other.path()},immediate);QCOMPARE(substituted.status.code,Code::Conflict);QVERIFY(!substituted.held());
+    }
+    void changedLiveRecordCannotAuthorizeCapturedClaim_data() {
+        QTest::addColumn<QString>("mutation");for(const auto* text:{"nonce","start","legacy","unknown-start"})QTest::newRow(text)<<QString::fromLatin1(text);
+    }
+    void changedLiveRecordCannotAuthorizeCapturedClaim() {
+        QFETCH(QString,mutation);QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);
+        const auto identity=slot.claimIdentity();const auto path=dir.filePath("sessions.json");auto session=QJsonDocument::fromJson(read(path)).object();
+        auto live=session.value("live").toArray();auto row=live[0].toObject();
+        if(mutation=="nonce")row["claimNonce"]=QUuid::createUuid().toString(QUuid::WithoutBraces);
+        else if(mutation=="legacy")row.remove("claimNonce");
+        else row["stamp"]=mutation=="unknown-start"?1:row.value("stamp").toDouble()+1;
+        live[0]=row;session["live"]=live;const auto changed=QJsonDocument(session).toJson(QJsonDocument::Compact);QVERIFY(write(path,changed));
+        Options immediate;immediate.lockTimeoutMs=0;
+        const auto refused=ownership::acquire(identity,{dir.path()},immediate);QCOMPARE(refused.status.code,Code::Conflict);QVERIFY(!refused.held());
+        QCOMPARE(read(path),changed);
+        if(mutation=="legacy"||mutation=="unknown-start") {
+            const auto offline=ownership::acquireOffline(1,{dir.path()},immediate);QCOMPARE(offline.status.code,Code::Busy);QVERIFY(!offline.held());
+        }
+    }
+    void offlineRefusesDamagedFutureAndAmbiguousBookkeeping_data() {
+        QTest::addColumn<QByteArray>("bytes");
+        QTest::newRow("corrupt")<<QByteArray("broken");
+        QTest::newRow("future")<<QByteArray("{\"schema\":2,\"counter\":0,\"live\":[]}");
+        QTest::newRow("fractional")<<QByteArray("{\"schema\":1,\"counter\":1.5,\"live\":[]}");
+        QTest::newRow("invalid-record")<<QByteArray("{\"schema\":1,\"counter\":1,\"live\":[{\"slot\":1}]}");
+        QTest::newRow("oversized")<<QByteArray(64*1024+1,'x');
+    }
+    void offlineRefusesDamagedFutureAndAmbiguousBookkeeping() {
+        QFETCH(QByteArray,bytes);QTemporaryDir dir;QVERIFY(dir.isValid());const auto path=dir.filePath("sessions.json");QVERIFY(write(path,bytes));
+        Options immediate;immediate.lockTimeoutMs=0;const auto guard=ownership::acquireOffline(1,{dir.path()},immediate);
+        QVERIFY(!guard.held());QCOMPARE(guard.status.code,Code::Corrupt);QCOMPARE(read(path),bytes);
+    }
+    void offlineGuardDoesNotResetOrRewriteSessions() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());const QByteArray bytes("{\"schema\":1,\"counter\":8,\"live\":[],\"unknown\":true}");
+        const auto path=dir.filePath("sessions.json");QVERIFY(write(path,bytes));Options immediate;immediate.lockTimeoutMs=0;
+        {const auto guard=ownership::acquireOffline(7,{dir.path()},immediate);QVERIFY(guard.held());QCOMPARE(guard.slot,7);QCOMPARE(read(path),bytes);}
+        QCOMPARE(read(path),bytes);WindowSlot next(dir.path(),0);QCOMPARE(next.number(),1);
+    }
+    void ownershipGuardContentionAndCancellation() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);const auto identity=slot.claimIdentity();
+        {
+            FileLock held(dir.filePath("sessions.json.lock"));QVERIFY(held.acquire(0));Options immediate;immediate.lockTimeoutMs=0;
+            const auto busy=ownership::acquire(identity,{dir.path()},immediate);QCOMPARE(busy.status.code,Code::Busy);QVERIFY(!busy.held());
+            std::stop_source stop;stop.request_stop();Options cancelled;cancelled.cancellation=stop.get_token();cancelled.generation=71;
+            const auto result=ownership::acquire(identity,{dir.path()},cancelled);QCOMPARE(result.status.code,Code::Cancelled);QCOMPARE(result.status.generation,quint64(71));
+        }
+    }
+    void directoryBookkeepingCannotAuthorizeOfflineRestore() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());QVERIFY(QDir(dir.path()).mkdir("sessions.json"));
+        Options options;options.lockTimeoutMs=0;const auto guard=ownership::acquireOffline(1,{dir.path()},options);
+        QCOMPARE(guard.status.code,Code::Corrupt);QVERIFY(!guard.held());QVERIFY(QFileInfo(dir.filePath("sessions.json")).isDir());
+    }
+    void capturedClaimAndOfflineGuardRetainPrivateRootOwner() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());auto owner=std::make_shared<int>(1);std::weak_ptr<int> weak=owner;
+        glancelot::WindowClaim identity;
+        {
+            WindowSlot slot(dir.path(),0,owner);identity=slot.claimIdentity();QVERIFY(identity.hasIdentity());owner.reset();QVERIFY(!weak.expired());
+        }
+        QVERIFY(!weak.expired());Options options;options.lockTimeoutMs=0;
+        const auto stale=ownership::acquire(identity,{dir.path()},options);QVERIFY(!stale.held());
+        identity={};QVERIFY(weak.expired());
+        owner=std::make_shared<int>(2);weak=owner;
+        {
+            auto guard=ownership::acquireOffline(1,{dir.path(),owner},options);QVERIFY(guard.held());owner.reset();QVERIFY(!weak.expired());
+        }
+        QVERIFY(weak.expired());
     }
 };
 QTEST_GUILESS_MAIN(RecoveryTests)
