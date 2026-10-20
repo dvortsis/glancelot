@@ -444,3 +444,21 @@ checks remain required before F064/F057 completion. Re-audit all frozen requirem
 against actual full-gate results, including failure/cancellation and other-slot
 preservation; component/runtime milestones alone do not qualify the whole feature.
 Physical GPU/DPI/power-loss behavior remains unverified unless measured.
+
+## Exact Windows maintenance stdout bytes
+
+The Windows CRT text stream expanded the serializer's explicitly budgeted final
+LF to CRLF. Production stdout now switches to binary before writing bounded JSON;
+the process verifier requires exact LF output. The old release failed the new
+assertion on its first command (process-windows/newline-red). The rebuilt release
+SHA256 CE49FBD6740A9633C6956D0E6313E97D097FDF8CEE9C2489D9429C54E40A2B78
+passed all33 commands including the byte assertion (process-windows/newline-green).
+Its first safe launch recorded28 swaps, first image frame2092ms, observed actual
+D3D11 backend3 CPU device5 Microsoft Basic Render Driver and exact RGB samples.
+
+An intervening attempt failed honestly with zero frame swaps, no first image frame
+and an invalidated observation, despite previously sampled CPU device details
+(process-windows/zero-frame-failure). The cause is unresolved. No renderer flags,
+frame requirements or sampling assertions were weakened; the unchanged executable
+passed the repeat with no competing viewer/test process present. The failed run
+remains part of qualification evidence, not a passing gate.

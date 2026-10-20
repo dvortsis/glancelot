@@ -149,6 +149,7 @@ class Verification:
         require(result.returncode == expected, f"Expected exit {expected}, got {result.returncode}: {command}; stderr={result.stderr[-2000:]!r}")
         if not gui:
             require(not trace.exists(), "Headless path constructed a controller")
+            require(result.stdout.endswith(b"\n") and not result.stdout.endswith(b"\r\n"), "Headless stdout expanded its explicitly budgeted newline")
         require(len(result.stdout) <= 3 * 1024 * 1024, "Unbounded stdout report")
         return json.loads(result.stdout) if json_result else result
 

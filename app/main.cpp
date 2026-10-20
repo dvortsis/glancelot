@@ -42,6 +42,10 @@
 #include <atomic>
 #include <mutex>
 #include <memory>
+#ifdef Q_OS_WIN
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 namespace {
 void applicationMetadata() {
@@ -49,7 +53,15 @@ void applicationMetadata() {
     QCoreApplication::setOrganizationName("Glancelot");
     QCoreApplication::setApplicationVersion("0.1.0-alpha.1");
 }
-bool writeOutput(const QByteArray& bytes) {return std::fwrite(bytes.constData(),1,size_t(bytes.size()),stdout)==size_t(bytes.size());}
+bool writeOutput(const QByteArray& bytes) {
+#ifdef Q_OS_WIN
+    // JSON is UTF8 with an explicitly budgeted newline. CRT text expansion
+    // must not add an unaccounted CR after bounded serialization.
+    static const auto binaryMode=_setmode(_fileno(stdout),_O_BINARY);
+    if(binaryMode==-1)return false;
+#endif
+    return std::fwrite(bytes.constData(),1,size_t(bytes.size()),stdout)==size_t(bytes.size());
+}
 int startupError(const QString& code,const QString& detail,int exitCode) {
     const QJsonObject result{{"schema",1},{"code",code},{"detail",detail.left(1024)},{"generation","0"}};
     return writeOutput(QJsonDocument(result).toJson(QJsonDocument::Compact)+'\n')?exitCode:7;
