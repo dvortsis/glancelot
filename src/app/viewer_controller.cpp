@@ -1459,3 +1459,11 @@ qint64 ViewerController::decodedCacheBytes() const { return qint64(d->cache.tota
 int ViewerController::decodedCacheCount() const { return d->cache.count(); }
 bool ViewerController::isLastDecodeCacheHit() const { return d->lastDecodeCacheHit; }
 void ViewerController::clearDecodedCache() { d->cancelLookahead(); d->cache.clear(); emit cacheChanged(); }
+
+// Lead-owned IO-01 interface defaults. Keep the frozen properties linkable
+// before the IO lane imports its scheduler wiring; these do not implement it.
+QString ViewerController::storageProfile() const { return QStringLiteral("auto"); }
+void ViewerController::setStorageProfile(const QString&) {}
+QString ViewerController::currentStorageType() const { return QStringLiteral("Unknown"); }
+int ViewerController::activeIoJobs() const { return 0; }
+qint64 ViewerController::admittedIoBytes() const { return 0; }
