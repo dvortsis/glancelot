@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock: {holder: "lead/codex-fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T15:03:16.728Z"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -675,7 +675,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: review
+    state: integration
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -684,9 +684,9 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates including fs_watch, fs_watch_budget and fs_watch_ui
-    candidate_evidence: Candidate1b6c031 after current-main sync; Claude R11 static10f49fb source acceptable subject to gates, F1 Linux startup leak reproduced and fixed c48b77c with red/green evidence. Old Windows0cab319 30/31 with FS180s timeout; unchanged100k case3/3 zero skips79.396s, maximum GUI124ms. Required split budget target and new full32 gates/review followup pending
+    candidate_evidence: Source116dac3 synced main through58fa807; actual Claude R13 e93ad90 accepts L1 weak-pointer cleanup, R12 accepts source after Linux startup leak fix with red/green probe. Prior1b6c031 Windows31/32 failed Defender fixture despite backend81/budget3/UI3 zero-skip passes. Qualified replacement334065e now available; fresh combined Windows32/Linux32 and merged gates required
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
-    native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
+    native_fixture_prerequisite: Qualified replacement334065e with actual Claude source/final review and integrated Windows29/Linux29; old launcher fixture permanently retired; require exact replacement source and ancestry before combined gates
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
     start_gate: PLATFORM-01 reaches review after required candidate checks
     outcome: Bounded file-change reconciliation and explicit refresh (F063)
