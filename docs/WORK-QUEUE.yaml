@@ -1,8 +1,9 @@
 schema: 1
 project: glancelot
 integration_branch: main
+windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "codex/fs-watch-01", branch: "codex/fs-watch-01", started: "2026-10-20T13:15:51.0526391Z"}
+integration_lock: null
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -674,7 +675,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: review
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -682,8 +683,8 @@ tasks:
     plan: docs/FS-WATCH-01-PLAN.md
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
-    integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates
-    candidate_evidence: Pre-Cache825f7f2 Windows25/25 409.58s and Linux25/25 210.08s; Claude f0bf272 accepts that source. Cache revision fix2b97ad0 turns R1 green and imported Cache tests10/10 pass; IO sync663fb19 and ownership correction implementing under contract3aef7c9; no combined approval
+    integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates including fs_watch, fs_watch_budget and fs_watch_ui
+    candidate_evidence: Candidate1b6c031 after current-main sync; Claude R11 static10f49fb source acceptable subject to gates, F1 Linux startup leak reproduced and fixed c48b77c with red/green evidence. Old Windows0cab319 30/31 with FS180s timeout; unchanged100k case3/3 zero skips79.396s, maximum GUI124ms. Required split budget target and new full32 gates/review followup pending
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Lead-frozen Windows test-only launcher seam and private GUI stub; cmake/PlatformTestFixtures.cmake required before next candidate gates; platform adapter unchanged
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
@@ -737,3 +738,17 @@ theme_task:
   outcome: Supplied Slate and Ice branding plus 40 families and 80 built-in variants
   acceptance: Exact supplied tokens, persisted settings, contrast, live search, compact layout, portable smoke
 remaining_waves: [browsing, culling, format_completion, hardening, expansions]
+
+  - id: PLATFORM-FIXTURE-SECURITY-01
+    requirements: [SYS-04, SYS-05]
+    owner: lead
+    owner_lane: codex
+    state: done
+    branch: codex/platform-fixture-security
+    worktree: .worktrees/codex-platform-fixture-security
+    build: build-codex-platform-fixture-security
+    plan: docs/PLATFORM-FIXTURE-SECURITY-01-PLAN.md
+    memory_action: act_mvgrfsa8_be3125ae52b0
+    evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+    acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
+    outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged
