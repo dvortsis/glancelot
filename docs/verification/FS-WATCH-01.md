@@ -387,3 +387,20 @@ backend runtime is still active in its own worktree; no report/approval yet.
 The native full-suite wait coordinator ended without starting while another
 lane's tests occupied the slot. Main's integration lock is currently held by
 Gemini agent/filter, so no main synchronization or integration was attempted.
+
+The unchanged diagnostic image f41fd9cb4950c98c9dbedb828a5bdf5adbef5911b43ab64670abe5826e85e488
+re-ran the exact failing compact-grid case:3/3 passed, zero skips,4.827s. The
+complete grid executable in isolation then passed74 cases with4 existing skips,
+zero failures,105.617s. Logs .cache/fs-watch-r5-grid-{repro,full-repro}.txt. These
+are diagnostic passes; the original full-gate failure is retained. A fresh full
+Docker attempt on unchanged source is running, output in
+.cache/fs-watch-r5-full-docker-retry.log; no result is claimed yet.
+
+Actual Claude's independent backend run produced48 passed,1 failed,zero skips,
+230.979s: the100k sustained-writer GUI gap was385ms against the unchanged250ms
+oracle (initial179ms, setup124.786s,256 writes,4 invalidations). Its first isolated
+rerun passed3/3,90.237s: initial12ms, sustained129ms,274 writes,13 invalidations,
+setup58.204s. These independently observed mixed results preserve the performance
+failure and require a clean full native gate; neither repeated passing nor a
+loaded host explanation waives it. Reviewer-owned second stress rerun is active;
+its final disposition is pending. Other lane native jobs remain active.
