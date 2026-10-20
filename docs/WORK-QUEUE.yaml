@@ -675,7 +675,7 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: integration
     depends: [FILE-GRID-01]
     branch: codex/fs-watch-01
     worktree: .worktrees/codex-fs-watch-01
@@ -684,8 +684,8 @@ tasks:
     memory_action: act_mvfcixst_8e09ad782b31
     test_target_contract: cmake/FSWatchTests.cmake
     integration_contract: FS-WATCH-01-PLAN.md and private revision protocol a82c5ac; preserve Cache features with isolated metadata-only validation, verified decoded source tokens and bounded discovery, then independent combined review and full gates including fs_watch, fs_watch_budget and fs_watch_ui
-    integrated_evidence: Existing merge2c38082 retained; acceptance reopened after2414cd6 Windows failure. Claude result on integrated descendant e819d4e (clean worktree, Windows and Docker run concurrently): Windows scripts/build.ps1 -Test 100% 32/32 in 636.38s, exit 0; docker build -t glancelot-browser:main . exit 0, Linux ctest 32/32 in 241.04s. Passed under overlap where 2414cd6 timed out, so the publication-budget margin is load-sensitive; this does not clear the reopened correction. Original note: Another session verifies integrated descendant e819d4e in isolated Claude tree, with Windows and Docker overlapping; collect actual terminal evidence without transfer to forthcoming correction. Required correction review and integrated checks remain pending.
-    candidate_evidence: Main-synced2414cd6 Windows rerun29/32 in776.35s; grid300s timeout, dense180s timeout with measured358ms publication above250ms, cache failure. Prior72f0afa green32 Windows/Linux remains historical. Narrow same-key/order publication optimization and persistent-index/metadata regression now in assigned Codex tree; build/review/new gates pending. Preserve exact failed logs and broader Cache/IO review states.
+    integrated_evidence: Corrected reviewed branch3ffcc6b merged --no-ff as1bd4461 under heldFSlock after both full candidate gates. Actual checks on merged1bd4461 pending in isolated codex/verify-fs-watch-integrated; do not transfer ancestor2c38082/e819d4e results or mark done until terminal Windows/Docker success. Physical watcher/storage/render variants unverified; broader Cache/IO acceptance remains review.
+    candidate_evidence: Reviewed correction4a86528 syncedmain80964f7 passed Windows32/32 625.10s and LinuxDocker32/32 233.88s with runtimeimage; Windowsbackend82/budget3/UI3 and Linuxbackend83/budget3/UI3 zero skips, Linux Starting edge observed. Dense maxpublication115ms Windows/61ms Linux below unchanged250ms. ActualClaudeR14 acceptance9851f03 builds on R7-R13 closure; full evidence032bf43 plus normalized text hashes3ffcc6b. Earlier failed29/32 and auxiliary different-renderer grid failure preserved.
     decoder_prerequisite: Lead permits only Claude a6bda32 after independent scoped Codex approval db23447; INPUT UI remains changes required; resulting source needs full packet gates
     native_fixture_prerequisite: Qualified replacement334065e with actual Claude source/final review and integrated Windows29/Linux29; old launcher fixture permanently retired; require exact replacement source and ancestry before combined gates
     test_target_wiring: Backend wired caf5030; October 19 lead routing amendment adds required fs_watch_ui and permits only refresh in Main.qml gridAllowsCommand; implementation checks pending
