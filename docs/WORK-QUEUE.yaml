@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "agent/anim-playback", branch: "agent/anim-playback", started: "2026-10-19T22:53:00Z"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -572,7 +572,9 @@ tasks:
     milestone: M3
     priority: 6
     owner_lane: gemini
-    state: implementing
+    state: done
+    commit: cd21061
+    integrated_evidence: integrated cd21061 Windows scripts/build.ps1 -Test 26/26 (205.03s) and Linux docker build 26/26 (113.39s)
     branch: agent/anim-playback
     worktree: .worktrees/anim-playback
     build: build-anim-playback
