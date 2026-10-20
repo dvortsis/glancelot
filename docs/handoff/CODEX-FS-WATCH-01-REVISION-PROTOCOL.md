@@ -36,9 +36,10 @@ held while copying. Thumbnail server request/reply framing remains unchanged.
 Reuse fs_watch::Revision/probe in a private helper, without calling it from
 GUI/render code. An eligible source is a known nondirectory, nonlink entry with
 unambiguous identity (the existing identity() qualification). Token is `r1:` plus
-SHA256 hex of a versioned/domain-separated fixed-width binary revision encoding.
-Include volume/object/birth/size/modified/change, link count and classification;
-encode integers explicitly little-endian. Do not pass64-bit IDs through JSON
+SHA256 hex of this binary sequence: ASCII `Glancelot.SourceRevision`, zero byte,
+version byte1; six unsigned64 little-endian values volume/object/born/size/
+modified/changed in that order; unsigned32 little-endian links; then three bytes
+known/directory/link (0/1 each). Do not pass64-bit IDs through JSON
 floating-point numbers. No source path or media bytes enter this token.
 
 Controller accepts only empty or the exact version/prefix/length/lowercase-hex
