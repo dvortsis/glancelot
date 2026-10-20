@@ -454,3 +454,16 @@ for Listing. This removes the deep row copy and its duplicate deferred destructi
 without blocking on an unfinished job or changing generation/cancellation logic.
 Required build.ps1 build passed, including the assertion. Full backend regression
 is running; no result claimed. New source needs independent review/full gates.
+
+Current2bd898d full backend direct run completed48 passed,1 failed,zero skips,
+175.165s. The100k case passed: initial13ms,sustained184ms,263 writes,2 invalidations;
+actual model publication3 callbacks,max183ms,final loadingfalse. The sole failure
+was replacementAndUnrelatedChanges:generated png(image,color) returnedfalse at
+line516. This is a failed complete backend run, not a pass. Exact output is
+fs-watch-01/windows-r7-backend-full.txt. Test-only PNG diagnostics now identify
+open/encoding/atomic-commit failure and retain immediatefailure/no retry behavior.
+The same unchanged replacement operation passed in a filtered rerun3/3,zero
+skips,2.940s, output fs-watch-01/windows-r7-replacement-repro.txt. No cause is yet
+proven and no complete native pass is claimed. Productdecoder already uses
+read/write/delete sharing and closes source before publication; no product write
+or arbitrary retry was added to mask this generated-media failure.

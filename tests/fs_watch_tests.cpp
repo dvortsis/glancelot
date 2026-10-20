@@ -47,9 +47,17 @@ class FSWatchTests : public QObject {
     };
     QTemporaryDir config;
     static bool png(const QString& path,Qt::GlobalColor color,QSize size=QSize(32,24)) {
-        QSaveFile target(path);if(!target.open(QIODevice::WriteOnly))return false;
+        QSaveFile target(path);if(!target.open(QIODevice::WriteOnly)) {
+            qWarning()<<"generated PNG open failed"<<target.error()<<target.errorString();return false;
+        }
         QImage image(size,QImage::Format_RGB32);image.fill(color);
-        return image.save(&target,"PNG")&&target.commit();
+        if(!image.save(&target,"PNG")) {
+            qWarning()<<"generated PNG encoding failed"<<target.error()<<target.errorString();return false;
+        }
+        if(!target.commit()) {
+            qWarning()<<"generated PNG atomic commit failed"<<target.error()<<target.errorString();return false;
+        }
+        return true;
     }
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
