@@ -36,6 +36,9 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterChanged)
     Q_PROPERTY(bool filterPersistent READ isFilterPersistent WRITE setFilterPersistent NOTIFY filterChanged)
     Q_PROPERTY(bool hasFilter READ hasFilter NOTIFY filterChanged)
+    Q_PROPERTY(qint64 decodedCacheBytes READ decodedCacheBytes NOTIFY cacheChanged)
+    Q_PROPERTY(int decodedCacheCount READ decodedCacheCount NOTIFY cacheChanged)
+    Q_PROPERTY(bool isLastDecodeCacheHit READ isLastDecodeCacheHit NOTIFY imageChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -109,11 +112,15 @@ public:
     Q_INVOKABLE void setFilter(const QString& pattern, bool persistent = false);
     Q_INVOKABLE void clearFilter();
     Q_INVOKABLE void toggleFilterPersistence();
+    qint64 decodedCacheBytes() const;
+    int decodedCacheCount() const;
+    bool isLastDecodeCacheHit() const;
+    Q_INVOKABLE void clearDecodedCache();
 
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
-    void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged();
+    void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged(); void cacheChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
     // The folder tree was just shown by command; the UI should move keyboard focus into it.
