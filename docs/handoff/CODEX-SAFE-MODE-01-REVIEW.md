@@ -1,0 +1,70 @@
+# SAFE-MODE-01 independent review preparation
+
+Status: preparation only, not a qualified candidate or review approval.
+Implementing lane: Codex, branch `codex/safe-mode-01`, assigned worktree
+`.worktrees/codex-safe-mode-01`, build `build-codex-safe-mode-01`.
+The lead must pin the final source/evidence commit after the pending shared build
+corrections and required candidate gates. A reviewer must come from another lane
+and use an isolated checkout/build. Do not review a moving branch as though it
+were the final candidate. Claude service review of this separate SAFE payload
+still needs the user's concrete authorization; PLATFORM/FS approvals do not cover it.
+
+## Frozen scope
+
+Read `docs/SAFE-MODE-01-PLAN.md`, `docs/REQUIREMENTS.md`, and the F064/F057 engine
+assignment in `docs/AGENT-LANES-PLAN.md`. This packet includes safe startup,
+configuration diff/backup/checked restore and the crash-recovery engine. Claude
+owns later recovery UI. No product QML changes or original-media writes belong
+to this packet. Hardware/physical power-loss qualification remains unverified.
+
+## Behaviors requiring independent inspection
+
+- Early native Unicode parsing, Qt GUI option compatibility, argument rejection
+  before mutation, QCore-only maintenance/help/version, exact bounded stdout and
+  stable exit/status codes. Maintenance must never instantiate viewer owners.
+- Pre-QGui safe temporary namespace, original settings and evidence preservation,
+  actual software RHI/backend/frame/RGB proof, owner lifetime through outstanding
+  work, and normal-launch visibility of original preferences after safe exit.
+- Raw primary/backup presence and exact bytes, bounded reads and revisions,
+  supported/corrupt/future handling, sealed exclusive backup packages, fixed member
+  names and bounded manifest validation, cancellation and partial-package refusal.
+- Immutable preview plans and fingerprints, bounded aggregate/depth/row output,
+  schema/policy/scope/package/namespace/revision revalidation, unknown nested data
+  preservation, no applicable plan after truncation or unsupported input, and an
+  exact sealed raw preimage before primary replacement. NoChange still checks both
+  primary and backup. Last-good use is explicit and cannot bypass future primary.
+- Session guard before settings lock, nonce/PID/start/namespace claim identity,
+  same-process reclaim revocation, offline refusal for live/ambiguous ownership,
+  other-slot preservation, atomic checkpoint position/sequence/revision, and clean
+  final marks only for the newest acknowledged successful checkpoint.
+- Value-owned asynchronous jobs, one active/one latest pending, cancellation,
+  guarded controller completion and reentrant generation changes, bounded shutdown,
+  explicit-open precedence even on failure, late claims, lazy resume and empty folders.
+- Shipped command/binding behavior and settings writer compatibility across all
+  existing callers. Production must have no private test hooks or crash-helper mode.
+
+## Current actual evidence and open gates
+
+`docs/verification/SAFE-MODE-01.md` and its referenced raw artifacts are authoritative
+for measured results, including failures. Release process verification passed33
+commands on Windows with actual D3D11 CPU device/frame/RGB evidence. An intervening
+zero-frame attempt is retained and remains unexplained; do not replace it with a
+claim inferred from renderer request flags. Physical power loss is not measured.
+
+Real owned-child restore interruption tests cover supported and corrupt primary
+with a supported last-good base at four transaction boundaries: before evidence,
+after sealed preimage, before replacement and after replacement. Eight cases
+passed, including exact original pair/preimage and OS-lock release checks. These
+are process-death checks, not filesystem durability or physical power-loss proof.
+
+First full Windows and Docker builds failed because settings-only consumers were
+not attached to the recovery engine. Dedicated recovery CMake tests then exposed
+a doubled catalog resource alias;13 policy cases fail closed as Unreadable.
+Both shared build corrections await the serial integration lock. Startup59/59 and
+controller10/10 passed; these are not substitutes for the complete candidate gates.
+
+Required before this packet can become done: both shared corrections, all required
+Windows and Docker/Linux tests including actual software-RHI process proof,
+independent cross-lane review of a pinned candidate, any resulting fixes, serial
+main merge and actual integrated checks. Report failed runs and unavailable physical
+platform tests explicitly. Do not disable existing tests or weaken renderer proof.
