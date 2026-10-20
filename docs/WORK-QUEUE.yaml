@@ -522,9 +522,7 @@ tasks:
     milestone: M3
     priority: 7
     owner: lead
-    state: done
-    commit: 090ccc8
-    evidence: docs/verification/FILTER-01.md; independent review approved; integrated 090ccc8 Windows scripts/build.ps1 -Test 22/22 (273.49s) and Linux docker build 22/22 (175.12s)
+    state: implementing
     branch: agent/filter
     worktree: .worktrees/filter
     build: build-filter
