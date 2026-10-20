@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock: {holder: gemini, branch: agent/monitor-output, started: "2026-10-20T14:28:00-06:00"}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -424,7 +424,14 @@ tasks:
     milestone: M5
     priority: 7
     owner: lead
-    state: ready
+    owner_lane: gemini
+    state: integration
+    branch: agent/monitor-output
+    worktree: .worktrees/monitor-output
+    build: build-monitor-output
+    plan: docs/MONITOR-OUTPUT-01-PLAN.md
+    evidence: docs/verification/MONITOR-OUTPUT-01.md
+    memory_action: act_mvh4wm12_cea4af8ff6b3
     depends: [GRID-PREVIEW-01, PLATFORM-01, CACHE-01]
     outcome: Explicit second-display output lifecycle and clean image routing
     acceptance: Native display capabilities and stable-identity fallback; mirror, pinned reference and comparison output; output-specific viewport/color/scale; shared decode and bounded aggregate CPU/GPU ownership; closing output leaves controller usable
