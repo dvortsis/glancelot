@@ -2,7 +2,7 @@ schema: 1
 project: glancelot
 integration_branch: main
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: "agent/meta-hud", branch: "agent/meta-hud", started: "2026-10-19T22:08:00Z"}
+integration_lock: {holder: null, branch: null, started: null}
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -554,7 +554,9 @@ tasks:
     milestone: M3
     priority: 6
     owner_lane: gemini
-    state: implementing
+    state: done
+    commit: 4d97a79
+    integrated_evidence: integrated 4d97a79 Windows scripts/build.ps1 -Test 25/25 and Linux docker build 25/25
     branch: agent/meta-hud
     worktree: .worktrees/meta-hud
     build: build-meta-hud
@@ -563,6 +565,7 @@ tasks:
     owner: lead
     depends: [IO-01]
     outcome: Bounded asynchronous metadata HUD and accurate basic image/index status
+    evidence: docs/verification/META-HUD-01.md; independent review approved; Windows scripts/build.ps1 -Test 25/25 (177.95s); Linux Docker Qt 25/25 (114.06s)
     acceptance: No parsing on UI/render thread; generation validation; malformed/large metadata fixtures; histogram remains M5
   - id: INPUT-02
     requirements: [IN-01, IN-02, IN-03, IN-05]
