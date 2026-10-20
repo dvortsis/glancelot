@@ -10,6 +10,8 @@
 #include "glancelot/viewer_controller.hpp"
 #include "glancelot/command_registry.hpp"
 #include "binding_validation.hpp"
+#include "recovery_session.hpp"
+#include "window_claim_guard.hpp"
 #include "glancelot/io_scheduler.hpp"
 #include "glancelot/filter_state.hpp"
 #include "glancelot/navigation.hpp"
@@ -42,6 +44,7 @@
 #include <deque>
 #include <stop_token>
 #include <utility>
+#include <limits>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -160,6 +163,13 @@ struct ViewerController::Private {
     int positionRetries{};
     bool positionDirty{}, restoreRequested{};
     QTimer positionTimer;
+    std::unique_ptr<recovery::Session> recoverySession;
+    WindowClaim recoveryClaim;
+    std::optional<WindowClaim> pendingRecoveryClaim;
+    recovery::ResumeState recoveryResume;
+    QTimer recoveryPoll;
+    quint64 checkpointSequence{},reportedCheckpointFailure{},recoveryEpoch{};
+    bool recoveryResumeReady{},restorePending{},explicitPositionIntent{},safeMode{},recoveryFinalized{},beginFailureReported{},recoveryRetiring{};
     // Paths this window just moved to the trash (DELETE-01); cleared by the next explicit open.
     QStringList removedPaths;
     bool removedCovers(const QString& value) const {
@@ -236,6 +246,37 @@ struct ViewerController::Private {
         trace("controller:settings-loaded");
         positionTimer.setSingleShot(true); positionTimer.setInterval(500);
         QObject::connect(&positionTimer,&QTimer::timeout,q,[this]{ writePosition(); });
+        recoveryPoll.setInterval(25);
+        QObject::connect(&recoveryPoll,&QTimer::timeout,q,[this]{
+            if(!recoverySession){recoveryPoll.stop();return;}
+            const QPointer<ViewerController> alive(q);const auto epoch=recoveryEpoch;
+            const auto state=recoverySession->snapshot();
+            if(recoveryRetiring) {
+                if(state.busy)return;
+                auto pending=std::move(pendingRecoveryClaim);pendingRecoveryClaim.reset();
+                recoverySession.reset();recoveryClaim={};recoveryRetiring=false;recoveryResumeReady=false;recoveryFinalized=false;
+                recoveryPoll.stop();
+                if(pending)q->setWindowClaim(*pending);
+                else if(positionDirty)writePosition();
+                return;
+            }
+            if(state.begun&&!recoveryResumeReady) {
+                recoveryResumeReady=true;recoveryResume=state.beginning.previous;
+                if(restorePending&&!explicitPositionIntent)q->restoreWindow();
+                if(!alive||epoch!=recoveryEpoch)return;
+            }
+            if(state.beginFinished&&!state.begun&&!state.busy&&!beginFailureReported) {
+                beginFailureReported=true;
+                status="Browsing recovery is unavailable. You can keep viewing images.";emit q->stateChanged();
+                if(!alive||epoch!=recoveryEpoch)return;
+            }
+            if(!state.busy&&state.acceptedSequence>state.persistedSequence&&reportedCheckpointFailure!=state.acceptedSequence) {
+                reportedCheckpointFailure=state.acceptedSequence;
+                status="This browsing position could not be saved. Your previous saved position is kept.";emit q->stateChanged();
+                if(!alive||epoch!=recoveryEpoch)return;
+            }
+            if(!state.busy&&!positionDirty&&state.beginFinished)recoveryPoll.stop();
+        });
         deadline.setSingleShot(true); deadline.setInterval(15000);
         QObject::connect(&deadline,&QTimer::timeout,q,[this]{ fail("Decoder timed out. You can open another image or retry."); });
         prefetchDeadline.setSingleShot(true);prefetchDeadline.setInterval(15000);
@@ -336,6 +377,19 @@ struct ViewerController::Private {
     }
     bool writePosition(bool final = false) {
         positionTimer.stop();
+        if(recoverySession&&!recoveryRetiring) {
+            if(positionDirty&&slot>0&&!recoveryFinalized) {
+                if(checkpointSequence<std::numeric_limits<quint64>::max()&&
+                   recoverySession->accept({pendingFolder,pendingImage,checkpointSequence+1})) {
+                    ++checkpointSequence;positionDirty=false;recoveryPoll.start();
+                }
+            }
+            if(final&&!recoveryFinalized) {
+                recoveryFinalized=true;recoveryPoll.stop();
+                return recoverySession->close(1000,!positionDirty);
+            }
+            return !positionDirty;
+        }
         if (!positionDirty || slot<=0) return true;
         const QString folder=pendingFolder,image=pendingImage;
         const int target=slot;
@@ -351,6 +405,10 @@ struct ViewerController::Private {
         if (!final && positionDirty && (result.code==SettingsStatus::Busy || result.code==SettingsStatus::WriteFailed) && ++positionRetries<=8)
             positionTimer.start(500);
         return result.ok();
+    }
+    void retireRecovery() {
+        if(!recoverySession||recoveryRetiring)return;
+        writePosition();recoveryFinalized=true;recoverySession->close(0,!positionDirty);
     }
     QString cacheKey(const QString& file) const {
         return fs_watch::key(file); // Pure text; worker tokens validate the source.
@@ -378,7 +436,7 @@ struct ViewerController::Private {
         if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active. Start Glancelot with --reset-settings to set a damaged file aside."; return; }
         if (result.recovered) status="Settings were damaged; your last saved copy was restored.";
         const auto resolvedBindings=glancelot::resolveCommandBindings(object.value("bindings").toObject());
-        if(resolvedBindings.valid)bindings=resolvedBindings.effective.toVariantMap();
+        if(resolvedBindings.valid)bindings=resolvedBindings.effective;
         else status=resolvedBindings.error;
         const auto savedBoundary=object.value("boundary").toString();
         if (savedBoundary=="continue" || savedBoundary=="stop" || savedBoundary=="loop") boundary=savedBoundary;
@@ -1029,22 +1087,65 @@ ViewerController::~ViewerController()=default; // ~Private flushes the pending w
 int ViewerController::windowSlot() const{return d->slot;}
 void ViewerController::setWindowSlot(int slot){
     if(slot<0||slot==d->slot)return;
-    d->writePosition();
+    ++d->recoveryEpoch;
+    if(d->recoverySession)d->retireRecovery();else d->writePosition();
+    if(d->recoverySession&&d->recoverySession->snapshot().busy) {
+        d->recoveryRetiring=true;d->pendingRecoveryClaim.reset();d->recoveryClaim={};
+        d->slot=slot;d->positionDirty=false;d->positionTimer.stop();d->recoveryPoll.start();
+        if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+        emit stateChanged();return;
+    }
+    d->recoverySession.reset();d->recoveryClaim={};d->recoveryPoll.stop();
+    d->recoveryRetiring=false;d->pendingRecoveryClaim.reset();
+    d->recoveryResumeReady=false;d->recoveryFinalized=false;d->checkpointSequence=0;
     d->positionTimer.stop(); d->positionDirty=false;
     d->slot=slot;
     if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
     emit stateChanged();
 }
+void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
+    const auto claim=glancelot::detail::WindowClaimAccess::get(identity);
+    if(!claim||!claim->active.load()){d->pendingRecoveryClaim.reset();setWindowSlot(0);return;}
+    if(!d->recoveryRetiring&&glancelot::detail::WindowClaimAccess::get(d->recoveryClaim)==claim)return;
+    ++d->recoveryEpoch;
+    if(d->recoverySession)d->retireRecovery();else d->writePosition();
+    d->positionTimer.stop();d->recoveryPoll.stop();
+    if(d->recoverySession&&d->recoverySession->snapshot().busy) {
+        d->pendingRecoveryClaim=identity;d->recoveryRetiring=true;d->slot=0;d->positionDirty=false;
+        d->recoveryPoll.start();emit stateChanged();return;
+    }
+    d->recoverySession.reset();d->recoveryClaim=identity;d->slot=claim->slot;d->checkpointSequence=0;
+    d->recoveryRetiring=false;d->pendingRecoveryClaim.reset();
+    d->positionDirty=false;d->recoveryResumeReady=false;d->recoveryFinalized=false;d->restoreRequested=false;
+    d->beginFailureReported=false;d->reportedCheckpointFailure=0;
+    d->recoverySession=std::make_unique<recovery::Session>(identity);d->recoveryPoll.start();
+    if(!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    else if(d->navigationReady&&!d->directoryPending&&!d->nav.snapshot().directory.empty()) {
+        d->pendingImage.clear();d->pendingFolder=displayPath(d->nav.snapshot().directory);
+        d->positionDirty=true;d->positionTimer.start();
+    }
+    emit stateChanged();
+}
+void ViewerController::setSafeMode(bool enabled){if(d->safeMode==enabled)return;d->safeMode=enabled;emit stateChanged();}
 void ViewerController::flushWindowPosition(){d->writePosition();}
 void ViewerController::restoreWindow(){
-    if(d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
-    QJsonObject settings;
-    if(!readSettings(settings).ok())return;
-    const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
-    const QString folder=entry.value("folder").toString(),image=entry.value("image").toString();
+    if(d->safeMode||d->explicitPositionIntent||d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
+    QString folder,image;
+    if(d->recoverySession) {
+        if(!d->recoveryResumeReady){d->restorePending=true;d->recoveryPoll.start();return;}
+        folder=d->recoveryResume.folder;image=d->recoveryResume.image;
+    }else {
+        QJsonObject settings;if(!readSettings(settings).ok())return;
+        const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
+        folder=entry.value("folder").toString();image=entry.value("image").toString();
+    }
+    d->restorePending=false;
     if(folder.isEmpty()&&image.isEmpty())return;
     d->restoreRequested=true;
+    const auto token=d->generation,navigation=d->navigationGeneration,epoch=d->recoveryEpoch;
+    const QPointer<ViewerController> alive(this);
     d->status="Restoring your last folder…";emit stateChanged();
+    if(!alive||d->safeMode||d->explicitPositionIntent||epoch!=d->recoveryEpoch||token!=d->generation||navigation!=d->navigationGeneration)return;
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[image=nativePath(image),folder=nativePath(folder),folderText=folder,cancellation=d->navigationStop.get_token()]() mutable {
         namespace fs=std::filesystem;
         std::optional<fs::path> destination;QString message;std::error_code ec;
@@ -1216,7 +1317,7 @@ bool ViewerController::openTerminal(const QString& directory) {
     }
     return true;
 }
-QString ViewerController::status() const{return d->status;}
+QString ViewerController::status() const{return d->safeMode?QStringLiteral("Safe mode · ")+d->status:d->status;}
 bool ViewerController::loading() const{return d->loading;}
 bool ViewerController::imageReady() const{return d->imageReady;}
 bool ViewerController::isCurrentImage(const QString& path) const {
@@ -1241,6 +1342,7 @@ void ViewerController::open(const QString& value){
     // Consume the caller's intent once: decode may wait for registration, while
     // a nested explicit open must not inherit the navigation-only cache policy.
     const bool fromNavigation=std::exchange(d->navigationOpen,false);
+    if(!fromNavigation){d->explicitPositionIntent=true;d->restorePending=false;}
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(!fromNavigation) {
@@ -1262,8 +1364,8 @@ void ViewerController::open(const QString& value){
     d->decodeAwaitingBaseline=true;d->decodeStartedWithoutBaseline=false;d->decodeStart.start();
     emit stateChanged(); d->scan(path,d->generation);
 }
-void ViewerController::next(){d->navigate(1,false);}void ViewerController::previous(){d->navigate(-1,false);}
-void ViewerController::nextFolder(){d->navigate(1,true);}void ViewerController::previousFolder(){d->navigate(-1,true);}
+void ViewerController::next(){d->explicitPositionIntent=true;d->navigate(1,false);}void ViewerController::previous(){d->explicitPositionIntent=true;d->navigate(-1,false);}
+void ViewerController::nextFolder(){d->explicitPositionIntent=true;d->navigate(1,true);}void ViewerController::previousFolder(){d->explicitPositionIntent=true;d->navigate(-1,true);}
 void ViewerController::trigger(const QString& id){
     if(id=="next")next();else if(id=="previous")previous();else if(id=="next-folder")nextFolder();else if(id=="previous-folder")previousFolder();
     else if(id=="refresh"){d->observe();d->monitor->refresh();}
@@ -1332,6 +1434,7 @@ bool ViewerController::treePinned() const{return d->treePin;}
 void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tree=value;if(!d->save({"tree"}))d->status="Folder tree setting changed; settings could not be saved.";emit stateChanged();if(value)emit treeShown();}
 void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save({"treePinned"}))d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::cancelDirectoryNavigation() {
+    d->explicitPositionIntent=true;d->restorePending=false;
     if(d->directoryPending) {
         d->navigationStop.request_stop();d->navigationStop=std::stop_source{};
         ++d->navigationGeneration;d->pendingNavigation.reset();d->navigationIntents.clear();
@@ -1340,6 +1443,7 @@ void ViewerController::cancelDirectoryNavigation() {
     d->directoryPending=false;d->directoryError.clear();emit stateChanged();
 }
 void ViewerController::navigateDirectory(const QString& value) {
+    d->explicitPositionIntent=true;d->restorePending=false;
     d->navigationIntents.clear();
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     const auto cancellation=d->navigationStop.get_token();
@@ -1362,6 +1466,7 @@ void ViewerController::navigateDirectory(const QString& value) {
     },"No supported images in this folder."});
 }
 void ViewerController::openFolder(const QString& value){
+    d->explicitPositionIntent=true;d->restorePending=false;
     d->cancelLookahead();
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();

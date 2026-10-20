@@ -988,6 +988,12 @@ private slots:
         Session invalid(glancelot::WindowClaim{});QVERIFY(invalid.waitForIdle(3000));QVERIFY(!invalid.snapshot().begun);
         QCOMPARE(invalid.snapshot().beginning.status.code,Code::Conflict);QVERIFY(!invalid.close(3000));
     }
+    void recoverySessionCannotCleanWhenCallerHasUnqueuedSuccess() {
+        QTemporaryDir dir;QVERIFY(dir.isValid());WindowSlot slot(dir.path(),0);Session session(slot.claimIdentity());
+        QVERIFY(session.waitForIdle(3000));QVERIFY(session.snapshot().begun);const auto original=read(dir.filePath("settings.json"));
+        QVERIFY(!session.close(3000,false));QVERIFY(session.snapshot().closed);QCOMPARE(session.snapshot().finalStatus.code,Code::WriteFailed);
+        QCOMPARE(read(dir.filePath("settings.json")),original);
+    }
     void revokedOwnerImmediatelyBeforeReplaceCannotApply() {
         QTemporaryDir dir,source,packages;QVERIFY(dir.isValid()&&source.isValid()&&packages.isValid());
         const QByteArray primary("{\"schema\":1}");QVERIFY(write(dir.filePath("settings.json"),primary));

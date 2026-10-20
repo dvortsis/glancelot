@@ -23,7 +23,7 @@ public:
     bool waitForIdle(int timeoutMs) const;
     // Stop accepting navigation and request a final save/clean. A timeout is
     // never clean success; the still-running value-owned job remains safe.
-    bool close(int timeoutMs);
+    bool close(int timeoutMs,bool allowClean=true);
 private:
     struct State;
     std::shared_ptr<State> state_;

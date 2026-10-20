@@ -15,6 +15,7 @@ struct Session::State {
     Snapshot snapshot;
     std::optional<CheckpointInput> pending;
     QString persistedRevision;
+    bool allowClean{true};
 #ifdef GLANCELOT_RECOVERY_TESTING
     std::optional<settings_detail::TransactionHooks> hooks=settings_detail::transactionHooks?
         std::optional{*settings_detail::transactionHooks}:std::nullopt;
@@ -89,8 +90,8 @@ void Session::run(const std::shared_ptr<State>& state) {
             std::lock_guard lock(state->mutex);
             if(state->pending){input=std::move(state->pending);state->pending.reset();}
             else if(state->snapshot.closing) {
-                if(state->snapshot.acceptedSequence!=state->snapshot.persistedSequence) {
-                    state->snapshot.finalStatus=state->snapshot.lastAttempt.status;state->snapshot.closed=true;
+                if(!state->allowClean||state->snapshot.acceptedSequence!=state->snapshot.persistedSequence) {
+                    state->snapshot.finalStatus=state->allowClean?state->snapshot.lastAttempt.status:Status{Code::WriteFailed,{},0};state->snapshot.closed=true;
                     state->snapshot.busy=false;state->changed.notify_all();return;
                 }
                 finish=true;revision=state->persistedRevision;sequence=state->snapshot.persistedSequence;
@@ -123,8 +124,8 @@ bool Session::waitForIdle(int timeoutMs) const {
     std::unique_lock lock(state_->mutex);
     return state_->changed.wait_for(lock,std::chrono::milliseconds(std::max(0,timeoutMs)),[&]{return !state_->snapshot.busy;});
 }
-bool Session::close(int timeoutMs) {
-    {std::lock_guard lock(state_->mutex);state_->snapshot.closing=true;state_->changed.notify_all();}
+bool Session::close(int timeoutMs,bool allowClean) {
+    {std::lock_guard lock(state_->mutex);state_->allowClean&=allowClean;state_->snapshot.closing=true;state_->changed.notify_all();}
     start(state_);
     std::unique_lock lock(state_->mutex);
     if(!state_->changed.wait_for(lock,std::chrono::milliseconds(std::max(0,timeoutMs)),[&]{return state_->snapshot.closed;}))return false;

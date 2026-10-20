@@ -324,10 +324,42 @@ releases the owner. No-navigation clean and invalid-claim refusal also pass.
 Actual outputs/project are session-* in safe-mode-01/. This tests the real worker
 and engine, not yet controller decode/navigation integration or whole-app teardown.
 
+## Controller checkpoint and lazy-resume integration
+
+The controller attaches the real captured claim to recovery::Session, queues only
+successful decoded images or successful directory visits, and captures begin's
+previous payload without scanning media. Lazy restore waits for that payload.
+Every explicit open/visit (including a failed one) suppresses delayed resume.
+Resume rechecks owner lifetime, recovery epoch and navigation/image generations
+after announcing status, so a reentrant explicit request or destroyed controller
+cannot receive the old restore job. Safe-mode feedback uses the existing status
+property and safe mode suppresses resume; no QML or theme token changes.
+
+Shutdown closes only after the newest accepted position persists. Unqueued success,
+failed final save or timeout cannot mark clean. Claim replacement asynchronously
+retires the outgoing session and holds only the latest next claim, avoiding extra
+running workers. Numeric legacy callers retain their existing position-memory path.
+
+Actual Windows component CTest passed3/3 in13.59s: backend127/127 zero skips11855ms,
+startup53/53 zero skips12ms and controller10/10 zero skips1509ms. Controller cases
+use the actual core/platform and decoder sources with generated PNG/empty folders:
+successful empty-folder save/clean, failed explicit visit before a late claim,
+explicit visit while begin is contended, successful versus failed decode persistence,
+reentrant visit precedence, owner destruction in resume status, safe feedback and
+blocked outgoing claim replacement (measured1ms). The first real controller compile
+found an earlier registry-adapter toVariantMap type mismatch; removing that needless
+conversion fixes it. First test failures were native path separator comparisons;
+assertions now normalize separators. Both failure outputs are retained with actual
+corrected outputs/project as controller-* in safe-mode-01/.
+
+This component does not qualify main startup dispatch, safe-root/RHI behavior,
+process interruption or full legacy/platform regression. Lead build amendment
+4745c0e prepares real source lists and the required dedicated controller target;
+release and full test wiring still need enablement before any candidate gate.
+
 ## Remaining complete scope
 
-Controller integration of the atomic navigation and lifecycle checkpoints,
-early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
+Executable early Unicode/maintenance/safe startup, actual software-RHI frame/RGB
 verification and complete failure/cancellation/process-interruption coverage remain
 to implement and verify. Enable frozen RecoverySources outside BUILD_TESTING and
 RecoveryTests unconditionally with real sources before candidate qualification.
