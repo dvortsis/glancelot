@@ -1,0 +1,282 @@
+#include "glancelot/pane_layout.hpp"
+#include "glancelot/filmstrip_model.hpp"
+#include "glancelot/folder_tree_model.hpp"
+#include "glancelot/directory_entry_model.hpp"
+#include "glancelot/settings_file.hpp"
+#include "../src/app/thumbnail_id.hpp"
+#include "../src/app/file_grid_wiring.hpp"
+#include "../src/app/file_operation_wiring.hpp"
+#include "glancelot/file_operation_service.hpp"
+#include "glancelot/file_operations.hpp"
+#include <condition_variable>
+#include <mutex>
+#include <QMutex>
+#include <QProcess>
+#include <cmath>
+#include <map>
+#include <QJsonObject>
+#include "glancelot/theme_manager.hpp"
+#include "glancelot/viewer_controller.hpp"
+#include "image_canvas.hpp"
+#include <QFontDatabase>
+#include <QGuiApplication>
+#include <QClipboard>
+#include <QMimeData>
+#include <QQuickStyle>
+#include <QQuickImageProvider>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include <QSignalSpy>
+#include <QTemporaryDir>
+#include <QWheelEvent>
+#include <QtTest>
+#include <atomic>
+#include <cmath>
+
+class PreviewProvider final : public QQuickImageProvider {
+public:
+    PreviewProvider() : QQuickImageProvider(Image) {}
+    std::atomic_int requests{0};
+    std::atomic_bool succeed{false};
+    QMutex mutex;
+    QStringList paths; // every decoded request path, to prove non-images never reach the thumbnail pipeline
+    QStringList requested() { QMutexLocker lock(&mutex); return paths; }
+    QImage requestImage(const QString& id, QSize* size, const QSize& requested) override {
+        ++requests;
+        const auto parts = thumbnail_id::decode(id);
+        { QMutexLocker lock(&mutex); paths << (parts ? parts->path : QStringLiteral("<malformed>")); }
+        if (size) *size = QSize(32, 24);
+        Q_UNUSED(requested);
+        // By default previews fail deliberately; each cell must remain named and activatable. Review captures use
+        // generated previews instead, except for names containing "broken".
+        if (!succeed || (parts && parts->path.contains("broken"))) return {};
+        QImage image(160, 120, QImage::Format_RGB32);
+        const uint seed = qHash(parts ? parts->path : id);
+        image.fill(QColor::fromHsv(int(seed % 360), 90, 170));
+        for (int y = 0; y < 120; ++y) for (int x = 0; x < 160; x += 1) if (y > 70 + int(20 * std::sin(x / 18.0 + seed))) image.setPixelColor(x, y, QColor::fromHsv(int((seed / 7) % 360), 120, 90));
+        if (size) *size = image.size();
+        return image;
+    }
+};
+
+// Disposable folders of empty "Photo N.png" files for tests that only need a listing; shared across cases so the
+// 10,000-entry fixture is generated once.
+QTemporaryDir* listingFixture(int count) {
+    static std::map<int, std::unique_ptr<QTemporaryDir>> fixtures;
+    if (count < 0) { fixtures.clear(); return nullptr; }
+    auto& slot = fixtures[count];
+    if (!slot) {
+        slot = std::make_unique<QTemporaryDir>();
+        for (int i = 0; i < count; ++i) { QFile file(slot->filePath(QString("Photo %1.png").arg(i))); if (file.open(QIODevice::WriteOnly)) file.close(); }
+    }
+    return slot.get();
+}
+QString gridKey(const QString& path) { return file_grid_wiring::directoryKey(path); }
+
+// DELETE-01: the UI harness never touches the real Trash/Recycle Bin. This backend renames (never copies or deletes)
+// into a disposable folder, refuses anything outside the temp directory, can fail chosen file names and can be held.
+struct TestTrash final : glancelot::TrashBackend {
+    std::filesystem::path bin;
+    std::mutex mutex; std::condition_variable wake; bool held{}; int waiting{};
+    std::map<QString, glancelot::DeleteOutcome> fail; // by file name
+    std::atomic_int calls{0};
+    explicit TestTrash(const QString& folder) : bin(folder.toStdWString()) {}
+    void hold() { std::lock_guard lock(mutex); held = true; }
+    void release() { { std::lock_guard lock(mutex); held = false; } wake.notify_all(); }
+    int blocked() { std::lock_guard lock(mutex); return waiting; }
+    glancelot::DeleteResult moveToTrash(const glancelot::MutationTarget& target) override {
+        { std::unique_lock lock(mutex); ++waiting; wake.wait(lock, [this] { return !held; }); --waiting; }
+        const int n = ++calls;
+        const QString name = QString::fromStdWString(target.path.filename().wstring());
+        const QString temp = QDir::cleanPath(QDir::tempPath()).toCaseFolded();
+        if (!QDir::cleanPath(QString::fromStdWString(target.path.wstring()).replace('\\', '/')).toCaseFolded().startsWith(temp))
+            return {target.path, glancelot::DeleteOutcome::Denied, "test trash only accepts generated files"};
+        { std::lock_guard lock(mutex); if (auto it = fail.find(name); it != fail.end()) return {target.path, it->second, "simulated"}; }
+        std::error_code ec;
+        std::filesystem::rename(target.path, bin / (std::to_wstring(n) + L"-" + target.path.filename().wstring()), ec);
+        return {target.path, ec ? glancelot::DeleteOutcome::Failed : glancelot::DeleteOutcome::Trashed, ec ? ec.message() : std::string{}};
+    }
+};
+
+struct Harness {
+    QTemporaryDir config;
+    ViewerController viewer;
+    ThemeManager theme;
+    FilmstripModel model;
+    FolderTreeModel folders;
+    PaneLayout layout;
+    DirectoryEntryModel fileGrid;
+    QTemporaryDir trashBin;
+    TestTrash* trash = new TestTrash(trashBin.path());
+    FileOperationService fileOperations{std::unique_ptr<glancelot::TrashBackend>(trash)};
+    QQmlApplicationEngine engine;
+    PreviewProvider* provider = new PreviewProvider;
+    QQuickWindow* window{};
+    explicit Harness(bool live = false, int slot = 0) {
+        if (slot > 0) layout.setSlot(slot); // as app/main.cpp: the slot's layout is loaded before the UI
+        // Load the UI from source: drop the executable's directory so a build-tree "Glancelot" module cannot shadow it.
+        QStringList imports = engine.importPathList();
+        imports.removeAll(QCoreApplication::applicationDirPath());
+        engine.setImportPathList(imports);
+        engine.addImageProvider("thumb", provider);
+        engine.rootContext()->setContextProperty("viewer", &viewer);
+        engine.rootContext()->setContextProperty("paneLayout", &layout);
+        engine.rootContext()->setContextProperty("theme", &theme);
+        engine.rootContext()->setContextProperty("filmstrip", &model);
+        engine.rootContext()->setContextProperty("folderTree", &folders);
+        engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
+        engine.rootContext()->setContextProperty("fileOperations", &fileOperations);
+        file_operation_wiring::follow(fileOperations, viewer, folders); // the shipped reconciliation wiring
+        // Tests that inject a listing with fill() must not be overwritten by the (empty) controller snapshot.
+        // Live wiring is app/main.cpp's: the same file_grid_wiring helpers, plus the filmstrip connections.
+        if (live) {
+            QObject::connect(&viewer, &ViewerController::stateChanged, &model, [&] { model.sync(viewer.snapshot()); });
+            QObject::connect(&viewer, &ViewerController::filesInvalidated, &model, [&] { model.invalidate(); });
+            file_grid_wiring::followViewer(viewer, fileGrid);
+        }
+        file_grid_wiring::lockThumbnailEpoch(model, fileGrid);
+        engine.load(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Main.qml")));
+        if (!engine.rootObjects().empty()) window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+    }
+    QQuickItem* grid() const { return window->findChild<QQuickItem*>("photoGrid"); }
+    QQuickItem* view() const { return window->findChild<QQuickItem*>("photoGridView"); }
+    void showGrid() { viewer.trigger("grid"); window->requestActivate(); }
+    // Injects a real generated listing into the grid (non-live harness) with `current` as the viewed photo.
+    void fill(int count, int current = 0) {
+        QTemporaryDir* dir = listingFixture(count);
+        fileGrid.setCurrentImage(count ? dir->filePath(QString("Photo %1.png").arg(current)) : QString{});
+        fileGrid.setDirectory(dir->path());
+    }
+    int selected() const { return grid()->property("selectedIndex").toInt(); }
+    // Delegates are visual (not QObject) children, so walk the item tree.
+    QList<QQuickItem*> cells() const {
+        QList<QQuickItem*> found; QList<QQuickItem*> pending{view()};
+        while (!pending.isEmpty()) {
+            QQuickItem* item = pending.takeFirst();
+            if (item->objectName() == "photoGridCell") found << item;
+            pending << item->childItems();
+        }
+        return found;
+    }
+    QQuickItem* cell(int index) const { for (auto* c : cells()) if (c->property("index").toInt() == index) return c; return nullptr; }
+};
+
+// TOPBAR-THEME-01 helpers: find a named item anywhere in the visual tree, and WCAG contrast.
+static QQuickItem* namedItem(QQuickWindow* window, const QString& name) {
+    QList<QQuickItem*> pending{window->contentItem()};
+    while (!pending.isEmpty()) {
+        QQuickItem* item = pending.takeFirst();
+        if (item->objectName() == name) return item;
+        pending << item->childItems();
+    }
+    return nullptr;
+}
+static double relativeLuminance(const QColor& color) {
+    const auto channel = [](double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+}
+static double contrastRatio(const QColor& a, const QColor& b) {
+    const double x = relativeLuminance(a), y = relativeLuminance(b);
+    return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05);
+}
+static QColor over(const QColor& top, const QColor& below) { // source-over compositing onto an opaque color
+    const double a = top.alphaF();
+    return QColor::fromRgbF(top.redF() * a + below.redF() * (1 - a), top.greenF() * a + below.greenF() * (1 - a), top.blueF() * a + below.blueF() * (1 - a));
+}
+static QColor itemColor(QQuickItem* item, const char* property = "color") { return item ? item->property(property).value<QColor>() : QColor(); }
+static QQuickItem* buttonBackground(QQuickItem* button) { return button ? button->property("background").value<QQuickItem*>() : nullptr; }
+static QQuickItem* buttonIcon(QQuickItem* button) {
+    QList<QQuickItem*> pending{button};
+    while (!pending.isEmpty()) {
+        QQuickItem* item = pending.takeFirst();
+        if (item != button && item->property("paths").isValid() && item->property("name").toString().size()) return item;
+        pending << item->childItems();
+    }
+    return nullptr;
+}
+
+
+class AuditUiTests final : public QObject {
+    Q_OBJECT
+private slots:
+    void initTestCase() {
+        QQuickStyle::setStyle("Basic");
+        for (const char* face : {"Geist-Light", "Geist-Regular", "Geist-Medium", "Geist-SemiBold", "GeistMono-Regular"})
+            QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)));
+        qmlRegisterType<ImageCanvas>("Glancelot", 1, 0, "ImageCanvas");
+        qmlRegisterSingletonType(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Theme.qml")), "Glancelot", 1, 0, "Theme");
+        QDir().mkpath(".cache/audit");
+    }
+    void cleanupTestCase() { listingFixture(-1); }
+
+    // Visible items that leave the window, and visible Text that is clipped by its own width.
+    static QStringList probe(QQuickWindow* w) {
+        QStringList issues; QList<QQuickItem*> pending{w->contentItem()};
+        const QRectF win(0, 0, w->width(), w->height());
+        while (!pending.isEmpty()) {
+            QQuickItem* item = pending.takeFirst();
+            pending << item->childItems();
+            if (!item->isVisible() || item->opacity() <= 0.01 || item->width() <= 0 || item->height() <= 0) continue;
+            const QString cls = item->metaObject()->className();
+            if (cls.startsWith("QQuickText")) {
+                const qreal implicit = item->property("implicitWidth").toReal();
+                const int elide = item->property("elide").toInt();
+                const QString text = item->property("text").toString();
+                if (!text.isEmpty() && elide == 0 && item->property("wrapMode").toInt() == 0 && implicit > item->width() + 1) {
+                    const QRectF r(item->mapToScene(QPointF(0, 0)), QSizeF(item->width(), item->height()));
+                    if (win.intersects(r)) issues << QString("clipped-text '%1' implicit=%2 width=%3").arg(text.left(40)).arg(implicit).arg(item->width());
+                }
+            }
+            const QRectF r(item->mapToScene(QPointF(0, 0)), QSizeF(item->width(), item->height()));
+            if (!item->objectName().isEmpty() && (r.right() > win.right() + 1 || r.bottom() > win.bottom() + 1 || r.left() < -1 || r.top() < -1) && win.intersects(r))
+                issues << QString("outside-window %1 (%2) rect=%3,%4 %5x%6").arg(item->objectName(), cls).arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height());
+        }
+        return issues;
+    }
+
+    void matrix_data() {
+        QTest::addColumn<QString>("mode"); QTest::addColumn<int>("w"); QTest::addColumn<int>("h"); QTest::addColumn<QString>("family"); QTest::addColumn<QString>("tmode"); QTest::addColumn<qreal>("scale");
+        for (const QString mode : {"photo", "grid", "both"})
+            for (const QSize s : {QSize(540, 360), QSize(900, 600), QSize(1920, 1080)})
+                QTest::newRow(qPrintable(QString("%1-%2x%3-default").arg(mode).arg(s.width()).arg(s.height()))) << mode << s.width() << s.height() << QString() << QString() << 1.0;
+        for (const qreal scale : {1.5, 2.0})
+            QTest::newRow(qPrintable(QString("grid-900x600-scale%1").arg(scale))) << "grid" << 900 << 600 << QString() << QString() << scale;
+        QTest::newRow("both-540x360-scale1.5") << "both" << 540 << 360 << QString() << QString() << 1.5;
+    }
+    void matrix() {
+        QFETCH(QString, mode); QFETCH(int, w); QFETCH(int, h); QFETCH(QString, family); QFETCH(QString, tmode); QFETCH(qreal, scale);
+        Harness hs(true); QVERIFY(hs.window); hs.window->resize(w, h);
+        QTemporaryDir media; QVERIFY(media.isValid());
+        for (int i = 0; i < 24; ++i) { QImage img(640 + 40 * (i % 5), 480 + 30 * (i % 3), QImage::Format_RGB32); img.fill(QColor::fromHsv(i * 15, 180, 200)); QVERIFY(img.save(media.filePath(QString("Photo %1 with a rather long name.jpg").arg(i)))); }
+        if (!family.isEmpty()) hs.theme.setFamily(family);
+        if (!tmode.isEmpty()) hs.theme.setMode(tmode);
+        hs.viewer.setTextScale(scale);
+        hs.viewer.open(media.filePath("Photo 3 with a rather long name.jpg"));
+        QTRY_VERIFY_WITH_TIMEOUT(hs.viewer.fileCount() > 0, 10000);
+        if (mode == "grid") hs.viewer.trigger("grid"); else if (mode == "both") hs.viewer.trigger("view-combined"); else hs.viewer.trigger("view-preview");
+        hs.window->requestActivate(); QTest::qWait(1200);
+        const QString tag = QString("%1-%2x%3-%4-%5-s%6").arg(mode).arg(w).arg(h).arg(family.isEmpty() ? "def" : family, tmode.isEmpty() ? "def" : tmode).arg(scale);
+        QVERIFY(hs.window->grabWindow().save(".cache/audit/" + tag + ".png"));
+        for (const auto& issue : probe(hs.window)) qWarning().noquote() << "AUDIT" << tag << issue;
+    }
+
+    void dialogs() {
+        for (const QString cmd : {"palette", "shortcuts-help", "toggle-metadata", "arrange-panes", "delete-current-file"})
+            for (const QSize s : {QSize(540, 360), QSize(1180, 780)}) {
+                Harness hs(true); QVERIFY(hs.window); hs.window->resize(s);
+                QTemporaryDir media; QVERIFY(media.isValid());
+                for (int i = 0; i < 6; ++i) { QImage img(800, 600, QImage::Format_RGB32); img.fill(QColor::fromHsv(i * 40, 180, 200)); QVERIFY(img.save(media.filePath(QString("p%1.jpg").arg(i)))); }
+                hs.viewer.open(media.filePath("p1.jpg")); QTRY_VERIFY_WITH_TIMEOUT(hs.viewer.fileCount() > 0, 10000);
+                hs.window->requestActivate(); QTest::qWait(500);
+                hs.viewer.trigger(cmd); const bool ok = true; QTest::qWait(900);
+                const QString tag = QString("dialog-%1-%2x%3").arg(cmd).arg(s.width()).arg(s.height());
+                QVERIFY(hs.window->grabWindow().save(".cache/audit/" + tag + ".png"));
+                qInfo().noquote() << "AUDIT-DIALOG" << tag << "trigger=" << ok;
+                for (const auto& issue : probe(hs.window)) qWarning().noquote() << "AUDIT" << tag << issue;
+            }
+    }
+};
+QTEST_MAIN(AuditUiTests)
+#include "audit_ui_tests.moc"

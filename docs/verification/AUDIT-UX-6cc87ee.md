@@ -56,3 +56,45 @@ changed. Windows `scripts/build.ps1 -Test` on this commit: 29 of 29 passed (229 
 ## Suggested routing
 Items 1, 4, 5 and 9 are engine/service work for the Codex lane; 2, 3 and 7 touch the worker and `ui/Main.qml`
 (Claude owns the QML packet); 6 and 8 are Claude UI. Nothing here was fixed in this audit.
+
+---
+
+# Addendum: second test pass (goal "test anything not yet tested")
+
+Same pinned commit `6cc87ee`. A throwaway QtTest (`docs/verification/audit-ux/audit_ui_tests.cpp.txt`; needs a CMake target,
+not added because root CMake is lead-owned) loaded the real `ui/Main.qml` and swept 3 view modes x 3 window sizes plus text
+scale 1.5 and 2.0 (12 matrix cases) and 5 dialogs x 2 sizes. 15 of 15 cases ran with no failure; they check nothing by
+themselves, so the findings below come from screenshots and a scene probe (items outside the window, clipped text).
+Probe hits for grid rows below the viewport and the pane-resize handle at the window edge were false positives
+(virtualised rows, intentional edge handle). Software backend: the photo canvas does not render.
+
+## New findings
+10. **Moderate - Shortcuts dialog footer text collides at 540x360** (`dialog-shortcuts-help-540x360.png`): the hint
+    "Press ? ..." overlaps "Customize shortcuts in Settings..." and the result list shows only three rows.
+11. **Moderate - "Arrange panes" overlay labels overlap and truncate at 540x360** (`dialog-arrange-panes-540x360.png`):
+    "Top toolbar . move" covers the logo and Open button; "Image preview . ..." and "Status toolbar . m..." are cut off.
+12. **Minor - Settings tab strip is cut mid-label at 540x360** (`dialog-palette-540x360.png`, which opens Settings > Controls):
+    the first tab shows as "ce" with no scroll cue.
+13. **Moderate (dev-visible) - `ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined`** fires 814 times across
+    the 15 cases (about 40 per window creation). Together with `PhotoGrid.qml:298: Unable to assign [undefined] to int`
+    (22 times) it means a binding evaluates before its data exists. Both are pre-existing (also seen in the R9 FS-WATCH
+    review). The cheat sheet is the screen where item 10 appears, so check them together.
+14. **Minor - at text scale 1.5 and 2.0 the top bar is tight**: "Pho...jpg" is truncated and the view switcher stays
+    readable, but there is no room left (`grid-900x600-def-def-s2.png`, `both-540x360-def-def-s1.5.png`). Nothing overlaps.
+15. **Minor - "Viewing" badge covers part of the thumbnail** at larger text scales
+    (`both-540x360-def-def-s1.5.png`).
+
+## Code and startup robustness (no defects unless listed)
+- **Decoder worker fuzz (probe phase):** 155 inputs (24 random mutations each of JPEG, PNG, GIF, BMP and TIFF, truncations at
+  4/16/64/200 bytes, 0xFF headers, empty and random files). 97 accepted at probe, 58 rejected, 0 crashes, 0 hangs
+  (4 s limit). The pixel-transfer phase was not fuzzed (it needs the parent's shared-memory handshake).
+- **Command line:** missing file, directory, empty file, 300-character path, non-ASCII name, two files, unknown option
+  (exit 1) and non-numeric/negative `--quit-after` (exit 2) all behave sensibly.
+16. **Minor - `--window-size 99999x99999` hangs for more than 20 s** (and ignores `--quit-after`). The size is not clamped. This
+    is a test-automation option only.
+17. **Moderate - an unreachable UNC path stalls startup**: `\\nonexistent-host\share\a.jpg` with `--quit-after 2500`
+    took 8.9 s and exited 3, so roughly 6 s of the stall is on the startup thread. This matches finding 4 (filesystem calls
+    on the GUI thread) and matters for network shares.
+
+Seen working: Move-to-Recycle-Bin dialog (`dialog-delete-current-file-540x360.png`) is clear at the minimum size, with a
+destructive-styled primary action, a Cancel button and the file name shown.
