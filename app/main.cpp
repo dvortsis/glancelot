@@ -18,6 +18,7 @@
 #include "thumbnail_provider.hpp"
 #include "native_title_bar.hpp"
 #include "startup_intent.hpp"
+#include "startup_window_geometry.hpp"
 #include "startup_environment.hpp"
 #include "settings_maintenance.hpp"
 #include "presentation_window.hpp"
@@ -35,6 +36,10 @@
 #include <QSysInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include <array>
+#include <algorithm>
+#include <limits>
 #include <QTimer>
 #include <cstdio>
 #include <QIcon>
@@ -67,6 +72,71 @@ bool writeOutput(const QByteArray& bytes) {
 int startupError(const QString& code,const QString& detail,int exitCode) {
     const QJsonObject result{{"schema",1},{"code",code},{"detail",detail.left(1024)},{"generation","0"}};
     return writeOutput(QJsonDocument(result).toJson(QJsonDocument::Compact)+'\n')?exitCode:7;
+}
+QJsonObject rectangleEvidence(const QRect& rect) {
+    return {{"x",rect.x()},{"y",rect.y()},{"width",rect.width()},{"height",rect.height()}};
+}
+QJsonObject windowSnapshot(QQuickWindow* window) {
+    if (!window) return {};
+    QJsonObject result{{"visible",window->isVisible()},{"exposed",window->isExposed()},
+        {"visibility",int(window->visibility())},{"state",int(window->windowState())},
+        {"x",window->x()},{"y",window->y()},{"width",window->width()},{"height",window->height()},
+        {"frame_geometry",rectangleEvidence(window->frameGeometry())}};
+    if (const auto* screen=window->screen()) {
+        auto info=rectangleEvidence(screen->geometry());
+        info["name"]=screen->name().left(256); info["available"]=rectangleEvidence(screen->availableGeometry());
+        info["device_pixel_ratio"]=screen->devicePixelRatio(); info["logical_dpi"]=screen->logicalDotsPerInch();
+        result["screen"]=info;
+    }
+    QJsonArray available;
+    const auto screens=QGuiApplication::screens();
+    for (qsizetype i=0;i<std::min(screens.size(),qsizetype(glancelot::startup::maximumStartupScreens));++i)
+        available.append(rectangleEvidence(screens[i]->availableGeometry()));
+    result["available_screens"]=available;
+    result["screen_count"]=double(screens.size());
+    result["screen_list_truncated"]=screens.size()>qsizetype(glancelot::startup::maximumStartupScreens);
+    return result;
+}
+QJsonObject recoverStartupPlacement(QQuickWindow* window) {
+    using namespace glancelot::startup;
+    if (!window) return {{"status","NoWindow"}};
+    window->create(); // Resolve the actual native frame and its margins before applying logical geometry.
+    const auto before=windowSnapshot(window);
+    // Fullscreen/maximized windows retain the platform's existing policy.
+    if (window->visibility()==QWindow::FullScreen || window->visibility()==QWindow::Maximized)
+        return {{"status","PreservedWindowState"},{"before",before}};
+    const auto screens=QGuiApplication::screens();
+    std::array<QRect,maximumStartupScreens> available{};
+    std::size_t preferred=maximumStartupScreens;
+    const auto count=std::min(screens.size(),qsizetype(maximumStartupScreens));
+    for (qsizetype i=0;i<count;++i) {
+        available[size_t(i)]=screens[i]->availableGeometry();
+        if (screens[i]==window->screen()) preferred=size_t(i);
+    }
+    const auto margins=window->frameMargins();
+    const auto bounded=[](qint64 value){return int(std::clamp(value,qint64(std::numeric_limits<int>::min()),qint64(std::numeric_limits<int>::max())));};
+    const QSize minimum(bounded(qint64(std::max(1,window->minimumWidth()))+margins.left()+margins.right()),
+                        bounded(qint64(std::max(1,window->minimumHeight()))+margins.top()+margins.bottom()));
+    const auto placement=screens.size()>qsizetype(maximumStartupScreens)
+        ? StartupPlacement{window->frameGeometry(),StartupPlacementStatus::TooManyScreens}
+        : recoverStartupWindowGeometry(window->frameGeometry(),std::span<const QRect>(available.data(),size_t(count)),preferred,minimum);
+    const char* status="Unchanged";
+    switch (placement.status) {
+    case StartupPlacementStatus::Recovered: {
+        status="Recovered";
+        const auto outer=placement.geometry;
+        window->setGeometry(bounded(qint64(outer.x())+margins.left()),bounded(qint64(outer.y())+margins.top()),
+            std::max(window->minimumWidth(),bounded(qint64(outer.width())-margins.left()-margins.right())),
+            std::max(window->minimumHeight(),bounded(qint64(outer.height())-margins.top()-margins.bottom())));
+        break;
+    }
+    case StartupPlacementStatus::NoUsableScreen: status="NoUsableScreen"; break;
+    case StartupPlacementStatus::TooManyScreens: status="TooManyScreens"; break;
+    case StartupPlacementStatus::Unchanged: break;
+    }
+    return {{"status",status},{"before",before},{"after",windowSnapshot(window)},
+        {"chosen_frame",rectangleEvidence(placement.geometry)},
+        {"frame_margins",QJsonObject{{"left",margins.left()},{"top",margins.top()},{"right",margins.right()},{"bottom",margins.bottom()}}}};
 }
 struct GraphicsEvidence {
     std::atomic_bool observed{};
@@ -240,74 +310,76 @@ int main(int argc,char** argv) {
     qint64 firstImage=-1,firstFrame=-1; int frames=0;
     QObject::connect(&viewer,&ViewerController::imageChanged,&app,[&]{if(firstImage<0&&!viewer.image().isNull())firstImage=elapsed.elapsed();});
     if(window)QObject::connect(window,&QQuickWindow::frameSwapped,&app,[&]{++frames;if(firstFrame<0&&!viewer.image().isNull())firstFrame=elapsed.elapsed();});
-    // An explicit file wins over resume and is remembered only once it decodes successfully.
-    if(!parser.positionalArguments().isEmpty())QTimer::singleShot(0,&viewer,[&]{viewer.open(parser.positionalArguments().first());});
-    else QTimer::singleShot(0,&viewer,[&]{viewer.restoreWindow();});
-    if(parser.isSet("quit-after")) {
-        bool valid=false;const int duration=parser.value("quit-after").toInt(&valid);
-        if(!valid || duration<100 || duration>3600000)return 2;
-        const auto quitTimerStartedMs=elapsed.elapsed();
-        QTimer::singleShot(duration,&app,[&,quitTimerStartedMs,duration]{
-            const auto quitCallbackMs=elapsed.elapsed();
-            if(window&&parser.isSet("screenshot"))window->grabWindow().save(parser.value("screenshot"));
-            if(parser.isSet("report")) {
-                QJsonObject actualRhi;
-                {
-                    std::lock_guard lock(graphicsEvidence->mutex);
-                    const bool cpu=graphicsEvidence->deviceType==int(QRhiDriverInfo::CpuDevice);
-                    const auto name=graphicsEvidence->deviceName.toLower();
-                    const bool softwareName=name.contains("llvmpipe")||name.contains("softpipe")||name.contains("swrast");
-                    actualRhi={{"observed",graphicsEvidence->observed.load()},{"backend",graphicsEvidence->backend},
-                        {"device_type",graphicsEvidence->deviceType},{"device_name",graphicsEvidence->deviceName},
-                        {"render_callbacks",double(graphicsEvidence->renderCallbacks.load())},
-                        {"scenegraph_invalidations",double(graphicsEvidence->invalidations.load())},
-                        {"software_detection",cpu?"cpu-device-type":softwareName?"renderer-name":"not-detected"}};
+    const auto captureRhi=[graphicsEvidence] {
+        QJsonObject actualRhi;
+        {
+            std::lock_guard lock(graphicsEvidence->mutex);
+            const bool cpu=graphicsEvidence->deviceType==int(QRhiDriverInfo::CpuDevice);
+            const auto name=graphicsEvidence->deviceName.toLower();
+            const bool softwareName=name.contains("llvmpipe")||name.contains("softpipe")||name.contains("swrast");
+            actualRhi={{"observed",graphicsEvidence->observed.load()},{"backend",graphicsEvidence->backend},
+                {"device_type",graphicsEvidence->deviceType},{"device_name",graphicsEvidence->deviceName},
+                {"render_callbacks",double(graphicsEvidence->renderCallbacks.load())},
+                {"scenegraph_invalidations",double(graphicsEvidence->invalidations.load())},
+                {"software_detection",cpu?"cpu-device-type":softwareName?"renderer-name":"not-detected"}};
+        }
+        return actualRhi;
+    };
+    QJsonObject startupPlacement;
+    // One startup turn consumes Qt's native creation/geometry notifications. It never waits for exposure.
+    const auto beginViewing=[&]() -> int {
+        startupPlacement=recoverStartupPlacement(window);
+        // An explicit file wins over resume and is remembered only once it decodes successfully.
+        if(!parser.positionalArguments().isEmpty())QTimer::singleShot(0,&viewer,[&]{viewer.open(parser.positionalArguments().first());});
+        else QTimer::singleShot(0,&viewer,[&]{viewer.restoreWindow();});
+        if(parser.isSet("quit-after")) {
+            bool valid=false;const int duration=parser.value("quit-after").toInt(&valid);
+            if(!valid || duration<100 || duration>3600000)return 2;
+            const auto quitTimerStartedMs=elapsed.elapsed();
+            QTimer::singleShot(duration,&app,[&,quitTimerStartedMs,duration]{
+                const auto quitCallbackMs=elapsed.elapsed();
+                const QJsonObject preGrab{{"window",windowSnapshot(window)},{"rhi",captureRhi()},
+                    {"frames",frames},{"first_image_frame_ms",firstFrame},{"snapshot_ms",elapsed.elapsed()}};
+                if(window&&parser.isSet("screenshot"))window->grabWindow().save(parser.value("screenshot"));
+                if(parser.isSet("report")) {
+                    const auto actualRhi=captureRhi();
+                    const auto windowEvidence=windowSnapshot(window);
+                    auto* canvas=engine.rootObjects().first()->findChild<ImageCanvas*>("canvas");
+                    const auto origin=canvas?canvas->mapToScene(QPointF{}):QPointF{};
+                    const QJsonObject canvasEvidence{{"x",origin.x()},{"y",origin.y()},
+                        {"width",canvas?canvas->width():0},{"height",canvas?canvas->height():0},
+                        {"zoom",canvas?canvas->zoom():0},{"visible",canvas&&canvas->isVisible()},
+                        {"renderer_error",canvas?canvas->rendererError():QStringLiteral("Canvas unavailable")}};
+                    QJsonObject report{{"version",QCoreApplication::applicationVersion()},{"qt",qVersion()},
+                        {"safe_mode",intent.safeMode},{"settings_directory",settingsNamespace},
+                        {"requested_backend",safeEnvironment.requestedBackend},{"rhi",actualRhi},{"canvas",canvasEvidence},
+                        {"window",windowEvidence},{"pre_grab",preGrab},{"startup_placement",startupPlacement},
+                        {"wheel_mode",viewer.wheelMode()},
+                        {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
+                        {"quit_timer_started_ms",quitTimerStartedMs},{"quit_after_ms",duration},{"quit_callback_ms",quitCallbackMs},{"report_ms",elapsed.elapsed()},
+                        {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
+                        {"loading",viewer.loading()},{"status",viewer.status()},
+                        {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},
+                        {"grid_visible",engine.rootObjects().first()->property("gridMode").toBool()},
+                        {"grid_live_cells",engine.rootObjects().first()->findChild<QObject*>("photoGrid") ? engine.rootObjects().first()->findChild<QObject*>("photoGrid")->property("liveDelegateCount").toInt() : 0},
+                        {"folder_count",filmstrip.count()},
+                        {"thumbnail_pending",thumbnails.pending()},{"thumbnail_active",thumbnails.active()},
+                        {"thumbnail_cache_bytes",double(thumbnails.cacheBytes())},
+                        {"theme",theme.family()},{"theme_mode",theme.mode()},
+                        {"frameless",window?window->property("frameless").toBool():false},{"window_active",window?window->isActive():false},
+                        {"native_title_bar",QJsonObject{{"dark_mode",titleBar&&titleBar->last().darkMode},{"caption_color",titleBar&&titleBar->last().caption},
+                            {"text_color",titleBar&&titleBar->last().text},{"border_color",titleBar&&titleBar->last().border}}},
+                        {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
+                        {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};
+                    QFile file(parser.value("report"));if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(report).toJson());
                 }
-                QJsonObject windowEvidence;
-                if(window) {
-                    windowEvidence={{"visible",window->isVisible()},{"exposed",window->isExposed()},
-                        {"visibility",int(window->visibility())},{"state",int(window->windowState())},
-                        {"width",window->width()},{"height",window->height()}};
-                    if(const auto* screen=window->screen()) {
-                        const auto geometry=screen->geometry();
-                        windowEvidence["screen"]=QJsonObject{{"name",screen->name().left(256)},
-                            {"x",geometry.x()},{"y",geometry.y()},{"width",geometry.width()},{"height",geometry.height()},
-                            {"device_pixel_ratio",screen->devicePixelRatio()},{"logical_dpi",screen->logicalDotsPerInch()}};
-                    }
-                }
-                auto* canvas=engine.rootObjects().first()->findChild<ImageCanvas*>("canvas");
-                const auto origin=canvas?canvas->mapToScene(QPointF{}):QPointF{};
-                const QJsonObject canvasEvidence{{"x",origin.x()},{"y",origin.y()},
-                    {"width",canvas?canvas->width():0},{"height",canvas?canvas->height():0},
-                    {"zoom",canvas?canvas->zoom():0},{"visible",canvas&&canvas->isVisible()},
-                    {"renderer_error",canvas?canvas->rendererError():QStringLiteral("Canvas unavailable")}};
-                QJsonObject report{{"version",QCoreApplication::applicationVersion()},{"qt",qVersion()},
-                    {"safe_mode",intent.safeMode},{"settings_directory",settingsNamespace},
-                    {"requested_backend",safeEnvironment.requestedBackend},{"rhi",actualRhi},{"canvas",canvasEvidence},
-                    {"window",windowEvidence},
-                    {"wheel_mode",viewer.wheelMode()},
-                    {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
-                    {"quit_timer_started_ms",quitTimerStartedMs},{"quit_after_ms",duration},{"quit_callback_ms",quitCallbackMs},{"report_ms",elapsed.elapsed()},
-                    {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
-                    {"loading",viewer.loading()},{"status",viewer.status()},
-                    {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},
-                    {"grid_visible",engine.rootObjects().first()->property("gridMode").toBool()},
-                    {"grid_live_cells",engine.rootObjects().first()->findChild<QObject*>("photoGrid") ? engine.rootObjects().first()->findChild<QObject*>("photoGrid")->property("liveDelegateCount").toInt() : 0},
-                    {"folder_count",filmstrip.count()},
-                    {"thumbnail_pending",thumbnails.pending()},{"thumbnail_active",thumbnails.active()},
-                    {"thumbnail_cache_bytes",double(thumbnails.cacheBytes())},
-                    {"theme",theme.family()},{"theme_mode",theme.mode()},
-                    {"frameless",window?window->property("frameless").toBool():false},{"window_active",window?window->isActive():false},
-                    {"native_title_bar",QJsonObject{{"dark_mode",titleBar&&titleBar->last().darkMode},{"caption_color",titleBar&&titleBar->last().caption},
-                        {"text_color",titleBar&&titleBar->last().text},{"border_color",titleBar&&titleBar->last().border}}},
-                    {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
-                    {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};
-                QFile file(parser.value("report"));if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(report).toJson());
-            }
-            app.exit(viewer.loading()?3:0);
-        });
-    }
-    if(!glancelot::perf::installReplay(app,viewer,fileGrid,thumbnails,engine.rootObjects().first(),parser.isSet("perf-report")&&parser.isSet("no-resume")))return 2;
+                app.exit(viewer.loading()?3:0);
+            });
+        }
+        if(!glancelot::perf::installReplay(app,viewer,fileGrid,thumbnails,engine.rootObjects().first(),parser.isSet("perf-report")&&parser.isSet("no-resume")))return 2;
+        return 0;
+    };
+    QTimer::singleShot(0,&app,[&] { if (const int code=beginViewing()) app.exit(code); });
     const int result=app.exec();
     return perfReportFailed ? 4 : result;
 }
