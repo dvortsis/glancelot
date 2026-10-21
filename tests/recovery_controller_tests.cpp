@@ -133,6 +133,29 @@ private slots:
         QCOMPARE(viewer.bindingFor("fullscreen"),QString("Ctrl+Alt+F12"));
         QCOMPARE(settings(config.path()).value("bindings").toObject().value("fullscreen"),QJsonValue("Ctrl+Alt+F12"));
     }
+    void pendingSortStatusTracksPersistence_data() {
+        QTest::addColumn<bool>("loaded");QTest::newRow("empty")<<false;QTest::newRow("loaded")<<true;
+    }
+    void pendingSortStatusTracksPersistence() {
+        QFETCH(bool,loaded);
+        QTemporaryDir config,media;QVERIFY(config.isValid()&&media.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        ViewerController viewer;
+        if(loaded){QImage image(16,16,QImage::Format_RGB32);image.fill(Qt::green);const auto path=media.filePath("generated.png");QVERIFY(image.save(path));viewer.open(path);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(),5000);}
+        QVERIFY(QDir().mkpath(config.path()));FileLock held(config.filePath("settings.json.lock"));QVERIFY(held.acquire(0));
+        viewer.setSortKey("size");
+        if(loaded)QTRY_VERIFY_WITH_TIMEOUT(viewer.status().startsWith("Sorted by size"),3000);
+        QVERIFY(viewer.status().contains("for this session"));QVERIFY(viewer.status().contains("pending"));QVERIFY(!viewer.status().contains("could not be saved"));
+        QVERIFY(!settings(config.path()).value("sort").toObject().contains("key"));held.release();
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("sort").toObject().value("key"),QJsonValue("size"),3000);
+        QTRY_VERIFY_WITH_TIMEOUT(!viewer.status().contains("for this session"),3000);QVERIFY(!viewer.status().contains("pending"));
+    }
+    void sortCompletionPreservesNewerFeedback() {
+        QTemporaryDir config,media;QVERIFY(config.isValid()&&media.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        ViewerController viewer;FileLock held(config.filePath("settings.json.lock"));QVERIFY(held.acquire(0));viewer.setSortKey("size");
+        viewer.navigateDirectory(media.filePath("missing"));QTRY_VERIFY_WITH_TIMEOUT(!viewer.directoryPending(),3000);
+        const auto newer=viewer.status();QVERIFY(!newer.contains("pending"));held.release();
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("sort").toObject().value("key"),QJsonValue("size"),3000);QCOMPARE(viewer.status(),newer);
+    }
     void failedSortIntentIsRetriedWithNextEditAndForeignFieldsPreserved() {
         QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["sort"]=QJsonObject{{"key","name"},{"future",7},{"seed",123}};}).ok());

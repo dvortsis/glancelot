@@ -150,7 +150,7 @@ struct ViewerController::Private {
     QCache<QString,CachedImage> cache{128*1024}; // KiB of verified immutable RGBA pixels.
     bool cacheNotificationPending{},ioNotificationPending{};
     QString storageProfile{"auto"};
-    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
+    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}, sortCompletion{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool* navigationPool=new QThreadPool;
     bool navigationBusy{}, navigationReady{};
@@ -160,6 +160,8 @@ struct ViewerController::Private {
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
     bool sortSaved{true};
+    bool sortSavePending{};
+    QString sortFeedbackPrefix, sortFeedback;
     QJsonObject pendingSortFields;
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
@@ -997,6 +999,7 @@ struct ViewerController::Private {
                 navigationReady=true; emit q->stateChanged(); emit q->currentStorageTypeChanged();
                 if(!loading && imageReady) scheduleLookahead();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
+                else if(result.sortCompletion) { setSortFeedback(QString("Sorted by %1%2").arg(sortKeyName(nav.sort().key),nav.sort().descending?" (reversed)":"")); emit q->stateChanged(); }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
                 else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
                 if(result.directoryFailed&&!path.isEmpty())scan(path,generation);
@@ -1012,15 +1015,19 @@ struct ViewerController::Private {
     // The navigator the UI shows can be older than a job that is still in flight, so a re-sort is only ever built
     // from an accepted navigator: immediately when idle, otherwise by the completion of the job already running.
     bool needsResort() const { return !nav.snapshot().current.empty() && !(nav.sort()==sortSpec); }
+    void setSortFeedback(const QString& prefix) {
+        sortFeedbackPrefix=prefix;
+        sortFeedback=prefix+(sortSavePending?" for this session; saving settings is pending.":sortSaved?".":" for this session; settings could not be saved.");
+        status=sortFeedback;
+    }
     void startResort() {
         navigationReady=false;
         Navigator copy=nav;
         copy.setCancellation(navigationStop.get_token());
         const auto next=sortSpec;
-        const QString done=QString("Sorted by %1%2%3.").arg(sortKeyName(next.key),next.descending?" (reversed)":"",sortSaved?"":" for this session; settings could not be saved");
-        submitNavigation({generation,++navigationGeneration,true,[copy,next,done]() mutable {
+        submitNavigation({generation,++navigationGeneration,true,[copy,next]() mutable {
             copy.setSort(next);
-            return NavigationResult{std::move(copy),std::nullopt,done};
+            return NavigationResult{std::move(copy),std::nullopt,{},false,false,true};
         }});
     }
     void changeSort(const glancelot::SortSpec& next) {
@@ -1034,15 +1041,17 @@ struct ViewerController::Private {
         for(auto it=fields.begin();it!=fields.end();++it)pendingSortFields[it.key()]=it.value();
         const auto pending=pendingSortFields;
         const auto deferred=std::make_shared<bool>(false);
-        sortSaved=settings_detail::saveWithRetry(q,"sort",[pending](QJsonObject& object){
+        sortSaved=false;sortSavePending=true;
+        const bool accepted=settings_detail::saveWithRetry(q,"sort",[pending](QJsonObject& object){
             auto stored=object.value("sort").toObject();for(auto it=pending.begin();it!=pending.end();++it)stored[it.key()]=it.value();object["sort"]=stored;
         },[this,deferred](SettingsStatus result){
-            sortSaved=result.ok();if(result.ok())pendingSortFields={};
-            if(*deferred&&!result.ok()){status="File order changed for this session; settings could not be saved.";emit q->stateChanged();}
+            sortSavePending=false;sortSaved=result.ok();if(result.ok())pendingSortFields={};
+            if(*deferred&&!sortFeedback.isEmpty()&&status==sortFeedback){setSortFeedback(sortFeedbackPrefix);emit q->stateChanged();}
         });
+        if(!accepted)sortSavePending=false;
         *deferred=true;
         if (nav.snapshot().current.empty()) {
-            status=sortSaved?"File order updated.":"File order changed for this session; settings could not be saved.";
+            setSortFeedback("File order updated");
             emit q->stateChanged(); return;
         }
         status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
