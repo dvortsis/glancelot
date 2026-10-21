@@ -48,3 +48,18 @@ The output also records No QRhi warnings. These are input/state tests, not GPU r
 Full Windows command: `& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/review-input-02-r2 -Run { & ./scripts/build.ps1 -BuildDir build-codex-review-input-02-r2 -Test }`. At initial handoff preparation it was waiting for the `claude/input-02-mainsync` gate; see actual waiting output in `input-02-r2/windows-full.txt`. Pending is not passed. No fresh Linux Docker gate has been run for this review; the remaining source finding prevents packet approval regardless.
 
 The committed initial handoff retains the actual queued-gate output in input-02-r2/windows-gate-waiting.txt. The live windows-full.txt will be retained with its completed outcome in a follow-up evidence commit.
+
+## Completed pinned Windows full gate
+
+The queued full gate acquired the machine lock and completed on unchanged product/test source from87b063d:
+```
+window_slots Passed 35.43 sec
+folder_grid Passed 174.20 sec
+input_ui Passed 32.40 sec
+platform_integration Failed 0.27 sec
+93% tests passed, 1 tests failed out of 15
+Total Test time (real) = 398.24 sec
+```
+Actual full command output is now retained in `input-02-r2/windows-full.txt`. This is14/15, not a full pass. A fresh direct platform run with Qt bin on PATH and an awaited GUI-process pipeline records the exact assertion in `windows-platform-awaited.txt`: openTerminal("C:/nonexistent_dir_path_12345") incorrectly returned true; 4 QtTest rows passed and1 failed. The prior immediate GUI launch's output is also retained in windows-platform-cases.txt; its log was initially still open when read, so only the awaited run's exit status is used.
+
+`git diff --exit-code 76da49e 87b063d -- src/app/platform_integration.cpp tests/platform_integration_tests.cpp` returns0: those inputs are unchanged from the packet base. The author previously reported the same baseline assertion. This review did not run a new full baseline suite. The pinned snapshot was not merged with main and no timeout, assertion, renderer setting or source was changed to hide the failure. Remaining tree Trash finding and CHANGES REQUIRED disposition are unchanged. Linux qualification remains unexecuted for this pinned review.
