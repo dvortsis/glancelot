@@ -6,6 +6,7 @@
 #include "settings_transaction.hpp"
 #include "settings_package.hpp"
 #include "settings_policy.hpp"
+#include "glancelot/command_registry.hpp"
 #include "settings_diff.hpp"
 #include "window_claim_guard.hpp"
 #include "glancelot/window_slot.hpp"
@@ -435,6 +436,39 @@ private slots:
         const auto result=policy::merge(current,{{"schema",1}},selection);QVERIFY(result.replacement);
         QCOMPARE(result.replacement->value("wheel"),current.value("wheel"));QCOMPARE(result.replacement->value("textScale"),current.value("textScale"));
         QVERIFY(!result.replacement->value("sort").toObject().contains("key"));QVERIFY(result.replacement->value("sort").toObject().value("future").toBool());
+    }
+    void scopedInputBindingsUseTheSharedRecoveryPolicy() {
+        const QJsonObject current{{"schema",1},{"bindings",QJsonObject{{"future-command",true}}}};
+        policy::Selection selected; selected.global=GlobalSection::Bindings;
+        const auto merge=[&](const QJsonObject& bindings){return policy::merge(current,{{"schema",1},{"bindings",bindings}},selected);};
+        auto accepted=merge({{"next","Ctrl+K"},{"grid-open","Ctrl+K, Ctrl+L"}});
+        QVERIFY(accepted.replacement); QCOMPARE(accepted.status.code,Code::Ok);
+        const auto bindings=accepted.replacement->value("bindings").toObject();
+        QVERIFY(bindings.value("future-command").toBool());
+        QVERIFY(glancelot::resolveCommandBindings(bindings).valid);
+        const auto overlap=merge({{"next","Ctrl+K"},{"previous","Ctrl+K, Ctrl+L"}});
+        QCOMPARE(overlap.status.code,Code::Corrupt); QVERIFY(!overlap.replacement);
+        const auto heldChord=merge({{"hold-actual","Ctrl+K, Ctrl+L"}});
+        QCOMPARE(heldChord.status.code,Code::Corrupt); QVERIFY(!heldChord.replacement);
+        const auto longChord=merge({{"next","Ctrl+K, Ctrl+L, Ctrl+M"}});
+        QCOMPARE(longChord.status.code,Code::Corrupt); QVERIFY(!longChord.replacement);
+        // A user's binding predates the new global presentation-fit default.
+        const auto retained=glancelot::resolveCommandBindings({{"next","Ctrl+Alt+F"}});
+        QVERIFY(retained.valid); QCOMPARE(retained.effective.value("next"),QJsonValue("Ctrl+Alt+F"));
+        QCOMPARE(retained.effective.value("presentation-fit"),QJsonValue(""));
+    }
+    void viewingModifierMergePreservesUnknownsAndRemovesAbsentKnownValues() {
+        const QJsonObject current{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","pan"},{"shift","zoom"},{"future",true}}}};
+        const QJsonObject source{{"schema",1},{"wheelModifiers",QJsonObject{{"alt","pan-horizontal"},{"future",false}}}};
+        policy::Selection selected; selected.global=GlobalSection::Viewing;
+        const auto result=policy::merge(current,source,selected); QVERIFY(result.replacement);
+        const auto modifiers=result.replacement->value("wheelModifiers").toObject();
+        QVERIFY(!modifiers.contains("ctrl")); QVERIFY(!modifiers.contains("shift"));
+        QCOMPARE(modifiers.value("alt"),QJsonValue("pan-horizontal")); QVERIFY(modifiers.value("future").toBool());
+        const auto invalid=policy::merge(current,{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","spin"}}}},selected);
+        QCOMPARE(invalid.status.code,Code::Corrupt); QVERIFY(!invalid.replacement);
+        const auto malformed=policy::merge(current,{{"schema",1},{"wheelModifiers",false}},selected);
+        QCOMPARE(malformed.status.code,Code::Corrupt); QVERIFY(!malformed.replacement);
     }
     void selectedInvalidValuesRejectWholeMerge_data() {
         QTest::addColumn<QJsonObject>("source");

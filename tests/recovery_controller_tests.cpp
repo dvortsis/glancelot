@@ -53,12 +53,16 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(gate->entered.load(),3000);
         const bool tree=!viewer.treeVisible();QElapsedTimer elapsed;elapsed.start();
         viewer.setTreeVisible(tree);viewer.setWheelMode("pan");viewer.setWheelMode("zoom");
+        QVERIFY(viewer.setWheelModifier("ctrl","zoom")); QVERIFY(viewer.setWheelModifier("ctrl","pan-horizontal"));
+        QVERIFY(viewer.setWheelModifier("shift","pan"));
         theme.setMode("light");QVERIFY(layout.resize("tree",400));QVERIFY(favorites.addFavorite(media.path(),"generated"));
         viewer.setSortKey("size");viewer.setSortDescending(true);QVERIFY(viewer.setBinding("fullscreen","Ctrl+Alt+F11"));
         QVERIFY(elapsed.elapsed()<250);QVERIFY(!viewer.status().contains("could not be saved"));
         {std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();}
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("tree"),QJsonValue(tree),3000);
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheel"),QJsonValue("zoom"),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheelModifiers").toObject().value("ctrl"),QJsonValue("pan-horizontal"),3000);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheelModifiers").toObject().value("shift"),QJsonValue("pan"),3000);
         QTRY_COMPARE_WITH_TIMEOUT(folder(config.path()),media.path(),3000);
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("appearance").toObject().value("mode"),QJsonValue("light"),3000);
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("layouts").toObject().value("1").toObject().value("panes").toObject().value("tree").toObject().value("extent"),QJsonValue(400),3000);
@@ -67,6 +71,18 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("sort").toObject().value("descending"),QJsonValue(true),3000);
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("bindings").toObject().value("fullscreen"),QJsonValue("Ctrl+Alt+F11"),3000);
         QTRY_VERIFY_WITH_TIMEOUT(layout.feedback().isEmpty(),3000);
+    }
+    void importedModifierAbsenceRestoresDefaultsInTheLiveController() {
+        QTemporaryDir config,source; QVERIFY(config.isValid()&&source.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        const auto write=[](const QString& path,const QJsonObject& root){QFile file(path);return file.open(QIODevice::WriteOnly)&&file.write(QJsonDocument(root).toJson())>0;};
+        QVERIFY(write(config.filePath("settings.json"),{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","pan"},{"shift","zoom"},{"alt","pan-horizontal"}}}}));
+        QVERIFY(write(source.filePath("settings.json"),{{"schema",1}}));
+        ViewerController viewer; QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(),QString("pan"));
+        QVERIFY(viewer.importSettings(source.filePath("settings.json")));
+        QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(),QString("zoom"));
+        QCOMPARE(viewer.wheelModifiers().value("shift").toString(),QString("pan-horizontal"));
+        QCOMPARE(viewer.wheelModifiers().value("alt").toString(),viewer.wheelMode());
     }
     void missingSourceLayoutKeepsUnknownsThroughActualLayoutEdit() {
         using namespace glancelot::recovery;

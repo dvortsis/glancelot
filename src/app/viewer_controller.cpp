@@ -1439,9 +1439,9 @@ bool ViewerController::setWheelModifier(const QString& modifier,const QString& a
             emit stateChanged();
         }
     });
-    if(!alive)return saved;
+    if(!alive)return true;
     if(!saved)d->status="Wheel behavior changed for this session; settings could not be saved.";
-    emit stateChanged();return saved;
+    emit stateChanged();return true;
 }
 QString ViewerController::keyStep(int key,int modifiers) const{
     return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
