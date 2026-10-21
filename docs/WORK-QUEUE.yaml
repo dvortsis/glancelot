@@ -3,7 +3,11 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock: {holder: Codex-user-authorized-lead, branch: codex/safe-mode-01, started: '2026-10-21T14:26:59.7975858Z'}
+gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
+lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
+lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
+review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/monitor-output-fix ae1b7e4; Gemini reviews stacked Claude packets F002, F037, F031, F040, F049, F009, F014, F051 in stack order, each only for its own changes on top of the previous branch, then a short confirmation pass after the stack is updated onto integrated main; Claude lane reviews SAFE-MODE-01 follow-up; Gemini never reviews MONITOR-OUTPUT-01 fixes
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -425,7 +429,13 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: gemini
-    state: done
+    state: implementing
+    owner_lane_override: claude, since (Gemini lane finished; user authorized Claude to complete Gemini leftovers)
+    reopened: Independent Claude review CHANGES REQUIRED (docs/verification/MONITOR-OUTPUT-01-CLAUDE-REVIEW.md, 77f67ab) for unstable display identity, half-implemented comparison, no aggregate memory cap, untested hotplug, hard-coded keys
+    fix_branch: claude/monitor-output-fix ae1b7e4; Codex re-review CHANGES REQUIRED evidence7af09d6; original24 tests and restored CTest pass, three independent probes fail. No full candidate gates or approval.
+    review_request: Claude fixes hidden secondary retention after shedding, stale comparison generation reset, invalid remembered fit and chord dismissal; submit new pin for cross-lane review, then full Windows/Docker gates. Additive presentation fit/texture-budget interfaces remain accepted with256MiB default unchanged.
+    codex_review: docs/verification/MONITOR-OUTPUT-01-ae1b7e4-CODEX-REVIEW.md
+    scope_decision_2026_10_21: Preserve frozen output-specific viewport/color/scale acceptance in MONITOR-OUTPUT-01; MONITOR-CUSTOM-01 owns advanced picker/presets/workspace customization, not a waiver of core acceptance. No product requirement is removed by the earlier split note.
     commit: 76b1979
     integrated_evidence: integrated 76b1979 Windows scripts/build.ps1 -Test 33/33 (642.45s) and Linux docker build 33/33 (240.07s)
     evidence: docs/verification/MONITOR-OUTPUT-01.md; independent review approved; Windows scripts/build.ps1 -Test 33/33 (642.45s); Linux Docker Qt 33/33 (240.07s)
@@ -465,7 +475,9 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: review
+    state: done
+    claude_review: Independent Claude cross-lane review APPROVED on main a395ca5 (docs/verification/CACHE-IO-CLAUDE-REVIEW.md, fab990e); stale-pixel defect fixed by FS revision validation (noncurrentSameTupleReplacementInvalidatesCache); targeted tests 6/6
+    follow_up: no eviction-pressure/aggregate-headroom test for cache (needs a lead CMake target); metadata token cannot detect content-only edits preserving id/size/mtime/ctime
     commit: 8b28060
     evidence: docs/verification/CACHE-01.md; independent review approved; Windows scripts/build.ps1 -Test 23/23 (206.74s); Linux Docker Qt 23/23 (135.07s)
     integrated_evidence: integrated 8b28060 Windows scripts/build.ps1 -Test 23/23 (263.94s) and Linux docker build 23/23 (135.07s)
@@ -483,7 +495,9 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: review
+    state: done
+    claude_review: Independent Claude cross-lane review APPROVED on main a395ca5 (docs/verification/CACHE-IO-CLAUDE-REVIEW.md, fab990e); duplicate-ID/negative-estimate/ownership defects fixed and regression-tested; targeted tests 6/6; physical SSD/HDD/SMB unverified
+    follow_up: no eviction-pressure/aggregate-headroom test for cache (needs a lead CMake target)
     commit: 1f97893
     evidence: docs/verification/IO-01.md; independent review approved; Windows scripts/build.ps1 -Test 24/24 (165.75s); Linux Docker Qt 24/24 (112.86s)
     integrated_evidence: integrated 1f97893 Windows scripts/build.ps1 -Test 24/24 (163.34s) and Linux docker build 24/24 (112.86s)
@@ -634,15 +648,16 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: review
+    state: implementing
     depends: [REVIEW-ALL-01]
     branch: claude/input-02
     worktree: .worktrees/claude-input-02
     plan: docs/INPUT-02-PLAN.md
     scope_addition: F055 context menus with command-route parity
-    review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
-    review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
-    review_request: Codex-lane re-review requested of exact candidate claude/input-02 87b063d, which addresses the five findings in INPUT-02-FINAL-CODEX-REVIEW.md (evidence in docs/verification/INPUT-02.md; author Windows input_ui 16/16, grid_ui 72/72, window_slots 34/34; Linux Docker not rerun). Do not merge main into the reviewed snapshot; trial merge against main conflicts in CMakeLists.txt, viewer_controller.cpp, worker/main.cpp and ui/Main.qml (b10354a, re-confirmed after FS-WATCH 1bd4461) and goes to the Claude lane only after approval. Stacked packets F002, F037, F009, F014, F031, F040, F049, F051 wait behind it.
+    review_gate: Codex exact87b063d re-review CHANGES REQUIRED, evidence2ce7928; root retargeting fixed but tree Trash still bypasses command routing/shared predicate and parity coverage. Four focused cases pass; full Windows14/15 failed unchanged terminal-launch assertion; no fresh Linux qualification.
+    review_evidence: docs/verification/INPUT-02-87b063d-CODEX-REVIEW.md; prior docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
+    review_request: Claude addresses remaining tree Trash registered-command/shared-target predicate and parity case, preserves root guard, then supplies a new pinned candidate for cross-lane review. Exact87b063d remains unchanged; mainsync is a rehearsal only. Stacked packet fixes must propagate forward before final confirmation.
+    stacked_review: Gemini lane reviews stacked F002, F037, F031, F040, F049, F009, F014, F051 now, each only for its own changes, at pinned SHAs (git diff <predecessor SHA merged into the packet> <packet SHA>, recorded in the review); Claude lane fixes findings in place and merges each earlier-packet fix forward through the stack before a later packet's review counts as final; Claude lane rehearses the main conflict resolution on throwaway claude/input-02-mainsync, never on the reviewed snapshot
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
   - id: PERF-MEASURE-01
@@ -709,9 +724,15 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: integration
     depends: [WINDOW-RESUME-01]
     branch: codex/safe-mode-01
+    source_candidate: 796ab411776068a6a7b8d40f26b64930818fd279
+    evidence_candidate: 116c6ba027a416046f6de50875a03b8e741a8baa
+    review_snapshot: Product03bd326 Sonnet5.5 follow-up plus fixture796ab411 Sonnet5.5 review/clarification; initial0580fe0 and intermediate reviews retained
+    candidate_checks: Exact796ab411 complete locked Windows37/37 558.04s and Docker37/37 273.13s, exits0; recovery137/startup61/controller29 zero skips on both; fresh35-command software-RHI/RGB process proofs on both. Earlier failures retained; hardware/sanitizer/power-loss unverified.
+    review_gate: Lead accepts resolved original High/Medium findings and independent no-blocking product/fixture follow-ups for integration testing. Recorded Low feedback/binding limitations and historical budget timeout are not claimed fixed. Synchronized source needs final independent confirmation and both integrated full gates before merge/done.
+    evidence: docs/verification/SAFE-MODE-01.md; docs/handoff/CODEX-SAFE-MODE-01-REVIEW.md
     worktree: .worktrees/codex-safe-mode-01
     build: build-codex-safe-mode-01
     plan: docs/SAFE-MODE-01-PLAN.md
@@ -767,5 +788,24 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     plan: docs/PLATFORM-FIXTURE-SECURITY-01-PLAN.md
     memory_action: act_mvgrfsa8_be3125ae52b0
     evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+
+  - id: EXPORT-CSV-01
+    requirements: [SYS-06, SYS-02]
+    feature: F070
+    milestone: M4
+    priority: 6
+    owner: lead
+    owner_lane: gemini
+    reviewer_lane: codex or claude (first free reviewer slot; never gemini)
+    state: ready
+    depends: [DELETE-01]
+    branch: agent/export-csv
+    worktree: .worktrees/export-csv
+    build: build-export-csv
+    plan: docs/EXPORT-CSV-01-PLAN.md
+    contract: include/glancelot/selection_export.hpp; cmake/ExportTests.cmake (included when src/core/selection_export.cpp exists)
+    outcome: Selection CSV and path-list export engine for downstream tools (engine only; UI is a later Claude packet; JSON manifest stays with F030)
+    acceptance: RFC 4180 quoting; formula-injection neutralization; Unicode round-trip; relative-root policy with outside-root skip; revalidated snapshot; never overwrites an exported item; atomic temp-and-rename; cancellation leaves nothing behind; bounded items; generation echoed
+    verification: tests/selection_export_tests.cpp per plan section 4; actual ctest output; full Windows and Docker gates under gate_lock
     acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
     outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged
