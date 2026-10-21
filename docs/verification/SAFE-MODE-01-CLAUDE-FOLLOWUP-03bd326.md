@@ -19,3 +19,7 @@ No blocking findings. Checked against settings_file.cpp SettingsRetries::submit/
 
 ## Verification
 Static review only. I did not build or run recovery_controller tests for this pin; Codex's own evidence is in the commit's verification folder. Verdict: favourable, not blocking.
+
+## Addendum: later head a15696c (2026-10-21)
+
+Since 03bd326 the branch adds docs/evidence commits plus bdaa779 (tests/fs_watch_tests.cpp only: two tests set baselineDeadlineMs=5000 via ControllerTestHooks so cache-path assertions await the baseline). Test-only, no production change, no src/ui/CMake diff from 03bd326; it addresses the load-sensitivity of fs_watch I also saw in the input-02 rehearsal. Not blocking; static review, not run.
