@@ -103,7 +103,8 @@ QJsonObject recoverStartupPlacement(QQuickWindow* window) {
     window->create(); // Resolve the actual native frame and its margins before applying logical geometry.
     const auto before=windowSnapshot(window);
     // Fullscreen/maximized windows retain the platform's existing policy.
-    if (window->visibility()==QWindow::FullScreen || window->visibility()==QWindow::Maximized)
+    if (window->visibility()==QWindow::FullScreen || window->visibility()==QWindow::Maximized
+        || window->windowStates().testFlag(Qt::WindowFullScreen) || window->windowStates().testFlag(Qt::WindowMaximized))
         return {{"status","PreservedWindowState"},{"before",before}};
     const auto screens=QGuiApplication::screens();
     std::array<QRect,maximumStartupScreens> available{};
