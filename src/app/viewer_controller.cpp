@@ -49,7 +49,9 @@
 
 using namespace glancelot;
 namespace {
+// A binding is one key or a two-step chord (INPUT-02); Escape is reserved for closing views and cancelling chords.
 bool usableShortcut(const QKeySequence& sequence) {
+    if (sequence.count()>2) return false;
     for (int i=0; i<sequence.count(); ++i) {
         const auto key=sequence[i];
         if (key.key()==Qt::Key_unknown || key==QKeyCombination(Qt::NoModifier,Qt::Key_Escape)) return false;
@@ -59,17 +61,6 @@ bool usableShortcut(const QKeySequence& sequence) {
 bool shortcutOverlap(const QKeySequence& left,const QKeySequence& right) {
     return !left.isEmpty() && !right.isEmpty()
         && (left.matches(right)!=QKeySequence::NoMatch || right.matches(left)!=QKeySequence::NoMatch);
-}
-bool usableBindings(const QJsonObject& bindings) {
-    QList<QKeySequence> seen;
-    for (const auto& value:bindings) {
-        const auto text=value.toString();
-        const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
-        if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
-        for (const auto& other:seen) if (shortcutOverlap(sequence,other)) return false;
-        seen.append(sequence);
-    }
-    return true;
 }
 void trace(const char* event) {
     const auto path=qEnvironmentVariable("GLANCELOT_TRACE_FILE");
@@ -90,14 +81,17 @@ QString displayPath(const std::filesystem::path& path) {
     return QFile::decodeName(path.native().c_str());
 #endif
 }
+// Scopes (INPUT-02): "global" works wherever keys are not claimed; "canvas" needs the photo pane (it is off while the grid owns
+// keys); "grid" and "tree" need that pane focused; "workspace" is either content pane. Photo-stepping and view commands are
+// "canvas" because the grid keeps its own arrow/Page keys; everything else the grid ever allowed stays "global".
 const std::vector<Command> registry {
-    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true}, {"previous","Previous image","Left",true},
-    {"next-folder","Next folder","PgDown"}, {"previous-folder","Previous folder","PgUp"},
+    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true,"canvas"}, {"previous","Previous image","Left",true,"canvas"},
+    {"next-folder","Next folder","PgDown",false,"canvas"}, {"previous-folder","Previous folder","PgUp",false,"canvas"},
     {"palette","Find a command","Ctrl+Shift+P"}, {"settings","Settings","Ctrl+,"},
-    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
-    {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
-    {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
+    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F",false,"canvas"},
+    {"actual","Actual size (physical 1:1)","1",false,"canvas"}, {"zoom-in","Zoom in","+",true,"canvas"}, {"zoom-out","Zoom out","-",true,"canvas"},
+    {"rotate","Rotate view clockwise","R",false,"canvas"}, {"background","Cycle canvas background","B",false,"canvas"},
+    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T",false,"canvas"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
     // Layout commands start unbound so existing users' shortcuts never collide.
     {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
     // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
@@ -108,12 +102,12 @@ const std::vector<Command> registry {
     {"copy-path", "Copy file path", "Ctrl+C"},
     {"copy-file", "Copy file", "Ctrl+Shift+C"},
     {"copy-image", "Copy image", "Ctrl+Alt+C"},
-    {"select-all", "Select all items in grid", ""},
-    {"clear-selection", "Clear grid selection", "Ctrl+D"},
-    {"invert-selection", "Invert grid selection", "Ctrl+I"},
-    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
-    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
-    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
+    {"select-all", "Select all items in grid", "", false, "workspace"},
+    {"clear-selection", "Clear grid selection", "Ctrl+D", false, "workspace"},
+    {"invert-selection", "Invert grid selection", "Ctrl+I", false, "workspace"},
+    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+=", false, "workspace"},
+    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-", false, "workspace"},
+    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0", false, "workspace"},
     // FS-WATCH-01: workspace command; generic routing preserves text/modal precedence.
     {"refresh", "Refresh", "F5"},
     // FAVORITES-01 (F003)
@@ -133,14 +127,14 @@ const std::vector<Command> registry {
     {"clear-filter", "Clear active filter", ""},
     {"toggle-filter-persistence", "Toggle filter persistence", ""},
     // META-HUD-01 (META-01 / UX-04)
-    {"toggle-metadata", "Toggle metadata inspector", "I"},
+    {"toggle-metadata", "Toggle metadata inspector", "I", false, "workspace"},
     // ANIM-01 (ADV-06 / FMT-03 / F036)
-    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
-    {"animation-next-frame", "Step to next frame / page", "."},
-    {"animation-previous-frame", "Step to previous frame / page", ","},
-    {"animation-speed-up", "Increase animation speed", "]"},
-    {"animation-speed-down", "Decrease animation speed", "["},
-    {"animation-toggle-loop", "Toggle animation loop", ""},
+    {"animation-toggle-play-pause", "Play or pause animation", "Space", false, "canvas"},
+    {"animation-next-frame", "Step to next frame / page", ".", true, "canvas"},
+    {"animation-previous-frame", "Step to previous frame / page", ",", true, "canvas"},
+    {"animation-speed-up", "Increase animation speed", "]", true, "canvas"},
+    {"animation-speed-down", "Decrease animation speed", "[", true, "canvas"},
+    {"animation-toggle-loop", "Toggle animation loop", "", false, "canvas"},
     // RENAME-01 (F018)
     {"rename", "Rename current file or folder", "F2"},
     {"new-folder", "Create new folder", "Ctrl+Shift+N"},
@@ -163,8 +157,46 @@ const std::vector<Command> registry {
     {"delete-current-file","Move current photo to the Trash","Ctrl+Delete"},
     {"delete-current-folder","Move current folder to the Trash","Ctrl+Shift+Delete"},
 #endif
+    // INPUT-02: hold lifecycle, per-pane commands and context-menu routes. Keys the grid and tree handle themselves
+    // (Enter, Backspace, Ctrl+A) stay unbound here; the menus show those fixed keys.
+    {"hold-actual","Show actual size while held","Z",false,"canvas",true},
+    {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
+    {"grid-select-all","Select all items","",false,"grid"},
+    {"tree-open-folder","Open the focused folder","",false,"tree"},
+    {"focus-path","Edit the folder path","",false,"global"}, {"copy-folder-path","Copy the folder path","",false,"global"},
+    {"paste-path","Go to the folder path on the clipboard","",false,"global"},
     {"quit","Quit","Ctrl+Q"}
 };
+const Command* findCommand(const QString& id) {
+    for (const auto& command:registry) if (QString::fromStdString(command.id)==id) return &command;
+    return nullptr;
+}
+QString scopeOf(const QString& id) {
+    const auto* command=findCommand(id);
+    return command?QString::fromStdString(command->scope):QStringLiteral("global");
+}
+// "global" overlaps every scope and "workspace" overlaps the two content panes; other scopes only themselves.
+bool scopesOverlap(const QString& left,const QString& right) {
+    if (left==right || left=="global" || right=="global") return true;
+    auto content=[](const QString& scope){ return scope=="canvas" || scope=="grid"; };
+    return (left=="workspace" && content(right)) || (right=="workspace" && content(left));
+}
+bool bindingsCollide(const QString& leftId,const QKeySequence& left,const QString& rightId,const QKeySequence& right) {
+    return scopesOverlap(scopeOf(leftId),scopeOf(rightId)) && shortcutOverlap(left,right);
+}
+bool usableBindings(const QJsonObject& bindings) {
+    QList<std::pair<QString,QKeySequence>> seen;
+    for (auto it=bindings.begin();it!=bindings.end();++it) {
+        const auto text=it.value().toString();
+        const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
+        if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
+        const auto* command=findCommand(it.key());
+        if (command && command->hold && sequence.count()>1) return false; // a hold needs one key to release
+        for (const auto& other:seen) if (bindingsCollide(it.key(),sequence,other.first,other.second)) return false;
+        seen.append({it.key(),sequence});
+    }
+    return true;
+}
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
 bool insideRoot(const QString& root, const QString& folder) {
     auto key=[](const QString& path){ auto value=QDir::cleanPath(QDir::fromNativeSeparators(path));
@@ -188,6 +220,9 @@ QString sortKeyName(glancelot::SortKey key) {
     default: return "name";
     }
 }
+bool validWheelAction(const QString& action) {
+    return action=="navigate" || action=="zoom" || action=="pan" || action=="pan-horizontal";
+}
 BoundaryMode boundaryValue(const QString& value) {
     return value == "stop" ? BoundaryMode::Stop : value == "loop" ? BoundaryMode::LoopFolder : BoundaryMode::ContinueTree;
 }
@@ -206,6 +241,8 @@ struct ViewerController::Private {
     Navigator nav;
     glancelot::FilterSpec filter;
     QJsonObject bindings;
+    // INPUT-02: explicit modifier -> action entries. "none" lives in `wheel`; an unset "alt" follows it.
+    QJsonObject wheelModifiers{{"ctrl","zoom"},{"shift","pan-horizontal"}};
     QProcess* worker{};
     std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
     quint64 workerGeneration{};
@@ -487,7 +524,7 @@ struct ViewerController::Private {
         for (auto it=candidate.begin();it!=candidate.end();++it) {
             if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
             for (auto other=stored.begin();other!=stored.end();++other) {
-                if (other.key()!=it.key() && candidate.contains(other.key()) && shortcutOverlap(QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
+                if (other.key()!=it.key() && candidate.contains(other.key()) && bindingsCollide(other.key(),QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
             }
         }
         if (usableBindings(candidate)) bindings=candidate;
@@ -498,6 +535,12 @@ struct ViewerController::Private {
         const auto savedWheel=object.value("wheel").toString();
         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
         else wheel="navigate";
+        // Each modifier falls back on its own: one invalid entry never discards the others.
+        const auto savedModifiers=object.value("wheelModifiers").toObject();
+        for (const char* modifier:{"ctrl","shift","alt"}) {
+            const auto action=savedModifiers.value(QLatin1String(modifier)).toString();
+            if (validWheelAction(action)) wheelModifiers[QLatin1String(modifier)]=action;
+        }
         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
         else filmstrip=true;
         const auto savedSort=object.value("sort").toObject();
@@ -1348,9 +1391,54 @@ int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); cons
 int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
 int ViewerController::imageWidth() const{return d->image.width();}
 int ViewerController::imageHeight() const{return d->image.height();}
-QVariantList ViewerController::commands() const{QVariantList rows;for(const auto& cmd:registry){const QString id=QString::fromStdString(cmd.id);rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",d->bindings.value(id).toString()}});}return rows;}
+QVariantList ViewerController::commands() const{
+    QVariantList rows;
+    for(const auto& cmd:registry){
+        const QString id=QString::fromStdString(cmd.id),binding=d->bindings.value(id).toString();
+        // `steps` are the portable key texts of the binding, one per press, so the UI can resolve chords itself.
+        QStringList steps;
+        const auto parsed=QKeySequence::fromString(binding,QKeySequence::PortableText);
+        for(int i=0;i<parsed.count();++i)steps.append(QKeySequence(parsed[i]).toString(QKeySequence::PortableText));
+        rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",binding},
+            {"scope",QString::fromStdString(cmd.scope)},{"hold",cmd.hold},{"repeat",cmd.repeat},{"steps",steps}});
+    }
+    return rows;
+}
 QString ViewerController::boundaryMode() const{return d->boundary;}
 QString ViewerController::wheelMode() const{return d->wheel;}
+QVariantMap ViewerController::wheelModifiers() const{
+    QVariantMap map{{"none",d->wheel},{"ctrl",d->wheelModifiers.value("ctrl").toString()},{"shift",d->wheelModifiers.value("shift").toString()}};
+    const auto alt=d->wheelModifiers.value("alt").toString();
+    map.insert("alt",validWheelAction(alt)?alt:d->wheel); // unset: Alt keeps behaving like the plain wheel
+    return map;
+}
+bool ViewerController::setWheelModifier(const QString& modifier,const QString& action){
+    if(!validWheelAction(action))return false;
+    if(modifier=="none"){ // the plain wheel keeps its three-value setting
+        if(action=="pan-horizontal")return false;
+        setWheelMode(action);return true;
+    }
+    if(modifier!="ctrl"&&modifier!="shift"&&modifier!="alt")return false;
+    d->wheelModifiers[modifier]=action;
+    // Only this modifier is merged into the stored object, so another window's other modifiers and unknown keys survive.
+    const bool saved=updateSettings([&](QJsonObject& object){
+        auto stored=object.value("wheelModifiers").toObject();
+        stored[modifier]=action;object["wheelModifiers"]=stored;
+    }).ok();
+    if(!saved)d->status="Wheel behavior changed; settings could not be saved.";
+    emit stateChanged();return true;
+}
+QString ViewerController::keyStep(int key,int modifiers) const{
+    return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
+}
+QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
+    if(!d->bindings.contains(id))return {};
+    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+    if(parsed.isEmpty())return {};
+    for(auto it=d->bindings.begin();it!=d->bindings.end();++it)
+        if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText)))return it.key();
+    return {};
+}
 void ViewerController::open(const QString& value){
     trace("open:begin");
     // Consume the caller's intent once: decode may wait for registration, while
@@ -1425,7 +1513,8 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
-    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
+    if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1){d->status="A hold shortcut is a single key: it is released to restore the view.";emit stateChanged();return false;}
+    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status="Shortcut conflicts with "+other+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}
     QJsonObject merged=d->bindings;
     merged[id]=normalized;
     QString conflict;
@@ -1436,7 +1525,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
         for(auto it=stored.begin();it!=stored.end();++it)
             if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
         for(auto it=merged.begin();it!=merged.end();++it)
-            if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
+            if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
     });

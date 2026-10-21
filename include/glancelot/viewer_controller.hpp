@@ -4,6 +4,7 @@
 #include <QImage>
 #include <QStringList>
 #include <QVariantList>
+#include <QVariantMap>
 #include <memory>
 
 #include "glancelot/metadata_model.hpp"
@@ -31,6 +32,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(QVariantList commands READ commands NOTIFY bindingsChanged)
     Q_PROPERTY(QString boundaryMode READ boundaryMode WRITE setBoundaryMode NOTIFY stateChanged)
     Q_PROPERTY(QString wheelMode READ wheelMode WRITE setWheelMode NOTIFY stateChanged)
+    Q_PROPERTY(QVariantMap wheelModifiers READ wheelModifiers NOTIFY stateChanged)
     Q_PROPERTY(bool filmstripVisible READ filmstripVisible WRITE setFilmstripVisible NOTIFY stateChanged)
     Q_PROPERTY(bool canRaiseRoot READ canRaiseRoot NOTIFY stateChanged)
     Q_PROPERTY(bool treeVisible READ treeVisible WRITE setTreeVisible NOTIFY stateChanged)
@@ -79,6 +81,14 @@ public:
     Q_INVOKABLE bool setBinding(const QString& id,const QString& sequence);
     Q_INVOKABLE void resetBindings();
     void setBoundaryMode(const QString& mode); void setWheelMode(const QString& mode);
+    // INPUT-02 wheel matrix: {"none","ctrl","shift","alt"} -> "navigate" | "zoom" | "pan" | "pan-horizontal". "none" is
+    // wheelMode; an Alt entry nobody set follows it. Only the changed modifier is merged into the stored settings.
+    QVariantMap wheelModifiers() const;
+    Q_INVOKABLE bool setWheelModifier(const QString& modifier, const QString& action);
+    // The command whose binding blocks `sequence` for `id` (same or overlapping scope, including chord prefixes), or "".
+    Q_INVOKABLE QString bindingConflict(const QString& id, const QString& sequence) const;
+    // The portable text of one key press (as it appears in a binding step), so panes can tell whether a key is remapped.
+    Q_INVOKABLE QString keyStep(int key, int modifiers) const;
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
     bool canRaiseRoot() const;
     bool treeVisible() const; void setTreeVisible(bool visible);
