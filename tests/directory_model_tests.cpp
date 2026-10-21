@@ -1,5 +1,6 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/navigation.hpp"
+#include <QFileInfo>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -151,13 +152,15 @@ private slots:
         QCOMPARE(names(model), (QStringList{"b.png", "d.png", "c.txt", "a.png"}));
         QCOMPARE(model.selectedPaths(), (QStringList{dir.filePath("b.png"), dir.filePath("d.png"), dir.filePath("c.txt")}));
         QCOMPARE(model.cursorRow(), 2); // cursor is c.txt, now third
-        // External delete and rename: removed keys drop, survivors stay, new names are unselected.
+        // FS-WATCH-01: deleted objects drop; a proven renamed identity stays selected.
+        const bool renameKnown=QFileInfo(dir.filePath("d.png")).birthTime().isValid();
         QVERIFY(QFile::remove(dir.filePath("c.txt")));
         QVERIFY(QFile::rename(dir.filePath("d.png"), dir.filePath("renamed.png")));
         touch(dir.filePath("new.png"), 5);
         QSignalSpy resets(&model, &QAbstractItemModel::modelReset);
         model.refresh(); QVERIFY(settle(model));
-        QCOMPARE(model.selectedPaths(), QStringList{dir.filePath("b.png")});
+        QStringList expected{dir.filePath("b.png")};if(renameKnown)expected<<dir.filePath("renamed.png");
+        QCOMPARE(model.selectedPaths(), expected);
         QCOMPARE(model.cursorRow(), -1); // the cursor's file was deleted
         QCOMPARE(model.count(), 4);
         QCOMPARE(model.rowOf(dir.filePath("d.png")), -1);
@@ -168,7 +171,7 @@ private slots:
         QCOMPARE(resets.count(), 0);
         // Same directory through setDirectory is a refresh that keeps selection.
         model.setDirectory(dir.path() + "/"); QVERIFY(settle(model));
-        QCOMPARE(model.selectedCount(), 1);
+        QCOMPARE(model.selectedCount(), expected.size());QCOMPARE(model.selectedPaths(),expected);
     }
     void incrementalRefreshInsertsAndRemovesInPlace() {
         QTemporaryDir dir; for (const char* n : {"b.png", "d.png", "f.png"}) touch(dir.filePath(n));

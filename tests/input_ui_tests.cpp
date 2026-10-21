@@ -866,14 +866,14 @@ private slots:
             else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
             QTRY_VERIFY2(menuOpen(pathMenu), qPrintable(QString::number(how)));
             QVERIFY2(menuProblems(h, pathMenu).isEmpty(), qPrintable(menuProblems(h, pathMenu).join("; ")));
-            for (const char* id : {"menuItem-focus-path", "menuItem-copy-path", "menuItem-paste-path"}) QVERIFY(pathMenu->findChild<QQuickItem*>(id));
+            for (const char* id : {"menuItem-focus-path", "menuItem-copy-folder-path", "menuItem-paste-path"}) QVERIFY(pathMenu->findChild<QQuickItem*>(id));
             closeMenu(pathMenu); QTRY_VERIFY(!menuOpen(pathMenu));
         }
         // "Copy the folder path" through the menu row.
         QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
         QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(pathMenu));
         QGuiApplication::clipboard()->setText("sentinel");
-        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(pathMenu->findChild<QQuickItem*>("menuItem-copy-path")));
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(pathMenu->findChild<QQuickItem*>("menuItem-copy-folder-path")));
         QTRY_COMPARE(QGuiApplication::clipboard()->text(), h.viewer.directory());
     }
 

@@ -1,0 +1,23 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+PASS   : FSWatchTests::malformedRevisionReply(missing)
+PASS   : FSWatchTests::malformedRevisionReply(number)
+PASS   : FSWatchTests::malformedRevisionReply(null)
+PASS   : FSWatchTests::malformedRevisionReply(version)
+PASS   : FSWatchTests::malformedRevisionReply(length)
+PASS   : FSWatchTests::malformedRevisionReply(uppercase)
+PASS   : FSWatchTests::emptyRevisionDecodesWithoutCacheAdmission()
+PASS   : FSWatchTests::revisionWorkerSupersededOrTimedOut(superseded)
+PASS   : FSWatchTests::revisionWorkerSupersededOrTimedOut(deadline)
+PASS   : FSWatchTests::prefetchWorkerSupersededOrTimedOut(superseded)
+PASS   : FSWatchTests::prefetchWorkerSupersededOrTimedOut(deadline)
+PASS   : FSWatchTests::lookaheadDiscoveryKeepsOnlyLatestPendingRequest()
+QINFO  : FSWatchTests::blockedLookaheadDoesNotRetainControllerOnClose() blocked discovery controller close ms 1017
+PASS   : FSWatchTests::blockedLookaheadDoesNotRetainControllerOnClose()
+PASS   : FSWatchTests::thumbnailMemoryReleaseWakesPendingWork()
+PASS   : FSWatchTests::thumbnailServicesOwnDistinctAdmissions(ssd)
+PASS   : FSWatchTests::thumbnailServicesOwnDistinctAdmissions(rotational)
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 18 passed, 0 failed, 0 skipped, 0 blacklisted, 13492ms
+********* Finished testing of FSWatchTests *********

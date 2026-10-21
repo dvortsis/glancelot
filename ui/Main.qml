@@ -149,22 +149,25 @@ ApplicationWindow {
         // which side (left/top) or end (right/bottom) of the split it takes.
         const gridEdge=state.grid.region,gridOn=gridMode||combinedMode,previewOn=!gridMode
         state.grid.region="center";state.preview.region="center"
-        const all=["topbar","statusbar","filmstrip","tree","preview","grid"]
+        const all=["topbar","statusbar","filmstrip","tree","preview","grid","metadata"]
         // shown: present whenever the HUD is awake. docked: stays up regardless of auto-hide and so reserves canvas
         // space. Auto-hiding bars overlay the photo (as before PANES-01) so the canvas never reflows with the HUD.
         const shown={tree:(viewer.treeVisible||state.tree.frozen)&&state.tree.visible,
             topbar:state.topbar.visible||frameless, statusbar:state.statusbar.visible,
             filmstrip:state.filmstrip.visible&&!gridOn&&(viewer.filmstripVisible||state.filmstrip.frozen)&&filmstrip.count>0,
+            metadata:state.metadata&&state.metadata.visible&&(viewer.metadataVisible||state.metadata.frozen),
             preview:previewOn,grid:gridOn}
         const docked={tree:shown.tree&&(viewer.treePinned||state.tree.frozen),
             topbar:shown.topbar&&(gridOn||state.topbar.frozen),
             statusbar:shown.statusbar&&(gridOn||state.statusbar.frozen),
             filmstrip:shown.filmstrip&&state.filmstrip.frozen,
+            metadata:shown.metadata&&(viewer.metadataVisible||state.metadata.frozen),
             preview:shown.preview,grid:shown.grid}
         const active={tree:shown.tree&&(docked.tree||hudVisible||frameless),
             topbar:shown.topbar&&(docked.topbar||hudVisible||frameless),
             statusbar:shown.statusbar&&(docked.statusbar||hudVisible),
             filmstrip:shown.filmstrip&&(docked.filmstrip||hudVisible||frameless),
+            metadata:shown.metadata&&(docked.metadata||hudVisible),
             preview:shown.preview,grid:shown.grid}
         const ids=all.filter(id=>active[id])
         function horizontal(id) { return ["top","bottom"].indexOf(state[id].region)>=0 }
@@ -172,6 +175,7 @@ ApplicationWindow {
         function minimum(id) {
             if(id==="topbar"||id==="statusbar")return horizontal(id)?48:200
             if(id==="tree")return 200
+            if(id==="metadata")return 260
             if(id==="filmstrip")return horizontal(id)?68:100
             return 120
         }
@@ -181,7 +185,7 @@ ApplicationWindow {
         // Decided on the HUD-independent set so recovery cannot flip on and off with auto-hide.
         let recovered=group(shownIds,true).reduce((n,id)=>n+minimum(id),0)>height-120 || group(shownIds,false).reduce((n,id)=>n+minimum(id),0)>width-reservedCenter
         if(recovered) {
-            const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640]}
+            const defaults={topbar:["top",0,48],statusbar:["bottom",0,48],filmstrip:["top",1,92],tree:["left",0,280],preview:["center",0,640],grid:["center",1,640],metadata:["right",0,320]}
             for(const id of Object.keys(defaults)) {
                 state[id].region=defaults[id][0];state[id].order=defaults[id][1];state[id].extent=defaults[id][2]
             }
@@ -269,7 +273,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: activeFocusItem !== null && typeof activeFocusItem.selectAll === "function" && typeof activeFocusItem.text === "string"
-    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal
+    property bool modalOpen: settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible || (renameFlow && renameFlow.modal)
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -465,6 +469,8 @@ ApplicationWindow {
     function shortcutHint(id) { const binding = viewer.bindingFor(id); return binding.length ? " (" + binding + ")" : "" }
     // Kept for --show-themes: appearance now lives in Settings.
     function openThemes() { settingsDialog.openSection("appearance", false) }
+    function openSettings(section, focusSearch) { settingsDialog.openSection(section || "appearance", focusSearch || false) }
+    function openShortcutsHelp() { shortcutsCheatSheet.open() }
     function handleViewCommand(id) {
         canvas.endLoupe()
         if (id === "grid") { gridMode = !gridMode; wakeHud(); if (!gridMode) canvas.forceActiveFocus() }
@@ -472,6 +478,7 @@ ApplicationWindow {
         else if (id === "fullscreen") visibility = visibility === Window.FullScreen ? Window.Windowed : Window.FullScreen
         else if (id === "palette") settingsDialog.openSection("controls", true)
         else if (id === "settings") settingsDialog.openSection(settingsDialog.section, false)
+        else if (id === "shortcuts-help") shortcutsCheatSheet.open()
         else if (id === "fit") canvas.fit("shrink")
         else if (id === "actual") canvas.actualSize()
         else if (id === "zoom-in") canvas.zoomAt(1.25, pointerX, pointerY)
@@ -483,6 +490,13 @@ ApplicationWindow {
         else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
+        else if (id === "toggle-metadata") { viewer.toggleMetadata(); wakeHud() }
+        else if (id === "animation-toggle-play-pause") { if (viewer.animationController) viewer.animationController.togglePlayPause() }
+        else if (id === "animation-next-frame") { if (viewer.animationController) viewer.animationController.nextFrame() }
+        else if (id === "animation-previous-frame") { if (viewer.animationController) viewer.animationController.previousFrame() }
+        else if (id === "animation-speed-up") { if (viewer.animationController) viewer.animationController.setSpeed(viewer.animationController.speed * 1.5) }
+        else if (id === "animation-speed-down") { if (viewer.animationController) viewer.animationController.setSpeed(viewer.animationController.speed / 1.5) }
+        else if (id === "animation-toggle-loop") { if (viewer.animationController) viewer.animationController.setLoop(!viewer.animationController.loop) }
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
             const blocked = commandBlockedReason(id)
@@ -526,8 +540,108 @@ ApplicationWindow {
         else if (id === "grid-select-all") fileGrid.selectAll()
         else if (id === "tree-open-folder") treePanel.openCursor()
         else if (id === "focus-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.focusAddress) }
-        else if (id === "copy-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
+        else if (id === "copy-folder-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
         else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
+        else if (id === "rename") {
+            let target = ""
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (focusWithin(treePanel) && treeFolder.length > 0) {
+                target = treeFolder
+            } else if (focusWithin(photoGrid) || gridScope || (workspace._gridShown && fileGrid.count > 0)) {
+                if (photoGrid.selectedPath && photoGrid.selectedPath.length > 0) {
+                    target = photoGrid.selectedPath
+                } else {
+                    const targets = photoGrid.deletionTargets()
+                    if (targets.length > 0) target = targets[0]
+                    else if (workspace._previewShown && viewer.filePath.length > 0) target = viewer.filePath
+                }
+            } else if (viewer.filePath.length > 0) {
+                target = viewer.filePath
+            } else if (treeFolder.length > 0) {
+                target = treeFolder
+            }
+            if (target.length > 0) {
+                renameFlow.openRename(target)
+            }
+        }
+        else if (id === "new-folder") {
+            let folder = ""
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (focusWithin(treePanel) && treeFolder.length > 0) {
+                folder = treeFolder
+            } else {
+                folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            }
+            if (folder.length > 0) {
+                renameFlow.openNewFolder(folder)
+            }
+        }
+        else if (id === "cut-selection") {
+            const targets = photoGrid.deletionTargets()
+            if (targets.length > 0) {
+                viewer.copyMoveService.markCut(targets)
+            } else if (viewer.filePath.length > 0) {
+                viewer.copyMoveService.markCut([viewer.filePath])
+            }
+        }
+        else if (id === "copy-selection") {
+            const targets = photoGrid.deletionTargets()
+            if (targets.length > 0) {
+                viewer.copyMoveService.markCopy(targets)
+            } else if (viewer.filePath.length > 0) {
+                viewer.copyMoveService.markCopy([viewer.filePath])
+            }
+        }
+        else if (id === "paste") {
+            let dest = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            const treeFolder = treePanel.currentSelectedFolder()
+            if (focusWithin(treePanel) && treeFolder.length > 0) dest = treeFolder
+            if (dest.length > 0) {
+                viewer.copyMoveService.pasteTo(dest)
+            }
+        }
+        else if (id === "reveal-in-file-manager") {
+            let target = ""
+            const hasGridFocusOrSelection = focusWithin(photoGrid) || gridScope || photoGrid.selectedCount > 0
+            const targets = photoGrid.deletionTargets()
+            if (hasGridFocusOrSelection && (photoGrid.selectedPath.length > 0 || targets.length > 0)) {
+                target = photoGrid.selectedPath.length > 0 ? photoGrid.selectedPath : targets[0]
+            } else if (viewer.filePath.length > 0) {
+                target = viewer.filePath
+            } else {
+                target = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            }
+            viewer.revealInFileManager(target)
+        }
+        else if (id === "open-terminal") {
+            const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+            viewer.openTerminal(folder)
+        }
+        else if (id === "copy-path" || id === "copy-file") {
+            let targets = []
+            const gridActive = focusWithin(photoGrid) || gridScope || gridMode || (workspace._gridShown && fileGrid.count > 0) || photoGrid.selectedCount > 0
+            if (gridActive) {
+                const dt = photoGrid.deletionTargets()
+                if (dt.length > 0) targets = dt
+                else if (photoGrid.selectedPath.length > 0) targets = [photoGrid.selectedPath]
+            }
+            if (targets.length === 0 && viewer.filePath.length > 0) {
+                targets = [viewer.filePath]
+            }
+            if (id === "copy-path") viewer.copyFilePath(targets)
+            else viewer.copyFileUrls(targets)
+        }
+        else if (id === "copy-image") {
+            viewer.copyImageBitmap()
+        }
+        else if (id === "select-all") { if (workspace._gridShown || gridScope) fileGrid.selectAll() }
+        else if (id === "clear-selection") { if (workspace._gridShown || gridScope) fileGrid.clearSelection() }
+        else if (id === "invert-selection") { if (workspace._gridShown || gridScope) fileGrid.invertSelection() }
+        else if (id === "grid-zoom-in") { if (workspace._gridShown || gridScope) photoGrid.zoomIn() }
+        else if (id === "grid-zoom-out") { if (workspace._gridShown || gridScope) photoGrid.zoomOut() }
+        else if (id === "grid-zoom-reset") { if (workspace._gridShown || gridScope) photoGrid.resetZoom() }
+        else if (id === "navigate-back") { if (typeof folderHistory !== "undefined") folderHistory.navigateBack() }
+        else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel() }
@@ -573,11 +687,19 @@ ApplicationWindow {
             if (app.chordPending) { app.chordCancel(); return } // the first Escape only abandons the pending chord
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
+            if (viewer.metadataVisible) { viewer.metadataVisible = false; return }
             if (app.gridMode) app.showCanvas()
             else if (app.combinedMode && app.focusedPane === "preview" && app.visibility !== Window.FullScreen) app.focusPane("grid")
             else if (app.visibility === Window.FullScreen) app.showNormal()
             else app.wakeHud()
         }
+    }
+    Shortcut {
+        sequence: "?"
+        context: Qt.WindowShortcut
+        autoRepeat: false
+        enabled: !app.modalOpen && !app.editingText
+        onActivated: app.openShortcutsHelp()
     }
     Timer {
         id: hideHud
@@ -648,7 +770,7 @@ ApplicationWindow {
         objectName: "canvas"
         x: app.paneRect("preview").x; y: app.paneRect("preview").y
         width: app.paneRect("preview").width; height: app.paneRect("preview").height
-        image: viewer.image
+        image: viewer.animationController && viewer.animationController.active && !viewer.animationController.frameImage.isNull ? viewer.animationController.frameImage : viewer.image
         background: "#191919" // photo backdrop, deliberately independent of the interface palette
         focus: !app.gridMode
         visible: app.workspace._previewShown
@@ -661,8 +783,35 @@ ApplicationWindow {
         }
         // Combined view: F6 returns to the grid; Tab continues to the split handle (its keyboard resize), then the grid.
         Keys.onPressed: event => {
-            if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true }
-            else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { app.openCanvasMenu(app.pointerX, app.pointerY); event.accepted = true }
+            if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true; return }
+            else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { app.openCanvasMenu(app.pointerX, app.pointerY); event.accepted = true; return }
+            if (viewer.animationController && viewer.animationController.active) {
+                if (event.key === Qt.Key_Space && viewer.animationController.isAnimated) {
+                    viewer.animationController.togglePlayPause()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Period) {
+                    viewer.animationController.nextFrame()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Comma) {
+                    viewer.animationController.previousFrame()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_BracketRight) {
+                    viewer.animationController.setSpeed(viewer.animationController.speed * 1.5)
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_BracketLeft) {
+                    viewer.animationController.setSpeed(viewer.animationController.speed / 1.5)
+                    event.accepted = true
+                    return
+                }
+            }
         }
         Keys.onTabPressed: event => {
             if (app.combinedMode) {
@@ -678,12 +827,20 @@ ApplicationWindow {
         Accessible.name: "Photo canvas"
         Accessible.description: viewer.fileName.length ? viewer.fileName + ", " + viewer.imageWidth + " by " + viewer.imageHeight + " pixels" : "Open or drop a photo to begin"
     }
+    AnimationBar {
+        id: animationBar
+        anchors.horizontalCenter: canvas.horizontalCenter
+        anchors.bottom: canvas.bottom
+        anchors.bottomMargin: Theme.gapLg
+        z: 20
+        visible: viewer.animationController && viewer.animationController.active && app.workspace._previewShown && !app.gridMode
+    }
     MouseArea {
         id: interaction
         objectName: "canvasPointer"
         visible: app.workspace._previewShown
         anchors.fill: canvas
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton | Qt.BackButton | Qt.ForwardButton
         hoverEnabled: true
         property real lastX: 0
         property real lastY: 0
@@ -706,6 +863,8 @@ ApplicationWindow {
         }
         function endPointerLoupe() { loupeDelay.stop(); if (pointerLoupe) { pointerLoupe = false; canvas.endLoupe() } }
         onPressed: mouse => {
+            if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
+            if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
             canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
             if (mouse.button === Qt.RightButton) loupeDelay.restart()
         }
@@ -1389,6 +1548,15 @@ ApplicationWindow {
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
     }
+    MetadataHud {
+        id: metadataPanel
+        objectName: "metadataHud"
+        x: app.paneRect("metadata").x; y: app.paneRect("metadata").y
+        width: app.paneRect("metadata").width; height: app.paneRect("metadata").height
+        visible: width > 0 && height > 0
+        model: viewer.metadataModel
+        onCloseRequested: { viewer.metadataVisible = false; app.focusContent() }
+    }
     DeleteFlow { // DELETE-01 confirmation, progress, notice and results
         id: deleteFlow
         objectName: "deleteFlow"
@@ -1396,6 +1564,24 @@ ApplicationWindow {
         anchors.fill: parent
         z: 25
         onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
+    }
+    RenameFlow { // RENAME-01 (F018) in-browser rename and new folder dialogs
+        id: renameFlow
+        objectName: "renameFlow"
+        host: app
+        mutationService: viewer.mutationService
+        anchors.fill: parent
+        z: 26
+        onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
+    }
+    TransferHud { // COPY-MOVE-01 (F020) async file copy and move progress HUD
+        id: transferHud
+        objectName: "transferHud"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.gapXl
+        service: viewer.copyMoveService
+        z: 23
     }
     Rectangle {
         id: bottomPanel
@@ -1442,8 +1628,8 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"
-                color: viewer.status.length > 0 ? Theme.text : Theme.muted
+                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             BarLabel { // INPUT-02: the first key of a two-key shortcut was pressed; the second key or Escape ends it
                 objectName: "chordPending"
@@ -1472,6 +1658,13 @@ ApplicationWindow {
             }
             UiButton { text: "Fit"; visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
             UiButton { text: "Rotate"; visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
+            UiButton {
+                text: "Info"
+                visible: !app.gridMode
+                variant: viewer.metadataVisible ? "primary" : "standard"
+                tip: "Toggle metadata inspector"
+                onClicked: app.invoke("toggle-metadata")
+            }
         }
         }
     }
@@ -1517,6 +1710,12 @@ ApplicationWindow {
         anchors.centerIn: parent
         width: Math.min(800, app.width - 2 * Theme.gapLg)
         height: Math.min(640, app.height - 2 * Theme.gapLg)
+        onClosed: app.focusContent()
+    }
+    ShortcutCheatSheet {
+        id: shortcutsCheatSheet
+        host: app
+        anchors.centerIn: parent
         onClosed: app.focusContent()
     }
     // Native system resizing remains available even in the optional frameless mode.

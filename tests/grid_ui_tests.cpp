@@ -5,6 +5,7 @@
 #include "glancelot/settings_file.hpp"
 #include "../src/app/thumbnail_id.hpp"
 #include "../src/app/file_grid_wiring.hpp"
+#include <QFileInfo>
 #include "../src/app/file_operation_wiring.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
@@ -21,6 +22,7 @@
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QClipboard>
+#include <QMimeData>
 #include <QQuickStyle>
 #include <QQuickImageProvider>
 #include <QQuickItem>
@@ -1148,7 +1150,7 @@ private slots:
         QCOMPARE(dialog->property("section").toString(), QString("controls"));
         auto* search = h.window->findChild<QQuickItem*>("commandSearch"); QVERIFY(search);
         QTRY_VERIFY(search->hasActiveFocus());
-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(!h.window->property("modalOpen").toBool());
         QVERIFY(commands.contains(QVariantList{QString("rotate")}));
@@ -1162,7 +1164,7 @@ private slots:
         h.fill(20); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         commands.clear();
         h.viewer.trigger("palette"); QTRY_VERIFY(search->hasActiveFocus());
-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTest::qWait(50);
         QVERIFY(!commands.contains(QVariantList{QString("rotate")}));
@@ -1616,6 +1618,7 @@ private slots:
         h.fileGrid.select(h.fileGrid.rowOf(media.file("README")), DirectoryEntryModel::Toggle);
         h.fileGrid.select(h.fileGrid.rowOf(media.file("notes.txt")), DirectoryEntryModel::Toggle);
         QCOMPARE(h.fileGrid.selectedCount(), 3);
+        const bool renameKnown=QFileInfo(media.file("README")).birthTime().isValid();
         QVERIFY(QFile::rename(media.file("README"), media.file("README.md")));
         QVERIFY(QFile::remove(media.file("itinerary.pdf")));
         QVERIFY(QFile::remove(media.file("notes.txt")));
@@ -1627,7 +1630,10 @@ private slots:
         QVERIFY(h.fileGrid.rowOf(media.file("README.md")) >= 0);
         QTRY_COMPARE(h.fileGrid.rowOf(media.file("notes.txt")), -1);
         QTest::qWait(150); // past the grid's post-listing cursor placement
-        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.file("sunset.jpg")});
+        QStringList expected;
+        if(renameKnown)expected<<media.file("README.md");
+        expected<<media.file("sunset.jpg");
+        QCOMPARE(h.fileGrid.selectedPaths(), expected);
         QCOMPARE(h.selected(), -1); // the cursor's file is gone; nothing else was selected in its place
         QVERIFY(h.window->property("gridMode").toBool());
     }
@@ -2316,14 +2322,26 @@ private slots:
         QObject* results = h.window->findChild<QObject*>("deleteResults");
         const QString trash = deleteFlow(h)->property("trashName").toString();
         QCOMPARE(results->property("title").toString(), "Moved 2 of 4 items to the " + trash);
+        // Results are virtualized. Wait for the model, then reveal each row instead of
+        // assuming both delegates exist immediately when the dialog starts opening.
+        auto* failures = overlayItem(h, "deleteFailures"); QVERIFY(failures);
+        QTRY_COMPARE(failures->property("count").toInt(), 2);
+        const auto reasonAt = [&](int row) {
+            QQuickItem* delegate = nullptr;
+            if (!QMetaObject::invokeMethod(failures, "itemAtIndex", Q_RETURN_ARG(QQuickItem*, delegate), Q_ARG(int, row)) || !delegate)
+                return QString{};
+            for (auto* item : descendants(delegate))
+                if (item->objectName() == "deleteFailureReason") return item->property("text").toString();
+            return QString{};
+        };
         QStringList reasons;
-        // The results popup can become visible before ListView has created both delegates.
-        // Re-query the live tree until both reasons exist; keep the exact count and content oracle.
-        QTRY_VERIFY(([&] {
-            reasons.clear();
-            for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
-            return reasons.size()==2;
-        })());
+        for (int row = 0; row < 2; ++row) {
+            QVERIFY(QMetaObject::invokeMethod(failures, "positionViewAtIndex", Q_ARG(int, row), Q_ARG(int, 4)));
+            QString reason;
+            QTRY_VERIFY(!(reason = reasonAt(row)).isEmpty());
+            reasons << reason;
+        }
+        QCOMPARE(reasons.size(), 2);
         QVERIFY(reasons.join("|").contains("open in another app"));
         QVERIFY(reasons.join("|").contains("Nothing was deleted"));
         QVERIFY(QFileInfo::exists(media.file("note2.txt")) && QFileInfo::exists(media.file("note3.txt")));
@@ -2512,6 +2530,142 @@ private slots:
 #else
         QCOMPARE(map["delete-current-folder"]["label"].toString(), QString("Move current folder to the Trash"));
 #endif
+    }
+    void platformOperationsShortcutsRegisteredAndBound() {
+        ViewerController viewer;
+        const auto commands = viewer.commands();
+        QMap<QString, QVariantMap> map;
+        for (const auto& cmd : commands) {
+            const auto row = cmd.toMap();
+            map[row["id"].toString()] = row;
+        }
+
+        QVERIFY(map.contains("reveal-in-file-manager"));
+        QCOMPARE(map["reveal-in-file-manager"]["binding"].toString(), QString("Ctrl+Alt+R"));
+        QCOMPARE(map["reveal-in-file-manager"]["label"].toString(), QString("Reveal in File Manager"));
+
+        QVERIFY(map.contains("open-terminal"));
+        QCOMPARE(map["open-terminal"]["binding"].toString(), QString("Ctrl+Alt+T"));
+        QCOMPARE(map["open-terminal"]["label"].toString(), QString("Open Terminal"));
+
+        // When no path or directory is set, controller invokables return false and update status
+        QVERIFY(!viewer.revealInFileManager(""));
+        QCOMPARE(viewer.status(), QString("No photo or folder is open to reveal."));
+
+        QVERIFY(!viewer.openTerminal(""));
+        QCOMPARE(viewer.status(), QString("No folder is open to open a terminal."));
+
+        // When nonexistent path is passed, controller attempts operation and reports failure
+        QVERIFY(!viewer.revealInFileManager("C:/nonexistent_file_path_12345.png"));
+        QCOMPARE(viewer.status(), QString("Could not open file manager."));
+
+        QVERIFY(!viewer.openTerminal("C:/nonexistent_dir_path_12345"));
+        QCOMPARE(viewer.status(), QString("Could not open terminal."));
+    }
+    void clipboardOperationsRegisteredAndFunctional() {
+        ViewerController viewer;
+        const auto commands = viewer.commands();
+        QMap<QString, QVariantMap> map;
+        for (const auto& cmd : commands) {
+            const auto row = cmd.toMap();
+            map[row["id"].toString()] = row;
+        }
+
+        // 1. Verify commands and default shortcuts in viewer.commands
+        QVERIFY(map.contains("copy-path"));
+        QCOMPARE(map["copy-path"]["binding"].toString(), QStringLiteral("Ctrl+C"));
+        QCOMPARE(map["copy-path"]["label"].toString(), QStringLiteral("Copy file path"));
+
+        QVERIFY(map.contains("copy-file"));
+        QCOMPARE(map["copy-file"]["binding"].toString(), QStringLiteral("Ctrl+Shift+C"));
+        QCOMPARE(map["copy-file"]["label"].toString(), QStringLiteral("Copy file"));
+
+        QVERIFY(map.contains("copy-image"));
+        QCOMPARE(map["copy-image"]["binding"].toString(), QStringLiteral("Ctrl+Alt+C"));
+        QCOMPARE(map["copy-image"]["label"].toString(), QStringLiteral("Copy image"));
+
+        // 2. Empty-state status messages and return false
+        QVERIFY(!viewer.copyFilePath());
+        QCOMPARE(viewer.status(), QStringLiteral("Nothing selected to copy path."));
+
+        QVERIFY(!viewer.copyFileUrls());
+        QCOMPARE(viewer.status(), QStringLiteral("Nothing selected to copy file."));
+
+        QVERIFY(!viewer.copyImageBitmap());
+        QCOMPARE(viewer.status(), QStringLiteral("No image open to copy."));
+
+        // 3. Functional copyFilePath with single and multiple paths
+        QTemporaryDir tempDir;
+        QVERIFY(tempDir.isValid());
+        const QString file1 = QDir(tempDir.path()).filePath("photo1.png");
+        const QString file2 = QDir(tempDir.path()).filePath("photo2.png");
+        {
+            QFile f1(file1); QVERIFY(f1.open(QIODevice::WriteOnly)); f1.close();
+            QFile f2(file2); QVERIFY(f2.open(QIODevice::WriteOnly)); f2.close();
+        }
+
+        // Single path
+        QVERIFY(viewer.copyFilePath(QStringList{file1}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied path to clipboard."));
+        QCOMPARE(QGuiApplication::clipboard()->text(), QDir::toNativeSeparators(file1));
+
+        // Multiple paths
+        QVERIFY(viewer.copyFilePath(QStringList{file1, file2}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied 2 paths to clipboard."));
+#ifdef Q_OS_WIN
+        const QString expectedJoined = QDir::toNativeSeparators(file1) + "\r\n" + QDir::toNativeSeparators(file2);
+#else
+        const QString expectedJoined = QDir::toNativeSeparators(file1) + "\n" + QDir::toNativeSeparators(file2);
+#endif
+        QCOMPARE(QGuiApplication::clipboard()->text(), expectedJoined);
+
+        // 4. Functional copyFileUrls with single and multiple paths
+        QVERIFY(viewer.copyFileUrls(QStringList{file1}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied file to clipboard."));
+        const QMimeData* mimeSingle = QGuiApplication::clipboard()->mimeData();
+        QVERIFY(mimeSingle != nullptr);
+        QVERIFY(mimeSingle->hasUrls());
+        QCOMPARE(mimeSingle->urls().size(), 1);
+        QCOMPARE(QDir::cleanPath(mimeSingle->urls().first().toLocalFile()).toCaseFolded(), QDir::cleanPath(file1).toCaseFolded());
+        QCOMPARE(QGuiApplication::clipboard()->text(), QDir::toNativeSeparators(file1));
+
+        QVERIFY(viewer.copyFileUrls(QStringList{file1, file2}));
+        QCOMPARE(viewer.status(), QStringLiteral("Copied 2 files to clipboard."));
+        const QMimeData* mimeMulti = QGuiApplication::clipboard()->mimeData();
+        QVERIFY(mimeMulti != nullptr);
+        QVERIFY(mimeMulti->hasUrls());
+        QCOMPARE(mimeMulti->urls().size(), 2);
+        QCOMPARE(QDir::cleanPath(mimeMulti->urls()[0].toLocalFile()).toCaseFolded(), QDir::cleanPath(file1).toCaseFolded());
+        QCOMPARE(QDir::cleanPath(mimeMulti->urls()[1].toLocalFile()).toCaseFolded(), QDir::cleanPath(file2).toCaseFolded());
+        QCOMPARE(QGuiApplication::clipboard()->text(), expectedJoined);
+
+        // 5. Functional copyImageBitmap
+        QImage testImg(64, 48, QImage::Format_RGB32);
+        testImg.fill(Qt::blue);
+        QVERIFY(testImg.save(file1));
+
+        viewer.open(file1);
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(), 15000);
+        QCOMPARE(viewer.image().size(), QSize(64, 48));
+
+        // When image is loaded, copyImageBitmap succeeds and copies bitmap
+        QVERIFY(viewer.copyImageBitmap());
+        QCOMPARE(viewer.status(), QStringLiteral("Copied image bitmap to clipboard."));
+        QImage clipImg = QGuiApplication::clipboard()->image();
+        QVERIFY(!clipImg.isNull());
+        QCOMPARE(clipImg.size(), QSize(64, 48));
+
+        // Also test copyFilePath fallback when no paths provided: falls back to d->path (file1)
+        QVERIFY(viewer.copyFilePath());
+        QCOMPARE(viewer.status(), QStringLiteral("Copied path to clipboard."));
+        QCOMPARE(QGuiApplication::clipboard()->text(), QDir::toNativeSeparators(file1));
+
+        // Also test copyFileUrls fallback when no paths provided: falls back to d->path (file1)
+        QVERIFY(viewer.copyFileUrls());
+        QCOMPARE(viewer.status(), QStringLiteral("Copied file to clipboard."));
+        QVERIFY(QGuiApplication::clipboard()->mimeData()->hasUrls());
+        QCOMPARE(QGuiApplication::clipboard()->mimeData()->urls().size(), 1);
+        QCOMPARE(QDir::cleanPath(QGuiApplication::clipboard()->mimeData()->urls().first().toLocalFile()).toCaseFolded(), QDir::cleanPath(file1).toCaseFolded());
     }
     void deleteCurrentFileAndFolderShortcuts() {
         DeleteFolder media(3, 2); QVERIFY(media.root.isValid());

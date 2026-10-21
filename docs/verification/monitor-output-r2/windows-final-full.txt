@@ -1,0 +1,98 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (6.1s)
+-- Generating done (1.3s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-monitor-output-r2/build-codex-monitor-output-r2
+[1/156] Automatic MOC and UIC for target glancelot_platform
+[2/154] Automatic MOC and UIC for target glancelot_test_argv_capture
+[3/152] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[4/150] Automatic MOC and UIC for target pane_layout_tests
+[5/148] Automatic MOC and UIC for target glancelot-decoder
+[6/146] Automatic MOC and UIC for target theme_tests
+[7/145] Automatic MOC and UIC for target file_operation_service_tests
+[8/143] Automatic MOC and UIC for target grid_ui_tests
+[9/142] Automatic MOC and UIC for target monitor_output_tests
+[10/140] Automatic MOC and UIC for target fs_watch_ui_tests
+[11/139] Automatic MOC and UIC for target acceptance_tests
+[12/138] Automatic MOC and UIC for target thumbnail_tests
+[13/137] Automatic MOC and UIC for target folder_tree_tests
+[14/136] Automatic MOC and UIC for target glancelot
+[15/136] Automatic MOC and UIC for target window_slot_tests
+[16/135] Running AUTOMOC file extraction for target glancelot
+[17/135] Automatic MOC and UIC for target directory_model_tests
+[18/133] Automatic MOC and UIC for target canvas_tests
+[19/132] Automatic MOC and UIC for target platform_integration_tests
+[20/130] Automatic MOC and UIC for target grid_search_tests
+[21/128] Running moc --collect-json for target glancelot
+[22/82] Automatic MOC and UIC for target grid_density_tests
+[23/80] Automatic MOC and UIC for target ui_settings_tests
+[24/79] Automatic MOC and UIC for target fs_watch_tests
+[25/78] Automatic MOC and UIC for target fs_watch_budget_tests
+[26/77] Automatic MOC and UIC for target favorites_tests
+[27/76] Automatic MOC and UIC for target folder_history_tests
+[28/74] Automatic MOC and UIC for target shortcuts_help_tests
+[29/73] Automatic MOC and UIC for target filter_tests
+[30/72] Automatic MOC and UIC for target cache_tests
+[31/71] Automatic MOC and UIC for target io_scheduler_tests
+[32/70] Automatic MOC and UIC for target metadata_tests
+[33/69] Automatic MOC and UIC for target animation_tests
+[34/68] Automatic MOC and UIC for target mutation_tests
+[35/67] Automatic MOC and UIC for target copy_move_tests
+[36/66] Automatic MOC and UIC for target format_tests
+[37/65] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[38/65] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[39/65] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[40/65] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[41/65] Linking CXX executable glancelot.exe
+[42/65] Linking CXX executable acceptance_tests.exe
+[43/65] Linking CXX executable thumbnail_tests.exe
+[44/65] Linking CXX executable folder_tree_tests.exe
+[45/65] Linking CXX executable window_slot_tests.exe
+[46/65] Linking CXX executable theme_tests.exe
+[47/65] Linking CXX executable ui_settings_tests.exe
+[48/65] Linking CXX executable fs_watch_tests.exe
+[49/65] Linking CXX executable fs_watch_budget_tests.exe
+[50/65] Linking CXX executable favorites_tests.exe
+[51/65] Linking CXX executable shortcuts_help_tests.exe
+[52/65] Linking CXX executable filter_tests.exe
+[53/65] Building CXX object CMakeFiles\grid_ui_tests.dir\src\render\image_canvas.cpp.obj
+[54/65] Linking CXX executable cache_tests.exe
+[55/65] Linking CXX executable io_scheduler_tests.exe
+[56/65] Linking CXX executable grid_ui_tests.exe
+[57/65] Linking CXX executable metadata_tests.exe
+[58/65] Linking CXX executable animation_tests.exe
+[59/65] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\render\image_canvas.cpp.obj
+[60/65] Linking CXX executable mutation_tests.exe
+[61/65] Linking CXX executable copy_move_tests.exe
+[62/65] Linking CXX executable format_tests.exe
+[63/65] Linking CXX executable fs_watch_ui_tests.exe
+[64/65] Building CXX object CMakeFiles\canvas_tests.dir\src\render\image_canvas.cpp.obj
+[65/65] Linking CXX executable canvas_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-monitor-output-r2/build-codex-monitor-output-r2
+      Start  1: perf_trace
+ 1/33 Test  #1: perf_trace .......................   Passed    0.06 sec
+      Start  2: navigation
+ 2/33 Test  #2: navigation .......................   Passed    2.74 sec
+      Start  3: directory_listing
+ 3/33 Test  #3: directory_listing ................   Passed   17.51 sec
+      Start  4: file_operations
+ 4/33 Test  #4: file_operations ..................   Passed    0.23 sec
+      Start  5: viewer_acceptance
+ 5/33 Test  #5: viewer_acceptance ................   Passed    7.68 sec
+      Start  6: thumbnails
+ 6/33 Test  #6: thumbnails .......................   Passed    7.09 sec
+      Start  7: folder_tree
+ 7/33 Test  #7: folder_tree ......................   Passed    8.36 sec
+      Start  8: pane_layout
+ 8/33 Test  #8: pane_layout ......................   Passed    0.59 sec
+      Start  9: window_slots
+ 9/33 Test  #9: window_slots .....................   Passed   24.02 sec
+      Start 10: folder_grid

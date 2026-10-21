@@ -1,0 +1,142 @@
+#include "presentation_window.hpp"
+#include "image_canvas.hpp"
+#include "glancelot/display_manager.hpp"
+#include <QQuickItem>
+#include <QColor>
+#include <QPointer>
+
+namespace glancelot {
+
+PresentationWindow::PresentationWindow(QWindow* parent)
+    : QQuickWindow(parent) {
+    setTitle(QStringLiteral("Glancelot - Presentation"));
+    setColor(QColor(0, 0, 0));
+    setFlags(Qt::Window | Qt::FramelessWindowHint);
+
+    m_canvasA = new ImageCanvas(contentItem());
+    m_canvasA->setBackground(QColor(0, 0, 0));
+    m_canvasA->fit(m_fitMode);
+
+    m_canvasB = new ImageCanvas(contentItem());
+    m_canvasB->setBackground(QColor(0, 0, 0));
+    m_canvasB->fit(m_fitMode);
+    m_canvasB->setVisible(false);
+
+    updateLayout();
+}
+
+PresentationWindow::~PresentationWindow() = default;
+
+void PresentationWindow::setComparisonMode(bool comparison) {
+    if (m_comparisonMode == comparison) return;
+    m_comparisonMode = comparison;
+    m_canvasB->setVisible(m_comparisonMode);
+    updateLayout();
+}
+
+void PresentationWindow::setPrimaryImage(const QImage& image) {
+    if (m_canvasA) {
+        m_canvasA->setImage(image);
+        m_canvasA->fit(m_fitMode);
+    }
+}
+
+void PresentationWindow::setSecondaryImage(const QImage& image) {
+    if (m_canvasB) {
+        m_canvasB->setImage(image);
+        m_canvasB->fit(m_fitMode);
+    }
+}
+
+void PresentationWindow::setFitMode(const QString& mode) {
+    m_fitMode = mode;
+    if (m_canvasA) m_canvasA->fit(mode);
+    if (m_canvasB) m_canvasB->fit(mode);
+}
+
+void PresentationWindow::updateLayout() {
+    const qreal w = width();
+    const qreal h = height();
+    if (w <= 0 || h <= 0) return;
+
+    if (!m_comparisonMode) {
+        if (m_canvasA) {
+            m_canvasA->setX(0);
+            m_canvasA->setY(0);
+            m_canvasA->setSize(QSizeF(w, h));
+        }
+    } else {
+        // Split side-by-side (left/right)
+        const qreal halfW = w / 2.0;
+        if (m_canvasA) {
+            m_canvasA->setX(0);
+            m_canvasA->setY(0);
+            m_canvasA->setSize(QSizeF(halfW, h));
+        }
+        if (m_canvasB) {
+            m_canvasB->setX(halfW);
+            m_canvasB->setY(0);
+            m_canvasB->setSize(QSizeF(halfW, h));
+        }
+    }
+}
+
+void PresentationWindow::keyPressEvent(QKeyEvent* event) {
+    if (event->key() == Qt::Key_Escape || event->key() == Qt::Key_F8) {
+        event->accept();
+        emit escapePressed();
+        close();
+        return;
+    }
+    QQuickWindow::keyPressEvent(event);
+}
+
+void PresentationWindow::closeEvent(QCloseEvent* event) {
+    emit closedByUser();
+    event->accept();
+}
+
+void PresentationWindow::resizeEvent(QResizeEvent* event) {
+    QQuickWindow::resizeEvent(event);
+    updateLayout();
+}
+
+class DefaultPresentationWindowWrapper : public IPresentationWindow {
+public:
+    explicit DefaultPresentationWindowWrapper(DisplayManager* owner) {
+        m_window = new PresentationWindow();
+        if (owner) {
+            QObject::connect(m_window.data(), &PresentationWindow::escapePressed, owner, &DisplayManager::closePresentation);
+            QObject::connect(m_window.data(), &PresentationWindow::closedByUser, owner, &DisplayManager::closePresentation);
+        }
+    }
+    void setScreen(QScreen* screen) override { if (m_window) m_window->setScreen(screen); }
+    void setGeometry(const QRect& geom) override { if (m_window) m_window->setGeometry(geom); }
+    void show() override { if (m_window) m_window->show(); }
+    void hide() override { if (m_window) m_window->hide(); }
+    void deleteLater() override { if (m_window) { m_window->deleteLater(); m_window = nullptr; } }
+    void setComparisonMode(bool comparison) override { if (m_window) m_window->setComparisonMode(comparison); }
+    void setPrimaryImage(const QImage& image) override { if (m_window) m_window->setPrimaryImage(image); }
+    void setSecondaryImage(const QImage& image) override { if (m_window) m_window->setSecondaryImage(image); }
+    QQuickWindow* quickWindow() override { return m_window.data(); }
+
+private:
+    QPointer<PresentationWindow> m_window;
+};
+
+void registerPresentationWindowFactory() {
+    DisplayManager::setPresentationWindowFactory([](DisplayManager* owner) -> std::unique_ptr<IPresentationWindow> {
+        return std::make_unique<DefaultPresentationWindowWrapper>(owner);
+    });
+}
+
+namespace {
+struct PresentationWindowAutoRegister {
+    PresentationWindowAutoRegister() {
+        registerPresentationWindowFactory();
+    }
+};
+static PresentationWindowAutoRegister s_autoRegister;
+} // namespace
+
+} // namespace glancelot

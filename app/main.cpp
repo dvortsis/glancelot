@@ -1,3 +1,5 @@
+#include "perf_replay.hpp"
+#include "glancelot/perf_trace.hpp"
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
@@ -6,6 +8,8 @@
 #include "glancelot/settings_file.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
+#include "glancelot/favorites_model.hpp"
+#include "glancelot/folder_history.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
 #include "file_operation_wiring.hpp"
@@ -13,6 +17,7 @@
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
 #include "native_title_bar.hpp"
+#include "presentation_window.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -22,6 +27,8 @@
 #include <QCommandLineParser>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QSaveFile>
+#include <QSysInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTimer>
@@ -31,11 +38,13 @@
 #include <memory>
 
 int main(int argc,char** argv) {
+    const auto perfStartupBegin=glancelot::perf::Recorder::nowNs();
     QGuiApplication app(argc,argv);
     QCoreApplication::setApplicationName("Glancelot");
     QCoreApplication::setOrganizationName("Glancelot");
     QCoreApplication::setApplicationVersion("0.1.0-alpha.1");
     QQuickStyle::setStyle("Basic");
+    glancelot::registerPresentationWindowFactory();
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})
         if(QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)))<0)
@@ -46,6 +55,7 @@ int main(int argc,char** argv) {
     parser.addPositionalArgument("image","Image to open.","[image]");
     parser.addOption({"quit-after","Exit after the given milliseconds (test automation).","milliseconds"});
     parser.addOption({"screenshot","Save a canvas/window screenshot before timed exit.","path"});
+    parser.addOption({"perf-report","Write a bounded, redacted local performance report on quit.","path"});
     parser.addOption({"report","Write local JSON startup/render evidence before timed exit.","path"});
     parser.addOption({"theme","Select a built-in family (saved preference).","id"});
     parser.addOption({"theme-mode","Select system, dark, or light (saved preference).","mode"});
@@ -57,6 +67,7 @@ int main(int argc,char** argv) {
     parser.addOption({"no-resume","Do not claim a window slot or remember/restore the browsing position (test automation)."});
     parser.addOption({"window-size","Initial logical window size for UI verification, e.g. 540x360.","size"});
     parser.process(app);
+    if (parser.isSet("perf-report")) glancelot::perf::Recorder::instance().setEnabled(true);
     QElapsedTimer elapsed;elapsed.start();
     if(parser.isSet("reset-settings")){QString moved;if(glancelot::resetSettings(&moved)&&!moved.isEmpty())std::fprintf(stderr,"Glancelot: settings set aside as %s\n",qPrintable(moved));}
     // The slot is claimed before the window shows; it is released on normal exit, and a crashed window's slot is
@@ -107,12 +118,27 @@ int main(int argc,char** argv) {
     // DELETE-01: the one user-initiated mutation path (Trash/Recycle Bin only). Viewing never reaches it.
     FileOperationService fileOperations;
     file_operation_wiring::follow(fileOperations,viewer,folderTree);
+    FavoritesModel favorites;
+    favorites.setCurrentDirectory(viewer.directory());
+    QObject::connect(&viewer,&ViewerController::stateChanged,&favorites,[&]{favorites.setCurrentDirectory(viewer.directory());});
+    FolderHistory folderHistory;
+    if (!viewer.directory().isEmpty()) folderHistory.recordVisit(viewer.directory(), viewer.filePath());
+    QObject::connect(&viewer, &ViewerController::stateChanged, &folderHistory, [&] {
+        if (!viewer.directory().isEmpty()) folderHistory.recordVisit(viewer.directory(), viewer.filePath());
+    });
+    QObject::connect(&folderHistory, &FolderHistory::navigationRequested, &viewer, [&](const QString& directory, const QString& filePath, const QString& selectedPath, int scroll) {
+        Q_UNUSED(selectedPath); Q_UNUSED(scroll);
+        if (!filePath.isEmpty() && QFileInfo::exists(filePath)) viewer.open(filePath);
+        else if (!directory.isEmpty()) viewer.navigateDirectory(directory);
+    });
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
     engine.rootContext()->setContextProperty("paneLayout",&paneLayout);
     engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
     engine.rootContext()->setContextProperty("folderTree",&folderTree);
+    engine.rootContext()->setContextProperty("favoritesModel",&favorites);
+    engine.rootContext()->setContextProperty("folderHistory",&folderHistory);
     engine.rootContext()->setContextProperty("fileGrid",&fileGrid);
     engine.rootContext()->setContextProperty("theme",&theme);
     engine.rootContext()->setContextProperty("fileOperations",&fileOperations);
@@ -131,6 +157,30 @@ int main(int argc,char** argv) {
     QTimer titleBarRefresh;titleBarRefresh.setSingleShot(true);titleBarRefresh.setInterval(0);
     QObject::connect(&titleBarRefresh,&QTimer::timeout,&app,[&]{if(titleBar)titleBar->apply();});
     if(window)QQmlProperty(window,"frameless").connectNotifySignal(&titleBarRefresh,SLOT(start()));
+    // PERF-MEASURE-01: frameSwapped is Qt's swap notification, not physical presentation.
+    bool perfStartupRecorded=false, perfReportFailed=false;
+    if(window) QObject::connect(window,&QQuickWindow::frameSwapped,&app,[&] {
+        if(perfStartupRecorded || viewer.image().isNull()) return;
+        perfStartupRecorded=true;
+        auto& recorder=glancelot::perf::Recorder::instance();
+        if(recorder.enabled()) recorder.record({glancelot::perf::Stage::Startup,glancelot::perf::Cold,0,
+            std::uint64_t(viewer.image().cacheKey()),perfStartupBegin,glancelot::perf::Recorder::nowNs(),0});
+    });
+    QObject::connect(&app,&QGuiApplication::aboutToQuit,&app,[&] {
+        if(!parser.isSet("perf-report")) return;
+        auto& recorder=glancelot::perf::Recorder::instance();
+        auto spans=recorder.drain();
+        const auto build=QCoreApplication::applicationVersion()+"-"+qEnvironmentVariable("GLANCELOT_PERF_BUILD","unversioned");
+        glancelot::perf::ReportContext context{build.toStdString(),
+            (QSysInfo::productType()+"-"+QSysInfo::productVersion()+"-"+QSysInfo::kernelVersion()).toStdString(),
+            std::string("qt-api-")+std::to_string(window?int(window->rendererInterface()->graphicsApi()):0),
+            qEnvironmentVariable("GLANCELOT_PERF_FIXTURE_ID","unspecified").toStdString()};
+        const auto json=glancelot::perf::toJsonReport(spans,context,recorder.dropped(),true);
+        QSaveFile report(parser.value("perf-report"));
+        if(!report.open(QIODevice::WriteOnly) || report.write(json.data(),qint64(json.size()))!=qint64(json.size()) || !report.commit()) {
+            perfReportFailed=true; std::fprintf(stderr,"Glancelot: performance report could not be saved\n");
+        }
+    });
     qint64 firstImage=-1,firstFrame=-1; int frames=0;
     QObject::connect(&viewer,&ViewerController::imageChanged,&app,[&]{if(firstImage<0&&!viewer.image().isNull())firstImage=elapsed.elapsed();});
     if(window)QObject::connect(window,&QQuickWindow::frameSwapped,&app,[&]{++frames;if(firstFrame<0&&!viewer.image().isNull())firstFrame=elapsed.elapsed();});
@@ -164,5 +214,7 @@ int main(int argc,char** argv) {
             app.exit(viewer.loading()?3:0);
         });
     }
-    return app.exec();
+    if(!glancelot::perf::installReplay(app,viewer,fileGrid,thumbnails,engine.rootObjects().first(),parser.isSet("perf-report")&&parser.isSet("no-resume")))return 2;
+    const int result=app.exec();
+    return perfReportFailed ? 4 : result;
 }

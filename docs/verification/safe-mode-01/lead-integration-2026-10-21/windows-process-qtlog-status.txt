@@ -1,0 +1,2 @@
+qt_logging_process_exit=1
+source_run=run-a5oxvwzl passed=False commands=26

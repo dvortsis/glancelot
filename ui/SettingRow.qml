@@ -9,6 +9,7 @@ RowLayout {
     id: row
     property string label
     property string description: ""
+    property bool modified: false
     default property alias control: slot.data
     spacing: Theme.gapLg
     Layout.fillWidth: true
@@ -18,12 +19,25 @@ RowLayout {
         spacing: Theme.gapXxs
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignVCenter
-        Label {
-            text: row.label
-            color: Theme.text
-            font.pixelSize: Theme.textBody
-            wrapMode: Text.Wrap
-            Layout.fillWidth: true
+        RowLayout {
+            spacing: Theme.gapSm
+            Label {
+                text: row.label
+                color: Theme.text
+                font.pixelSize: Theme.textBody
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            Rectangle {
+                width: 6
+                height: 6
+                radius: 3
+                color: Theme.accent
+                visible: row.modified
+                Layout.alignment: Qt.AlignVCenter
+                Accessible.role: Accessible.Indicator
+                Accessible.name: "Modified from default"
+            }
         }
         Label {
             visible: row.description.length > 0

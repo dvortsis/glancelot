@@ -1,0 +1,18 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/lead-integration-2026-10-21'
+& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Holder Codex-user-authorized-lead -Run {
+ if((git rev-parse HEAD) -ne '7e8897975d507c29907d6a026792e1ea42b7cedd'){throw 'Qt log source pin changed'}
+ $env:PATH='C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/bin;C:/src/Github/Glancelot/.tools/python/Scripts;'+$env:PATH
+ $env:QT_FORCE_STDERR_LOGGING='1'
+ $env:QT_LOGGING_RULES='qt.qpa.window.debug=true;qt.qpa.screen.debug=true;qt.scenegraph.renderloop.debug=true;qt.scenegraph.general.debug=true'
+ $env:QT_MESSAGE_PATTERN='[%{time process}] %{category}: %{message}'
+ & C:/Python315/python.exe .cache/record-qt-child-environment-stderr.py --executable build-codex-safe-mode-01/glancelot.exe --work-dir build-codex-safe-mode-01/recovery-process *> "$d/windows-process-qtstderr.txt"
+ $code=$LASTEXITCODE
+ "qt_logging_process_exit=$code" | Set-Content "$d/windows-process-qtstderr-status.txt"
+ $run=Get-ChildItem build-codex-safe-mode-01/recovery-process -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+ Copy-Item -LiteralPath $run.FullName -Destination "$d/windows-qtstderr-process" -Recurse
+ $r=Get-Content -Raw (Join-Path $run.FullName 'result.json')|ConvertFrom-Json
+ "source_run=$($run.Name) passed=$($r.passed) commands=$($r.steps.Count)"|Add-Content "$d/windows-process-qtstderr-status.txt"
+ if($code -ne 0){throw "Qt logging diagnostic failed proof exit=$code"}
+}

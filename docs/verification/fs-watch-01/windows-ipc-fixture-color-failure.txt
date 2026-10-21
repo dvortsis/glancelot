@@ -1,0 +1,36 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+FAIL!  : FSWatchTests::malformedRevisionReply(missing) Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ff008000
+   Expected (QColor(Qt::green))             : #ff00ff00
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(111) : failure location
+FAIL!  : FSWatchTests::malformedRevisionReply(number) Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ff008000
+   Expected (QColor(Qt::green))             : #ff00ff00
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(111) : failure location
+FAIL!  : FSWatchTests::malformedRevisionReply(null) Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ff008000
+   Expected (QColor(Qt::green))             : #ff00ff00
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(111) : failure location
+FAIL!  : FSWatchTests::malformedRevisionReply(version) Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ff008000
+   Expected (QColor(Qt::green))             : #ff00ff00
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(111) : failure location
+FAIL!  : FSWatchTests::malformedRevisionReply(length) Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ff008000
+   Expected (QColor(Qt::green))             : #ff00ff00
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(111) : failure location
+FAIL!  : FSWatchTests::malformedRevisionReply(uppercase) Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ff008000
+   Expected (QColor(Qt::green))             : #ff00ff00
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(111) : failure location
+PASS   : FSWatchTests::emptyRevisionDecodesWithoutCacheAdmission()
+PASS   : FSWatchTests::revisionWorkerSupersededOrTimedOut(superseded)
+PASS   : FSWatchTests::revisionWorkerSupersededOrTimedOut(deadline)
+PASS   : FSWatchTests::thumbnailMemoryReleaseWakesPendingWork()
+PASS   : FSWatchTests::thumbnailServicesOwnDistinctAdmissions(ssd)
+PASS   : FSWatchTests::thumbnailServicesOwnDistinctAdmissions(rotational)
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 8 passed, 6 failed, 0 skipped, 0 blacklisted, 6771ms
+********* Finished testing of FSWatchTests *********

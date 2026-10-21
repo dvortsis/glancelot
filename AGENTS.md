@@ -5,6 +5,12 @@
 - Lead work (shared contracts, root CMake/configuration, docs/WORK-QUEUE.yaml and integration) is done only by the session currently acting as lead or integrator, under the integration lock below. Implementation and review agents never do it.
 - Every implementation task uses its assigned worktree, branch and build directory. Never edit another agent's worktree.
 - Three agent lanes work concurrently: Claude Code (`claude/*`), Codex (`codex/*`) and Gemini (`agent/*`). docs/AGENT-LANES-PLAN.md assigns tasks to lanes; never take another lane's task. Each lane has at most one active implementation task. Reviews cross lanes: a reviewer never comes from the implementing lane and never approves its own work.
+- Tools per lane (lead decision, October 20, 2026): Claude Code Sonnet 5.5 is the Claude lane, Codex 6.1 Sol is the Codex lane and Antigravity 3.8 Flash is the Gemini lane. The Claude Code Opus session acts only as lead/integrator and implements no lane tasks. Any lane may review another lane's branch, but Gemini never reviews fixes to code the Gemini lane originally wrote (MONITOR-OUTPUT-01 is the current example).
+- Gate lock: only one full `scripts/build.ps1 -Test` or `docker build` runs on this machine at a time, because overlapping runs break timing-budget tests.
+  - The lock is machine-local, in the shared git directory, and is never written to the queue.
+  - `scripts/build.ps1 -Test` takes it automatically.
+  - Run Docker and any older worktree's build through the main checkout's script, in one PowerShell process: `& C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch <branch> -Run { <command> }`. Check it with `-Status`.
+  - Targeted `ctest -R` runs are exempt. The integrator wraps the whole integration gate in one `-Run` block.
 - Lane naming: worktree `.worktrees/<lane>-<task>`, build directory `build-<lane>-<task>`. Gemini keeps `agent/<task>` and `.worktrees/<task>`.
 - Hot files: per wave, only the lane that owns its packet edits `ui/Main.qml`. New commands go in a per-task block of the command table. New UI tests go in a new per-feature test file, not `tests/grid_ui_tests.cpp`.
 - Integration is serial. Set `integration_lock` in docs/WORK-QUEUE.yaml before merging, merge `main` into the reviewed branch, run `scripts/build.ps1 -Test` plus `docker build -t glancelot-browser:main .`, merge `--no-ff`, record the evidence, then clear the lock. Never merge while another holder has the lock. A branch that conflicts goes back to its lane.
