@@ -1,0 +1,1 @@
+{"code":"Ok","destination":"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-process/run-dfrnwowm/sealed-配置-😀","detail":"","generation":"0","package_revision":"sp1:b0f683bc6e3cf14b1e940f7f991f09b62967a51663eae65864b4097b8164f146","schema":1}
