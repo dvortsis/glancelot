@@ -1,8 +1,23 @@
 # SAFE-MODE-01 implementation evidence
 
-Status: implementing the full F064/F057 packet under frozen main3149b6a.
-Branch codex/safe-mode-01, assigned worktree/build. This is early component
-evidence, not feature acceptance, independent review or a full platform gate.
+Latest candidate:796ab411776068a6a7b8d40f26b64930818fd279 on codex/safe-mode-01,
+in its assigned worktree/build. Complete candidate Windows37/37 (558.04s) and
+Docker37/37 (273.13s) gates passed through the main checkout's gate-lock.
+Actual output, failures retained from earlier attempts, and fresh35-command
+Windows/Linux process proofs are in
+[the latest handoff](safe-mode-01/cache-fixture-correction/README.md).
+
+Product code remains03bd326, whose authorized read-only Sonnet5.5 follow-up found
+no blocking regression. The later six-line cache-path test-fixture correction
+still needs independent cross-lane review. Automatic approval review rejected
+exporting that broader watcher payload because the earlier approval covered the
+isolated7bffd68 SAFE payload; no rejected export was executed. Explicit approval
+of [the prepared watcher payload](safe-mode-01/sort-status-corrections/WATCHER-REVIEW-PAYLOAD.md)
+is pending. No integration or task-done claim is made, and the queue is unchanged.
+
+The frozen engine contract remains docs/SAFE-MODE-01-PLAN.md; lane/review/lock
+rules were read from10bdeb1:AGENTS.md. Sections below retain chronological
+implementation evidence; older results qualify only their named source pins.
 
 ## Headless command and binding policy
 

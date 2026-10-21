@@ -1,0 +1,3 @@
+review=C:/src/Github/Glancelot/.worktrees/codex-review-input-02-r2 source_pin=87b063d1523808c9c7dc28a53f2030dd989c01c4 evidence_head=2ce79284d9f7745d5235aab9e6136a0efad5fb9c non_docs_diff_exit=0 merges_after_pin=0 dirty_entries=0
+review=C:/src/Github/Glancelot/.worktrees/codex-review-monitor-output-fix source_pin=ae1b7e42edf89a15b637b6c7364ba6f6fa8e92fe evidence_head=7af09d66311b8b4f12e96acd658cf7942c7fd9ab non_docs_diff_exit=0 merges_after_pin=0 dirty_entries=0
+safe_source_test_diff_from_796ab411=0
