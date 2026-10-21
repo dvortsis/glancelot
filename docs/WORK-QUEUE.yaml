@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead-evidence, purpose: import accepted INPUT review evidence only}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -656,7 +656,7 @@ tasks:
     plan: docs/INPUT-02-PLAN.md
     scope_addition: F055 context menus with command-route parity
     review_gate: Corrected source953adf9 plus test330d050 independently accepted by actual Sonnet5.5, followed by all9UIskills ACCEPT. Linux15/15 136.64s exit0; oldbranch Windows14/15 245.88s sole unchanged invalid-path terminal failure. No integrated-commit qualification.
-    correction_branch: codex/input-02-r3 2e1585d (source953adf9, test330d050); .worktrees/codex-input-02-r3/docs/verification/INPUT-02-0cc2a38-CODEX-REVIEW.md; actual rawoutputs and Sonnetreports committed.
+    correction_branch: codex/input-02-r3 2e1585d (source953adf9, test330d050); docs/verification/INPUT-02-0cc2a38-CODEX-REVIEW.md; actual rawoutputs and Sonnetreports committed.
     review_evidence: docs/verification/INPUT-02-87b063d-CODEX-REVIEW.md; prior docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
     review_request: Lead synchronize accepted codex/input-02-r3 correction into current-main rehearsal, resolve conflicts with lane, then independent confirmation and locked Windows/Docker integrated gates. Original87b063d remains unchanged. Propagate input fixes forward through stack.
     stacked_review: Gemini lane reviews stacked F002, F037, F031, F040, F049, F009, F014, F051 now, each only for its own changes, at pinned SHAs (git diff <predecessor SHA merged into the packet> <packet SHA>, recorded in the review); Claude lane fixes findings in place and merges each earlier-packet fix forward through the stack before a later packet's review counts as final; Claude lane rehearses the main conflict resolution on throwaway claude/input-02-mainsync, never on the reviewed snapshot
