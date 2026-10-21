@@ -118,7 +118,7 @@ std::string formatModifiedIsoUtc(std::int64_t modified) {
 #else
     if (gmtime_r(&sec, &tmUtc) == nullptr) return {};
 #endif
-    char buf[32];
+    char buf[64];
     std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02dZ",
                   tmUtc.tm_year + 1900, tmUtc.tm_mon + 1, tmUtc.tm_mday,
                   tmUtc.tm_hour, tmUtc.tm_min, tmUtc.tm_sec);
