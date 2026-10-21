@@ -410,7 +410,11 @@ ApplicationWindow {
     function remapped(event) {
         const step = viewer.keyStep(event.key, event.modifiers)
         if (step.length === 0) return false
-        const paneCommand = id => id.length > 0 && (scopeOf(id) === "grid" || scopeOf(id) === "tree")
+        // Printable command keys also precede grid type-to-search, including global chord steps.
+        // Space and native navigation keys retain their pane precedence unless explicitly remapped in a pane scope.
+        const printable = event.key >= 0x21 && event.key <= 0x7e
+                          && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+        const paneCommand = id => id.length > 0 && (scopeOf(id) === "grid" || scopeOf(id) === "tree" || printable)
         if (chordPending) return !!keyTable.seconds[step] && paneCommand(resolveKey(keyTable.seconds[step], chordFirst))
         if (!keyTable.firsts[step]) return false
         const id = resolveKey(keyTable.firsts[step])
