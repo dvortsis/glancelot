@@ -1,11 +1,15 @@
 # SAFE-MODE-01 independent review preparation
 
-Status: independent review corrections prepared; new candidate gates and fix review remain open.
-Implementing lane: Codex, branch `codex/safe-mode-01`, assigned worktree
-`.worktrees/codex-safe-mode-01`, build `build-codex-safe-mode-01`.
-The lead pins the source/evidence commit in the review request. A reviewer must come from another lane
-and use an isolated checkout/build. Do not review a moving branch as though it
-were the final candidate. The user approved Claude SAFE review and packet follow-ups. Initial review and coverage reports are retained; corrected source requires a pinned follow-up review.
+Status2026-10-21: requested corrections, cross-lane follow-up reviews and candidate gates are complete; lead integration remains open. This summary supersedes the historical evidence below.
+
+- Assigned branch/worktree/build: codex/safe-mode-01, .worktrees/codex-safe-mode-01, build-codex-safe-mode-01.
+- Qualified source/test candidate:796ab411776068a6a7b8d40f26b64930818fd279. Product correction source:03bd32687b0e47cc71306d7667927eeb896785e3. Evidence head before this documentation close-out:a15696cca18f3935a53ca2f75ec91e32a98db313; subsequent documentation-only commits retain the qualified source/tests.
+- Actual complete locked gates: Windows37/37,558.04s,exit0; Docker37/37,273.13s,exit0. Actual command output, prior failures and fresh35-command Windows/Linux software-RHI/RGB process proofs are retained in [latest handoff](../verification/safe-mode-01/cache-fixture-correction/README.md).
+- Actual independent Sonnet5.5 product follow-up found no blocking regression on03bd326. The subsequent six-line watcher fixture correction has an independent review/clarification requiring no source/test correction before handoff. Full results, canonical model/session metadata, prompts and exits are in [review completion](../verification/safe-mode-01/cache-fixture-correction/REVIEW-COMPLETION.md). This does not claim full-packet or integration approval.
+- The historical watcher-budget timeout remains unresolved; all250ms assertions and the180s CTest limit remain unchanged. Later passes do not establish the earlier cause. Existing Low review limitations and physical GPU/DPI, input-to-photon, sanitizer and power-loss gaps remain disclosed.
+- Lead next steps: reconcile the stale main queue pins/status against these artifacts; assess recorded limitations; set integration_lock; synchronize main into the reviewed branch and return conflicts to the Codex lane; run both complete integrated gates in the main gate-lock wrapper; merge --no-ff, record integrated evidence, clear the integration lock. No queue edits or merges were performed by this implementation/review session.
+
+User authorizes automatic read-only reviews. No further review-export approval is pending for the executed watcher payload.
 
 ## Frozen scope
 
@@ -43,7 +47,7 @@ to this packet. Hardware/physical power-loss qualification remains unverified.
 - Shipped command/binding behavior and settings writer compatibility across all
   existing callers. Production must have no private test hooks or crash-helper mode.
 
-## Current actual evidence and open gates
+## Historical candidate evidence and gates
 
 `docs/verification/SAFE-MODE-01.md` and its referenced raw artifacts are authoritative
 for measured results, including failures. Release process verification passed33
