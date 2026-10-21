@@ -123,7 +123,8 @@ public:
     Q_INVOKABLE void setPresentationMode(const QString& mode);
     void setMode(PresentationMode mode);
 
-    // Image routing
+    // Image routing. Every producer uses the controller's monotonic selection-generation
+    // space (including pin/comparison requests), never an independent per-producer counter.
     void updateImage(const QString& path, const QImage& image, quint64 generation);
     Q_INVOKABLE void pinCurrentImage();
     Q_INVOKABLE void pinImage(const QString& path, const QImage& image, quint64 generation);

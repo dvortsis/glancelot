@@ -21,6 +21,45 @@ class MonitorOutputTests : public QObject {
     }
 
 private slots:
+    void testUnvisitedOutputStartsWithDefaults() {
+        glancelot::PresentationWindow window; window.resize(800,600); window.setComparisonMode(true);
+        window.setPrimaryImage(createTestImage(640,480,Qt::red)); window.setSecondaryImage(createTestImage(640,480,Qt::blue));
+        window.viewportCommand("linked"); window.viewportCommand("reference"); window.viewportCommand("zoom-in"); window.viewportCommand("pan-up");
+        window.restoreViewport({}); // no saved state on the newly selected identity
+        QCOMPARE(window.primaryCanvas()->fitMode(),QStringLiteral("shrink"));
+        QCOMPARE(window.secondaryCanvas()->fitMode(),QStringLiteral("shrink"));
+        QVERIFY(window.viewportState()["linked"].toBool()); QVERIFY(!window.viewportState()["activeSecondary"].toBool());
+    }
+    void testTextureBudgetTracksPresentationMode() {
+        glancelot::PresentationWindow window;
+        QCOMPARE(window.primaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget);
+        QCOMPARE(window.secondaryCanvas()->textureBudget(),qint64(0));
+        const QImage image=createTestImage(6400,6144,Qt::red); // generated 150 MiB: exceeds the old 128 MiB half-cap
+        QCOMPARE(image.sizeInBytes(),qint64(150)*1024*1024);
+        window.setPrimaryImage(image);
+        QCOMPARE(window.primaryCanvas()->image().cacheKey(),image.cacheKey());
+        QVERIFY(window.primaryCanvas()->image().sizeInBytes()<=window.primaryCanvas()->textureBudget());
+        window.setComparisonMode(true);
+        QCOMPARE(window.primaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget/2);
+        QCOMPARE(window.secondaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget/2);
+        window.setComparisonMode(false);
+        QCOMPARE(window.primaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget);
+        QCOMPARE(window.secondaryCanvas()->textureBudget(),qint64(0));
+        QVERIFY(window.secondaryCanvas()->image().isNull());
+    }
+    void testClosedOutputDoesNotRetainNavigationHistory() {
+        glancelot::DisplayManager dm; QVERIFY(dm.openPresentation());
+        const auto pinned=createTestImage(40,40,Qt::red);
+        dm.pinImage("pin",pinned,1); dm.closePresentation();
+        dm.updateImage("a",createTestImage(80,80,Qt::green),2);
+        const auto current=createTestImage(64,64,Qt::blue);
+        dm.updateImage("b",current,3);
+        QCOMPARE(dm.retainedImageBytes(),pinned.sizeInBytes()+current.sizeInBytes());
+        QVERIFY(dm.openPresentation()); dm.compareWithPinnedOrPrevious();
+        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
+        QCOMPARE(window->secondaryCanvas()->image().cacheKey(),pinned.cacheKey());
+        dm.closePresentation(); flushDeletes();
+    }
     void testIndependentReferenceViewSurvivesTemporarilyMissingImage() {
         glancelot::PresentationWindow window; window.resize(800,600); window.setComparisonMode(true);
         window.setPrimaryImage(createTestImage(640,480,Qt::red));
@@ -59,6 +98,9 @@ private slots:
         QVERIFY(dm.openPresentation(displays[1].id));
         QTRY_COMPARE(glancelot::DisplayManager::computeDisplayId(window->screen()),displays[1].id);
         QTest::qWait(100);
+        // First visit must not inherit A's manual view or comparison interaction state.
+        QCOMPARE(window->primaryCanvas()->fitMode(),QStringLiteral("shrink"));
+        QVERIFY(window->viewportState()["linked"].toBool()); QVERIFY(!window->viewportState()["activeSecondary"].toBool());
         dm.outputViewportCommand("actual"); dm.outputViewportCommand("zoom-out"); dm.outputViewportCommand("pan-up");
         const auto second=window->primaryCanvas()->viewState();
         QVERIFY(dm.openPresentation(displays[0].id)); QTest::qWait(100);

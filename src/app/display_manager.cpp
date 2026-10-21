@@ -400,7 +400,9 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
         d->presentationWindow->setScreen(targetScreen);
         d->presentationWindow->setGeometry(targetScreen->geometry());
         d->applyImagesToWindow();
-        d->presentationWindow->restoreViewport(d->viewports.value(d->activeId));
+        const auto defaultFit=d->fitModes.value(d->activeId,QStringLiteral("shrink"));
+        const QVariantMap defaults{{"primary",QVariantMap{{"fit",defaultFit}}},{"secondary",QVariantMap{{"fit",defaultFit}}},{"linked",true},{"activeSecondary",false}};
+        d->presentationWindow->restoreViewport(d->viewports.value(d->activeId,defaults));
         d->presentationWindow->show();
     }
 
@@ -469,7 +471,8 @@ void DisplayManager::setMode(PresentationMode mode) {
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
     if (generation < d->currentGeneration) return;
 
-    if (path != d->currentPath && !d->currentImage.isNull()) {
+    if (!d->active) { d->previousImage={}; d->previousPath.clear(); }
+    else if (path != d->currentPath && !d->currentImage.isNull()) {
         d->previousPath = d->currentPath;
         d->previousImage = d->currentImage;
     }

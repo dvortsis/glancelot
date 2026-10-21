@@ -25,12 +25,12 @@ PresentationWindow::PresentationWindow(QWindow* parent)
     setFlags(Qt::Window | Qt::FramelessWindowHint);
 
     m_canvasA = new ImageCanvas(contentItem());
-    m_canvasA->setTextureBudget(kPresentationTextureBudget / 2);
+    m_canvasA->setTextureBudget(kPresentationTextureBudget);
     m_canvasA->setBackground(QColor(0, 0, 0));
     m_canvasA->fit(m_fitMode);
 
     m_canvasB = new ImageCanvas(contentItem());
-    m_canvasB->setTextureBudget(kPresentationTextureBudget / 2);
+    m_canvasB->setTextureBudget(0);
     m_canvasB->setBackground(QColor(0, 0, 0));
     m_canvasB->fit(m_fitMode);
     m_canvasB->setVisible(false);
@@ -39,13 +39,14 @@ PresentationWindow::PresentationWindow(QWindow* parent)
     m_colorRetry.setSingleShot(true); m_colorRetry.setInterval(50);
     connect(&m_colorRetry,&QTimer::timeout,this,&PresentationWindow::requestColor);
     m_colorRefresh.setInterval(5000);
-    connect(&m_colorRefresh,&QTimer::timeout,this,[this] { if (isVisible() && !m_hasInjectedProfile) { ++m_colorRevision; requestColor(); } });
+    connect(&m_colorRefresh,&QTimer::timeout,this,[this] { if (isVisible() && !m_hasInjectedProfile && !m_colorInFlight) { ++m_colorRevision; requestColor(); } });
     m_colorRefresh.start();
     connect(this,&QWindow::screenChanged,this,[this] { refreshOutputColorProfile(); updateLayout(); });
     connect(&m_colorWatcher,&QFutureWatcher<output_color::Result>::finished,this,[this] {
         m_colorInFlight=false; m_colorRetry.stop();
         const auto result=m_colorWatcher.result();
         if (result.revision!=m_colorRevision) { requestColor(); return; }
+        if (m_colorAtlas==result.atlas && m_colorStatus==result.status) return;
         m_colorAtlas=result.atlas; m_colorStatus=result.status;
         m_canvasA->setOutputColorLut(m_colorAtlas); m_canvasB->setOutputColorLut(m_colorAtlas);
         emit outputColorChanged();
@@ -56,6 +57,8 @@ PresentationWindow::PresentationWindow(QWindow* parent)
 PresentationWindow::~PresentationWindow() = default;
 
 void PresentationWindow::setComparisonMode(bool comparison) {
+    m_canvasA->setTextureBudget(comparison?kPresentationTextureBudget/2:kPresentationTextureBudget);
+    m_canvasB->setTextureBudget(comparison?kPresentationTextureBudget/2:0);
     if (m_comparisonMode == comparison) return;
     m_comparisonMode = comparison;
     if (!comparison) m_activeSecondary=false;
@@ -105,7 +108,7 @@ QVariantMap PresentationWindow::viewportState() const {
     return {{"primary",m_canvasA->image().isNull()?m_pendingPrimary:m_canvasA->viewState()},{"secondary",m_canvasB->image().isNull()?m_pendingSecondary:m_canvasB->viewState()},{"linked",m_linked},{"activeSecondary",m_activeSecondary}};
 }
 void PresentationWindow::restoreViewport(const QVariantMap& state) {
-    if (state.isEmpty()) return;
+    if (state.isEmpty()) { m_linked=true; m_activeSecondary=false; setFitMode("shrink"); return; }
     m_pendingPrimary=state.value("primary").toMap(); m_pendingSecondary=state.value("secondary").toMap();
     if(!m_canvasA->image().isNull() || !m_pendingPrimary.value("fit").toString().isEmpty()) m_canvasA->setViewState(m_pendingPrimary);
     if(!m_canvasB->image().isNull() || !m_pendingSecondary.value("fit").toString().isEmpty()) m_canvasB->setViewState(m_pendingSecondary);

@@ -154,7 +154,7 @@ const std::vector<Command> registry {
     {"presentation-pin", "Presentation: Pin current photo", ""},
     {"presentation-compare", "Presentation: Comparison mode", ""},
     {"presentation-close", "Close presentation display", ""},
-    {"presentation-fit", "Presentation: Cycle fit mode for this display", ""},
+    {"presentation-fit", "Presentation: Cycle fit mode for this display", "Ctrl+Alt+F"},
     // MONITOR-OUTPUT-01 core correction: output viewport; never modifies the controller canvas.
     {"presentation-view-actual", "Presentation: Actual physical pixel size", ""},
     {"presentation-view-zoom-in", "Presentation: Zoom in", ""},

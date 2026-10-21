@@ -25,7 +25,7 @@ class DisplayManager;
 constexpr qint64 kPresentationTextureBudget = 256LL * 1024 * 1024;
 // Conservative reservation for shared CPU atlas, two GPU atlases and in-flight uploads.
 // Separately reported from retained decoded pixels; no full-size converted rasters.
-constexpr qint64 kPresentationColorReservation = 4LL * 1024 * 1024;
+constexpr qint64 kPresentationColorReservation = 16LL * 1024 * 1024;
 
 class PresentationWindow : public QQuickWindow {
     Q_OBJECT
