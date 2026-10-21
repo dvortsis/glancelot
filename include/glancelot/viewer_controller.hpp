@@ -183,6 +183,8 @@ public:
     Q_INVOKABLE void togglePresentation();
     Q_INVOKABLE void openPresentation(const QString& displayId = QString(), const QString& mode = QStringLiteral("mirror"));
     Q_INVOKABLE void closePresentation();
+    Q_INVOKABLE void setPresentationFitMode(const QString& mode);
+    Q_INVOKABLE void cyclePresentationFit();
     Q_INVOKABLE void pinPresentationImage();
     Q_INVOKABLE void unpinPresentationImage();
 
