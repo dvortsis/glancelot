@@ -407,6 +407,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
     emit activeDisplayIdChanged(d->activeId);
     emit presentationModeChanged(d->mode);
     emit presentationActiveChanged(true);
+    emit outputColorStatusChanged();
     return true;
 }
 
@@ -436,6 +437,7 @@ void DisplayManager::closePresentation() {
     emit activeDisplayIdChanged(d->activeId);
     emit presentationActiveChanged(false);
     emit presentationClosed();
+    emit outputColorStatusChanged();
 }
 
 void DisplayManager::togglePresentation() {
@@ -533,6 +535,7 @@ static bool isValidFitMode(const QString& mode) {
 void DisplayManager::setOutputFitMode(const QString& mode) {
     if (!isValidFitMode(mode)) return;
     if (!d->active || d->activeId.isEmpty()) return;
+    if (d->fitModes.size()>=64 && !d->fitModes.contains(d->activeId)) d->fitModes.erase(d->fitModes.begin());
     d->fitModes[d->activeId] = mode;
     if (d->presentationWindow) d->presentationWindow->setFitMode(mode);
 }

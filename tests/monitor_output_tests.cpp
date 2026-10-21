@@ -21,6 +21,58 @@ class MonitorOutputTests : public QObject {
     }
 
 private slots:
+    void testIndependentReferenceViewSurvivesTemporarilyMissingImage() {
+        glancelot::PresentationWindow window; window.resize(800,600); window.setComparisonMode(true);
+        window.setPrimaryImage(createTestImage(640,480,Qt::red));
+        window.setSecondaryImage(createTestImage(320,240,Qt::green));
+        window.viewportCommand("linked"); window.viewportCommand("reference");
+        window.viewportCommand("actual"); window.viewportCommand("zoom-in"); window.viewportCommand("pan-up");
+        const auto saved=window.secondaryCanvas()->viewState();
+        window.setComparisonMode(false); window.setSecondaryImage({});
+        window.setComparisonMode(true); window.setSecondaryImage(createTestImage(320,240,Qt::blue));
+        const auto restored=window.secondaryCanvas()->viewState();
+        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(restored[key].toDouble()-saved[key].toDouble())<1e-6,key);
+        const auto state=window.viewportState();
+        window.setSecondaryImage({}); window.restoreViewport(state);
+        window.setSecondaryImage(createTestImage(320,240,Qt::yellow));
+        const auto reopened=window.secondaryCanvas()->viewState();
+        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(reopened[key].toDouble()-saved[key].toDouble())<1e-6,key);
+    }
+    void testColorStatusNotifiesWhenPresentationCloses() {
+        glancelot::DisplayManager dm; QVERIFY(dm.openPresentation());
+        QSignalSpy changed(&dm,&glancelot::DisplayManager::outputColorStatusChanged);
+        dm.closePresentation();
+        QCOMPARE(dm.outputColorStatus(),QStringLiteral("Presentation closed"));
+        QCOMPARE(changed.count(),1); flushDeletes();
+    }
+    void testNativeDisplayIdentityStateRestore() {
+        if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) QSKIP("Requires native display topology; headless state tests do not qualify mixed DPI");
+        glancelot::DisplayManager dm;
+        const auto displays=dm.displays();
+        if (displays.size()<2) QSKIP("Two native displays unavailable");
+        dm.updateImage("generated-native",createTestImage(640,480,Qt::red),1);
+        QVERIFY(dm.openPresentation(displays[0].id));
+        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
+        QTRY_VERIFY_WITH_TIMEOUT(window->isExposed(),10000);
+        dm.outputViewportCommand("actual"); dm.outputViewportCommand("zoom-in"); dm.outputViewportCommand("pan-right");
+        const auto first=window->primaryCanvas()->viewState();
+        QVERIFY(dm.openPresentation(displays[1].id));
+        QTRY_COMPARE(glancelot::DisplayManager::computeDisplayId(window->screen()),displays[1].id);
+        QTest::qWait(100);
+        dm.outputViewportCommand("actual"); dm.outputViewportCommand("zoom-out"); dm.outputViewportCommand("pan-up");
+        const auto second=window->primaryCanvas()->viewState();
+        QVERIFY(dm.openPresentation(displays[0].id)); QTest::qWait(100);
+        auto restored=window->primaryCanvas()->viewState();
+        qInfo()<<"native display0 DPR"<<displays[0].devicePixelRatio<<"saved"<<first<<"restored"<<restored;
+        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(restored[key].toDouble()-first[key].toDouble())<1e-6,key);
+        QVERIFY(dm.openPresentation(displays[1].id)); QTest::qWait(100);
+        restored=window->primaryCanvas()->viewState();
+        qInfo()<<"native display1 DPR"<<displays[1].devicePixelRatio<<"saved"<<second<<"restored"<<restored;
+        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(restored[key].toDouble()-second[key].toDouble())<1e-6,key);
+        qInfo()<<"native output profile status"<<dm.outputColorStatus();
+        dm.closePresentation(); flushDeletes();
+    }
+
     void testNativeGpuColorPatch() {
         if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) QSKIP("Opt-in native GPU readback; headless state tests do not qualify presentation pixels");
         glancelot::PresentationWindow window;

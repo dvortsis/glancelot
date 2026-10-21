@@ -14,10 +14,7 @@ namespace glancelot {
 namespace {
 void copyViewport(ImageCanvas* from,ImageCanvas* to) {
     if (from->image().isNull() || to->image().isNull()) return;
-    auto state=from->viewState();
-    state["centerX"]=state["centerX"].toDouble()*to->image().width()/from->image().width();
-    state["centerY"]=state["centerY"].toDouble()*to->image().height()/from->image().height();
-    to->setViewState(state);
+    to->setViewState(from->viewState());
 }
 }
 
@@ -64,7 +61,7 @@ void PresentationWindow::setComparisonMode(bool comparison) {
     if (!comparison) m_activeSecondary=false;
     m_canvasB->setVisible(m_comparisonMode);
     if (!m_comparisonMode && m_canvasB) {
-        m_canvasB->setImage(QImage());
+        setSecondaryImage(QImage());
     }
     updateLayout();
 }
@@ -72,27 +69,25 @@ void PresentationWindow::setComparisonMode(bool comparison) {
 void PresentationWindow::setPrimaryImage(const QImage& image) {
     if (m_canvasA) {
         const auto previous=m_canvasA->image();
-        auto state=m_canvasA->viewState();
+        const auto state=previous.isNull()?m_pendingPrimary:m_canvasA->viewState();
+        if (!previous.isNull()) m_pendingPrimary=state;
         m_canvasA->setImage(image);
-        if (!previous.isNull() && !image.isNull()) {
-            state["centerX"]=state["centerX"].toDouble()*image.width()/previous.width();
-            state["centerY"]=state["centerY"].toDouble()*image.height()/previous.height();
-            m_canvasA->setViewState(state);
-        } else if(m_fitMode=="actual") m_canvasA->actualSize(); else m_canvasA->fit(m_fitMode);
+        if (!image.isNull()) {
+            if(!state.isEmpty()) m_canvasA->setViewState(state);
+            else if(m_fitMode=="actual") m_canvasA->actualSize(); else m_canvasA->fit(m_fitMode);
+        }
     }
 }
 
 void PresentationWindow::setSecondaryImage(const QImage& image) {
     if (m_canvasB) {
         const auto previous=m_canvasB->image();
-        auto state=m_canvasB->viewState();
+        const auto state=previous.isNull()?m_pendingSecondary:m_canvasB->viewState();
+        if (!previous.isNull()) m_pendingSecondary=state;
         m_canvasB->setImage(image);
         if (!image.isNull()) {
-            if (!previous.isNull()) {
-                state["centerX"]=state["centerX"].toDouble()*image.width()/previous.width();
-                state["centerY"]=state["centerY"].toDouble()*image.height()/previous.height();
-                m_canvasB->setViewState(state);
-            } else if(m_fitMode=="actual") m_canvasB->actualSize(); else m_canvasB->fit(m_fitMode);
+            if (!state.isEmpty()) m_canvasB->setViewState(state);
+            else if(m_fitMode=="actual") m_canvasB->actualSize(); else m_canvasB->fit(m_fitMode);
             if (m_linked) copyViewport(m_canvasA,m_canvasB);
         }
     }
@@ -101,17 +96,19 @@ void PresentationWindow::setSecondaryImage(const QImage& image) {
 void PresentationWindow::setFitMode(const QString& mode) {
     if (mode != "shrink" && mode != "fit" && mode != "fill" && mode != "width" && mode != "height" && mode!="actual") return;
     m_fitMode = mode;
+    m_pendingPrimary={{"fit",mode}}; m_pendingSecondary={{"fit",mode}};
     if (mode=="actual") { m_canvasA->actualSize(); m_canvasB->actualSize(); }
     else { if (m_canvasA) m_canvasA->fit(mode); if (m_canvasB) m_canvasB->fit(mode); }
 }
 
 QVariantMap PresentationWindow::viewportState() const {
-    return {{"primary",m_canvasA->viewState()},{"secondary",m_canvasB->viewState()},{"linked",m_linked},{"activeSecondary",m_activeSecondary}};
+    return {{"primary",m_canvasA->image().isNull()?m_pendingPrimary:m_canvasA->viewState()},{"secondary",m_canvasB->image().isNull()?m_pendingSecondary:m_canvasB->viewState()},{"linked",m_linked},{"activeSecondary",m_activeSecondary}};
 }
 void PresentationWindow::restoreViewport(const QVariantMap& state) {
     if (state.isEmpty()) return;
-    m_canvasA->setViewState(state.value("primary").toMap());
-    m_canvasB->setViewState(state.value("secondary").toMap());
+    m_pendingPrimary=state.value("primary").toMap(); m_pendingSecondary=state.value("secondary").toMap();
+    if(!m_canvasA->image().isNull()) m_canvasA->setViewState(m_pendingPrimary);
+    if(!m_canvasB->image().isNull()) m_canvasB->setViewState(m_pendingSecondary);
     m_linked=state.value("linked",true).toBool(); m_fitMode=m_canvasA->fitMode();
     m_activeSecondary=m_comparisonMode && state.value("activeSecondary",false).toBool();
 }
@@ -162,6 +159,7 @@ void PresentationWindow::refreshOutputColorProfile() {
     ++m_colorRevision;
     m_colorAtlas={}; m_colorStatus=QStringLiteral("sRGB fallback (monitor profile pending)");
     m_canvasA->setOutputColorLut({}); m_canvasB->setOutputColorLut({});
+    emit outputColorChanged();
     requestColor();
 }
 void PresentationWindow::requestColor() {

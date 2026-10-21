@@ -279,16 +279,19 @@ void ImageCanvas::panBy(qreal dx,qreal dy) {
 }
 QVariantMap ImageCanvas::viewState() const {
     const auto center=imagePointAt(width()/2, height()/2);
-    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()}};
+    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()},{"sourceWidth",m_image.width()},{"sourceHeight",m_image.height()}};
 }
 void ImageCanvas::setViewState(const QVariantMap& state) {
     const auto mode=state.value("fit").toString();
     if (mode=="actual") { actualSize(); return; }
     if (!mode.isEmpty()) { fit(mode); return; }
     bool okZ=false,okX=false,okY=false;
-    const qreal z=state.value("zoom").toDouble(&okZ), x=state.value("centerX").toDouble(&okX), y=state.value("centerY").toDouble(&okY);
+    const qreal z=state.value("zoom").toDouble(&okZ);
+    qreal x=state.value("centerX").toDouble(&okX), y=state.value("centerY").toDouble(&okY);
+    const int sourceWidth=state.value("sourceWidth").toInt(),sourceHeight=state.value("sourceHeight").toInt();
+    if(sourceWidth>0 && sourceHeight>0 && !m_image.isNull()) { x*=qreal(m_image.width())/sourceWidth; y*=qreal(m_image.height())/sourceHeight; }
     if (!okZ || !okX || !okY || !std::isfinite(z) || z<.001 || z>64 || !std::isfinite(x) || !std::isfinite(y) || std::abs(x)>1e9 || std::abs(y)>1e9) return;
-    endLoupe(); m_zoom=z; m_fitMode.clear();
+    endLoupe(); m_zoom=z; m_fitMode.clear(); m_lastDpr=dpr();
     const QPointF centered(x-m_image.width()/2.0,y-m_image.height()/2.0);
     const qreal radians=qDegreesToRadians(qreal(m_rotation));
     m_pan=-QPointF(std::cos(radians)*centered.x()-std::sin(radians)*centered.y(),std::sin(radians)*centered.x()+std::cos(radians)*centered.y())*(z/dpr());

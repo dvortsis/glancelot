@@ -88,6 +88,7 @@ private:
     QElapsedTimer m_chordElapsed;
     bool m_linked{true},m_dragging{},m_dragSecondary{},m_activeSecondary{};
     QPointF m_lastPointer;
+    QVariantMap m_pendingPrimary,m_pendingSecondary;
     QImage m_colorAtlas;
     QString m_colorStatus{QStringLiteral("sRGB fallback (monitor profile pending)")};
     QColorSpace m_injectedProfile;
