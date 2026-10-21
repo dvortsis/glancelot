@@ -14,12 +14,15 @@ MenuItem {
     property string iconName: ""
     property bool danger: false
     property bool available: true
+    // The target is one the command refuses (a drive root, a busy operation). The key stays live and explains itself;
+    // the row is disabled and says why in its label.
+    property bool blocked: false
     readonly property string keys: host ? host.keyHint(commandId) : ""
     readonly property bool allowed: host ? host.scopeAllows(commandId) : true
     objectName: "menuItem-" + commandId
     text: label.length ? label : (host ? host.commandLabel(commandId) : commandId)
     visible: available
-    enabled: allowed
+    enabled: allowed && !blocked
     height: available ? implicitHeight : 0
     implicitHeight: available ? Theme.controlHeight : 0
     leftPadding: Theme.gapSm; rightPadding: Theme.gapSm

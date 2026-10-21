@@ -2414,7 +2414,7 @@ private slots:
         QTRY_VERIFY(list->hasActiveFocus());
         QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
         QTRY_VERIFY(menu->property("visible").toBool());
-        QObject* item = h.window->findChild<QObject*>("folderMoveToTrash"); QVERIFY(item);
+        QObject* item = menu->findChild<QObject*>("menuItem-delete-selection"); QVERIFY(item);
         QVERIFY(!item->property("enabled").toBool());
         QVERIFY(item->property("text").toString().startsWith("Drives can't"));
         QTest::keyClick(h.window, Qt::Key_Escape);

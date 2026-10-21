@@ -1379,7 +1379,6 @@ ApplicationWindow {
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
-        onDeleteRequested: path => deleteFlow.request([path], "tree", "")
     }
     DeleteFlow { // DELETE-01 confirmation, progress, notice and results
         id: deleteFlow
