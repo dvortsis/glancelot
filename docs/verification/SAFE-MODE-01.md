@@ -7,13 +7,14 @@ Actual output, failures retained from earlier attempts, and fresh35-command
 Windows/Linux process proofs are in
 [the latest handoff](safe-mode-01/cache-fixture-correction/README.md).
 
-Product code remains03bd326, whose authorized read-only Sonnet5.5 follow-up found
-no blocking regression. The later six-line cache-path test-fixture correction
-still needs independent cross-lane review. Automatic approval review rejected
-exporting that broader watcher payload because the earlier approval covered the
-isolated7bffd68 SAFE payload; no rejected export was executed. Explicit approval
-of [the prepared watcher payload](safe-mode-01/sort-status-corrections/WATCHER-REVIEW-PAYLOAD.md)
-is pending. No integration or task-done claim is made, and the queue is unchanged.
+Product code remains03bd326, whose read-only Sonnet5.5 follow-up found no
+blocking regression. The later six-line fixture correction now has an independent
+Sonnet5.5 review: no source/test correction is required before handoff. The
+[review completion](safe-mode-01/cache-fixture-correction/REVIEW-COMPLETION.md)
+retains both reviews, clarification, authorization and actual execution metadata.
+The confirmed timeout-documentation error is fixed; the earlier budget timeout
+remains unresolved. The requested correction/review handoff is complete. No
+integration or packet-done claim is made, and the queue is unchanged.
 
 The frozen engine contract remains docs/SAFE-MODE-01-PLAN.md; lane/review/lock
 rules were read from10bdeb1:AGENTS.md. Sections below retain chronological

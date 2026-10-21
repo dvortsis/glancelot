@@ -1,6 +1,6 @@
 # Requested work audit
 
-The goal is incomplete only at the independent review of the latest fixture correction. No integration is authorized/performed and no packet is marked done.
+The requested pinned reviews and SAFE correction handoff are complete. Independent fixture review is retained in REVIEW-COMPLETION.md. No integration is performed and no packet is marked done.
 
 1. Rules:10bdeb1:AGENTS.md was read and rechecked. Assigned Codex worktrees/builds were used. Main/root configuration, shared interfaces and WORK-QUEUE were not changed by these reviews/follow-up. Full-Test/Docker commands ran through the main checkout's machine-local gate-lock in one PowerShell process; actual scripts and wait/terminal output are retained.
 
@@ -12,6 +12,6 @@ The goal is incomplete only at the independent review of the latest fixture corr
 
 5. Complete candidate verification: exact796ab411 passed Windows37/37 in558.04s and Docker37/37 in273.13s, terminal exits0. Each platform's actual35-command executable verifier passed, with observed software-RHI frames and RGB. Raw output/artifacts and command scripts are in this directory. No narrow run is substituted for either complete gate. Earlier timing failures are disclosed, not waived. Sealed generated packages/preimages use handoff-local binary attributes to preserve their bytes. Physical GPU/DPI, input-to-photon, sanitizer and power-loss evidence remains unverified.
 
-6. Remaining requirement: an independent cross-lane review must assess the six-line fixture correction, including whether it preserves the intended cache/admission and fallback coverage. The prepared read-only Claude watcher source/test/log payload has not been exported: automatic approval review rejected its broader scope, and explicit user approval has been requested but not received. No alternative export or self-approval is substituted. Gate passes alone cannot complete this requirement.
+6. Independent fixture review: actual Claude Sonnet5.5 reviewed the scoped source/test/log payload after explicit user approval on2026-10-21. Both runs exited0 with canonical model metadata and raw results retained. Final clarification explicitly requires no source/test correction before handoff and retracts its initial claim of removed false-hit coverage. The confirmed180s/300s documentation error is corrected. Optional diagnostic/unchanged-source performance coverage remains a disclosed preexisting gap; the budget timeout is unresolved and left to the lead. See REVIEW-COMPLETION.md for scope/limits and both unedited results.
 
-request-audit-source-proof.txt contains the actual current Git comparisons. README.md contains current exact gate results and links/names for complete raw evidence. The source/test snapshot remains796ab411; a later evidence-only commit does not qualify different source. Goal completion remains unproven until the independent review is completed and any required findings are resolved.
+request-audit-source-proof.txt contains actual Git comparisons. README.md retains complete gate output/process proofs. Final source/tests still equal796ab411; only evidence/documentation changed after its full gates. No requested requirement remains unfinished within this review/correction handoff. INPUT/MONITOR lane fixes and serial SAFE integration remain separate lead/lane work, not completed by this goal.
