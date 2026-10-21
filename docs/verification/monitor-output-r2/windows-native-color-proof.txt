@@ -1,0 +1,8 @@
+********* Start testing of MonitorOutputTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorOutputTests::initTestCase()
+QINFO  : MonitorOutputTests::testNativeGpuColorPatch() native output shader patch QColor(ARGB 1, 0.670588, 0.482353, 0.309804) Qt reference QColor(ARGB 1, 0.670588, 0.482353, 0.309804) DPR 1
+PASS   : MonitorOutputTests::testNativeGpuColorPatch()
+PASS   : MonitorOutputTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 536ms
+********* Finished testing of MonitorOutputTests *********
