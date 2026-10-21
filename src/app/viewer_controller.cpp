@@ -119,6 +119,7 @@ struct ViewerController::Private {
     Navigator nav;
     glancelot::FilterSpec filter;
     QJsonObject bindings;
+    QJsonObject confirmedBindings;
     QProcess* worker{};
     std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
     quint64 workerGeneration{};
@@ -159,7 +160,6 @@ struct ViewerController::Private {
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
     bool sortSaved{true};
-    quint64 preferenceSequence{};
     QJsonObject pendingSortFields;
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
@@ -246,6 +246,7 @@ struct ViewerController::Private {
         trace("controller:construct");
         navigationPool->setMaxThreadCount(1);
         for (const auto& command: registry) bindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
+        confirmedBindings=bindings;
         load();
         trace("controller:settings-loaded");
         positionTimer.setSingleShot(true); positionTimer.setInterval(500);
@@ -267,7 +268,7 @@ struct ViewerController::Private {
             if(state.begun&&(!recoveryResumeReady||beginFailureReported)) {
                 beginFailureReported=false;
                 recoveryResumeReady=true;recoveryResume=state.beginning.previous;
-                if(status=="Browsing recovery is unavailable. You can keep viewing images."||status=="This browsing position could not be saved. Your previous saved position is kept.") {
+                if(status=="Browsing recovery is unavailable. You can keep viewing images.") {
                     status="Browsing recovery is available.";emit q->stateChanged();
                     if(!alive||epoch!=recoveryEpoch)return;
                 }
@@ -455,7 +456,7 @@ struct ViewerController::Private {
         if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active. Start Glancelot with --reset-settings to set a damaged file aside."; return; }
         if (result.recovered) status="Settings were damaged; your last saved copy was restored.";
         const auto resolvedBindings=glancelot::resolveCommandBindings(object.value("bindings").toObject());
-        if(resolvedBindings.valid)bindings=resolvedBindings.effective;
+        if(resolvedBindings.valid)confirmedBindings=bindings=resolvedBindings.effective;
         else status=resolvedBindings.error;
         const auto savedBoundary=object.value("boundary").toString();
         if (savedBoundary=="continue" || savedBoundary=="stop" || savedBoundary=="loop") boundary=savedBoundary;
@@ -521,7 +522,13 @@ struct ViewerController::Private {
                 if (name=="bindings" && !bindingId.isEmpty()) { auto stored=object.value(name).toObject(); stored[bindingId]=it.value(); object[name]=stored; }
                 else object[name]=it.value();
             }
-        },[this,deferred](SettingsStatus result){if(*deferred&&!result.ok()){status="Preferences changed for this session; settings could not be saved.";emit q->stateChanged();}});
+        },[this,deferred,values,bindingId](SettingsStatus result){
+            if(result.ok()&&values.contains("bindings")) {
+                if(bindingId.isEmpty())confirmedBindings=values.value("bindings").toObject();
+                else confirmedBindings[bindingId]=values.value("bindings");
+            }
+            if(*deferred&&!result.ok()){status="Preferences changed for this session; settings could not be saved.";emit q->stateChanged();}
+        });
         *deferred=true;return accepted;
     }
     void cancelLookahead() {
@@ -1026,12 +1033,10 @@ struct ViewerController::Private {
         if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))fields["seed"]=double(next.seed);
         for(auto it=fields.begin();it!=fields.end();++it)pendingSortFields[it.key()]=it.value();
         const auto pending=pendingSortFields;
-        const auto sequence=++preferenceSequence;
         const auto deferred=std::make_shared<bool>(false);
         sortSaved=settings_detail::saveWithRetry(q,"sort",[pending](QJsonObject& object){
             auto stored=object.value("sort").toObject();for(auto it=pending.begin();it!=pending.end();++it)stored[it.key()]=it.value();object["sort"]=stored;
-        },[this,deferred,sequence](SettingsStatus result){
-            if(sequence!=preferenceSequence)return;
+        },[this,deferred](SettingsStatus result){
             sortSaved=result.ok();if(result.ok())pendingSortFields={};
             if(*deferred&&!result.ok()){status="File order changed for this session; settings could not be saved.";emit q->stateChanged();}
         });
@@ -1449,12 +1454,15 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
     for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
-    struct BindingSave {QJsonObject merged;QString conflict;std::optional<SettingsStatus> result;bool deferred{};};
+    struct BindingSave {QJsonObject merged;QJsonValue rollback;QString conflict;std::optional<SettingsStatus> result;bool deferred{};};
     const auto pending=std::make_shared<BindingSave>();const auto before=d->bindings;
+    pending->rollback=d->confirmedBindings.value(id);
     pending->merged=before;pending->merged[id]=normalized;
     settings_detail::saveWithRetry(this,"bindings/"+id,[pending,id,normalized,parsed](QJsonObject& object) {
         auto& merged=pending->merged;auto& conflict=pending->conflict;conflict.clear();
         auto stored=object.value("bindings").toObject();
+        const auto persisted=glancelot::resolveCommandBindings(stored);
+        if(persisted.valid)pending->rollback=persisted.effective.value(id);
         // Validate the effective map while holding the writer lock: another window may have
         // assigned this shortcut since our settings were loaded.
         for(auto it=stored.begin();it!=stored.end();++it)
@@ -1464,9 +1472,12 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
     },[this,pending,before,id,normalized](SettingsStatus result){
-        pending->result=result;if(!pending->deferred||d->bindings.value(id)!=QJsonValue(normalized))return;
+        pending->result=result;
+        if(!pending->conflict.isEmpty())d->confirmedBindings[id]=pending->rollback;
+        else if(result.ok())d->confirmedBindings[id]=normalized;
+        if(!pending->deferred||d->bindings.value(id)!=QJsonValue(normalized))return;
         if(!pending->conflict.isEmpty()) {
-            d->bindings[id]=before.value(id);
+            d->bindings[id]=pending->rollback;
             d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";
         }
         else if(result.ok()) {

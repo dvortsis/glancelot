@@ -124,6 +124,39 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("layouts").toObject().value("1").toObject().value("panes").toObject().value("tree").toObject().value("extent"),QJsonValue(410),3000);
         QTRY_VERIFY_WITH_TIMEOUT(layout.feedback().isEmpty(),3000);QCOMPARE(layout.pane("tree").value("extent"),QVariant(410));
     }
+    void supersededBindingConflictRestoresPersistedValue() {
+        QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        ViewerController viewer;viewer.resetBindings();FileLock held(config.filePath("settings.json.lock"));QVERIFY(held.acquire(0));
+        QVERIFY(viewer.setBinding("fullscreen","Ctrl+Alt+F10"));QVERIFY(viewer.setBinding("fullscreen","Ctrl+Alt+F11"));held.release();
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){auto bindings=root.value("bindings").toObject();bindings["fullscreen"]="Ctrl+Alt+F12";bindings["rotate"]="Ctrl+Alt+F11";root["bindings"]=bindings;}).ok());
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("already assigned"),3000);
+        QCOMPARE(viewer.bindingFor("fullscreen"),QString("Ctrl+Alt+F12"));
+        QCOMPARE(settings(config.path()).value("bindings").toObject().value("fullscreen"),QJsonValue("Ctrl+Alt+F12"));
+    }
+    void failedSortIntentIsRetriedWithNextEditAndForeignFieldsPreserved() {
+        QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["sort"]=QJsonObject{{"key","name"},{"future",7},{"seed",123}};}).ok());
+        ViewerController viewer;FileLock held(config.filePath("settings.json.lock"));QVERIFY(held.acquire(0));viewer.setSortKey("size");
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.status().contains("could not be saved"),5000);held.release();
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){auto sort=root.value("sort").toObject();sort["key"]="name";sort["seed"]=789;root["sort"]=sort;}).ok());
+        viewer.setSortDescending(true);
+        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("sort").toObject().value("key"),QJsonValue("size"),3000);
+        const auto saved=settings(config.path()).value("sort").toObject();QCOMPARE(saved.value("descending"),QJsonValue(true));
+        QCOMPARE(saved.value("seed"),QJsonValue(789));QCOMPARE(saved.value("future"),QJsonValue(7));QVERIFY(!viewer.status().contains("could not be saved"));
+    }
+    void retryNoChangeStillRepairsRecoveredPrimary() {
+        QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        const auto write=[](const QString& path,const QByteArray& bytes){QFile file(path);return file.open(QIODevice::WriteOnly)&&file.write(bytes)==bytes.size();};
+        const auto bytes=[](const QString& path){QFile file(path);return file.open(QIODevice::ReadOnly)?file.readAll():QByteArray{};};
+        const QByteArray corrupt="{corrupt",backup="{\"schema\":1,\"tree\":true}";
+        QVERIFY(write(config.filePath("settings.json"),corrupt));QVERIFY(write(config.filePath("settings.json.bak"),backup));
+        QObject owner;int completed=0;
+        QVERIFY(glancelot::settings_detail::saveWithRetry(&owner,"tree",[](QJsonObject& root){root["tree"]=true;},[&](auto result){QVERIFY(result.ok());++completed;}));
+        QCOMPARE(completed,1);QCOMPARE(settings(config.path()).value("tree"),QJsonValue(true));QCOMPARE(bytes(config.filePath("settings.json.damaged")),corrupt);
+        const auto primary=bytes(config.filePath("settings.json")),lastGood=bytes(config.filePath("settings.json.bak"));
+        QVERIFY(glancelot::settings_detail::saveWithRetry(&owner,"tree",[](QJsonObject& root){root["tree"]=true;}));
+        QCOMPARE(bytes(config.filePath("settings.json")),primary);QCOMPARE(bytes(config.filePath("settings.json.bak")),lastGood);
+    }
     void deferredLayoutCompletionPreservesCurrentSlotFeedback() {
         QTemporaryDir config;QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         PaneLayout layout;layout.setSlot(1);QVERIFY(layout.resize("tree",300));

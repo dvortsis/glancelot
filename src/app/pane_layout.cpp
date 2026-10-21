@@ -117,7 +117,10 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
         layouts[QString::number(slot)]=layout;settings["layouts"]=layouts;
     },[this,unsupported,completion,slot,directory](glancelot::SettingsStatus result){
         completion->done=true;
-        if(completion->deferred&&(slot_!=slot||directory!=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath())||feedback_!="Saving layout preferences…"))return;
+        if(completion->deferred&&(slot_!=slot||directory!=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath())||feedback_!="Saving layout preferences…")) {
+            if(!result.ok())qWarning("Glancelot: a deferred layout save failed; newer view feedback was preserved");
+            return;
+        }
         if(completion->deferred&&result.ok()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot)+"/"))return;
         if(*unsupported)feedback_="Layout changed for this session; a newer saved layout was preserved.";
         else if(!result.ok())feedback_="Layout changed for this session; settings could not be saved.";
