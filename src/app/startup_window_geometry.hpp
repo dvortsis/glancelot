@@ -12,7 +12,9 @@ struct StartupPlacement {
     QRect geometry;
     StartupPlacementStatus status = StartupPlacementStatus::Unchanged;
 };
-// All coordinates are Qt logical desktop coordinates. No native-pixel/DPR conversion,
+// current/result are OUTER FRAME rectangles in Qt logical desktop coordinates.
+// minimumSize is the outer-frame minimum (client minimum plus actual frame margins).
+// No native-pixel/DPR conversion,
 // screen enumeration, window mutation, persistent state or allocation occurs here.
 [[nodiscard]] StartupPlacement recoverStartupWindowGeometry(
     const QRect& current, std::span<const QRect> availableScreens,
