@@ -2317,8 +2317,13 @@ private slots:
         const QString trash = deleteFlow(h)->property("trashName").toString();
         QCOMPARE(results->property("title").toString(), "Moved 2 of 4 items to the " + trash);
         QStringList reasons;
-        for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
-        QCOMPARE(reasons.size(), 2);
+        // The results popup can become visible before ListView has created both delegates.
+        // Re-query the live tree until both reasons exist; keep the exact count and content oracle.
+        QTRY_VERIFY(([&] {
+            reasons.clear();
+            for (auto* item : descendants(h.window->contentItem())) if (item->objectName() == "deleteFailureReason") reasons << item->property("text").toString();
+            return reasons.size()==2;
+        })());
         QVERIFY(reasons.join("|").contains("open in another app"));
         QVERIFY(reasons.join("|").contains("Nothing was deleted"));
         QVERIFY(QFileInfo::exists(media.file("note2.txt")) && QFileInfo::exists(media.file("note3.txt")));
