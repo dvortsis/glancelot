@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: Codex-user-authorized-lead, branch: codex/safe-mode-01, started: '2026-10-21T14:26:59.7975858Z'}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -724,14 +724,19 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: codex
-    state: integration
+    state: review
     depends: [WINDOW-RESUME-01]
     branch: codex/safe-mode-01
     source_candidate: 796ab411776068a6a7b8d40f26b64930818fd279
-    evidence_candidate: 116c6ba027a416046f6de50875a03b8e741a8baa
+    evidence_candidate: 1b7c3db4e0bcdacbc93a4605447a8b126ad77243
     review_snapshot: Product03bd326 Sonnet5.5 follow-up plus fixture796ab411 Sonnet5.5 review/clarification; initial0580fe0 and intermediate reviews retained
     candidate_checks: Exact796ab411 complete locked Windows37/37 558.04s and Docker37/37 273.13s, exits0; recovery137/startup61/controller29 zero skips on both; fresh35-command software-RHI/RGB process proofs on both. Earlier failures retained; hardware/sanitizer/power-loss unverified.
-    review_gate: Lead accepts resolved original High/Medium findings and independent no-blocking product/fixture follow-ups for integration testing. Recorded Low feedback/binding limitations and historical budget timeout are not claimed fixed. Synchronized source needs final independent confirmation and both integrated full gates before merge/done.
+    review_gate: Source ACCEPT by actual Sonnet5.5 final review on synchronized7e88979; mandatory Windows process proof fails and repeats, so integration is rejected pending STARTUP-WINDOW-01. Source acceptance does not waive runtime checks.
+    integration_candidate: 7e8897975d507c29907d6a026792e1ea42b7cedd
+    integration_attempt: Windows36/37 601.99s exit1, sole recovery_process failure; isolated identical proof also fails. Docker37/37 283.69s exit0 with35-command proof. Native Qt logging records wholly offscreen startup at0,1600 size2360x1560; source remains unchanged. No merge.
+    blocked_by: STARTUP-WINDOW-01
+    lane_serialization: SAFE stays in review while STARTUP-WINDOW-01 is the sole next Codex implementation; carry the corrected stack through independent review and both full gates before integration.
+    integration_evidence: docs/verification/safe-mode-01/lead-integration-2026-10-21/README.md
     evidence: docs/verification/SAFE-MODE-01.md; docs/handoff/CODEX-SAFE-MODE-01-REVIEW.md
     worktree: .worktrees/codex-safe-mode-01
     build: build-codex-safe-mode-01
@@ -742,6 +747,26 @@ tasks:
     contract_gate: Lead-frozen complete F064/F057 contract and shared value APIs; production/test fragments must be enabled unconditionally once real feature sources exist before candidate gates. Sole Codex implementation while prior FS source is in pinned integration; serialize any renewed FS correction. No SAFE merge while FS integration lock remains held.
     outcome: Safe mode, configuration diff, settings backup/restore and crash-recovery restore engine (F064, F057 engine)
     acceptance: Recover without deleting originals or unknown preferences; isolate bad layout or renderer overrides; preserve last-good state; restore lazily with explicit-open precedence; corrupted state and interrupted migration tests
+  - id: STARTUP-WINDOW-01
+    requirements: [SYS-03, SYS-05, UX-12]
+    milestone: M3
+    priority: 9
+    owner: lead
+    owner_lane: codex
+    state: ready
+    depends: [PLATFORM-01]
+    branch: codex/startup-window-01
+    worktree: .worktrees/codex-startup-window-01
+    build: build-codex-startup-window-01
+    plan: docs/STARTUP-WINDOW-01-PLAN.md
+    memory_action: act_mvi8zmfo_9655f6654d92
+    contract_review: Actual Sonnet5.5 accepted amended f9c8adc contract, sessionccabe0f2; initial outer-frame/degenerate-input amendments resolved. Implementation/integration not approved.
+    source_base: Reviewed SAFE7e8897975d507c29907d6a026792e1ea42b7cedd plus evidence-only commits, then merge main frozen contract; this is the authorized SAFE correction stack, not main integration approval
+    test_target_contract: cmake/StartupWindowGeometryTests.cmake; private API src/app/startup_window_geometry.hpp; lead removes implementation-presence guard at integration
+    start_gate: Lead returned SAFE to review for this runtime blocker; sole active Codex implementation, no concurrent SAFE or watcher correction
+    outcome: Recover wholly offscreen startup windows in Qt logical screen space before timed viewing, preserving valid placements and actual frame proof
+    acceptance: Bounded allocation-free pure geometry helper; negative origins, monitor gaps, mixed-DPI placement evidence, minimum controls and explicit-size semantics; no renderer/deadline/oracle weakening; bounded pre-grab position/exposure diagnostics; independent actual Sonnet5.5 review and complete locked Windows/Docker gates with mandatory new target
+    evidence: docs/verification/safe-mode-01/lead-integration-2026-10-21/README.md
   - id: FORMAT-02
     requirements: [FMT-02, FMT-03, FMT-06, PERF-03]
     milestone: M3

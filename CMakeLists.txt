@@ -61,6 +61,7 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
+  include(cmake/StartupWindowGeometryTests.cmake)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
     ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml)
