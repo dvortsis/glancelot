@@ -97,6 +97,8 @@ struct DisplayManager::Private {
     QImage previousImage;
 
     QHash<QString, QString> fitModes;           // per display id
+    QHash<QString, QVariantMap> viewports;      // bounded session state by display identity
+    std::function<QString(const QString&)> outputBindingProvider;
     std::function<QString()> toggleBindingProvider;
 
     std::unique_ptr<IPresentationWindow> presentationWindow;
@@ -362,6 +364,10 @@ quint64 DisplayManager::currentGeneration() const {
 }
 
 bool DisplayManager::openPresentation(const QString& displayId, PresentationMode mode) {
+    if (d->presentationWindow && !d->activeId.isEmpty()) {
+        if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
+        d->viewports[d->activeId]=d->presentationWindow->viewportState();
+    }
     QScreen* targetScreen = nullptr;
     if (!displayId.isEmpty()) {
         targetScreen = d->findScreenById(displayId);
@@ -393,6 +399,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
         d->presentationWindow->setScreen(targetScreen);
         d->presentationWindow->setGeometry(targetScreen->geometry());
         d->applyImagesToWindow();
+        d->presentationWindow->restoreViewport(d->viewports.value(d->activeId));
         d->presentationWindow->show();
     }
 
@@ -405,6 +412,10 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
 
 void DisplayManager::closePresentation() {
     if (!d->active && !d->presentationWindow) return;
+    if (d->presentationWindow && !d->activeId.isEmpty()) {
+        if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
+        d->viewports[d->activeId]=d->presentationWindow->viewportState();
+    }
 
     d->active = false;
     d->activeId.clear();
@@ -516,7 +527,7 @@ void DisplayManager::compareWithPinnedOrPrevious() {
 static bool isValidFitMode(const QString& mode) {
     return (mode == QLatin1String("shrink") || mode == QLatin1String("fit") ||
             mode == QLatin1String("fill") || mode == QLatin1String("width") ||
-            mode == QLatin1String("height"));
+            mode == QLatin1String("height") || mode==QLatin1String("actual"));
 }
 
 void DisplayManager::setOutputFitMode(const QString& mode) {
@@ -525,9 +536,33 @@ void DisplayManager::setOutputFitMode(const QString& mode) {
     d->fitModes[d->activeId] = mode;
     if (d->presentationWindow) d->presentationWindow->setFitMode(mode);
 }
+void DisplayManager::outputViewportCommand(const QString& command) {
+    if (!d->active || !d->presentationWindow) return;
+    d->presentationWindow->viewportCommand(command);
+}
+QVariantMap DisplayManager::outputViewportState(const QString& displayId) const {
+    if (d->presentationWindow && (displayId.isEmpty() || displayId==d->activeId)) return d->presentationWindow->viewportState();
+    return d->viewports.value(displayId);
+}
+void DisplayManager::setOutputBindingProvider(std::function<QString(const QString&)> provider) {
+    d->outputBindingProvider=std::move(provider);
+}
+QString DisplayManager::outputBinding(const QString& command) const {
+    return d->outputBindingProvider ? d->outputBindingProvider(command) : QString();
+}
 
 QString DisplayManager::outputFitMode(const QString& displayId) const {
+    if (d->presentationWindow && (displayId.isEmpty() || displayId==d->activeId)) {
+        const auto fit=d->presentationWindow->viewportState().value("primary").toMap().value("fit").toString();
+        return fit.isEmpty()?QStringLiteral("custom"):fit;
+    }
     return d->fitModes.value(displayId.isEmpty() ? d->activeId : displayId, QStringLiteral("shrink"));
+}
+QString DisplayManager::outputColorStatus() const {
+    return d->presentationWindow?d->presentationWindow->outputColorStatus():QStringLiteral("Presentation closed");
+}
+qint64 DisplayManager::outputColorResourceBytes() const {
+    return d->presentationWindow?d->presentationWindow->colorResourceBytes():0;
 }
 
 qint64 DisplayManager::retainedImageBytes() const { return d->retainedBytes(); }

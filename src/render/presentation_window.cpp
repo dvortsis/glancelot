@@ -4,8 +4,22 @@
 #include <QQuickItem>
 #include <QColor>
 #include <QPointer>
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include <QtConcurrent/QtConcurrentRun>
+#include <QScreen>
+#include <cmath>
 
 namespace glancelot {
+namespace {
+void copyViewport(ImageCanvas* from,ImageCanvas* to) {
+    if (from->image().isNull() || to->image().isNull()) return;
+    auto state=from->viewState();
+    state["centerX"]=state["centerX"].toDouble()*to->image().width()/from->image().width();
+    state["centerY"]=state["centerY"].toDouble()*to->image().height()/from->image().height();
+    to->setViewState(state);
+}
+}
 
 PresentationWindow::PresentationWindow(QWindow* parent)
     : QQuickWindow(parent) {
@@ -25,6 +39,21 @@ PresentationWindow::PresentationWindow(QWindow* parent)
     m_canvasB->setVisible(false);
 
     updateLayout();
+    m_colorRetry.setSingleShot(true); m_colorRetry.setInterval(50);
+    connect(&m_colorRetry,&QTimer::timeout,this,&PresentationWindow::requestColor);
+    m_colorRefresh.setInterval(5000);
+    connect(&m_colorRefresh,&QTimer::timeout,this,[this] { if (isVisible() && !m_hasInjectedProfile) { ++m_colorRevision; requestColor(); } });
+    m_colorRefresh.start();
+    connect(this,&QWindow::screenChanged,this,[this] { refreshOutputColorProfile(); updateLayout(); });
+    connect(&m_colorWatcher,&QFutureWatcher<output_color::Result>::finished,this,[this] {
+        m_colorInFlight=false; m_colorRetry.stop();
+        const auto result=m_colorWatcher.result();
+        if (result.revision!=m_colorRevision) { requestColor(); return; }
+        m_colorAtlas=result.atlas; m_colorStatus=result.status;
+        m_canvasA->setOutputColorLut(m_colorAtlas); m_canvasB->setOutputColorLut(m_colorAtlas);
+        emit outputColorChanged();
+    });
+    refreshOutputColorProfile();
 }
 
 PresentationWindow::~PresentationWindow() = default;
@@ -32,6 +61,7 @@ PresentationWindow::~PresentationWindow() = default;
 void PresentationWindow::setComparisonMode(bool comparison) {
     if (m_comparisonMode == comparison) return;
     m_comparisonMode = comparison;
+    if (!comparison) m_activeSecondary=false;
     m_canvasB->setVisible(m_comparisonMode);
     if (!m_comparisonMode && m_canvasB) {
         m_canvasB->setImage(QImage());
@@ -41,25 +71,107 @@ void PresentationWindow::setComparisonMode(bool comparison) {
 
 void PresentationWindow::setPrimaryImage(const QImage& image) {
     if (m_canvasA) {
+        const auto previous=m_canvasA->image();
+        auto state=m_canvasA->viewState();
         m_canvasA->setImage(image);
-        m_canvasA->fit(m_fitMode);
+        if (!previous.isNull() && !image.isNull()) {
+            state["centerX"]=state["centerX"].toDouble()*image.width()/previous.width();
+            state["centerY"]=state["centerY"].toDouble()*image.height()/previous.height();
+            m_canvasA->setViewState(state);
+        } else if(m_fitMode=="actual") m_canvasA->actualSize(); else m_canvasA->fit(m_fitMode);
     }
 }
 
 void PresentationWindow::setSecondaryImage(const QImage& image) {
     if (m_canvasB) {
+        const auto previous=m_canvasB->image();
+        auto state=m_canvasB->viewState();
         m_canvasB->setImage(image);
         if (!image.isNull()) {
-            m_canvasB->fit(m_fitMode);
+            if (!previous.isNull()) {
+                state["centerX"]=state["centerX"].toDouble()*image.width()/previous.width();
+                state["centerY"]=state["centerY"].toDouble()*image.height()/previous.height();
+                m_canvasB->setViewState(state);
+            } else if(m_fitMode=="actual") m_canvasB->actualSize(); else m_canvasB->fit(m_fitMode);
+            if (m_linked) copyViewport(m_canvasA,m_canvasB);
         }
     }
 }
 
 void PresentationWindow::setFitMode(const QString& mode) {
-    if (mode != "shrink" && mode != "fit" && mode != "fill" && mode != "width" && mode != "height") return;
+    if (mode != "shrink" && mode != "fit" && mode != "fill" && mode != "width" && mode != "height" && mode!="actual") return;
     m_fitMode = mode;
-    if (m_canvasA) m_canvasA->fit(mode);
-    if (m_canvasB) m_canvasB->fit(mode);
+    if (mode=="actual") { m_canvasA->actualSize(); m_canvasB->actualSize(); }
+    else { if (m_canvasA) m_canvasA->fit(mode); if (m_canvasB) m_canvasB->fit(mode); }
+}
+
+QVariantMap PresentationWindow::viewportState() const {
+    return {{"primary",m_canvasA->viewState()},{"secondary",m_canvasB->viewState()},{"linked",m_linked},{"activeSecondary",m_activeSecondary}};
+}
+void PresentationWindow::restoreViewport(const QVariantMap& state) {
+    if (state.isEmpty()) return;
+    m_canvasA->setViewState(state.value("primary").toMap());
+    m_canvasB->setViewState(state.value("secondary").toMap());
+    m_linked=state.value("linked",true).toBool(); m_fitMode=m_canvasA->fitMode();
+    m_activeSecondary=m_comparisonMode && state.value("activeSecondary",false).toBool();
+}
+void PresentationWindow::zoomOutput(qreal factor,const QPointF& at) {
+    const bool secondary=m_comparisonMode && at.x()>=m_canvasB->x();
+    m_activeSecondary=secondary;
+    auto* target=secondary?m_canvasB:m_canvasA;
+    const auto local=at-QPointF(target->x(),target->y());
+    target->zoomAt(factor,local.x(),local.y());
+    if (m_comparisonMode && m_linked) {
+        auto* other=secondary?m_canvasA:m_canvasB;
+        copyViewport(target,other);
+    }
+    m_fitMode=target->fitMode();
+}
+void PresentationWindow::panOutput(const QPointF& delta,bool secondary) {
+    m_activeSecondary=m_comparisonMode && secondary;
+    auto* target=secondary?m_canvasB:m_canvasA;
+    target->panBy(delta.x(),delta.y());
+    if (m_comparisonMode && m_linked) {
+        auto* other=secondary?m_canvasA:m_canvasB;
+        copyViewport(target,other);
+    }
+    m_fitMode=target->fitMode();
+}
+void PresentationWindow::viewportCommand(const QString& command) {
+    if (command=="reference") { if(m_comparisonMode) m_activeSecondary=!m_activeSecondary; return; }
+    auto* active=m_activeSecondary?m_canvasB:m_canvasA;
+    auto* other=m_activeSecondary?m_canvasA:m_canvasB;
+    if (command=="actual") { if(m_linked) setFitMode("actual"); else active->actualSize(); return; }
+    if (command=="linked") { m_linked=!m_linked; if(m_linked && m_comparisonMode) copyViewport(active,other); return; }
+    if (command=="fit") {
+        const QStringList modes{"shrink","fit","fill"}; const auto mode=modes[(modes.indexOf(active->fitMode())+1)%modes.size()];
+        if(m_linked) setFitMode(mode); else active->fit(mode); return;
+    }
+    if (command=="zoom-in" || command=="zoom-out") zoomOutput(command=="zoom-in"?1.25:.8,QPointF(active->x()+active->width()/2,height()/2));
+    else if (command=="pan-left") panOutput({40,0},m_activeSecondary);
+    else if (command=="pan-right") panOutput({-40,0},m_activeSecondary);
+    else if (command=="pan-up") panOutput({0,40},m_activeSecondary);
+    else if (command=="pan-down") panOutput({0,-40},m_activeSecondary);
+}
+void PresentationWindow::setOutputColorProfile(const QColorSpace& profile) {
+    m_hasInjectedProfile=true;
+    m_injectedProfile=profile.isValid() && profile.iccProfile().size()<=output_color::maximumProfileBytes ? profile : QColorSpace{};
+    refreshOutputColorProfile();
+}
+void PresentationWindow::refreshOutputColorProfile() {
+    ++m_colorRevision;
+    m_colorAtlas={}; m_colorStatus=QStringLiteral("sRGB fallback (monitor profile pending)");
+    m_canvasA->setOutputColorLut({}); m_canvasB->setOutputColorLut({});
+    requestColor();
+}
+void PresentationWindow::requestColor() {
+    if (m_colorInFlight) { m_colorRetry.start(); return; }
+    bool expected=false;
+    if (!output_color::workerBusy.compare_exchange_strong(expected,true)) { m_colorRetry.start(); return; }
+    m_colorRetry.stop(); m_colorInFlight=true;
+    const auto name=screen()?screen()->name():QString();
+    const auto profile=m_injectedProfile; const bool injected=m_hasInjectedProfile; const auto revision=m_colorRevision;
+    m_colorWatcher.setFuture(QtConcurrent::run([name,profile,injected,revision] { return output_color::build(name,profile,injected,revision); }));
 }
 
 void PresentationWindow::updateLayout() {
@@ -102,50 +214,71 @@ void PresentationWindow::keyPressEvent(QKeyEvent* event) {
         break;
     }
 
-    // Escape is the reserved dismiss key. If in a chord, Escape cancels the chord.
-    // If not in a chord, Escape dismisses the window.
-    if (event->key() == Qt::Key_Escape && event->modifiers() == Qt::NoModifier) {
-        if (!m_chordPrefix.isEmpty()) {
-            m_chordPrefix.clear();
-            event->accept();
-            return;
-        }
+    if (event->isAutoRepeat()) { event->accept(); return; }
+    const auto bindingFor=[this](const QString& id) {
+        return QKeySequence::fromString(id=="presentation-toggle" ? (m_toggleBinding?m_toggleBinding():QString()) : (m_commandBinding?m_commandBinding(id):QString()),QKeySequence::PortableText);
+    };
+    if (!m_chordPrefix.isEmpty() && (!m_chordElapsed.isValid() || m_chordElapsed.elapsed()>=1500 || bindingFor(m_chordCommand)!=m_chordBinding)) m_chordPrefix.clear();
+    if (event->key()==Qt::Key_Escape && event->modifiers()==Qt::NoModifier) {
         event->accept();
-        emit escapePressed();
+        if (!m_chordPrefix.isEmpty()) { m_chordPrefix.clear(); return; }
+        emit escapePressed(); return;
+    }
+    const QKeyCombination combo(event->modifiers(),Qt::Key(event->key()));
+    QStringList ids{"presentation-toggle","presentation-fit"};
+    for (const auto* suffix : {"actual","zoom-in","zoom-out","pan-left","pan-right","pan-up","pan-down","linked","reference"}) ids<<QStringLiteral("presentation-view-")+QLatin1String(suffix);
+    if (!m_chordPrefix.isEmpty()) ids={m_chordCommand};
+    for (const auto& id:ids) {
+        const auto bound=bindingFor(id);
+        const int step=m_chordPrefix.size();
+        if (bound.isEmpty() || step>=bound.count() || bound[step]!=combo) continue;
+        if (!step) { m_chordBinding=bound; m_chordCommand=id; m_chordElapsed.start(); }
+        m_chordPrefix.append(combo); event->accept();
+        if (m_chordPrefix.size()==bound.count()) {
+            m_chordPrefix.clear();
+            if (id=="presentation-toggle") emit escapePressed();
+            else viewportCommand(id=="presentation-fit"?QStringLiteral("fit"):id.mid(18));
+        }
         return;
     }
-
-    if (m_toggleBinding) {
-        const QKeySequence bound = QKeySequence::fromString(m_toggleBinding(), QKeySequence::PortableText);
-        if (!bound.isEmpty()) {
-            const QKeyCombination currentCombo(event->modifiers(), Qt::Key(event->key()));
-            const int step = m_chordPrefix.size();
-            if (step < bound.count() && bound[step] == currentCombo) {
-                m_chordPrefix.append(currentCombo);
-                if (m_chordPrefix.size() == bound.count()) {
-                    m_chordPrefix.clear();
-                    event->accept();
-                    emit escapePressed();
-                    return;
-                }
-                event->accept();
-                return;
-            }
-            m_chordPrefix.clear();
-        }
-    }
-
+    m_chordPrefix.clear();
     QQuickWindow::keyPressEvent(event);
 }
 
 void PresentationWindow::focusOutEvent(QFocusEvent* event) {
     m_chordPrefix.clear();
+    m_dragging=false;
     QQuickWindow::focusOutEvent(event);
 }
 
 void PresentationWindow::hideEvent(QHideEvent* event) {
     m_chordPrefix.clear();
+    m_dragging=false;
     QQuickWindow::hideEvent(event);
+}
+void PresentationWindow::wheelEvent(QWheelEvent* event) {
+    if (event->modifiers() & Qt::ControlModifier) {
+        const qreal steps=!event->pixelDelta().isNull()?event->pixelDelta().y()/120.0:event->angleDelta().y()/120.0;
+        zoomOutput(std::pow(1.2,qBound(qreal(-20),steps,qreal(20))),event->position());
+    } else {
+        const QPointF delta=!event->pixelDelta().isNull()?QPointF(event->pixelDelta()):QPointF(event->angleDelta())/3;
+        panOutput(delta,m_comparisonMode && event->position().x()>=m_canvasB->x());
+    }
+    event->accept();
+}
+void PresentationWindow::mousePressEvent(QMouseEvent* event) {
+    if (event->button()!=Qt::LeftButton && event->button()!=Qt::MiddleButton) { QQuickWindow::mousePressEvent(event); return; }
+    m_dragging=true; m_dragSecondary=m_comparisonMode && event->position().x()>=m_canvasB->x();
+    m_activeSecondary=m_dragSecondary;
+    m_lastPointer=event->position(); event->accept();
+}
+void PresentationWindow::mouseMoveEvent(QMouseEvent* event) {
+    if (!m_dragging) { QQuickWindow::mouseMoveEvent(event); return; }
+    panOutput(event->position()-m_lastPointer,m_dragSecondary); m_lastPointer=event->position(); event->accept();
+}
+void PresentationWindow::mouseReleaseEvent(QMouseEvent* event) {
+    if (!m_dragging) { QQuickWindow::mouseReleaseEvent(event); return; }
+    m_dragging=false; event->accept();
 }
 
 void PresentationWindow::closeEvent(QCloseEvent* event) {
@@ -164,8 +297,10 @@ public:
         m_window = new PresentationWindow();
         if (owner) {
             m_window->setToggleBindingProvider([owner] { return owner->toggleBinding(); });
+            m_window->setCommandBindingProvider([owner](const QString& id) { return owner->outputBinding(id); });
             QObject::connect(m_window.data(), &PresentationWindow::escapePressed, owner, &DisplayManager::closePresentation);
             QObject::connect(m_window.data(), &PresentationWindow::closedByUser, owner, &DisplayManager::closePresentation);
+            QObject::connect(m_window.data(), &PresentationWindow::outputColorChanged, owner, &DisplayManager::outputColorStatusChanged);
         }
     }
     void setScreen(QScreen* screen) override { if (m_window) m_window->setScreen(screen); }
@@ -177,6 +312,11 @@ public:
     void setPrimaryImage(const QImage& image) override { if (m_window) m_window->setPrimaryImage(image); }
     void setSecondaryImage(const QImage& image) override { if (m_window) m_window->setSecondaryImage(image); }
     void setFitMode(const QString& mode) override { if (m_window) m_window->setFitMode(mode); }
+    QVariantMap viewportState() const override { return m_window ? m_window->viewportState() : QVariantMap{}; }
+    void restoreViewport(const QVariantMap& state) override { if (m_window) m_window->restoreViewport(state); }
+    void viewportCommand(const QString& command) override { if (m_window) m_window->viewportCommand(command); }
+    QString outputColorStatus() const override { return m_window?m_window->outputColorStatus():QStringLiteral("Presentation closed"); }
+    qint64 colorResourceBytes() const override { return m_window?m_window->colorResourceBytes():0; }
     QQuickWindow* quickWindow() override { return m_window.data(); }
 
 private:

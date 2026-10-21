@@ -63,6 +63,11 @@ public:
     virtual void setPrimaryImage(const QImage& image) = 0;
     virtual void setSecondaryImage(const QImage& image) = 0;
     virtual void setFitMode(const QString& mode) = 0;
+    virtual QVariantMap viewportState() const = 0;
+    virtual void restoreViewport(const QVariantMap& state) = 0;
+    virtual void viewportCommand(const QString& command) = 0;
+    virtual QString outputColorStatus() const = 0;
+    virtual qint64 colorResourceBytes() const = 0;
     virtual QQuickWindow* quickWindow() = 0;
 };
 
@@ -79,6 +84,7 @@ class DisplayManager : public QObject {
     Q_PROPERTY(QString currentPath READ currentPath NOTIFY imageRouted)
     Q_PROPERTY(QString pinnedPath READ pinnedPath NOTIFY pinnedPathChanged)
     Q_PROPERTY(bool isPinned READ isPinned NOTIFY presentationModeChanged)
+    Q_PROPERTY(QString outputColorStatus READ outputColorStatus NOTIFY outputColorStatusChanged)
 
 public:
     explicit DisplayManager(QObject* parent = nullptr);
@@ -129,6 +135,10 @@ public:
     // Per-output fit mode, remembered by display id and restored when that output reopens.
     Q_INVOKABLE void setOutputFitMode(const QString& mode);
     QString outputFitMode(const QString& displayId = QString()) const;
+    Q_INVOKABLE void outputViewportCommand(const QString& command);
+    QVariantMap outputViewportState(const QString& displayId = QString()) const;
+    QString outputColorStatus() const;
+    qint64 outputColorResourceBytes() const;
 
     // Aggregate budget for decoded images retained by the presentation (shared QImages count once).
     static void setImageBudgetBytes(qint64 bytes);
@@ -140,6 +150,8 @@ public:
     // Window-local key handling consults the user-rebindable toggle binding through this provider.
     void setToggleBindingProvider(std::function<QString()> provider);
     QString toggleBinding() const;
+    void setOutputBindingProvider(std::function<QString(const QString&)> provider);
+    QString outputBinding(const QString& command) const;
 
     // Presentation Window access (for testing/canvas inspection)
     QQuickWindow* presentationWindow() const;
@@ -152,6 +164,7 @@ signals:
     void pinnedPathChanged(const QString& path);
     void presentationClosed();
     void imageRouted(const QString& path, quint64 generation);
+    void outputColorStatusChanged();
 
 private:
     struct Private;

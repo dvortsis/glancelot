@@ -2,6 +2,7 @@
 #include <QQuickRhiItem>
 #include <QImage>
 #include <QColor>
+#include <QVariantMap>
 
 // All viewport distances are logical pixels; zoom is physical pixels per source pixel.
 class ImageCanvas : public QQuickRhiItem {
@@ -36,6 +37,10 @@ public:
     Q_INVOKABLE void actualSize();
     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
     Q_INVOKABLE void panBy(qreal dx, qreal dy);
+    QVariantMap viewState() const;
+    void setViewState(const QVariantMap& state);
+    // Fixed 33-cube RGB atlas, shared by presentation canvases; null means identity.
+    void setOutputColorLut(const QImage& atlas);
     // Continuous source coordinates, including points outside the image bounds.
     Q_INVOKABLE QPointF imagePointAt(qreal x, qreal y) const;
     Q_INVOKABLE void rotateClockwise();
@@ -56,7 +61,9 @@ private:
     qreal dpr() const;
     void refreshFit();
     QImage m_image;
+    QImage m_outputColorLut;
     qreal m_zoom{1};
+    qreal m_lastDpr{1};
     QPointF m_pan;
     QString m_fitMode{"shrink"};
     int m_rotation{};

@@ -2,6 +2,10 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QSignalSpy>
+#include <QColorSpace>
+#include <QColorTransform>
+#include <QMouseEvent>
+#include <QWheelEvent>
 #include "glancelot/display_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "presentation_window.hpp"
@@ -17,6 +21,134 @@ class MonitorOutputTests : public QObject {
     }
 
 private slots:
+    void testNativeGpuColorPatch() {
+        if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) QSKIP("Opt-in native GPU readback; headless state tests do not qualify presentation pixels");
+        glancelot::PresentationWindow window;
+        const QRect available=QGuiApplication::primaryScreen()->availableGeometry();
+        window.setGeometry(QRect(available.center()-QPoint(200,150),QSize(400,300)));
+        auto source=createTestImage(64,64,QColor(180,120,70)); source.setColorSpace(QColorSpace::SRgb);
+        const auto expected=source.convertedToColorSpace(QColorSpace::DisplayP3).pixelColor(32,32);
+        window.setPrimaryImage(source); window.setFitMode("fit"); window.setOutputColorProfile(QColorSpace::DisplayP3);
+        QTRY_VERIFY_WITH_TIMEOUT(!window.outputColorAtlas().isNull(),15000);
+        window.show(); QTRY_VERIFY_WITH_TIMEOUT(window.isExposed(),10000);
+        QImage pixels;
+        auto matches=[&] {
+            pixels=window.grabWindow(); if(pixels.isNull()) return false;
+            const auto actual=pixels.pixelColor(pixels.width()/2,pixels.height()/2);
+            return qAbs(actual.red()-expected.red())<=4 && qAbs(actual.green()-expected.green())<=4 && qAbs(actual.blue()-expected.blue())<=4;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(matches(),10000);
+        qInfo()<<"native output shader patch"<<pixels.pixelColor(pixels.width()/2,pixels.height()/2)<<"Qt reference"<<expected<<"DPR"<<window.effectiveDevicePixelRatio();
+        window.hide();
+    }
+    void testOutputViewportSurvivesNavigationAndReopen() {
+        glancelot::DisplayManager dm;
+        QVERIFY(dm.openPresentation());
+        const auto id=dm.activeDisplayId();
+        dm.updateImage("generated-a",createTestImage(640,480,Qt::red),1);
+        dm.outputViewportCommand("actual");
+        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
+        QCOMPARE(window->primaryCanvas()->zoom(),qreal(1));
+        dm.outputViewportCommand("zoom-in"); dm.outputViewportCommand("pan-right");
+        const auto state=window->primaryCanvas()->viewState();
+        QCOMPARE(state["zoom"].toDouble(),1.25);
+        dm.updateImage("generated-b",createTestImage(640,480,Qt::blue),2);
+        QCOMPARE(window->primaryCanvas()->viewState(),state);
+        dm.closePresentation(); QVERIFY(dm.openPresentation(id));
+        window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
+        QCOMPARE(window->primaryCanvas()->viewState(),state);
+        // Distinct manager/controller output state cannot overwrite this output's state.
+        glancelot::DisplayManager other; QVERIFY(other.openPresentation());
+        other.setOutputFitMode("fill"); QCOMPARE(window->primaryCanvas()->viewState(),state);
+        other.closePresentation(); dm.closePresentation(); flushDeletes();
+    }
+    void testComparisonViewportsLinkAndSeparate() {
+        glancelot::PresentationWindow window; window.resize(800,600);
+        window.setComparisonMode(true);
+        window.setPrimaryImage(createTestImage(640,480,Qt::red));
+        window.setSecondaryImage(createTestImage(320,240,Qt::green));
+        window.viewportCommand("actual"); window.viewportCommand("zoom-in"); window.viewportCommand("pan-right");
+        QCOMPARE(window.primaryCanvas()->zoom(),window.secondaryCanvas()->zoom());
+        const auto a=window.primaryCanvas()->viewState(),b=window.secondaryCanvas()->viewState();
+        QVERIFY(qAbs(a["centerX"].toDouble()/640-b["centerX"].toDouble()/320)<1e-6);
+        window.viewportCommand("linked");
+        const auto independent=window.secondaryCanvas()->viewState();
+        window.viewportCommand("zoom-in"); window.viewportCommand("pan-up");
+        QCOMPARE(window.secondaryCanvas()->viewState(),independent);
+        const auto primary=window.primaryCanvas()->viewState();
+        window.viewportCommand("reference"); window.viewportCommand("zoom-in");
+        QCOMPARE(window.primaryCanvas()->viewState(),primary);
+        QVERIFY(window.secondaryCanvas()->viewState()!=independent);
+        window.viewportCommand("linked");
+        QCOMPARE(window.primaryCanvas()->zoom(),window.secondaryCanvas()->zoom());
+    }
+    void testActualSizeUsesPhysicalPixels() {
+        glancelot::PresentationWindow window; window.resize(800,600);
+        window.setPrimaryImage(createTestImage(320,240,Qt::red)); window.viewportCommand("actual");
+        const qreal dpr=window.effectiveDevicePixelRatio();
+        const auto a=window.primaryCanvas()->imagePointAt(400,300),b=window.primaryCanvas()->imagePointAt(401,300);
+        QCOMPARE(window.primaryCanvas()->zoom(),qreal(1));
+        QVERIFY(qAbs((b.x()-a.x())-dpr)<1e-6);
+        qInfo()<<"actual-size physical-pixel ratio"<<dpr<<"source pixels per logical pixel"<<b.x()-a.x();
+    }
+    void testOutputProfileTransitionsAreBoundedAndLatestWins() {
+        glancelot::PresentationWindow window;
+        auto source=createTestImage(40,40,QColor(180,120,70)); const auto key=source.cacheKey();
+        window.setPrimaryImage(source);
+        window.setOutputColorProfile(QColorSpace::DisplayP3);
+        QTRY_VERIFY_WITH_TIMEOUT(!window.outputColorAtlas().isNull(),15000);
+        QCOMPARE(window.outputColorAtlas().sizeInBytes(),glancelot::output_color::atlasBytes);
+        QCOMPARE(window.colorResourceBytes(),glancelot::kPresentationColorReservation);
+        QCOMPARE(window.primaryCanvas()->image().cacheKey(),key); // no full-raster copy/mutation
+        window.setOutputColorProfile(QColorSpace::AdobeRgb);
+        window.setOutputColorProfile(QColorSpace::SRgb);
+        QTRY_VERIFY_WITH_TIMEOUT(window.outputColorStatus().startsWith("SDR output profile:"),15000);
+        QVERIFY(window.outputColorAtlas().isNull()); QCOMPARE(window.colorResourceBytes(),glancelot::kPresentationColorReservation);
+        window.setOutputColorProfile({});
+        QTRY_VERIFY_WITH_TIMEOUT(window.outputColorStatus().contains("unavailable"),15000);
+        QVERIFY(window.outputColorAtlas().isNull());
+    }
+    void testGeneratedColorAtlasMatchesSdrReferencePatches() {
+        const QColorSpace srgb(QColorSpace::SRgb),p3(QColorSpace::DisplayP3);
+        const auto atlas=glancelot::output_color::makeAtlas(p3);
+        QVERIFY(!atlas.isNull());
+        const auto transform=srgb.transformationToColorSpace(p3);
+        for (int r : {0,4,16,24,32}) for (int g : {0,4,16,24,32}) for (int b : {0,4,16,24,32}) {
+            const QColor input(qRound(r*255.0/32),qRound(g*255.0/32),qRound(b*255.0/32));
+            const QColor expected=transform.map(input),actual=atlas.pixelColor(b*33+r,g);
+            QVERIFY(qAbs(actual.red()-expected.red())<=1 && qAbs(actual.green()-expected.green())<=1 && qAbs(actual.blue()-expected.blue())<=1);
+        }
+        QVERIFY(glancelot::output_color::makeAtlas(srgb).isNull());
+        QVERIFY(glancelot::output_color::makeAtlas({}).isNull());
+    }
+    void testDismissChordExpiresAndBindingChangesCancelIt() {
+        glancelot::DisplayManager dm; QString binding="Ctrl+K, P";
+        dm.setToggleBindingProvider([&] { return binding; }); QVERIFY(dm.openPresentation());
+        auto* window=dm.presentationWindow();
+        QTest::keyClick(window,Qt::Key_K,Qt::ControlModifier); QTest::qWait(1550);
+        QTest::keyClick(window,Qt::Key_P); QVERIFY(dm.isPresentationActive());
+        QTest::keyClick(window,Qt::Key_K,Qt::ControlModifier); binding="Ctrl+J, P";
+        QTest::keyClick(window,Qt::Key_P); QVERIFY(dm.isPresentationActive());
+        QTest::keyClick(window,Qt::Key_J,Qt::ControlModifier);
+        QFocusEvent focusOut(QEvent::FocusOut); QCoreApplication::sendEvent(window,&focusOut);
+        QTest::keyClick(window,Qt::Key_P); QVERIFY(dm.isPresentationActive());
+        binding="F9";
+        QKeyEvent repeat(QEvent::KeyPress,Qt::Key_F9,Qt::NoModifier,QString(),true);
+        QCoreApplication::sendEvent(window,&repeat); QVERIFY(dm.isPresentationActive());
+        QTest::keyClick(window,Qt::Key_F9); QVERIFY(!dm.isPresentationActive()); flushDeletes();
+    }
+    void testReboundOutputCommandActsOnlyOnPresentation() {
+        ViewerController controller;
+        QVERIFY(controller.setBinding("presentation-view-actual","Ctrl+Alt+1"));
+        auto* dm=controller.displayManager(); QVERIFY(dm->openPresentation());
+        dm->updateImage("generated",createTestImage(400,300,Qt::red),1);
+        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(window);
+        QTest::keyClick(window,Qt::Key_1,Qt::ControlModifier|Qt::AltModifier);
+        QCOMPARE(window->primaryCanvas()->fitMode(),QStringLiteral("actual"));
+        QCOMPARE(window->primaryCanvas()->zoom(),qreal(1));
+        controller.trigger("presentation-view-zoom-in"); QCOMPARE(window->primaryCanvas()->zoom(),qreal(1.25));
+        dm->closePresentation(); flushDeletes();
+    }
     void initTestCase() {
         QVERIFY(qApp != nullptr);
         glancelot::registerPresentationWindowFactory();
@@ -535,7 +667,7 @@ private slots:
 };
 
 int main(int argc, char** argv) {
-    qputenv("QT_QPA_PLATFORM", "offscreen");
+    if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
     MonitorOutputTests tests;
     return QTest::qExec(&tests, argc, argv);

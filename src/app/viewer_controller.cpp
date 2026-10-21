@@ -155,6 +155,16 @@ const std::vector<Command> registry {
     {"presentation-compare", "Presentation: Comparison mode", ""},
     {"presentation-close", "Close presentation display", ""},
     {"presentation-fit", "Presentation: Cycle fit mode for this display", ""},
+    // MONITOR-OUTPUT-01 core correction: output viewport; never modifies the controller canvas.
+    {"presentation-view-actual", "Presentation: Actual physical pixel size", ""},
+    {"presentation-view-zoom-in", "Presentation: Zoom in", ""},
+    {"presentation-view-zoom-out", "Presentation: Zoom out", ""},
+    {"presentation-view-pan-left", "Presentation: Pan left", ""},
+    {"presentation-view-pan-right", "Presentation: Pan right", ""},
+    {"presentation-view-pan-up", "Presentation: Pan up", ""},
+    {"presentation-view-pan-down", "Presentation: Pan down", ""},
+    {"presentation-view-linked", "Presentation: Toggle linked comparison viewports", ""},
+    {"presentation-view-reference", "Presentation: Switch active comparison viewport", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -417,6 +427,7 @@ struct ViewerController::Private {
             emit q->presentationChanged();
         });
         displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
+        displayManager.setOutputBindingProvider([this](const QString& id) { return q->bindingFor(id); });
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
@@ -1419,6 +1430,7 @@ void ViewerController::trigger(const QString& id){
     else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
     else if(id=="presentation-compare") { d->displayManager.compareWithPinnedOrPrevious(); emit viewCommand(id); }
     else if(id=="presentation-fit") { cyclePresentationFit(); emit viewCommand(id); }
+    else if(id.startsWith("presentation-view-")) { d->displayManager.outputViewportCommand(id.mid(18)); emit viewCommand(id); }
     else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
     else if(d->bindings.contains(id))emit viewCommand(id);
 }
