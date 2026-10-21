@@ -1,0 +1,178 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (13.0s)
+-- Generating done (2.0s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+[1/179] Automatic MOC and UIC for target glancelot_recovery_common
+[2/177] Automatic MOC and UIC for target glancelot_platform
+[3/175] Automatic MOC and UIC for target glancelot_test_argv_capture
+[4/173] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/171] Automatic MOC and UIC for target pane_layout_tests
+[6/169] Automatic MOC and UIC for target glancelot-decoder
+[7/167] Automatic MOC and UIC for target glancelot
+[8/166] Automatic MOC and UIC for target theme_tests
+[9/165] Running AUTOMOC file extraction for target glancelot
+[10/165] Automatic MOC and UIC for target recovery_startup_tests
+[11/163] Automatic MOC and UIC for target grid_ui_tests
+[12/162] Automatic MOC and UIC for target fs_watch_ui_tests
+[13/161] Running moc --collect-json for target glancelot
+[14/115] Automatic MOC and UIC for target monitor_output_tests
+[15/114] Automatic MOC and UIC for target recovery_tests
+[16/112] Automatic MOC and UIC for target recovery_controller_tests
+[17/110] Automatic MOC and UIC for target acceptance_tests
+[18/109] Automatic MOC and UIC for target thumbnail_tests
+[19/107] Automatic MOC and UIC for target folder_tree_tests
+[20/106] Automatic MOC and UIC for target window_slot_tests
+[21/105] Automatic MOC and UIC for target file_operation_service_tests
+[22/103] Automatic MOC and UIC for target directory_model_tests
+[23/101] Automatic MOC and UIC for target canvas_tests
+[24/99] Automatic MOC and UIC for target platform_integration_tests
+[25/97] Automatic MOC and UIC for target grid_search_tests
+[26/95] Automatic MOC and UIC for target grid_density_tests
+[27/93] Automatic MOC and UIC for target ui_settings_tests
+[28/92] Automatic MOC and UIC for target fs_watch_tests
+[29/91] Automatic MOC and UIC for target fs_watch_budget_tests
+[30/90] Automatic MOC and UIC for target favorites_tests
+[31/88] Automatic MOC and UIC for target folder_history_tests
+[32/86] Automatic MOC and UIC for target shortcuts_help_tests
+[33/85] Automatic MOC and UIC for target filter_tests
+[34/84] Automatic MOC and UIC for target cache_tests
+[35/83] Automatic MOC and UIC for target metadata_tests
+[36/81] Automatic MOC and UIC for target io_scheduler_tests
+[37/80] Automatic MOC and UIC for target animation_tests
+[38/78] Automatic MOC and UIC for target mutation_tests
+[39/77] Automatic MOC and UIC for target copy_move_tests
+[40/76] Automatic MOC and UIC for target format_tests
+[41/74] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[42/74] Building CXX object CMakeFiles\theme_tests.dir\src\app\viewer_controller.cpp.obj
+[43/74] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[44/74] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[45/74] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\viewer_controller.cpp.obj
+[46/74] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\viewer_controller.cpp.obj
+[47/74] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\viewer_controller.cpp.obj
+[48/74] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\viewer_controller.cpp.obj
+[49/74] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\viewer_controller.cpp.obj
+[50/74] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\viewer_controller.cpp.obj
+[51/74] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\viewer_controller.cpp.obj
+[52/74] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\viewer_controller.cpp.obj
+[53/74] Building CXX object CMakeFiles\filter_tests.dir\src\app\viewer_controller.cpp.obj
+[54/74] Building CXX object CMakeFiles\cache_tests.dir\src\app\viewer_controller.cpp.obj
+[55/74] Linking CXX executable glancelot.exe
+[56/74] Linking CXX executable acceptance_tests.exe
+[57/74] Linking CXX executable folder_tree_tests.exe
+[58/74] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\viewer_controller.cpp.obj
+[59/74] Linking CXX executable window_slot_tests.exe
+[60/74] Building CXX object CMakeFiles\mutation_tests.dir\src\app\viewer_controller.cpp.obj
+[61/74] Linking CXX executable theme_tests.exe
+[62/74] Linking CXX executable ui_settings_tests.exe
+[63/74] Linking CXX executable grid_ui_tests.exe
+[64/74] Linking CXX executable fs_watch_tests.exe
+[65/74] Linking CXX executable fs_watch_budget_tests.exe
+[66/74] Linking CXX executable fs_watch_ui_tests.exe
+[67/74] Linking CXX executable shortcuts_help_tests.exe
+[68/74] Linking CXX executable filter_tests.exe
+[69/74] Linking CXX executable cache_tests.exe
+[70/74] Linking CXX executable io_scheduler_tests.exe
+[71/74] Linking CXX executable mutation_tests.exe
+[72/74] Linking CXX executable monitor_output_tests.exe
+[73/74] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\viewer_controller.cpp.obj
+[74/74] Linking CXX executable copy_move_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+      Start  1: perf_trace
+ 1/37 Test  #1: perf_trace .......................   Passed    0.09 sec
+      Start  2: navigation
+ 2/37 Test  #2: navigation .......................   Passed    3.03 sec
+      Start  3: directory_listing
+ 3/37 Test  #3: directory_listing ................   Passed   17.35 sec
+      Start  4: file_operations
+ 4/37 Test  #4: file_operations ..................   Passed    0.22 sec
+      Start  5: viewer_acceptance
+ 5/37 Test  #5: viewer_acceptance ................   Passed    8.65 sec
+      Start  6: thumbnails
+ 6/37 Test  #6: thumbnails .......................   Passed    7.15 sec
+      Start  7: folder_tree
+ 7/37 Test  #7: folder_tree ......................   Passed    8.72 sec
+      Start  8: pane_layout
+ 8/37 Test  #8: pane_layout ......................   Passed    0.75 sec
+      Start  9: window_slots
+ 9/37 Test  #9: window_slots .....................   Passed   25.73 sec
+      Start 10: folder_grid
+10/37 Test #10: folder_grid ......................   Passed  212.95 sec
+      Start 11: file_operation_service
+11/37 Test #11: file_operation_service ...........   Passed    1.32 sec
+      Start 12: directory_model
+12/37 Test #12: directory_model ..................   Passed   53.89 sec
+      Start 13: viewport
+13/37 Test #13: viewport .........................   Passed    0.11 sec
+      Start 14: themes
+14/37 Test #14: themes ...........................   Passed    0.36 sec
+      Start 15: platform_integration
+15/37 Test #15: platform_integration .............   Passed    1.14 sec
+      Start 16: grid_search
+16/37 Test #16: grid_search ......................   Passed    0.48 sec
+      Start 17: grid_density
+17/37 Test #17: grid_density .....................   Passed    0.29 sec
+      Start 18: ui_settings
+18/37 Test #18: ui_settings ......................   Passed    0.50 sec
+      Start 19: fs_watch
+19/37 Test #19: fs_watch .........................***Failed   86.36 sec
+
+      Start 20: fs_watch_budget
+20/37 Test #20: fs_watch_budget ..................   Passed  164.83 sec
+      Start 21: fs_watch_ui
+21/37 Test #21: fs_watch_ui ......................   Passed    2.66 sec
+      Start 22: favorites
+22/37 Test #22: favorites ........................   Passed    0.44 sec
+      Start 23: folder_history
+23/37 Test #23: folder_history ...................   Passed    0.08 sec
+      Start 24: shortcuts_help
+24/37 Test #24: shortcuts_help ...................   Passed    0.15 sec
+      Start 25: filter
+25/37 Test #25: filter ...........................   Passed    2.39 sec
+      Start 26: cache
+26/37 Test #26: cache ............................   Passed    4.42 sec
+      Start 27: io_scheduler
+27/37 Test #27: io_scheduler .....................   Passed    0.15 sec
+      Start 28: metadata
+28/37 Test #28: metadata .........................   Passed    0.24 sec
+      Start 29: animation
+29/37 Test #29: animation ........................   Passed    0.48 sec
+      Start 30: mutation
+30/37 Test #30: mutation .........................   Passed    0.11 sec
+      Start 31: copy_move
+31/37 Test #31: copy_move ........................   Passed    0.17 sec
+      Start 32: format
+32/37 Test #32: format ...........................   Passed    0.13 sec
+      Start 33: monitor_output
+33/37 Test #33: monitor_output ...................   Passed    0.12 sec
+      Start 34: recovery
+34/37 Test #34: recovery .........................   Passed   13.75 sec
+      Start 35: recovery_startup
+35/37 Test #35: recovery_startup .................   Passed    0.22 sec
+      Start 36: recovery_controller
+36/37 Test #36: recovery_controller ..............   Passed   12.97 sec
+      Start 37: recovery_process
+37/37 Test #37: recovery_process .................   Passed   28.53 sec
+
+97% tests passed, 1 tests failed out of 37
+
+Total Test time (real) = 663.14 sec
+
+The following tests FAILED:
+	 19 - fs_watch (Failed)
+Errors while running CTest
+Exception: C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\scripts\build.ps1:34
+Line |
+  34 |  … tput-on-failure; if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' } }
+     |                                                ~~~~~~~~~~~~~~~~~~~~~
+     | Tests failed.
+
+windows_gate_exit=1

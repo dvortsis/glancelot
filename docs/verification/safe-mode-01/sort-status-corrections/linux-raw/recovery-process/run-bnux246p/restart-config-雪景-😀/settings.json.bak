@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "e4fe00cc-0317-4814-ad5b-8e6494d6306d",
+                "claimNonce": "505b735a-3254-4ecc-9f32-1563885e747d",
+                "origin": "navigation",
+                "pid": 1613,
+                "sequence": "0",
+                "start": "13648609",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-bnux246p/generated-media",
+            "image": "/build/recovery-process/run-bnux246p/generated-media/-explicit-配置.png",
+            "saved": 1792555700
+        }
+    }
+}
