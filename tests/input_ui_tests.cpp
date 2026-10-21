@@ -349,6 +349,34 @@ private slots:
         QVERIFY(!pending());
     }
 
+    void gridSearchKeepsPrintableDefaultsWhileChordsCanArm() {
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window);
+        h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
+        auto* grid = named(h.window, "photoGrid"); QVERIFY(grid);
+        const auto sort = h.viewer.sortKey(); const bool descending = h.viewer.sortDescending();
+        QTest::keyClick(h.window, Qt::Key_G);
+        QCOMPARE(flag(h, "gridMode"), true);
+        QTRY_COMPARE(grid->property("searchQuery").toString().toLower(), QString("g"));
+        QTest::keyClick(h.window, Qt::Key_S);
+        QTest::keyClick(h.window, Qt::Key_S, Qt::ShiftModifier);
+        QTRY_COMPARE(grid->property("searchQuery").toString().toLower(), QString("gss"));
+        QCOMPARE(h.viewer.sortKey(), sort); QCOMPARE(h.viewer.sortDescending(), descending);
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_COMPARE(grid->property("searchQuery").toString(), QString{});
+        QVERIFY(flag(h, "gridMode"));
+        QVERIFY(h.viewer.setBinding("sort-reverse", "K, S"));
+        WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "S");
+        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(flag(h, "chordPending"));
+        QCOMPARE(grid->property("searchQuery").toString(), QString{});
+        QTest::keyClick(h.window, Qt::Key_S); QTRY_VERIFY(!flag(h, "chordPending"));
+        QTRY_COMPARE(h.viewer.sortDescending(), !descending);
+        QCOMPARE(grid->property("searchQuery").toString(), QString{});
+        QVERIFY(flag(h, "gridMode"));
+    }
+
     // Escape belongs to the pending chord before the pane that has focus: neither the grid nor the tree acts on it.
     void escapeCancelsAChordBeforeTheGridOrTreeActOnIt() {
         Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
