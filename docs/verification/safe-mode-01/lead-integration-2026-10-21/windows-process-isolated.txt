@@ -1,0 +1,13 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+    Start 37: recovery_process
+1/1 Test #37: recovery_process .................***Failed    5.96 sec
+Recovery process verification FAILED: No actual software device evidence: rhi={'backend': 3, 'device_name': 'Microsoft Basic Render Driver', 'device_type': 5, 'observed': False, 'render_callbacks': 1, 'scenegraph_invalidations': 1, 'software_detection': 'cpu-device-type'}; window={'exposed': False, 'height': 1560, 'screen': {'device_pixel_ratio': 1, 'height': 1440, 'logical_dpi': 96, 'name': 'P27h-20', 'width': 2560, 'x': 0, 'y': 0}, 'state': 0, 'visibility': 2, 'visible': True, 'width': 2360}; frames=0; first_image_frame_ms=-1; quit_timer_started_ms=1228; quit_callback_ms=3715; report_ms=3992; evidence: C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\build-codex-safe-mode-01\recovery-process\run-mf3dp8ac
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   5.97 sec
+
+The following tests FAILED:
+	 37 - recovery_process (Failed)
+Errors while running CTest
