@@ -1,0 +1,17 @@
+********* Start testing of MonitorOutputTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorOutputTests::initTestCase()
+QINFO  : MonitorOutputTests::reviewerHiddenCanvasMustReleaseShedImage() reported bytes 6400 hidden secondary bytes 6400
+FAIL!  : MonitorOutputTests::reviewerHiddenCanvasMustReleaseShedImage() 'pw->secondaryCanvas()->image().isNull()' returned FALSE. (Shed/low-memory-released secondary pixels are retained by the hidden canvas outside accounting)
+C:\src\Github\Glancelot\.worktrees\codex-review-monitor-output-fix\tests\monitor_output_tests.cpp(406) : failure location
+FAIL!  : MonitorOutputTests::reviewerOldComparisonCannotOverrideNewCompareCommand() Compared values are not the same
+   Actual   (pw->secondaryCanvas()->image().size()): QSize(30x30)
+   Expected (QSize(64, 64))                        : QSize(64x64)
+C:\src\Github\Glancelot\.worktrees\codex-review-monitor-output-fix\tests\monitor_output_tests.cpp(419) : failure location
+FAIL!  : MonitorOutputTests::reviewerInvalidFitMustNotDestroyRememberedFit() Compared values are not the same
+   Actual   (pw->fitMode())         : "shrink"
+   Expected (QStringLiteral("fill")): "fill"
+C:\src\Github\Glancelot\.worktrees\codex-review-monitor-output-fix\tests\monitor_output_tests.cpp(432) : failure location
+PASS   : MonitorOutputTests::cleanupTestCase()
+Totals: 2 passed, 3 failed, 0 skipped, 0 blacklisted, 16ms
+********* Finished testing of MonitorOutputTests *********
