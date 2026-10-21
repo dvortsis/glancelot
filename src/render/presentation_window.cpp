@@ -107,9 +107,9 @@ QVariantMap PresentationWindow::viewportState() const {
 void PresentationWindow::restoreViewport(const QVariantMap& state) {
     if (state.isEmpty()) return;
     m_pendingPrimary=state.value("primary").toMap(); m_pendingSecondary=state.value("secondary").toMap();
-    if(!m_canvasA->image().isNull()) m_canvasA->setViewState(m_pendingPrimary);
-    if(!m_canvasB->image().isNull()) m_canvasB->setViewState(m_pendingSecondary);
-    m_linked=state.value("linked",true).toBool(); m_fitMode=m_canvasA->fitMode();
+    if(!m_canvasA->image().isNull() || !m_pendingPrimary.value("fit").toString().isEmpty()) m_canvasA->setViewState(m_pendingPrimary);
+    if(!m_canvasB->image().isNull() || !m_pendingSecondary.value("fit").toString().isEmpty()) m_canvasB->setViewState(m_pendingSecondary);
+    m_linked=state.value("linked",true).toBool(); m_fitMode=m_pendingPrimary.value("fit",m_canvasA->fitMode()).toString();
     m_activeSecondary=m_comparisonMode && state.value("activeSecondary",false).toBool();
 }
 void PresentationWindow::zoomOutput(qreal factor,const QPointF& at) {
