@@ -749,10 +749,10 @@ private slots:
         auto* rotate = menu->findChild<QQuickItem*>("menuItem-rotate"); QVERIFY(rotate);
         QCOMPARE(rotate->property("keys").toString(), QString("R"));
         closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
-        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+R"));
+        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+Y"));
         focusCanvas(h); QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(menu));
         rotate = menu->findChild<QQuickItem*>("menuItem-rotate");
-        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+R"));
+        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+Y"));
         // Choosing a row runs the same command the key would.
         QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rotate));
         QTRY_COMPARE(canvas->rotation(), 90);
