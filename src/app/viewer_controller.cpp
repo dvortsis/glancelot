@@ -56,7 +56,8 @@
 using namespace glancelot;
 namespace {
 using glancelot::bindings::usableShortcut;
-using glancelot::bindings::shortcutOverlap;
+using glancelot::bindings::bindingsCollide;
+using glancelot::bindings::findCommand;
 using glancelot::bindings::usableBindings;
 void trace(const char* event) {
     const auto path=qEnvironmentVariable("GLANCELOT_TRACE_FILE");
@@ -101,6 +102,9 @@ QString sortKeyName(glancelot::SortKey key) {
     default: return "name";
     }
 }
+bool validWheelAction(const QString& action) {
+    return action=="navigate" || action=="zoom" || action=="pan" || action=="pan-horizontal";
+}
 BoundaryMode boundaryValue(const QString& value) {
     return value == "stop" ? BoundaryMode::Stop : value == "loop" ? BoundaryMode::LoopFolder : BoundaryMode::ContinueTree;
 }
@@ -120,6 +124,8 @@ struct ViewerController::Private {
     glancelot::FilterSpec filter;
     QJsonObject bindings;
     QJsonObject confirmedBindings;
+    // INPUT-02: explicit modifier -> action entries. "none" lives in `wheel`; an unset "alt" follows it.
+    QJsonObject wheelModifiers{{"ctrl","zoom"},{"shift","pan-horizontal"}};
     QProcess* worker{};
     std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
     quint64 workerGeneration{};
@@ -380,6 +386,8 @@ struct ViewerController::Private {
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationActiveChanged, q, [this](bool) {
             emit q->presentationChanged();
         });
+        displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
+        displayManager.setOutputBindingProvider([this](const QString& id) { return q->bindingFor(id); });
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
@@ -466,6 +474,13 @@ struct ViewerController::Private {
         const auto savedWheel=object.value("wheel").toString();
         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
         else wheel="navigate";
+        // Each modifier falls back on its own: one invalid entry never discards the others.
+        wheelModifiers=QJsonObject{{"ctrl","zoom"},{"shift","pan-horizontal"}};
+        const auto savedModifiers=object.value("wheelModifiers").toObject();
+        for (const char* modifier:{"ctrl","shift","alt"}) {
+            const auto action=savedModifiers.value(QLatin1String(modifier)).toString();
+            if (validWheelAction(action)) wheelModifiers[QLatin1String(modifier)]=action;
+        }
         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
         else filmstrip=true;
         const auto savedSort=object.value("sort").toObject();
@@ -1384,9 +1399,61 @@ int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); cons
 int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
 int ViewerController::imageWidth() const{return d->image.width();}
 int ViewerController::imageHeight() const{return d->image.height();}
-QVariantList ViewerController::commands() const{QVariantList rows;for(const auto& cmd:registry){const QString id=QString::fromStdString(cmd.id);rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",d->bindings.value(id).toString()}});}return rows;}
+QVariantList ViewerController::commands() const{
+    QVariantList rows;
+    for(const auto& cmd:registry){
+        const QString id=QString::fromStdString(cmd.id),binding=d->bindings.value(id).toString();
+        // `steps` are the portable key texts of the binding, one per press, so the UI can resolve chords itself.
+        QStringList steps;
+        const auto parsed=QKeySequence::fromString(binding,QKeySequence::PortableText);
+        for(int i=0;i<parsed.count();++i)steps.append(QKeySequence(parsed[i]).toString(QKeySequence::PortableText));
+        rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",binding},
+            {"scope",QString::fromStdString(cmd.scope)},{"hold",cmd.hold},{"repeat",cmd.repeat},{"steps",steps}});
+    }
+    return rows;
+}
 QString ViewerController::boundaryMode() const{return d->boundary;}
 QString ViewerController::wheelMode() const{return d->wheel;}
+QVariantMap ViewerController::wheelModifiers() const{
+    QVariantMap map{{"none",d->wheel},{"ctrl",d->wheelModifiers.value("ctrl").toString()},{"shift",d->wheelModifiers.value("shift").toString()}};
+    const auto alt=d->wheelModifiers.value("alt").toString();
+    map.insert("alt",validWheelAction(alt)?alt:d->wheel); // unset: Alt keeps behaving like the plain wheel
+    return map;
+}
+bool ViewerController::setWheelModifier(const QString& modifier,const QString& action){
+    if(!validWheelAction(action))return false;
+    if(modifier=="none"){ // the plain wheel keeps its three-value setting
+        if(action=="pan-horizontal")return false;
+        setWheelMode(action);return true;
+    }
+    if(modifier!="ctrl"&&modifier!="shift"&&modifier!="alt")return false;
+    d->wheelModifiers[modifier]=action;
+    // Only this modifier is merged into the stored object, so another window's other modifiers and unknown keys survive.
+    const QPointer<ViewerController> alive(this);
+    const bool saved=settings_detail::saveWithRetry(this,"wheelModifiers/"+modifier,[modifier,action](QJsonObject& object){
+        auto stored=object.value("wheelModifiers").toObject();
+        stored[modifier]=action;object["wheelModifiers"]=stored;
+    },[this,modifier,action](SettingsStatus result){
+        if(!result.ok()&&d->wheelModifiers.value(modifier)==QJsonValue(action)) {
+            d->status="Wheel behavior changed for this session; settings could not be saved.";
+            emit stateChanged();
+        }
+    });
+    if(!alive)return saved;
+    if(!saved)d->status="Wheel behavior changed for this session; settings could not be saved.";
+    emit stateChanged();return saved;
+}
+QString ViewerController::keyStep(int key,int modifiers) const{
+    return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
+}
+QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
+    if(!d->bindings.contains(id))return {};
+    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+    if(parsed.isEmpty())return {};
+    for(auto it=d->bindings.begin();it!=d->bindings.end();++it)
+        if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText)))return it.key();
+    return {};
+}
 void ViewerController::open(const QString& value){
     trace("open:begin");
     // Consume the caller's intent once: decode may wait for registration, while
@@ -1452,7 +1519,9 @@ void ViewerController::trigger(const QString& id){
     else if(id=="presentation-toggle") { togglePresentation(); emit viewCommand(id); }
     else if(id=="presentation-mirror") { d->displayManager.setPresentationMode("mirror"); emit viewCommand(id); }
     else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
-    else if(id=="presentation-compare") { d->displayManager.setPresentationMode("comparison"); emit viewCommand(id); }
+    else if(id=="presentation-compare") { d->displayManager.compareWithPinnedOrPrevious(); emit viewCommand(id); }
+    else if(id=="presentation-fit") { cyclePresentationFit(); emit viewCommand(id); }
+    else if(id.startsWith("presentation-view-")) { d->displayManager.outputViewportCommand(id.mid(18)); emit viewCommand(id); }
     else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
     else if(d->bindings.contains(id))emit viewCommand(id);
 }
@@ -1462,7 +1531,8 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
-    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
+    if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1){d->status="A hold shortcut is a single key: it is released to restore the view.";emit stateChanged();return false;}
+    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status="Shortcut conflicts with "+other+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}
     struct BindingSave {QJsonObject merged;QJsonValue rollback;QString conflict;std::optional<SettingsStatus> result;bool deferred{};};
     const auto pending=std::make_shared<BindingSave>();const auto before=d->bindings;
     pending->rollback=d->confirmedBindings.value(id);
@@ -1477,7 +1547,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
         for(auto it=stored.begin();it!=stored.end();++it)
             if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
         for(auto it=merged.begin();it!=merged.end();++it)
-            if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
+            if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
     },[this,pending,before,id,normalized](SettingsStatus result){
@@ -1872,6 +1942,16 @@ void ViewerController::openPresentation(const QString& displayId, const QString&
     if (mode == QStringLiteral("pinned")) m = glancelot::PresentationMode::Pinned;
     else if (mode == QStringLiteral("comparison")) m = glancelot::PresentationMode::Comparison;
     d->displayManager.openPresentation(displayId, m);
+}
+
+void ViewerController::setPresentationFitMode(const QString& mode) {
+    d->displayManager.setOutputFitMode(mode);
+}
+
+void ViewerController::cyclePresentationFit() {
+    static const QStringList order{QStringLiteral("shrink"), QStringLiteral("fit"), QStringLiteral("fill")};
+    const int i = order.indexOf(d->displayManager.outputFitMode());
+    d->displayManager.setOutputFitMode(order[(i + 1) % order.size()]);
 }
 
 void ViewerController::closePresentation() {

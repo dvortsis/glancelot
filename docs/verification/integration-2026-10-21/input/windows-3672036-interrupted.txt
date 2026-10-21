@@ -1,0 +1,73 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (7.6s)
+-- Generating done (1.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/build-codex-input-02-r3
+[1/159] Copying glancelot qml sources into build dir
+[2/159] Automatic MOC and UIC for target glancelot_platform
+[3/157] Automatic MOC and UIC for target glancelot_test_argv_capture
+[4/155] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/153] Automatic MOC and UIC for target glancelot-decoder
+[6/151] Automatic MOC and UIC for target theme_tests
+[7/149] Automatic MOC and UIC for target pane_layout_tests
+[8/147] Automatic MOC and UIC for target grid_ui_tests
+[9/145] Automatic MOC and UIC for target input_ui_tests
+[10/143] Automatic MOC and UIC for target fs_watch_ui_tests
+[11/141] Automatic MOC and UIC for target monitor_output_tests
+[12/139] Automatic MOC and UIC for target acceptance_tests
+[13/137] Automatic MOC and UIC for target thumbnail_tests
+[14/135] Automatic MOC and UIC for target folder_tree_tests
+[15/133] Automatic MOC and UIC for target window_slot_tests
+[16/131] Automatic MOC and UIC for target file_operation_service_tests
+[17/129] Running qmlimportscanner for glancelot
+[18/129] Automatic MOC and UIC for target directory_model_tests
+[19/127] Automatic MOC and UIC for target canvas_tests
+[20/125] Automatic MOC and UIC for target platform_integration_tests
+[21/123] Automatic MOC and UIC for target glancelot
+[22/122] Automatic MOC and UIC for target grid_search_tests
+[23/120] Running AUTOMOC file extraction for target glancelot
+[24/120] Automatic MOC and UIC for target grid_density_tests
+[25/118] Automatic MOC and UIC for target ui_settings_tests
+[26/116] Running rcc for resource glancelot_raw_qml_0
+[27/116] Running moc --collect-json for target glancelot
+[28/70] Automatic MOC and UIC for target fs_watch_tests
+[29/68] Automatic MOC and UIC for target favorites_tests
+[30/66] Automatic MOC and UIC for target fs_watch_budget_tests
+[31/64] Automatic MOC and UIC for target folder_history_tests
+[32/62] Automatic MOC and UIC for target shortcuts_help_tests
+[33/60] Automatic MOC and UIC for target filter_tests
+[34/58] Automatic MOC and UIC for target cache_tests
+[35/56] Automatic MOC and UIC for target io_scheduler_tests
+[36/54] Automatic MOC and UIC for target metadata_tests
+[37/52] Automatic MOC and UIC for target animation_tests
+[38/50] Automatic MOC and UIC for target mutation_tests
+[39/48] Automatic MOC and UIC for target copy_move_tests
+[40/46] Automatic MOC and UIC for target format_tests
+[41/44] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[42/44] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[43/44] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[44/44] Linking CXX executable glancelot.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/build-codex-input-02-r3
+      Start  1: perf_trace
+ 1/34 Test  #1: perf_trace .......................   Passed    0.04 sec
+      Start  2: navigation
+ 2/34 Test  #2: navigation .......................   Passed    2.17 sec
+      Start  3: directory_listing
+ 3/34 Test  #3: directory_listing ................   Passed   13.57 sec
+      Start  4: file_operations
+ 4/34 Test  #4: file_operations ..................   Passed    0.15 sec
+      Start  5: viewer_acceptance
+ 5/34 Test  #5: viewer_acceptance ................   Passed    7.68 sec
+      Start  6: thumbnails
+ 6/34 Test  #6: thumbnails .......................   Passed    6.30 sec
+      Start  7: folder_tree

@@ -1,0 +1,27 @@
+**Disposition: ACCEPT (source), with non-blocking advisories.** This is a source assessment only. I read the files and did not run anything. Full-gate, platform and hardware qualification are separate: the Windows 14/15 platform_integration failure and the Linux retry are not covered by this review.
+
+I read the correction patch, Main.qml, FolderTree.qml, CommandMenuItem.qml, DeleteFlow.qml, input_ui_tests.cpp, the plan (F055, line 82) and the original finding. I skipped the ui-design-skills SKILL.md files. I judged the QML against Theme tokens and the plan instead, so treat the design-skill part as thinner than you asked for.
+
+**Original P2 finding: resolved.**
+- **Shared predicate:** The tree row is now a `CommandMenuItem` with `commandId: "delete-selection"` (`ui/FolderTree.qml:445-453`). The `blocked` property is gone from `ui/CommandMenuItem.qml`, so `enabled: allowed` (line 22) uses the shared `scopeAllows` predicate (`ui/Main.qml:342`). The root and busy rules sit in one `commandBlockedReason` (`Main.qml:335-340`) that `scopeAllows`, `routeAllows` and `routeBlockedReason` all call.
+- **Root guard:** The root guard is kept, scoped to `focusRegion === "tree"`, and the busy rule is checked before it.
+- **Shortcut gating:** The Shortcut `enabled` bindings (`Main.qml:548,564`) go through `resolveKey` → `scopeAllows`, so a blocked key is dead exactly when its row is disabled.
+- **Parity tests:** `menuProblems` (`tests/input_ui_tests.cpp:192`) no longer has the `blocked` exemption. The "live Shortcut" check at line 205 is skipped for shared first keys, so Delete parity rests on the `allowed()` comparison.
+- **Target path:** The new `QCOMPARE` on `flow->targets` path (lines 471, 489) pins the exact folder, for the key, the menu key and the pointer.
+- **Popup close and focus:** `handedOff` is set by `Connections.onTriggered`. The Menu closes after `triggered`, so `onClosed` (`FolderTree.qml:433`) sees `handedOff` true and does not steal focus from the confirmation dialog. `focusRegion` is not changed by popups, so `invoke → routeAllows → cursorIsRoot` still sees the tree.
+- **Busy test:** `treeTrashAndDeleteKeyShareBusyEligibility` injects a `TrashBackend` that never mutates and returns `Cancelled`. `qScopeGuard` is declared after the Harness, so it is destroyed first and releases the semaphore before teardown on early failure, so teardown cannot hang. The explicit `release()` and the extra guard release are harmless.
+
+**Advisories (not blocking):**
+1. **P3, `ui/Main.qml:488-489`:** This branch is now unreachable through key or menu routes. `invoke` returns silently at `routeAllows` (line 312, which calls `commandBlockedReason`), and the Shortcut is already disabled. Delete on a drive root or while busy used to show a notice and is now a no-op. This still meets F055, since the key and row agree. The row label carries the reason, but a keyboard-only user gets no feedback. Fix: either drop the dead branch, or have the tree's Delete key path call `deleteFlow.showNotice(commandBlockedReason(id))` when blocked. A test can then assert the notice text. Lines 446-447 and 532-534 only assert that no dialog opened, which the old code also satisfied.
+2. **P3, `ui/PhotoGrid.qml:301`:** The grid header Trash button keeps its own `!fileOperations.busy` and calls `deleteRequested` directly, bypassing `routeAllows`. `DeleteFlow.request` (line 85) is the backstop, so nothing unsafe happens. It is a second busy predicate outside the tree scope, so consider routing it through `commandBlockedReason`.
+3. **P3, busy test (`tests/input_ui_tests.cpp:532-534`):** The Delete-key half would also pass without the fix, because `DeleteFlow.request` rejects busy requests. The menu-row half (`!trash->isEnabled()` plus `menuProblems`) is what exercises the shared predicate. Fine as written, but the comment should not claim the key half proves it.
+4. **P3, `FolderTree.qml:58-62`:** `cursorIsRoot` reads `rowInfo()`, which is an invokable and not a notifying binding. It re-evaluates only when `list.currentIndex` or `focusRegion` changes. Today the cursor row cannot change depth without moving the cursor, so this is latent.
+
+**Test-only commit (`tests/grid_ui_tests.cpp:2320-2328`): sound. It needs one small tightening.**
+- **The race:** A visible results popup before both ListView delegates exist is a real race. `QTRY_VERIFY` re-querying the live tree is the right fix, and no timeout was widened.
+- **Assertions:** The exact-count oracle and both content assertions are kept. The title at line 2318 (`Moved 2 of 4 items`) is still checked first, and the file-existence checks at 2329-2330 still pin the backend outcome. A missing reason would time out and fail.
+- **Masking risk:** Delegates are created incrementally, so a defect that produced 3 reasons could briefly show exactly 2 and pass. The count is not checked for stability. Fix: after the `QTRY_VERIFY`, call `QTest::qWait(50)` and re-collect, or assert the results model's failure count equals 2 from the source, then compare reasons. This only matters if a bug adds reasons. It cannot hide a missing or wrong reason.
+
+**Not qualified by this review:** real GPU presentation, physical keyboard and IME layouts, assistive technology, mixed DPI. The Linux full-gate result on the integrated commit is also unreviewed.
+
+I did not write a plan file or call ExitPlanMode, since this was a read-only review with no implementation to plan.

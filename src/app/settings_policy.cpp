@@ -53,7 +53,7 @@ QString revision() {
     const auto append=[&](const QByteArray& field){for(int shift=0;shift<64;shift+=8)bytes.append(char((quint64(field.size())>>shift)&255));bytes.append(field);};
     append(QJsonDocument(commands).toJson(QJsonDocument::Compact));append(themeCatalog());
     append(QJsonDocument(layout_detail::defaults()).toJson(QJsonDocument::Compact));
-    append(QByteArrayLiteral("known-fields-v2-layout-absence-retains-supported-unknowns"));
+    append(QByteArrayLiteral("known-fields-v3-scoped-input-wheel-modifiers"));
     return "policy1:"+QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
 }
 Result merge(const QJsonObject& current,const QJsonObject& source,Selection selection,Options options) {
@@ -104,6 +104,8 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
     if(enabled(GlobalSection::Viewing)) {
         add({"boundary"},[](const QJsonValue& v){return choice(v,{"continue","stop","loop"});});
         add({"wheel"},[](const QJsonValue& v){return choice(v,{"navigate","zoom","pan"});});
+        for(const auto* modifier:{"ctrl","shift","alt"})
+            add({"wheelModifiers",QLatin1String(modifier)},[](const QJsonValue& v){return choice(v,{"navigate","zoom","pan","pan-horizontal"});});
     }
     if(enabled(GlobalSection::Browsing)) {
         for(const auto* key:{"filmstrip","tree","treePinned"})add({QLatin1String(key)},boolean);

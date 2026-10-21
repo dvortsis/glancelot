@@ -8,13 +8,13 @@ std::span<const Command> commandRegistry() {
 // The controller may call before main from another translation unit. A local
 // static is initialized on that first use, rather than exposing an empty span.
 static const std::vector<Command> registry {
-    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true}, {"previous","Previous image","Left",true},
-    {"next-folder","Next folder","PgDown"}, {"previous-folder","Previous folder","PgUp"},
+    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true,"canvas"}, {"previous","Previous image","Left",true,"canvas"},
+    {"next-folder","Next folder","PgDown",false,"canvas"}, {"previous-folder","Previous folder","PgUp",false,"canvas"},
     {"palette","Find a command","Ctrl+Shift+P"}, {"settings","Settings","Ctrl+,"},
-    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
-    {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
-    {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
+    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F",false,"canvas"},
+    {"actual","Actual size (physical 1:1)","1",false,"canvas"}, {"zoom-in","Zoom in","+",true,"canvas"}, {"zoom-out","Zoom out","-",true,"canvas"},
+    {"rotate","Rotate view clockwise","R",false,"canvas"}, {"background","Cycle canvas background","B",false,"canvas"},
+    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T",false,"canvas"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
     // Layout commands start unbound so existing users' shortcuts never collide.
     {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
     // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
@@ -25,12 +25,12 @@ static const std::vector<Command> registry {
     {"copy-path", "Copy file path", "Ctrl+C"},
     {"copy-file", "Copy file", "Ctrl+Shift+C"},
     {"copy-image", "Copy image", "Ctrl+Alt+C"},
-    {"select-all", "Select all items in grid", ""},
-    {"clear-selection", "Clear grid selection", "Ctrl+D"},
-    {"invert-selection", "Invert grid selection", "Ctrl+I"},
-    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
-    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
-    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
+    {"select-all", "Select all items in grid", "", false, "workspace"},
+    {"clear-selection", "Clear grid selection", "Ctrl+D", false, "workspace"},
+    {"invert-selection", "Invert grid selection", "Ctrl+I", false, "workspace"},
+    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+=", false, "workspace"},
+    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-", false, "workspace"},
+    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0", false, "workspace"},
     // FS-WATCH-01: workspace command; generic routing preserves text/modal precedence.
     {"refresh", "Refresh", "F5"},
     // FAVORITES-01 (F003)
@@ -50,14 +50,14 @@ static const std::vector<Command> registry {
     {"clear-filter", "Clear active filter", ""},
     {"toggle-filter-persistence", "Toggle filter persistence", ""},
     // META-HUD-01 (META-01 / UX-04)
-    {"toggle-metadata", "Toggle metadata inspector", "I"},
+    {"toggle-metadata", "Toggle metadata inspector", "I", false, "workspace"},
     // ANIM-01 (ADV-06 / FMT-03 / F036)
-    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
-    {"animation-next-frame", "Step to next frame / page", "."},
-    {"animation-previous-frame", "Step to previous frame / page", ","},
-    {"animation-speed-up", "Increase animation speed", "]"},
-    {"animation-speed-down", "Decrease animation speed", "["},
-    {"animation-toggle-loop", "Toggle animation loop", ""},
+    {"animation-toggle-play-pause", "Play or pause animation", "Space", false, "canvas"},
+    {"animation-next-frame", "Step to next frame / page", ".", true, "canvas"},
+    {"animation-previous-frame", "Step to previous frame / page", ",", true, "canvas"},
+    {"animation-speed-up", "Increase animation speed", "]", true, "canvas"},
+    {"animation-speed-down", "Decrease animation speed", "[", true, "canvas"},
+    {"animation-toggle-loop", "Toggle animation loop", "", false, "canvas"},
     // RENAME-01 (F018)
     {"rename", "Rename current file or folder", "F2"},
     {"new-folder", "Create new folder", "Ctrl+Shift+N"},
@@ -71,6 +71,17 @@ static const std::vector<Command> registry {
     {"presentation-pin", "Presentation: Pin current photo", ""},
     {"presentation-compare", "Presentation: Comparison mode", ""},
     {"presentation-close", "Close presentation display", ""},
+    {"presentation-fit", "Presentation: Cycle fit mode for this display", "Ctrl+Alt+F"},
+    // MONITOR-OUTPUT-01 core correction: output viewport; never modifies the controller canvas.
+    {"presentation-view-actual", "Presentation: Actual physical pixel size", ""},
+    {"presentation-view-zoom-in", "Presentation: Zoom in", ""},
+    {"presentation-view-zoom-out", "Presentation: Zoom out", ""},
+    {"presentation-view-pan-left", "Presentation: Pan left", ""},
+    {"presentation-view-pan-right", "Presentation: Pan right", ""},
+    {"presentation-view-pan-up", "Presentation: Pan up", ""},
+    {"presentation-view-pan-down", "Presentation: Pan down", ""},
+    {"presentation-view-linked", "Presentation: Toggle linked comparison viewports", ""},
+    {"presentation-view-reference", "Presentation: Switch active comparison viewport", ""},
 #ifdef Q_OS_WIN
     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
@@ -80,13 +91,21 @@ static const std::vector<Command> registry {
     {"delete-current-file","Move current photo to the Trash","Ctrl+Delete"},
     {"delete-current-folder","Move current folder to the Trash","Ctrl+Shift+Delete"},
 #endif
+    // INPUT-02: hold lifecycle, per-pane commands and context-menu routes. Keys the grid and tree handle themselves
+    // (Enter, Backspace, Ctrl+A) stay unbound here; the menus show those fixed keys.
+    {"hold-actual","Show actual size while held","Z",false,"canvas",true},
+    {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
+    {"grid-select-all","Select all items","",false,"grid"},
+    {"tree-open-folder","Open the focused folder","",false,"tree"},
+    {"focus-path","Edit the folder path","",false,"global"}, {"copy-folder-path","Copy the folder path","",false,"global"},
+    {"paste-path","Go to the folder path on the clipboard","",false,"global"},
     {"quit","Quit","Ctrl+Q"}
 };
     return {registry.data(),registry.size()};
 }
 
 BindingResolution resolveCommandBindings(const QJsonObject& stored) {
-    using bindings::shortcutOverlap;
+    using bindings::bindingsCollide;
     const auto registry=commandRegistry();
     QJsonObject defaultBindings;
     for (const auto& command: registry) defaultBindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
@@ -99,7 +118,7 @@ BindingResolution resolveCommandBindings(const QJsonObject& stored) {
     for (auto it=candidate.begin();it!=candidate.end();++it) {
         if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
         for (auto other=stored.begin();other!=stored.end();++other) {
-            if (other.key()!=it.key() && candidate.contains(other.key()) && shortcutOverlap(QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
+            if (other.key()!=it.key() && candidate.contains(other.key()) && bindingsCollide(other.key(),QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
         }
     }
     BindingResolution result;

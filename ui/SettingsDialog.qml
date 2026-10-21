@@ -10,7 +10,7 @@ import Glancelot
 UiDialog {
     id: dialog
     objectName: "settingsDialog"
-    required property var host     // the application window: invoke(), gridAllowsCommand(), fuzzyMatch(), frameless
+    required property var host     // the application window: invoke(), routeAllows(), fuzzyMatch(), frameless
     required property var photoCanvas
     property string section: "appearance"
     property string bindingMessage: ""
@@ -95,9 +95,10 @@ UiDialog {
     }
     function focusSection() { const button = nav.itemAtIndex(sectionIndex); if (button) button.forceActiveFocus(Qt.TabFocusReason) }
     // Settings is already open, so its own row is listed for remapping but is not runnable.
-    function commandRunnable(id) { return id !== "settings" && (!host.gridMode || host.gridAllowsCommand(id)) }
+    // INPUT-02: the window's scope data (routeAllows) replaced its grid allow-list; behaviour in the grid view is unchanged.
+    function commandRunnable(id) { return id !== "settings" && host.routeAllows(id) }
     // Why a command cannot run right now, shown in visible text on its row (empty when it can run).
-    function unavailableReason(id) { return id === "settings" ? "Open now" : (commandRunnable(id) ? "" : "Not in grid view") }
+    function unavailableReason(id) { return id === "settings" ? "Open now" : (commandRunnable(id) ? "" : host.routeBlockedReason(id)) }
     function run(id) {
         if (!commandRunnable(id)) return
         if (id === "palette") { openSection("controls", true); return }
