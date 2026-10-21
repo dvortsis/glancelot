@@ -1,0 +1,6 @@
+9b03718a59533bacc7b1f66b1536af409ffa3d28 fix(monitor): address independent review resource and display defaults
+51fb9c6c93a4a4766593eb76cbd40b5765b1f1cd fix(monitor): initialize fit from target display before restoring viewport
+c84ea8350cc92de99c1a1658c1922dd4acdf7bae fix(monitor): restore remembered fit before image arrival
+a0ba77008d9dd69c055199f470f0f631cca5c64c fix(monitor): retain independent reference views and notify profile lifecycle
+6a08c3e16573b028a39808d9336f58221af0c6d2 fix(monitor): implement output viewports and bounded SDR monitor color pipeline
+0e32d1617ac6f7cbf1f0abdd79b9fdbea2eb9b84 docs(verification): record 33/33 Windows gate evidence on monitor-output
