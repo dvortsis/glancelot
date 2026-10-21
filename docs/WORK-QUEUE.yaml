@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead-monitor-closeout, purpose: import accepted monitor evidence and reconcile review queue}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -429,13 +429,13 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: gemini
-    state: implementing
+    state: review
     owner_lane_override: claude, since (Gemini lane finished; user authorized Claude to complete Gemini leftovers)
     reopened: Independent Claude review CHANGES REQUIRED (docs/verification/MONITOR-OUTPUT-01-CLAUDE-REVIEW.md, 77f67ab) for unstable display identity, half-implemented comparison, no aggregate memory cap, untested hotplug, hard-coded keys
-    fix_branch: claude/monitor-output-fix ae1b7e4; Codex re-review CHANGES REQUIRED evidence7af09d6; original24 tests and restored CTest pass, three independent probes fail. No full candidate gates or approval.
-    review_request: Claude fixes hidden secondary retention after shedding, stale comparison generation reset, invalid remembered fit and chord dismissal; submit new pin for cross-lane review, then full Windows/Docker gates. Additive presentation fit/texture-budget interfaces remain accepted with256MiB default unchanged.
+    fix_branch: codex/monitor-output-r2 source9b03718 evidence6b54375; actual Sonnet5.5 follow-up ACCEPT; Windows33/33 450.91s and LinuxDocker33/33 232.74s exit0. No main source integration.
+    review_request: Lead synchronize accepted monitor correction with current main after INPUT integration, confirm merged changes independently and run serial integrated Windows/Docker gates under main gate-lock before merge.
     codex_review: docs/verification/MONITOR-OUTPUT-01-ae1b7e4-CODEX-REVIEW.md
-    core_correction_round: User explicitly assigned Codex missing core viewport/color/scale; contract docs/MONITOR-OUTPUT-01-CORE-CORRECTION.md; branch codex/monitor-output-r2. Native shader and attached DPR1/2 restore proofs pass; actual Sonnet requires fresh-display defaults, mode-aware texture budget and no closed-output history retention. Fix and re-review before approval.
+    core_correction_round: User assigned missing core viewport/color/scale to Codex; implemented and independently accepted9b03718, contract docs/MONITOR-OUTPUT-01-CORE-CORRECTION.md. Review and actual outputs docs/verification/MONITOR-OUTPUT-01-0e32d16-CODEX-REVIEW.md. Native shader and attached DPR1/2 state proofs pass; physical calibration/HDR remain unverified.
     scope_decision_2026_10_21: Preserve frozen output-specific viewport/color/scale acceptance in MONITOR-OUTPUT-01; MONITOR-CUSTOM-01 owns advanced picker/presets/workspace customization, not a waiver of core acceptance. No product requirement is removed by the earlier split note.
     commit: 76b1979
     integrated_evidence: integrated 76b1979 Windows scripts/build.ps1 -Test 33/33 (642.45s) and Linux docker build 33/33 (240.07s)
