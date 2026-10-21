@@ -395,7 +395,8 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
     }
 
     if (d->presentationWindow) {
-        d->presentationWindow->setFitMode(outputFitMode(d->activeId));
+        // The live window may still describe the previous display, or have no image yet.
+        d->presentationWindow->setFitMode(d->fitModes.value(d->activeId,QStringLiteral("shrink")));
         d->presentationWindow->setScreen(targetScreen);
         d->presentationWindow->setGeometry(targetScreen->geometry());
         d->applyImagesToWindow();
