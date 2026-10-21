@@ -332,8 +332,15 @@ ApplicationWindow {
     property string focusRegion: "canvas"
     readonly property var scopeRank: ({ tree: 0, grid: 1, canvas: 2, workspace: 3, global: 4 })
     function scopeOf(id) { return commandInfo[id] ? commandInfo[id].scope : "global" }
+    function commandBlockedReason(id) {
+        if (id !== "delete-selection") return ""
+        if (fileOperations.busy) return "Wait for the current move to the " + deleteFlow.trashName + " to finish."
+        if (focusRegion === "tree" && treePanel.cursorIsRoot()) return "Drives can't be moved to the " + deleteFlow.trashName + "."
+        return ""
+    }
     // Whether the focused pane lets a command's key act. This one predicate gates shortcuts and context-menu rows.
     function scopeAllows(id) {
+        if (commandBlockedReason(id).length) return false
         const scope = scopeOf(id)
         // A pane's commands act only while that pane owns keys: a tree that has focus keeps the canvas and grid keys quiet.
         if (scope === "canvas") return !gridScope && focusRegion !== "tree"
@@ -344,6 +351,7 @@ ApplicationWindow {
     // Explicit routes (toolbar, command search, menus) are looser than keys only in the combined view, where a canvas
     // command runs whichever pane has focus.
     function routeAllows(id) {
+        if (commandBlockedReason(id).length) return false
         const scope = scopeOf(id)
         if (scope === "canvas") return !gridMode
         if (scope === "grid") return workspace._gridShown
@@ -352,6 +360,8 @@ ApplicationWindow {
     }
     // Visible text for a command that cannot run from an explicit route right now.
     function routeBlockedReason(id) {
+        const blocked = commandBlockedReason(id)
+        if (blocked.length) return blocked
         const scope = scopeOf(id)
         return scope === "canvas" ? "Not in grid view" : scope === "grid" ? "Needs the folder grid" : scope === "tree" ? "Needs the folder tree" : ""
     }
@@ -475,9 +485,8 @@ ApplicationWindow {
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
-            if (focusRegion === "tree" && treePanel.cursorIsRoot()) { // the menu row is disabled here, so the key explains instead of retargeting
-                deleteFlow.showNotice("Drives can't be moved to the " + deleteFlow.trashName + "."); return
-            }
+            const blocked = commandBlockedReason(id)
+            if (blocked.length) { deleteFlow.showNotice(blocked); return }
             const treeFolder = treePanel.currentSelectedFolder()
             if (treeFolder.length > 0) {
                 deleteFlow.request([treeFolder], "tree", "")

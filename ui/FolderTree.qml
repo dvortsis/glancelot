@@ -447,8 +447,9 @@ Rectangle {
                     host: panel.host
                     commandId: "delete-selection"
                     iconName: "trash"; danger: true
-                    label: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move “" + rowMenu.name + "” to the " + panel.trashName
-                    blocked: rowMenu.depth === 0 || fileOperations.busy
+                    label: panel.host && panel.host.commandBlockedReason(commandId).length
+                           ? panel.host.commandBlockedReason(commandId)
+                           : "Move “" + rowMenu.name + "” to the " + panel.trashName
                 }
                 Connections { // the confirmation dialog owns focus after a choice
                     target: trashItem

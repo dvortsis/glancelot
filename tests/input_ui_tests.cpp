@@ -6,6 +6,7 @@
 #include "../src/app/file_grid_wiring.hpp"
 #include "../src/app/file_operation_wiring.hpp"
 #include "glancelot/file_operation_service.hpp"
+#include "glancelot/file_operations.hpp"
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
@@ -23,12 +24,22 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QRegularExpression>
+#include <QSemaphore>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QWheelEvent>
 #include <QWindow>
 #include <QtTest>
 
 namespace {
+struct HeldTrash final : glancelot::TrashBackend {
+    std::shared_ptr<QSemaphore> release;
+    explicit HeldTrash(std::shared_ptr<QSemaphore> gate) : release(std::move(gate)) {}
+    glancelot::DeleteResult moveToTrash(const glancelot::MutationTarget& target) override {
+        release->acquire();
+        return {target.path, glancelot::DeleteOutcome::Cancelled, {}}; // never mutate even disposable media
+    }
+};
 class PreviewProvider final : public QQuickImageProvider {
 public:
     PreviewProvider() : QQuickImageProvider(Image) {}
@@ -64,7 +75,7 @@ struct Harness {
     FileOperationService fileOperations;
     QQmlApplicationEngine engine;
     QQuickWindow* window{};
-    Harness() {
+    explicit Harness(std::unique_ptr<glancelot::TrashBackend> backend = {}) : fileOperations(std::move(backend)) {
         QStringList imports = engine.importPathList();
         imports.removeAll(QCoreApplication::applicationDirPath()); // load the UI from source, not a build-tree module
         engine.setImportPathList(imports);
@@ -178,9 +189,7 @@ QStringList menuProblems(Harness& h, QObject* menu) {
         const QString id = row->objectName().mid(QString("menuItem-").size());
         if (!known.contains(id)) { problems << id + " is not a registered command"; continue; }
         if (!row->isVisible()) continue; // rows that do not apply take no space and are not offered
-        // A row may also be blocked for its target (a drive root): then the key stays live and explains instead of acting.
-        const bool blocked = row->property("blocked").toBool();
-        if (row->isEnabled() != (allowed(h, id) && !blocked)) problems << id + ": menu and shortcut disagree";
+        if (row->isEnabled() != allowed(h, id)) problems << id + ": menu and shortcut disagree";
         // Against the real Shortcut objects too, not only the shared predicate: a key that is live reaches the row's
         // command only when the row is enabled, and a dead key means a disabled row.
         const QString binding0 = firstStep.value(id).toString();
@@ -193,7 +202,7 @@ QStringList menuProblems(Harness& h, QObject* menu) {
                 QMetaObject::invokeMethod(keys, "objectAt", Q_RETURN_ARG(QObject*, shortcut), Q_ARG(int, i));
                 if (!shortcut || shortcut->property("modelData").toString() != binding0) continue;
                 found = true;
-                if (!shared && !blocked && shortcut->property("enabled").toBool() != row->isEnabled()) problems << id + ": the live Shortcut and the menu row disagree";
+                if (!shared && shortcut->property("enabled").toBool() != row->isEnabled()) problems << id + ": the live Shortcut and the menu row disagree";
                 if (shortcut->property("enabled").toBool() == false && row->isEnabled()) problems << id + ": enabled row on a dead key";
             }
             if (!found) problems << id + ": no Shortcut owns " + binding0;
@@ -430,7 +439,7 @@ private slots:
         auto* rowMenu = h.object("folderRowMenu");
         QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
         auto* rootTrash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(rootTrash && rootTrash->isVisible());
-        QVERIFY(!rootTrash->isEnabled()); QVERIFY(rootTrash->property("blocked").toBool()); // the menu refuses a root...
+        QVERIFY(!rootTrash->isEnabled()); QVERIFY(!allowed(h, "delete-selection")); // the menu refuses a root...
         QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
         closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
         QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
@@ -459,6 +468,7 @@ private slots:
         list->setProperty("currentIndex", h.folders.currentRow());
         QTest::keyClick(h.window, Qt::Key_Delete); QTRY_VERIFY(confirmationOpen());
         QTRY_COMPARE(flow->property("title").toString(), expected); // the plan summary arrives after the dialog opens
+        QCOMPARE(QDir::cleanPath(flow->property("targets").toList().first().toMap()["path"].toString()), QDir::cleanPath(media.dir.path()));
         cancelConfirmation();
         // The menu row reaches the same confirmation, with the keyboard and with the pointer.
         for (int how = 0; how < 2; ++how) {
@@ -466,7 +476,7 @@ private slots:
             list->setProperty("currentIndex", h.folders.currentRow());
             QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
             auto* trash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash && trash->isEnabled());
-            QVERIFY(!trash->property("blocked").toBool());
+            QVERIFY(allowed(h, "delete-selection"));
             QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
             if (how == 0) {
                 for (int i = 0; i < 4 && !trash->property("highlighted").toBool(); ++i) QTest::keyClick(h.window, Qt::Key_Down);
@@ -476,6 +486,7 @@ private slots:
             else QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(trash));
             QTRY_VERIFY(confirmationOpen());
             QTRY_COMPARE(flow->property("title").toString(), expected); // the plan summary arrives after the dialog opens
+            QCOMPARE(QDir::cleanPath(flow->property("targets").toList().first().toMap()["path"].toString()), QDir::cleanPath(media.dir.path()));
             QTRY_VERIFY(!menuOpen(rowMenu));
             cancelConfirmation();
         }
@@ -483,13 +494,47 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
         QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
         auto* rootTrash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(rootTrash);
-        QVERIFY(!rootTrash->isEnabled()); QVERIFY(rootTrash->property("blocked").toBool());
+        QVERIFY(!rootTrash->isEnabled()); QVERIFY(!allowed(h, "delete-selection"));
         QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rootTrash)); QTest::qWait(200);
         QVERIFY(!confirmationOpen());
         closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
         QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
         QTest::keyClick(h.window, Qt::Key_Delete); QTest::qWait(300);
         QVERIFY(!confirmationOpen());
+    }
+
+    void treeTrashAndDeleteKeyShareBusyEligibility() {
+        Media media(2, QSize(64, 48));
+        auto gate = std::make_shared<QSemaphore>();
+        Harness h(std::make_unique<HeldTrash>(gate));
+        const auto releaseOnFailure = qScopeGuard([&] { gate->release(); });
+        QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
+        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
+        auto* tree = named(h.window, "folderTree"); QVERIFY(tree);
+        auto* list = named(h.window, "folderList"); QVERIFY(list);
+        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+        list->setProperty("currentIndex", h.folders.currentRow());
+        QSignalSpy ready(&h.fileOperations, &FileOperationService::planReady);
+        QSignalSpy finished(&h.fileOperations, &FileOperationService::finished);
+        const auto id = h.fileOperations.plan({media.path(0)}, "command");
+        QVERIFY(id); QTRY_COMPARE(ready.count(), 1);
+        QVERIFY(h.fileOperations.confirm(id)); QVERIFY(h.fileOperations.busy());
+        QTest::keyClick(h.window, Qt::Key_Menu);
+        auto* menu = h.object("folderRowMenu"); QTRY_VERIFY(menuOpen(menu));
+        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash);
+        QVERIFY(!allowed(h, "delete-selection")); QVERIFY(!trash->isEnabled());
+        QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
+        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
+        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+        QTest::keyClick(h.window, Qt::Key_Delete);
+        QVERIFY(!h.object("deleteConfirmation") || !h.object("deleteConfirmation")->property("visible").toBool());
+        QCOMPARE(ready.count(), 1);
+        gate->release(); QTRY_COMPARE(finished.count(), 1); QTRY_VERIFY(!h.fileOperations.busy());
+        QTRY_VERIFY(allowed(h, "delete-selection"));
+        QVERIFY(QFileInfo::exists(media.path(0))); // injected backend never touches originals
     }
 
     void compactMenusScrollToTheCurrentRow() {
