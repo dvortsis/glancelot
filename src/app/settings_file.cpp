@@ -215,13 +215,14 @@ Result transact(const Request& input,const Editor& edit,const PreimageWriter& pr
 }
 
 namespace {
-SettingsStatus updateAt(const QString& directory,const std::function<void(QJsonObject&)>& edit,bool waitOnExit,int timeoutMs=4000) {
+SettingsStatus updateAt(const QString& directory,const std::function<void(QJsonObject&)>& edit,bool waitOnExit,int timeoutMs=4000,bool skipUnchanged=false) {
     const bool retry=waitOnExit||!interactiveThread();
     settings_detail::Request request;request.context.directory=directory;
     request.policy=settings_detail::Policy::Ordinary;request.options.lockTimeoutMs=retry?std::clamp(timeoutMs,0,4000):0;
     request.retryReplacements=retry;
     const auto result=settings_detail::transact(request,[&](const settings_detail::View& view) {
         auto replacement=view.base;edit(replacement);
+        if(skipUnchanged&&!view.recovered&&replacement==view.base)return settings_detail::Edit{};
         return settings_detail::Edit{recovery::Code::Committed,std::move(replacement)};
     });
     switch(result.status.code) {
@@ -258,9 +259,16 @@ public:
             for(auto it=pending.begin();it!=pending.end();) {
                 if(it->directory==directory){batch.push_back(std::move(*it));it=pending.erase(it);}else ++it;
             }
-            const auto result=updateAt(directory,[&batch](QJsonObject& root){for(const auto& value:batch)value.edit(root);},true,int(4000-budget.elapsed()));
+            const auto result=updateAt(directory,[&batch](QJsonObject& root){for(const auto& value:batch)value.edit(root);},true,int(4000-budget.elapsed()),true);
             if(!result.ok())qWarning("Glancelot: pending preferences could not be saved during final teardown");
         }
+        if(!pending.empty())qWarning("Glancelot: final preference save budget expired with pending edits");
+    }
+    void overlay(QJsonObject& root,const QString& directory) const {
+        for(const auto& value:pending)if(value.directory==directory)value.edit(root);
+    }
+    bool contains(const QString& directory,const QString& prefix) const {
+        return std::any_of(pending.begin(),pending.end(),[&](const auto& value){return value.directory==directory&&value.channel.startsWith(prefix);});
     }
     bool submit(Pending value) {
         // Distinct channels merge independently. Moving a superseding edit to
@@ -273,7 +281,7 @@ public:
         }
         value.elapsed.start();
         if(pending.empty()) {
-            const auto result=updateAt(value.directory,value.edit,false);
+            const auto result=updateAt(value.directory,value.edit,false,4000,true);
             if(result.code!=SettingsStatus::Busy) {
                 const bool ok=result.ok();if(value.completed)value.completed(result);return ok;
             }
@@ -286,7 +294,7 @@ public:
     void run() {
         if(pending.empty())return;
         auto value=std::move(pending.front());pending.pop_front();
-        const auto result=updateAt(value.directory,value.edit,false);
+        const auto result=updateAt(value.directory,value.edit,false,4000,true);
         if(result.code==SettingsStatus::Busy&&value.elapsed.elapsed()<4000)pending.push_front(std::move(value));
         else if(value.completed) {
             const QPointer<SettingsRetries> alive(this);value.completed(result);if(!alive)return;
@@ -305,6 +313,17 @@ bool settings_detail::saveWithRetry(QObject* owner,QString channel,std::function
     for(auto* child:owner->children())if((retries=dynamic_cast<SettingsRetries*>(child)))break;
     if(!retries)retries=new SettingsRetries(owner);
     return retries->submit(std::move(channel),std::move(edit),std::move(completed));
+}
+void settings_detail::overlayPendingSettings(QObject* owner,QJsonObject& settings) {
+    if(!owner||owner->thread()!=QThread::currentThread())return;
+    const auto directory=QDir::cleanPath(QFileInfo(settingsDirectory()).absoluteFilePath());
+    for(auto* child:owner->children())if(auto* retries=dynamic_cast<SettingsRetries*>(child)){retries->overlay(settings,directory);return;}
+}
+bool settings_detail::hasPendingSettings(QObject* owner,const QString& channelPrefix) {
+    if(!owner||owner->thread()!=QThread::currentThread())return false;
+    const auto directory=QDir::cleanPath(QFileInfo(settingsDirectory()).absoluteFilePath());
+    for(auto* child:owner->children())if(auto* retries=dynamic_cast<SettingsRetries*>(child))return retries->contains(directory,channelPrefix);
+    return false;
 }
 
 bool resetSettings(QString* movedTo) {

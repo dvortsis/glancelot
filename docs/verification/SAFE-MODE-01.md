@@ -646,3 +646,6 @@ Cause is unproven. Persistent QtTest logging is now wired by the lead without
 changing assertions, platform settings or timeout. Final source also adds retry
 exhaustion/deletion and fresh foreign shortcut conflict regressions and guards
 synchronous completion signal compatibility; these await the next actual run.
+## Second independent review corrections
+
+The authorized Sonnet5.5 follow-up on7bffd68 found a live-binding rollback gap and deferred-layout reload/feedback hazards. These are corrected with exact-state regressions, along with bounded sort coalescing, obsolete recovery-feedback recovery, documented callback supersession, teardown-budget warnings and timing fields in process-verifier failure messages. See safe-mode-01/followup-corrections/README.md and the retained independent report under continued-corrections. Final focused Windows results are137recovery+61startup+23controller cases, zero skips, CTest3/3 in25.60s. No assertions, timeouts or renderer proof were weakened. The obsolete queued7bffd68 full gates never started and were cancelled before changing source. Fresh full gates and an independent review of the new pinned candidate remain open; this packet is not approved, integrated or done.

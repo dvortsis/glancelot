@@ -178,7 +178,10 @@ class Verification:
         if safe:
             require(result["safe_mode"] and result["status"].startswith("Safe mode"), "Missing safe-mode state/feedback")
             require(Path(result["settings_directory"]) != config and not Path(result["settings_directory"]).exists(), "Private safe settings root was not cleaned")
-            render_state = f"rhi={result['rhi']}; window={result.get('window')}; frames={result['frames']}; first_image_frame_ms={result['first_image_frame_ms']}"
+            render_state = (f"rhi={result['rhi']}; window={result.get('window')}; frames={result['frames']}; "
+                            f"first_image_frame_ms={result['first_image_frame_ms']}; "
+                            f"quit_timer_started_ms={result['quit_timer_started_ms']}; "
+                            f"quit_callback_ms={result['quit_callback_ms']}; report_ms={result['report_ms']}")
             require(result["rhi"]["observed"] and result["rhi"]["software_detection"] != "not-detected", f"No actual software device evidence: {render_state}")
             require(result["rhi"]["backend"] == (3 if os.name == "nt" else 2), f"Unexpected actual safe RHI backend: {result['rhi']}")
             require(result["frames"] > 0 and result["first_image_frame_ms"] >= 0, f"No actual decoded-image frame swaps: {render_state}")

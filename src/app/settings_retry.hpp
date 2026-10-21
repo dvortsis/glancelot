@@ -10,6 +10,11 @@ namespace glancelot::settings_detail {
 // 128 channels per owner. Destruction makes a bounded final batch attempt using
 // only the owned edits, without calling a dying owner's completion. A true return means
 // committed OR accepted for retry, not a durability acknowledgement.
+// Superseding a queued channel intentionally discards its obsolete completion;
+// consumers must not await a callback for every submission. Teardown also never
+// invokes completions. Read overlays are for value-owned preference edits only.
 bool saveWithRetry(QObject* owner,QString channel,std::function<void(QJsonObject&)> edit,
                    std::function<void(SettingsStatus)> completed = {});
+void overlayPendingSettings(QObject* owner,QJsonObject& settings);
+bool hasPendingSettings(QObject* owner,const QString& channelPrefix = {});
 }

@@ -160,6 +160,7 @@ struct ViewerController::Private {
     glancelot::SortSpec sortSpec;
     bool sortSaved{true};
     quint64 preferenceSequence{};
+    QJsonObject pendingSortFields;
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
@@ -263,8 +264,13 @@ struct ViewerController::Private {
                 else if(positionDirty)writePosition();
                 return;
             }
-            if(state.begun&&!recoveryResumeReady) {
+            if(state.begun&&(!recoveryResumeReady||beginFailureReported)) {
+                beginFailureReported=false;
                 recoveryResumeReady=true;recoveryResume=state.beginning.previous;
+                if(status=="Browsing recovery is unavailable. You can keep viewing images."||status=="This browsing position could not be saved. Your previous saved position is kept.") {
+                    status="Browsing recovery is available.";emit q->stateChanged();
+                    if(!alive||epoch!=recoveryEpoch)return;
+                }
                 if(restorePending&&!explicitPositionIntent)q->restoreWindow();
                 if(!alive||epoch!=recoveryEpoch)return;
             }
@@ -1018,10 +1024,17 @@ struct ViewerController::Private {
         if(next.key!=previous.key)fields["key"]=sortKeyName(next.key);
         if(next.descending!=previous.descending)fields["descending"]=next.descending;
         if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))fields["seed"]=double(next.seed);
+        for(auto it=fields.begin();it!=fields.end();++it)pendingSortFields[it.key()]=it.value();
+        const auto pending=pendingSortFields;
+        const auto sequence=++preferenceSequence;
         const auto deferred=std::make_shared<bool>(false);
-        sortSaved=settings_detail::saveWithRetry(q,"sort/"+QString::number(++preferenceSequence),[fields](QJsonObject& object){
-            auto stored=object.value("sort").toObject();for(auto it=fields.begin();it!=fields.end();++it)stored[it.key()]=it.value();object["sort"]=stored;
-        },[this,deferred](SettingsStatus result){if(*deferred&&!result.ok()){sortSaved=false;status="File order changed for this session; settings could not be saved.";emit q->stateChanged();}});
+        sortSaved=settings_detail::saveWithRetry(q,"sort",[pending](QJsonObject& object){
+            auto stored=object.value("sort").toObject();for(auto it=pending.begin();it!=pending.end();++it)stored[it.key()]=it.value();object["sort"]=stored;
+        },[this,deferred,sequence](SettingsStatus result){
+            if(sequence!=preferenceSequence)return;
+            sortSaved=result.ok();if(result.ok())pendingSortFields={};
+            if(*deferred&&!result.ok()){status="File order changed for this session; settings could not be saved.";emit q->stateChanged();}
+        });
         *deferred=true;
         if (nav.snapshot().current.empty()) {
             status=sortSaved?"File order updated.":"File order changed for this session; settings could not be saved.";
@@ -1452,14 +1465,18 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
         stored[id]=normalized;object["bindings"]=stored;
     },[this,pending,before,id,normalized](SettingsStatus result){
         pending->result=result;if(!pending->deferred||d->bindings.value(id)!=QJsonValue(normalized))return;
-        if(!pending->conflict.isEmpty())d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";
+        if(!pending->conflict.isEmpty()) {
+            d->bindings[id]=before.value(id);
+            d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";
+        }
         else if(result.ok()) {
             // Bring in foreign changes only where no newer local edit exists.
             for(auto it=pending->merged.begin();it!=pending->merged.end();++it)
                 if(it.key()!=id&&d->bindings.value(it.key())==before.value(it.key()))d->bindings[it.key()]=it.value();
             d->status="Shortcut saved.";
         }else d->status="Shortcut changed for this session; settings could not be saved.";
-        emit bindingsChanged();emit stateChanged();
+        const QPointer<ViewerController> alive(this);
+        emit bindingsChanged();if(alive)emit stateChanged();
     });
     if(!pending->conflict.isEmpty()){d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";emit stateChanged();return false;}
     if(pending->result&&pending->result->ok())d->bindings=pending->merged;

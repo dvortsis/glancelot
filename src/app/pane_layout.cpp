@@ -4,6 +4,8 @@
 #include <memory>
 #include "layout_defaults.hpp"
 #include <QJsonArray>
+#include <QDir>
+#include <QFileInfo>
 #include <algorithm>
 #include <cmath>
 
@@ -41,6 +43,7 @@ void PaneLayout::load() {
         QJsonObject settings;
         if(!glancelot::readSettings(settings).ok())feedback_="Layout settings could not be read; defaults are active.";
         else {
+            glancelot::settings_detail::overlayPendingSettings(this,settings);
             const auto layoutsValue=settings.value("layouts");
             const auto savedValue=layoutsValue.toObject().value(QString::number(slot_));
             const auto saved=savedValue.toObject();
@@ -63,6 +66,7 @@ void PaneLayout::load() {
             }
         }
     }
+    if(feedback_.isEmpty()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot_)+"/"))feedback_="Saving layout preferences…";
     emit changed();
 }
 void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,bool lockOnly) {
@@ -70,6 +74,7 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
     const auto unsupported=std::make_shared<bool>(false);
     struct Completion {bool done{},deferred{};};const auto completion=std::make_shared<Completion>();
     const auto slot=slot_;const auto panes=panes_;const auto centerState=center_;const auto mode=mode_;const auto locked=locked_;
+    const auto directory=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath());
     const auto channel="layout/"+QString::number(slot)+"/"+id+"/"+fields.keys().join('/')+(reset?"/reset":"")+(lockOnly?"/locked":"");
     glancelot::settings_detail::saveWithRetry(this,channel,[id,fields,reset,lockOnly,slot,panes,centerState,mode,locked,unsupported](QJsonObject& settings) {
         auto layouts=settings.value("layouts").toObject();
@@ -110,8 +115,10 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
             layout["panes"]=stored;
         }
         layouts[QString::number(slot)]=layout;settings["layouts"]=layouts;
-    },[this,unsupported,completion](glancelot::SettingsStatus result){
+    },[this,unsupported,completion,slot,directory](glancelot::SettingsStatus result){
         completion->done=true;
+        if(completion->deferred&&(slot_!=slot||directory!=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath())||feedback_!="Saving layout preferences…"))return;
+        if(completion->deferred&&result.ok()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot)+"/"))return;
         if(*unsupported)feedback_="Layout changed for this session; a newer saved layout was preserved.";
         else if(!result.ok())feedback_="Layout changed for this session; settings could not be saved.";
         else feedback_.clear();
