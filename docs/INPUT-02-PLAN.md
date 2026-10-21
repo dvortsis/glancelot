@@ -106,3 +106,17 @@ Wheel modifiers are stored under `"wheelModifiers"` through the existing locked 
   - dark/light and compact/wide captures behind `GLANCELOT_REVIEW_CAPTURE`.
 - **Full suite and Linux:** `scripts/build.ps1 -BuildDir build-claude-input-02 -Test`, plus the Linux Docker build.
 - **Unverified unless measured:** physical trackpads and real keyboard layouts or IMEs.
+
+## As delivered (October 18, 2026)
+
+Decisions the implementation made inside the frozen contract. None changes a frozen header beyond the approved additions.
+
+- **Scopes.** Photo-stepping and view commands (`next`, `previous`, `next-folder`, `previous-folder`, `fit`, `actual`, `zoom-in`, `zoom-out`, `rotate`, `background`, `filmstrip`, `hold-actual`) are `canvas`. Every command the old grid allow-list let through stays `global`, so behaviour is unchanged. `canvas` is allowed whenever the grid does not own keys, as before; the tree, which never claimed those keys, still lets them through.
+- **One Shortcut per key.** `Main.qml` groups commands by first key and resolves the command at activation: the narrowest allowed scope wins (tree, grid, canvas, workspace, global). Two commands in scopes that are never active together can therefore share a key without Qt's ambiguous-shortcut refusal. Second keys of chords are live only while a chord is pending.
+- **Chords** are at most two steps. `Command` rows carry a `steps` list (the portable text of each key press) in addition to the contracted `scope` and `hold` keys; this is a map key, not a header change. Escape cancels a pending chord first and does nothing else.
+- **Holds.** `ImageCanvas::beginHold(x, y, sequence)` zooms to exactly 1:1 around the pointer and watches the window for the key's release (auto-repeat ignored) and for deactivation. The image-change and modal-open restores use the existing `endLoupe` paths. A mouse release never ends a key hold. A hold binding must be a single key.
+- **Right button.** A quick right click opens the context menu on release; holding it for 220 ms starts the loupe, which ends with the button. This replaces the instant-loupe-on-press, which could not coexist with a context menu.
+- **Wheel.** Precedence is Ctrl, then Shift, then Alt. An Alt entry nobody set follows the plain wheel. A partial navigation detent is discarded after 400 ms of idleness or when the direction reverses.
+- **New commands** (block `INPUT-02` in the registry): `hold-actual`, `grid-open`, `grid-up`, `grid-select-all`, `tree-open-folder`, `focus-path`, `copy-path`, `paste-path`. All but `hold-actual` start unbound; the grid and tree already handle Enter, Backspace and Ctrl+A themselves, and the menus show those fixed keys.
+- **Menus.** `ui/CommandMenuItem.qml` is the one row component. Menus: canvas and grid (item or empty area) in `Main.qml`, tree row and path bar in `FolderTree.qml`. The grid reports a request through a `contextRequested` signal, which keeps `PhotoGrid.qml` changes to a handful of lines. A destructive row names its target and middle-elides a long file name. The tree row menu gained "Open the focused folder" above the move-to-trash row; the one existing test that selected the only row was adjusted.
+- **Command search** (`SettingsDialog.qml`) asked the removed `gridAllowsCommand`; it now asks the window's `routeAllows` and `routeBlockedReason`. This is the only edit outside the INPUT-02 surface.

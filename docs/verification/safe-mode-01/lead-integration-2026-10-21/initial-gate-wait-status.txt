@@ -1,0 +1,8 @@
+
+branch  : claude/input-02-mainsync
+host    : MONDOSHAWAN
+holder  : dvort
+pid     : 59132
+cwd     : C:\src\Github\Glancelot\.worktrees\claude-input-02-mainsync
+started : 10/21/2026 8:19:51 AM
+

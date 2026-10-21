@@ -90,6 +90,11 @@ ApplicationWindow {
         go(); Qt.callLater(go)
     }
     onActiveFocusItemChanged: {
+        if (activeFocusItem) {
+            if (focusWithin(treePanel)) focusRegion = "tree"
+            else if (focusWithin(photoGrid)) focusRegion = "grid"
+            else if (activeFocusItem === canvas || focusWithin(topPanel) || focusWithin(filmstripPanel) || focusWithin(bottomPanel)) focusRegion = "canvas"
+        }
         if (!combinedMode || !activeFocusItem) return
         if (focusWithin(photoGrid)) focusedPane = "grid"
         else if (activeFocusItem === canvas) focusedPane = "preview"
@@ -308,7 +313,7 @@ ApplicationWindow {
     // Explicit routes (toolbar, command search) run canvas commands in the combined view whatever pane has focus;
     // window shortcuts follow the focused pane (`gridScope`).
     function invoke(id) {
-        if (gridMode && !gridAllowsCommand(id)) return
+        if (!routeAllows(id)) return
         if (combinedMode && ["next", "previous", "next-folder", "previous-folder"].indexOf(id) >= 0) previewFollowsCursor = false
         viewer.trigger(id); wakeHud()
     }
@@ -318,18 +323,144 @@ ApplicationWindow {
         if (combinedMode) { previewFollowsCursor = false; focusPane("preview"); wakeHud(); return } // an explicit open
         gridMode = false; canvas.forceActiveFocus(); wakeHud()
     }
-    function gridAllowsCommand(id) {
-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
-                "view-preview", "view-grid", "view-combined", "combined-orientation",
-                "reveal-in-file-manager", "open-terminal",
-                "copy-path", "copy-file", "copy-image",
-                "rename", "new-folder",
-                "cut-selection", "copy-selection", "paste",
-                "delete-selection", "delete-current-file", "delete-current-folder",
-                "select-all", "clear-selection", "invert-selection",
-                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh",
-                "navigate-back", "navigate-forward", "shortcuts-help", "toggle-metadata"].indexOf(id) >= 0
+
+    // ---- INPUT-02 scoped command input. Precedence, highest first: modal, text editing, the focused pane (grid, tree,
+    // canvas), the workspace, global. A command's scope comes from the registry (`viewer.commands`).
+    readonly property var commandInfo: {
+        const table = ({})
+        for (const command of viewer.commands) table[command.id] = command
+        return table
     }
+    // The pane that last held keyboard focus; popups and dialogs do not change it, so a context menu opened from the
+    // tree still counts as the tree's.
+    property string focusRegion: "canvas"
+    readonly property var scopeRank: ({ tree: 0, grid: 1, canvas: 2, workspace: 3, global: 4 })
+    function scopeOf(id) { return commandInfo[id] ? commandInfo[id].scope : "global" }
+    function commandBlockedReason(id) {
+        if (id !== "delete-selection") return ""
+        if (fileOperations.busy) return "Wait for the current move to the " + deleteFlow.trashName + " to finish."
+        if (focusRegion === "tree" && treePanel.cursorIsRoot()) return "Drives can't be moved to the " + deleteFlow.trashName + "."
+        return ""
+    }
+    // Whether the focused pane lets a command's key act. This one predicate gates shortcuts and context-menu rows.
+    function scopeAllows(id) {
+        if (commandBlockedReason(id).length) return false
+        const scope = scopeOf(id)
+        // A pane's commands act only while that pane owns keys: a tree that has focus keeps the canvas and grid keys quiet.
+        if (scope === "canvas") return !gridScope && focusRegion !== "tree"
+        if (scope === "grid") return gridScope && workspace._gridShown && focusRegion !== "tree"
+        if (scope === "tree") return focusRegion === "tree" && treePanel.visible
+        return true
+    }
+    // Explicit routes (toolbar, command search, menus) are looser than keys only in the combined view, where a canvas
+    // command runs whichever pane has focus.
+    function routeAllows(id) {
+        if (commandBlockedReason(id).length) return false
+        const scope = scopeOf(id)
+        if (scope === "canvas") return !gridMode
+        if (scope === "grid") return workspace._gridShown
+        if (scope === "tree") return treePanel.visible
+        return true
+    }
+    // Visible text for a command that cannot run from an explicit route right now.
+    function routeBlockedReason(id) {
+        const blocked = commandBlockedReason(id)
+        if (blocked.length) return blocked
+        const scope = scopeOf(id)
+        return scope === "canvas" ? "Not in grid view" : scope === "grid" ? "Needs the folder grid" : scope === "tree" ? "Needs the folder tree" : ""
+    }
+    // Keys the grid and tree handle themselves are unbound commands; menus still show them.
+    readonly property var fixedKeys: ({ "grid-open": "Enter", "grid-up": "Backspace", "grid-select-all": "Ctrl+A", "tree-open-folder": "Enter" })
+    function keyHint(id) { const info = commandInfo[id]; return info && info.binding.length ? info.binding : (fixedKeys[id] || "") }
+    function commandLabel(id) { const info = commandInfo[id]; return info ? info.label : id }
+    // Commands grouped by first key (singles and chord starters share one Shortcut per key) and by second key.
+    readonly property var keyTable: {
+        const firsts = ({}), seconds = ({})
+        const add = (table, key, id) => { (table[key] = table[key] || []).push(id) }
+        for (const command of viewer.commands) {
+            if (command.steps.length === 1 || command.steps.length === 2) add(firsts, command.steps[0], command.id)
+            if (command.steps.length === 2) add(seconds, command.steps[1], command.id)
+        }
+        return { firsts: firsts, seconds: seconds }
+    }
+    // The command a key reaches right now ("" when none): scope-allowed candidates, narrowest scope first. With
+    // `firstStep`, only chords that started with it. Two scopes that are never active together may share a key.
+    function resolveKey(ids, firstStep) {
+        let best = "", rank = 99
+        for (const id of ids) {
+            const info = commandInfo[id]
+            if (!info || (firstStep !== undefined && (info.steps.length !== 2 || info.steps[0] !== firstStep)) || !scopeAllows(id)) continue
+            const value = scopeRank[info.scope] === undefined ? 4 : scopeRank[info.scope]
+            if (value < rank) { best = id; rank = value }
+        }
+        return best
+    }
+    readonly property bool keysLive: !modalOpen && !editingText
+    // Two-step chords: the first key arms a pending state that the second key completes. It ends after 1.5 s, on
+    // Escape, on losing focus or when a modal opens; commands in the same scope never share the first key alone.
+    property string chordFirst: ""
+    readonly property bool chordPending: chordFirst.length > 0
+    function chordCancel() { chordFirst = ""; chordTimer.stop() }
+    function beginChord(step) { chordFirst = step; chordTimer.restart(); wakeHud() }
+    onChordPendingChanged: if (chordPending) hudVisible = true
+    onFocusRegionChanged: chordCancel() // a chord started in one pane never finishes in another
+    // True when this key press is a live registered key of a grid or tree command (or the second step of a chord that
+    // started there or on a pane command). The panes yield exactly those keys, so a pane command remapped onto a native key
+    // works; global commands remapped onto native pane keys still lose to the pane, as before (grid keys beat global remaps).
+    function remapped(event) {
+        const step = viewer.keyStep(event.key, event.modifiers)
+        if (step.length === 0) return false
+        // Registered printable chord steps precede grid type-to-search; global single-key bindings do not.
+        // Space and native navigation keys retain their pane precedence unless explicitly remapped in a pane scope.
+        const printable = event.key >= 0x21 && event.key <= 0x7e
+                          && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+        const paneCommand = id => id.length > 0 && (scopeOf(id) === "grid" || scopeOf(id) === "tree"
+            || (printable && (chordPending || commandInfo[id].steps.length === 2)))
+        if (chordPending) return !!keyTable.seconds[step] && paneCommand(resolveKey(keyTable.seconds[step], chordFirst))
+        if (!keyTable.firsts[step]) return false
+        const id = resolveKey(keyTable.firsts[step])
+        return paneCommand(id)
+    }
+    Timer { id: chordTimer; objectName: "chordTimer"; interval: 1500; onTriggered: app.chordFirst = "" }
+    onKeysLiveChanged: if (!keysLive) chordCancel()
+    // A key reached its command. Holds start here and end when the key is released (see ImageCanvas::beginHold).
+    function pressKey(id) {
+        chordCancel()
+        const info = commandInfo[id]
+        if (info && info.hold) startHold(info); else invoke(id)
+    }
+    function startHold(info) {
+        if (!routeAllows(info.id)) return
+        if (info.id === "hold-actual") { canvas.beginHold(pointerX, pointerY, info.steps[0]); wakeHud() }
+    }
+    // Wheel matrix (IN-03): one action per modifier. Ctrl outranks Shift, which outranks Alt. Navigation accumulates
+    // high-resolution deltas into 120-unit detents; zoom and pan are continuous.
+    function wheelModifierName(modifiers) {
+        if (modifiers & Qt.ControlModifier) return "ctrl"
+        if (modifiers & Qt.ShiftModifier) return "shift"
+        if (modifiers & Qt.AltModifier) return "alt"
+        return "none"
+    }
+    function handleWheel(wheel) {
+        const action = viewer.wheelModifiers[wheelModifierName(wheel.modifiers)] || "navigate"
+        const delta = wheel.angleDelta.y || wheel.angleDelta.x
+        const pixel = wheel.pixelDelta.y || wheel.pixelDelta.x
+        if (action !== "navigate") wheelRemainder = 0
+        if (action === "zoom") canvas.zoomAt(Math.pow(1.0015, pixel !== 0 ? pixel * 3 : delta), wheel.x, wheel.y)
+        else if (action === "pan-horizontal") canvas.panBy(pixel !== 0 ? pixel : delta / 3, 0)
+        else if (action === "pan") canvas.panBy(wheel.pixelDelta.x, pixel !== 0 ? pixel : delta / 3)
+        else {
+            wheelIdle.restart()
+            const step = pixel !== 0 ? pixel * 2 : delta
+            if (wheelRemainder !== 0 && (step > 0) !== (wheelRemainder > 0)) wheelRemainder = 0 // a reversal starts afresh
+            wheelRemainder += step
+            if (Math.abs(wheelRemainder) >= 120) previewFollowsCursor = false
+            while (wheelRemainder >= 120) { viewer.previous(); wheelRemainder -= 120 }
+            while (wheelRemainder <= -120) { viewer.next(); wheelRemainder += 120 }
+        }
+    }
+    // A partial detent does not wait for the next gesture.
+    Timer { id: wheelIdle; interval: 400; onTriggered: app.wheelRemainder = 0 }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
         let offset = 0
@@ -373,6 +504,8 @@ ApplicationWindow {
         else if (id === "animation-toggle-loop") { if (viewer.animationController) viewer.animationController.setLoop(!viewer.animationController.loop) }
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
+            const blocked = commandBlockedReason(id)
+            if (blocked.length) { deleteFlow.showNotice(blocked); return }
             const treeFolder = treePanel.currentSelectedFolder()
             if (treeFolder.length > 0) {
                 deleteFlow.request([treeFolder], "tree", "")
@@ -405,6 +538,15 @@ ApplicationWindow {
                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
             }
         }
+        // INPUT-02
+        else if (id === "hold-actual") canvas.actualSize() // reached without its key: nothing to release, so just show 1:1
+        else if (id === "grid-open") photoGrid.activate()
+        else if (id === "grid-up") photoGrid.goUp()
+        else if (id === "grid-select-all") fileGrid.selectAll()
+        else if (id === "tree-open-folder") treePanel.openCursor()
+        else if (id === "focus-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.focusAddress) }
+        else if (id === "copy-folder-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
+        else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
         else if (id === "rename") {
             let target = ""
             const treeFolder = treePanel.currentSelectedFolder()
@@ -507,22 +649,39 @@ ApplicationWindow {
         else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
         else if (id === "quit") close()
     }
-    onActiveChanged: if (!active) canvas.endLoupe()
-    onModalOpenChanged: if (modalOpen) canvas.endLoupe()
+    onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel() }
+    onModalOpenChanged: if (modalOpen) { canvas.endLoupe(); chordCancel() }
     Connections {
         target: viewer
         function onViewCommand(id) { app.handleViewCommand(id) }
         function onTreeShown() { app.hudVisible = true; hideHud.restart(); Qt.callLater(treePanel.focusList) }
     }
-    Instantiator {
-        model: viewer.commands
+    Instantiator { // one Shortcut per first key; a chord starter arms the pending state instead of running
+        objectName: "firstKeys"
+        model: Object.keys(app.keyTable.firsts)
         delegate: Shortcut {
-            required property var modelData
-            sequence: modelData.binding
+            required property string modelData
+            sequence: modelData
             context: Qt.WindowShortcut
             autoRepeat: false
-            enabled: !app.modalOpen && !app.editingText && modelData.binding.length > 0 && (!app.gridScope || app.gridAllowsCommand(modelData.id))
-            onActivated: app.invoke(modelData.id)
+            enabled: app.keysLive && !app.chordPending && app.resolveKey(app.keyTable.firsts[modelData]).length > 0
+            onActivated: {
+                const id = app.resolveKey(app.keyTable.firsts[modelData])
+                if (id.length === 0) return
+                if (app.commandInfo[id].steps.length === 2) app.beginChord(modelData); else app.pressKey(id)
+            }
+        }
+    }
+    Instantiator { // second keys are live only while a chord is pending, so they never compete with single keys
+        objectName: "secondKeys"
+        model: Object.keys(app.keyTable.seconds)
+        delegate: Shortcut {
+            required property string modelData
+            sequence: modelData
+            context: Qt.WindowShortcut
+            autoRepeat: false
+            enabled: app.keysLive && app.chordPending && app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst).length > 0
+            onActivated: app.pressKey(app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst))
         }
     }
     Shortcut {
@@ -530,6 +689,7 @@ ApplicationWindow {
         // Text fields own Escape (the address field reverts, then leaves arrangement itself).
         enabled: !app.modalOpen && !app.editingText
         onActivated: {
+            if (app.chordPending) { app.chordCancel(); return } // the first Escape only abandons the pending chord
             canvas.endLoupe()
             if(app.layoutEditing) { app.layoutEditing=false; return }
             if (viewer.metadataVisible) { viewer.metadataVisible = false; return }
@@ -551,7 +711,7 @@ ApplicationWindow {
         interval: 2400
         running: true
         onTriggered: {
-            if (!app.layoutEditing && !app.gridMode && !app.combinedMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+            if (!app.layoutEditing && !app.gridMode && !app.combinedMode && viewer.fileCount > 0 && !app.modalOpen && !app.chordPending && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
                 app.hudVisible = false
             else restart()
         }
@@ -629,6 +789,7 @@ ApplicationWindow {
         // Combined view: F6 returns to the grid; Tab continues to the split handle (its keyboard resize), then the grid.
         Keys.onPressed: event => {
             if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true; return }
+            else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { app.openCanvasMenu(app.pointerX, app.pointerY); event.accepted = true; return }
             if (viewer.animationController && viewer.animationController.active) {
                 if (event.key === Qt.Key_Space && viewer.animationController.isAnimated) {
                     viewer.animationController.togglePlayPause()
@@ -681,6 +842,7 @@ ApplicationWindow {
     }
     MouseArea {
         id: interaction
+        objectName: "canvasPointer"
         visible: app.workspace._previewShown
         anchors.fill: canvas
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton | Qt.BackButton | Qt.ForwardButton
@@ -694,30 +856,34 @@ ApplicationWindow {
             lastX=mouse.x; lastY=mouse.y
             app.wakeHud()
         }
+        // A quick right click opens the canvas menu; holding the right button keeps the loupe. Only a pointer-started
+        // loupe ends with the pointer, so a held key's actual-size view never stops when a mouse button is released.
+        property bool pointerLoupe: false
+        Timer {
+            id: loupeDelay
+            interval: 220
+            onTriggered: {
+                if ((interaction.pressedButtons & Qt.RightButton) && !canvas.loupeActive) { interaction.pointerLoupe = true; canvas.beginLoupe(interaction.lastX, interaction.lastY) }
+            }
+        }
+        function endPointerLoupe() { loupeDelay.stop(); if (pointerLoupe) { pointerLoupe = false; canvas.endLoupe() } }
         onPressed: mouse => {
             if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
             if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
             canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
-            if (mouse.button === Qt.RightButton) canvas.beginLoupe(mouse.x,mouse.y)
+            if (mouse.button === Qt.RightButton) loupeDelay.restart()
         }
-        onReleased: canvas.endLoupe()
-        onCanceled: canvas.endLoupe()
+        onReleased: mouse => {
+            if (mouse.button !== Qt.RightButton) return
+            const loupe = pointerLoupe
+            endPointerLoupe()
+            if (!loupe) app.openCanvasMenu(mouse.x, mouse.y)
+        }
+        onCanceled: { endPointerLoupe(); canvas.endLoupe() } // a cancelled grab restores a key hold too
         onDoubleClicked: mouse => { if (mouse.button === Qt.LeftButton) app.invoke("fullscreen") }
         onWheel: wheel => {
             app.wakeHud()
-            let delta=wheel.angleDelta.y || wheel.angleDelta.x
-            let pixel=wheel.pixelDelta.y || wheel.pixelDelta.x
-            if ((wheel.modifiers & Qt.ControlModifier) || (!(wheel.modifiers & Qt.ShiftModifier) && viewer.wheelMode === "zoom")) {
-                canvas.zoomAt(Math.pow(1.0015, pixel !== 0 ? pixel*3 : delta), wheel.x, wheel.y)
-            } else if ((wheel.modifiers & Qt.ShiftModifier) || viewer.wheelMode === "pan") {
-                let amount=pixel !== 0 ? pixel : delta/3
-                canvas.panBy((wheel.modifiers & Qt.ShiftModifier) ? amount : wheel.pixelDelta.x, (wheel.modifiers & Qt.ShiftModifier) ? 0 : amount)
-            } else {
-                app.wheelRemainder += pixel !== 0 ? pixel*2 : delta
-                if (Math.abs(app.wheelRemainder) >= 120) app.previewFollowsCursor = false
-                while (app.wheelRemainder >= 120) { viewer.previous(); app.wheelRemainder-=120 }
-                while (app.wheelRemainder <= -120) { viewer.next(); app.wheelRemainder+=120 }
-            }
+            app.handleWheel(wheel)
             wheel.accepted=true
         }
     }
@@ -732,10 +898,98 @@ ApplicationWindow {
         onItemActivated: { previewDebounce.stop(); if (app.combinedMode) app.focusPane("preview"); else app.showCanvas() }
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else if(app.combinedMode)app.focusPane("preview");else app.showCanvas() }
         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
+        onContextRequested: (x, y, row) => app.openGridMenu(x, y, row)
+        yields: app.remapped
+        chordPending: app.chordPending
         tabHandler: app.combinedMode ? (() => app.focusPane("preview")) : null
         Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("preview"); event.accepted = true } }
         deleteBlocked: deleteFlow.isReadOnly(fileGrid.directory)
         onDeleteRequested: paths => deleteFlow.request(paths, "grid", fileGrid.directory)
+    }
+    // ---- INPUT-02 context menus (F055): canvas and grid here; the tree row and path bar menus live in FolderTree.
+    // Every row is a registered command with its live binding. Right click, the Menu key and Shift+F10 open them.
+    component ContextMenu: Menu {
+        id: menu
+        // Closing a menu without choosing returns keys to the pane that had them (a choice that opens a dialog keeps the dialog's).
+        onClosed: Qt.callLater(() => { if (!app.modalOpen && !deleteFlow.modal) app.focusContent() })
+        margins: Theme.gapSm // stays inside a narrow window
+        padding: Theme.gapXs
+        // Taller than a compact window: the rows scroll instead of running off the screen.
+        height: Math.min(implicitHeight, app.height - 2 * Theme.gapSm)
+        contentItem: ListView {
+            implicitHeight: contentHeight
+            model: menu.contentModel
+            currentIndex: menu.currentIndex
+            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain) // keyboard navigation keeps the current row visible
+            clip: true
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: UiScrollBar {}
+        }
+        background: Rectangle {
+            implicitWidth: 368 // the longest row (label and binding) never elides
+            radius: Theme.radiusControl
+            color: Theme.surface
+            border.width: Theme.borderWidth
+            border.color: Theme.border
+        }
+    }
+    component MenuRule: MenuSeparator {
+        padding: 0; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
+        contentItem: Rectangle { implicitWidth: 120; implicitHeight: Theme.borderWidth; color: Theme.border }
+    }
+    // A long file name keeps both ends so a destructive row stays on one line and still names its target.
+    function menuName(name) { return name.length > 30 ? name.slice(0, 18) + "…" + name.slice(-10) : name }
+    function openCanvasMenu(x, y) {
+        if (!workspace._previewShown || modalOpen) return
+        canvasMenu.popup(canvas, Math.max(0, Math.min(x, canvas.width - 1)), Math.max(0, Math.min(y, canvas.height - 1)))
+    }
+    // `row` is the item under the pointer or cursor (-1: empty area). A click outside the selection selects that item
+    // first, like a file manager, so "Move to the Recycle Bin" always names what it will move.
+    function openGridMenu(x, y, row) {
+        if (modalOpen) return
+        if (row >= 0 && fileGrid.selectedPaths().indexOf(fileGrid.pathAt(row)) < 0) photoGrid.select(row)
+        photoGrid.focusGrid()
+        gridMenu.row = row
+        gridMenu.targets = photoGrid.deletionTargets()
+        gridMenu.popup(photoGrid, x, y)
+    }
+    ContextMenu {
+        id: canvasMenu
+        objectName: "canvasContextMenu"
+        CommandMenuItem { host: app; commandId: "next" }
+        CommandMenuItem { host: app; commandId: "previous" }
+        MenuRule {}
+        CommandMenuItem { host: app; commandId: "fit" }
+        CommandMenuItem { host: app; commandId: "actual" }
+        CommandMenuItem { host: app; commandId: "zoom-in" }
+        CommandMenuItem { host: app; commandId: "zoom-out" }
+        CommandMenuItem { host: app; commandId: "rotate" }
+        CommandMenuItem { host: app; commandId: "background" }
+        MenuRule {}
+        CommandMenuItem { host: app; commandId: "grid" }
+        CommandMenuItem { host: app; commandId: "fullscreen" }
+        MenuRule {}
+        CommandMenuItem {
+            host: app; commandId: "delete-current-file"; iconName: "trash"; danger: true
+            label: viewer.fileName.length ? "Move “" + app.menuName(viewer.fileName) + "” to the " + deleteFlow.trashName : "Move the photo to the " + deleteFlow.trashName
+        }
+    }
+    ContextMenu {
+        id: gridMenu
+        objectName: "gridContextMenu"
+        property int row: -1
+        property var targets: []
+        CommandMenuItem { host: app; commandId: "grid-open"; available: gridMenu.row >= 0 }
+        CommandMenuItem { host: app; commandId: "grid-up" }
+        CommandMenuItem { host: app; commandId: "grid-select-all" }
+        MenuRule { visible: gridMenu.targets.length > 0 }
+        CommandMenuItem {
+            host: app; commandId: "delete-selection"; iconName: "trash"; danger: true
+            available: gridMenu.targets.length > 0
+            label: gridMenu.targets.length === 1 ? "Move “" + app.menuName(app.leafName(gridMenu.targets[0])) + "” to the " + deleteFlow.trashName
+                : "Move " + gridMenu.targets.length + " items to the " + deleteFlow.trashName
+        }
     }
     // ---- GRID-PREVIEW-01 combined view: split handle, explicit preview states, pane focus rings and notices.
     Item {
@@ -1291,13 +1545,13 @@ ApplicationWindow {
         width: app.paneRect("tree").width; height: app.paneRect("tree").height
         maximumWidth: Math.max(200, Math.round(app.width * 0.45))
         layoutFrozen: true
+        host: app
         arrangementMode: app.layoutEditing
         onResizeCommitted: extent => paneLayout.resize("tree", extent)
         visible: width > 0 && height > 0
         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
         // Hiding a focused panel must not strand keyboard input on an invisible item.
         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
-        onDeleteRequested: path => deleteFlow.request([path], "tree", "")
     }
     MetadataHud {
         id: metadataPanel
@@ -1381,6 +1635,18 @@ ApplicationWindow {
                 elide: Text.ElideRight
                 text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
                 color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
+            }
+            BarLabel { // INPUT-02: the first key of a two-key shortcut was pressed; the second key or Escape ends it
+                objectName: "chordPending"
+                visible: app.chordPending
+                Layout.leftMargin: Theme.gapSm
+                text: app.chordFirst + ", …"
+                color: Theme.text
+                font.family: Theme.monoFamily
+                leftPadding: Theme.gapSm; rightPadding: Theme.gapSm; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
+                background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.primary }
+                Accessible.role: Accessible.StaticText
+                Accessible.name: "Waiting for the next key after " + app.chordFirst + ". Escape cancels."
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }

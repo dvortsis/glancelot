@@ -1,0 +1,10 @@
+********* Start testing of PlatformIntegrationTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : PlatformIntegrationTests::initTestCase()
+PASS   : PlatformIntegrationTests::revealInvalidOrMissingPathReturnsFalse()
+FAIL!  : PlatformIntegrationTests::openTerminalInvalidOrMissingPathReturnsFalse() '!glancelot::PlatformIntegration::openTerminal("C:/nonexistent_dir_path_12345")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-review-input-02-r2\tests\platform_integration_tests.cpp(16) : failure location
+PASS   : PlatformIntegrationTests::pathsWithSpacesAndUnicodeValidation()
+PASS   : PlatformIntegrationTests::cleanupTestCase()
+Totals: 4 passed, 1 failed, 0 skipped, 0 blacklisted, 167ms
+********* Finished testing of PlatformIntegrationTests *********

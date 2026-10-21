@@ -1,5 +1,11 @@
 param([string]$BuildDir = 'build', [string]$QtRoot = '', [switch]$Test, [switch]$CoreOnly, [switch]$Package)
 $ErrorActionPreference = 'Stop'
+# Full test gates are serialized machine-wide (AGENTS.md gate lock); scripts/gate-lock.ps1 is re-entrant.
+if ($Test -and $env:GLANCELOT_GATE_LOCK_HELD -ne "$PID") {
+    $gateSelf = $PSCommandPath; $gateArgs = $PSBoundParameters
+    & (Join-Path $PSScriptRoot 'gate-lock.ps1') -Run ({ & $gateSelf @gateArgs }.GetNewClosure())
+    return
+}
 $repoRoot = Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $repoRoot
 if ($IsWindows -or $env:OS -eq 'Windows_NT') {

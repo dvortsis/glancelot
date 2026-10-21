@@ -14,6 +14,9 @@ if(MSVC)
 else()
   target_compile_options(glancelot_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/core/selection_export.cpp")
+  include(cmake/ExportTests.cmake)
+endif()
 if(BUILD_TESTING)
   # PERF-MEASURE-01: pre-approved core recorder and dedicated test target.
   add_executable(perf_trace_tests tests/perf_trace_tests.cpp)
@@ -58,9 +61,10 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp)
   target_include_directories(glancelot PRIVATE include src/render src/app)
   target_link_libraries(glancelot PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
+  include(cmake/StartupWindowGeometryTests.cmake)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
-    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml)
+    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml ui/CommandMenuItem.qml)
   # Interface typefaces (SIL OFL 1.1, assets/fonts/geist/OFL.txt), registered at startup.
   set(ui_fonts assets/fonts/geist/Geist-Light.ttf assets/fonts/geist/Geist-Regular.ttf assets/fonts/geist/Geist-Medium.ttf assets/fonts/geist/Geist-SemiBold.ttf assets/fonts/geist/GeistMono-Regular.ttf)
   qt_add_resources(glancelot ui_fonts PREFIX "/" BASE assets FILES ${ui_fonts})
@@ -83,7 +87,7 @@ if(GLANCELOT_BUILD_VIEWER)
     target_include_directories(acceptance_tests PRIVATE include)
     target_link_libraries(acceptance_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(acceptance_tests glancelot-decoder)
-    add_test(NAME viewer_acceptance COMMAND acceptance_tests)
+    add_test(NAME viewer_acceptance COMMAND acceptance_tests -o "${CMAKE_CURRENT_BINARY_DIR}/acceptance-results.txt,txt" -o -,txt)
     set_tests_properties(viewer_acceptance PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     qt_add_executable(thumbnail_tests tests/thumbnail_tests.cpp src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp)
     target_include_directories(thumbnail_tests PRIVATE include src/app)
@@ -129,6 +133,28 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(grid_ui_tests glancelot-decoder)
     add_test(NAME folder_grid COMMAND grid_ui_tests -o -,txt)
     set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 400)
+    # INPUT-02: scoped keys, chords, holds, wheel matrix and context menus (its own file; grid_ui_tests stays untouched).
+    qt_add_executable(input_ui_tests tests/input_ui_tests.cpp
+      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
+      src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
+      src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
+      src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
+      src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
+      src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
+    target_include_directories(input_ui_tests PRIVATE include src/render)
+    target_compile_definitions(input_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(input_ui_tests PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
+    qt_add_resources(input_ui_tests input_theme_catalog PREFIX "/" BASE assets FILES assets/themes/catalog.json ${ui_fonts})
+    qt_add_resources(input_ui_tests input_brand_assets PREFIX "/" BASE assets FILES
+      assets/brand/icons/app/dark/glancelot-64.png assets/brand/icons/app/light/glancelot-64.png
+      assets/brand/mascots/transparent/01_mascot_standing.png)
+    qt_add_shaders(input_ui_tests "input_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
+    add_dependencies(input_ui_tests glancelot-decoder)
+    add_test(NAME input_ui COMMAND input_ui_tests -o -,txt)
+    set_tests_properties(input_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
     qt_add_executable(file_operation_service_tests tests/file_operation_service_tests.cpp src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp)
     target_include_directories(file_operation_service_tests PRIVATE include src/app)
     target_link_libraries(file_operation_service_tests PRIVATE glancelot_core Qt6::Core Qt6::Test Qt6::Concurrent)

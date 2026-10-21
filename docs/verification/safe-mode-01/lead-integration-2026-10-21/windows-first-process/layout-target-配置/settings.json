@@ -1,0 +1,20 @@
+{
+    "layouts": {
+        "1": {
+            "panes": {
+                "future-pane": {
+                    "kind": 9
+                },
+                "tree": {
+                    "future": 7
+                }
+            },
+            "version": 1
+        },
+        "2": {
+            "marker": "untouched",
+            "version": 1
+        }
+    },
+    "schema": 1
+}

@@ -3,7 +3,11 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock: {holder: Codex lead, branch: codex/monitor-output-r2, started: 2026-10-21T13:35:00-06:00}
+gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
+lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
+lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
+review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/monitor-output-fix ae1b7e4; Gemini reviews stacked Claude packets F002, F037, F031, F040, F049, F009, F014, F051 in stack order, each only for its own changes on top of the previous branch, then a short confirmation pass after the stack is updated onto integrated main; Claude lane reviews SAFE-MODE-01 follow-up; Gemini never reviews MONITOR-OUTPUT-01 fixes
 memory_action: act_mvcridmt_bdf1947ea9e7
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -425,7 +429,14 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: gemini
-    state: done
+    state: review
+    owner_lane_override: claude, since (Gemini lane finished; user authorized Claude to complete Gemini leftovers)
+    reopened: Independent Claude review CHANGES REQUIRED (docs/verification/MONITOR-OUTPUT-01-CLAUDE-REVIEW.md, 77f67ab) for unstable display identity, half-implemented comparison, no aggregate memory cap, untested hotplug, hard-coded keys
+    fix_branch: codex/monitor-output-r2 source9b03718 evidence6b54375; actual Sonnet5.5 follow-up ACCEPT; Windows33/33 450.91s and LinuxDocker33/33 232.74s exit0. No main source integration.
+    review_request: Lead synchronize accepted monitor correction with current main after INPUT integration, confirm merged changes independently and run serial integrated Windows/Docker gates under main gate-lock before merge.
+    codex_review: docs/verification/MONITOR-OUTPUT-01-ae1b7e4-CODEX-REVIEW.md
+    core_correction_round: User assigned missing core viewport/color/scale to Codex; implemented and independently accepted9b03718, contract docs/MONITOR-OUTPUT-01-CORE-CORRECTION.md. Review and actual outputs docs/verification/MONITOR-OUTPUT-01-0e32d16-CODEX-REVIEW.md. Native shader and attached DPR1/2 state proofs pass; physical calibration/HDR remain unverified.
+    scope_decision_2026_10_21: Preserve frozen output-specific viewport/color/scale acceptance in MONITOR-OUTPUT-01; MONITOR-CUSTOM-01 owns advanced picker/presets/workspace customization, not a waiver of core acceptance. No product requirement is removed by the earlier split note.
     commit: 76b1979
     integrated_evidence: integrated 76b1979 Windows scripts/build.ps1 -Test 33/33 (642.45s) and Linux docker build 33/33 (240.07s)
     evidence: docs/verification/MONITOR-OUTPUT-01.md; independent review approved; Windows scripts/build.ps1 -Test 33/33 (642.45s); Linux Docker Qt 33/33 (240.07s)
@@ -465,7 +476,9 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: review
+    state: done
+    claude_review: Independent Claude cross-lane review APPROVED on main a395ca5 (docs/verification/CACHE-IO-CLAUDE-REVIEW.md, fab990e); stale-pixel defect fixed by FS revision validation (noncurrentSameTupleReplacementInvalidatesCache); targeted tests 6/6
+    follow_up: no eviction-pressure/aggregate-headroom test for cache (needs a lead CMake target); metadata token cannot detect content-only edits preserving id/size/mtime/ctime
     commit: 8b28060
     evidence: docs/verification/CACHE-01.md; independent review approved; Windows scripts/build.ps1 -Test 23/23 (206.74s); Linux Docker Qt 23/23 (135.07s)
     integrated_evidence: integrated 8b28060 Windows scripts/build.ps1 -Test 23/23 (263.94s) and Linux docker build 23/23 (135.07s)
@@ -483,7 +496,9 @@ tasks:
     milestone: M3
     priority: 8
     owner: lead
-    state: review
+    state: done
+    claude_review: Independent Claude cross-lane review APPROVED on main a395ca5 (docs/verification/CACHE-IO-CLAUDE-REVIEW.md, fab990e); duplicate-ID/negative-estimate/ownership defects fixed and regression-tested; targeted tests 6/6; physical SSD/HDD/SMB unverified
+    follow_up: no eviction-pressure/aggregate-headroom test for cache (needs a lead CMake target)
     commit: 1f97893
     evidence: docs/verification/IO-01.md; independent review approved; Windows scripts/build.ps1 -Test 24/24 (165.75s); Linux Docker Qt 24/24 (112.86s)
     integrated_evidence: integrated 1f97893 Windows scripts/build.ps1 -Test 24/24 (163.34s) and Linux docker build 24/24 (112.86s)
@@ -634,17 +649,21 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: review
+    state: done
     depends: [REVIEW-ALL-01]
     branch: claude/input-02
     worktree: .worktrees/claude-input-02
     plan: docs/INPUT-02-PLAN.md
     scope_addition: F055 context menus with command-route parity
-    review_gate: Independent Codex b47b99f on a6bda32 CHANGES REQUIRED; five blocking input mechanisms remain; runtime gates incomplete
-    review_evidence: docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
-    review_request: Codex-lane re-review requested of exact candidate claude/input-02 87b063d, which addresses the five findings in INPUT-02-FINAL-CODEX-REVIEW.md (evidence in docs/verification/INPUT-02.md; author Windows input_ui 16/16, grid_ui 72/72, window_slots 34/34; Linux Docker not rerun). Do not merge main into the reviewed snapshot; trial merge against main conflicts in CMakeLists.txt, viewer_controller.cpp, worker/main.cpp and ui/Main.qml (b10354a, re-confirmed after FS-WATCH 1bd4461) and goes to the Claude lane only after approval. Stacked packets F002, F037, F009, F014, F031, F040, F049, F051 wait behind it.
+    review_gate: Corrected source953adf9 plus test330d050 independently accepted by actual Sonnet5.5, followed by all9UIskills ACCEPT. Linux15/15 136.64s exit0; oldbranch Windows14/15 245.88s sole unchanged invalid-path terminal failure. No integrated-commit qualification.
+    correction_branch: codex/input-02-r3 2e1585d (source953adf9, test330d050); docs/verification/INPUT-02-0cc2a38-CODEX-REVIEW.md; actual rawoutputs and Sonnetreports committed.
+    review_evidence: docs/verification/INPUT-02-87b063d-CODEX-REVIEW.md; prior docs/verification/INPUT-02-FINAL-CODEX-REVIEW.md
+    review_request: Lead synchronize accepted codex/input-02-r3 correction into current-main rehearsal, resolve conflicts with lane, then independent confirmation and locked Windows/Docker integrated gates. Original87b063d remains unchanged. Propagate input fixes forward through stack.
+    stacked_review: Gemini lane reviews stacked F002, F037, F031, F040, F049, F009, F014, F051 now, each only for its own changes, at pinned SHAs (git diff <predecessor SHA merged into the packet> <packet SHA>, recorded in the review); Claude lane fixes findings in place and merges each earlier-packet fix forward through the stack before a later packet's review counts as final; Claude lane rehearses the main conflict resolution on throwaway claude/input-02-mainsync, never on the reviewed snapshot
     outcome: Complete scoped input matrix, modifier wheel rules and chord/hold lifecycle
     acceptance: Text/modal precedence, conflict handling, focus-loss cancellation and equivalent command behavior
+    integrated_commit: d59369014574658893458ea403a08161d986b67e
+    integrated_checks: Accepted synchronized83100c4; locked Windows34/34 493.56s and Docker34/34 297.09s exits0; no-ff merge tree exactly identical, focused integrated3/3 92.18s exit0. Full output docs/verification/integration-2026-10-21/input/README.md. Stack propagation and packet confirmations remain Claude/Gemini work.
   - id: PERF-MEASURE-01
     requirements: [SYS-05, PERF-04, PERF-05]
     milestone: M3
@@ -709,9 +728,20 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: review
     depends: [WINDOW-RESUME-01]
     branch: codex/safe-mode-01
+    source_candidate: 796ab411776068a6a7b8d40f26b64930818fd279
+    evidence_candidate: 1b7c3db4e0bcdacbc93a4605447a8b126ad77243
+    review_snapshot: Product03bd326 Sonnet5.5 follow-up plus fixture796ab411 Sonnet5.5 review/clarification; initial0580fe0 and intermediate reviews retained
+    candidate_checks: Exact796ab411 complete locked Windows37/37 558.04s and Docker37/37 273.13s, exits0; recovery137/startup61/controller29 zero skips on both; fresh35-command software-RHI/RGB process proofs on both. Earlier failures retained; hardware/sanitizer/power-loss unverified.
+    review_gate: Source ACCEPT by actual Sonnet5.5 final review on synchronized7e88979; mandatory Windows process proof fails and repeats, so integration is rejected pending STARTUP-WINDOW-01. Source acceptance does not waive runtime checks.
+    integration_candidate: 7e8897975d507c29907d6a026792e1ea42b7cedd
+    integration_attempt: Windows36/37 601.99s exit1, sole recovery_process failure; isolated identical proof also fails. Docker37/37 283.69s exit0 with35-command proof. Native Qt logging records wholly offscreen startup at0,1600 size2360x1560; source remains unchanged. No merge.
+    blocked_by: STARTUP-WINDOW-01
+    lane_serialization: SAFE stays in review while STARTUP-WINDOW-01 is the sole next Codex implementation; carry the corrected stack through independent review and both full gates before integration.
+    integration_evidence: docs/verification/safe-mode-01/lead-integration-2026-10-21/README.md
+    evidence: docs/verification/SAFE-MODE-01.md; docs/handoff/CODEX-SAFE-MODE-01-REVIEW.md
     worktree: .worktrees/codex-safe-mode-01
     build: build-codex-safe-mode-01
     plan: docs/SAFE-MODE-01-PLAN.md
@@ -721,6 +751,26 @@ tasks:
     contract_gate: Lead-frozen complete F064/F057 contract and shared value APIs; production/test fragments must be enabled unconditionally once real feature sources exist before candidate gates. Sole Codex implementation while prior FS source is in pinned integration; serialize any renewed FS correction. No SAFE merge while FS integration lock remains held.
     outcome: Safe mode, configuration diff, settings backup/restore and crash-recovery restore engine (F064, F057 engine)
     acceptance: Recover without deleting originals or unknown preferences; isolate bad layout or renderer overrides; preserve last-good state; restore lazily with explicit-open precedence; corrupted state and interrupted migration tests
+  - id: STARTUP-WINDOW-01
+    requirements: [SYS-03, SYS-05, UX-12]
+    milestone: M3
+    priority: 9
+    owner: lead
+    owner_lane: codex
+    state: ready
+    depends: [PLATFORM-01]
+    branch: codex/startup-window-01
+    worktree: .worktrees/codex-startup-window-01
+    build: build-codex-startup-window-01
+    plan: docs/STARTUP-WINDOW-01-PLAN.md
+    memory_action: act_mvi8zmfo_9655f6654d92
+    contract_review: Actual Sonnet5.5 accepted amended f9c8adc contract, sessionccabe0f2; initial outer-frame/degenerate-input amendments resolved. Implementation/integration not approved.
+    source_base: Reviewed SAFE7e8897975d507c29907d6a026792e1ea42b7cedd plus evidence-only commits, then merge main frozen contract; this is the authorized SAFE correction stack, not main integration approval
+    test_target_contract: cmake/StartupWindowGeometryTests.cmake; private API src/app/startup_window_geometry.hpp; lead removes implementation-presence guard at integration
+    start_gate: Lead returned SAFE to review for this runtime blocker; sole active Codex implementation, no concurrent SAFE or watcher correction
+    outcome: Recover wholly offscreen startup windows in Qt logical screen space before timed viewing, preserving valid placements and actual frame proof
+    acceptance: Bounded allocation-free pure geometry helper; negative origins, monitor gaps, mixed-DPI placement evidence, minimum controls and explicit-size semantics; no renderer/deadline/oracle weakening; bounded pre-grab position/exposure diagnostics; independent actual Sonnet5.5 review and complete locked Windows/Docker gates with mandatory new target
+    evidence: docs/verification/safe-mode-01/lead-integration-2026-10-21/README.md
   - id: FORMAT-02
     requirements: [FMT-02, FMT-03, FMT-06, PERF-03]
     milestone: M3
@@ -767,5 +817,24 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     plan: docs/PLATFORM-FIXTURE-SECURITY-01-PLAN.md
     memory_action: act_mvgrfsa8_be3125ae52b0
     evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+
+  - id: EXPORT-CSV-01
+    requirements: [SYS-06, SYS-02]
+    feature: F070
+    milestone: M4
+    priority: 6
+    owner: lead
+    owner_lane: gemini
+    reviewer_lane: codex or claude (first free reviewer slot; never gemini)
+    state: ready
+    depends: [DELETE-01]
+    branch: agent/export-csv
+    worktree: .worktrees/export-csv
+    build: build-export-csv
+    plan: docs/EXPORT-CSV-01-PLAN.md
+    contract: include/glancelot/selection_export.hpp; cmake/ExportTests.cmake (included when src/core/selection_export.cpp exists)
+    outcome: Selection CSV and path-list export engine for downstream tools (engine only; UI is a later Claude packet; JSON manifest stays with F030)
+    acceptance: RFC 4180 quoting; formula-injection neutralization; Unicode round-trip; relative-root policy with outside-root skip; revalidated snapshot; never overwrites an exported item; atomic temp-and-rename; cancellation leaves nothing behind; bounded items; generation echoed
+    verification: tests/selection_export_tests.cpp per plan section 4; actual ctest output; full Windows and Docker gates under gate_lock
     acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
     outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged

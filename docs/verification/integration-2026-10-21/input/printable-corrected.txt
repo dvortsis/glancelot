@@ -1,0 +1,130 @@
+********* Start testing of InputUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : InputUiTests::initTestCase()
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/PhotoGrid.qml:314:25: Unable to assign [undefined] to int
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() No QRhi found for window 0x218508dd860, QQuickRhiItem will not be functional
+PASS   : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm()
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/PhotoGrid.qml:314:25: Unable to assign [undefined] to int
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() No QRhi found for window 0x21852cd0e90, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() No QRhi found for window 0x21852cd0e90, QQuickRhiItem will not be functional
+PASS   : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt()
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() file:///C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/ui/PhotoGrid.qml:314:25: Unable to assign [undefined] to int
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() No QRhi found for window 0x218517e81a0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() No QRhi found for window 0x218517e81a0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys()
+PASS   : InputUiTests::cleanupTestCase()
+Totals: 5 passed, 0 failed, 0 skipped, 0 blacklisted, 7093ms
+********* Finished testing of InputUiTests *********

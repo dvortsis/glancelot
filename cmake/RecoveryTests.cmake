@@ -31,6 +31,9 @@ add_test(NAME recovery_startup COMMAND recovery_startup_tests
 set_tests_properties(recovery_startup PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
 
 qt_add_executable(recovery_controller_tests tests/recovery_controller_tests.cpp
+  src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
+  src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
+  src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
   src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
   src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
   ${glancelot_recovery_provider_sources} ${glancelot_recovery_implementation_sources})
