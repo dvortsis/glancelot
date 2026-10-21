@@ -109,3 +109,79 @@ Test project C:/src/Github/Glancelot/.worktrees/monitor-output/build-monitor-out
 100% tests passed out of 4
 Total Test time (real) =  10.28 sec
 ```
+
+
+
+### Full Windows Test Gate (`scripts/build.ps1 -Test` under Gate Lock)
+```text
+Test project C:/src/Github/Glancelot/.worktrees/monitor-output/build-monitor-output
+      Start  1: perf_trace
+ 1/33 Test  #1: perf_trace .......................   Passed    0.11 sec
+      Start  2: navigation
+ 2/33 Test  #2: navigation .......................   Passed    3.27 sec
+      Start  3: directory_listing
+ 3/33 Test  #3: directory_listing ................   Passed   21.23 sec
+      Start  4: file_operations
+ 4/33 Test  #4: file_operations ..................   Passed    0.25 sec
+      Start  5: viewer_acceptance
+ 5/33 Test  #5: viewer_acceptance ................   Passed    8.06 sec
+      Start  6: thumbnails
+ 6/33 Test  #6: thumbnails .......................   Passed    6.97 sec
+      Start  7: folder_tree
+ 7/33 Test  #7: folder_tree ......................   Passed    9.48 sec
+      Start  8: pane_layout
+ 8/33 Test  #8: pane_layout ......................   Passed    1.11 sec
+      Start  9: window_slots
+ 9/33 Test  #9: window_slots .....................   Passed   54.24 sec
+      Start 10: folder_grid
+10/33 Test #10: folder_grid ......................   Passed  243.78 sec
+      Start 11: file_operation_service
+11/33 Test #11: file_operation_service ...........   Passed    1.31 sec
+      Start 12: directory_model
+12/33 Test #12: directory_model ..................   Passed   39.86 sec
+      Start 13: viewport
+13/33 Test #13: viewport .........................   Passed    0.16 sec
+      Start 14: themes
+14/33 Test #14: themes ...........................   Passed    0.47 sec
+      Start 15: platform_integration
+15/33 Test #15: platform_integration .............   Passed    1.04 sec
+      Start 16: grid_search
+16/33 Test #16: grid_search ......................   Passed    0.36 sec
+      Start 17: grid_density
+17/33 Test #17: grid_density .....................   Passed    0.26 sec
+      Start 18: ui_settings
+18/33 Test #18: ui_settings ......................   Passed    0.33 sec
+      Start 19: fs_watch
+19/33 Test #19: fs_watch .........................   Passed   85.91 sec
+      Start 20: fs_watch_budget
+20/33 Test #20: fs_watch_budget ..................   Passed  118.41 sec
+      Start 21: fs_watch_ui
+21/33 Test #21: fs_watch_ui ......................   Passed    3.03 sec
+      Start 22: favorites
+22/33 Test #22: favorites ........................   Passed    0.62 sec
+      Start 23: folder_history
+23/33 Test #23: folder_history ...................   Passed    0.21 sec
+      Start 24: shortcuts_help
+24/33 Test #24: shortcuts_help ...................   Passed    0.20 sec
+      Start 25: filter
+25/33 Test #25: filter ...........................   Passed    2.75 sec
+      Start 26: cache
+26/33 Test #26: cache ............................   Passed    4.79 sec
+      Start 27: io_scheduler
+27/33 Test #27: io_scheduler .....................   Passed    0.32 sec
+      Start 28: metadata
+28/33 Test #28: metadata .........................   Passed    0.30 sec
+      Start 29: animation
+29/33 Test #29: animation ........................   Passed    0.49 sec
+      Start 30: mutation
+30/33 Test #30: mutation .........................   Passed    0.15 sec
+      Start 31: copy_move
+31/33 Test #31: copy_move ........................   Passed    0.24 sec
+      Start 32: format
+32/33 Test #32: format ...........................   Passed    0.19 sec
+      Start 33: monitor_output
+33/33 Test #33: monitor_output ...................   Passed    0.32 sec
+
+100% tests passed out of 33
+Total Test time (real) = 612.32 sec
+```
