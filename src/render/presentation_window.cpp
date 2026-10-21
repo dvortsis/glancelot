@@ -33,6 +33,9 @@ void PresentationWindow::setComparisonMode(bool comparison) {
     if (m_comparisonMode == comparison) return;
     m_comparisonMode = comparison;
     m_canvasB->setVisible(m_comparisonMode);
+    if (!m_comparisonMode && m_canvasB) {
+        m_canvasB->setImage(QImage());
+    }
     updateLayout();
 }
 
@@ -46,7 +49,9 @@ void PresentationWindow::setPrimaryImage(const QImage& image) {
 void PresentationWindow::setSecondaryImage(const QImage& image) {
     if (m_canvasB) {
         m_canvasB->setImage(image);
-        m_canvasB->fit(m_fitMode);
+        if (!image.isNull()) {
+            m_canvasB->fit(m_fitMode);
+        }
     }
 }
 
@@ -85,21 +90,62 @@ void PresentationWindow::updateLayout() {
 }
 
 void PresentationWindow::keyPressEvent(QKeyEvent* event) {
-    // Escape is the reserved dismiss key. The toggle key follows the user-rebindable binding
-    // of presentation-toggle (supplied by the owner); it is not hard-coded.
-    bool dismiss = event->key() == Qt::Key_Escape && event->modifiers() == Qt::NoModifier;
-    if (!dismiss && m_toggleBinding) {
-        const QKeySequence bound = QKeySequence::fromString(m_toggleBinding(), QKeySequence::PortableText);
-        dismiss = bound.count() == 1 && bound[0] == QKeyCombination(event->modifiers(), Qt::Key(event->key()));
+    switch (event->key()) {
+    case Qt::Key_Shift:
+    case Qt::Key_Control:
+    case Qt::Key_Alt:
+    case Qt::Key_Meta:
+    case Qt::Key_AltGr:
+        QQuickWindow::keyPressEvent(event);
+        return;
+    default:
+        break;
     }
-    if (dismiss) {
+
+    // Escape is the reserved dismiss key. If in a chord, Escape cancels the chord.
+    // If not in a chord, Escape dismisses the window.
+    if (event->key() == Qt::Key_Escape && event->modifiers() == Qt::NoModifier) {
+        if (!m_chordPrefix.isEmpty()) {
+            m_chordPrefix.clear();
+            event->accept();
+            return;
+        }
         event->accept();
-        // One close path only: the owner closes (and deletes) this window in response.
         emit escapePressed();
         return;
     }
 
+    if (m_toggleBinding) {
+        const QKeySequence bound = QKeySequence::fromString(m_toggleBinding(), QKeySequence::PortableText);
+        if (!bound.isEmpty()) {
+            const QKeyCombination currentCombo(event->modifiers(), Qt::Key(event->key()));
+            const int step = m_chordPrefix.size();
+            if (step < bound.count() && bound[step] == currentCombo) {
+                m_chordPrefix.append(currentCombo);
+                if (m_chordPrefix.size() == bound.count()) {
+                    m_chordPrefix.clear();
+                    event->accept();
+                    emit escapePressed();
+                    return;
+                }
+                event->accept();
+                return;
+            }
+            m_chordPrefix.clear();
+        }
+    }
+
     QQuickWindow::keyPressEvent(event);
+}
+
+void PresentationWindow::focusOutEvent(QFocusEvent* event) {
+    m_chordPrefix.clear();
+    QQuickWindow::focusOutEvent(event);
+}
+
+void PresentationWindow::hideEvent(QHideEvent* event) {
+    m_chordPrefix.clear();
+    QQuickWindow::hideEvent(event);
 }
 
 void PresentationWindow::closeEvent(QCloseEvent* event) {

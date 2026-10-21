@@ -453,6 +453,85 @@ private slots:
         QCOMPARE(closedSpy.count(), 2);
         flushDeletes();
     }
+
+    void testHiddenCanvasMustReleaseShedImage() {
+        const qint64 saved = glancelot::DisplayManager::imageBudgetBytes();
+        struct Reset { qint64 n; ~Reset() { glancelot::DisplayManager::setImageBudgetBytes(n); } } reset{saved};
+        glancelot::DisplayManager dm;
+        QVERIFY(dm.openPresentation());
+        dm.updateImage("a", createTestImage(40, 40, Qt::red), 1);
+        dm.setComparisonImage("b", createTestImage(40, 40, Qt::blue), 2);
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QVERIFY(pw);
+        dm.setMode(glancelot::PresentationMode::Mirror);
+        const qint64 one = 40 * 40 * 4;
+        glancelot::DisplayManager::setImageBudgetBytes(one);
+        dm.updateImage("c", createTestImage(40, 40, Qt::green), 3);
+        QCOMPARE(dm.retainedImageBytes(), one);
+        dm.releaseCachedImages();
+        QVERIFY2(pw->secondaryCanvas()->image().isNull(), "Shed/low-memory-released secondary pixels are retained by the hidden canvas outside accounting");
+        dm.closePresentation();
+        flushDeletes();
+    }
+
+    void testOldComparisonCannotOverrideNewCompareCommand() {
+        glancelot::DisplayManager dm;
+        QVERIFY(dm.openPresentation());
+        dm.updateImage("a", createTestImage(64, 64, Qt::red), 1);
+        dm.updateImage("b", createTestImage(80, 80, Qt::green), 2);
+        dm.setComparisonImage("new", createTestImage(40, 40, Qt::blue), 20);
+        dm.compareWithPinnedOrPrevious();
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(64, 64));
+        dm.setComparisonImage("old", createTestImage(30, 30, Qt::yellow), 7);
+        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(64, 64));
+        dm.closePresentation();
+        flushDeletes();
+    }
+
+    void testInvalidFitMustNotDestroyRememberedFit() {
+        glancelot::DisplayManager dm;
+        QVERIFY(dm.openPresentation());
+        dm.setOutputFitMode("fill");
+        dm.setOutputFitMode("bogus");
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
+        dm.closePresentation();
+        QVERIFY(dm.openPresentation());
+        pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
+        dm.closePresentation();
+        flushDeletes();
+    }
+
+    void testChordToggleKeyDismissesAndEscapeCancelsChord() {
+        glancelot::DisplayManager dm;
+        dm.setToggleBindingProvider([] { return QStringLiteral("Ctrl+K, P"); });
+        QSignalSpy closedSpy(&dm, &glancelot::DisplayManager::presentationClosed);
+        dm.openPresentation();
+        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
+        QVERIFY(pw);
+
+        // Step 1: chord prefix Ctrl+K
+        QKeyEvent step1(QEvent::KeyPress, Qt::Key_K, Qt::ControlModifier);
+        QCoreApplication::sendEvent(pw, &step1);
+        QVERIFY(dm.isPresentationActive());
+
+        // Escape cancels chord without closing window
+        QKeyEvent escCancel(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(pw, &escCancel);
+        QVERIFY(dm.isPresentationActive());
+        QCOMPARE(closedSpy.count(), 0);
+
+        // Retrying: step 1 Ctrl+K, then step 2 P -> dismisses!
+        QCoreApplication::sendEvent(pw, &step1);
+        QVERIFY(dm.isPresentationActive());
+        QKeyEvent step2(QEvent::KeyPress, Qt::Key_P, Qt::NoModifier);
+        QCoreApplication::sendEvent(pw, &step2);
+        QVERIFY(!dm.isPresentationActive());
+        QCOMPARE(closedSpy.count(), 1);
+        flushDeletes();
+    }
 };
 
 int main(int argc, char** argv) {

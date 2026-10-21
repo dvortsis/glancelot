@@ -4,6 +4,10 @@
 #include <QKeyEvent>
 #include <QCloseEvent>
 #include <QResizeEvent>
+#include <QFocusEvent>
+#include <QHideEvent>
+#include <QList>
+#include <QKeyCombination>
 
 #include <functional>
 
@@ -42,6 +46,8 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
 
 private:
     void updateLayout();
@@ -51,6 +57,7 @@ private:
     bool m_comparisonMode{false};
     QString m_fitMode{"shrink"};
     std::function<QString()> m_toggleBinding;
+    QList<QKeyCombination> m_chordPrefix;
 };
 
 void registerPresentationWindowFactory();

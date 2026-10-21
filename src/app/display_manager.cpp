@@ -9,6 +9,9 @@
 #include <QHash>
 #include <QSet>
 #ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -88,6 +91,7 @@ struct DisplayManager::Private {
     QString comparisonPath;
     QImage comparisonImage;
     quint64 comparisonGeneration{0};
+    quint64 comparisonGenerationHighWater{0};
 
     QString previousPath;
     QImage previousImage;
@@ -157,14 +161,21 @@ struct DisplayManager::Private {
     void enforceBudget() {
         if (retainedBytes() <= s_imageBudgetBytes) return;
         previousImage = QImage(); previousPath.clear();
-        if (retainedBytes() <= s_imageBudgetBytes) return;
+        if (retainedBytes() <= s_imageBudgetBytes) {
+            applyImagesToWindow();
+            return;
+        }
         comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0;
-        if (retainedBytes() <= s_imageBudgetBytes) return;
+        if (retainedBytes() <= s_imageBudgetBytes) {
+            applyImagesToWindow();
+            return;
+        }
         if (!pinnedImage.isNull()) {
             pinnedImage = QImage(); pinnedPath.clear(); pinnedGeneration = 0;
             emit q->pinnedPathChanged(pinnedPath);
             if (mode == PresentationMode::Pinned) q->setMode(PresentationMode::Mirror);
         }
+        applyImagesToWindow();
     }
 
     void applyImagesToWindow() {
@@ -175,12 +186,14 @@ struct DisplayManager::Private {
 
         if (mode == PresentationMode::Pinned) {
             presentationWindow->setPrimaryImage(pinnedImage);
+            presentationWindow->setSecondaryImage(QImage());
         } else if (mode == PresentationMode::Comparison) {
             presentationWindow->setPrimaryImage(currentImage);
             presentationWindow->setSecondaryImage(secondaryImage());
         } else {
             // Mirror
             presentationWindow->setPrimaryImage(currentImage);
+            presentationWindow->setSecondaryImage(QImage());
         }
     }
 };
@@ -402,6 +415,8 @@ void DisplayManager::closePresentation() {
     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
 
     if (d->presentationWindow) {
+        d->presentationWindow->setPrimaryImage(QImage());
+        d->presentationWindow->setSecondaryImage(QImage());
         d->presentationWindow->hide();
         d->presentationWindow->deleteLater();
         d->presentationWindow.reset();
@@ -447,6 +462,7 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
     d->currentPath = path;
     d->currentImage = image;
     d->currentGeneration = generation;
+    d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
     d->enforceBudget();
 
     if (d->mode == PresentationMode::Mirror || d->mode == PresentationMode::Comparison) {
@@ -480,7 +496,8 @@ void DisplayManager::unpin() {
 }
 
 void DisplayManager::setComparisonImage(const QString& path, const QImage& image, quint64 generation) {
-    if (generation < d->comparisonGeneration) return;   // stale comparison request
+    if (generation < d->comparisonGenerationHighWater) return;   // stale comparison request
+    d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
     d->comparisonPath = path;
     d->comparisonImage = image;
     d->comparisonGeneration = generation;
@@ -491,11 +508,19 @@ void DisplayManager::setComparisonImage(const QString& path, const QImage& image
 
 void DisplayManager::compareWithPinnedOrPrevious() {
     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
+    d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, d->currentGeneration);
     setMode(PresentationMode::Comparison);
     d->applyImagesToWindow();
 }
 
+static bool isValidFitMode(const QString& mode) {
+    return (mode == QLatin1String("shrink") || mode == QLatin1String("fit") ||
+            mode == QLatin1String("fill") || mode == QLatin1String("width") ||
+            mode == QLatin1String("height"));
+}
+
 void DisplayManager::setOutputFitMode(const QString& mode) {
+    if (!isValidFitMode(mode)) return;
     if (!d->active || d->activeId.isEmpty()) return;
     d->fitModes[d->activeId] = mode;
     if (d->presentationWindow) d->presentationWindow->setFitMode(mode);
@@ -511,6 +536,9 @@ void DisplayManager::releaseCachedImages() {
     d->previousImage = QImage(); d->previousPath.clear();
     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
     d->applyImagesToWindow();
+    if (d->presentationWindow && d->mode != PresentationMode::Comparison) {
+        d->presentationWindow->setSecondaryImage(QImage());
+    }
 }
 
 void DisplayManager::setToggleBindingProvider(std::function<QString()> provider) {
