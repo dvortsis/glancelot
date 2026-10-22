@@ -17,6 +17,7 @@
 #include <QSet>
 #include <QTemporaryDir>
 #include <QThread>
+#include <QTranslator>
 #include <QtTest>
 #include <QScopeGuard>
 #include <array>
@@ -159,6 +160,10 @@ private slots:
     void scopeAwareConflictsAndChordPrefixes();
     void scopedBindingsPersistAndReload();
     void wheelModifiersPersistFallBackIndividuallyAndMerge();
+    void bindingProblemExplainsEveryRefusal();
+    void accessibilityOptionsPersistAndReset();
+    void tabsKeepLocationsAndRestoreWithTheWindow();
+    void commandNamesAreTranslatable();
 };
 
 void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
@@ -938,6 +943,86 @@ void WindowSlotTests::wheelModifiersPersistFallBackIndividuallyAndMerge() {
     QCOMPARE(stored.value("ctrl").toString(), QString("pan"));
     QCOMPARE(stored.value("alt").toString(), QString("navigate"));
     QCOMPARE(stored.value("future").toString(), QString("kept"));
+}
+// F051: every refusal comes with a sentence; a shortcut that can be saved has none.
+void WindowSlotTests::bindingProblemExplainsEveryRefusal() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    ViewerController viewer;
+    QCOMPARE(viewer.bindingProblem("rotate", ""), QString());                 // clearing is always fine
+    QCOMPARE(viewer.bindingProblem("rotate", "Ctrl+Alt+J"), QString());
+    QCOMPARE(viewer.bindingProblem("rotate", "Ctrl+K, Ctrl+C"), QString());
+    QVERIFY(viewer.bindingProblem("rotate", "Escape").contains("Escape"));
+    QVERIFY(viewer.bindingProblem("rotate", "Ctrl+K, Ctrl+C, Ctrl+V").contains("two"));
+    QVERIFY(viewer.bindingProblem("hold-actual", "Ctrl+J, Ctrl+Z").contains("one key"));
+    const QString taken = viewer.bindingProblem("rotate", "Right");           // belongs to "Next image"
+    QVERIFY2(taken.contains("Already used by") && taken.contains("Next image"), qPrintable(taken));
+    QVERIFY(viewer.bindingProblem("rotate", "G, D").contains("Toggle folder grid")); // chord prefix on a global key
+    QCOMPARE(viewer.bindingProblem("no-such-command", "F9"), QString());
+    QCOMPARE(viewer.keyStep(Qt::Key_J, Qt::ControlModifier), QString("Ctrl+J"));
+    QCOMPARE(viewer.keyStep(Qt::Key_Right, Qt::NoModifier), QString("Right"));
+}
+// F053: both options default off, persist, and "Reset appearance" clears them.
+void WindowSlotTests::accessibilityOptionsPersistAndReset() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    { ViewerController v; QVERIFY(!v.highContrast() && !v.largeTargets()); v.setHighContrast(true); v.setLargeTargets(true); }
+    { ViewerController v; QVERIFY(v.highContrast() && v.largeTargets());
+      const auto root = settingsOf(config.path());
+      QVERIFY(root.value("highContrast").toBool() && root.value("largeTargets").toBool()); }
+    QString error;
+    QVERIFY(glancelot::resetSection("appearance", &error));
+    ViewerController after; QVERIFY(!after.highContrast() && !after.largeTargets());
+}
+// F015 (shape A): a tab is a saved location; switching navigates; the set persists with the window and restores.
+void WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow() {
+    QTemporaryDir config, media; QVERIFY(config.isValid() && media.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    QVERIFY(QDir(media.path()).mkpath("alpha") && QDir(media.path()).mkpath("beta"));
+    QImage image(32, 24, QImage::Format_RGB32); image.fill(Qt::darkGreen);
+    const QString a = QDir(media.path()).filePath("alpha/a.png"), b = QDir(media.path()).filePath("beta/b.png");
+    QVERIFY(image.save(a) && image.save(b));
+    auto same = [](const QString& x, const QString& y) { return QDir::cleanPath(x).compare(QDir::cleanPath(y), Qt::CaseInsensitive) == 0; };
+    {
+        ViewerController v; v.setWindowSlot(6);
+        QVERIFY(v.tabs().isEmpty()); QVERIFY(!v.closeTab(0)); QVERIFY(!v.activateTab(1)); // one implicit tab
+        v.open(a); QTRY_VERIFY(v.imageReady());
+        QVERIFY(v.newTab()); QCOMPARE(v.tabs().size(), 2); QCOMPARE(v.activeTab(), 1);
+        v.open(b); QTRY_VERIFY(v.imageReady() && same(v.filePath(), b));
+        QCOMPARE(v.tabs().at(1).toMap().value("title").toString(), QString("beta"));
+        QCOMPARE(v.tabs().at(0).toMap().value("title").toString(), QString("alpha"));
+        QVERIFY(v.activateTab(0)); QTRY_VERIFY(same(v.filePath(), a)); QCOMPARE(v.activeTab(), 0);
+        QVERIFY(v.activateTab(1)); QTRY_VERIFY(same(v.filePath(), b));
+        for (int i = 0; i < 6; ++i) QVERIFY(v.newTab()); QVERIFY(!v.newTab()); QCOMPARE(v.tabs().size(), 8); // at most eight
+        while (v.tabs().size() > 2) QVERIFY(v.closeTab(v.tabs().size() - 1));
+        v.flushWindowPosition();
+    }
+    {   ViewerController w; w.setWindowSlot(6); w.restoreWindow();
+        QTRY_VERIFY(w.imageReady());
+        QCOMPARE(w.tabs().size(), 2);
+        QVERIFY(same(w.tabs().at(0).toMap().value("folder").toString(), QDir(media.path()).filePath("alpha")));
+        QCOMPARE(w.activeTab(), w.tabs().at(1).toMap().value("active").toBool() ? 1 : 0);
+        QVERIFY(w.closeTab(w.activeTab())); QVERIFY(w.tabs().isEmpty()); // closing down to one hides the strip
+        QTRY_VERIFY(w.imageReady() || !w.directory().isEmpty());
+    }
+}
+// F054: command names go through the Commands translation context, with the English text as the key.
+void WindowSlotTests::commandNamesAreTranslatable() {
+    struct Spanish : QTranslator {
+        QString translate(const char* context, const char* source, const char*, int) const override {
+            return QByteArray(context) == "Commands" && QByteArray(source) == "Next image" ? QStringLiteral("Imagen siguiente") : QString();
+        }
+        bool isEmpty() const override { return false; }
+    } spanish;
+    QTemporaryDir config; QVERIFY(config.isValid()); qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    auto label = [](ViewerController& v, const QString& id) { for (const auto& r : v.commands()) if (r.toMap().value("id").toString() == id) return r.toMap().value("label").toString(); return QString(); };
+    ViewerController v;
+    QCOMPARE(label(v, "next"), QString("Next image"));
+    QVERIFY(QCoreApplication::installTranslator(&spanish));
+    QCOMPARE(label(v, "next"), QString("Imagen siguiente"));
+    QCOMPARE(label(v, "previous"), QString("Previous image")); // an untranslated name falls back to English
+    QCoreApplication::removeTranslator(&spanish);
+    QCOMPARE(label(v, "next"), QString("Next image"));
 }
 #include "window_slot_tests.moc"
 

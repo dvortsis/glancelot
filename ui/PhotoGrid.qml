@@ -57,8 +57,11 @@ Rectangle {
     }
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
+    // F009: one row per item with name, size and modified time instead of thumbnail tiles.
+    property bool details: false
+    function sizeText(bytes) { return bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : bytes < 1073741824 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1073741824).toFixed(2) + " GB" }
     readonly property int targetWidth: compact ? Math.max(96, Math.floor(currentBucketSize * 0.85)) : (currentBucketSize + 16)
-    readonly property int columns: Math.max(1, Math.min(24, Math.floor(grid.width / targetWidth)))
+    readonly property int columns: details ? 1 : Math.max(1, Math.min(24, Math.floor(grid.width / targetWidth)))
     readonly property int count: grid.count
     readonly property int thumbEdge: currentBucketSize >= 220 ? 512 : 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
@@ -261,8 +264,8 @@ Rectangle {
                 objectName: "gridParent"
                 iconName: "corner-up"
                 iconOnly: true
-                text: "Up one folder"
-                tip: "Up one folder (Backspace or Alt+Up)"
+                text: qsTr("Up one folder")
+                tip: qsTr("Up one folder (Backspace or Alt+Up)")
                 enabled: panel.parentPath.length > 0 && panel.inputEnabled
                 focusPolicy: Qt.NoFocus
                 onClicked: panel.goUp()
@@ -283,11 +286,34 @@ Rectangle {
                 font.weight: Font.Medium
                 Accessible.name: "Folder " + panel.folderPath
             }
+            Row { // F042 type chips: show only folders, photos or other files; a second click (or Esc) clears
+                objectName: "gridKindChips"
+                visible: panel.width >= 600 && fileGrid.directory.length > 0
+                spacing: Theme.gapXxs
+                Accessible.role: Accessible.Grouping
+                Accessible.name: qsTr("Show only")
+                Repeater {
+                    model: [{ id: "folder", label: qsTr("Folders") }, { id: "image", label: qsTr("Photos") }, { id: "file", label: qsTr("Other files") }]
+                    delegate: UiButton {
+                        required property var modelData
+                        objectName: "gridKind-" + modelData.id
+                        text: modelData.label
+                        selected: fileGrid.kindFilter === modelData.id
+                        implicitHeight: Theme.controlHeight - Theme.gapSm
+                        focusPolicy: Qt.NoFocus
+                        Accessible.role: Accessible.CheckBox
+                        Accessible.checkable: true
+                        Accessible.checked: selected
+                        Accessible.name: qsTr("Show only %1").arg(modelData.label)
+                        onClicked: fileGrid.kindFilter = (fileGrid.kindFilter === modelData.id ? "" : modelData.id)
+                    }
+                }
+            }
             Label {
                 objectName: "gridItemCount"
                 visible: fileGrid.count > 0 && panel.width >= 480
-                text: fileGrid.hasFilter ? (fileGrid.count === 1 ? "1 match" : fileGrid.count.toLocaleString(Qt.locale(), "f", 0) + " matches")
-                                         : (fileGrid.count === 1 ? "1 item" : fileGrid.count.toLocaleString(Qt.locale(), "f", 0) + " items")
+                text: fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match") : qsTr("%1 matches").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0)))
+                                         : (fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0)))
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.features: { "tnum": 1 }
@@ -405,8 +431,8 @@ Rectangle {
                         objectName: "gridInvertSelection"
                         iconName: "refresh"
                         iconOnly: true
-                        text: "Invert selection"
-                        tip: "Invert selection (Ctrl+I)"
+                        text: qsTr("Invert selection")
+                        tip: qsTr("Invert selection (Ctrl+I)")
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
@@ -416,8 +442,8 @@ Rectangle {
                         objectName: "gridClearSelection"
                         iconName: "close"
                         iconOnly: true
-                        text: "Clear selection"
-                        tip: "Clear selection (Esc)"
+                        text: qsTr("Clear selection")
+                        tip: qsTr("Clear selection (Esc)")
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
@@ -428,7 +454,7 @@ Rectangle {
             Label { // a known read-only drive: the action stays visible, disabled, with the reason beside it
                 objectName: "gridTrashBlocked"
                 visible: panel.deleteBlocked && fileGrid.selectedCount > 0
-                text: "Read-only drive"
+                text: qsTr("Read-only drive")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
             }
@@ -460,7 +486,7 @@ Rectangle {
             id: truncatedText
             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Theme.gapMd }
             // The limit keeps enumeration order, not display order, so this must not claim "the first" items.
-            text: "Showing 100,000 items. This folder has more that are not listed here."
+            text: qsTr("Showing 100,000 items. This folder has more that are not listed here.")
             wrapMode: Text.Wrap
             color: Theme.text
             font.pixelSize: Theme.textSmall
@@ -478,7 +504,7 @@ Rectangle {
         cellWidth: width / panel.columns
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
-        cellHeight: panel.compact
+        cellHeight: panel.details ? Theme.rowHeight + Theme.gapSm : panel.compact
                     ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(panel.currentBucketSize, cellWidth * 0.6 + 40))))
                                      : Math.max(100, height))
                     : Math.max(Math.floor(panel.currentBucketSize * 0.9), Math.min(Math.floor(panel.currentBucketSize * 1.4), cellWidth * 0.75 + 46),
@@ -490,7 +516,7 @@ Rectangle {
         enabled: panel.inputEnabled
         Accessible.role: Accessible.List
         Accessible.name: "Items in " + panel.folderPath
-        Accessible.description: "Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo."
+        Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo.")
         ScrollBar.vertical: UiScrollBar { }
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier
@@ -656,10 +682,12 @@ Rectangle {
             required property bool isLink
             required property bool isSelected
             required property bool isCursor
+            required property var size
+            required property var modified
             required property bool isCurrent
             readonly property bool selected: isSelected
             readonly property bool image: kind === "image"
-            readonly property bool previewFailed: image && thumb.status === Image.Error
+            property bool previewFailed: false // set by the tile's image (it lives in the tile component, absent in details mode)
             readonly property string extension: panel.fileExtension(name)
             objectName: "photoGridCell"
             Component.onCompleted: ++panel.liveDelegateCount
@@ -696,7 +724,10 @@ Rectangle {
                 border.width: cursorRing || cell.isSelected ? Theme.focusWidth : 0
                 border.color: cursorRing ? Theme.focusRing : Theme.primary
             }
-            contentItem: Column {
+            contentItem: Loader { sourceComponent: panel.details ? detailsComp : tileComp }
+            Component {
+                id: tileComp
+            Column {
                 spacing: Theme.gapXs + Theme.gapXxs
                 Item {
                     id: preview
@@ -714,6 +745,8 @@ Rectangle {
                         sourceSize.height: panel.thumbEdge
                         fillMode: Image.PreserveAspectFit
                         visible: status === Image.Ready
+                        onStatusChanged: cell.previewFailed = cell.image && status === Image.Error
+                        Component.onDestruction: cell.previewFailed = false
                     }
                     Label {
                         anchors.centerIn: parent
@@ -748,6 +781,39 @@ Rectangle {
                             font.letterSpacing: 0.4
                         }
                     }
+                    // F014 badges from data the grid already has: the photo type, and a failed preview. Words, not colour
+                    // alone; they sit on the left edge so the link badge (right) and the "Viewing" tag (bottom) stay clear.
+                    Rectangle {
+                        objectName: "gridTypeBadge"
+                        visible: cell.image && cell.extension.length > 0 && preview.width >= 96
+                        anchors { left: parent.left; top: parent.top; margins: Theme.gapXs }
+                        width: typeLabel.implicitWidth + 2 * Theme.gapXs
+                        height: Theme.iconSize + Theme.gapXs
+                        radius: Theme.radiusSmall
+                        color: Theme.surface
+                        border.width: Theme.borderWidth
+                        border.color: Theme.border
+                        Accessible.ignored: true // the extension is already in the cell's description
+                        Label { id: typeLabel; anchors.centerIn: parent; text: cell.extension; color: Theme.text; font.pixelSize: Theme.textCaption; font.weight: Font.Medium; font.letterSpacing: 0.4 }
+                    }
+                    Rectangle {
+                        objectName: "gridErrorBadge"
+                        visible: cell.previewFailed
+                        anchors { left: parent.left; bottom: parent.bottom; margins: Theme.gapXs }
+                        width: errorRow.implicitWidth + 2 * Theme.gapXs
+                        height: Theme.iconSize + Theme.gapXs
+                        radius: Theme.radiusSmall
+                        color: Theme.surface
+                        border.width: Theme.borderWidth
+                        border.color: Theme.danger
+                        RowLayout {
+                            id: errorRow
+                            anchors.centerIn: parent
+                            spacing: Theme.gapXxs
+                            UiIcon { name: "alert"; size: 12; lineWidth: 2; color: Theme.danger }
+                            Label { text: qsTr("No preview"); visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
+                        }
+                    }
                     Rectangle { // link badge
                         objectName: "gridLinkBadge"
                         visible: cell.isLink
@@ -763,13 +829,13 @@ Rectangle {
                             anchors.centerIn: parent
                             spacing: Theme.gapXxs
                             UiIcon { name: "link"; size: 12; lineWidth: 2; color: Theme.text }
-                            Label { text: "Link"; visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
+                            Label { text: qsTr("Link"); visible: preview.width >= 96; color: Theme.text; font.pixelSize: Theme.textCaption }
                         }
                     }
                     Label { // tag
                         anchors { left: parent.left; bottom: parent.bottom; margins: Theme.gapXs }
                         visible: cell.isCurrent
-                        text: "Viewing"
+                        text: qsTr("Viewing")
                         leftPadding: Theme.gapXs + Theme.gapXxs; rightPadding: leftPadding
                         topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
                         font.pixelSize: Theme.textCaption
@@ -785,6 +851,26 @@ Rectangle {
                     elide: Text.ElideMiddle
                     color: Theme.text
                     font.pixelSize: Theme.textSmall
+                }
+            }
+            }
+            Component {
+                id: detailsComp
+                // F009 details row: name, size and modified time on one line; no thumbnail is requested in this mode.
+                RowLayout {
+                    spacing: Theme.gapMd
+                    UiIcon { name: cell.kind === "folder" ? "folder" : cell.image ? "image" : "file"; color: cell.kind === "folder" ? Theme.text : Theme.muted }
+                    Label { Layout.fillWidth: true; text: cell.name; elide: Text.ElideMiddle; color: Theme.text; font.pixelSize: Theme.textBody }
+                    Label {
+                        Layout.preferredWidth: 84; horizontalAlignment: Text.AlignRight
+                        text: cell.kind === "folder" ? "" : panel.sizeText(cell.size)
+                        color: Theme.muted; font.pixelSize: Theme.textSmall; font.features: { "tnum": 1 }
+                    }
+                    Label {
+                        Layout.preferredWidth: panel.width >= 520 ? 150 : 0; visible: panel.width >= 520
+                        text: cell.modified ? Qt.formatDateTime(cell.modified, "yyyy-MM-dd HH:mm") : ""
+                        color: Theme.muted; font.pixelSize: Theme.textSmall; font.features: { "tnum": 1 }
+                    }
                 }
             }
         }
@@ -835,14 +921,14 @@ Rectangle {
                 objectName: "gridRetry"
                 visible: panel.stateName === "inaccessible"
                 variant: "outline"
-                text: "Try again"
+                text: qsTr("Try again")
                 onClicked: fileGrid.refresh()
             }
             UiButton {
                 visible: (panel.stateName === "empty" || panel.stateName === "inaccessible") && panel.parentPath.length > 0
                 variant: "outline"
                 iconName: "corner-up"
-                text: "Up one folder"
+                text: qsTr("Up one folder")
                 onClicked: panel.goUp()
             }
         }

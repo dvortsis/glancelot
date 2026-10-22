@@ -25,7 +25,7 @@ UiDialog {
         { id: "about", label: "About", icon: "info" }
     ]
     readonly property int sectionIndex: Math.max(0, sections.findIndex(item => item.id === section))
-    title: "Settings"
+    title: qsTr("Settings")
 
     function cleanPath(url) {
         let path = url.toString()
@@ -169,9 +169,9 @@ UiDialog {
                 objectName: "settingsSearch"
                 Layout.fillWidth: true
                 searchIcon: true
-                placeholderText: "Search settings..."
+                placeholderText: qsTr("Search settings...")
                 Accessible.name: "Search settings"
-                Accessible.description: "Filters visible settings across all sections."
+                Accessible.description: qsTr("Filters visible settings across all sections.")
                 onTextChanged: {
                     if (text.trim().length > 0 && !dialog.sectionMatches(dialog.section)) {
                         for (const sec of dialog.sections) {
@@ -226,10 +226,10 @@ UiDialog {
             currentIndex: dialog.sectionIndex
 
             Page {
-                heading: "Appearance"
+                heading: qsTr("Appearance")
                 SettingRow {
-                    label: "Mode"
-                    description: "Follow system matches the light or dark setting of your desktop."
+                    label: qsTr("Mode")
+                    description: qsTr("Follow system matches the light or dark setting of your desktop.")
                     visible: dialog.rowMatches(label, description)
                     modified: theme.mode !== "system"
                     UiComboBox {
@@ -240,8 +240,8 @@ UiDialog {
                     }
                 }
                 SettingRow {
-                    label: "Text size"
-                    description: "Scale interface text and controls proportionally."
+                    label: qsTr("Text size")
+                    description: qsTr("Scale interface text and controls proportionally.")
                     visible: dialog.rowMatches(label, description)
                     modified: Math.abs(viewer.textScale - 1.0) > 0.01
                     RowLayout {
@@ -268,13 +268,13 @@ UiDialog {
                 }
                 UiSwitch {
                     Layout.fillWidth: true
-                    text: "Reduced motion"
-                    description: "Disables non-essential animations across the interface."
+                    text: qsTr("Reduced motion")
+                    description: qsTr("Disables non-essential animations across the interface.")
                     visible: dialog.rowMatches(text, description)
                     checked: viewer.reducedMotion
                     onToggled: viewer.reducedMotion = checked
                 }
-                SectionLabel { text: "Palette"; visible: dialog.rowMatches("Palette", "Themes and color palettes") }
+                SectionLabel { text: qsTr("Palette"); visible: dialog.rowMatches("Palette", "Themes and color palettes") }
                 ThemePicker { Layout.fillWidth: true; visible: dialog.rowMatches("Palette", "Themes and color palettes") }
                 Note {
                     text: theme.error || "Changes apply immediately and are saved. Palettes colour the interface only; photo pixels and the canvas backdrop are unchanged."
@@ -282,7 +282,7 @@ UiDialog {
                     visible: dialog.rowMatches("Palette", text)
                 }
                 UiButton {
-                    text: "Reset appearance to defaults"
+                    text: qsTr("Reset appearance to defaults")
                     variant: "outline"
                     Layout.topMargin: Theme.gapSm
                     visible: dialog.rowMatches(text, "Reset appearance settings to default values")
@@ -294,9 +294,9 @@ UiDialog {
             }
 
             Page {
-                heading: "Viewing"
+                heading: qsTr("Viewing")
                 SettingRow {
-                    label: "Fit current photo"
+                    label: qsTr("Fit current photo")
                     description: viewer.imageWidth > 0 ? "Each newly opened photo starts at Shrink only." : "Open a photo to change how it fits."
                     visible: dialog.rowMatches(label, description)
                     UiComboBox {
@@ -310,8 +310,8 @@ UiDialog {
                     }
                 }
                 SettingRow {
-                    label: "Mouse wheel"
-                    description: "Ctrl + wheel always zooms at the pointer; Shift + wheel pans sideways."
+                    label: qsTr("Mouse wheel")
+                    description: qsTr("Ctrl + wheel always zooms at the pointer; Shift + wheel pans sideways.")
                     visible: dialog.rowMatches(label, description)
                     modified: viewer.wheelMode !== "navigate"
                     UiComboBox {
@@ -322,33 +322,33 @@ UiDialog {
                     }
                 }
                 SettingRow {
-                    label: "Canvas backdrop"
+                    label: qsTr("Canvas backdrop")
                     description: dialog.host.gridMode ? "Switch to photo view to change the canvas backdrop." : "Steps through the backdrop colours behind the photo" + (viewer.bindingFor("background").length ? " (" + viewer.bindingFor("background") + ")." : ".")
                     visible: dialog.rowMatches(label, description)
-                    UiButton { text: "Next backdrop"; variant: "outline"; enabled: !dialog.host.gridMode; onClicked: dialog.host.invoke("background") }
+                    UiButton { text: qsTr("Next backdrop"); variant: "outline"; enabled: !dialog.host.gridMode; onClicked: dialog.host.invoke("background") }
                 }
                 UiSwitch {
                     Layout.fillWidth: true
-                    text: "Nearest-neighbour sampling"
-                    description: "Shows individual pixels sharply when zoomed in."
+                    text: qsTr("Nearest-neighbour sampling")
+                    description: qsTr("Shows individual pixels sharply when zoomed in.")
                     visible: dialog.rowMatches(text, description)
                     checked: dialog.photoCanvas.nearest
                     onToggled: dialog.photoCanvas.nearest = checked
                 }
                 UiSwitch {
                     Layout.fillWidth: true
-                    text: "Frameless window"
-                    description: "Hides the system title bar. Drag the top bar to move the window."
+                    text: qsTr("Frameless window")
+                    description: qsTr("Hides the system title bar. Drag the top bar to move the window.")
                     visible: dialog.rowMatches(text, description)
                     checked: dialog.host.frameless
                     onToggled: dialog.host.frameless = checked
                 }
                 Note {
-                    text: "Drag to pan. Hold the right mouse button for a 100% loupe. Double-click toggles full screen."
+                    text: qsTr("Drag to pan. Hold the right mouse button for a 100% loupe. Double-click toggles full screen.")
                     visible: dialog.rowMatches("Viewing controls", text)
                 }
                 UiButton {
-                    text: "Reset viewing to defaults"
+                    text: qsTr("Reset viewing to defaults")
                     variant: "outline"
                     Layout.topMargin: Theme.gapSm
                     visible: dialog.rowMatches(text, "Reset viewing settings to default values")
@@ -360,28 +360,76 @@ UiDialog {
             }
 
             Page {
-                heading: "Browsing"
-                SectionLabel { text: "Workspace layout" }
+                heading: qsTr("Browsing")
+                SectionLabel { text: qsTr("Workspace layout") }
                 UiButton {
                     objectName: "openMonitorSettings"
-                    text: "Displays and workspaces…"
+                    text: qsTr("Displays and workspaces…")
                     Layout.fillWidth: true
                     onClicked: { dialog.close(); host.invoke("monitor-settings") }
                 }
                 UiButton {
-                    text: "Arrange panes"
+                    text: qsTr("Arrange panes")
                     onClicked: { dialog.close();dialog.host.layoutEditing=true }
                 }
                 UiSwitch {
                     objectName: "layoutLock"
                     Layout.fillWidth: true
-                    text: "Lock workspace layout"
-                    description: "Keep pane positions and sizes fixed while using their contents."
+                    text: qsTr("Lock workspace layout")
+                    description: qsTr("Keep pane positions and sizes fixed while using their contents.")
                     checked: paneLayout.locked
                     onToggled: paneLayout.locked = checked
                 }
+                // F049 presets: apply a saved arrangement in one step; save the current one under a name.
                 SettingRow {
-                    label: "Pane"
+                    label: qsTr("Layout preset")
+                    description: qsTr("Review, Browse and Default are built in; your own saved layouts follow.")
+                    RowLayout {
+                        spacing: Theme.gapSm
+                        UiComboBox {
+                            id: presetChoice
+                            objectName: "layoutPresetChoice"
+                            model: paneLayout.presetNames
+                            Accessible.name: "Layout preset"
+                        }
+                        UiButton {
+                            objectName: "layoutPresetApply"
+                            text: qsTr("Apply")
+                            enabled: !paneLayout.locked && presetChoice.currentIndex >= 0
+                            onClicked: paneLayout.applyPreset(presetChoice.currentText)
+                        }
+                        UiButton {
+                            objectName: "layoutPresetDelete"
+                            text: qsTr("Delete")
+                            variant: "outline"
+                            enabled: presetChoice.currentIndex >= 0 && !paneLayout.isBuiltInPreset(presetChoice.currentText)
+                            onClicked: paneLayout.deletePreset(presetChoice.currentText)
+                        }
+                    }
+                }
+                SettingRow {
+                    label: qsTr("Save current layout as")
+                    RowLayout {
+                        spacing: Theme.gapSm
+                        UiTextField {
+                            id: presetName
+                            objectName: "layoutPresetName"
+                            implicitWidth: 180
+                            placeholderText: qsTr("Preset name")
+                            maximumLength: 40
+                            Accessible.name: "Name for the new layout preset"
+                            onAccepted: if (paneLayout.savePreset(text.trim())) text = ""
+                        }
+                        UiButton {
+                            objectName: "layoutPresetSave"
+                            text: qsTr("Save")
+                            enabled: presetName.text.trim().length > 0
+                            onClicked: if (paneLayout.savePreset(presetName.text.trim())) presetName.text = ""
+                        }
+                    }
+                }
+                SettingRow {
+                    label: qsTr("Pane")
                     UiComboBox {
                         id: paneChoice
                         objectName: "layoutPaneChoice"
@@ -391,7 +439,7 @@ UiDialog {
                     }
                 }
                 SettingRow {
-                    label: "Position"
+                    label: qsTr("Position")
                     UiComboBox {
                         objectName: "layoutPosition"
                         property string paneId: paneChoice.ids[paneChoice.currentIndex]
@@ -405,8 +453,8 @@ UiDialog {
                     }
                 }
                 SettingRow {
-                    label: "Preferred size"
-                    description: "Logical pixels; smaller windows constrain the displayed size."
+                    label: qsTr("Preferred size")
+                    description: qsTr("Logical pixels; smaller windows constrain the displayed size.")
                     UiTextField {
                         objectName: "layoutExtent"
                         property string paneId: paneChoice.ids[paneChoice.currentIndex]
@@ -423,15 +471,15 @@ UiDialog {
                     objectName: "layoutFreeze"
                     property string paneId: paneChoice.ids[paneChoice.currentIndex]
                     Layout.fillWidth: true
-                    text: "Freeze this pane"
-                    description: "Lock its placement and size and keep it visible."
+                    text: qsTr("Freeze this pane")
+                    description: qsTr("Lock its placement and size and keep it visible.")
                     checked: paneLayout.panes[paneId].frozen
                     enabled: !paneLayout.locked
                     onToggled: paneLayout.freeze(paneId,checked)
                 }
                 RowLayout {
                     UiButton {
-                        text: "Move earlier"
+                        text: qsTr("Move earlier")
                         enabled: !paneLayout.locked && !paneLayout.panes[paneChoice.ids[paneChoice.currentIndex]].frozen
                         onClicked: {
                             const id=paneChoice.ids[paneChoice.currentIndex], state=paneLayout.panes[id]
@@ -439,7 +487,7 @@ UiDialog {
                         }
                     }
                     UiButton {
-                        text: "Move later"
+                        text: qsTr("Move later")
                         enabled: !paneLayout.locked && !paneLayout.panes[paneChoice.ids[paneChoice.currentIndex]].frozen
                         onClicked: {
                             const id=paneChoice.ids[paneChoice.currentIndex], state=paneLayout.panes[id]
@@ -447,12 +495,12 @@ UiDialog {
                         }
                     }
                 }
-                UiButton { text: "Reset workspace layout"; onClicked: paneLayout.reset() }
+                UiButton { text: qsTr("Reset workspace layout"); onClicked: paneLayout.reset() }
                 Note { visible: paneLayout.feedback.length > 0; text: paneLayout.feedback }
 
                 SettingRow {
-                    label: "File order"
-                    description: "Order of photos inside a folder. Folders always keep natural name order."
+                    label: qsTr("File order")
+                    description: qsTr("Order of photos inside a folder. Folders always keep natural name order.")
                     visible: dialog.rowMatches(label, description)
                     modified: viewer.sortKey !== "name"
                     UiComboBox {
@@ -464,15 +512,15 @@ UiDialog {
                 }
                 UiSwitch {
                     Layout.fillWidth: true
-                    text: "Reverse file order"
+                    text: qsTr("Reverse file order")
                     visible: dialog.rowMatches(text, "")
                     modified: viewer.sortDescending
                     checked: viewer.sortDescending
                     onToggled: viewer.sortDescending = checked
                 }
                 SettingRow {
-                    label: "At the end of a folder"
-                    description: "What Next and Previous do after the last or first photo."
+                    label: qsTr("At the end of a folder")
+                    description: qsTr("What Next and Previous do after the last or first photo.")
                     visible: dialog.rowMatches(label, description)
                     modified: viewer.boundaryMode !== "continue"
                     UiComboBox {
@@ -484,8 +532,8 @@ UiDialog {
                 }
                 UiSwitch {
                     Layout.fillWidth: true
-                    text: "Show filmstrip"
-                    description: "Thumbnails of the current folder under the top bar."
+                    text: qsTr("Show filmstrip")
+                    description: qsTr("Thumbnails of the current folder under the top bar.")
                     visible: dialog.rowMatches(text, description)
                     modified: !viewer.filmstripVisible
                     checked: viewer.filmstripVisible
@@ -493,21 +541,21 @@ UiDialog {
                 }
                 UiSwitch {
                     Layout.fillWidth: true
-                    text: "Pin folder tree open"
-                    description: "Keeps the folder panel visible and makes room for the photo in wider windows."
+                    text: qsTr("Pin folder tree open")
+                    description: qsTr("Keeps the folder panel visible and makes room for the photo in wider windows.")
                     visible: dialog.rowMatches(text, description)
                     modified: viewer.treePinned
                     checked: viewer.treePinned
                     onToggled: viewer.treePinned = checked
                 }
-                SectionLabel { text: "This window"; visible: dialog.rowMatches("This window", "Window position memory") }
+                SectionLabel { text: qsTr("This window"); visible: dialog.rowMatches("This window", "Window position memory") }
                 Note {
                     text: viewer.windowSlot > 0 ? "Window " + viewer.windowSlot + " remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file."
                                                 : "Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch."
                     visible: dialog.rowMatches("This window", text)
                 }
                 UiButton {
-                    text: "Reset browsing to defaults"
+                    text: qsTr("Reset browsing to defaults")
                     variant: "outline"
                     Layout.topMargin: Theme.gapSm
                     visible: dialog.rowMatches(text, "Reset browsing settings to default values")
@@ -519,22 +567,22 @@ UiDialog {
             }
 
             Page {
-                heading: "Controls"
+                heading: qsTr("Controls")
                 UiTextField {
                     id: commandSearch
                     objectName: "commandSearch"
                     Layout.fillWidth: true
                     searchIcon: true
-                    placeholderText: "Find a command"
+                    placeholderText: qsTr("Find a command")
                     Accessible.name: "Find a command"
-                    Accessible.description: "Enter runs the first match. Down moves to the list."
+                    Accessible.description: qsTr("Enter runs the first match. Down moves to the list.")
                     onAccepted: dialog.runFirstMatch()
                     Keys.onDownPressed: { const first = commandRows.firstVisible(); if (first) first.forceActiveFocus(Qt.TabFocusReason) }
                 }
-                Note { text: "Select a command to run it. Type a shortcut such as Ctrl+O or Shift+Right to remap it; clear a shortcut to unassign it." }
+                Note { text: qsTr("Select a command to run it. To change a shortcut, activate its box and press the new keys (two presses make a chord such as Ctrl+K, Ctrl+C). Escape cancels; Backspace clears it.") }
                 Note {
                     visible: dialog.host.gridMode
-                    text: "Commands that act on the open photo are dimmed while the grid view is showing. Their shortcuts can still be changed."
+                    text: qsTr("Commands that act on the open photo are dimmed while the grid view is showing. Their shortcuts can still be changed.")
                 }
                 Note {
                     visible: dialog.bindingMessage.length > 0
@@ -555,6 +603,7 @@ UiDialog {
                             id: commandRow
                             required property var modelData
                             readonly property string reason: dialog.unavailableReason(modelData.id)
+                            readonly property var settings: dialog // for handlers of nested components, which cannot see this id
                             property alias runButton: runButton
                             Layout.fillWidth: true
                             spacing: Theme.gapSm
@@ -578,20 +627,24 @@ UiDialog {
                                 font.pixelSize: Theme.textSmall
                                 Accessible.ignored: true // already the button's description
                             }
-                            UiTextField {
-                                Layout.preferredWidth: 148
-                                mono: true
-                                text: commandRow.modelData.binding
-                                placeholderText: "Unassigned"
-                                Accessible.name: "Shortcut for " + commandRow.modelData.label
-                                onEditingFinished: {
-                                    if (text !== commandRow.modelData.binding) {
-                                        const ok = viewer.setBinding(commandRow.modelData.id, text)
-                                        dialog.bindingMessage = viewer.status
-                                        dialog.bindingFailed = !ok
-                                        if (!ok) text = commandRow.modelData.binding
-                                    }
+                            // F051: press the keys to record; a refused shortcut explains why and nothing is saved.
+                            ShortcutRecorder {
+                                objectName: "shortcutRecorder-" + commandRow.modelData.id
+                                Layout.preferredWidth: 168
+                                commandId: commandRow.modelData.id
+                                commandLabel: commandRow.modelData.label
+                                binding: commandRow.modelData.binding
+                                // Saved after this handler returns: a saved binding rebuilds the command list, which destroys this
+                                // very row, and that must not happen in the middle of its own signal.
+                                onCommitted: sequence => {
+                                    const id = commandRow.modelData.id, label = commandRow.modelData.label, owner = commandRow.settings
+                                    Qt.callLater(() => {
+                                        const ok = viewer.setBinding(id, sequence)
+                                        owner.bindingMessage = ok ? (sequence.length ? "Shortcut for “" + label + "” is now " + sequence + "." : "Shortcut for “" + label + "” cleared.") : viewer.status
+                                        owner.bindingFailed = !ok
+                                    })
                                 }
+                                onRefused: reason => { commandRow.settings.bindingMessage = reason; commandRow.settings.bindingFailed = true }
                             }
                         }
                     }
@@ -601,7 +654,7 @@ UiDialog {
                     text: "No command matches “" + commandSearch.text + "”."
                 }
                 UiButton {
-                    text: "Restore default shortcuts"
+                    text: qsTr("Restore default shortcuts")
                     variant: "outline"
                     Layout.topMargin: Theme.gapSm
                     onClicked: { viewer.resetBindings(); dialog.bindingMessage = "Default shortcuts restored."; dialog.bindingFailed = false }
@@ -609,7 +662,7 @@ UiDialog {
             }
 
             Page {
-                heading: "About"
+                heading: qsTr("About")
                 Label {
                     text: "Glancelot " + Qt.application.version
                     color: Theme.text
@@ -618,33 +671,33 @@ UiDialog {
                     visible: dialog.rowMatches("Glancelot", "About")
                 }
                 Note {
-                    text: "A local-first photo viewer. Viewing never changes your photos."
+                    text: qsTr("A local-first photo viewer. Viewing never changes your photos.")
                     visible: dialog.rowMatches("About", text)
                 }
                 SectionLabel {
-                    text: "Settings management"
+                    text: qsTr("Settings management")
                     visible: dialog.rowMatches("Settings management", "Export import backup restore reset")
                 }
                 Note {
-                    text: "Export settings to a portable JSON file for backup or transfer between computers, or import settings to restore them."
+                    text: qsTr("Export settings to a portable JSON file for backup or transfer between computers, or import settings to restore them.")
                     visible: dialog.rowMatches("Settings management", text)
                 }
                 RowLayout {
                     spacing: Theme.gapSm
                     visible: dialog.rowMatches("Settings management", "Export import backup reset")
                     UiButton {
-                        text: "Export settings..."
+                        text: qsTr("Export settings...")
                         variant: "outline"
                         onClicked: exportDialog.open()
                     }
                     UiButton {
-                        text: "Import settings..."
+                        text: qsTr("Import settings...")
                         variant: "outline"
                         onClicked: importDialog.open()
                     }
                 }
                 UiButton {
-                    text: "Reset all settings to defaults..."
+                    text: qsTr("Reset all settings to defaults...")
                     variant: "danger-quiet"
                     Layout.topMargin: Theme.gapXs
                     visible: dialog.rowMatches("Reset all settings to defaults", "Restore default settings")
@@ -656,19 +709,19 @@ UiDialog {
                     color: Theme.accent
                 }
                 SectionLabel {
-                    text: "Early alpha"
+                    text: qsTr("Early alpha")
                     visible: dialog.rowMatches("Early alpha", "")
                 }
                 Note {
-                    text: "JPEG and PNG, displayed as SDR in sRGB. Monitor profile calibration and native HDR output are not yet qualified."
+                    text: qsTr("JPEG and PNG, displayed as SDR in sRGB. Monitor profile calibration and native HDR output are not yet qualified.")
                     visible: dialog.rowMatches("Early alpha", text)
                 }
                 SectionLabel {
-                    text: "Type"
+                    text: qsTr("Type")
                     visible: dialog.rowMatches("Type", "Geist fonts")
                 }
                 Note {
-                    text: "Interface set in Geist and Geist Mono, under the SIL Open Font License 1.1."
+                    text: qsTr("Interface set in Geist and Geist Mono, under the SIL Open Font License 1.1.")
                     visible: dialog.rowMatches("Type", text)
                 }
             }
@@ -677,7 +730,7 @@ UiDialog {
 
     FileDialog {
         id: exportDialog
-        title: "Export Settings"
+        title: qsTr("Export Settings")
         fileMode: FileDialog.SaveFile
         nameFilters: ["JSON settings files (*.json)", "All files (*)"]
         defaultSuffix: "json"
@@ -693,7 +746,7 @@ UiDialog {
 
     FileDialog {
         id: importDialog
-        title: "Import Settings"
+        title: qsTr("Import Settings")
         fileMode: FileDialog.OpenFile
         nameFilters: ["JSON settings files (*.json)", "All files (*)"]
         onAccepted: {
@@ -708,13 +761,13 @@ UiDialog {
 
     UiDialog {
         id: confirmResetDialog
-        title: "Reset all settings"
+        title: qsTr("Reset all settings")
         width: Math.min(480, dialog.width - 2 * Theme.gapLg)
         ColumnLayout {
             spacing: Theme.gapMd
             anchors.fill: parent
             Label {
-                text: "Restore all settings to their original defaults? This will reset your theme, keyboard shortcuts, workspace layout, and preferences."
+                text: qsTr("Restore all settings to their original defaults? This will reset your theme, keyboard shortcuts, workspace layout, and preferences.")
                 color: Theme.text
                 font.pixelSize: Theme.textBody
                 wrapMode: Text.Wrap
@@ -724,12 +777,12 @@ UiDialog {
                 Layout.alignment: Qt.AlignRight
                 spacing: Theme.gapSm
                 UiButton {
-                    text: "Cancel"
+                    text: qsTr("Cancel")
                     variant: "outline"
                     onClicked: confirmResetDialog.close()
                 }
                 UiButton {
-                    text: "Reset everything"
+                    text: qsTr("Reset everything")
                     variant: "danger"
                     onClicked: {
                         confirmResetDialog.close()

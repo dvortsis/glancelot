@@ -42,6 +42,8 @@
 #include <algorithm>
 #include <limits>
 #include <QTimer>
+#include <QLocale>
+#include <QTranslator>
 #include <cstdio>
 #include <QIcon>
 #include <QFontDatabase>
@@ -173,6 +175,19 @@ int main(int argc,char** argv) {
     applicationMetadata();
     const auto settingsNamespace=intent.safeMode?safeEnvironment.context.directory:glancelot::startup::resolveOriginalConfig(originalConfig);
     QQuickStyle::setStyle("Basic");
+    // F054: a translation catalog resource ":/i18n/glancelot_<language>.qm" is installed when one exists for GLANCELOT_LANGUAGE or the
+    // system language. QGuiApplication already follows the locale's text direction, which the UI mirrors for right-to-left languages.
+    QTranslator translator;
+    {
+        const QString requested=qEnvironmentVariable("GLANCELOT_LANGUAGE");
+        const QLocale locale=requested.isEmpty()?QLocale::system():QLocale(requested);
+        // An explicit GLANCELOT_LANGUAGE names a catalog file directly (so the pseudo-locale en_XA, which is not a real QLocale,
+        // can be tried); otherwise the system locale picks one.
+        const bool loaded=(!requested.isEmpty()&&translator.load(QStringLiteral("glancelot_")+requested,QStringLiteral(":/i18n")))
+            ||translator.load(locale,QStringLiteral("glancelot"),QStringLiteral("_"),QStringLiteral(":/i18n"));
+        if(loaded)app.installTranslator(&translator);
+        else if(!requested.isEmpty())std::fprintf(stderr,"Glancelot: no translation catalog for GLANCELOT_LANGUAGE=%s; the interface stays English\n",qPrintable(requested));
+    }
     glancelot::registerPresentationWindowFactory();
     // Bundled interface typefaces; Theme.qml falls back to system fonts if any of these fail to register.
     for(const char* face:{"Geist-Light","Geist-Regular","Geist-Medium","Geist-SemiBold","GeistMono-Regular"})

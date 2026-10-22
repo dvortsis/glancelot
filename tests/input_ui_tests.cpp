@@ -32,6 +32,10 @@
 #include <QWindow>
 #include <QtTest>
 
+#include "ui_test_support.hpp"
+#include <QAccessible>
+#include <QScopeGuard>
+#include <QAccessibleInterface>
 namespace {
 struct HeldTrash final : glancelot::TrashBackend {
     std::shared_ptr<QSemaphore> release;
@@ -41,139 +45,6 @@ struct HeldTrash final : glancelot::TrashBackend {
         return {target.path, glancelot::DeleteOutcome::Cancelled, {}}; // never mutate even disposable media
     }
 };
-class PreviewProvider final : public QQuickImageProvider {
-public:
-    PreviewProvider() : QQuickImageProvider(Image) {}
-    QImage requestImage(const QString& id, QSize* size, const QSize&) override {
-        QImage image(160, 120, QImage::Format_RGB32);
-        image.fill(QColor::fromHsv(int(qHash(id) % 360), 90, 170));
-        if (size) *size = image.size();
-        return image;
-    }
-};
-
-// Disposable photos: p1.png .. pN.png, large enough that "fit" is below 1:1.
-struct Media {
-    QTemporaryDir dir;
-    int count;
-    explicit Media(int photos = 4, QSize size = QSize(2400, 1600)) : count(photos) {
-        for (int i = 0; i < photos; ++i) {
-            QImage image(size, QImage::Format_RGB32);
-            image.fill(QColor::fromHsv((i * 70) % 360, 110, 180));
-            image.save(path(i));
-        }
-    }
-    QString path(int index) const { return dir.filePath(QString("p%1.png").arg(index + 1)); }
-};
-
-struct Harness {
-    ViewerController viewer;
-    ThemeManager theme;
-    FilmstripModel model;
-    FolderTreeModel folders;
-    PaneLayout layout;
-    glancelot::MonitorCustomization monitor{viewer.displayManager(), &layout};
-    DirectoryEntryModel fileGrid;
-    FileOperationService fileOperations;
-    QQmlApplicationEngine engine;
-    QQuickWindow* window{};
-    explicit Harness(std::unique_ptr<glancelot::TrashBackend> backend = {}) : fileOperations(std::move(backend)) {
-        QStringList imports = engine.importPathList();
-        imports.removeAll(QCoreApplication::applicationDirPath()); // load the UI from source, not a build-tree module
-        engine.setImportPathList(imports);
-        engine.addImageProvider("thumb", new PreviewProvider);
-        engine.rootContext()->setContextProperty("viewer", &viewer);
-        engine.rootContext()->setContextProperty("paneLayout", &layout);
-        monitor.setSlot(1);
-        engine.rootContext()->setContextProperty("monitorCustomization", &monitor);
-        engine.rootContext()->setContextProperty("theme", &theme);
-        engine.rootContext()->setContextProperty("filmstrip", &model);
-        engine.rootContext()->setContextProperty("folderTree", &folders);
-        engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
-        engine.rootContext()->setContextProperty("fileOperations", &fileOperations);
-        file_operation_wiring::follow(fileOperations, viewer, folders);
-        QObject::connect(&viewer, &ViewerController::stateChanged, &model, [this] { model.sync(viewer.snapshot()); });
-        QObject::connect(&viewer, &ViewerController::filesInvalidated, &model, [this] { model.invalidate(); });
-        QObject::connect(&viewer, &ViewerController::stateChanged, &folders, [this] { folders.sync(viewer.snapshot()); });
-        file_grid_wiring::followViewer(viewer, fileGrid);
-        file_grid_wiring::lockThumbnailEpoch(model, fileGrid);
-        engine.load(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Main.qml")));
-        if (!engine.rootObjects().empty()) window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
-    }
-    ImageCanvas* canvas() const { return window->findChild<ImageCanvas*>("canvas"); }
-    QObject* object(const char* name) const { return window->findChild<QObject*>(name); }
-};
-
-QQuickItem* named(QQuickWindow* window, const QString& name) {
-    QList<QQuickItem*> pending{window->contentItem()};
-    while (!pending.isEmpty()) {
-        QQuickItem* item = pending.takeFirst();
-        if (item->objectName() == name) return item;
-        pending << item->childItems();
-    }
-    return nullptr;
-}
-QList<QQuickItem*> namedAll(QQuickWindow* window, const QString& name) {
-    QList<QQuickItem*> found, pending{window->contentItem()};
-    while (!pending.isEmpty()) {
-        QQuickItem* item = pending.takeFirst();
-        if (item->objectName() == name) found << item;
-        pending << item->childItems();
-    }
-    return found;
-}
-QPoint sceneCenter(QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); }
-bool allowed(Harness& h, const QString& id) {
-    QVariant result;
-    return QMetaObject::invokeMethod(h.window, "scopeAllows", Q_RETURN_ARG(QVariant, result), Q_ARG(QVariant, id)) && result.toBool();
-}
-bool flag(Harness& h, const char* property) { return h.window->property(property).toBool(); }
-bool openFolder(Harness& h, const Media& media) {
-    h.viewer.setFilmstripVisible(false);
-    h.viewer.open(media.path(0));
-    return QTest::qWaitFor([&] { return h.viewer.imageReady() && h.viewer.fileCount() == media.count; }, 15000);
-}
-bool activate(Harness& h) {
-    h.window->requestActivate();
-    return QTest::qWaitFor([&] { return h.window->isActive(); }, 5000);
-}
-void focusCanvas(Harness& h) { h.canvas()->forceActiveFocus(Qt::TabFocusReason); }
-void sendWheel(Harness& h, QPoint at, QPoint pixel, QPoint angle, Qt::KeyboardModifiers mods) {
-    QWheelEvent event(QPointF(at), QPointF(h.window->mapToGlobal(at)), pixel, angle, Qt::NoButton, mods, Qt::NoScrollPhase, false);
-    QCoreApplication::sendEvent(h.window, &event);
-}
-void sendKey(QQuickWindow* window, int key, bool autoRepeat) { // as a keyboard's own repeat delivers it
-    QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, QString(), autoRepeat);
-    QGuiApplication::sendEvent(window, &press);
-    QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, QString(), autoRepeat);
-    QGuiApplication::sendEvent(window, &release);
-}
-QString trashName() {
-#ifdef Q_OS_WIN
-    return "Recycle Bin";
-#else
-    return "Trash";
-#endif
-}
-// A remapped key only works once the window has rebuilt its Shortcuts (slow machines and containers take a few frames).
-bool shortcutReady(Harness& h, const char* instantiator, const QString& step) {
-    QObject* keys = h.object(instantiator);
-    for (int i = 0; keys && i < keys->property("count").toInt(); ++i) {
-        QObject* shortcut = nullptr;
-        QMetaObject::invokeMethod(keys, "objectAt", Q_RETURN_ARG(QObject*, shortcut), Q_ARG(int, i));
-        if (shortcut && shortcut->property("modelData").toString() == step) return true;
-    }
-    return false;
-}
-#define WAIT_FIRST_KEY(h, step) QTRY_VERIFY_WITH_TIMEOUT(shortcutReady(h, "firstKeys", step), 10000)
-#define WAIT_SECOND_KEY(h, step) QTRY_VERIFY_WITH_TIMEOUT(shortcutReady(h, "secondKeys", step), 10000)
-bool menuOpen(QObject* menu) { return menu && menu->property("visible").toBool(); }
-void closeMenu(QObject* menu) { if (menu) QMetaObject::invokeMethod(menu, "close"); }
-QList<QQuickItem*> menuRows(QObject* menu) {
-    QList<QQuickItem*> rows;
-    for (auto* item : menu->findChildren<QQuickItem*>(QRegularExpression("^menuItem-"))) rows << item;
-    return rows;
-}
 // Every row is a registered command, shows its live binding, and is enabled exactly when its key would act.
 // Returns what is wrong (empty when the menu agrees with the keyboard).
 QStringList menuProblems(Harness& h, QObject* menu) {
@@ -649,6 +520,381 @@ private slots:
         QTest::keyPress(h.window, Qt::Key_Z); QTest::qWait(150);
         QVERIFY(!canvas->loupeActive());
         QTest::keyRelease(h.window, Qt::Key_Z);
+    }
+
+    // F037: the navigator appears only while zoomed in, tracks the view and recentres on click; presets and zoom lock are commands.
+    void navigatorPresetsAndZoomLock() {
+        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* canvas = h.canvas(); focusCanvas(h);
+        h.viewer.trigger("navigator");
+        auto* nav = named(h.window, "zoomNavigator"); QVERIFY(nav);
+        QVERIFY(!nav->isVisible()); // fitted: no extra chrome
+        h.viewer.trigger("zoom-200");
+        QTRY_COMPARE(canvas->zoom(), 2.0);
+        QTRY_VERIFY(nav->isVisible());
+        auto* viewport = named(h.window, "navigatorViewport"); QVERIFY(viewport);
+        QTest::mouseMove(h.window, sceneCenter(nav)); QTest::qWait(50);
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, nav->mapToScene(QPointF(nav->width() * 0.8, nav->height() * 0.25)).toPoint(), 60);
+        const QPointF at = canvas->imagePointAt(canvas->width() / 2, canvas->height() / 2);
+        QVERIFY2(at.x() > 1200 && at.y() < 800, qPrintable(QString("%1,%2").arg(at.x()).arg(at.y()))); // moved toward the upper right
+        h.viewer.trigger("zoom-lock");
+        h.viewer.next(); QTRY_COMPARE(h.viewer.currentIndex(), 2); QTRY_VERIFY(h.viewer.imageReady());
+        QCOMPARE(canvas->zoom(), 2.0);
+        h.viewer.trigger("zoom-lock");
+        h.viewer.next(); QTRY_COMPARE(h.viewer.currentIndex(), 3); QTRY_VERIFY(h.viewer.imageReady());
+        QCOMPARE(canvas->fitMode(), QString("shrink"));
+        QTRY_VERIFY(!nav->isVisible());
+    }
+
+    // F040: a pinned reference stays put while the main window browses, and unpins from every route.
+    void referenceWindowKeepsItsPhoto() {
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.trigger("reference-pin"); QTest::qWait(150);
+        QVERIFY(h.viewer.referenceName().isEmpty()); // nothing open: nothing pinned
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        auto* ref = h.window->findChild<QQuickWindow*>("referenceWindow"); QVERIFY(ref);
+        QVERIFY(!ref->isVisible());
+        h.viewer.trigger("reference-pin");
+        QTRY_VERIFY(ref->isVisible());
+        QCOMPARE(h.viewer.referenceName(), QString("p1.png"));
+        QCOMPARE(h.viewer.referenceImage().size(), QSize(320, 200));
+        QVERIFY(ref->title().contains("p1.png"));
+        h.viewer.next(); QTRY_COMPARE(h.viewer.currentIndex(), 2); QTRY_VERIFY(h.viewer.imageReady());
+        QCOMPARE(h.viewer.referenceName(), QString("p1.png")); // browsing never moves it
+        h.viewer.trigger("reference-pin"); QCOMPARE(h.viewer.referenceName(), QString("p2.png")); // pinning again replaces it
+        h.viewer.trigger("reference-close"); QTRY_VERIFY(!ref->isVisible());
+        QVERIFY(h.viewer.referenceName().isEmpty());
+        h.viewer.trigger("reference-pin"); QTRY_VERIFY(ref->isVisible());
+        ref->close(); QTRY_VERIFY(h.viewer.referenceName().isEmpty()); // the window's own close button unpins
+        QTRY_VERIFY(h.viewer.imageReady());
+    }
+
+    // F009: details mode lists name, size and date in one column and requests no thumbnails.
+    void detailsModeListsRowsWithoutThumbnails() {
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 3);
+        auto* grid = h.object("photoGrid"); QVERIFY(grid);
+        auto tiles = [&] { return namedAll(h.window, "photoGridCell"); };
+        QTRY_COMPARE(tiles().size(), 3);
+        QTRY_VERIFY(!namedAll(h.window, "gridThumb0").isEmpty());
+        h.viewer.trigger("view-details");
+        QTRY_VERIFY(grid->property("details").toBool());
+        QTRY_VERIFY(namedAll(h.window, "gridThumb0").isEmpty() && namedAll(h.window, "gridThumb1").isEmpty());
+        QCOMPARE(grid->property("columns").toInt(), 1);
+        QTRY_COMPARE(tiles().size(), 3);
+        for (auto* cell : tiles()) QVERIFY(cell->height() < 60);
+        // Selection and keys behave as before.
+        auto* view = named(h.window, "photoGridView"); QVERIFY(view); view->forceActiveFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
+        h.fileGrid.select(0, DirectoryEntryModel::Replace);
+        QTest::qWait(250); QTest::keyClick(h.window, Qt::Key_Down);
+        QTRY_COMPARE(h.fileGrid.cursorRow(), 1);
+        h.viewer.trigger("view-details");
+        QTRY_VERIFY(!grid->property("details").toBool());
+        QTRY_VERIFY(!namedAll(h.window, "gridThumb0").isEmpty());
+    }
+
+    // F051: the recorder captures real key presses (chords too), explains refusals, clears and cancels, and keeps window
+    // shortcuts quiet while it records.
+    void shortcutRecorderCapturesChordsAndExplainsRefusals() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* dialog = h.object("settingsDialog"); QVERIFY(dialog);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString("controls")), Q_ARG(QVariant, false)));
+        QTRY_VERIFY(flag(h, "modalOpen"));
+        QTest::qWait(400); // the dialog moves focus to its section list once it opens; let that settle
+        auto recorder = [&](const char* id) { return named(h.window, QString("shortcutRecorder-") + id); };
+        QTRY_VERIFY(recorder("rotate") != nullptr);
+        // The list rebuilds when a binding is saved, so rows are looked up again each time, never held.
+        auto rotate = [&] { return recorder("rotate"); };
+        QCOMPARE(rotate()->property("text").toString(), QString("R"));
+        auto begin = [&](QQuickItem* r) { QVERIFY(r); r->forceActiveFocus(Qt::TabFocusReason); QTRY_VERIFY(r->hasActiveFocus()); QTest::keyClick(h.window, Qt::Key_Space); QTest::qWait(150); QTRY_VERIFY(r->property("recording").toBool()); };
+        // A chord: two presses record immediately.
+        begin(rotate());
+        QCOMPARE(rotate()->property("text").toString(), QString("Press a shortcut…"));
+        QTest::keyClick(h.window, Qt::Key_J, Qt::ControlModifier);
+        QTRY_COMPARE(rotate()->property("text").toString(), QString("Ctrl+J, …"));
+        QTest::keyClick(h.window, Qt::Key_L, Qt::ControlModifier);
+        QTRY_COMPARE(h.viewer.bindingFor("rotate"), QString("Ctrl+J, Ctrl+L"));
+        QTRY_VERIFY(!rotate()->property("recording").toBool());
+        // A key that is already taken: refused with the reason, nothing saved, and the taken key's own command did not run.
+        auto* canvas = h.canvas(); const QColor backdrop = canvas->background();
+        auto zoom = [&] { return recorder("zoom-200"); }; QVERIFY(zoom());
+        begin(zoom());
+        QTest::keyClick(h.window, Qt::Key_B);
+        QTest::qWait(1700); // a single key is accepted after a pause
+        QTRY_VERIFY(!zoom()->property("recording").toBool());
+        QCOMPARE(h.viewer.bindingFor("zoom-200"), QString());
+        QCOMPARE(canvas->background(), backdrop);
+        QVERIFY2(dialog->property("bindingMessage").toString().contains("Already used by"), qPrintable(dialog->property("bindingMessage").toString()));
+        // Escape cancels without changing anything; Backspace clears.
+        begin(zoom()); QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!zoom()->property("recording").toBool());
+        QVERIFY(flag(h, "modalOpen")); // the Escape belonged to the recorder, not the dialog
+        begin(rotate()); QTest::keyClick(h.window, Qt::Key_Backspace);
+        QTRY_COMPARE(h.viewer.bindingFor("rotate"), QString());
+        QCOMPARE(rotate()->property("text").toString(), QString("Unassigned"));
+        // A free single key is saved after the pause.
+        begin(zoom()); QTest::keyClick(h.window, Qt::Key_F7); QTest::qWait(1700); // F8 is the presentation toggle on main
+        QTRY_COMPARE(h.viewer.bindingFor("zoom-200"), QString("F7"));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+    }
+
+    // F053: the high-contrast palette meets WCAG AAA in both modes, the focus ring and borders are strong, and large targets
+    // reach 44 px on real controls and menu rows.
+    void highContrastIsAAAAndLargeTargetsReachFortyFourPixels() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        QObject* tokens = h.engine.singletonInstance<QObject*>("Glancelot", "Theme"); QVERIFY(tokens);
+        auto color = [&](const char* name) { return tokens->property(name).value<QColor>(); };
+        auto lum = [](const QColor& c) {
+            auto ch = [](double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+            return 0.2126 * ch(c.redF()) + 0.7152 * ch(c.greenF()) + 0.0722 * ch(c.blueF());
+        };
+        auto ratio = [&](const QColor& a, const QColor& b) { const double x = lum(a), y = lum(b); return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05); };
+        h.viewer.setHighContrast(true);
+        for (const QString mode : {QString("dark"), QString("light")}) {
+            h.theme.setMode(mode); QTest::qWait(60);
+            QVERIFY(tokens->property("highContrast").toBool());
+            const struct { const char* a; const char* b; double min; } pairs[] = {
+                {"text", "background", 7}, {"text", "surface", 7}, {"muted", "background", 7}, {"muted", "surface", 7},
+                {"textOnPrimary", "primary", 7}, {"primary", "background", 3}, {"border", "background", 7},
+                {"focusRing", "background", 7}, {"danger", "background", 7}, {"danger", "surface", 7}};
+            for (const auto& pair : pairs)
+                QVERIFY2(ratio(color(pair.a), color(pair.b)) >= pair.min, qPrintable(QString("%1: %2 on %3 = %4").arg(mode, pair.a, pair.b).arg(ratio(color(pair.a), color(pair.b)))));
+            QVERIFY(tokens->property("borderWidth").toInt() >= 2 && tokens->property("focusWidth").toInt() >= 3);
+        }
+        h.viewer.setHighContrast(false);
+        QVERIFY(!tokens->property("highContrast").toBool());
+        QCOMPARE(tokens->property("controlHeight").toInt(), 32);
+        h.viewer.setLargeTargets(true);
+        QTRY_COMPARE(tokens->property("controlHeight").toInt(), 44);
+        auto* settings = named(h.window, "settingsButton"); QVERIFY(settings);
+        QTRY_VERIFY(settings->height() >= 44);
+        focusCanvas(h);
+        auto* menu = h.object("canvasContextMenu"); QVERIFY(menu);
+        QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 60), Q_ARG(QVariant, 60)));
+        QTRY_VERIFY(menuOpen(menu));
+        for (auto* row : menuRows(menu)) if (row->isVisible()) QVERIFY2(row->height() >= 44, qPrintable(row->objectName() + QString(" %1").arg(row->height())));
+        closeMenu(menu);
+        h.viewer.setLargeTargets(false);
+        QTRY_COMPARE(tokens->property("controlHeight").toInt(), 32);
+    }
+    // F049: presets apply from the keyboard command and from Settings, and save/delete from Settings.
+    void layoutPresetsFromCommandAndSettings() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* top = named(h.window, "topBar"); QVERIFY(top); QTRY_VERIFY(top->isVisible());
+        h.viewer.trigger("layout-preset-next"); // first in the cycle: Default
+        h.viewer.trigger("layout-preset-next"); // Review: toolbar hidden
+        QTRY_VERIFY(!h.layout.pane("topbar")["visible"].toBool());
+        QTRY_VERIFY(!top->isVisible());
+        h.viewer.trigger("layout-preset-next"); // Browse: combined view
+        QTRY_COMPARE(h.layout.contentMode(), QString("combined"));
+        QVERIFY(h.layout.applyPreset("Default"));
+        QTRY_VERIFY(top->isVisible());
+        // Settings: save the arrangement under a name, see it listed, delete it.
+        QVERIFY(h.layout.resize("tree", 301));
+        auto* dialog = h.object("settingsDialog"); QVERIFY(dialog);
+        QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString("browsing")), Q_ARG(QVariant, false)));
+        QTRY_VERIFY(flag(h, "modalOpen")); QTest::qWait(400);
+        auto* name = named(h.window, "layoutPresetName"); QVERIFY(name);
+        name->setProperty("text", "My review");
+        auto* save = named(h.window, "layoutPresetSave"); QVERIFY(save); QTRY_VERIFY(save->isEnabled());
+        QTest::mouseMove(h.window, sceneCenter(save)); QTest::qWait(50);
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(save), 60);
+        QTRY_VERIFY(h.layout.presetNames().contains("My review"));
+        QTRY_VERIFY(name->property("text").toString().isEmpty());
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        QTRY_VERIFY(!flag(h, "modalOpen"));
+        QVERIFY(h.layout.deletePreset("My review"));
+        QVERIFY(!h.layout.presetNames().contains("My review"));
+    }
+    // F052: every interactive control reachable on the main screens exposes an accessible name and a sensible role to the
+    // platform accessibility tree. Lists every offender at once so a regression names the control.
+    void everyInteractiveControlIsNamedForAssistiveTechnology() {
+        QAccessible::setActive(true);
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.setTreeVisible(true); h.viewer.setFilmstripVisible(true);
+        QTest::qWait(400);
+        int inspected = 0; // the audit must really look at controls, or an empty pass would mean nothing
+        auto audit = [&](const QString& where) {
+            QStringList problems;
+            QList<QQuickItem*> pending{h.window->contentItem()};
+            while (!pending.isEmpty()) {
+                QQuickItem* item = pending.takeFirst();
+                pending << item->childItems();
+                if (!item->isVisible() || item->width() <= 0 || item->height() <= 0) continue;
+                const QString cls = item->metaObject()->className();
+                const bool interactive = item->activeFocusOnTab() || cls.contains("Button") || cls.contains("TextField")
+                    || cls.contains("ComboBox") || cls.contains("Switch") || cls.contains("MenuItem") || cls.contains("CheckBox");
+                if (!interactive) continue;
+                auto* iface = QAccessible::queryAccessibleInterface(item);
+                if (!iface) { problems << where + ": " + cls + " " + item->objectName() + " has no accessible interface"; continue; }
+                if (iface->state().invisible || iface->state().disabled) continue;
+                ++inspected;
+                if (iface->text(QAccessible::Name).trimmed().isEmpty())
+                    problems << where + ": " + cls + " '" + item->objectName() + "' has no accessible name";
+                if (iface->role() == QAccessible::NoRole)
+                    problems << where + ": " + cls + " '" + item->objectName() + "' has no role";
+            }
+            return problems;
+        };
+        QStringList problems = audit("main");
+        auto* dialog = h.object("settingsDialog"); QVERIFY(dialog);
+        for (const char* section : {"appearance", "viewing", "browsing", "controls", "about"}) {
+            QVERIFY(QMetaObject::invokeMethod(dialog, "openSection", Q_ARG(QVariant, QString(section)), Q_ARG(QVariant, false)));
+            QTRY_VERIFY(flag(h, "modalOpen")); QTest::qWait(350);
+            problems << audit(QString("settings/") + section);
+        }
+        QVERIFY2(inspected >= 40, qPrintable(QString("only %1 controls were inspected").arg(inspected)));
+        QVERIFY2(problems.isEmpty(), qPrintable(problems.join("\n")));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+    }
+    // F054: a right-to-left layout direction mirrors the toolbar and swaps the start and end panes; left-to-right restores it.
+    void rightToLeftMirrorsTheWorkspace() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+        auto* open = named(h.window, "openButton"); auto* settings = named(h.window, "settingsButton"); auto* tree = named(h.window, "folderTree");
+        QVERIFY(open && settings && tree); QTRY_VERIFY(tree->isVisible());
+        auto cx = [](QQuickItem* i) { return i->mapToScene(QPointF(i->width() / 2, 0)).x(); };
+        QTRY_VERIFY(cx(open) < cx(settings));
+        QVERIFY(cx(tree) < h.window->width() / 2);
+        QGuiApplication::setLayoutDirection(Qt::RightToLeft);
+        const auto restore = qScopeGuard([] { QGuiApplication::setLayoutDirection(Qt::LeftToRight); });
+        QTRY_VERIFY(flag(h, "rtl"));
+        QTRY_VERIFY(cx(open) > cx(settings));            // the toolbar reads from the right
+        QTRY_VERIFY(cx(tree) > h.window->width() / 2);   // the folder tree sits on the start (right) side
+        QCOMPARE(h.layout.pane("tree")["region"].toString(), QString("left")); // the saved layout is untouched
+        QGuiApplication::setLayoutDirection(Qt::LeftToRight);
+        QTRY_VERIFY(!flag(h, "rtl"));
+        QTRY_VERIFY(cx(open) < cx(settings));
+        QTRY_VERIFY(cx(tree) < h.window->width() / 2);
+    }
+    // F015: the tab strip replaces the title once there are two tabs, switches location on click and shrinks back when closed.
+    void tabStripSwitchesLocationsAndHidesAtOneTab() {
+        QTemporaryDir other; QVERIFY(other.isValid());
+        QImage image(64, 48, QImage::Format_RGB32); image.fill(Qt::blue); QVERIFY(image.save(other.filePath("o1.png")));
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        auto* strip = named(h.window, "tabStrip"); auto* title = named(h.window, "topBarTitle"); QVERIFY(strip && title);
+        QVERIFY(!strip->isVisible()); QVERIFY(title->isVisible());
+        h.viewer.trigger("tab-new");
+        QTRY_VERIFY(strip->isVisible()); QVERIFY(!title->isVisible());
+        QTRY_VERIFY(named(h.window, "tab-0") && named(h.window, "tab-1"));
+        h.viewer.open(other.filePath("o1.png")); QTRY_VERIFY(h.viewer.imageReady());
+        auto* first = named(h.window, "tab-0"); QVERIFY(first);
+        QTest::mouseMove(h.window, sceneCenter(first)); QTest::qWait(50);
+        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(first), 60);
+        QTRY_COMPARE(QDir::cleanPath(h.viewer.directory()).toLower(), QDir::cleanPath(media.dir.path()).toLower());
+        h.viewer.trigger("tab-next");
+        QTRY_COMPARE(QDir::cleanPath(h.viewer.directory()).toLower(), QDir::cleanPath(other.path()).toLower());
+        h.viewer.trigger("tab-close");
+        QTRY_VERIFY(!strip->isVisible()); QTRY_VERIFY(title->isVisible());
+        QTRY_VERIFY(h.viewer.imageReady());
+    }
+    // F042 type chips: folders, photos or other files, combined with the name filter; clicking again or Esc clears.
+    void kindChipsFilterTheGridByType() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkpath("sub1") && QDir(dir.path()).mkpath("sub2"));
+        QImage image(32, 24, QImage::Format_RGB32); image.fill(Qt::red);
+        QVERIFY(image.save(dir.filePath("a.png")) && image.save(dir.filePath("b.png")) && image.save(dir.filePath("c.png")));
+        for (const char* name : {"notes.txt", "todo.txt"}) { QFile f(dir.filePath(name)); QVERIFY(f.open(QIODevice::WriteOnly)); f.close(); }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.open(dir.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
+        QTRY_COMPARE(h.fileGrid.count(), 7); // 2 folders, 3 photos, 2 other files
+        auto chip = [&](const char* id) { return named(h.window, QString("gridKind-") + id); };
+        QQuickItem* photos = chip("image"); QVERIFY(photos); QTRY_VERIFY(photos->isVisible());
+        auto click = [&](QQuickItem* item) { QTest::mouseMove(h.window, sceneCenter(item)); QTest::qWait(50); QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(item), 60); };
+        click(photos);
+        QTRY_COMPARE(h.fileGrid.count(), 3); QCOMPARE(h.fileGrid.kindFilter(), QString("image")); QVERIFY(h.fileGrid.hasFilter());
+        click(chip("folder")); QTRY_COMPARE(h.fileGrid.count(), 2); QCOMPARE(h.fileGrid.kindFilter(), QString("folder"));
+        click(chip("file")); QTRY_COMPARE(h.fileGrid.count(), 2);
+        click(chip("file")); QTRY_COMPARE(h.fileGrid.count(), 7); QVERIFY(!h.fileGrid.hasFilter()); // second click clears
+        // Combined with the name filter, and Esc clears both.
+        h.fileGrid.setKindFilter("image"); h.fileGrid.setFilter("a", false);
+        QTRY_COMPARE(h.fileGrid.count(), 1);
+        h.fileGrid.clearFilter();
+        QTRY_COMPARE(h.fileGrid.count(), 7); QCOMPARE(h.fileGrid.kindFilter(), QString());
+    }
+
+    // F014: type and failed-preview badges are labelled, appear only where they fit, and do not touch the "Viewing" tag.
+    void gridBadgesAreLabelledAndDoNotOverlap() {
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 2);
+        QTRY_VERIFY(!namedAll(h.window, "gridTypeBadge").isEmpty());
+        for (auto* badge : namedAll(h.window, "gridTypeBadge")) {
+            QVERIFY(badge->isVisible());
+            auto* label = badge->findChild<QQuickItem*>(QString(), Qt::FindChildrenRecursively);
+            QVERIFY(label);
+            QCOMPARE(label->property("text").toString(), QString("PNG"));
+        }
+        for (auto* badge : namedAll(h.window, "gridErrorBadge")) QVERIFY(!badge->isVisible()); // previews load here
+        QQuickItem* cell = nullptr;
+        for (auto* c : namedAll(h.window, "photoGridCell")) if (c->property("index").toInt() == 0) cell = c;
+        QVERIFY(cell);
+        cell->setProperty("previewFailed", true);
+        QTRY_VERIFY(!cell->findChildren<QQuickItem*>("gridErrorBadge").isEmpty() && cell->findChildren<QQuickItem*>("gridErrorBadge").first()->isVisible());
+        // The badges stack on the left edge: the error badge never overlaps the type badge above it.
+        auto* error = cell->findChildren<QQuickItem*>("gridErrorBadge").first();
+        auto* type = cell->findChildren<QQuickItem*>("gridTypeBadge").first();
+        const QRectF e(error->mapToScene(QPointF(0, 0)), QSizeF(error->width(), error->height()));
+        const QRectF t(type->mapToScene(QPointF(0, 0)), QSizeF(type->width(), type->height()));
+        QVERIFY2(!e.intersects(t), "badges overlap");
+        cell->setProperty("previewFailed", false);
+    }
+
+    // F049: focus mode hides every bar and panel for the session, leaves the saved layout alone, and Escape returns them.
+    void focusModeHidesChromeAndEscapeRestoresIt() {
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        h.viewer.setTreeVisible(true);
+        auto* top = named(h.window, "topBar"); QVERIFY(top);
+        QTRY_VERIFY(top->isVisible());
+        const auto saved = h.layout.panes();
+        auto* canvas = h.canvas();
+        const qreal before = canvas->height();
+        h.viewer.trigger("focus-mode");
+        QTRY_VERIFY(flag(h, "focusMode"));
+        QTRY_VERIFY(!top->isVisible());
+        QTRY_VERIFY(!named(h.window, "folderTree")->isVisible());
+        QTRY_VERIFY(canvas->height() >= before);
+        QCOMPARE(h.layout.panes(), saved);
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(!flag(h, "focusMode"));
+        QTRY_VERIFY(top->isVisible());
+        QCOMPARE(h.layout.panes(), saved);
+    }
+
+    // F031: the slideshow advances on its own pace, never queues, and ends on manual steps, Escape and a folder boundary.
+    void slideshowAdvancesAndEndsCleanly() {
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        h.viewer.setBoundaryMode("stop");
+        QVERIFY(QMetaObject::invokeMethod(h.window, "setSlideshowSeconds", Q_ARG(QVariant, 1)));
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY(named(h.window, "slideshowIndicator")->isVisible());
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 2, 4000);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 3, 4000);
+        QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 4000); // the stop boundary ended it
+        QCOMPARE(h.viewer.currentIndex(), 3);
+        // Escape stops it; so does a manual step.
+        h.viewer.setBoundaryMode("loop");
+        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!flag(h, "slideshowOn"));
+        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(!flag(h, "slideshowOn"));
+        // A modal dialog ends it too.
+        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        h.viewer.trigger("settings"); QTRY_VERIFY(!flag(h, "slideshowOn"));
+        QVERIFY(QMetaObject::invokeMethod(h.object("settingsDialog"), "close"));
     }
 
     // Right button: a quick click is the menu; holding it is the loupe, which ends with the button.
