@@ -31,4 +31,8 @@ SettingsStatus updateSettings(const std::function<void(QJsonObject&)>& edit, boo
 // Safe-mode reset: renames settings.json to settings.json.reset-<timestamp> (never deletes it). True when there
 // was nothing to set aside or the rename succeeded.
 bool resetSettings(QString* movedTo = nullptr);
+// Portable settings export/import and section reset (UI-SETTINGS-01 / F050)
+bool exportSettings(const QString& targetFilePath, QString* error = nullptr);
+bool importSettings(const QString& sourceFilePath, QString* error = nullptr);
+bool resetSection(const QString& sectionName, QString* error = nullptr);
 }

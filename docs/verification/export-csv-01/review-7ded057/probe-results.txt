@@ -1,0 +1,13 @@
+mixed-known-unknown order=0 written=2 skipped=0 expected=1/1
+FAIL: mixed identity duplicates must use lexical path fallback
+mixed-known-unknown order=1 written=2 skipped=0 expected=1/1
+FAIL: mixed identity duplicates must use lexical path fallback
+cancel-stage=0 status=0 calls=2 destination-preserved=0 expected=Cancelled/true
+FAIL: last-item/completion cancellation must preserve destination
+FAIL: progress no more than once per item
+cancel-stage=1 status=0 calls=2 destination-preserved=0 expected=Cancelled/true
+FAIL: last-item/completion cancellation must preserve destination
+FAIL: progress no more than once per item
+unicode-destination exception=No mapping for the Unicode character exists in the target multi-byte code page.
+FAIL: Unicode destination must not throw on narrow conversion
+Review probe unmet assertions=7

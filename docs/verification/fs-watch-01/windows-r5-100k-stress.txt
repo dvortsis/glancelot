@@ -1,0 +1,8 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 40901 ms; initial GUI gap 12 ms; sustained-writer/recovery GUI gap 140 ms; writes 271 invalidations 11
+PASS   : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 68017ms
+********* Finished testing of FSWatchTests *********

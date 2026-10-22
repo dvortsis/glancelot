@@ -1,0 +1,26 @@
+UpdateCTestConfiguration  from :C:/src/Github/Glancelot/.worktrees/codex-review-input-02-r2/build-codex-review-input-02-r2/DartConfiguration.tcl
+Parse Config file:C:/src/Github/Glancelot/.worktrees/codex-review-input-02-r2/build-codex-review-input-02-r2/DartConfiguration.tcl
+Test project C:/src/Github/Glancelot/.worktrees/codex-review-input-02-r2/build-codex-review-input-02-r2
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 10
+    Start 10: input_ui
+
+10: Test command: C:\src\Github\Glancelot\.worktrees\codex-review-input-02-r2\build-codex-review-input-02-r2\input_ui_tests.exe "-o" "-,txt"
+10: Working Directory: C:/src/Github/Glancelot/.worktrees/codex-review-input-02-r2/build-codex-review-input-02-r2
+10: Environment variables: 
+10:  QT_QPA_PLATFORM=offscreen
+10:  QT_QUICK_BACKEND=software
+10: Test timeout computed to be: 240
+1/1 Test #10: input_ui .........................   Passed   37.54 sec
+
+The following tests passed:
+	input_ui
+
+100% tests passed out of 1
+
+Total Test time (real) =  37.62 sec

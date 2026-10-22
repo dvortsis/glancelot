@@ -1,0 +1,30 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/lead-integration-2026-10-21'
+$status=Get-Content -Raw "$d/gate-status.txt"
+if($status -notmatch 'docker_gate_exit=0'){throw 'Docker gate has not passed'}
+& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Holder Codex-user-authorized-lead -Run {
+ if((git rev-parse HEAD) -ne '7e8897975d507c29907d6a026792e1ea42b7cedd'){throw 'Evidence source pin changed'}
+ # A cached-stage export of the successful image, not another claimed fresh gate.
+ & docker build --target build -t glancelot-safe-mode-verification:7e88979 .
+ if($LASTEXITCODE -ne 0){throw 'Build-stage export failed'}
+ $containerId=(& docker create glancelot-safe-mode-verification:7e88979 /bin/true).Trim()
+ if($LASTEXITCODE -ne 0 -or $containerId -notmatch '^[0-9a-f]{64}$'){throw 'Evidence container creation failed'}
+ try {
+  New-Item -ItemType Directory -Force "$d/linux-raw" | Out-Null
+  & docker cp "${containerId}:/build/recovery-process" "$d/linux-raw/recovery-process"
+  if($LASTEXITCODE -ne 0){throw 'Linux process evidence copy failed'}
+  foreach($name in @('recovery-results.txt','recovery-startup-results.txt','recovery-controller-results.txt','fs-watch-results.txt','fs-watch-budget-results.txt')){
+   & docker cp "${containerId}:/build/$name" "$d/linux-raw/$name"
+   if($LASTEXITCODE -ne 0){throw "Linux evidence copy failed: $name"}
+  }
+  & docker cp "${containerId}:/build/Testing/Temporary/LastTest.log" "$d/linux-raw/LastTest.log"
+  if($LASTEXITCODE -ne 0){throw 'Linux CTest evidence copy failed'}
+ } finally { & docker rm $containerId }
+}
+$run=Get-ChildItem "$d/linux-raw/recovery-process" -Directory | Select-Object -First 1
+$r=Get-Content -Raw (Join-Path $run.FullName 'result.json') | ConvertFrom-Json
+if(!$r.passed -or $r.steps.Count -ne 35){throw 'Linux proof incomplete'}
+"linux_source_run=$($run.Name) passed=$($r.passed) commands=$($r.steps.Count)" | Set-Content "$d/linux-process-proof-status.txt"
+Add-Content "$d/.gitattributes" 'linux-raw/recovery-process/** binary'
+"linux_evidence_export_exit=0"

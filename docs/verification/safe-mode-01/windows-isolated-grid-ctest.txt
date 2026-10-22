@@ -1,0 +1,7 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/.cache/windows-isolated
+    Start 1: folder_grid_diagnostic
+1/1 Test #1: folder_grid_diagnostic ...........   Passed  206.56 sec
+
+100% tests passed out of 1
+
+Total Test time (real) = 206.64 sec

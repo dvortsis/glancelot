@@ -1,0 +1,1 @@
+First integrated check did not start: ctest absent from fresh shell PATH. No test result. Retried with project-local tools path.

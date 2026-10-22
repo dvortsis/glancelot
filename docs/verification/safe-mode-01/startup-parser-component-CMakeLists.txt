@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.24)
+project(GlancelotRecoveryRegistryComponent LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+enable_testing()
+find_package(Qt6 6.8.3 REQUIRED COMPONENTS Core Gui Test)
+set(recovery_repo "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01")
+add_executable(recovery_registry_component
+  "${recovery_repo}/tests/recovery_startup_tests.cpp" "${recovery_repo}/app/startup_intent.cpp"
+  "${recovery_repo}/src/app/command_registry.cpp")
+target_include_directories(recovery_registry_component PRIVATE "${recovery_repo}/include" "${recovery_repo}/src/app" "${recovery_repo}/app")
+target_link_libraries(recovery_registry_component PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME recovery_registry_component COMMAND recovery_registry_component
+  -o "${CMAKE_CURRENT_BINARY_DIR}/registry-results.txt,txt" -o -,txt)
+set_tests_properties(recovery_registry_component PROPERTIES TIMEOUT 30)
+add_executable(recovery_raw_component "${recovery_repo}/tests/recovery_tests.cpp"
+  "${recovery_repo}/src/app/settings_recovery.cpp" "${recovery_repo}/src/app/settings_file.cpp"
+  "${recovery_repo}/src/app/settings_policy.cpp" "${recovery_repo}/src/app/settings_diff.cpp" "${recovery_repo}/src/app/settings_restore.cpp" "${recovery_repo}/src/app/recovery_checkpoint.cpp"
+  "${recovery_repo}/src/app/command_registry.cpp" "${recovery_repo}/src/app/window_slot.cpp")
+target_compile_definitions(recovery_raw_component PRIVATE GLANCELOT_RECOVERY_TESTING)
+target_include_directories(recovery_raw_component PRIVATE "${recovery_repo}/include" "${recovery_repo}/src/app" "${recovery_repo}/app")
+target_link_libraries(recovery_raw_component PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+qt_add_resources(recovery_raw_component recovery_component_catalog PREFIX "/themes"
+  BASE "${recovery_repo}/assets/themes" FILES "${recovery_repo}/assets/themes/catalog.json")
+add_test(NAME recovery_raw_component COMMAND recovery_raw_component
+  -o "${CMAKE_CURRENT_BINARY_DIR}/raw-results.txt,txt" -o -,txt)
+set_tests_properties(recovery_raw_component PROPERTIES TIMEOUT 30)
+
+
+if(WIN32)
+  target_link_libraries(recovery_registry_component PRIVATE shell32)
+endif()
+

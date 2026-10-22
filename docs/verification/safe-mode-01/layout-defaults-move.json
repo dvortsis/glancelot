@@ -1,0 +1,7 @@
+{
+  "base": "3149b6a91763aa3b43983e07a1e9017706a25a05",
+  "bodyEqual": true,
+  "normalization": "UTF-8 text LF",
+  "sha256": "E2EDD842609AF248B2854E1650B8B7D7FEF9C1F7D4A0C5584F7C9F33F2100751",
+  "scope": "Pure extraction of shipped pane defaults for headless validation; no visual layout change"
+}

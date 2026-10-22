@@ -1,0 +1,26 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+    Start  5: viewer_acceptance
+1/8 Test  #5: viewer_acceptance ................***Failed   45.94 sec
+
+    Start  8: pane_layout
+2/8 Test  #8: pane_layout ......................   Passed    0.47 sec
+    Start 14: themes
+3/8 Test #14: themes ...........................   Passed    0.30 sec
+    Start 22: favorites
+4/8 Test #22: favorites ........................   Passed    0.53 sec
+    Start 34: recovery
+5/8 Test #34: recovery .........................   Passed   14.31 sec
+    Start 35: recovery_startup
+6/8 Test #35: recovery_startup .................   Passed    0.23 sec
+    Start 36: recovery_controller
+7/8 Test #36: recovery_controller ..............   Passed    2.76 sec
+    Start 37: recovery_process
+8/8 Test #37: recovery_process .................   Passed   30.01 sec
+
+88% tests passed, 1 tests failed out of 8
+
+Total Test time (real) =  94.96 sec
+
+The following tests FAILED:
+	  5 - viewer_acceptance (Failed)
+Errors while running CTest

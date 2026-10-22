@@ -1,0 +1,15 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+    Start  5: startup_window_geometry
+1/5 Test  #5: startup_window_geometry ..........   Passed    0.19 sec
+    Start 36: recovery
+2/5 Test #36: recovery .........................   Passed   15.04 sec
+    Start 37: recovery_startup
+3/5 Test #37: recovery_startup .................   Passed    0.46 sec
+    Start 38: recovery_controller
+4/5 Test #38: recovery_controller ..............   Passed   14.50 sec
+    Start 39: recovery_process
+5/5 Test #39: recovery_process .................   Passed   36.82 sec
+
+100% tests passed out of 5
+
+Total Test time (real) =  67.03 sec

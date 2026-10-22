@@ -1,0 +1,115 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (11.9s)
+-- Generating done (3.2s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+[1/147] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[2/145] Automatic MOC and UIC for target glancelot_test_argv_capture
+[3/143] Automatic MOC and UIC for target glancelot_platform
+[4/141] Automatic MOC and UIC for target pane_layout_tests
+[5/139] Automatic MOC and UIC for target file_operation_service_tests
+[6/137] Automatic MOC and UIC for target directory_model_tests
+[7/135] Automatic MOC and UIC for target glancelot
+[8/134] Automatic MOC and UIC for target glancelot-decoder
+[9/132] Running AUTOMOC file extraction for target glancelot
+[10/132] Automatic MOC and UIC for target theme_tests
+[11/130] Automatic MOC and UIC for target canvas_tests
+[12/128] Running moc --collect-json for target glancelot
+[13/81] Automatic MOC and UIC for target grid_ui_tests
+[14/79] Automatic MOC and UIC for target fs_watch_ui_tests
+[15/77] Automatic MOC and UIC for target acceptance_tests
+[16/75] Automatic MOC and UIC for target thumbnail_tests
+[17/73] Automatic MOC and UIC for target folder_tree_tests
+[18/71] Automatic MOC and UIC for target window_slot_tests
+[19/69] Automatic MOC and UIC for target grid_search_tests
+[20/67] Automatic MOC and UIC for target platform_integration_tests
+[21/65] Automatic MOC and UIC for target grid_density_tests
+[22/63] Automatic MOC and UIC for target ui_settings_tests
+[23/61] Automatic MOC and UIC for target fs_watch_tests
+[24/59] Automatic MOC and UIC for target fs_watch_budget_tests
+[25/57] Automatic MOC and UIC for target favorites_tests
+[26/55] Automatic MOC and UIC for target folder_history_tests
+[27/53] Automatic MOC and UIC for target shortcuts_help_tests
+[28/51] Automatic MOC and UIC for target filter_tests
+[29/49] Automatic MOC and UIC for target cache_tests
+[30/47] Automatic MOC and UIC for target io_scheduler_tests
+[31/45] Automatic MOC and UIC for target metadata_tests
+[32/43] Automatic MOC and UIC for target animation_tests
+[33/41] Automatic MOC and UIC for target mutation_tests
+[34/39] Automatic MOC and UIC for target format_tests
+[35/37] Automatic MOC and UIC for target copy_move_tests
+Test project C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+      Start  1: perf_trace
+ 1/32 Test  #1: perf_trace .......................   Passed    0.30 sec
+      Start  2: navigation
+ 2/32 Test  #2: navigation .......................   Passed    6.22 sec
+      Start  3: directory_listing
+ 3/32 Test  #3: directory_listing ................   Passed   32.83 sec
+      Start  4: file_operations
+ 4/32 Test  #4: file_operations ..................   Passed    0.46 sec
+      Start  5: viewer_acceptance
+ 5/32 Test  #5: viewer_acceptance ................   Passed   11.12 sec
+      Start  6: thumbnails
+ 6/32 Test  #6: thumbnails .......................   Passed   12.02 sec
+      Start  7: folder_tree
+ 7/32 Test  #7: folder_tree ......................   Passed   10.05 sec
+      Start  8: pane_layout
+ 8/32 Test  #8: pane_layout ......................   Passed    0.83 sec
+      Start  9: window_slots
+ 9/32 Test  #9: window_slots .....................   Passed   27.30 sec
+      Start 10: folder_grid
+10/32 Test #10: folder_grid ......................   Passed  258.33 sec
+      Start 11: file_operation_service
+11/32 Test #11: file_operation_service ...........   Passed    1.56 sec
+      Start 12: directory_model
+12/32 Test #12: directory_model ..................   Passed   33.50 sec
+      Start 13: viewport
+13/32 Test #13: viewport .........................   Passed    0.18 sec
+      Start 14: themes
+14/32 Test #14: themes ...........................   Passed    0.36 sec
+      Start 15: platform_integration
+15/32 Test #15: platform_integration .............   Passed    1.28 sec
+      Start 16: grid_search
+16/32 Test #16: grid_search ......................   Passed    0.41 sec
+      Start 17: grid_density
+17/32 Test #17: grid_density .....................   Passed    0.39 sec
+      Start 18: ui_settings
+18/32 Test #18: ui_settings ......................   Passed    0.50 sec
+      Start 19: fs_watch
+19/32 Test #19: fs_watch .........................   Passed   80.92 sec
+      Start 20: fs_watch_budget
+20/32 Test #20: fs_watch_budget ..................   Passed  129.37 sec
+      Start 21: fs_watch_ui
+21/32 Test #21: fs_watch_ui ......................   Passed    3.88 sec
+      Start 22: favorites
+22/32 Test #22: favorites ........................   Passed    0.54 sec
+      Start 23: folder_history
+23/32 Test #23: folder_history ...................   Passed    0.12 sec
+      Start 24: shortcuts_help
+24/32 Test #24: shortcuts_help ...................   Passed    0.30 sec
+      Start 25: filter
+25/32 Test #25: filter ...........................   Passed    2.87 sec
+      Start 26: cache
+26/32 Test #26: cache ............................   Passed    5.25 sec
+      Start 27: io_scheduler
+27/32 Test #27: io_scheduler .....................   Passed    0.22 sec
+      Start 28: metadata
+28/32 Test #28: metadata .........................   Passed    0.22 sec
+      Start 29: animation
+29/32 Test #29: animation ........................   Passed    0.53 sec
+      Start 30: mutation
+30/32 Test #30: mutation .........................   Passed    0.18 sec
+      Start 31: copy_move
+31/32 Test #31: copy_move ........................   Passed    0.27 sec
+      Start 32: format
+32/32 Test #32: format ...........................   Passed    0.17 sec
+
+100% tests passed out of 32
+
+Total Test time (real) = 625.10 sec

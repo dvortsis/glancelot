@@ -1,0 +1,1 @@
+{"code":"Ok","destination":"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/process/run-l0e85vno/last-good-package","detail":"","generation":"0","package_revision":"sp1:6f74ccc5998a75779bb94963d23b79ecb322916a2c411f85ca00b807c4752adb","schema":1}

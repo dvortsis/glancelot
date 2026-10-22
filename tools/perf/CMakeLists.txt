@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.24)
+project(GlancelotPerfTools LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(Qt6 6.8.3 EXACT REQUIRED COMPONENTS Core Gui)
+add_executable(glancelot-perf-fixtures generate_fixtures.cpp)
+target_link_libraries(glancelot-perf-fixtures PRIVATE Qt6::Core Qt6::Gui)

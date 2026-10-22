@@ -1,0 +1,8 @@
+windows-first-process/** binary
+windows-isolated-process/** binary
+linux-raw/recovery-process/** binary
+windows-qtlog-process/** binary
+windows-qtstderr-process/** binary
+docker-full.txt binary
+windows-full.txt binary
+initial-gate-wait-status.txt binary

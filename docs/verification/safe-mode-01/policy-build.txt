@@ -1,0 +1,11 @@
+[1/13] Automatic MOC for target recovery_registry_component
+[2/11] Automatic MOC for target recovery_raw_component
+[3/11] Running rcc for resource recovery_component_catalog
+[4/11] Building CXX object CMakeFiles\recovery_raw_component.dir\recovery_raw_component_autogen\mocs_compilation.cpp.obj
+[5/11] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_recovery.cpp.obj
+[6/11] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp.obj
+[7/11] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_file.cpp.obj
+[8/11] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_policy.cpp.obj
+[9/11] Building CXX object CMakeFiles\recovery_raw_component.dir\.qt\rcc\qrc_recovery_component_catalog.cpp.obj
+[10/11] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\command_registry.cpp.obj
+[11/11] Linking CXX executable recovery_raw_component.exe

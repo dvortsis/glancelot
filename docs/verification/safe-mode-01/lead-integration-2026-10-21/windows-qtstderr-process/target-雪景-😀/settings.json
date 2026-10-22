@@ -1,0 +1,10 @@
+{
+    "schema": 1,
+    "unknown": null,
+    "wheel": "pan",
+    "windows": {
+        "2": {
+            "future": 7
+        }
+    }
+}
