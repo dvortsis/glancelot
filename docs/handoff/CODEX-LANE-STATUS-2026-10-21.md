@@ -1,3 +1,9 @@
+# Current closeout, October 21, 2026
+
+INPUT and monitor integrations are complete, followed by SAFE and startup correction integration at `e39eee2`. Both final SAFE/startup full gates pass39/39; independent actual Sonnet accepted source and compatibility; exact integrated focused5/5 plus35-command native proof passes. See [current SAFE/startup handoff](SAFE-STARTUP-INTEGRATION-2026-10-21.md) and [INPUT/monitor handoff](INPUT-MONITOR-INTEGRATION-2026-10-21.md) for source pins, actual output and limits. Integration lock is released in closeout. The older status below is historical and does not supersede these final records.
+
+---
+
 # Codex lane close-out,2026-10-21
 
 Checked authoritative main cdc5528, docs/AGENT-LANES-PLAN.md, docs/WORK-QUEUE.yaml, current worktree branches and completed review/correction handoffs. This implementation session does not edit lead-owned queue/contracts or integrate.
