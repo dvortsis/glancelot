@@ -1,3 +1,11 @@
+# Current lead update, October22,2026
+
+MONITOR-CUSTOM-01 was explicitly reassigned by the user from Claude to Codex. Its correction candidate is `6e228045f28b5c73819c37fc20ccf961082a13c4` in `.worktrees/codex-monitor-custom-01`, branch `codex/monitor-custom-01`, build `build-codex-monitor-custom-01`. Actual independent read-only Sonnet5.5 follow-up review is running. Prior review at2f73c84 returned changes required and is retained in [the evidence archive](../verification/monitor-custom-01/codex-2026-10-22/README.md).
+
+Corrections address canonical freeze ownership, settings labels/switches, windowed output and native screen bookkeeping, cross-display drag, positive one/two/three-display coordinator tests, real grid focus/scroll retention and actual renderer retirement proof. Focused tests pass30 coordinator and12 UI with1 native-only skip. Complete native attempt7 passed12 checks but failed controller exposure in the rendering method; unchanged-source isolated attempt8 passed that method with25 screenshots and six actual GPU migrations. Both outcomes are retained. Full Windows/Docker integration gates, final cross-lane approval and integration are pending. Hardware qualification remains MONITOR-VERIFY. The historical ownership/ready statements below are superseded by this update.
+
+---
+
 # Current closeout, October 21, 2026
 
 MONITOR-CUSTOM-01 is now lead-frozen and assigned to Claude: branch claude/monitor-custom-01, worktree .worktrees/claude-monitor-custom-01, build build-claude-monitor-custom-01. [Start packet](MONITOR-CUSTOM-01-CLAUDE-START.md). The lead-owned contract blocker is removed; serialize against Claude's current stack implementation. This is a ready packet, not a delivered feature. Codex independently reviews it after implementation; MONITOR-VERIFY still depends on completion.
