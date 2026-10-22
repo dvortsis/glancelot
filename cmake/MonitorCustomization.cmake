@@ -54,7 +54,7 @@ if(BUILD_TESTING)
     qt_add_shaders(${monitor_suite}_tests "${monitor_suite}_shaders" PREFIX "/shaders"
       FILES src/render/image.vert src/render/image.frag)
     add_dependencies(${monitor_suite}_tests glancelot-decoder)
-    add_test(NAME ${monitor_suite} COMMAND ${monitor_suite}_tests -o -,txt)
+    add_test(NAME ${monitor_suite} COMMAND ${monitor_suite}_tests -o "${CMAKE_CURRENT_BINARY_DIR}/${monitor_suite}-results.txt,txt" -o -,txt)
     set_tests_properties(${monitor_suite} PROPERTIES
       ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
   endforeach()
