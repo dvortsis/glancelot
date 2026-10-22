@@ -1,4 +1,6 @@
 #include "glancelot/viewer_controller.hpp"
+#include "fs_monitor.hpp"
+#include <QScopeGuard>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -281,6 +283,15 @@ void CacheTests::lookaheadCancellationOnFilterChange() {
 int main(int argc, char** argv) {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
+    // Cache-hit assertions await registration; fs_watch separately covers the
+    // production 100 ms fallback and its required late-baseline fresh decode.
+    glancelot::fs_watch::ControllerTestHooks hooks;
+    hooks.baselineDeadlineMs = 5000;
+    const auto* previousHooks = glancelot::fs_watch::controllerTestHooks;
+    glancelot::fs_watch::controllerTestHooks = &hooks;
+    const auto restoreHooks = qScopeGuard([previousHooks] {
+        glancelot::fs_watch::controllerTestHooks = previousHooks;
+    });
     CacheTests tests;
     return QTest::qExec(&tests, argc, argv);
 }
