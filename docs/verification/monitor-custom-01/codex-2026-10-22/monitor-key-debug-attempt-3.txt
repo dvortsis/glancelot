@@ -1,0 +1,15 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+QDEBUG : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() qml: HOST_ENABLE false false true false monitor-recover
+QDEBUG : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() qml: HOST_SHORTCUT Ctrl+Alt+9 false false true ["monitor-recover"]
+QWARN  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() No QRhi found for window 0x1bc6e4bf050, QQuickRhiItem will not be functional
+QDEBUG : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() qml: HOST_ENABLE true true true false monitor-recover
+QDEBUG : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() qml: HOST_STATE true true false false {"binding":"Ctrl+Alt+9","hold":false,"id":"monitor-recover","label":"Recover all panes to controller","repeat":false,"scope":"global","steps":["Ctrl+Alt+9"]} QQuickGridView(0x1bc6e924d70, "photoGridView")
+FAIL!  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() Compared QObject pointers are not the same
+   Actual   (grid->window()): DetachedPaneHost_QMLTYPE_103/"detached-grid"
+   Expected (h.window)      : Main_QMLTYPE_157/"viewerWindow"
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(112) : failure location
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 21658ms
+********* Finished testing of MonitorCustomizationUiTests *********

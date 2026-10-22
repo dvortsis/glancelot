@@ -14,18 +14,18 @@ PASS   : MonitorCustomizationTests::outputMovePreservesTransformAndLayoutAndMiss
 PASS   : MonitorCustomizationTests::folderResumeReopenAndStaleGenerations()
 PASS   : MonitorCustomizationTests::identifyIsBoundedAndPaneGeometryRetainsPreference()
 PASS   : MonitorCustomizationTests::dockTransactionRetainsLatestUnknownFieldsWithoutDuplicateOwner()
+PASS   : MonitorCustomizationTests::pinnedOutputIgnoresFollowFolderAndTimingPolicy()
 PASS   : MonitorCustomizationTests::linkedComparisonRotationAndOutputGestureUseDisplayedGeneration()
 PASS   : MonitorCustomizationTests::duplicateAndPlaceholderSerialsAreWeak()
 PASS   : MonitorCustomizationTests::newerVersionIsNeverOverwritten()
 PASS   : MonitorCustomizationTests::simultaneousSlotEditRefusesStaleOverwrite()
 PASS   : MonitorCustomizationTests::optionsReachRealPresentationAndPreserveBudgets()
-QWARN  : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded() No QRhi found for window 0x1de5e6ea0f0, QQuickRhiItem will not be functional
-QWARN  : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded() No QRhi found for window 0x1de5e6ea0f0, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded() No QRhi found for window 0x273ef866580, QQuickRhiItem will not be functional
 PASS   : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded()
 PASS   : MonitorCustomizationTests::generatedTopologiesRecoverMissingAndReusedIdentities()
 PASS   : MonitorCustomizationTests::rendererIncarnationsShareAdmissionUntilOldTextureReleases()
 PASS   : MonitorCustomizationTests::nestedUnknownFieldsSurviveEditsAndPortableImport()
 PASS   : MonitorCustomizationTests::safeLayoutRestoreOwnsMonitorFieldsAndPreservesOtherSlots()
 PASS   : MonitorCustomizationTests::cleanupTestCase()
-Totals: 25 passed, 0 failed, 0 skipped, 0 blacklisted, 9169ms
+Totals: 26 passed, 0 failed, 0 skipped, 0 blacklisted, 8104ms
 ********* Finished testing of MonitorCustomizationTests *********

@@ -152,6 +152,15 @@ private slots:
         h.customization.setLayoutLocked(true);QTRY_VERIFY(h.customization.layoutLocked());QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());const auto saved=root["layouts"].toObject()["1"].toObject();QCOMPARE(saved["future"].toInt(),42);QCOMPARE(saved["center"].toObject()["future"].toInt(),43);QCOMPARE(saved["panes"].toObject()["tree"].toObject()["future"].toInt(),44);
         QVERIFY(!root["monitorCustomization"].toObject()["slots"].toObject()["1"].toObject().contains("dock"));
     }
+    void pinnedOutputIgnoresFollowFolderAndTimingPolicy() {
+        Harness h;QImage pin(40,30,QImage::Format_RGBA8888);pin.fill(Qt::red);QImage latest=pin.copy();latest.fill(Qt::blue);
+        h.manager.updateImage("/first/a.png",pin,1);h.manager.pinCurrentImage();QVERIFY(h.manager.openPresentation({},glancelot::PresentationMode::Pinned));
+        QVERIFY(h.customization.setOutputOptions({{"followSelection",false},{"folderChange","disable"},{"slideshowTiming","independent"}}));
+        h.manager.updateImage("/second/b.png",latest,2);QVERIFY(h.manager.isPresentationActive());QCOMPARE(h.manager.outputGeneration(),quint64(1));
+        auto* window=qobject_cast<glancelot::PresentationWindow*>(h.manager.presentationWindow());QVERIFY(window);QCOMPARE(window->primaryCanvas()->image().cacheKey(),pin.cacheKey());
+        h.manager.setPresentationMode("mirror");QVERIFY(h.customization.setOutputOptions({{"followSelection",true},{"slideshowTiming","shared"}}));
+        h.manager.updateImage("/second/c.png",latest,3);QVERIFY(h.manager.isPresentationActive());QCOMPARE(h.manager.currentPath(),QString("/second/c.png"));
+    }
     void linkedComparisonRotationAndOutputGestureUseDisplayedGeneration() {
         Harness h;QImage image(400,200,QImage::Format_RGBA8888);image.fill(Qt::red);h.manager.updateImage("/a.png",image,1);h.manager.pinCurrentImage();h.manager.setPresentationMode("comparison");QVERIFY(h.manager.openPresentation({},glancelot::PresentationMode::Comparison));
         QVERIFY(h.customization.setOutputOptions({{"viewportLink","linked"}}));auto* window=qobject_cast<glancelot::PresentationWindow*>(h.manager.presentationWindow());QVERIFY(window);

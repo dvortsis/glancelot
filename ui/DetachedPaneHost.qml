@@ -108,6 +108,6 @@ Window {
             onActivated: appHost.pressKey(appHost.resolveKey(appHost.keyTable.seconds[modelData],appHost.chordFirst))
         }
     }
-    Shortcut { sequence: "Escape"; enabled: window.active && !appHost.modalOpen && !appHost.editingText; onActivated: appHost.escapeContent() }
-    Shortcut { sequence: "?"; enabled: window.active && appHost.keysLive; onActivated: { appHost.requestActivate(); appHost.openShortcutsHelp() } }
+    Shortcut { sequence: "Escape"; context: Qt.WindowShortcut; enabled: window.active && !appHost.modalOpen && !appHost.editingText; onActivated: appHost.escapeContent() }
+    Shortcut { sequence: "?"; context: Qt.WindowShortcut; enabled: window.active && appHost.keysLive; onActivated: { appHost.requestActivate(); appHost.openShortcutsHelp() } }
 }

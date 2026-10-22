@@ -496,6 +496,12 @@ ApplicationWindow {
         }
         return best
     }
+    // QWindow considers the transient controller active together with a detached host.
+    // Only one window may register an enabled copy of the shared key table.
+    readonly property bool controllerOwnsKeys: {
+        for(const id of Object.keys(detachedHosts))if(detachedHosts[id].active)return false
+        return true
+    }
     readonly property bool keysLive: !modalOpen && !editingText
     // Two-step chords: the first key arms a pending state that the second key completes. It ends after 1.5 s, on
     // Escape, on losing focus or when a modal opens; commands in the same scope never share the first key alone.
@@ -779,7 +785,7 @@ ApplicationWindow {
             sequence: modelData
             context: Qt.WindowShortcut
             autoRepeat: false
-            enabled: app.keysLive && !app.chordPending && app.resolveKey(app.keyTable.firsts[modelData]).length > 0
+            enabled: app.controllerOwnsKeys && app.keysLive && !app.chordPending && app.resolveKey(app.keyTable.firsts[modelData]).length > 0
             onActivated: {
                 const id = app.resolveKey(app.keyTable.firsts[modelData])
                 if (id.length === 0) return
@@ -795,21 +801,21 @@ ApplicationWindow {
             sequence: modelData
             context: Qt.WindowShortcut
             autoRepeat: false
-            enabled: app.keysLive && app.chordPending && app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst).length > 0
+            enabled: app.controllerOwnsKeys && app.keysLive && app.chordPending && app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst).length > 0
             onActivated: app.pressKey(app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst))
         }
     }
     Shortcut {
         sequence: "Escape"
         // Text fields own Escape (the address field reverts, then leaves arrangement itself).
-        enabled: !app.modalOpen && !app.editingText
+        enabled: app.controllerOwnsKeys && !app.modalOpen && !app.editingText
         onActivated: app.escapeContent()
     }
     Shortcut {
         sequence: "?"
         context: Qt.WindowShortcut
         autoRepeat: false
-        enabled: !app.modalOpen && !app.editingText
+        enabled: app.controllerOwnsKeys && !app.modalOpen && !app.editingText
         onActivated: app.openShortcutsHelp()
     }
     Timer {

@@ -150,6 +150,7 @@ struct DisplayManager::Private {
 
     mutable bool displaysDirty{true};
     mutable QList<DisplayInfo> cachedDisplays;
+    void notifyDisplays(){displaysDirty=true;emit q->displaysChanged();}
     QList<DisplayInfo> enumerateDisplays() const {
         if(!displaysDirty)return cachedDisplays;
         QList<DisplayInfo> result;
@@ -230,27 +231,26 @@ struct DisplayManager::Private {
 
 DisplayManager::DisplayManager(QObject* parent)
     : QObject(parent), d(std::make_unique<Private>(this)) {
-    connect(this,&DisplayManager::displaysChanged,this,[this]{d->displaysDirty=true;});
     auto observe=[this](QScreen* screen) {
-        connect(screen,&QScreen::geometryChanged,this,[this]{emit displaysChanged();});
-        connect(screen,&QScreen::availableGeometryChanged,this,[this]{emit displaysChanged();});
-        connect(screen,&QScreen::logicalDotsPerInchChanged,this,[this]{emit displaysChanged();});
-        connect(screen,&QScreen::refreshRateChanged,this,[this]{emit displaysChanged();});
+        connect(screen,&QScreen::geometryChanged,this,[this]{d->notifyDisplays();});
+        connect(screen,&QScreen::availableGeometryChanged,this,[this]{d->notifyDisplays();});
+        connect(screen,&QScreen::logicalDotsPerInchChanged,this,[this]{d->notifyDisplays();});
+        connect(screen,&QScreen::refreshRateChanged,this,[this]{d->notifyDisplays();});
     };
     for(auto* screen:QGuiApplication::screens())observe(screen);
     // Listen to screen topology changes
     if (qApp) {
         connect(qApp, &QGuiApplication::screenAdded, this, [this,observe](QScreen* screen) {
-            observe(screen); emit displaysChanged();
+            observe(screen); d->notifyDisplays();
         });
         connect(qApp, &QGuiApplication::screenRemoved, this, [this](QScreen* screen) {
             if (d->presentationScreen == screen) {
                 closePresentation();
             }
-            emit displaysChanged();
+            d->notifyDisplays();
         });
         connect(qApp, &QGuiApplication::primaryScreenChanged, this, [this](QScreen*) {
-            emit displaysChanged();
+            d->notifyDisplays();
         });
     }
 }
@@ -511,6 +511,7 @@ void DisplayManager::setPresentationMode(const QString& mode) {
 void DisplayManager::setMode(PresentationMode mode) {
     if (d->mode == mode) return;
     d->mode = mode;
+    d->folderHeld=false;d->followFolder=d->currentPath.isEmpty()?QString{}:QFileInfo(d->currentPath).absolutePath();
     d->applyImagesToWindow();
     emit presentationModeChanged(d->mode);
 }
@@ -518,7 +519,7 @@ void DisplayManager::setMode(PresentationMode mode) {
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
     if (generation < d->currentGeneration) return;
 
-    if(d->active&&!d->publishingTimed) {
+    if(d->active&&d->mode!=PresentationMode::Pinned&&!d->publishingTimed) {
         const auto folder=QFileInfo(path).absolutePath();
         if(d->followFolder.isEmpty())d->followFolder=folder;
         if(folder!=d->followFolder) {

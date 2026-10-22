@@ -105,6 +105,16 @@ private slots:
         for(int i=0;i<6;++i){qInfo("Native detach %d",i);QVERIFY(h.monitor.detachPane("preview",display));QTRY_VERIFY(canvas->window()!=h.window);qInfo("Native detached");auto* host=canvas->window();QTRY_VERIFY_WITH_TIMEOUT(host->isExposed(),5000);QTest::qWait(150);qInfo("Native exposed; grab");QVERIFY(!host->grabWindow().isNull());QVERIFY(canvas->rendererError().isEmpty());qInfo("Native redock");QVERIFY(h.monitor.redockPane("preview"));QTRY_COMPARE(canvas->window(),h.window);}
         QVERIFY(h.window->grabWindow().save(QDir(destination).filePath("preview-after-six-native-migrations.png")));
     }
+    void recoveryKeyPointerAndPaletteShareLockedRouting() {
+        Harness h;QVERIFY(h.window);h.window->show();const auto display=h.viewer.displayManager()->displays().first().id;
+        auto* grid=h.window->findChild<QQuickItem*>("photoGrid");QVERIFY(grid);QVERIFY(h.viewer.setBinding("monitor-recover","Ctrl+Alt+9"));
+        QVERIFY(h.monitor.detachPane("grid",display));QTRY_VERIFY(grid->window()!=h.window);QVERIFY(h.monitor.setPaneFrozen("grid",true));h.monitor.setLayoutLocked(true);QTRY_VERIFY(h.monitor.layoutLocked());
+        auto* host=grid->window();host->requestActivate();QTRY_VERIFY(host->isActive());QTest::keyClick(host,Qt::Key_9,Qt::ControlModifier|Qt::AltModifier);QTRY_COMPARE(grid->window(),h.window);QVERIFY(h.monitor.layoutLocked());QVERIFY(h.monitor.paneRoutes()["grid"].toMap()["frozen"].toBool());
+        h.monitor.setLayoutLocked(false);QVERIFY(h.monitor.setPaneFrozen("grid",false));QVERIFY(h.monitor.detachPane("grid",display));QTRY_VERIFY(grid->window()!=h.window);QVERIFY(h.monitor.setPaneFrozen("grid",true));
+        QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"monitor-settings")));auto* button=h.window->findChild<QQuickItem*>("monitorRecover");QVERIFY(button);h.window->requestActivate();QTRY_VERIFY(button->isVisible());
+        QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,button->mapToScene(QPointF(button->width()/2,button->height()/2)).toPoint());QTRY_COMPARE(grid->window(),h.window);QVERIFY(h.monitor.paneRoutes()["grid"].toMap()["frozen"].toBool());
+        QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"monitor-recover")));QVERIFY(h.monitor.paneRoutes()["grid"].toMap()["frozen"].toBool());
+    }
     void actualImportAndResetReloadCoordinatorPreferences() {
         Harness h;QVERIFY(h.window);QVERIFY(h.monitor.savePreset({},"Portable","presentation"));
         const auto package=config->filePath("portable.json");QVERIFY(h.viewer.exportSettings(package));

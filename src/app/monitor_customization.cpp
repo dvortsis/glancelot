@@ -83,7 +83,8 @@ struct MonitorCustomization::Private {
         identifyTimer.setSingleShot(true);identifyTimer.setInterval(3000);
         QObject::connect(&identifyTimer,&QTimer::timeout,q,[this]{labels.clear();});
     }
-    bool fail(QString message) {feedback=std::move(message);emit q->changed();return false;}
+    void notify(){routeCache.clear();emit q->changed();}
+    bool fail(QString message) {feedback=std::move(message);notify();return false;}
     bool editable(const QString& id) {
         if(!monitor_state::paneIds.contains(id))return fail("Unknown pane.");
         if(panes->locked())return fail("Unlock the layout before moving panes.");
@@ -166,41 +167,40 @@ struct MonitorCustomization::Private {
             },[this,next,routing,committed,expectedWindow,capturedSlot,capturedRevision,applied,refused,written,writtenDock,dockChanged](SettingsStatus status){
                 if(slot!=capturedSlot||revision!=capturedRevision)return;
                 pending=false;
-                if(!status.ok()||!*applied){feedback=refused->isEmpty()?"Monitor preferences could not be saved; previous state is unchanged.":*refused;emit q->changed();return;}
+                if(!status.ok()||!*applied){feedback=refused->isEmpty()?"Monitor preferences could not be saved; previous state is unchanged.":*refused;notify();return;}
                 data=next;data["dock"]=*writtenDock;persisted=*written;invalid=false;
                 QSignalBlocker blocked(panes);
                 if(dockChanged){settings_detail::cancelPendingSettings(panes,"layout/"+QString::number(slot)+"/");panes->restoreSnapshot(data.value("dock").toMap());}
                 feedback.clear();if(committed)committed();
                 if(expectedWindow==displays->presentationWindow()){if(!routing.isEmpty())displays->setPresentationMode(routing);applyOutput();}
                 else feedback="Preferences saved; the newer presentation session was left unchanged.";
-                blocked.unblock();if(dockChanged)emit panes->changed();emit q->changed();
+                blocked.unblock();if(dockChanged)emit panes->changed();notify();
             });
         if(!accepted&&pending){pending=false;feedback="Monitor preferences could not be queued.";}
-        emit q->changed();return accepted&&(pending||*applied);
+        notify();return accepted&&(pending||*applied);
     }
 };
 
 MonitorCustomization::MonitorCustomization(DisplayManager* manager,PaneLayout* panes,QObject* parent)
     :QObject(parent),d(std::make_unique<Private>(this,manager,panes)) {
-    connect(this,&MonitorCustomization::changed,this,[this]{d->routeCache.clear();});
     connect(manager,&DisplayManager::presentationActiveChanged,this,[this](bool active){
         if(active&&!d->movingOutput)d->sessionScreen=d->displays->presentationWindow()?d->displays->presentationWindow()->screen():screenFor(d->displays->activeDisplayId());
         if(!active)d->sessionScreen=nullptr;
-        d->applyOutput();emit changed();
+        d->applyOutput();d->notify();
     });
-    connect(manager,&DisplayManager::routingStatusChanged,this,[this]{emit changed();});
+    connect(manager,&DisplayManager::routingStatusChanged,this,[this]{d->notify();});
     connect(manager,&DisplayManager::displaysChanged,this,[this]{
         if(d->controller&&d->controller->visibility()!=QWindow::FullScreen&&d->controller->visibility()!=QWindow::Maximized&&d->controller->visibility()!=QWindow::Minimized)d->controller->setGeometry(reachable(d->controller->geometry(),d->controller->screen(),d->controller->minimumSize().expandedTo({320,240})));
-        emit changed();
+        d->notify();
     });
-    connect(panes,&PaneLayout::changed,this,[this]{emit changed();});
+    connect(panes,&PaneLayout::changed,this,[this]{d->notify();});
 }
 MonitorCustomization::~MonitorCustomization()=default;
 void MonitorCustomization::setControllerWindow(QQuickWindow* window){
     QObject::disconnect(d->themeConnection);QObject::disconnect(d->controllerScreenConnection);d->controller=window;
     if(window)d->themeConnection=connect(window,&QQuickWindow::colorChanged,this,[this]{d->applyOutput();});
-    if(window)d->controllerScreenConnection=connect(window,&QWindow::screenChanged,this,[this]{emit changed();});
-    d->applyOutput();emit changed();
+    if(window)d->controllerScreenConnection=connect(window,&QWindow::screenChanged,this,[this]{d->notify();});
+    d->applyOutput();d->notify();
 }
 void MonitorCustomization::reloadPreferences() {
     const auto slot=d->slot;if(slot<1)return;
@@ -209,7 +209,7 @@ void MonitorCustomization::reloadPreferences() {
     {QSignalBlocker blocked(d->panes);d->panes->setSlot(0);d->panes->setSlot(slot);}
     d->slot=0;setSlot(slot);
     emit d->panes->changed();
-    emit changed();
+    d->notify();
 }
 void MonitorCustomization::setSlot(int slot) {
     if(slot<1||slot>1000000||slot==d->slot)return;
@@ -233,7 +233,7 @@ void MonitorCustomization::setSlot(int slot) {
     }
     // Clean presentation is never enabled by preference restore. Control panes may
     // restore; weak identities recover to the controller instead of an ordinal guess.
-    d->boundScreens.clear();d->applyOutput();emit changed();
+    d->boundScreens.clear();d->applyOutput();d->notify();
 }
 QVariantMap MonitorCustomization::outputOptions() const{return d->data.value("output").toMap();}
 QVariantMap MonitorCustomization::paneRoutes() const {
@@ -385,6 +385,6 @@ void MonitorCustomization::recoverToController() {
         if(d->controller->visibility()!=QWindow::FullScreen&&d->controller->visibility()!=QWindow::Maximized)d->controller->setGeometry(reachable(d->controller->geometry(),d->controller->screen(),d->controller->minimumSize().expandedTo({320,240})));
         d->controller->requestActivate();
     }
-    d->feedback="Presentation closed; panes returned to the controller. Lock preferences were retained.";emit changed();
+    d->feedback="Presentation closed; panes returned to the controller. Lock preferences were retained.";d->notify();
 }
 } // namespace glancelot
