@@ -243,6 +243,17 @@ tasks:
     depends: [BOOT-01]
     files: [src/core/navigation.cpp, tests/navigation_tests.cpp]
     acceptance: Natural folder ordering, forward/reverse landing, roots, links, boundary policies
+  - id: GRID-RESIZE-TEST-01
+    requirements: [SYS-05, SYS-02]
+    owner: lead
+    owner_lane: codex
+    reviewer_lane: claude
+    state: implementing
+    branch: codex/grid-resize-test-01
+    worktree: .worktrees/codex-grid-resize-test-01
+    build: build-codex-grid-resize-test-01
+    outcome: Wait for asynchronous GridView resize cleanup before the existing stable delegate assertion
+    acceptance: Preserve delegate limit and geometry assertions; bounded wait only; source/test independent review; actual repeated targeted output and complete integration gates
   - id: CANVAS-UI
     requirements: [PERF-01, UX-01, VIEW-01, VIEW-03, VIEW-04, IN-04]
     owner: canvas
