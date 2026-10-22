@@ -1,3 +1,11 @@
+# Lead wrapup, October 22, 2026
+
+EXPORT-CSV-01 is integrated at `5db97272926105e7b6185eca671b5f6a837b9dd4` after actual independent Claude approval of Gemini25146f6. Two independently reviewed Codex test-fixture corrections (grid deferred cleanup and cache baseline/config isolation) are included. Full locked Windows42/42 620.01s and fresh Linux Docker42/42 375.21s pass; exact-merge CSV/cache2/2, grid3/3 and production core with tests disabled pass. All earlier failures, raw output and reviews are retained in [the final integration handoff](EXPORT-CSV-01-INTEGRATION-2026-10-22.md). Queue structure/status repaired; integration lock cleared at closeout.
+
+MONITOR-CUSTOM-01 remains done. [Remaining work and frozen Claude contract](LEAD-WRAPUP-2026-10-22.md): Claude retains its stack implementation and owns Main.qml for the serial synchronization/correction wave; Gemini confirmation is still required afterward. MONITOR-VERIFY is dependency-unblocked for Codex harness/evidence work, with independent Claude review and physical/native-platform qualification still required. CANVAS/DECODE physical limits remain explicit. No unrelated backlog is promoted. Older pending/status statements below are historical.
+
+---
+
 # Current lead closeout, October22,2026
 
 MONITOR-CUSTOM-01 is complete and integrated into main at `008d026951428988e545c63c25ded0b6106e3882`. The user reassigned implementation to Codex; actual independent Sonnet5.5 source/test approvals and all failed/passing evidence are retained. Full Windows41/41 and fresh Linux Docker41/41 pass under one main gate-lock block. Exact-merge targeted5/5, native14/14, rebuilt native two-display frame/move probe and isolated25-frame Intel Iris Xe rendering all pass. [Final handoff with actual output](MONITOR-CUSTOM-01-CODEX-HANDOFF.md). Queue done and integration lock released.

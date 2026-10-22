@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: codex-lead-wrapup-2026-10-22, task: EXPORT-CSV-01, branch: codex/integrate-export-csv-01}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -248,7 +248,7 @@ tasks:
     owner: lead
     owner_lane: codex
     reviewer_lane: claude
-    state: "integration"
+    state: done
     branch: codex/grid-resize-test-01
     worktree: .worktrees/codex-grid-resize-test-01
     build: build-codex-grid-resize-test-01
@@ -257,12 +257,14 @@ tasks:
     candidate_commit: "498d92279a356d064595c2781f84bad89c3624c3"
     review_evidence: "docs/verification/grid-resize-test-01/claude-review/REVIEW.md"
     evidence: "docs/verification/grid-resize-test-01/README.md; docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md"
+    integrated_commit: 5db97272926105e7b6185eca671b5f6a837b9dd4
+    integrated_checks: Windows42/42 620.01s and fresh Docker42/42 375.21s under one main gate-lock block; exact merge tree identical; integrated CSV/cache2/2 6.24s plus grid3/3 3.182s and production core BUILD_TESTING=OFF six steps pass. Actual output in docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md
   - id: CACHE-BASELINE-TEST-01
     requirements: [SYS-05, SYS-02]
     owner: lead
     owner_lane: codex
     reviewer_lane: claude
-    state: "integration"
+    state: done
     branch: codex/cache-baseline-test-01
     worktree: .worktrees/codex-cache-baseline-test-01
     build: build-codex-cache-baseline-test-01
@@ -271,6 +273,8 @@ tasks:
     candidate_commit: "d63cd9d5f36f0134a4b42bcddeaa4b62ddad198f"
     review_evidence: "docs/verification/cache-baseline-test-01/review/REVIEW.md"
     evidence: "docs/verification/cache-baseline-test-01/README.md; docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md"
+    integrated_commit: 5db97272926105e7b6185eca671b5f6a837b9dd4
+    integrated_checks: Windows42/42 620.01s and fresh Docker42/42 375.21s under one main gate-lock block; exact merge tree identical; integrated CSV/cache2/2 6.24s plus grid3/3 3.182s and production core BUILD_TESTING=OFF six steps pass. Actual output in docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md
   - id: CANVAS-UI
     requirements: [PERF-01, UX-01, VIEW-01, VIEW-03, VIEW-04, IN-04]
     owner: canvas
@@ -881,7 +885,7 @@ tasks:
     owner: lead
     owner_lane: gemini
     reviewer_lane: codex or claude (first free reviewer slot; never gemini)
-    state: "integration"
+    state: done
     review_verdict: "APPROVED at25146f6450fcac5b7f6a8c6b71f47fe470665698; independent Claude Sonnet5.5 review0a38bd9c18c1fb72e7b564038f612ae7adbc9014"
     review_evidence: "docs/verification/EXPORT-CSV-01-CLAUDE-REVIEW-R2.md"
     blocked_by: null
@@ -901,6 +905,8 @@ tasks:
     gated_commit: "845509f1930bd62cb24194a3182d94267c67dafc"
     integration_evidence: "docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md"
     follow_up: "Approved nonblocking O1 invalid native Unicode item path can throw with RAII cleanup; future Qt service must contain worker exceptions. O2 link-test skip visibility and O3 filesystems without hard links remain recorded in independent review. Engine only; no export dialog claimed."
+    integrated_commit: 5db97272926105e7b6185eca671b5f6a837b9dd4
+    integrated_checks: Windows42/42 620.01s and fresh Docker42/42 375.21s under one main gate-lock block; exact merge tree identical; integrated CSV/cache2/2 6.24s plus grid3/3 3.182s and production core BUILD_TESTING=OFF six steps pass. Actual output in docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md
 next_milestone: M3
 priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02, MONITOR-OUTPUT-01]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Original planning note; current per-task states and pinned evidence are authoritative.
