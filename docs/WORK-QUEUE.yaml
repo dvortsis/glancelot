@@ -10,6 +10,7 @@ lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane i
 review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/monitor-output-fix ae1b7e4; Gemini reviews stacked Claude packets F002, F037, F031, F040, F049, F009, F014, F051 in stack order, each only for its own changes on top of the previous branch, then a short confirmation pass after the stack is updated onto integrated main; Claude lane reviews SAFE-MODE-01 follow-up; Gemini never reviews MONITOR-OUTPUT-01 fixes
 memory_action: act_mvcridmt_bdf1947ea9e7
 lead_takeover_2026_10_22: "User decision: Claude Code Opus 5.5 lead owns all lanes' remaining work via Opus subagents; fresh-context Claude reviewers replace cross-lane review; scope is stack correction then v1 M3-M6, conditional items feasibility-first. Supersedes lane_tools/review_routing above. Plan: docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
+lead_plan_2026_10_22: "User-approved execution plan: enablement phase EN-01..EN-10, frozen Wave A stack correction, then six concurrent subsystem tracks A-F with cross-track contracts; CI lead-windows-gate is the only gate that decides done; physical qualification via RUNBOOK packets. Replaces takeover waves B-G. Plan: docs/handoff/LEAD-PLAN-2026-10-22.md"
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
   performance_strategy: docs/PERFORMANCE-STRATEGY.md

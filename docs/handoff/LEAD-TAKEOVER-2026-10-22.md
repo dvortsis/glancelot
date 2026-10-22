@@ -2,6 +2,8 @@
 
 Written for: the Claude lead session that continues this work (local or cloud), and the user.
 
+> Superseded in part, October 22, 2026: section 4's waves B–G and the step-0 inventory mapping are replaced by [LEAD-PLAN-2026-10-22.md](LEAD-PLAN-2026-10-22.md) (enablement phase, then six concurrent tracks; CI `lead-windows-gate` decides done). Sections 1–3, Wave A and the cloud-run notes remain in force.
+
 ## 1. Decisions (user, October 22, 2026)
 
 - **One lead, all lanes.** The Claude Code Opus 5.5 session is lead and integrator, and owns every remaining task regardless of lane. The Codex and Gemini lanes are retired for this work. The lead implements through subagents and uses as many as the machine sustains.
