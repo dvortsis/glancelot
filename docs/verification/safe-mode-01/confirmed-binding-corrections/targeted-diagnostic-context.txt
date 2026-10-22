@@ -1,0 +1,3 @@
+The optional quiet diagnostic waiters were cancelled before test execution after another lane acquired the next full-gate slot.
+Diagnostics now run as narrow target-only tests, which are exempt from full-gate serialization; any competing build load is disclosed.
+No full gate, source, assertion or timeout was changed.

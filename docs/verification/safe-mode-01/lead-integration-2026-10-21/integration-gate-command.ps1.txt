@@ -1,0 +1,25 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/lead-integration-2026-10-21'
+New-Item -ItemType Directory -Force $d | Out-Null
+& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Holder Codex-user-authorized-lead -Run {
+ if((git rev-parse HEAD) -ne '7e8897975d507c29907d6a026792e1ea42b7cedd'){throw 'Integration source pin changed'}
+ git status --short > "$d/pre-gate-status.txt"
+ try {
+  & ./scripts/build.ps1 -BuildDir build-codex-safe-mode-01 -Test *> "$d/windows-full.txt"
+  $windows=0
+ } catch { $_ | Out-String | Add-Content "$d/windows-full.txt"; $windows=1 }
+ "windows_gate_exit=$windows" | Add-Content "$d/windows-full.txt"
+ "windows_gate_exit=$windows" | Set-Content "$d/gate-status.txt"
+ & docker build -t glancelot-browser:main . *> "$d/docker-full.txt"
+ $linux=$LASTEXITCODE
+ "docker_gate_exit=$linux" | Add-Content "$d/docker-full.txt"
+ "docker_gate_exit=$linux" | Add-Content "$d/gate-status.txt"
+ foreach($name in @('recovery-results.txt','recovery-startup-results.txt','recovery-controller-results.txt','fs-watch-results.txt','fs-watch-budget-results.txt')){
+  if(Test-Path "build-codex-safe-mode-01/$name"){Copy-Item "build-codex-safe-mode-01/$name" "$d/windows-$name"}
+ }
+ Copy-Item build-codex-safe-mode-01/Testing/Temporary/LastTest.log "$d/windows-LastTest.log"
+ "integration_gate_exit=$([int]($windows -ne 0 -or $linux -ne 0))" | Add-Content "$d/gate-status.txt"
+ if($windows -ne 0 -or $linux -ne 0){throw "Integrated gates failed Windows=$windows Docker=$linux"}
+}
+"gate_script_exit=0"

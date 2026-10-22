@@ -155,6 +155,10 @@ private slots:
     void missingFolderIsReportedAndSavedLocationKept();
     void explicitOpenOverridesRestore();
     void positionFlushesOnDestructionAndDisabledSlotWritesNothing();
+    // INPUT-02
+    void scopeAwareConflictsAndChordPrefixes();
+    void scopedBindingsPersistAndReload();
+    void wheelModifiersPersistFallBackIndividuallyAndMerge();
 };
 
 void WindowSlotTests::staleWindowsMergeIndependentSortFields() {
@@ -808,6 +812,132 @@ int main(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     WindowSlotTests tests;
     return QTest::qExec(&tests, argc, argv);
+}
+// ---- INPUT-02: scoped bindings, chords and the wheel matrix.
+void WindowSlotTests::scopeAwareConflictsAndChordPrefixes() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    ViewerController viewer;
+    // Every registered command reports its scope, hold flag and key steps.
+    QMap<QString, QVariantMap> byId;
+    for (const auto& row : viewer.commands()) byId.insert(row.toMap().value("id").toString(), row.toMap());
+    QCOMPARE(byId.value("next").value("scope").toString(), QString("canvas"));
+    QCOMPARE(byId.value("open").value("scope").toString(), QString("global"));
+    QCOMPARE(byId.value("grid-up").value("scope").toString(), QString("grid"));
+    QCOMPARE(byId.value("tree-open-folder").value("scope").toString(), QString("tree"));
+    QVERIFY(byId.value("hold-actual").value("hold").toBool());
+    QCOMPARE(byId.value("hold-actual").value("binding").toString(), QString("Z"));
+    QCOMPARE(byId.value("next").value("steps").toStringList(), QStringList{"Right"});
+    QVERIFY(byId.value("grid-up").value("steps").toStringList().isEmpty());
+    // Scopes that overlap conflict: same scope, and "global" with every scope.
+    QCOMPARE(viewer.bindingConflict("rotate", "Right"), QString("next"));
+    QCOMPARE(viewer.bindingConflict("hold-actual", "F"), QString("fit"));
+    QCOMPARE(viewer.bindingConflict("grid-up", "Ctrl+O"), QString("open"));
+    QCOMPARE(viewer.bindingConflict("tree-open-folder", "G"), QString("grid"));
+    QCOMPARE(viewer.bindingConflict("rotate", "R"), QString()); // a command never conflicts with itself
+    QCOMPARE(viewer.bindingConflict("rotate", ""), QString());
+    // Scopes that are never active together may share a key.
+    QCOMPARE(viewer.bindingConflict("grid-up", "Right"), QString());
+    QCOMPARE(viewer.bindingConflict("tree-open-folder", "Right"), QString());
+    QCOMPARE(viewer.bindingConflict("grid-select-all", "Left"), QString());
+    QVERIFY(viewer.setBinding("grid-up", "Right"));
+    QCOMPARE(viewer.bindingFor("grid-up"), QString("Right"));
+    QCOMPARE(viewer.bindingFor("next"), QString("Right"));
+    QCOMPARE(viewer.bindingConflict("grid-select-all", "Right"), QString("grid-up")); // same scope again
+    QVERIFY(!viewer.setBinding("grid-select-all", "Right"));
+    QCOMPARE(viewer.bindingConflict("zoom-in", "Right"), QString("next"));
+    // Chords: a prefix collides only inside an overlapping scope.
+    QCOMPARE(viewer.bindingConflict("rotate", "Right, D"), QString("next"));   // would swallow the single key
+    QCOMPARE(viewer.bindingConflict("grid-open", "G, D"), QString("grid"));    // "G" is global
+    QCOMPARE(viewer.bindingConflict("grid-open", "Left, D"), QString());       // "Left" is a canvas key; the grid never shares a pane
+    QVERIFY(viewer.setBinding("grid-open", "Left, D"));
+    QCOMPARE(viewer.bindingFor("grid-open"), QString("Left, D"));
+    QCOMPARE(viewer.bindingConflict("rotate", "Ctrl+K, Ctrl+C"), QString());
+    QVERIFY(viewer.setBinding("rotate", "Ctrl+K, Ctrl+C"));
+    QCOMPARE(viewer.bindingConflict("fit", "Ctrl+K"), QString("rotate"));      // a single key inside an existing chord's prefix
+    QCOMPARE(viewer.bindingConflict("fit", "Ctrl+K, Ctrl+C"), QString("rotate"));
+    QVERIFY(!viewer.setBinding("fit", "Ctrl+K"));
+    QStringList steps;
+    for (const auto& row : viewer.commands()) if (row.toMap().value("id").toString() == "rotate") steps = row.toMap().value("steps").toStringList();
+    QCOMPARE(steps, (QStringList{"Ctrl+K", "Ctrl+C"}));
+    // A chord is at most two steps; Escape stays reserved; a hold needs one key to release.
+    QVERIFY(!viewer.setBinding("background", "Ctrl+K, Ctrl+C, Ctrl+V"));
+    QVERIFY(!viewer.setBinding("background", "Ctrl+J, Escape"));
+    QVERIFY(!viewer.setBinding("hold-actual", "Ctrl+J, Ctrl+Z"));
+    QVERIFY(viewer.setBinding("hold-actual", "Ctrl+Alt+Z"));
+    // A rejected edit leaves the map as it was.
+    QCOMPARE(viewer.bindingFor("background"), QString("B"));
+    QCOMPARE(viewer.bindingFor("fit"), QString("F"));
+}
+
+void WindowSlotTests::scopedBindingsPersistAndReload() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    { ViewerController viewer; QVERIFY(viewer.setBinding("grid-up", "Right")); QVERIFY(viewer.setBinding("rotate", "Ctrl+K, Ctrl+C")); }
+    {   // A saved map that shares a key between scopes that never overlap is kept, not reset to defaults.
+        ViewerController again;
+        QCOMPARE(again.bindingFor("grid-up"), QString("Right"));
+        QCOMPARE(again.bindingFor("next"), QString("Right"));
+        QCOMPARE(again.bindingFor("rotate"), QString("Ctrl+K, Ctrl+C"));
+        QVERIFY(!again.status().contains("conflict"));
+    }
+    // Two canvas commands on one key is a conflict: the whole map falls back to the defaults.
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root) { root["bindings"] = QJsonObject{{"fit", "Q"}, {"rotate", "Q"}}; }).ok());
+    ViewerController broken;
+    QCOMPARE(broken.bindingFor("fit"), QString("F"));
+    QVERIFY(broken.status().contains("conflict"));
+    // A default added later (hold-actual's Z) yields to a saved key that already uses it.
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root) { root["bindings"] = QJsonObject{{"rotate", "Z"}}; }).ok());
+    ViewerController legacy;
+    QCOMPARE(legacy.bindingFor("rotate"), QString("Z"));
+    QCOMPARE(legacy.bindingFor("hold-actual"), QString());
+}
+
+void WindowSlotTests::wheelModifiersPersistFallBackIndividuallyAndMerge() {
+    QTemporaryDir config; QVERIFY(config.isValid());
+    qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+    {
+        ViewerController viewer;
+        const auto defaults = viewer.wheelModifiers();
+        QCOMPARE(defaults.value("none").toString(), QString("navigate"));   // today's behaviour
+        QCOMPARE(defaults.value("ctrl").toString(), QString("zoom"));
+        QCOMPARE(defaults.value("shift").toString(), QString("pan-horizontal"));
+        QCOMPARE(defaults.value("alt").toString(), QString("navigate"));    // unset Alt follows the plain wheel
+        QVERIFY(!viewer.setWheelModifier("ctrl", "spin"));
+        QVERIFY(!viewer.setWheelModifier("meta", "zoom"));
+        QVERIFY(!viewer.setWheelModifier("none", "pan-horizontal"));        // the plain wheel keeps its three values
+        QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(), QString("zoom"));
+        QVERIFY(viewer.setWheelModifier("none", "zoom"));
+        QCOMPARE(viewer.wheelMode(), QString("zoom"));
+        QCOMPARE(viewer.wheelModifiers().value("alt").toString(), QString("zoom"));
+        QVERIFY(viewer.setWheelModifier("alt", "pan"));
+        QCOMPARE(viewer.wheelModifiers().value("alt").toString(), QString("pan"));
+    }
+    {   ViewerController reloaded;
+        QCOMPARE(reloaded.wheelModifiers().value("none").toString(), QString("zoom"));
+        QCOMPARE(reloaded.wheelModifiers().value("alt").toString(), QString("pan"));
+        QCOMPARE(reloaded.wheelModifiers().value("ctrl").toString(), QString("zoom"));
+    }
+    // Invalid entries fall back one at a time; unknown keys survive an edit.
+    QVERIFY(glancelot::updateSettings([](QJsonObject& root) {
+        root["wheelModifiers"] = QJsonObject{{"ctrl", "bogus"}, {"shift", "navigate"}, {"alt", 5}, {"future", "kept"}};
+    }).ok());
+    ViewerController partial;
+    QCOMPARE(partial.wheelModifiers().value("ctrl").toString(), QString("zoom"));
+    QCOMPARE(partial.wheelModifiers().value("shift").toString(), QString("navigate"));
+    QCOMPARE(partial.wheelModifiers().value("alt").toString(), partial.wheelMode());
+    QVERIFY(partial.setWheelModifier("shift", "pan-horizontal"));
+    auto stored = settingsOf(config.path()).value("wheelModifiers").toObject();
+    QCOMPARE(stored.value("future").toString(), QString("kept"));
+    QCOMPARE(stored.value("shift").toString(), QString("pan-horizontal"));
+    // Two windows editing different modifiers do not revert each other.
+    ViewerController first, second;
+    QVERIFY(first.setWheelModifier("ctrl", "pan"));
+    QVERIFY(second.setWheelModifier("alt", "navigate"));
+    stored = settingsOf(config.path()).value("wheelModifiers").toObject();
+    QCOMPARE(stored.value("ctrl").toString(), QString("pan"));
+    QCOMPARE(stored.value("alt").toString(), QString("navigate"));
+    QCOMPARE(stored.value("future").toString(), QString("kept"));
 }
 #include "window_slot_tests.moc"
 

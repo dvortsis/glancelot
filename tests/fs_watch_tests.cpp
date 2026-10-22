@@ -388,6 +388,9 @@ private slots:
         QVERIFY(readUnlocked);QCOMPARE(scheduler.activeForegroundJobs(),0);
     }
     void controllerCannotReleaseForeignAdmissions() {
+        // Exercise verified cache reuse, not the separately tested late-baseline fallback.
+        fs_watch::ControllerTestHooks cacheHooks;cacheHooks.baselineDeadlineMs=5000;
+        HookScope awaitBaseline(cacheHooks);
         auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
         const auto cleanup=qScopeGuard([&]{scheduler.reset();});
         QTemporaryDir files;QVERIFY(files.isValid());const auto a=files.filePath("a.png"),b=files.filePath("b.png");
@@ -662,6 +665,9 @@ private slots:
         QVERIFY(!viewer.directoryError().isEmpty());
     }
     void noncurrentSameTupleReplacementInvalidatesCache() {
+        // Match the IPC fixture's baseline wait so this asserts the cached revision path.
+        fs_watch::ControllerTestHooks cacheHooks;cacheHooks.baselineDeadlineMs=5000;
+        HookScope awaitBaseline(cacheHooks);
         QTemporaryDir files;QVERIFY(files.isValid());QVERIFY(QDir(files.path()).mkpath("sub/leaf"));
         const auto a=files.filePath("a.png"),b=files.filePath("sub/leaf/b.png");
         const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);

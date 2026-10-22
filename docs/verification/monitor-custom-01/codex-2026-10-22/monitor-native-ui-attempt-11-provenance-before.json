@@ -1,0 +1,6 @@
+{
+  "binarySha256Before": "C58BA5AE2BF30F3266B85D0AB832C670C7BD07204949E4AB386E8705DECBB9B7",
+  "source": "70a6903b9b9618fcd7c7cdc71a884d7cfa359d3c",
+  "started": "2026-10-22T13:14:52.0355910-06:00",
+  "command": "monitor_customization_ui_tests.exe -o .cache/monitor-native-ui-attempt-11.txt,txt"
+}

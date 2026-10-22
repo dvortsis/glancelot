@@ -1,0 +1,4 @@
+COMMAND: ctest --test-dir build-codex-monitor-custom-01 -R '^(input_ui|monitor_output|monitor_customization|monitor_customization_ui|recovery_controller)$' --output-on-failure
+COMMAND: & ./.cache/run-monitor-native-proof.ps1 -Attempt 13
+COMMAND: & ./.cache/run-native-monitor-probe-integrated.ps1
+COMMAND: glancelot.exe --no-resume --quit-after 2500 --report <isolated report> --screenshot <isolated PNG> <generated image>

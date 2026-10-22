@@ -1,0 +1,128 @@
+[
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "include/glancelot/display_manager.hpp",
+    "reference": "365fc143833c95b78853f62c7f782fe08e91136d",
+    "candidate": "365fc143833c95b78853f62c7f782fe08e91136d",
+    "equal": true
+  },
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "src/app/display_manager.cpp",
+    "reference": "0462a68a17ae14fbaaa9f4e777b091219ba1d3ec",
+    "candidate": "0462a68a17ae14fbaaa9f4e777b091219ba1d3ec",
+    "equal": true
+  },
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "src/render/presentation_window.cpp",
+    "reference": "4f98682fbd80e3c03837e679632dc4a0642cb572",
+    "candidate": "4f98682fbd80e3c03837e679632dc4a0642cb572",
+    "equal": true
+  },
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "src/render/presentation_window.hpp",
+    "reference": "af8f3581e3f0441088b1b3e85554e07c1af7826c",
+    "candidate": "af8f3581e3f0441088b1b3e85554e07c1af7826c",
+    "equal": true
+  },
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "src/render/output_color.hpp",
+    "reference": "f626f6e1a674de72971a8f563dc6c46a9aaac338",
+    "candidate": "f626f6e1a674de72971a8f563dc6c46a9aaac338",
+    "equal": true
+  },
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "src/render/image.frag",
+    "reference": "9e1c0789102d6eac0897c20550ee579b20f8d537",
+    "candidate": "9e1c0789102d6eac0897c20550ee579b20f8d537",
+    "equal": true
+  },
+  {
+    "group": "accepted_monitor_9b03718",
+    "path": "tests/monitor_output_tests.cpp",
+    "reference": "576a8ed1a2849fd240058d1d5a1e0176790a002a",
+    "candidate": "576a8ed1a2849fd240058d1d5a1e0176790a002a",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "ui/Main.qml",
+    "reference": "cde37cf049b074d565a3c2168040bca9c53d6a6c",
+    "candidate": "cde37cf049b074d565a3c2168040bca9c53d6a6c",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "ui/PhotoGrid.qml",
+    "reference": "31f70ecfd4d29dba1d612074b718e701f045145b",
+    "candidate": "31f70ecfd4d29dba1d612074b718e701f045145b",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "ui/FolderTree.qml",
+    "reference": "0155c5c403ac84fa2a5ae0e331bd701dc3794871",
+    "candidate": "0155c5c403ac84fa2a5ae0e331bd701dc3794871",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "ui/CommandMenuItem.qml",
+    "reference": "b07d823898660749af554aaee03ec9ee5b919d96",
+    "candidate": "b07d823898660749af554aaee03ec9ee5b919d96",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "tests/input_ui_tests.cpp",
+    "reference": "06998febcd7670ef2867842c38cf83fd712ed40d",
+    "candidate": "06998febcd7670ef2867842c38cf83fd712ed40d",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "tests/grid_ui_tests.cpp",
+    "reference": "0577df40251336a1bf2d29ccfa3ace90b8d7b8d5",
+    "candidate": "0577df40251336a1bf2d29ccfa3ace90b8d7b8d5",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "tests/window_slot_tests.cpp",
+    "reference": "d821ce95c0a82f7d8d12118c49b30ec062278694",
+    "candidate": "d821ce95c0a82f7d8d12118c49b30ec062278694",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "CMakeLists.txt",
+    "reference": "751c866ec0315e3124b5d2860308a66c6373b321",
+    "candidate": "751c866ec0315e3124b5d2860308a66c6373b321",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "src/worker/main.cpp",
+    "reference": "08f84c7c27fc426d6c442c5669988b7521885258",
+    "candidate": "08f84c7c27fc426d6c442c5669988b7521885258",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "src/app/fs_monitor.hpp",
+    "reference": "19bafa9322df84930fc5a3b8f95aca0a5eb470cd",
+    "candidate": "19bafa9322df84930fc5a3b8f95aca0a5eb470cd",
+    "equal": true
+  },
+  {
+    "group": "integrated_input_main_7c0bd2e",
+    "path": "src/app/fs_source_token.hpp",
+    "reference": "60dc21ab23d671392430edc43c0051a9d81a20e4",
+    "candidate": "60dc21ab23d671392430edc43c0051a9d81a20e4",
+    "equal": true
+  }
+]

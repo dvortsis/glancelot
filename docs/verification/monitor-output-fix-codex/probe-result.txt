@@ -1,0 +1,2 @@
+probe_exit=3
+source_diff_exit=0

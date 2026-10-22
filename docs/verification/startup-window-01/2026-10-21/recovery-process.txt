@@ -1,0 +1,7 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+    Start 38: recovery_process
+1/1 Test #38: recovery_process .................   Passed   31.51 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =  31.53 sec

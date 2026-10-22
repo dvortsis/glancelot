@@ -1,0 +1,1 @@
+Queued wrapper36576 cancelled before acquiring gate; native55984 still held lock. Restart uses frozen plan tag glancelot-browser:main; no Docker command ran in the cancelled wrapper.

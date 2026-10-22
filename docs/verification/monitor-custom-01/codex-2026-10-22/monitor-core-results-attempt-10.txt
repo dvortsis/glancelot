@@ -1,0 +1,37 @@
+********* Start testing of MonitorCustomizationTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationTests::initTestCase()
+PASS   : MonitorCustomizationTests::optionsRejectWholeInvalidPatch()
+PASS   : MonitorCustomizationTests::snapshotsValidateWithoutPartialMutation()
+PASS   : MonitorCustomizationTests::presetsCrudIsolationAndUnknownFields()
+PASS   : MonitorCustomizationTests::freezeLockAndEmergencyRecovery()
+PASS   : MonitorCustomizationTests::invalidSlotDoesNotEraseValidPresets()
+PASS   : MonitorCustomizationTests::busySaveRollsBackUntilCommittedAndCancellationIsFenced()
+PASS   : MonitorCustomizationTests::writeFailureDoesNotMutateRuntime()
+PASS   : MonitorCustomizationTests::presetAndDisplayBoundsAreAtomic()
+PASS   : MonitorCustomizationTests::serializedBoundsPreserveOriginalSettings()
+FAIL!  : MonitorCustomizationTests::outputMovePreservesTransformAndLayoutAndMissingPreferenceCanClear() Compared values are not the same
+   Actual   (output->viewportState()): QMap(("activeSecondary", QVariant(bool, false))("linked", QVariant(bool, true))("primary", QVariant(QVariantMap, QMap(("centerX", QVariant(double, 150))("centerY", QVariant(double, 100))("fit", QVariant(QString, "fill"))("rotation", QVariant(int, 90))("sourceHeight", QVariant(int, 200))("sourceWidth", QVariant(int, 300))("zoom", QVariant(double, 3.18)))))("secondary", QVariant(QVariantMap, QMap(("fit", QVariant(QString, "fill"))))))
+   Expected (state)                  : QMap(("activeSecondary", QVariant(bool, false))("linked", QVariant(bool, true))("primary", QVariant(QVariantMap, QMap(("centerX", QVariant(double, 150))("centerY", QVariant(double, 100))("fit", QVariant(QString, "fill"))("rotation", QVariant(int, 90))("sourceHeight", QVariant(int, 200))("sourceWidth", QVariant(int, 300))("zoom", QVariant(double, 4)))))("secondary", QVariant(QVariantMap, QMap(("fit", QVariant(QString, "fill"))))))
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_tests.cpp(122) : failure location
+PASS   : MonitorCustomizationTests::folderResumeReopenAndStaleGenerations()
+PASS   : MonitorCustomizationTests::identifyIsBoundedAndPaneGeometryRetainsPreference()
+PASS   : MonitorCustomizationTests::dockTransactionRetainsLatestUnknownFieldsWithoutDuplicateOwner()
+PASS   : MonitorCustomizationTests::pinnedOutputIgnoresFollowFolderAndTimingPolicy()
+PASS   : MonitorCustomizationTests::linkedComparisonRotationAndOutputGestureUseDisplayedGeneration()
+PASS   : MonitorCustomizationTests::duplicateAndPlaceholderSerialsAreWeak()
+PASS   : MonitorCustomizationTests::canonicalFreezeIsSharedBySettingsArrangementAndReset()
+PASS   : MonitorCustomizationTests::layoutUnlockAndFreezePreserveUnsupportedMonitorData()
+PASS   : MonitorCustomizationTests::realCoordinatorMovesSwapsAndRecoversAcrossSyntheticScreens()
+PASS   : MonitorCustomizationTests::newerVersionIsNeverOverwritten()
+PASS   : MonitorCustomizationTests::simultaneousSlotEditRefusesStaleOverwrite()
+PASS   : MonitorCustomizationTests::optionsReachRealPresentationAndPreserveBudgets()
+QWARN  : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded() No QRhi found for window 0x278034b0270, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded()
+PASS   : MonitorCustomizationTests::generatedTopologiesRecoverMissingAndReusedIdentities()
+PASS   : MonitorCustomizationTests::rendererIncarnationsShareAdmissionUntilOldTextureReleases()
+PASS   : MonitorCustomizationTests::nestedUnknownFieldsSurviveEditsAndPortableImport()
+PASS   : MonitorCustomizationTests::safeLayoutRestoreOwnsMonitorFieldsAndPreservesOtherSlots()
+PASS   : MonitorCustomizationTests::cleanupTestCase()
+Totals: 28 passed, 1 failed, 0 skipped, 0 blacklisted, 9673ms
+********* Finished testing of MonitorCustomizationTests *********

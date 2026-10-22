@@ -8,10 +8,15 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include "glancelot/viewer_controller.hpp"
+#include "glancelot/command_registry.hpp"
+#include "binding_validation.hpp"
+#include "recovery_session.hpp"
+#include "window_claim_guard.hpp"
 #include "glancelot/io_scheduler.hpp"
 #include "glancelot/filter_state.hpp"
 #include "glancelot/navigation.hpp"
 #include "glancelot/settings_file.hpp"
+#include "settings_retry.hpp"
 #include "glancelot/platform_integration.hpp"
 #include "glancelot/metadata_model.hpp"
 #include "glancelot/metadata_parser.hpp"
@@ -40,6 +45,7 @@
 #include <deque>
 #include <stop_token>
 #include <utility>
+#include <limits>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -49,28 +55,10 @@
 
 using namespace glancelot;
 namespace {
-bool usableShortcut(const QKeySequence& sequence) {
-    for (int i=0; i<sequence.count(); ++i) {
-        const auto key=sequence[i];
-        if (key.key()==Qt::Key_unknown || key==QKeyCombination(Qt::NoModifier,Qt::Key_Escape)) return false;
-    }
-    return true;
-}
-bool shortcutOverlap(const QKeySequence& left,const QKeySequence& right) {
-    return !left.isEmpty() && !right.isEmpty()
-        && (left.matches(right)!=QKeySequence::NoMatch || right.matches(left)!=QKeySequence::NoMatch);
-}
-bool usableBindings(const QJsonObject& bindings) {
-    QList<QKeySequence> seen;
-    for (const auto& value:bindings) {
-        const auto text=value.toString();
-        const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
-        if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
-        for (const auto& other:seen) if (shortcutOverlap(sequence,other)) return false;
-        seen.append(sequence);
-    }
-    return true;
-}
+using glancelot::bindings::usableShortcut;
+using glancelot::bindings::bindingsCollide;
+using glancelot::bindings::findCommand;
+using glancelot::bindings::usableBindings;
 void trace(const char* event) {
     const auto path=qEnvironmentVariable("GLANCELOT_TRACE_FILE");
     if(path.isEmpty())return;
@@ -90,81 +78,7 @@ QString displayPath(const std::filesystem::path& path) {
     return QFile::decodeName(path.native().c_str());
 #endif
 }
-const std::vector<Command> registry {
-    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true}, {"previous","Previous image","Left",true},
-    {"next-folder","Next folder","PgDown"}, {"previous-folder","Previous folder","PgUp"},
-    {"palette","Find a command","Ctrl+Shift+P"}, {"settings","Settings","Ctrl+,"},
-    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
-    {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
-    {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
-    // Layout commands start unbound so existing users' shortcuts never collide.
-    {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
-    // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
-    {"view-preview","Show photo preview only",""}, {"view-grid","Show folder grid only",""},
-    {"view-combined","Show grid and preview together","Ctrl+Shift+G"}, {"combined-orientation","Switch grid and preview side by side or stacked",""},
-    {"reveal-in-file-manager", "Reveal in File Manager", "Ctrl+Alt+R"},
-    {"open-terminal", "Open Terminal", "Ctrl+Alt+T"},
-    {"copy-path", "Copy file path", "Ctrl+C"},
-    {"copy-file", "Copy file", "Ctrl+Shift+C"},
-    {"copy-image", "Copy image", "Ctrl+Alt+C"},
-    {"select-all", "Select all items in grid", ""},
-    {"clear-selection", "Clear grid selection", "Ctrl+D"},
-    {"invert-selection", "Invert grid selection", "Ctrl+I"},
-    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
-    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
-    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
-    // FS-WATCH-01: workspace command; generic routing preserves text/modal precedence.
-    {"refresh", "Refresh", "F5"},
-    // FAVORITES-01 (F003)
-    {"add-to-favorites", "Add current folder to favorites", ""},
-    // FOLDER-HISTORY-01 (F001)
-    {"navigate-back", "Go back to previous folder", "Alt+Left"},
-    {"navigate-forward", "Go forward to next folder", "Alt+Right"},
-    // SHORTCUTS-HELP-01 (F056)
-    {"shortcuts-help", "Keyboard shortcuts cheat sheet", "F1"},
-    // IO-01 Storage Profile Commands
-    {"storage-profile-auto", "Set storage profile to Auto", ""},
-    {"storage-profile-ssd", "Set storage profile to SSD (Maximum concurrency)", ""},
-    {"storage-profile-hdd", "Set storage profile to HDD (Serialized background I/O)", ""},
-    {"storage-profile-network", "Set storage profile to Network (Throttled I/O)", ""},
-    // FILTER-01
-    {"filter", "Filter folder files", "Ctrl+F"},
-    {"clear-filter", "Clear active filter", ""},
-    {"toggle-filter-persistence", "Toggle filter persistence", ""},
-    // META-HUD-01 (META-01 / UX-04)
-    {"toggle-metadata", "Toggle metadata inspector", "I"},
-    // ANIM-01 (ADV-06 / FMT-03 / F036)
-    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
-    {"animation-next-frame", "Step to next frame / page", "."},
-    {"animation-previous-frame", "Step to previous frame / page", ","},
-    {"animation-speed-up", "Increase animation speed", "]"},
-    {"animation-speed-down", "Decrease animation speed", "["},
-    {"animation-toggle-loop", "Toggle animation loop", ""},
-    // RENAME-01 (F018)
-    {"rename", "Rename current file or folder", "F2"},
-    {"new-folder", "Create new folder", "Ctrl+Shift+N"},
-    // COPY-MOVE-01 (F020)
-    {"cut-selection", "Cut selected files", "Ctrl+X"},
-    {"copy-selection", "Copy selected files", ""},
-    {"paste", "Paste files to current folder", "Ctrl+V"},
-    // MONITOR-OUTPUT-01 (UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
-    {"presentation-toggle", "Toggle second display presentation", "F8"},
-    {"presentation-mirror", "Presentation: Mirror current photo", ""},
-    {"presentation-pin", "Presentation: Pin current photo", ""},
-    {"presentation-compare", "Presentation: Comparison mode", ""},
-    {"presentation-close", "Close presentation display", ""},
-#ifdef Q_OS_WIN
-    {"delete-selection","Move selected items to the Recycle Bin","Delete"},
-    {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
-    {"delete-current-folder","Move current folder to the Recycle Bin","Ctrl+Shift+Delete"},
-#else
-    {"delete-selection","Move selected items to the Trash","Delete"},
-    {"delete-current-file","Move current photo to the Trash","Ctrl+Delete"},
-    {"delete-current-folder","Move current folder to the Trash","Ctrl+Shift+Delete"},
-#endif
-    {"quit","Quit","Ctrl+Q"}
-};
+const auto registry=glancelot::commandRegistry();
 // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
 bool insideRoot(const QString& root, const QString& folder) {
     auto key=[](const QString& path){ auto value=QDir::cleanPath(QDir::fromNativeSeparators(path));
@@ -188,6 +102,9 @@ QString sortKeyName(glancelot::SortKey key) {
     default: return "name";
     }
 }
+bool validWheelAction(const QString& action) {
+    return action=="navigate" || action=="zoom" || action=="pan" || action=="pan-horizontal";
+}
 BoundaryMode boundaryValue(const QString& value) {
     return value == "stop" ? BoundaryMode::Stop : value == "loop" ? BoundaryMode::LoopFolder : BoundaryMode::ContinueTree;
 }
@@ -206,6 +123,9 @@ struct ViewerController::Private {
     Navigator nav;
     glancelot::FilterSpec filter;
     QJsonObject bindings;
+    QJsonObject confirmedBindings;
+    // INPUT-02: explicit modifier -> action entries. "none" lives in `wheel`; an unset "alt" follows it.
+    QJsonObject wheelModifiers{{"ctrl","zoom"},{"shift","pan-horizontal"}};
     QProcess* worker{};
     std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
     quint64 workerGeneration{};
@@ -236,7 +156,7 @@ struct ViewerController::Private {
     QCache<QString,CachedImage> cache{128*1024}; // KiB of verified immutable RGBA pixels.
     bool cacheNotificationPending{},ioNotificationPending{};
     QString storageProfile{"auto"};
-    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}; };
+    struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}, sortCompletion{}; };
     struct NavigationJob { quint64 token{}, sequence{}; bool scan{}; std::function<NavigationResult()> work; QString emptyMessage; };
     QThreadPool* navigationPool=new QThreadPool;
     bool navigationBusy{}, navigationReady{};
@@ -246,11 +166,21 @@ struct ViewerController::Private {
     std::stop_source navigationStop;
     glancelot::SortSpec sortSpec;
     bool sortSaved{true};
+    bool sortSavePending{};
+    QString sortFeedbackPrefix, sortFeedback;
+    QJsonObject pendingSortFields;
     int slot{};
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
     bool positionDirty{}, restoreRequested{};
     QTimer positionTimer;
+    std::unique_ptr<recovery::Session> recoverySession;
+    WindowClaim recoveryClaim;
+    std::optional<WindowClaim> pendingRecoveryClaim;
+    recovery::ResumeState recoveryResume;
+    QTimer recoveryPoll;
+    quint64 checkpointSequence{},reportedCheckpointFailure{},recoveryEpoch{};
+    bool recoveryResumeReady{},restorePending{},explicitPositionIntent{},safeMode{},recoveryFinalized{},beginFailureReported{},recoveryRetiring{};
     // Paths this window just moved to the trash (DELETE-01); cleared by the next explicit open.
     QStringList removedPaths;
     bool removedCovers(const QString& value) const {
@@ -324,10 +254,51 @@ struct ViewerController::Private {
         trace("controller:construct");
         navigationPool->setMaxThreadCount(1);
         for (const auto& command: registry) bindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
+        confirmedBindings=bindings;
         load();
         trace("controller:settings-loaded");
         positionTimer.setSingleShot(true); positionTimer.setInterval(500);
         QObject::connect(&positionTimer,&QTimer::timeout,q,[this]{ writePosition(); });
+        recoveryPoll.setInterval(25);
+        QObject::connect(&recoveryPoll,&QTimer::timeout,q,[this]{
+            if(!recoverySession){recoveryPoll.stop();return;}
+            const QPointer<ViewerController> alive(q);const auto epoch=recoveryEpoch;
+            const auto state=recoverySession->snapshot();
+            if(recoveryRetiring) {
+                if(state.busy)return;
+                auto pending=std::move(pendingRecoveryClaim);pendingRecoveryClaim.reset();
+                recoverySession.reset();recoveryClaim={};recoveryRetiring=false;recoveryResumeReady=false;recoveryFinalized=false;
+                recoveryPoll.stop();
+                if(pending)q->setWindowClaim(*pending);
+                else if(positionDirty)writePosition();
+                return;
+            }
+            if(state.begun&&(!recoveryResumeReady||beginFailureReported)) {
+                beginFailureReported=false;
+                recoveryResumeReady=true;recoveryResume=state.beginning.previous;
+                if(status=="Browsing recovery is unavailable. You can keep viewing images.") {
+                    status="Browsing recovery is available.";emit q->stateChanged();
+                    if(!alive||epoch!=recoveryEpoch)return;
+                }
+                if(restorePending&&!explicitPositionIntent)q->restoreWindow();
+                if(!alive||epoch!=recoveryEpoch)return;
+            }
+            if(state.beginFinished&&!state.begun&&!state.busy&&!beginFailureReported) {
+                beginFailureReported=true;
+                recoveryResumeReady=true;
+                recoveryResume=state.readOnlyResume.value_or(recovery::ResumeState{});
+                status="Browsing recovery is unavailable. You can keep viewing images.";emit q->stateChanged();
+                if(!alive||epoch!=recoveryEpoch)return;
+                if(restorePending&&!explicitPositionIntent)q->restoreWindow();
+                if(!alive||epoch!=recoveryEpoch)return;
+            }
+            if(!state.busy&&state.acceptedSequence>state.persistedSequence&&reportedCheckpointFailure!=state.acceptedSequence) {
+                reportedCheckpointFailure=state.acceptedSequence;
+                status="This browsing position could not be saved. Your previous saved position is kept.";emit q->stateChanged();
+                if(!alive||epoch!=recoveryEpoch)return;
+            }
+            if(!state.busy&&!positionDirty&&state.beginFinished)recoveryPoll.stop();
+        });
         deadline.setSingleShot(true); deadline.setInterval(15000);
         QObject::connect(&deadline,&QTimer::timeout,q,[this]{ fail("Decoder timed out. You can open another image or retry."); });
         prefetchDeadline.setSingleShot(true);prefetchDeadline.setInterval(15000);
@@ -415,6 +386,11 @@ struct ViewerController::Private {
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationActiveChanged, q, [this](bool) {
             emit q->presentationChanged();
         });
+        displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
+        QObject::connect(&displayManager,&glancelot::DisplayManager::currentImageRequested,q,[this]{
+            if(imageReady&&!loading&&!directoryPending)displayManager.updateImage(path,image,generation);
+        });
+        displayManager.setOutputBindingProvider([this](const QString& id) { return q->bindingFor(id); });
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
@@ -434,6 +410,19 @@ struct ViewerController::Private {
     }
     bool writePosition(bool final = false) {
         positionTimer.stop();
+        if(recoverySession&&!recoveryRetiring) {
+            if(positionDirty&&slot>0&&!recoveryFinalized) {
+                if(checkpointSequence<std::numeric_limits<quint64>::max()&&
+                   recoverySession->accept({pendingFolder,pendingImage,checkpointSequence+1})) {
+                    ++checkpointSequence;positionDirty=false;recoveryPoll.start();
+                }
+            }
+            if(final&&!recoveryFinalized) {
+                recoveryFinalized=true;recoveryPoll.stop();
+                return recoverySession->close(1000,!positionDirty);
+            }
+            return !positionDirty;
+        }
         if (!positionDirty || slot<=0) return true;
         const QString folder=pendingFolder,image=pendingImage;
         const int target=slot;
@@ -449,6 +438,10 @@ struct ViewerController::Private {
         if (!final && positionDirty && (result.code==SettingsStatus::Busy || result.code==SettingsStatus::WriteFailed) && ++positionRetries<=8)
             positionTimer.start(500);
         return result.ok();
+    }
+    void retireRecovery() {
+        if(!recoverySession||recoveryRetiring)return;
+        writePosition();recoveryFinalized=true;recoverySession->close(0,!positionDirty);
     }
     QString cacheKey(const QString& file) const {
         return fs_watch::key(file); // Pure text; worker tokens validate the source.
@@ -475,29 +468,22 @@ struct ViewerController::Private {
         if (result.code==SettingsStatus::Unreadable) { status="Settings could not be read; defaults are active."; return; }
         if (!result.ok()) { status="Settings are invalid or from a newer version; defaults are active. Start Glancelot with --reset-settings to set a damaged file aside."; return; }
         if (result.recovered) status="Settings were damaged; your last saved copy was restored.";
-        QJsonObject defaultBindings;
-        for (const auto& command: registry) defaultBindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
-        auto candidate=defaultBindings;
-        const auto stored=object.value("bindings").toObject();
-        for (auto it=stored.begin();it!=stored.end();++it) {
-            if (candidate.contains(it.key()) && it.value().isString()) candidate[it.key()]=QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText).toString(QKeySequence::PortableText);
-        }
-        // A command added after the settings file was written gets its default only if that key is still free;
-        // otherwise the user's explicit choice wins and the new command starts unassigned.
-        for (auto it=candidate.begin();it!=candidate.end();++it) {
-            if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
-            for (auto other=stored.begin();other!=stored.end();++other) {
-                if (other.key()!=it.key() && candidate.contains(other.key()) && shortcutOverlap(QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
-            }
-        }
-        if (usableBindings(candidate)) bindings=candidate;
-        else status="Saved shortcuts conflict or use reserved Escape; default shortcuts are active. Reset shortcuts in Settings to repair them.";
+        const auto resolvedBindings=glancelot::resolveCommandBindings(object.value("bindings").toObject());
+        if(resolvedBindings.valid)confirmedBindings=bindings=resolvedBindings.effective;
+        else status=resolvedBindings.error;
         const auto savedBoundary=object.value("boundary").toString();
         if (savedBoundary=="continue" || savedBoundary=="stop" || savedBoundary=="loop") boundary=savedBoundary;
         else boundary="continue";
         const auto savedWheel=object.value("wheel").toString();
         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
         else wheel="navigate";
+        // Each modifier falls back on its own: one invalid entry never discards the others.
+        wheelModifiers=QJsonObject{{"ctrl","zoom"},{"shift","pan-horizontal"}};
+        const auto savedModifiers=object.value("wheelModifiers").toObject();
+        for (const char* modifier:{"ctrl","shift","alt"}) {
+            const auto action=savedModifiers.value(QLatin1String(modifier)).toString();
+            if (validWheelAction(action)) wheelModifiers[QLatin1String(modifier)]=action;
+        }
         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
         else filmstrip=true;
         const auto savedSort=object.value("sort").toObject();
@@ -535,22 +521,35 @@ struct ViewerController::Private {
     // Writes only the named preferences through the shared locked writer, so another window's changes to other
     // keys (and unknown keys, never a future schema) survive.
     bool save(std::initializer_list<const char*> keys,const QString& bindingId=QString()) {
-        return updateSettings([&](QJsonObject& object) {
-            for (const char* key: keys) {
-                const QString name=QString::fromLatin1(key);
+        QJsonObject values;QStringList channels;
+        for(const char* key:keys) {
+            const QString name=QString::fromLatin1(key);channels.append(name);
+            if(name=="bindings")values[name]=bindingId.isEmpty()?QJsonValue(bindings):bindings.value(bindingId);
+            else if(name=="boundary")values[name]=boundary;
+            else if(name=="wheel")values[name]=wheel;
+            else if(name=="filmstrip")values[name]=filmstrip;
+            else if(name=="tree")values[name]=tree;
+            else if(name=="treePinned")values[name]=treePin;
+            else if(name=="textScale")values[name]=textScale;
+            else if(name=="reducedMotion")values[name]=reducedMotion;
+            else if(name=="storageProfile")values[name]=storageProfile;
+        }
+        const auto deferred=std::make_shared<bool>(false);
+        const bool accepted=settings_detail::saveWithRetry(q,channels.join('/')+"/"+bindingId,[values,bindingId](QJsonObject& object) {
+            for (auto it=values.begin();it!=values.end();++it) {
+                const auto name=it.key();
                 // One changed shortcut is merged into the stored map, so another window's other edits survive.
-                if (name=="bindings" && !bindingId.isEmpty()) { auto stored=object.value(name).toObject(); stored[bindingId]=bindings.value(bindingId); object[name]=stored; }
-                else if (name=="bindings") object[name]=bindings;
-                else if (name=="boundary") object[name]=boundary;
-                else if (name=="wheel") object[name]=wheel;
-                else if (name=="filmstrip") object[name]=filmstrip;
-                else if (name=="tree") object[name]=tree;
-                else if (name=="treePinned") object[name]=treePin;
-                else if (name=="textScale") object[name]=textScale;
-                else if (name=="reducedMotion") object[name]=reducedMotion;
-                else if (name=="storageProfile") object[name]=storageProfile;
+                if (name=="bindings" && !bindingId.isEmpty()) { auto stored=object.value(name).toObject(); stored[bindingId]=it.value(); object[name]=stored; }
+                else object[name]=it.value();
             }
-        }).ok();
+        },[this,deferred,values,bindingId](SettingsStatus result){
+            if(result.ok()&&values.contains("bindings")) {
+                if(bindingId.isEmpty())confirmedBindings=values.value("bindings").toObject();
+                else confirmedBindings[bindingId]=values.value("bindings");
+            }
+            if(*deferred&&!result.ok()){status="Preferences changed for this session; settings could not be saved.";emit q->stateChanged();}
+        });
+        *deferred=true;return accepted;
     }
     void cancelLookahead() {
         lookaheadStop.request_stop();
@@ -1018,6 +1017,7 @@ struct ViewerController::Private {
                 navigationReady=true; emit q->stateChanged(); emit q->currentStorageTypeChanged();
                 if(!loading && imageReady) scheduleLookahead();
                 if(result.destination) { navigationOpen=true; q->open(displayPath(*result.destination)); navigationOpen=false; }
+                else if(result.sortCompletion) { setSortFeedback(QString("Sorted by %1%2").arg(sortKeyName(nav.sort().key),nav.sort().descending?" (reversed)":"")); emit q->stateChanged(); }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
                 else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
                 if(result.directoryFailed&&!path.isEmpty())scan(path,generation);
@@ -1033,32 +1033,43 @@ struct ViewerController::Private {
     // The navigator the UI shows can be older than a job that is still in flight, so a re-sort is only ever built
     // from an accepted navigator: immediately when idle, otherwise by the completion of the job already running.
     bool needsResort() const { return !nav.snapshot().current.empty() && !(nav.sort()==sortSpec); }
+    void setSortFeedback(const QString& prefix) {
+        sortFeedbackPrefix=prefix;
+        sortFeedback=prefix+(sortSavePending?" for this session; saving settings is pending.":sortSaved?".":" for this session; settings could not be saved.");
+        status=sortFeedback;
+    }
     void startResort() {
         navigationReady=false;
         Navigator copy=nav;
         copy.setCancellation(navigationStop.get_token());
         const auto next=sortSpec;
-        const QString done=QString("Sorted by %1%2%3.").arg(sortKeyName(next.key),next.descending?" (reversed)":"",sortSaved?"":" for this session; settings could not be saved");
-        submitNavigation({generation,++navigationGeneration,true,[copy,next,done]() mutable {
+        submitNavigation({generation,++navigationGeneration,true,[copy,next]() mutable {
             copy.setSort(next);
-            return NavigationResult{std::move(copy),std::nullopt,done};
+            return NavigationResult{std::move(copy),std::nullopt,{},false,false,true};
         }});
     }
     void changeSort(const glancelot::SortSpec& next) {
         if (next==sortSpec) return;
         const auto previous=sortSpec;
         sortSpec=next;
-        sortSaved=updateSettings([&](QJsonObject& object){
-            // A stale window changes only the fields the user edited; other windows'
-            // key/direction/seed choices and unknown nested preferences survive.
-            auto stored=object.value("sort").toObject();
-            if(next.key!=previous.key)stored["key"]=sortKeyName(next.key);
-            if(next.descending!=previous.descending)stored["descending"]=next.descending;
-            if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))stored["seed"]=double(next.seed);
-            object["sort"]=stored;
-        }).ok();
+        QJsonObject fields;
+        if(next.key!=previous.key)fields["key"]=sortKeyName(next.key);
+        if(next.descending!=previous.descending)fields["descending"]=next.descending;
+        if(next.seed!=previous.seed || (next.key==SortKey::Shuffle && next.key!=previous.key))fields["seed"]=double(next.seed);
+        for(auto it=fields.begin();it!=fields.end();++it)pendingSortFields[it.key()]=it.value();
+        const auto pending=pendingSortFields;
+        const auto deferred=std::make_shared<bool>(false);
+        sortSaved=false;sortSavePending=true;
+        const bool accepted=settings_detail::saveWithRetry(q,"sort",[pending](QJsonObject& object){
+            auto stored=object.value("sort").toObject();for(auto it=pending.begin();it!=pending.end();++it)stored[it.key()]=it.value();object["sort"]=stored;
+        },[this,deferred](SettingsStatus result){
+            sortSavePending=false;sortSaved=result.ok();if(result.ok())pendingSortFields={};
+            if(*deferred&&!sortFeedback.isEmpty()&&status==sortFeedback){setSortFeedback(sortFeedbackPrefix);emit q->stateChanged();}
+        });
+        if(!accepted)sortSavePending=false;
+        *deferred=true;
         if (nav.snapshot().current.empty()) {
-            status=sortSaved?"File order saved.":"File order changed for this session; settings could not be saved.";
+            setSortFeedback("File order updated");
             emit q->stateChanged(); return;
         }
         status=QString("Sorting by %1%2…").arg(sortKeyName(next.key),next.descending?" (reversed)":"");
@@ -1144,22 +1155,65 @@ ViewerController::~ViewerController()=default; // ~Private flushes the pending w
 int ViewerController::windowSlot() const{return d->slot;}
 void ViewerController::setWindowSlot(int slot){
     if(slot<0||slot==d->slot)return;
-    d->writePosition();
+    ++d->recoveryEpoch;
+    if(d->recoverySession)d->retireRecovery();else d->writePosition();
+    if(d->recoverySession&&d->recoverySession->snapshot().busy) {
+        d->recoveryRetiring=true;d->pendingRecoveryClaim.reset();d->recoveryClaim={};
+        d->slot=slot;d->positionDirty=false;d->positionTimer.stop();d->recoveryPoll.start();
+        if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+        emit stateChanged();return;
+    }
+    d->recoverySession.reset();d->recoveryClaim={};d->recoveryPoll.stop();
+    d->recoveryRetiring=false;d->pendingRecoveryClaim.reset();
+    d->recoveryResumeReady=false;d->recoveryFinalized=false;d->checkpointSequence=0;
     d->positionTimer.stop(); d->positionDirty=false;
     d->slot=slot;
     if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
     emit stateChanged();
 }
+void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
+    const auto claim=glancelot::detail::WindowClaimAccess::get(identity);
+    if(!claim||!claim->active.load()){d->pendingRecoveryClaim.reset();setWindowSlot(0);return;}
+    if(!d->recoveryRetiring&&glancelot::detail::WindowClaimAccess::get(d->recoveryClaim)==claim)return;
+    ++d->recoveryEpoch;
+    if(d->recoverySession)d->retireRecovery();else d->writePosition();
+    d->positionTimer.stop();d->recoveryPoll.stop();
+    if(d->recoverySession&&d->recoverySession->snapshot().busy) {
+        d->pendingRecoveryClaim=identity;d->recoveryRetiring=true;d->slot=0;d->positionDirty=false;
+        d->recoveryPoll.start();emit stateChanged();return;
+    }
+    d->recoverySession.reset();d->recoveryClaim=identity;d->slot=claim->slot;d->checkpointSequence=0;
+    d->recoveryRetiring=false;d->pendingRecoveryClaim.reset();
+    d->positionDirty=false;d->recoveryResumeReady=false;d->recoveryFinalized=false;d->restoreRequested=false;
+    d->beginFailureReported=false;d->reportedCheckpointFailure=0;
+    d->recoverySession=std::make_unique<recovery::Session>(identity);d->recoveryPoll.start();
+    if(!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    else if(d->navigationReady&&!d->directoryPending&&!d->nav.snapshot().directory.empty()) {
+        d->pendingImage.clear();d->pendingFolder=displayPath(d->nav.snapshot().directory);
+        d->positionDirty=true;d->positionTimer.start();
+    }
+    emit stateChanged();
+}
+void ViewerController::setSafeMode(bool enabled){if(d->safeMode==enabled)return;d->safeMode=enabled;emit stateChanged();}
 void ViewerController::flushWindowPosition(){d->writePosition();}
 void ViewerController::restoreWindow(){
-    if(d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
-    QJsonObject settings;
-    if(!readSettings(settings).ok())return;
-    const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
-    const QString folder=entry.value("folder").toString(),image=entry.value("image").toString();
+    if(d->safeMode||d->explicitPositionIntent||d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
+    QString folder,image;
+    if(d->recoverySession) {
+        if(!d->recoveryResumeReady){d->restorePending=true;d->recoveryPoll.start();return;}
+        folder=d->recoveryResume.folder;image=d->recoveryResume.image;
+    }else {
+        QJsonObject settings;if(!readSettings(settings).ok())return;
+        const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
+        folder=entry.value("folder").toString();image=entry.value("image").toString();
+    }
+    d->restorePending=false;
     if(folder.isEmpty()&&image.isEmpty())return;
     d->restoreRequested=true;
+    const auto token=d->generation,navigation=d->navigationGeneration,epoch=d->recoveryEpoch;
+    const QPointer<ViewerController> alive(this);
     d->status="Restoring your last folder…";emit stateChanged();
+    if(!alive||d->safeMode||d->explicitPositionIntent||epoch!=d->recoveryEpoch||token!=d->generation||navigation!=d->navigationGeneration)return;
     d->submitNavigation({d->generation,++d->navigationGeneration,false,[image=nativePath(image),folder=nativePath(folder),folderText=folder,cancellation=d->navigationStop.get_token()]() mutable {
         namespace fs=std::filesystem;
         std::optional<fs::path> destination;QString message;std::error_code ec;
@@ -1331,7 +1385,7 @@ bool ViewerController::openTerminal(const QString& directory) {
     }
     return true;
 }
-QString ViewerController::status() const{return d->status;}
+QString ViewerController::status() const{return d->safeMode?QStringLiteral("Safe mode · ")+d->status:d->status;}
 bool ViewerController::loading() const{return d->loading;}
 bool ViewerController::imageReady() const{return d->imageReady;}
 bool ViewerController::isCurrentImage(const QString& path) const {
@@ -1348,14 +1402,67 @@ int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); cons
 int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
 int ViewerController::imageWidth() const{return d->image.width();}
 int ViewerController::imageHeight() const{return d->image.height();}
-QVariantList ViewerController::commands() const{QVariantList rows;for(const auto& cmd:registry){const QString id=QString::fromStdString(cmd.id);rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",d->bindings.value(id).toString()}});}return rows;}
+QVariantList ViewerController::commands() const{
+    QVariantList rows;
+    for(const auto& cmd:registry){
+        const QString id=QString::fromStdString(cmd.id),binding=d->bindings.value(id).toString();
+        // `steps` are the portable key texts of the binding, one per press, so the UI can resolve chords itself.
+        QStringList steps;
+        const auto parsed=QKeySequence::fromString(binding,QKeySequence::PortableText);
+        for(int i=0;i<parsed.count();++i)steps.append(QKeySequence(parsed[i]).toString(QKeySequence::PortableText));
+        rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",binding},
+            {"scope",QString::fromStdString(cmd.scope)},{"hold",cmd.hold},{"repeat",cmd.repeat},{"steps",steps}});
+    }
+    return rows;
+}
 QString ViewerController::boundaryMode() const{return d->boundary;}
 QString ViewerController::wheelMode() const{return d->wheel;}
+QVariantMap ViewerController::wheelModifiers() const{
+    QVariantMap map{{"none",d->wheel},{"ctrl",d->wheelModifiers.value("ctrl").toString()},{"shift",d->wheelModifiers.value("shift").toString()}};
+    const auto alt=d->wheelModifiers.value("alt").toString();
+    map.insert("alt",validWheelAction(alt)?alt:d->wheel); // unset: Alt keeps behaving like the plain wheel
+    return map;
+}
+bool ViewerController::setWheelModifier(const QString& modifier,const QString& action){
+    if(!validWheelAction(action))return false;
+    if(modifier=="none"){ // the plain wheel keeps its three-value setting
+        if(action=="pan-horizontal")return false;
+        setWheelMode(action);return true;
+    }
+    if(modifier!="ctrl"&&modifier!="shift"&&modifier!="alt")return false;
+    d->wheelModifiers[modifier]=action;
+    // Only this modifier is merged into the stored object, so another window's other modifiers and unknown keys survive.
+    const QPointer<ViewerController> alive(this);
+    const bool saved=settings_detail::saveWithRetry(this,"wheelModifiers/"+modifier,[modifier,action](QJsonObject& object){
+        auto stored=object.value("wheelModifiers").toObject();
+        stored[modifier]=action;object["wheelModifiers"]=stored;
+    },[this,modifier,action](SettingsStatus result){
+        if(!result.ok()&&d->wheelModifiers.value(modifier)==QJsonValue(action)) {
+            d->status="Wheel behavior changed for this session; settings could not be saved.";
+            emit stateChanged();
+        }
+    });
+    if(!alive)return true;
+    if(!saved)d->status="Wheel behavior changed for this session; settings could not be saved.";
+    emit stateChanged();return true;
+}
+QString ViewerController::keyStep(int key,int modifiers) const{
+    return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
+}
+QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
+    if(!d->bindings.contains(id))return {};
+    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+    if(parsed.isEmpty())return {};
+    for(auto it=d->bindings.begin();it!=d->bindings.end();++it)
+        if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText)))return it.key();
+    return {};
+}
 void ViewerController::open(const QString& value){
     trace("open:begin");
     // Consume the caller's intent once: decode may wait for registration, while
     // a nested explicit open must not inherit the navigation-only cache policy.
     const bool fromNavigation=std::exchange(d->navigationOpen,false);
+    if(!fromNavigation){d->explicitPositionIntent=true;d->restorePending=false;}
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(!fromNavigation) {
@@ -1377,8 +1484,8 @@ void ViewerController::open(const QString& value){
     d->decodeAwaitingBaseline=true;d->decodeStartedWithoutBaseline=false;d->decodeStart.start();
     emit stateChanged(); d->scan(path,d->generation);
 }
-void ViewerController::next(){d->navigate(1,false);}void ViewerController::previous(){d->navigate(-1,false);}
-void ViewerController::nextFolder(){d->navigate(1,true);}void ViewerController::previousFolder(){d->navigate(-1,true);}
+void ViewerController::next(){d->explicitPositionIntent=true;d->navigate(1,false);}void ViewerController::previous(){d->explicitPositionIntent=true;d->navigate(-1,false);}
+void ViewerController::nextFolder(){d->explicitPositionIntent=true;d->navigate(1,true);}void ViewerController::previousFolder(){d->explicitPositionIntent=true;d->navigate(-1,true);}
 void ViewerController::trigger(const QString& id){
     if(id=="next")next();else if(id=="previous")previous();else if(id=="next-folder")nextFolder();else if(id=="previous-folder")previousFolder();
     else if(id=="refresh"){d->observe();d->monitor->refresh();}
@@ -1415,7 +1522,9 @@ void ViewerController::trigger(const QString& id){
     else if(id=="presentation-toggle") { togglePresentation(); emit viewCommand(id); }
     else if(id=="presentation-mirror") { d->displayManager.setPresentationMode("mirror"); emit viewCommand(id); }
     else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
-    else if(id=="presentation-compare") { d->displayManager.setPresentationMode("comparison"); emit viewCommand(id); }
+    else if(id=="presentation-compare") { d->displayManager.compareWithPinnedOrPrevious(); emit viewCommand(id); }
+    else if(id=="presentation-fit") { cyclePresentationFit(); emit viewCommand(id); }
+    else if(id.startsWith("presentation-view-")) { d->displayManager.outputViewportCommand(id.mid(18)); emit viewCommand(id); }
     else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
     else if(d->bindings.contains(id))emit viewCommand(id);
 }
@@ -1425,25 +1534,48 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
     const QString normalized=parsed.toString(QKeySequence::PortableText);
     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
-    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
-    QJsonObject merged=d->bindings;
-    merged[id]=normalized;
-    QString conflict;
-    const auto result=updateSettings([&](QJsonObject& object) {
+    if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1){d->status="A hold shortcut is a single key: it is released to restore the view.";emit stateChanged();return false;}
+    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status="Shortcut conflicts with "+other+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}
+    struct BindingSave {QJsonObject merged;QJsonValue rollback;QString conflict;std::optional<SettingsStatus> result;bool deferred{};};
+    const auto pending=std::make_shared<BindingSave>();const auto before=d->bindings;
+    pending->rollback=d->confirmedBindings.value(id);
+    pending->merged=before;pending->merged[id]=normalized;
+    settings_detail::saveWithRetry(this,"bindings/"+id,[pending,id,normalized,parsed](QJsonObject& object) {
+        auto& merged=pending->merged;auto& conflict=pending->conflict;conflict.clear();
         auto stored=object.value("bindings").toObject();
+        const auto persisted=glancelot::resolveCommandBindings(stored);
+        if(persisted.valid)pending->rollback=persisted.effective.value(id);
         // Validate the effective map while holding the writer lock: another window may have
         // assigned this shortcut since our settings were loaded.
         for(auto it=stored.begin();it!=stored.end();++it)
             if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
         for(auto it=merged.begin();it!=merged.end();++it)
-            if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
+            if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
         stored[id]=normalized;object["bindings"]=stored;
+    },[this,pending,before,id,normalized](SettingsStatus result){
+        pending->result=result;
+        if(!pending->conflict.isEmpty())d->confirmedBindings[id]=pending->rollback;
+        else if(result.ok())d->confirmedBindings[id]=normalized;
+        if(!pending->deferred||d->bindings.value(id)!=QJsonValue(normalized))return;
+        if(!pending->conflict.isEmpty()) {
+            d->bindings[id]=pending->rollback;
+            d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";
+        }
+        else if(result.ok()) {
+            // Bring in foreign changes only where no newer local edit exists.
+            for(auto it=pending->merged.begin();it!=pending->merged.end();++it)
+                if(it.key()!=id&&d->bindings.value(it.key())==before.value(it.key()))d->bindings[it.key()]=it.value();
+            d->status="Shortcut saved.";
+        }else d->status="Shortcut changed for this session; settings could not be saved.";
+        const QPointer<ViewerController> alive(this);
+        emit bindingsChanged();if(alive)emit stateChanged();
     });
-    if(!conflict.isEmpty()){d->status="Shortcut already assigned to "+conflict+" in another window. Clear it first.";emit stateChanged();return false;}
-    d->bindings=result.ok()?merged:d->bindings;
+    if(!pending->conflict.isEmpty()){d->status="Shortcut already assigned to "+pending->conflict+" in another window. Clear it first.";emit stateChanged();return false;}
+    if(pending->result&&pending->result->ok())d->bindings=pending->merged;
     d->bindings[id]=normalized;
-    d->status=result.ok()?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    d->status=!pending->result?"Saving shortcut…":pending->result->ok()?"Shortcut saved.":"Shortcut changed for this session; settings could not be saved.";
+    pending->deferred=true;
     emit bindingsChanged();emit stateChanged();return true;
 }
 void ViewerController::resetBindings(){for(const auto& cmd:registry)d->bindings[QString::fromStdString(cmd.id)]=QString::fromStdString(cmd.defaultBinding);const bool saved=d->save({"bindings"});d->status=saved?"Default shortcuts restored.":"Defaults restored for this session; settings could not be saved.";emit bindingsChanged();emit stateChanged();}
@@ -1452,6 +1584,7 @@ bool ViewerController::treePinned() const{return d->treePin;}
 void ViewerController::setTreeVisible(bool value){if(d->tree==value)return;d->tree=value;if(!d->save({"tree"}))d->status="Folder tree setting changed; settings could not be saved.";emit stateChanged();if(value)emit treeShown();}
 void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->treePin=value;if(!d->save({"treePinned"}))d->status="Folder tree pin changed; settings could not be saved.";emit stateChanged();}
 void ViewerController::cancelDirectoryNavigation() {
+    d->explicitPositionIntent=true;d->restorePending=false;
     if(d->directoryPending) {
         d->navigationStop.request_stop();d->navigationStop=std::stop_source{};
         ++d->navigationGeneration;d->pendingNavigation.reset();d->navigationIntents.clear();
@@ -1460,6 +1593,7 @@ void ViewerController::cancelDirectoryNavigation() {
     d->directoryPending=false;d->directoryError.clear();emit stateChanged();
 }
 void ViewerController::navigateDirectory(const QString& value) {
+    d->explicitPositionIntent=true;d->restorePending=false;
     d->navigationIntents.clear();
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     const auto cancellation=d->navigationStop.get_token();
@@ -1482,6 +1616,7 @@ void ViewerController::navigateDirectory(const QString& value) {
     },"No supported images in this folder."});
 }
 void ViewerController::openFolder(const QString& value){
+    d->explicitPositionIntent=true;d->restorePending=false;
     d->cancelLookahead();
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
@@ -1635,6 +1770,7 @@ bool ViewerController::importSettings(const QString& sourceFilePath) {
     }
     d->load();
     d->status = QStringLiteral("Settings imported successfully.");
+    emit configurationReloaded();
     emit stateChanged();
     emit bindingsChanged();
     return true;
@@ -1648,6 +1784,7 @@ bool ViewerController::resetSection(const QString& sectionName) {
     }
     d->load();
     d->status = QStringLiteral("Section reset to defaults.");
+    emit configurationReloaded();
     emit stateChanged();
     emit bindingsChanged();
     return true;
@@ -1661,6 +1798,7 @@ bool ViewerController::resetAllSettings() {
     }
     d->load();
     d->status = QStringLiteral("All settings reset to defaults.");
+    emit configurationReloaded();
     emit stateChanged();
     emit bindingsChanged();
     return true;
@@ -1810,6 +1948,16 @@ void ViewerController::openPresentation(const QString& displayId, const QString&
     if (mode == QStringLiteral("pinned")) m = glancelot::PresentationMode::Pinned;
     else if (mode == QStringLiteral("comparison")) m = glancelot::PresentationMode::Comparison;
     d->displayManager.openPresentation(displayId, m);
+}
+
+void ViewerController::setPresentationFitMode(const QString& mode) {
+    d->displayManager.setOutputFitMode(mode);
+}
+
+void ViewerController::cyclePresentationFit() {
+    static const QStringList order{QStringLiteral("shrink"), QStringLiteral("fit"), QStringLiteral("fill")};
+    const int i = order.indexOf(d->displayManager.outputFitMode());
+    d->displayManager.setOutputFitMode(order[(i + 1) % order.size()]);
 }
 
 void ViewerController::closePresentation() {

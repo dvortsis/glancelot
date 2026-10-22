@@ -1,3 +1,4 @@
+#include "glancelot/monitor_customization.hpp"
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
@@ -108,6 +109,7 @@ struct Harness {
     FilmstripModel model;
     FolderTreeModel folders;
     PaneLayout layout;
+    glancelot::MonitorCustomization monitor{viewer.displayManager(), &layout};
     DirectoryEntryModel fileGrid;
     QTemporaryDir trashBin;
     TestTrash* trash = new TestTrash(trashBin.path());
@@ -124,6 +126,8 @@ struct Harness {
         engine.addImageProvider("thumb", provider);
         engine.rootContext()->setContextProperty("viewer", &viewer);
         engine.rootContext()->setContextProperty("paneLayout", &layout);
+        monitor.setSlot(1);
+        engine.rootContext()->setContextProperty("monitorCustomization", &monitor);
         engine.rootContext()->setContextProperty("theme", &theme);
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);
@@ -1150,7 +1154,7 @@ private slots:
         QCOMPARE(dialog->property("section").toString(), QString("controls"));
         auto* search = h.window->findChild<QQuickItem*>("commandSearch"); QVERIFY(search);
         QTRY_VERIFY(search->hasActiveFocus());
-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(!h.window->property("modalOpen").toBool());
         QVERIFY(commands.contains(QVariantList{QString("rotate")}));
@@ -1164,7 +1168,7 @@ private slots:
         h.fill(20); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         commands.clear();
         h.viewer.trigger("palette"); QTRY_VERIFY(search->hasActiveFocus());
-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTest::qWait(50);
         QVERIFY(!commands.contains(QVariantList{QString("rotate")}));
@@ -2414,7 +2418,8 @@ private slots:
             QDir().mkpath(".cache/delete");
             for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/tree-menu-" + mode + "-1180.png")); }
         }
-        QTest::keyClick(h.window, Qt::Key_Down); // highlight the only item
+        QTest::keyClick(h.window, Qt::Key_Down); // INPUT-02: "Open folder" is first; the destructive row stays last
+        QTest::keyClick(h.window, Qt::Key_Down); // highlight the move-to-trash item
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
         QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");
@@ -2436,7 +2441,7 @@ private slots:
         QTRY_VERIFY(list->hasActiveFocus());
         QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
         QTRY_VERIFY(menu->property("visible").toBool());
-        QObject* item = h.window->findChild<QObject*>("folderMoveToTrash"); QVERIFY(item);
+        QObject* item = menu->findChild<QObject*>("menuItem-delete-selection"); QVERIFY(item);
         QVERIFY(!item->property("enabled").toBool());
         QVERIFY(item->property("text").toString().startsWith("Drives can't"));
         QTest::keyClick(h.window, Qt::Key_Escape);

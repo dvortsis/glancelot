@@ -1,0 +1,3 @@
+Removed queued Docker retry wrapper PID=65388 before it acquired the gate or spawned Docker.
+Reason: prioritize the quiet window_slots assertion diagnostic after a real full-gate failure.
+Running Windows gate and queued targeted diagnostic left untouched. Docker retry will resume after diagnosis; this queued attempt ran no build.

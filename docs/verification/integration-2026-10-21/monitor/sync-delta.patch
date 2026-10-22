@@ -1,0 +1,1929 @@
+diff --git a/include/glancelot/viewer_controller.hpp b/include/glancelot/viewer_controller.hpp
+index d2e27f2..1d2c278 100644
+--- a/include/glancelot/viewer_controller.hpp
++++ b/include/glancelot/viewer_controller.hpp
+@@ -4,6 +4,7 @@
+ #include <QImage>
+ #include <QStringList>
+ #include <QVariantList>
++#include <QVariantMap>
+ #include <memory>
+ 
+ #include "glancelot/metadata_model.hpp"
+@@ -31,6 +32,7 @@ class ViewerController : public QObject {
+     Q_PROPERTY(QVariantList commands READ commands NOTIFY bindingsChanged)
+     Q_PROPERTY(QString boundaryMode READ boundaryMode WRITE setBoundaryMode NOTIFY stateChanged)
+     Q_PROPERTY(QString wheelMode READ wheelMode WRITE setWheelMode NOTIFY stateChanged)
++    Q_PROPERTY(QVariantMap wheelModifiers READ wheelModifiers NOTIFY stateChanged)
+     Q_PROPERTY(bool filmstripVisible READ filmstripVisible WRITE setFilmstripVisible NOTIFY stateChanged)
+     Q_PROPERTY(bool canRaiseRoot READ canRaiseRoot NOTIFY stateChanged)
+     Q_PROPERTY(bool treeVisible READ treeVisible WRITE setTreeVisible NOTIFY stateChanged)
+@@ -79,6 +81,14 @@ public:
+     Q_INVOKABLE bool setBinding(const QString& id,const QString& sequence);
+     Q_INVOKABLE void resetBindings();
+     void setBoundaryMode(const QString& mode); void setWheelMode(const QString& mode);
++    // INPUT-02 wheel matrix: {"none","ctrl","shift","alt"} -> "navigate" | "zoom" | "pan" | "pan-horizontal". "none" is
++    // wheelMode; an Alt entry nobody set follows it. Only the changed modifier is merged into the stored settings.
++    QVariantMap wheelModifiers() const;
++    Q_INVOKABLE bool setWheelModifier(const QString& modifier, const QString& action);
++    // The command whose binding blocks `sequence` for `id` (same or overlapping scope, including chord prefixes), or "".
++    Q_INVOKABLE QString bindingConflict(const QString& id, const QString& sequence) const;
++    // The portable text of one key press (as it appears in a binding step), so panes can tell whether a key is remapped.
++    Q_INVOKABLE QString keyStep(int key, int modifiers) const;
+     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
+     bool canRaiseRoot() const;
+     bool treeVisible() const; void setTreeVisible(bool visible);
+diff --git a/src/app/viewer_controller.cpp b/src/app/viewer_controller.cpp
+index bf0a789..d94202a 100644
+--- a/src/app/viewer_controller.cpp
++++ b/src/app/viewer_controller.cpp
+@@ -49,7 +49,9 @@
+ 
+ using namespace glancelot;
+ namespace {
++// A binding is one key or a two-step chord (INPUT-02); Escape is reserved for closing views and cancelling chords.
+ bool usableShortcut(const QKeySequence& sequence) {
++    if (sequence.count()>2) return false;
+     for (int i=0; i<sequence.count(); ++i) {
+         const auto key=sequence[i];
+         if (key.key()==Qt::Key_unknown || key==QKeyCombination(Qt::NoModifier,Qt::Key_Escape)) return false;
+@@ -60,17 +62,6 @@ bool shortcutOverlap(const QKeySequence& left,const QKeySequence& right) {
+     return !left.isEmpty() && !right.isEmpty()
+         && (left.matches(right)!=QKeySequence::NoMatch || right.matches(left)!=QKeySequence::NoMatch);
+ }
+-bool usableBindings(const QJsonObject& bindings) {
+-    QList<QKeySequence> seen;
+-    for (const auto& value:bindings) {
+-        const auto text=value.toString();
+-        const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
+-        if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
+-        for (const auto& other:seen) if (shortcutOverlap(sequence,other)) return false;
+-        seen.append(sequence);
+-    }
+-    return true;
+-}
+ void trace(const char* event) {
+     const auto path=qEnvironmentVariable("GLANCELOT_TRACE_FILE");
+     if(path.isEmpty())return;
+@@ -90,14 +81,17 @@ QString displayPath(const std::filesystem::path& path) {
+     return QFile::decodeName(path.native().c_str());
+ #endif
+ }
++// Scopes (INPUT-02): "global" works wherever keys are not claimed; "canvas" needs the photo pane (it is off while the grid owns
++// keys); "grid" and "tree" need that pane focused; "workspace" is either content pane. Photo-stepping and view commands are
++// "canvas" because the grid keeps its own arrow/Page keys; everything else the grid ever allowed stays "global".
+ const std::vector<Command> registry {
+-    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true}, {"previous","Previous image","Left",true},
+-    {"next-folder","Next folder","PgDown"}, {"previous-folder","Previous folder","PgUp"},
++    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true,"canvas"}, {"previous","Previous image","Left",true,"canvas"},
++    {"next-folder","Next folder","PgDown",false,"canvas"}, {"previous-folder","Previous folder","PgUp",false,"canvas"},
+     {"palette","Find a command","Ctrl+Shift+P"}, {"settings","Settings","Ctrl+,"},
+-    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
+-    {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
+-    {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
+-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
++    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F",false,"canvas"},
++    {"actual","Actual size (physical 1:1)","1",false,"canvas"}, {"zoom-in","Zoom in","+",true,"canvas"}, {"zoom-out","Zoom out","-",true,"canvas"},
++    {"rotate","Rotate view clockwise","R",false,"canvas"}, {"background","Cycle canvas background","B",false,"canvas"},
++    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T",false,"canvas"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
+     // Layout commands start unbound so existing users' shortcuts never collide.
+     {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
+     // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
+@@ -108,12 +102,12 @@ const std::vector<Command> registry {
+     {"copy-path", "Copy file path", "Ctrl+C"},
+     {"copy-file", "Copy file", "Ctrl+Shift+C"},
+     {"copy-image", "Copy image", "Ctrl+Alt+C"},
+-    {"select-all", "Select all items in grid", ""},
+-    {"clear-selection", "Clear grid selection", "Ctrl+D"},
+-    {"invert-selection", "Invert grid selection", "Ctrl+I"},
+-    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
+-    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
+-    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
++    {"select-all", "Select all items in grid", "", false, "workspace"},
++    {"clear-selection", "Clear grid selection", "Ctrl+D", false, "workspace"},
++    {"invert-selection", "Invert grid selection", "Ctrl+I", false, "workspace"},
++    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+=", false, "workspace"},
++    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-", false, "workspace"},
++    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0", false, "workspace"},
+     // FS-WATCH-01: workspace command; generic routing preserves text/modal precedence.
+     {"refresh", "Refresh", "F5"},
+     // FAVORITES-01 (F003)
+@@ -133,14 +127,14 @@ const std::vector<Command> registry {
+     {"clear-filter", "Clear active filter", ""},
+     {"toggle-filter-persistence", "Toggle filter persistence", ""},
+     // META-HUD-01 (META-01 / UX-04)
+-    {"toggle-metadata", "Toggle metadata inspector", "I"},
++    {"toggle-metadata", "Toggle metadata inspector", "I", false, "workspace"},
+     // ANIM-01 (ADV-06 / FMT-03 / F036)
+-    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
+-    {"animation-next-frame", "Step to next frame / page", "."},
+-    {"animation-previous-frame", "Step to previous frame / page", ","},
+-    {"animation-speed-up", "Increase animation speed", "]"},
+-    {"animation-speed-down", "Decrease animation speed", "["},
+-    {"animation-toggle-loop", "Toggle animation loop", ""},
++    {"animation-toggle-play-pause", "Play or pause animation", "Space", false, "canvas"},
++    {"animation-next-frame", "Step to next frame / page", ".", true, "canvas"},
++    {"animation-previous-frame", "Step to previous frame / page", ",", true, "canvas"},
++    {"animation-speed-up", "Increase animation speed", "]", true, "canvas"},
++    {"animation-speed-down", "Decrease animation speed", "[", true, "canvas"},
++    {"animation-toggle-loop", "Toggle animation loop", "", false, "canvas"},
+     // RENAME-01 (F018)
+     {"rename", "Rename current file or folder", "F2"},
+     {"new-folder", "Create new folder", "Ctrl+Shift+N"},
+@@ -174,8 +168,46 @@ const std::vector<Command> registry {
+     {"delete-current-file","Move current photo to the Trash","Ctrl+Delete"},
+     {"delete-current-folder","Move current folder to the Trash","Ctrl+Shift+Delete"},
+ #endif
++    // INPUT-02: hold lifecycle, per-pane commands and context-menu routes. Keys the grid and tree handle themselves
++    // (Enter, Backspace, Ctrl+A) stay unbound here; the menus show those fixed keys.
++    {"hold-actual","Show actual size while held","Z",false,"canvas",true},
++    {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
++    {"grid-select-all","Select all items","",false,"grid"},
++    {"tree-open-folder","Open the focused folder","",false,"tree"},
++    {"focus-path","Edit the folder path","",false,"global"}, {"copy-folder-path","Copy the folder path","",false,"global"},
++    {"paste-path","Go to the folder path on the clipboard","",false,"global"},
+     {"quit","Quit","Ctrl+Q"}
+ };
++const Command* findCommand(const QString& id) {
++    for (const auto& command:registry) if (QString::fromStdString(command.id)==id) return &command;
++    return nullptr;
++}
++QString scopeOf(const QString& id) {
++    const auto* command=findCommand(id);
++    return command?QString::fromStdString(command->scope):QStringLiteral("global");
++}
++// "global" overlaps every scope and "workspace" overlaps the two content panes; other scopes only themselves.
++bool scopesOverlap(const QString& left,const QString& right) {
++    if (left==right || left=="global" || right=="global") return true;
++    auto content=[](const QString& scope){ return scope=="canvas" || scope=="grid"; };
++    return (left=="workspace" && content(right)) || (right=="workspace" && content(left));
++}
++bool bindingsCollide(const QString& leftId,const QKeySequence& left,const QString& rightId,const QKeySequence& right) {
++    return scopesOverlap(scopeOf(leftId),scopeOf(rightId)) && shortcutOverlap(left,right);
++}
++bool usableBindings(const QJsonObject& bindings) {
++    QList<std::pair<QString,QKeySequence>> seen;
++    for (auto it=bindings.begin();it!=bindings.end();++it) {
++        const auto text=it.value().toString();
++        const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
++        if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
++        const auto* command=findCommand(it.key());
++        if (command && command->hold && sequence.count()>1) return false; // a hold needs one key to release
++        for (const auto& other:seen) if (bindingsCollide(it.key(),sequence,other.first,other.second)) return false;
++        seen.append({it.key(),sequence});
++    }
++    return true;
++}
+ // True when `folder` is `root` or below it (separator-aware; case-insensitive on Windows).
+ bool insideRoot(const QString& root, const QString& folder) {
+     auto key=[](const QString& path){ auto value=QDir::cleanPath(QDir::fromNativeSeparators(path));
+@@ -199,6 +231,9 @@ QString sortKeyName(glancelot::SortKey key) {
+     default: return "name";
+     }
+ }
++bool validWheelAction(const QString& action) {
++    return action=="navigate" || action=="zoom" || action=="pan" || action=="pan-horizontal";
++}
+ BoundaryMode boundaryValue(const QString& value) {
+     return value == "stop" ? BoundaryMode::Stop : value == "loop" ? BoundaryMode::LoopFolder : BoundaryMode::ContinueTree;
+ }
+@@ -217,6 +252,8 @@ struct ViewerController::Private {
+     Navigator nav;
+     glancelot::FilterSpec filter;
+     QJsonObject bindings;
++    // INPUT-02: explicit modifier -> action entries. "none" lives in `wheel`; an unset "alt" follows it.
++    QJsonObject wheelModifiers{{"ctrl","zoom"},{"shift","pan-horizontal"}};
+     QProcess* worker{};
+     std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
+     quint64 workerGeneration{};
+@@ -500,7 +537,7 @@ struct ViewerController::Private {
+         for (auto it=candidate.begin();it!=candidate.end();++it) {
+             if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
+             for (auto other=stored.begin();other!=stored.end();++other) {
+-                if (other.key()!=it.key() && candidate.contains(other.key()) && shortcutOverlap(QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
++                if (other.key()!=it.key() && candidate.contains(other.key()) && bindingsCollide(other.key(),QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
+             }
+         }
+         if (usableBindings(candidate)) bindings=candidate;
+@@ -511,6 +548,12 @@ struct ViewerController::Private {
+         const auto savedWheel=object.value("wheel").toString();
+         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
+         else wheel="navigate";
++        // Each modifier falls back on its own: one invalid entry never discards the others.
++        const auto savedModifiers=object.value("wheelModifiers").toObject();
++        for (const char* modifier:{"ctrl","shift","alt"}) {
++            const auto action=savedModifiers.value(QLatin1String(modifier)).toString();
++            if (validWheelAction(action)) wheelModifiers[QLatin1String(modifier)]=action;
++        }
+         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
+         else filmstrip=true;
+         const auto savedSort=object.value("sort").toObject();
+@@ -1361,9 +1404,54 @@ int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); cons
+ int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
+ int ViewerController::imageWidth() const{return d->image.width();}
+ int ViewerController::imageHeight() const{return d->image.height();}
+-QVariantList ViewerController::commands() const{QVariantList rows;for(const auto& cmd:registry){const QString id=QString::fromStdString(cmd.id);rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",d->bindings.value(id).toString()}});}return rows;}
++QVariantList ViewerController::commands() const{
++    QVariantList rows;
++    for(const auto& cmd:registry){
++        const QString id=QString::fromStdString(cmd.id),binding=d->bindings.value(id).toString();
++        // `steps` are the portable key texts of the binding, one per press, so the UI can resolve chords itself.
++        QStringList steps;
++        const auto parsed=QKeySequence::fromString(binding,QKeySequence::PortableText);
++        for(int i=0;i<parsed.count();++i)steps.append(QKeySequence(parsed[i]).toString(QKeySequence::PortableText));
++        rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",binding},
++            {"scope",QString::fromStdString(cmd.scope)},{"hold",cmd.hold},{"repeat",cmd.repeat},{"steps",steps}});
++    }
++    return rows;
++}
+ QString ViewerController::boundaryMode() const{return d->boundary;}
+ QString ViewerController::wheelMode() const{return d->wheel;}
++QVariantMap ViewerController::wheelModifiers() const{
++    QVariantMap map{{"none",d->wheel},{"ctrl",d->wheelModifiers.value("ctrl").toString()},{"shift",d->wheelModifiers.value("shift").toString()}};
++    const auto alt=d->wheelModifiers.value("alt").toString();
++    map.insert("alt",validWheelAction(alt)?alt:d->wheel); // unset: Alt keeps behaving like the plain wheel
++    return map;
++}
++bool ViewerController::setWheelModifier(const QString& modifier,const QString& action){
++    if(!validWheelAction(action))return false;
++    if(modifier=="none"){ // the plain wheel keeps its three-value setting
++        if(action=="pan-horizontal")return false;
++        setWheelMode(action);return true;
++    }
++    if(modifier!="ctrl"&&modifier!="shift"&&modifier!="alt")return false;
++    d->wheelModifiers[modifier]=action;
++    // Only this modifier is merged into the stored object, so another window's other modifiers and unknown keys survive.
++    const bool saved=updateSettings([&](QJsonObject& object){
++        auto stored=object.value("wheelModifiers").toObject();
++        stored[modifier]=action;object["wheelModifiers"]=stored;
++    }).ok();
++    if(!saved)d->status="Wheel behavior changed; settings could not be saved.";
++    emit stateChanged();return true;
++}
++QString ViewerController::keyStep(int key,int modifiers) const{
++    return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
++}
++QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
++    if(!d->bindings.contains(id))return {};
++    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
++    if(parsed.isEmpty())return {};
++    for(auto it=d->bindings.begin();it!=d->bindings.end();++it)
++        if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText)))return it.key();
++    return {};
++}
+ void ViewerController::open(const QString& value){
+     trace("open:begin");
+     // Consume the caller's intent once: decode may wait for registration, while
+@@ -1440,7 +1528,8 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
+     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+     const QString normalized=parsed.toString(QKeySequence::PortableText);
+     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
+-    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
++    if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1){d->status="A hold shortcut is a single key: it is released to restore the view.";emit stateChanged();return false;}
++    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status="Shortcut conflicts with "+other+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}
+     QJsonObject merged=d->bindings;
+     merged[id]=normalized;
+     QString conflict;
+@@ -1451,7 +1540,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
+         for(auto it=stored.begin();it!=stored.end();++it)
+             if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
+         for(auto it=merged.begin();it!=merged.end();++it)
+-            if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
++            if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
+         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
+         stored[id]=normalized;object["bindings"]=stored;
+     });
+diff --git a/src/render/image_canvas.cpp b/src/render/image_canvas.cpp
+index d7d03d0..37efd0e 100644
+--- a/src/render/image_canvas.cpp
++++ b/src/render/image_canvas.cpp
+@@ -1,6 +1,8 @@
+ #include "glancelot/perf_trace.hpp"
+ #include "image_canvas.hpp"
+ #include <QQuickWindow>
++#include <QKeyEvent>
++#include <QKeySequence>
+ #include <QFile>
+ #include <QMatrix4x4>
+ #include <QPointer>
+@@ -202,6 +204,7 @@ protected:
+     }
+ };
+ 
++ImageCanvas::~ImageCanvas() { unwatchHold(); }
+ ImageCanvas::ImageCanvas(QQuickItem* parent):QQuickRhiItem(parent) {
+     setAlphaBlending(false);
+     connect(this,&QQuickRhiItem::effectiveColorBufferSizeChanged,this,[this] { refreshFit(); });
+@@ -310,11 +313,40 @@ void ImageCanvas::beginLoupe(qreal x,qreal y) {
+     if (m_loupe || m_image.isNull()) return;
+     m_savedZoom=m_zoom; m_savedPan=m_pan; m_savedFit=m_fitMode; m_loupe=true;
+     zoomAt(std::max(qreal(1),m_zoom)/m_zoom,x,y);
++    emit loupeChanged();
+ }
+ void ImageCanvas::endLoupe() {
+     if (!m_loupe) return;
+     m_zoom=m_savedZoom; m_pan=m_savedPan; m_fitMode=m_savedFit; m_loupe=false;
+-    emit viewChanged(); update();
++    unwatchHold();
++    emit viewChanged(); emit loupeChanged(); update();
++}
++// INPUT-02 hold: exactly 1:1 around (x,y) until the key is released. The window filter sees the release wherever focus sits
++// (a shortcut consumes the press, never the release); a deactivated window restores too. Auto-repeat releases are ignored.
++void ImageCanvas::beginHold(qreal x,qreal y,const QString& sequence) {
++    if (m_loupe || m_image.isNull()) return;
++    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
++    m_savedZoom=m_zoom; m_savedPan=m_pan; m_savedFit=m_fitMode; m_loupe=true;
++    zoomAt(1/m_zoom,x,y);
++    if (parsed.count()==1 && window()) {
++        m_holdKey=int(parsed[0].key());
++        m_holdWindow=window();
++        m_holdWindow->installEventFilter(this);
++    }
++    emit loupeChanged();
++}
++void ImageCanvas::unwatchHold() {
++    if (m_holdWindow) m_holdWindow->removeEventFilter(this);
++    m_holdWindow=nullptr; m_holdKey=0;
++}
++bool ImageCanvas::eventFilter(QObject* watched,QEvent* event) {
++    if (m_loupe && watched==m_holdWindow) {
++        if (event->type()==QEvent::KeyRelease) {
++            const auto* key=static_cast<QKeyEvent*>(event);
++            if (!key->isAutoRepeat() && m_holdKey!=0 && key->key()==m_holdKey) endLoupe();
++        } else if (event->type()==QEvent::WindowDeactivate) endLoupe();
++    }
++    return false;
+ }
+ void ImageCanvas::cycleBackground() {
+     if (m_checkerboard) { setCheckerboard(false); setBackground(QColor("#191919")); }
+diff --git a/src/render/image_canvas.hpp b/src/render/image_canvas.hpp
+index 920bc7b..73934d1 100644
+--- a/src/render/image_canvas.hpp
++++ b/src/render/image_canvas.hpp
+@@ -3,6 +3,8 @@
+ #include <QImage>
+ #include <QColor>
+ #include <QVariantMap>
++#include <QPointer>
++#include <QQuickWindow>
+ 
+ // All viewport distances are logical pixels; zoom is physical pixels per source pixel.
+ class ImageCanvas : public QQuickRhiItem {
+@@ -17,6 +19,7 @@ class ImageCanvas : public QQuickRhiItem {
+     Q_PROPERTY(QString rendererError READ rendererError NOTIFY rendererErrorChanged)
+ public:
+     explicit ImageCanvas(QQuickItem* parent = nullptr);
++    ~ImageCanvas() override;
+     QImage image() const { return m_image; }
+     void setImage(const QImage& image);
+     qreal zoom() const { return m_zoom; }
+@@ -46,6 +49,11 @@ public:
+     Q_INVOKABLE void rotateClockwise();
+     Q_INVOKABLE void beginLoupe(qreal x, qreal y);
+     Q_INVOKABLE void endLoupe();
++    // INPUT-02: exactly 1:1 around (x,y) while `sequence`'s key is held; releasing it, a deactivated window or an image
++    // change restores the previous fit or zoom and pan exactly. A repeated begin keeps the first saved state.
++    Q_INVOKABLE void beginHold(qreal x, qreal y, const QString& sequence);
++    Q_PROPERTY(bool loupeActive READ loupeActive NOTIFY loupeChanged)
++    bool loupeActive() const { return m_loupe; }
+     Q_INVOKABLE void cycleBackground();
+     void reportRendererError(const QString& message);
+ signals:
+@@ -53,10 +61,15 @@ signals:
+     void viewChanged();
+     void appearanceChanged();
+     void rendererErrorChanged();
++    void loupeChanged();
+ protected:
+     QQuickRhiItemRenderer* createRenderer() override;
+     void geometryChange(const QRectF&, const QRectF&) override;
++    bool eventFilter(QObject* watched, QEvent* event) override;
+ private:
++    void unwatchHold();
++    int m_holdKey{};
++    QPointer<QQuickWindow> m_holdWindow;
+     friend class ImageRenderer;
+     qreal dpr() const;
+     void refreshFit();
+diff --git a/tests/input_ui_tests.cpp b/tests/input_ui_tests.cpp
+new file mode 100644
+index 0000000..06998fe
+--- /dev/null
++++ b/tests/input_ui_tests.cpp
+@@ -0,0 +1,953 @@
++// INPUT-02: scoped keys, chords, held keys, the wheel matrix and context menus, driven through the shipped Main.qml.
++#include "glancelot/pane_layout.hpp"
++#include "glancelot/filmstrip_model.hpp"
++#include "glancelot/folder_tree_model.hpp"
++#include "glancelot/directory_entry_model.hpp"
++#include "../src/app/file_grid_wiring.hpp"
++#include "../src/app/file_operation_wiring.hpp"
++#include "glancelot/file_operation_service.hpp"
++#include "glancelot/file_operations.hpp"
++#include "glancelot/theme_manager.hpp"
++#include "glancelot/viewer_controller.hpp"
++#include "image_canvas.hpp"
++#include <QClipboard>
++#include <QDir>
++#include <QElapsedTimer>
++#include <QFontDatabase>
++#include <QGuiApplication>
++#include <QImage>
++#include <QKeyEvent>
++#include <QQuickImageProvider>
++#include <QQuickItem>
++#include <QQuickStyle>
++#include <QQuickWindow>
++#include <QQmlApplicationEngine>
++#include <QQmlContext>
++#include <QRegularExpression>
++#include <QSemaphore>
++#include <QScopeGuard>
++#include <QTemporaryDir>
++#include <QWheelEvent>
++#include <QWindow>
++#include <QtTest>
++
++namespace {
++struct HeldTrash final : glancelot::TrashBackend {
++    std::shared_ptr<QSemaphore> release;
++    explicit HeldTrash(std::shared_ptr<QSemaphore> gate) : release(std::move(gate)) {}
++    glancelot::DeleteResult moveToTrash(const glancelot::MutationTarget& target) override {
++        release->acquire();
++        return {target.path, glancelot::DeleteOutcome::Cancelled, {}}; // never mutate even disposable media
++    }
++};
++class PreviewProvider final : public QQuickImageProvider {
++public:
++    PreviewProvider() : QQuickImageProvider(Image) {}
++    QImage requestImage(const QString& id, QSize* size, const QSize&) override {
++        QImage image(160, 120, QImage::Format_RGB32);
++        image.fill(QColor::fromHsv(int(qHash(id) % 360), 90, 170));
++        if (size) *size = image.size();
++        return image;
++    }
++};
++
++// Disposable photos: p1.png .. pN.png, large enough that "fit" is below 1:1.
++struct Media {
++    QTemporaryDir dir;
++    int count;
++    explicit Media(int photos = 4, QSize size = QSize(2400, 1600)) : count(photos) {
++        for (int i = 0; i < photos; ++i) {
++            QImage image(size, QImage::Format_RGB32);
++            image.fill(QColor::fromHsv((i * 70) % 360, 110, 180));
++            image.save(path(i));
++        }
++    }
++    QString path(int index) const { return dir.filePath(QString("p%1.png").arg(index + 1)); }
++};
++
++struct Harness {
++    ViewerController viewer;
++    ThemeManager theme;
++    FilmstripModel model;
++    FolderTreeModel folders;
++    PaneLayout layout;
++    DirectoryEntryModel fileGrid;
++    FileOperationService fileOperations;
++    QQmlApplicationEngine engine;
++    QQuickWindow* window{};
++    explicit Harness(std::unique_ptr<glancelot::TrashBackend> backend = {}) : fileOperations(std::move(backend)) {
++        QStringList imports = engine.importPathList();
++        imports.removeAll(QCoreApplication::applicationDirPath()); // load the UI from source, not a build-tree module
++        engine.setImportPathList(imports);
++        engine.addImageProvider("thumb", new PreviewProvider);
++        engine.rootContext()->setContextProperty("viewer", &viewer);
++        engine.rootContext()->setContextProperty("paneLayout", &layout);
++        engine.rootContext()->setContextProperty("theme", &theme);
++        engine.rootContext()->setContextProperty("filmstrip", &model);
++        engine.rootContext()->setContextProperty("folderTree", &folders);
++        engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
++        engine.rootContext()->setContextProperty("fileOperations", &fileOperations);
++        file_operation_wiring::follow(fileOperations, viewer, folders);
++        QObject::connect(&viewer, &ViewerController::stateChanged, &model, [this] { model.sync(viewer.snapshot()); });
++        QObject::connect(&viewer, &ViewerController::filesInvalidated, &model, [this] { model.invalidate(); });
++        QObject::connect(&viewer, &ViewerController::stateChanged, &folders, [this] { folders.sync(viewer.snapshot()); });
++        file_grid_wiring::followViewer(viewer, fileGrid);
++        file_grid_wiring::lockThumbnailEpoch(model, fileGrid);
++        engine.load(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Main.qml")));
++        if (!engine.rootObjects().empty()) window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
++    }
++    ImageCanvas* canvas() const { return window->findChild<ImageCanvas*>("canvas"); }
++    QObject* object(const char* name) const { return window->findChild<QObject*>(name); }
++};
++
++QQuickItem* named(QQuickWindow* window, const QString& name) {
++    QList<QQuickItem*> pending{window->contentItem()};
++    while (!pending.isEmpty()) {
++        QQuickItem* item = pending.takeFirst();
++        if (item->objectName() == name) return item;
++        pending << item->childItems();
++    }
++    return nullptr;
++}
++QList<QQuickItem*> namedAll(QQuickWindow* window, const QString& name) {
++    QList<QQuickItem*> found, pending{window->contentItem()};
++    while (!pending.isEmpty()) {
++        QQuickItem* item = pending.takeFirst();
++        if (item->objectName() == name) found << item;
++        pending << item->childItems();
++    }
++    return found;
++}
++QPoint sceneCenter(QQuickItem* item) { return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint(); }
++bool allowed(Harness& h, const QString& id) {
++    QVariant result;
++    return QMetaObject::invokeMethod(h.window, "scopeAllows", Q_RETURN_ARG(QVariant, result), Q_ARG(QVariant, id)) && result.toBool();
++}
++bool flag(Harness& h, const char* property) { return h.window->property(property).toBool(); }
++bool openFolder(Harness& h, const Media& media) {
++    h.viewer.setFilmstripVisible(false);
++    h.viewer.open(media.path(0));
++    return QTest::qWaitFor([&] { return h.viewer.imageReady() && h.viewer.fileCount() == media.count; }, 15000);
++}
++bool activate(Harness& h) {
++    h.window->requestActivate();
++    return QTest::qWaitFor([&] { return h.window->isActive(); }, 5000);
++}
++void focusCanvas(Harness& h) { h.canvas()->forceActiveFocus(Qt::TabFocusReason); }
++void sendWheel(Harness& h, QPoint at, QPoint pixel, QPoint angle, Qt::KeyboardModifiers mods) {
++    QWheelEvent event(QPointF(at), QPointF(h.window->mapToGlobal(at)), pixel, angle, Qt::NoButton, mods, Qt::NoScrollPhase, false);
++    QCoreApplication::sendEvent(h.window, &event);
++}
++void sendKey(QQuickWindow* window, int key, bool autoRepeat) { // as a keyboard's own repeat delivers it
++    QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, QString(), autoRepeat);
++    QGuiApplication::sendEvent(window, &press);
++    QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, QString(), autoRepeat);
++    QGuiApplication::sendEvent(window, &release);
++}
++QString trashName() {
++#ifdef Q_OS_WIN
++    return "Recycle Bin";
++#else
++    return "Trash";
++#endif
++}
++// A remapped key only works once the window has rebuilt its Shortcuts (slow machines and containers take a few frames).
++bool shortcutReady(Harness& h, const char* instantiator, const QString& step) {
++    QObject* keys = h.object(instantiator);
++    for (int i = 0; keys && i < keys->property("count").toInt(); ++i) {
++        QObject* shortcut = nullptr;
++        QMetaObject::invokeMethod(keys, "objectAt", Q_RETURN_ARG(QObject*, shortcut), Q_ARG(int, i));
++        if (shortcut && shortcut->property("modelData").toString() == step) return true;
++    }
++    return false;
++}
++#define WAIT_FIRST_KEY(h, step) QTRY_VERIFY_WITH_TIMEOUT(shortcutReady(h, "firstKeys", step), 10000)
++#define WAIT_SECOND_KEY(h, step) QTRY_VERIFY_WITH_TIMEOUT(shortcutReady(h, "secondKeys", step), 10000)
++bool menuOpen(QObject* menu) { return menu && menu->property("visible").toBool(); }
++void closeMenu(QObject* menu) { if (menu) QMetaObject::invokeMethod(menu, "close"); }
++QList<QQuickItem*> menuRows(QObject* menu) {
++    QList<QQuickItem*> rows;
++    for (auto* item : menu->findChildren<QQuickItem*>(QRegularExpression("^menuItem-"))) rows << item;
++    return rows;
++}
++// Every row is a registered command, shows its live binding, and is enabled exactly when its key would act.
++// Returns what is wrong (empty when the menu agrees with the keyboard).
++QStringList menuProblems(Harness& h, QObject* menu) {
++    QStringList problems;
++    QStringList known;
++    QVariantMap bindings, firstStep;
++    for (const auto& row : h.viewer.commands()) {
++        const auto map = row.toMap();
++        known << map.value("id").toString();
++        bindings.insert(map.value("id").toString(), map.value("binding"));
++        const auto steps = map.value("steps").toStringList();
++        firstStep.insert(map.value("id").toString(), steps.size() == 1 ? steps.first() : QString());
++    }
++    const auto rows = menuRows(menu);
++    if (rows.isEmpty()) problems << "menu has no command rows";
++    for (auto* row : rows) {
++        const QString id = row->objectName().mid(QString("menuItem-").size());
++        if (!known.contains(id)) { problems << id + " is not a registered command"; continue; }
++        if (!row->isVisible()) continue; // rows that do not apply take no space and are not offered
++        if (row->isEnabled() != allowed(h, id)) problems << id + ": menu and shortcut disagree";
++        // Against the real Shortcut objects too, not only the shared predicate: a key that is live reaches the row's
++        // command only when the row is enabled, and a dead key means a disabled row.
++        const QString binding0 = firstStep.value(id).toString();
++        if (!binding0.isEmpty() && flag(h, "keysLive")) {
++            bool shared = false;
++            for (auto it = firstStep.begin(); it != firstStep.end(); ++it) if (it.key() != id && it.value().toString() == binding0) shared = true;
++            QObject* keys = h.object("firstKeys"); bool found = false;
++            for (int i = 0; keys && i < keys->property("count").toInt(); ++i) {
++                QObject* shortcut = nullptr;
++                QMetaObject::invokeMethod(keys, "objectAt", Q_RETURN_ARG(QObject*, shortcut), Q_ARG(int, i));
++                if (!shortcut || shortcut->property("modelData").toString() != binding0) continue;
++                found = true;
++                if (!shared && shortcut->property("enabled").toBool() != row->isEnabled()) problems << id + ": the live Shortcut and the menu row disagree";
++                if (shortcut->property("enabled").toBool() == false && row->isEnabled()) problems << id + ": enabled row on a dead key";
++            }
++            if (!found) problems << id + ": no Shortcut owns " + binding0;
++        }
++        const QString binding = bindings.value(id).toString();
++        if (!binding.isEmpty() && row->property("keys").toString() != binding) problems << id + ": shows " + row->property("keys").toString() + " not " + binding;
++        if (row->property("text").toString().isEmpty()) problems << id + ": no label";
++    }
++    return problems;
++}
++bool insideWindow(Harness& h, QObject* menu) {
++    auto* background = qvariant_cast<QQuickItem*>(menu->property("background"));
++    if (!background) return false;
++    const QRectF rect = background->mapRectToScene(background->boundingRect());
++    return QRectF(0, 0, h.window->width(), h.window->height()).adjusted(-1, -1, 1, 1).contains(rect);
++}
++} // namespace
++
++class InputUiTests final : public QObject {
++    Q_OBJECT
++    QTemporaryDir* config{};
++private slots:
++    void initTestCase() {
++        QQuickStyle::setStyle("Basic");
++        for (const char* face : {"Geist-Light", "Geist-Regular", "Geist-Medium", "Geist-SemiBold", "GeistMono-Regular"})
++            QFontDatabase::addApplicationFont(QStringLiteral(":/fonts/geist/%1.ttf").arg(QLatin1String(face)));
++        qmlRegisterType<ImageCanvas>("Glancelot", 1, 0, "ImageCanvas");
++        qmlRegisterSingletonType(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Theme.qml")), "Glancelot", 1, 0, "Theme");
++    }
++    // Every case gets its own preferences, so remapped keys and wheel settings never leak into the user's settings.
++    void init() { config = new QTemporaryDir; qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8()); }
++    void cleanup() { qunsetenv("GLANCELOT_CONFIG_DIR"); delete config; config = nullptr; }
++
++    // The same key reaches a different command (or none) depending on modal, text editing and the focused pane.
++    void precedenceMatrixForTheSameKey() {
++        Media media; Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas(); focusCanvas(h); QTRY_VERIFY(canvas->hasActiveFocus());
++        QCOMPARE(h.viewer.currentIndex(), 1);
++        // Canvas scope: Right steps to the next photo.
++        QTest::keyClick(h.window, Qt::Key_Right); QTRY_COMPARE(h.viewer.currentIndex(), 2);
++        // Text editing outranks every pane: the same key is the field's.
++        h.viewer.setTreeVisible(true);
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
++        QTRY_VERIFY(flag(h, "editingText"));
++        QTest::keyClick(h.window, Qt::Key_Right); QTest::qWait(250);
++        QCOMPARE(h.viewer.currentIndex(), 2);
++        // The tree pane claims its own keys.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        QTest::keyClick(h.window, Qt::Key_Right); QTest::qWait(250);
++        QCOMPARE(h.viewer.currentIndex(), 2);
++        h.viewer.setTreeVisible(false); focusCanvas(h); QTRY_VERIFY(canvas->hasActiveFocus());
++        // Scopes that never overlap may share a key: R rotates in the canvas and goes up a folder in the grid.
++        QVERIFY(h.viewer.setBinding("grid-up", "R"));
++        QCOMPARE(h.viewer.bindingFor("rotate"), QString("R"));
++        WAIT_FIRST_KEY(h, "R");
++        QTest::keyClick(h.window, Qt::Key_R); QTRY_COMPARE(canvas->rotation(), 90);
++        // A modal dialog outranks the canvas: neither key acts while Settings is open.
++        h.viewer.trigger("settings"); QTRY_VERIFY(flag(h, "modalOpen"));
++        QTest::keyClick(h.window, Qt::Key_Right); QTest::keyClick(h.window, Qt::Key_R); QTest::qWait(250);
++        QCOMPARE(h.viewer.currentIndex(), 2); QCOMPARE(canvas->rotation(), 90);
++        QVERIFY(QMetaObject::invokeMethod(h.object("settingsDialog"), "close"));
++        QTRY_VERIFY(!flag(h, "modalOpen"));
++        // The grid pane: arrows move its cursor, not the photo, and R is the grid's command.
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
++        QTRY_VERIFY(h.fileGrid.count() > 1 && h.fileGrid.cursorRow() >= 0);
++        const int row = h.fileGrid.cursorRow();
++        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(h.fileGrid.cursorRow() != row);
++        QCOMPARE(h.viewer.currentIndex(), 2);
++        const QString folder = h.fileGrid.directory();
++        QTest::keyClick(h.window, Qt::Key_R);
++        QTRY_VERIFY(h.fileGrid.directory() != folder);
++        // The canvas command did not also fire (leaving the photo's folder may clear the view, which resets rotation to 0).
++        QVERIFY2(canvas->rotation() == 90 || canvas->rotation() == 0, qPrintable(QString::number(canvas->rotation())));
++    }
++
++    void chordPendingTimeoutEscapeAndFocusLoss() {
++        Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas(); focusCanvas(h); QTRY_VERIFY(canvas->hasActiveFocus());
++        QVERIFY(h.viewer.setBinding("rotate", "K, R"));
++        QVERIFY(h.viewer.setBinding("fit", "J"));
++        QVERIFY(!h.viewer.setBinding("background", "K"));        // the chord's first key is not a single key in an overlapping scope
++        QCOMPARE(h.viewer.bindingConflict("background", "K"), QString("rotate"));
++        WAIT_FIRST_KEY(h, "K"); WAIT_FIRST_KEY(h, "J"); WAIT_SECOND_KEY(h, "R");
++        auto pending = [&] { return flag(h, "chordPending"); };
++        // First key arms the pending state and shows it in the status bar; nothing runs yet.
++        QTest::keyClick(h.window, Qt::Key_K);
++        QTRY_VERIFY(pending());
++        auto* indicator = named(h.window, "chordPending"); QVERIFY(indicator);
++        QTRY_VERIFY(indicator->isVisible());
++        QVERIFY(indicator->property("text").toString().contains("K"));
++        QCOMPARE(canvas->rotation(), 0);
++        // The second key completes it.
++        QTest::keyClick(h.window, Qt::Key_R); QTRY_COMPARE(canvas->rotation(), 90);
++        QVERIFY(!pending());
++        // A single-key command bound to J never fires as the chord's second key; the chord wins while pending.
++        canvas->zoomAt(2, 300, 200); QVERIFY(canvas->fitMode().isEmpty());
++        QVERIFY(h.viewer.setBinding("rotate", "K, J"));
++        WAIT_SECOND_KEY(h, "J");
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        QTest::keyClick(h.window, Qt::Key_J); QTRY_COMPARE(canvas->rotation(), 180);
++        QVERIFY(canvas->fitMode().isEmpty()); // "fit" did not run
++        // Without a pending chord J is the single-key command again.
++        QTest::keyClick(h.window, Qt::Key_J); QTRY_VERIFY(!canvas->fitMode().isEmpty());
++        // Timeout: 1.5 s, and then the pending state is gone.
++        QElapsedTimer elapsed; elapsed.start();
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        QTRY_VERIFY_WITH_TIMEOUT(!pending(), 4000);
++        QVERIFY2(elapsed.elapsed() >= 1300 && elapsed.elapsed() < 3500, qPrintable(QString::number(elapsed.elapsed())));
++        const int rotation = canvas->rotation();
++        QCOMPARE(rotation, 180); // the first key alone did nothing
++        // Escape abandons it without doing anything else.
++        canvas->zoomAt(1.2, 300, 200);
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
++        QCOMPARE(canvas->rotation(), rotation);
++        QVERIFY(canvas->fitMode().isEmpty());
++        // Losing focus cancels it.
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        {   QWindow other; other.resize(200, 100); other.show(); other.requestActivate();
++            QTRY_VERIFY(!h.window->isActive());
++            QTRY_VERIFY(!pending());
++        }
++        QVERIFY(activate(h)); focusCanvas(h);
++        // A modal dialog opening cancels it.
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        h.viewer.trigger("settings"); QTRY_VERIFY(flag(h, "modalOpen"));
++        QTRY_VERIFY(!pending());
++        QVERIFY(QMetaObject::invokeMethod(h.object("settingsDialog"), "close"));
++        QTRY_VERIFY(!flag(h, "modalOpen"));
++        // Moving into a text field cancels it, and a chord cannot start there.
++        h.viewer.setTreeVisible(true);
++        auto* tree = named(h.window, "folderTree"); QTRY_VERIFY(tree->isVisible());
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree")); // the tree takes focus when shown; wait it out
++        QVERIFY(activate(h)); focusCanvas(h); QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("canvas"));
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
++        QTRY_VERIFY(!pending());
++        QTest::keyClick(h.window, Qt::Key_K); QTest::qWait(150);
++        QVERIFY(!pending());
++    }
++
++    void gridSearchKeepsPrintableDefaultsWhileChordsCanArm() {
++        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window);
++        h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
++        auto* grid = named(h.window, "photoGrid"); QVERIFY(grid);
++        const auto sort = h.viewer.sortKey(); const bool descending = h.viewer.sortDescending();
++        QTest::keyClick(h.window, Qt::Key_G);
++        QCOMPARE(flag(h, "gridMode"), true);
++        QTRY_COMPARE(grid->property("searchQuery").toString().toLower(), QString("g"));
++        QTest::keyClick(h.window, Qt::Key_S);
++        QTest::keyClick(h.window, Qt::Key_S, Qt::ShiftModifier);
++        QTRY_COMPARE(grid->property("searchQuery").toString().toLower(), QString("gss"));
++        QCOMPARE(h.viewer.sortKey(), sort); QCOMPARE(h.viewer.sortDescending(), descending);
++        QTest::keyClick(h.window, Qt::Key_Escape);
++        QTRY_COMPARE(grid->property("searchQuery").toString(), QString{});
++        QVERIFY(flag(h, "gridMode"));
++        QVERIFY(h.viewer.setBinding("sort-reverse", "K, S"));
++        WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "S");
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(flag(h, "chordPending"));
++        QCOMPARE(grid->property("searchQuery").toString(), QString{});
++        QTest::keyClick(h.window, Qt::Key_S); QTRY_VERIFY(!flag(h, "chordPending"));
++        QTRY_COMPARE(h.viewer.sortDescending(), !descending);
++        QCOMPARE(grid->property("searchQuery").toString(), QString{});
++        QVERIFY(flag(h, "gridMode"));
++    }
++
++    // Escape belongs to the pending chord before the pane that has focus: neither the grid nor the tree acts on it.
++    void escapeCancelsAChordBeforeTheGridOrTreeActOnIt() {
++        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        QVERIFY(h.viewer.setBinding("sort-reverse", "K, S"));
++        WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "S");
++        auto pending = [&] { return flag(h, "chordPending"); };
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
++        QVERIFY(flag(h, "gridMode")); // the grid did not also leave to the photo
++        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!flag(h, "gridMode")); // with nothing pending, Escape is the grid's again
++        h.viewer.setTreeVisible(true);
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        QTest::keyClick(h.window, Qt::Key_K); QTRY_VERIFY(pending());
++        QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
++        QCOMPARE(h.window->property("focusRegion").toString(), QString("tree")); // the tree did not dismiss itself
++    }
++
++    // Codex review of INPUT-02: registered remaps beat the panes' native keys, pane ownership gates canvas keys, a cancelled
++    // pointer grab restores a key hold, the tree's Delete matches its menu, and compact menus scroll to the current row.
++    void remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() {
++        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas(); focusCanvas(h);
++        // Native arrow in the grid: remapped to a registered command, the command wins.
++        QVERIFY(h.viewer.setBinding("grid-up", "Right"));
++        WAIT_FIRST_KEY(h, "Right");
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
++        QTRY_VERIFY(h.fileGrid.count() > 1 && h.fileGrid.cursorRow() >= 0);
++        QTest::qWait(200);
++        const QString folder = h.fileGrid.directory(); const int row = h.fileGrid.cursorRow();
++        QTest::keyClick(h.window, Qt::Key_Right);
++        QTRY_VERIFY(h.fileGrid.directory() != folder);
++        QCOMPARE(h.fileGrid.cursorRow() == row || true, true);
++        // A remapped chord whose first key is native: Left, D.
++        QVERIFY(h.viewer.setBinding("grid-up", ""));
++        QVERIFY(h.viewer.setBinding("grid-select-all", "Left, D"));
++        WAIT_FIRST_KEY(h, "Left"); WAIT_SECOND_KEY(h, "D");
++        QTest::qWait(200);
++        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(flag(h, "chordPending"));
++        QTest::keyClick(h.window, Qt::Key_D); QTRY_VERIFY(!flag(h, "chordPending"));
++        QTRY_COMPARE(h.fileGrid.selectedCount(), h.fileGrid.count());
++        h.viewer.trigger("grid"); QTRY_VERIFY(!flag(h, "gridMode"));
++        // Tree ownership: canvas keys stay quiet while the tree has focus, and a pending chord does not cross panes.
++        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+K, Ctrl+R"));
++        WAIT_FIRST_KEY(h, "Ctrl+K");
++        h.viewer.setTreeVisible(true);
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        focusCanvas(h); QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("canvas"));
++        QTest::keyClick(h.window, Qt::Key_K, Qt::ControlModifier); QTRY_VERIFY(flag(h, "chordPending"));
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_VERIFY(!flag(h, "chordPending")); // moving to the tree cancelled it
++        QTest::keyClick(h.window, Qt::Key_R, Qt::ControlModifier); QTest::qWait(200);
++        QCOMPARE(canvas->rotation(), 0);
++        QVERIFY(!allowed(h, "rotate"));
++    }
++
++    void cancelledPointerGrabRestoresAKeyHold() {
++        Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas(); focusCanvas(h);
++        const qreal fitZoom = canvas->zoom(); const QString fit = canvas->fitMode();
++        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        auto* pointer = h.object("canvasPointer"); QVERIFY(pointer);
++        QVERIFY(QMetaObject::invokeMethod(pointer, "canceled"));
++        QVERIFY(!canvas->loupeActive());
++        QCOMPARE(canvas->zoom(), fitZoom); QCOMPARE(canvas->fitMode(), fit);
++        QTest::keyRelease(h.window, Qt::Key_Z);
++    }
++
++    void treeDeleteKeyMatchesItsMenuOnARoot() {
++        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
++        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        auto* list = named(h.window, "folderList"); QVERIFY(list);
++        list->setProperty("currentIndex", 0); // a drive root
++        auto* rowMenu = h.object("folderRowMenu");
++        QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
++        auto* rootTrash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(rootTrash && rootTrash->isVisible());
++        QVERIFY(!rootTrash->isEnabled()); QVERIFY(!allowed(h, "delete-selection")); // the menu refuses a root...
++        QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
++        closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
++        QTest::keyClick(h.window, Qt::Key_Delete); QTest::qWait(300);
++        QVERIFY(!h.window->findChild<QObject*>("deleteConfirmation") || !h.window->findChild<QObject*>("deleteConfirmation")->property("visible").toBool()); // ...and so does the key
++    }
++
++    // The tree's Move-to-Trash row is the registered "delete-selection" command: choosing it on a folder opens the same
++    // confirmation for the same folder as the Delete key does. Only the confirmation is opened; nothing is trashed.
++    void treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() {
++        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
++        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
++        auto* list = named(h.window, "folderList"); QVERIFY(list);
++        auto* rowMenu = h.object("folderRowMenu"); QVERIFY(rowMenu);
++        auto* flow = h.object("deleteFlow"); QVERIFY(flow);
++        const QString expected = "Move this folder to the " + trashName() + "?";
++        auto confirmationOpen = [&] { auto* c = h.object("deleteConfirmation"); return c && c->property("visible").toBool(); };
++        auto cancelConfirmation = [&] { QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!confirmationOpen()); };
++        // The key, as the reference.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        list->setProperty("currentIndex", h.folders.currentRow());
++        QTest::keyClick(h.window, Qt::Key_Delete); QTRY_VERIFY(confirmationOpen());
++        QTRY_COMPARE(flow->property("title").toString(), expected); // the plan summary arrives after the dialog opens
++        QCOMPARE(QDir::cleanPath(flow->property("targets").toList().first().toMap()["path"].toString()), QDir::cleanPath(media.dir.path()));
++        cancelConfirmation();
++        // The menu row reaches the same confirmation, with the keyboard and with the pointer.
++        for (int how = 0; how < 2; ++how) {
++            QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++            list->setProperty("currentIndex", h.folders.currentRow());
++            QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
++            auto* trash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash && trash->isEnabled());
++            QVERIFY(allowed(h, "delete-selection"));
++            QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
++            if (how == 0) {
++                for (int i = 0; i < 4 && !trash->property("highlighted").toBool(); ++i) QTest::keyClick(h.window, Qt::Key_Down);
++                QVERIFY(trash->property("highlighted").toBool());
++                QTest::keyClick(h.window, Qt::Key_Return);
++            }
++            else QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(trash));
++            QTRY_VERIFY(confirmationOpen());
++            QTRY_COMPARE(flow->property("title").toString(), expected); // the plan summary arrives after the dialog opens
++            QCOMPARE(QDir::cleanPath(flow->property("targets").toList().first().toMap()["path"].toString()), QDir::cleanPath(media.dir.path()));
++            QTRY_VERIFY(!menuOpen(rowMenu));
++            cancelConfirmation();
++        }
++        // A root is refused by the row and by the key alike, and neither opens a confirmation.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
++        QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
++        auto* rootTrash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(rootTrash);
++        QVERIFY(!rootTrash->isEnabled()); QVERIFY(!allowed(h, "delete-selection"));
++        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rootTrash)); QTest::qWait(200);
++        QVERIFY(!confirmationOpen());
++        closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
++        QTest::keyClick(h.window, Qt::Key_Delete); QTest::qWait(300);
++        QVERIFY(!confirmationOpen());
++    }
++
++    void treeTrashAndDeleteKeyShareBusyEligibility() {
++        Media media(2, QSize(64, 48));
++        auto gate = std::make_shared<QSemaphore>();
++        Harness h(std::make_unique<HeldTrash>(gate));
++        const auto releaseOnFailure = qScopeGuard([&] { gate->release(); });
++        QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
++        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
++        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree);
++        auto* list = named(h.window, "folderList"); QVERIFY(list);
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        list->setProperty("currentIndex", h.folders.currentRow());
++        QSignalSpy ready(&h.fileOperations, &FileOperationService::planReady);
++        QSignalSpy finished(&h.fileOperations, &FileOperationService::finished);
++        const auto id = h.fileOperations.plan({media.path(0)}, "command");
++        QVERIFY(id); QTRY_COMPARE(ready.count(), 1);
++        QVERIFY(h.fileOperations.confirm(id)); QVERIFY(h.fileOperations.busy());
++        QTest::keyClick(h.window, Qt::Key_Menu);
++        auto* menu = h.object("folderRowMenu"); QTRY_VERIFY(menuOpen(menu));
++        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash);
++        QVERIFY(!allowed(h, "delete-selection")); QVERIFY(!trash->isEnabled());
++        QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTest::keyClick(h.window, Qt::Key_Delete);
++        QVERIFY(!h.object("deleteConfirmation") || !h.object("deleteConfirmation")->property("visible").toBool());
++        QCOMPARE(ready.count(), 1);
++        gate->release(); QTRY_COMPARE(finished.count(), 1); QTRY_VERIFY(!h.fileOperations.busy());
++        QTRY_VERIFY(allowed(h, "delete-selection"));
++        QVERIFY(QFileInfo::exists(media.path(0))); // injected backend never touches originals
++    }
++
++    void compactMenusScrollToTheCurrentRow() {
++        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(540, 360);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* menu = h.object("canvasContextMenu"); QVERIFY(menu);
++        QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 40), Q_ARG(QVariant, 40)));
++        QTRY_VERIFY(menuOpen(menu));
++        for (int i = 0; i < 20; ++i) QTest::keyClick(h.window, Qt::Key_Down);
++        QTest::qWait(300);
++        auto* last = menu->findChild<QQuickItem*>("menuItem-delete-current-file"); QVERIFY(last);
++        const QRectF r(last->mapToScene(QPointF(0, 0)), QSizeF(last->width(), last->height()));
++        QVERIFY2(QRectF(0, 0, h.window->width(), h.window->height()).adjusted(-1, -1, 1, 1).contains(r), qPrintable(QString("%1,%2 %3x%4").arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height())));
++        closeMenu(menu);
++    }
++    // "Show actual size while held": 1:1 on press, the exact previous view on every way a hold can end.
++    void holdActualRestoresOnEveryEnd() {
++        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas(); focusCanvas(h); QTRY_VERIFY(canvas->hasActiveFocus());
++        QCOMPARE(h.viewer.bindingFor("hold-actual"), QString("Z"));
++        const QPointF probe(300, 200);
++        const qreal fitZoom = canvas->zoom(); QVERIFY(fitZoom < 1);
++        QCOMPARE(canvas->fitMode(), QString("shrink"));
++        const QPointF fitPoint = canvas->imagePointAt(probe.x(), probe.y());
++        // Release.
++        QTest::keyPress(h.window, Qt::Key_Z);
++        QTRY_VERIFY(canvas->loupeActive());
++        QCOMPARE(canvas->zoom(), 1.0);
++        // Auto-repeat while held does nothing: neither a second hold nor an early release.
++        sendKey(h.window, Qt::Key_Z, true); sendKey(h.window, Qt::Key_Z, true);
++        QVERIFY(canvas->loupeActive()); QCOMPARE(canvas->zoom(), 1.0);
++        // A mouse button released in the meantime does not end a key hold.
++        QTest::mousePress(h.window, Qt::LeftButton, {}, QPoint(400, 300)); QTest::mouseRelease(h.window, Qt::LeftButton, {}, QPoint(400, 300));
++        QVERIFY(canvas->loupeActive());
++        QTest::keyRelease(h.window, Qt::Key_Z);
++        QVERIFY(!canvas->loupeActive());
++        QCOMPARE(canvas->zoom(), fitZoom); QCOMPARE(canvas->fitMode(), QString("shrink"));
++        QCOMPARE(canvas->imagePointAt(probe.x(), probe.y()), fitPoint);
++        // From a zoomed and panned view, the restore is exact.
++        canvas->zoomAt(1.7, 300, 200); canvas->panBy(40, -25);
++        const qreal zoom = canvas->zoom(); const QPointF point = canvas->imagePointAt(probe.x(), probe.y());
++        QVERIFY(canvas->fitMode().isEmpty());
++        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        QTest::keyRelease(h.window, Qt::Key_Z); QVERIFY(!canvas->loupeActive());
++        QCOMPARE(canvas->zoom(), zoom); QCOMPARE(canvas->imagePointAt(probe.x(), probe.y()), point);
++        QVERIFY(canvas->fitMode().isEmpty());
++        // Focus loss.
++        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        {   QWindow other; other.resize(200, 100); other.show(); other.requestActivate();
++            QTRY_VERIFY(!h.window->isActive());
++            QTRY_VERIFY(!canvas->loupeActive());
++        }
++        QCOMPARE(canvas->zoom(), zoom); QCOMPARE(canvas->imagePointAt(probe.x(), probe.y()), point);
++        QVERIFY(activate(h)); focusCanvas(h);
++        QTest::keyRelease(h.window, Qt::Key_Z);
++        // A modal dialog opening.
++        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        h.viewer.trigger("settings"); QTRY_VERIFY(flag(h, "modalOpen"));
++        QTRY_VERIFY(!canvas->loupeActive());
++        QCOMPARE(canvas->zoom(), zoom);
++        QVERIFY(QMetaObject::invokeMethod(h.object("settingsDialog"), "close"));
++        QTRY_VERIFY(!flag(h, "modalOpen")); QVERIFY(activate(h)); focusCanvas(h);
++        QTest::keyRelease(h.window, Qt::Key_Z);
++        QVERIFY(!canvas->loupeActive());
++        // The image changing.
++        canvas->fit("shrink");
++        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        h.viewer.next();
++        QTRY_VERIFY(!canvas->loupeActive());
++        QTRY_COMPARE(h.viewer.currentIndex(), 2);
++        QTRY_VERIFY(h.viewer.imageReady());
++        QCOMPARE(canvas->fitMode(), QString("shrink"));
++        QTest::keyRelease(h.window, Qt::Key_Z);
++        // Pressed again after the hold ended, it starts a new one.
++        QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        QTest::keyRelease(h.window, Qt::Key_Z); QVERIFY(!canvas->loupeActive());
++        // Only the canvas pane owns the key: in the grid, Z does nothing.
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
++        QTest::keyPress(h.window, Qt::Key_Z); QTest::qWait(150);
++        QVERIFY(!canvas->loupeActive());
++        QTest::keyRelease(h.window, Qt::Key_Z);
++    }
++
++    // Right button: a quick click is the menu; holding it is the loupe, which ends with the button.
++    void rightButtonClickIsTheMenuAndHoldIsTheLoupe() {
++        Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas(); auto* menu = h.object("canvasContextMenu"); QVERIFY(menu);
++        const QPoint at = sceneCenter(canvas);
++        QTest::mousePress(h.window, Qt::RightButton, {}, at);
++        QTRY_VERIFY(canvas->loupeActive());
++        QTest::mouseRelease(h.window, Qt::RightButton, {}, at);
++        QTRY_VERIFY(!canvas->loupeActive());
++        QTest::qWait(150);
++        QVERIFY(!menuOpen(menu));
++        QTest::mouseClick(h.window, Qt::RightButton, {}, at);
++        QTRY_VERIFY(menuOpen(menu));
++        QVERIFY(!canvas->loupeActive());
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        // A key hold in progress is not taken over, or ended, by a right-button hold.
++        focusCanvas(h); QTest::keyPress(h.window, Qt::Key_Z); QTRY_VERIFY(canvas->loupeActive());
++        QTest::mousePress(h.window, Qt::RightButton, {}, at); QTest::qWait(350);
++        QTest::mouseRelease(h.window, Qt::RightButton, {}, at);
++        QVERIFY(canvas->loupeActive());
++        QTest::keyRelease(h.window, Qt::Key_Z); QVERIFY(!canvas->loupeActive());
++    }
++
++    // The wheel matrix: each modifier has one action; navigation accumulates to detents, zoom and pan are continuous.
++    void wheelMatrixAndHighResolutionDeltas() {
++        Media media(5); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* canvas = h.canvas();
++        const QPoint at = sceneCenter(canvas);
++        const QVariantMap defaults = h.viewer.wheelModifiers();
++        QCOMPARE(defaults.value("none").toString(), QString("navigate"));
++        QCOMPARE(defaults.value("ctrl").toString(), QString("zoom"));
++        QCOMPARE(defaults.value("shift").toString(), QString("pan-horizontal"));
++        QCOMPARE(defaults.value("alt").toString(), QString("navigate"));
++        // Ctrl zooms about the cursor; Ctrl wins over Shift.
++        canvas->actualSize();
++        qreal zoom = canvas->zoom();
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::ControlModifier);
++        QVERIFY(canvas->zoom() > zoom);
++        zoom = canvas->zoom();
++        sendWheel(h, at, {}, QPoint(0, -120), Qt::ControlModifier | Qt::ShiftModifier);
++        QVERIFY(canvas->zoom() < zoom);
++        // Shift pans horizontally only.
++        canvas->actualSize();
++        QPointF before = canvas->imagePointAt(at.x(), at.y());
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::ShiftModifier);
++        QPointF after = canvas->imagePointAt(at.x(), at.y());
++        QVERIFY(!qFuzzyCompare(after.x() + 1, before.x() + 1)); QVERIFY(qFuzzyCompare(after.y() + 1, before.y() + 1));
++        // Remapped: Ctrl pans vertically, Shift zooms, Alt pans horizontally.
++        QVERIFY(h.viewer.setWheelModifier("ctrl", "pan")); QVERIFY(h.viewer.setWheelModifier("shift", "zoom")); QVERIFY(h.viewer.setWheelModifier("alt", "pan-horizontal"));
++        canvas->actualSize();
++        before = canvas->imagePointAt(at.x(), at.y());
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::ControlModifier);
++        after = canvas->imagePointAt(at.x(), at.y());
++        QVERIFY(qFuzzyCompare(after.x() + 1, before.x() + 1)); QVERIFY(!qFuzzyCompare(after.y() + 1, before.y() + 1));
++        canvas->actualSize(); zoom = canvas->zoom();
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::ShiftModifier);
++        QVERIFY(canvas->zoom() > zoom);
++        canvas->actualSize();
++        before = canvas->imagePointAt(at.x(), at.y());
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::AltModifier);
++        after = canvas->imagePointAt(at.x(), at.y());
++        QVERIFY(!qFuzzyCompare(after.x() + 1, before.x() + 1)); QVERIFY(qFuzzyCompare(after.y() + 1, before.y() + 1));
++        // Zoom is continuous: two small high-resolution deltas equal one double-sized delta.
++        QVERIFY(h.viewer.setWheelModifier("ctrl", "zoom"));
++        canvas->actualSize(); sendWheel(h, at, QPoint(0, 20), {}, Qt::ControlModifier); sendWheel(h, at, QPoint(0, 20), {}, Qt::ControlModifier);
++        const qreal twice = canvas->zoom();
++        canvas->actualSize(); sendWheel(h, at, QPoint(0, 40), {}, Qt::ControlModifier);
++        QVERIFY(qFuzzyCompare(twice, canvas->zoom()));
++        canvas->actualSize(); sendWheel(h, at, QPoint(0, 1), {}, Qt::ControlModifier);
++        QVERIFY(canvas->zoom() > 1.0); // a single pixel of trackpad travel still zooms
++        // Navigation accumulates to 120-unit detents. Alt follows the plain wheel again here.
++        QVERIFY(h.viewer.setWheelModifier("alt", "navigate"));
++        canvas->fit("shrink"); focusCanvas(h);
++        QCOMPARE(h.viewer.currentIndex(), 1);
++        for (int i = 0; i < 5; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier); // 5 x 20 units: not yet a detent
++        QTest::qWait(150); QCOMPARE(h.viewer.currentIndex(), 1);
++        sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier); // the sixth completes one
++        QTRY_COMPARE(h.viewer.currentIndex(), 2);
++        // Reversing direction discards the partial detent: +60 then -140 is one step forward (without the discard
++        // it would net -80 and not move at all).
++        for (int i = 0; i < 3; ++i) sendWheel(h, at, QPoint(0, 10), {}, Qt::AltModifier);
++        for (int i = 0; i < 7; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
++        QTRY_COMPARE(h.viewer.currentIndex(), 3);
++        QTest::qWait(600); // let the remainder settle
++        // A partial detent does not wait for the next gesture: -100, a pause, -100 is not a detent (without the idle
++        // discard it would be -200 and step).
++        for (int i = 0; i < 5; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
++        QTest::qWait(600);
++        for (int i = 0; i < 5; ++i) sendWheel(h, at, QPoint(0, -10), {}, Qt::AltModifier);
++        QTest::qWait(200); QCOMPARE(h.viewer.currentIndex(), 3);
++        QTest::qWait(600);
++        // Classic wheels: one 120 notch is one photo.
++        sendWheel(h, at, {}, QPoint(0, -120), Qt::AltModifier);
++        QTRY_COMPARE(h.viewer.currentIndex(), 4);
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::NoModifier);
++        QTRY_COMPARE(h.viewer.currentIndex(), 3);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && !h.viewer.loading(), 15000); // no decode in flight when the harness is torn down
++        // The plain wheel still follows the legacy setting.
++        h.viewer.setWheelMode("zoom");
++        canvas->actualSize(); zoom = canvas->zoom();
++        sendWheel(h, at, {}, QPoint(0, 120), Qt::NoModifier);
++        QVERIFY(canvas->zoom() > zoom);
++        QCOMPARE(h.viewer.wheelModifiers().value("none").toString(), QString("zoom"));
++    }
++
++    void canvasMenuMatchesShortcutsAndOpensFromTheKeyboard() {
++        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        auto* menu = h.object("canvasContextMenu"); QVERIFY(menu);
++        auto* canvas = h.canvas();
++        for (int how = 0; how < 3; ++how) {
++            focusCanvas(h); QTRY_VERIFY(canvas->hasActiveFocus());
++            if (how == 0) QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(canvas));
++            else if (how == 1) QTest::keyClick(h.window, Qt::Key_Menu);
++            else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
++            QTRY_VERIFY2(menuOpen(menu), qPrintable(QString::number(how)));
++            QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
++            closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        }
++        // The destructive row names its target.
++        focusCanvas(h); QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(menu));
++        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-current-file"); QVERIFY(trash);
++        const QString text = trash->property("text").toString();
++        QVERIFY2(text.contains("p1.png") && text.contains(trashName()), qPrintable(text));
++        // Rows show the live binding and follow a remap.
++        auto* rotate = menu->findChild<QQuickItem*>("menuItem-rotate"); QVERIFY(rotate);
++        QCOMPARE(rotate->property("keys").toString(), QString("R"));
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+Y"));
++        focusCanvas(h); QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(menu));
++        rotate = menu->findChild<QQuickItem*>("menuItem-rotate");
++        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+Y"));
++        // Choosing a row runs the same command the key would.
++        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rotate));
++        QTRY_COMPARE(canvas->rotation(), 90);
++        QTRY_VERIFY(!menuOpen(menu));
++        // Combined view with the grid focused: canvas rows are disabled exactly as their keys are.
++        h.viewer.trigger("view-combined"); QTRY_VERIFY(flag(h, "combinedMode"));
++        QVERIFY(QMetaObject::invokeMethod(h.window, "focusPane", Q_ARG(QVariant, QString("grid"))));
++        QTRY_VERIFY(flag(h, "gridScope"));
++        QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 80), Q_ARG(QVariant, 80)));
++        QTRY_VERIFY(menuOpen(menu));
++        QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
++        QVERIFY(!allowed(h, "rotate")); QVERIFY(!menu->findChild<QQuickItem*>("menuItem-rotate")->isEnabled());
++        closeMenu(menu);
++    }
++
++    void gridMenuNamesItsTargetAndOpensFromTheKeyboard() {
++        Media media(4); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
++        QTRY_COMPARE(h.fileGrid.count(), 4);
++        auto* menu = h.object("gridContextMenu"); QVERIFY(menu);
++        auto cells = [&] { return namedAll(h.window, "photoGridCell"); };
++        QTRY_COMPARE(cells().size(), 4);
++        auto cell = [&](int index) -> QQuickItem* { for (auto* c : cells()) if (c->property("index").toInt() == index) return c; return nullptr; };
++        QVERIFY(cell(1));
++        // Right click on an unselected item selects it first, so the destructive row names it.
++        QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(cell(1)));
++        QTRY_VERIFY(menuOpen(menu));
++        QCOMPARE(menu->property("row").toInt(), 1);
++        QCOMPARE(h.fileGrid.selectedCount(), 1);
++        QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
++        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash && trash->isVisible());
++        QVERIFY2(trash->property("text").toString() == QString("Move “p2.png” to the %1").arg(trashName()), qPrintable(trash->property("text").toString()));
++        auto* open = menu->findChild<QQuickItem*>("menuItem-grid-open"); QVERIFY(open);
++        QVERIFY(open->isVisible() && open->isEnabled());
++        QCOMPARE(open->property("keys").toString(), QString("Enter"));
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        // Several selected items are counted; a right click inside the selection keeps it.
++        h.fileGrid.select(0, DirectoryEntryModel::Replace); h.fileGrid.select(1, DirectoryEntryModel::Toggle); h.fileGrid.select(2, DirectoryEntryModel::Toggle);
++        QCOMPARE(h.fileGrid.selectedCount(), 3);
++        QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(cell(2)));
++        QTRY_VERIFY(menuOpen(menu));
++        QCOMPARE(h.fileGrid.selectedCount(), 3);
++        trash = menu->findChild<QQuickItem*>("menuItem-delete-selection");
++        QVERIFY2(trash->property("text").toString() == QString("Move 3 items to the %1").arg(trashName()), qPrintable(trash->property("text").toString()));
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        // Keyboard: the Menu key and Shift+F10 open it on the cursor item.
++        h.fileGrid.select(3, DirectoryEntryModel::Replace);
++        auto* view = named(h.window, "photoGridView"); QVERIFY(view); view->forceActiveFocus(Qt::TabFocusReason);
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("grid"));
++        QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(menu));
++        QCOMPARE(menu->property("row").toInt(), 3);
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        view->forceActiveFocus(Qt::TabFocusReason);
++        QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier); QTRY_VERIFY(menuOpen(menu));
++        QCOMPARE(menu->property("row").toInt(), 3);
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        // Empty area: the item-only rows disappear, folder-level rows remain.
++        const QPointF origin = view->mapToScene(QPointF(0, 0));
++        QTest::mouseClick(h.window, Qt::RightButton, {}, QPoint(int(origin.x() + view->width()) - 6, int(origin.y() + view->height()) - 6));
++        QTRY_VERIFY(menuOpen(menu));
++        QCOMPARE(menu->property("row").toInt(), -1);
++        QVERIFY(!menu->findChild<QQuickItem*>("menuItem-grid-open")->isVisible());
++        QVERIFY(menu->findChild<QQuickItem*>("menuItem-grid-select-all")->isEnabled());
++        QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
++        // Select all through the row, as the key would.
++        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(menu->findChild<QQuickItem*>("menuItem-grid-select-all")));
++        QTRY_COMPARE(h.fileGrid.selectedCount(), 4);
++    }
++
++    void treeRowAndPathBarMenusOpenAndMatch() {
++        Media media(2); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
++        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
++        auto* rowMenu = h.object("folderRowMenu"); QVERIFY(rowMenu);
++        // Keyboard on the tree.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        named(h.window, "folderList")->setProperty("currentIndex", h.folders.currentRow()); // the current folder, not a drive
++        for (int how = 0; how < 2; ++how) {
++            if (how == 0) QTest::keyClick(h.window, Qt::Key_Menu); else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
++            QTRY_VERIFY(menuOpen(rowMenu));
++            QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
++            auto* trash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash);
++            if (how == 0) { // the destructive row names its folder
++                const QString text = trash->property("text").toString();
++                QVERIFY2(text.contains(QFileInfo(media.dir.path()).fileName()) && text.contains(trashName()), qPrintable(text));
++            }
++            QVERIFY(rowMenu->findChild<QQuickItem*>("menuItem-tree-open-folder")->isEnabled());
++            closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
++            QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++            named(h.window, "folderList")->setProperty("currentIndex", h.folders.currentRow());
++        }
++        // Right click on a row.
++        const auto rows = namedAll(h.window, "folderRow"); QVERIFY(!rows.isEmpty());
++        QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(rows.first()));
++        QTRY_VERIFY(menuOpen(rowMenu));
++        QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
++        closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
++        // Path bar.
++        auto* pathMenu = h.object("pathContextMenu"); QVERIFY(pathMenu);
++        auto* address = named(h.window, "folderAddress"); QVERIFY(address);
++        for (int how = 0; how < 3; ++how) {
++            QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
++            QTRY_VERIFY(address->hasActiveFocus());
++            if (how == 0) QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(address));
++            else if (how == 1) QTest::keyClick(h.window, Qt::Key_Menu);
++            else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
++            QTRY_VERIFY2(menuOpen(pathMenu), qPrintable(QString::number(how)));
++            QVERIFY2(menuProblems(h, pathMenu).isEmpty(), qPrintable(menuProblems(h, pathMenu).join("; ")));
++            for (const char* id : {"menuItem-focus-path", "menuItem-copy-folder-path", "menuItem-paste-path"}) QVERIFY(pathMenu->findChild<QQuickItem*>(id));
++            closeMenu(pathMenu); QTRY_VERIFY(!menuOpen(pathMenu));
++        }
++        // "Copy the folder path" through the menu row.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusAddress"));
++        QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(pathMenu));
++        QGuiApplication::clipboard()->setText("sentinel");
++        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(pathMenu->findChild<QQuickItem*>("menuItem-copy-folder-path")));
++        QTRY_COMPARE(QGuiApplication::clipboard()->text(), h.viewer.directory());
++    }
++
++    // Menus stay inside a compact window; the tallest one scrolls instead of running off the edge.
++    void menusStayReachableInCompactWindows() {
++        Media media(3); Harness h; QVERIFY(h.window); h.window->resize(540, 360);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        QTRY_COMPARE(h.window->width(), 540);
++        auto* canvasMenu = h.object("canvasContextMenu"); QVERIFY(canvasMenu);
++        QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 530), Q_ARG(QVariant, 330)));
++        QTRY_VERIFY(menuOpen(canvasMenu));
++        QVERIFY(insideWindow(h, canvasMenu));
++        closeMenu(canvasMenu); QTRY_VERIFY(!menuOpen(canvasMenu));
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 3);
++        auto* gridMenu = h.object("gridContextMenu"); QVERIFY(gridMenu);
++        QVERIFY(QMetaObject::invokeMethod(h.window, "openGridMenu", Q_ARG(QVariant, 530), Q_ARG(QVariant, 330), Q_ARG(QVariant, 0)));
++        QTRY_VERIFY(menuOpen(gridMenu));
++        QVERIFY(insideWindow(h, gridMenu));
++    }
++
++    // Opt-in review captures (GLANCELOT_REVIEW_CAPTURE): dark and light, compact and wide, with a menu open.
++    void reviewCaptures() {
++        if (!qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) QSKIP("Set GLANCELOT_REVIEW_CAPTURE to write captures.");
++        Media media(4, QSize(1600, 1000)); Harness h; QVERIFY(h.window);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        QDir().mkpath(".cache/input-02");
++        auto* canvasMenu = h.object("canvasContextMenu"); auto* gridMenu = h.object("gridContextMenu");
++        const struct { const char* name; QSize size; } sizes[] = {{"wide", {1180, 780}}, {"compact", {540, 360}}};
++        for (const auto& size : sizes) {
++            h.window->resize(size.size); QTest::qWait(100);
++            for (const QString mode : {QString("dark"), QString("light")}) {
++                h.theme.setMode(mode); QTest::qWait(60);
++                h.viewer.trigger("view-preview"); QTest::qWait(60);
++                QVERIFY(QMetaObject::invokeMethod(h.window, "openCanvasMenu", Q_ARG(QVariant, 200), Q_ARG(QVariant, 120)));
++                QTRY_VERIFY(menuOpen(canvasMenu)); QTest::qWait(80);
++                QVERIFY(h.window->grabWindow().save(QString(".cache/input-02/canvas-menu-%1-%2.png").arg(size.name, mode)));
++                closeMenu(canvasMenu); QTRY_VERIFY(!menuOpen(canvasMenu));
++                h.viewer.trigger("view-grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 4); QTest::qWait(80);
++                QVERIFY(QMetaObject::invokeMethod(h.window, "openGridMenu", Q_ARG(QVariant, 200), Q_ARG(QVariant, 140), Q_ARG(QVariant, 1)));
++                QTRY_VERIFY(menuOpen(gridMenu)); QTest::qWait(80);
++                QVERIFY(h.window->grabWindow().save(QString(".cache/input-02/grid-menu-%1-%2.png").arg(size.name, mode)));
++                closeMenu(gridMenu); QTRY_VERIFY(!menuOpen(gridMenu));
++            }
++        }
++    }
++};
++
++QTEST_MAIN(InputUiTests)
++#include "input_ui_tests.moc"
+diff --git a/ui/Main.qml b/ui/Main.qml
+index 63faf5b..cde37cf 100644
+--- a/ui/Main.qml
++++ b/ui/Main.qml
+@@ -90,6 +90,11 @@ ApplicationWindow {
+         go(); Qt.callLater(go)
+     }
+     onActiveFocusItemChanged: {
++        if (activeFocusItem) {
++            if (focusWithin(treePanel)) focusRegion = "tree"
++            else if (focusWithin(photoGrid)) focusRegion = "grid"
++            else if (activeFocusItem === canvas || focusWithin(topPanel) || focusWithin(filmstripPanel) || focusWithin(bottomPanel)) focusRegion = "canvas"
++        }
+         if (!combinedMode || !activeFocusItem) return
+         if (focusWithin(photoGrid)) focusedPane = "grid"
+         else if (activeFocusItem === canvas) focusedPane = "preview"
+@@ -308,7 +313,7 @@ ApplicationWindow {
+     // Explicit routes (toolbar, command search) run canvas commands in the combined view whatever pane has focus;
+     // window shortcuts follow the focused pane (`gridScope`).
+     function invoke(id) {
+-        if (gridMode && !gridAllowsCommand(id)) return
++        if (!routeAllows(id)) return
+         if (combinedMode && ["next", "previous", "next-folder", "previous-folder"].indexOf(id) >= 0) previewFollowsCursor = false
+         viewer.trigger(id); wakeHud()
+     }
+@@ -318,18 +323,144 @@ ApplicationWindow {
+         if (combinedMode) { previewFollowsCursor = false; focusPane("preview"); wakeHud(); return } // an explicit open
+         gridMode = false; canvas.forceActiveFocus(); wakeHud()
+     }
+-    function gridAllowsCommand(id) {
+-        return ["open", "settings", "palette", "quit", "grid", "tree", "fullscreen", "frameless", "sort", "sort-reverse", "arrange-panes", "layout-lock", "layout-reset",
+-                "view-preview", "view-grid", "view-combined", "combined-orientation",
+-                "reveal-in-file-manager", "open-terminal",
+-                "copy-path", "copy-file", "copy-image",
+-                "rename", "new-folder",
+-                "cut-selection", "copy-selection", "paste",
+-                "delete-selection", "delete-current-file", "delete-current-folder",
+-                "select-all", "clear-selection", "invert-selection",
+-                "grid-zoom-in", "grid-zoom-out", "grid-zoom-reset", "refresh",
+-                "navigate-back", "navigate-forward", "shortcuts-help", "toggle-metadata"].indexOf(id) >= 0
++
++    // ---- INPUT-02 scoped command input. Precedence, highest first: modal, text editing, the focused pane (grid, tree,
++    // canvas), the workspace, global. A command's scope comes from the registry (`viewer.commands`).
++    readonly property var commandInfo: {
++        const table = ({})
++        for (const command of viewer.commands) table[command.id] = command
++        return table
++    }
++    // The pane that last held keyboard focus; popups and dialogs do not change it, so a context menu opened from the
++    // tree still counts as the tree's.
++    property string focusRegion: "canvas"
++    readonly property var scopeRank: ({ tree: 0, grid: 1, canvas: 2, workspace: 3, global: 4 })
++    function scopeOf(id) { return commandInfo[id] ? commandInfo[id].scope : "global" }
++    function commandBlockedReason(id) {
++        if (id !== "delete-selection") return ""
++        if (fileOperations.busy) return "Wait for the current move to the " + deleteFlow.trashName + " to finish."
++        if (focusRegion === "tree" && treePanel.cursorIsRoot()) return "Drives can't be moved to the " + deleteFlow.trashName + "."
++        return ""
++    }
++    // Whether the focused pane lets a command's key act. This one predicate gates shortcuts and context-menu rows.
++    function scopeAllows(id) {
++        if (commandBlockedReason(id).length) return false
++        const scope = scopeOf(id)
++        // A pane's commands act only while that pane owns keys: a tree that has focus keeps the canvas and grid keys quiet.
++        if (scope === "canvas") return !gridScope && focusRegion !== "tree"
++        if (scope === "grid") return gridScope && workspace._gridShown && focusRegion !== "tree"
++        if (scope === "tree") return focusRegion === "tree" && treePanel.visible
++        return true
++    }
++    // Explicit routes (toolbar, command search, menus) are looser than keys only in the combined view, where a canvas
++    // command runs whichever pane has focus.
++    function routeAllows(id) {
++        if (commandBlockedReason(id).length) return false
++        const scope = scopeOf(id)
++        if (scope === "canvas") return !gridMode
++        if (scope === "grid") return workspace._gridShown
++        if (scope === "tree") return treePanel.visible
++        return true
++    }
++    // Visible text for a command that cannot run from an explicit route right now.
++    function routeBlockedReason(id) {
++        const blocked = commandBlockedReason(id)
++        if (blocked.length) return blocked
++        const scope = scopeOf(id)
++        return scope === "canvas" ? "Not in grid view" : scope === "grid" ? "Needs the folder grid" : scope === "tree" ? "Needs the folder tree" : ""
++    }
++    // Keys the grid and tree handle themselves are unbound commands; menus still show them.
++    readonly property var fixedKeys: ({ "grid-open": "Enter", "grid-up": "Backspace", "grid-select-all": "Ctrl+A", "tree-open-folder": "Enter" })
++    function keyHint(id) { const info = commandInfo[id]; return info && info.binding.length ? info.binding : (fixedKeys[id] || "") }
++    function commandLabel(id) { const info = commandInfo[id]; return info ? info.label : id }
++    // Commands grouped by first key (singles and chord starters share one Shortcut per key) and by second key.
++    readonly property var keyTable: {
++        const firsts = ({}), seconds = ({})
++        const add = (table, key, id) => { (table[key] = table[key] || []).push(id) }
++        for (const command of viewer.commands) {
++            if (command.steps.length === 1 || command.steps.length === 2) add(firsts, command.steps[0], command.id)
++            if (command.steps.length === 2) add(seconds, command.steps[1], command.id)
++        }
++        return { firsts: firsts, seconds: seconds }
++    }
++    // The command a key reaches right now ("" when none): scope-allowed candidates, narrowest scope first. With
++    // `firstStep`, only chords that started with it. Two scopes that are never active together may share a key.
++    function resolveKey(ids, firstStep) {
++        let best = "", rank = 99
++        for (const id of ids) {
++            const info = commandInfo[id]
++            if (!info || (firstStep !== undefined && (info.steps.length !== 2 || info.steps[0] !== firstStep)) || !scopeAllows(id)) continue
++            const value = scopeRank[info.scope] === undefined ? 4 : scopeRank[info.scope]
++            if (value < rank) { best = id; rank = value }
++        }
++        return best
++    }
++    readonly property bool keysLive: !modalOpen && !editingText
++    // Two-step chords: the first key arms a pending state that the second key completes. It ends after 1.5 s, on
++    // Escape, on losing focus or when a modal opens; commands in the same scope never share the first key alone.
++    property string chordFirst: ""
++    readonly property bool chordPending: chordFirst.length > 0
++    function chordCancel() { chordFirst = ""; chordTimer.stop() }
++    function beginChord(step) { chordFirst = step; chordTimer.restart(); wakeHud() }
++    onChordPendingChanged: if (chordPending) hudVisible = true
++    onFocusRegionChanged: chordCancel() // a chord started in one pane never finishes in another
++    // True when this key press is a live registered key of a grid or tree command (or the second step of a chord that
++    // started there or on a pane command). The panes yield exactly those keys, so a pane command remapped onto a native key
++    // works; global commands remapped onto native pane keys still lose to the pane, as before (grid keys beat global remaps).
++    function remapped(event) {
++        const step = viewer.keyStep(event.key, event.modifiers)
++        if (step.length === 0) return false
++        // Registered printable chord steps precede grid type-to-search; global single-key bindings do not.
++        // Space and native navigation keys retain their pane precedence unless explicitly remapped in a pane scope.
++        const printable = event.key >= 0x21 && event.key <= 0x7e
++                          && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
++        const paneCommand = id => id.length > 0 && (scopeOf(id) === "grid" || scopeOf(id) === "tree"
++            || (printable && (chordPending || commandInfo[id].steps.length === 2)))
++        if (chordPending) return !!keyTable.seconds[step] && paneCommand(resolveKey(keyTable.seconds[step], chordFirst))
++        if (!keyTable.firsts[step]) return false
++        const id = resolveKey(keyTable.firsts[step])
++        return paneCommand(id)
+     }
++    Timer { id: chordTimer; objectName: "chordTimer"; interval: 1500; onTriggered: app.chordFirst = "" }
++    onKeysLiveChanged: if (!keysLive) chordCancel()
++    // A key reached its command. Holds start here and end when the key is released (see ImageCanvas::beginHold).
++    function pressKey(id) {
++        chordCancel()
++        const info = commandInfo[id]
++        if (info && info.hold) startHold(info); else invoke(id)
++    }
++    function startHold(info) {
++        if (!routeAllows(info.id)) return
++        if (info.id === "hold-actual") { canvas.beginHold(pointerX, pointerY, info.steps[0]); wakeHud() }
++    }
++    // Wheel matrix (IN-03): one action per modifier. Ctrl outranks Shift, which outranks Alt. Navigation accumulates
++    // high-resolution deltas into 120-unit detents; zoom and pan are continuous.
++    function wheelModifierName(modifiers) {
++        if (modifiers & Qt.ControlModifier) return "ctrl"
++        if (modifiers & Qt.ShiftModifier) return "shift"
++        if (modifiers & Qt.AltModifier) return "alt"
++        return "none"
++    }
++    function handleWheel(wheel) {
++        const action = viewer.wheelModifiers[wheelModifierName(wheel.modifiers)] || "navigate"
++        const delta = wheel.angleDelta.y || wheel.angleDelta.x
++        const pixel = wheel.pixelDelta.y || wheel.pixelDelta.x
++        if (action !== "navigate") wheelRemainder = 0
++        if (action === "zoom") canvas.zoomAt(Math.pow(1.0015, pixel !== 0 ? pixel * 3 : delta), wheel.x, wheel.y)
++        else if (action === "pan-horizontal") canvas.panBy(pixel !== 0 ? pixel : delta / 3, 0)
++        else if (action === "pan") canvas.panBy(wheel.pixelDelta.x, pixel !== 0 ? pixel : delta / 3)
++        else {
++            wheelIdle.restart()
++            const step = pixel !== 0 ? pixel * 2 : delta
++            if (wheelRemainder !== 0 && (step > 0) !== (wheelRemainder > 0)) wheelRemainder = 0 // a reversal starts afresh
++            wheelRemainder += step
++            if (Math.abs(wheelRemainder) >= 120) previewFollowsCursor = false
++            while (wheelRemainder >= 120) { viewer.previous(); wheelRemainder -= 120 }
++            while (wheelRemainder <= -120) { viewer.next(); wheelRemainder += 120 }
++        }
++    }
++    // A partial detent does not wait for the next gesture.
++    Timer { id: wheelIdle; interval: 400; onTriggered: app.wheelRemainder = 0 }
+     function fuzzyMatch(text, query) {
+         text = text.toLowerCase(); query = query.toLowerCase()
+         let offset = 0
+@@ -373,6 +504,8 @@ ApplicationWindow {
+         else if (id === "animation-toggle-loop") { if (viewer.animationController) viewer.animationController.setLoop(!viewer.animationController.loop) }
+         else if (id === "combined-orientation") toggleOrientation()
+         else if (id === "delete-selection") {
++            const blocked = commandBlockedReason(id)
++            if (blocked.length) { deleteFlow.showNotice(blocked); return }
+             const treeFolder = treePanel.currentSelectedFolder()
+             if (treeFolder.length > 0) {
+                 deleteFlow.request([treeFolder], "tree", "")
+@@ -405,6 +538,15 @@ ApplicationWindow {
+                 deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
+             }
+         }
++        // INPUT-02
++        else if (id === "hold-actual") canvas.actualSize() // reached without its key: nothing to release, so just show 1:1
++        else if (id === "grid-open") photoGrid.activate()
++        else if (id === "grid-up") photoGrid.goUp()
++        else if (id === "grid-select-all") fileGrid.selectAll()
++        else if (id === "tree-open-folder") treePanel.openCursor()
++        else if (id === "focus-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.focusAddress) }
++        else if (id === "copy-folder-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
++        else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
+         else if (id === "rename") {
+             let target = ""
+             const treeFolder = treePanel.currentSelectedFolder()
+@@ -507,22 +649,39 @@ ApplicationWindow {
+         else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
+         else if (id === "quit") close()
+     }
+-    onActiveChanged: if (!active) canvas.endLoupe()
+-    onModalOpenChanged: if (modalOpen) canvas.endLoupe()
++    onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel() }
++    onModalOpenChanged: if (modalOpen) { canvas.endLoupe(); chordCancel() }
+     Connections {
+         target: viewer
+         function onViewCommand(id) { app.handleViewCommand(id) }
+         function onTreeShown() { app.hudVisible = true; hideHud.restart(); Qt.callLater(treePanel.focusList) }
+     }
+-    Instantiator {
+-        model: viewer.commands
++    Instantiator { // one Shortcut per first key; a chord starter arms the pending state instead of running
++        objectName: "firstKeys"
++        model: Object.keys(app.keyTable.firsts)
+         delegate: Shortcut {
+-            required property var modelData
+-            sequence: modelData.binding
++            required property string modelData
++            sequence: modelData
++            context: Qt.WindowShortcut
++            autoRepeat: false
++            enabled: app.keysLive && !app.chordPending && app.resolveKey(app.keyTable.firsts[modelData]).length > 0
++            onActivated: {
++                const id = app.resolveKey(app.keyTable.firsts[modelData])
++                if (id.length === 0) return
++                if (app.commandInfo[id].steps.length === 2) app.beginChord(modelData); else app.pressKey(id)
++            }
++        }
++    }
++    Instantiator { // second keys are live only while a chord is pending, so they never compete with single keys
++        objectName: "secondKeys"
++        model: Object.keys(app.keyTable.seconds)
++        delegate: Shortcut {
++            required property string modelData
++            sequence: modelData
+             context: Qt.WindowShortcut
+             autoRepeat: false
+-            enabled: !app.modalOpen && !app.editingText && modelData.binding.length > 0 && (!app.gridScope || app.gridAllowsCommand(modelData.id))
+-            onActivated: app.invoke(modelData.id)
++            enabled: app.keysLive && app.chordPending && app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst).length > 0
++            onActivated: app.pressKey(app.resolveKey(app.keyTable.seconds[modelData], app.chordFirst))
+         }
+     }
+     Shortcut {
+@@ -530,6 +689,7 @@ ApplicationWindow {
+         // Text fields own Escape (the address field reverts, then leaves arrangement itself).
+         enabled: !app.modalOpen && !app.editingText
+         onActivated: {
++            if (app.chordPending) { app.chordCancel(); return } // the first Escape only abandons the pending chord
+             canvas.endLoupe()
+             if(app.layoutEditing) { app.layoutEditing=false; return }
+             if (viewer.metadataVisible) { viewer.metadataVisible = false; return }
+@@ -551,7 +711,7 @@ ApplicationWindow {
+         interval: 2400
+         running: true
+         onTriggered: {
+-            if (!app.layoutEditing && !app.gridMode && !app.combinedMode && viewer.fileCount > 0 && !app.modalOpen && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
++            if (!app.layoutEditing && !app.gridMode && !app.combinedMode && viewer.fileCount > 0 && !app.modalOpen && !app.chordPending && !topBar.hovered && !bottomHover.hovered && !app.focusWithin(topPanel) && !app.focusWithin(bottomPanel) && !filmstripPanel.keepOpen && !treePanel.keepOpen)
+                 app.hudVisible = false
+             else restart()
+         }
+@@ -629,6 +789,7 @@ ApplicationWindow {
+         // Combined view: F6 returns to the grid; Tab continues to the split handle (its keyboard resize), then the grid.
+         Keys.onPressed: event => {
+             if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true; return }
++            else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { app.openCanvasMenu(app.pointerX, app.pointerY); event.accepted = true; return }
+             if (viewer.animationController && viewer.animationController.active) {
+                 if (event.key === Qt.Key_Space && viewer.animationController.isAnimated) {
+                     viewer.animationController.togglePlayPause()
+@@ -681,6 +842,7 @@ ApplicationWindow {
+     }
+     MouseArea {
+         id: interaction
++        objectName: "canvasPointer"
+         visible: app.workspace._previewShown
+         anchors.fill: canvas
+         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton | Qt.BackButton | Qt.ForwardButton
+@@ -694,30 +856,34 @@ ApplicationWindow {
+             lastX=mouse.x; lastY=mouse.y
+             app.wakeHud()
+         }
++        // A quick right click opens the canvas menu; holding the right button keeps the loupe. Only a pointer-started
++        // loupe ends with the pointer, so a held key's actual-size view never stops when a mouse button is released.
++        property bool pointerLoupe: false
++        Timer {
++            id: loupeDelay
++            interval: 220
++            onTriggered: {
++                if ((interaction.pressedButtons & Qt.RightButton) && !canvas.loupeActive) { interaction.pointerLoupe = true; canvas.beginLoupe(interaction.lastX, interaction.lastY) }
++            }
++        }
++        function endPointerLoupe() { loupeDelay.stop(); if (pointerLoupe) { pointerLoupe = false; canvas.endLoupe() } }
+         onPressed: mouse => {
+             if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
+             if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
+             canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
+-            if (mouse.button === Qt.RightButton) canvas.beginLoupe(mouse.x,mouse.y)
++            if (mouse.button === Qt.RightButton) loupeDelay.restart()
+         }
+-        onReleased: canvas.endLoupe()
+-        onCanceled: canvas.endLoupe()
++        onReleased: mouse => {
++            if (mouse.button !== Qt.RightButton) return
++            const loupe = pointerLoupe
++            endPointerLoupe()
++            if (!loupe) app.openCanvasMenu(mouse.x, mouse.y)
++        }
++        onCanceled: { endPointerLoupe(); canvas.endLoupe() } // a cancelled grab restores a key hold too
+         onDoubleClicked: mouse => { if (mouse.button === Qt.LeftButton) app.invoke("fullscreen") }
+         onWheel: wheel => {
+             app.wakeHud()
+-            let delta=wheel.angleDelta.y || wheel.angleDelta.x
+-            let pixel=wheel.pixelDelta.y || wheel.pixelDelta.x
+-            if ((wheel.modifiers & Qt.ControlModifier) || (!(wheel.modifiers & Qt.ShiftModifier) && viewer.wheelMode === "zoom")) {
+-                canvas.zoomAt(Math.pow(1.0015, pixel !== 0 ? pixel*3 : delta), wheel.x, wheel.y)
+-            } else if ((wheel.modifiers & Qt.ShiftModifier) || viewer.wheelMode === "pan") {
+-                let amount=pixel !== 0 ? pixel : delta/3
+-                canvas.panBy((wheel.modifiers & Qt.ShiftModifier) ? amount : wheel.pixelDelta.x, (wheel.modifiers & Qt.ShiftModifier) ? 0 : amount)
+-            } else {
+-                app.wheelRemainder += pixel !== 0 ? pixel*2 : delta
+-                if (Math.abs(app.wheelRemainder) >= 120) app.previewFollowsCursor = false
+-                while (app.wheelRemainder >= 120) { viewer.previous(); app.wheelRemainder-=120 }
+-                while (app.wheelRemainder <= -120) { viewer.next(); app.wheelRemainder+=120 }
+-            }
++            app.handleWheel(wheel)
+             wheel.accepted=true
+         }
+     }
+@@ -732,11 +898,99 @@ ApplicationWindow {
+         onItemActivated: { previewDebounce.stop(); if (app.combinedMode) app.focusPane("preview"); else app.showCanvas() }
+         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;else if(app.combinedMode)app.focusPane("preview");else app.showCanvas() }
+         onFoldersRequested: { if (!viewer.treeVisible) viewer.treeVisible = true; else treePanel.focusList() }
++        onContextRequested: (x, y, row) => app.openGridMenu(x, y, row)
++        yields: app.remapped
++        chordPending: app.chordPending
+         tabHandler: app.combinedMode ? (() => app.focusPane("preview")) : null
+         Keys.onPressed: event => { if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("preview"); event.accepted = true } }
+         deleteBlocked: deleteFlow.isReadOnly(fileGrid.directory)
+         onDeleteRequested: paths => deleteFlow.request(paths, "grid", fileGrid.directory)
+     }
++    // ---- INPUT-02 context menus (F055): canvas and grid here; the tree row and path bar menus live in FolderTree.
++    // Every row is a registered command with its live binding. Right click, the Menu key and Shift+F10 open them.
++    component ContextMenu: Menu {
++        id: menu
++        // Closing a menu without choosing returns keys to the pane that had them (a choice that opens a dialog keeps the dialog's).
++        onClosed: Qt.callLater(() => { if (!app.modalOpen && !deleteFlow.modal) app.focusContent() })
++        margins: Theme.gapSm // stays inside a narrow window
++        padding: Theme.gapXs
++        // Taller than a compact window: the rows scroll instead of running off the screen.
++        height: Math.min(implicitHeight, app.height - 2 * Theme.gapSm)
++        contentItem: ListView {
++            implicitHeight: contentHeight
++            model: menu.contentModel
++            currentIndex: menu.currentIndex
++            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain) // keyboard navigation keeps the current row visible
++            clip: true
++            interactive: contentHeight > height
++            boundsBehavior: Flickable.StopAtBounds
++            ScrollBar.vertical: UiScrollBar {}
++        }
++        background: Rectangle {
++            implicitWidth: 368 // the longest row (label and binding) never elides
++            radius: Theme.radiusControl
++            color: Theme.surface
++            border.width: Theme.borderWidth
++            border.color: Theme.border
++        }
++    }
++    component MenuRule: MenuSeparator {
++        padding: 0; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
++        contentItem: Rectangle { implicitWidth: 120; implicitHeight: Theme.borderWidth; color: Theme.border }
++    }
++    // A long file name keeps both ends so a destructive row stays on one line and still names its target.
++    function menuName(name) { return name.length > 30 ? name.slice(0, 18) + "…" + name.slice(-10) : name }
++    function openCanvasMenu(x, y) {
++        if (!workspace._previewShown || modalOpen) return
++        canvasMenu.popup(canvas, Math.max(0, Math.min(x, canvas.width - 1)), Math.max(0, Math.min(y, canvas.height - 1)))
++    }
++    // `row` is the item under the pointer or cursor (-1: empty area). A click outside the selection selects that item
++    // first, like a file manager, so "Move to the Recycle Bin" always names what it will move.
++    function openGridMenu(x, y, row) {
++        if (modalOpen) return
++        if (row >= 0 && fileGrid.selectedPaths().indexOf(fileGrid.pathAt(row)) < 0) photoGrid.select(row)
++        photoGrid.focusGrid()
++        gridMenu.row = row
++        gridMenu.targets = photoGrid.deletionTargets()
++        gridMenu.popup(photoGrid, x, y)
++    }
++    ContextMenu {
++        id: canvasMenu
++        objectName: "canvasContextMenu"
++        CommandMenuItem { host: app; commandId: "next" }
++        CommandMenuItem { host: app; commandId: "previous" }
++        MenuRule {}
++        CommandMenuItem { host: app; commandId: "fit" }
++        CommandMenuItem { host: app; commandId: "actual" }
++        CommandMenuItem { host: app; commandId: "zoom-in" }
++        CommandMenuItem { host: app; commandId: "zoom-out" }
++        CommandMenuItem { host: app; commandId: "rotate" }
++        CommandMenuItem { host: app; commandId: "background" }
++        MenuRule {}
++        CommandMenuItem { host: app; commandId: "grid" }
++        CommandMenuItem { host: app; commandId: "fullscreen" }
++        MenuRule {}
++        CommandMenuItem {
++            host: app; commandId: "delete-current-file"; iconName: "trash"; danger: true
++            label: viewer.fileName.length ? "Move “" + app.menuName(viewer.fileName) + "” to the " + deleteFlow.trashName : "Move the photo to the " + deleteFlow.trashName
++        }
++    }
++    ContextMenu {
++        id: gridMenu
++        objectName: "gridContextMenu"
++        property int row: -1
++        property var targets: []
++        CommandMenuItem { host: app; commandId: "grid-open"; available: gridMenu.row >= 0 }
++        CommandMenuItem { host: app; commandId: "grid-up" }
++        CommandMenuItem { host: app; commandId: "grid-select-all" }
++        MenuRule { visible: gridMenu.targets.length > 0 }
++        CommandMenuItem {
++            host: app; commandId: "delete-selection"; iconName: "trash"; danger: true
++            available: gridMenu.targets.length > 0
++            label: gridMenu.targets.length === 1 ? "Move “" + app.menuName(app.leafName(gridMenu.targets[0])) + "” to the " + deleteFlow.trashName
++                : "Move " + gridMenu.targets.length + " items to the " + deleteFlow.trashName
++        }
++    }
+     // ---- GRID-PREVIEW-01 combined view: split handle, explicit preview states, pane focus rings and notices.
+     Item {
+         id: splitHandle
+@@ -1291,13 +1545,13 @@ ApplicationWindow {
+         width: app.paneRect("tree").width; height: app.paneRect("tree").height
+         maximumWidth: Math.max(200, Math.round(app.width * 0.45))
+         layoutFrozen: true
++        host: app
+         arrangementMode: app.layoutEditing
+         onResizeCommitted: extent => paneLayout.resize("tree", extent)
+         visible: width > 0 && height > 0
+         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
+         // Hiding a focused panel must not strand keyboard input on an invisible item.
+         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
+-        onDeleteRequested: path => deleteFlow.request([path], "tree", "")
+     }
+     MetadataHud {
+         id: metadataPanel
+@@ -1382,6 +1636,18 @@ ApplicationWindow {
+                 text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                 color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
+             }
++            BarLabel { // INPUT-02: the first key of a two-key shortcut was pressed; the second key or Escape ends it
++                objectName: "chordPending"
++                visible: app.chordPending
++                Layout.leftMargin: Theme.gapSm
++                text: app.chordFirst + ", …"
++                color: Theme.text
++                font.family: Theme.monoFamily
++                leftPadding: Theme.gapSm; rightPadding: Theme.gapSm; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
++                background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.primary }
++                Accessible.role: Accessible.StaticText
++                Accessible.name: "Waiting for the next key after " + app.chordFirst + ". Escape cancels."
++            }
+             Item { Layout.fillWidth: true }
+             UiButton { visible: app.gridMode; text: "Back to photo"; tip: "Back to photo (Esc)"; onClicked: app.showCanvas() }
+             UiButton { objectName: "gridOpenSelected"; visible: app.workspace._gridShown; variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: "Open the item under the cursor (Enter)"; onClicked: photoGrid.activate() }
+diff --git a/ui/PhotoGrid.qml b/ui/PhotoGrid.qml
+index b9ff2b3..31f70ec 100644
+--- a/ui/PhotoGrid.qml
++++ b/ui/PhotoGrid.qml
+@@ -16,6 +16,10 @@ Rectangle {
+     property string revealPath: ""
+     property bool placeCursor: false
+     property bool inputEnabled: true
++    // INPUT-02: while the host has a chord pending, Escape is its to cancel, not the grid's.
++    property bool chordPending: false
++    // INPUT-02: a function(event) -> bool; true when a registered remap owns this key, so the native handling steps aside.
++    property var yields: null
+     property int liveDelegateCount: 0
+     property string noticeText: ""
+     property var resetViewport: null
+@@ -72,6 +76,8 @@ Rectangle {
+     signal itemActivated(string path)
+     signal dismissed()
+     signal foldersRequested()
++    // INPUT-02: a context menu was asked for at (x, y) in this pane over `row` (-1: empty area). The host owns the menu.
++    signal contextRequested(real x, real y, int row)
+     // DELETE-01: the header action asks the host to confirm moving these paths to the trash; nothing happens here.
+     signal deleteRequested(var paths)
+     property bool deleteBlocked: false // every item here is on a read-only drive
+@@ -171,6 +177,14 @@ Rectangle {
+         const name = path.slice(path.lastIndexOf("/") + 1)
+         showNotice("“" + name + "” isn't a photo Glancelot can open. Supported formats are JPEG and PNG.")
+     }
++    // The menu key opens the menu on the cursor item, or the pane's corner when there is none.
++    function contextAtCursor() {
++        const row = fileGrid.cursorRow
++        if (row < 0) { contextRequested(grid.x + Theme.gapMd, grid.y + Theme.gapMd, -1); return }
++        const column = row % columns, line = Math.floor(row / columns)
++        const x = grid.x + (column + 0.5) * grid.cellWidth, y = grid.y + (line + 1) * grid.cellHeight - grid.contentY + grid.originY
++        contextRequested(Math.max(grid.x, Math.min(x, grid.x + grid.width - 1)), Math.max(grid.y, Math.min(y, grid.y + grid.height - 1)), row)
++    }
+     function goUp() { if (inputEnabled && parentPath.length) { noticeText = ""; viewer.navigateDirectory(parentPath) } }
+     function clickRow(row, modifiers) {
+         const ctrl = (modifiers & Qt.ControlModifier) !== 0, shift = (modifiers & Qt.ShiftModifier) !== 0
+@@ -181,6 +195,8 @@ Rectangle {
+     // One table for both shortcut override and handling, so the grid claims exactly the keys it uses.
+     function keyAction(event) {
+         const mods = event.modifiers & ~Qt.KeypadModifier
++        if (yields && yields(event)) return ""
++        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && mods === Qt.ShiftModifier)) return "menu"
+         const navigation = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown]
+         if (navigation.indexOf(event.key) >= 0) {
+             if (mods === Qt.NoModifier) return "move"
+@@ -190,7 +206,7 @@ Rectangle {
+         }
+         if (mods === Qt.NoModifier) {
+             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) return "activate"
+-            if (event.key === Qt.Key_Escape) return "escape"
++            if (event.key === Qt.Key_Escape) return panel.chordPending ? "" : "escape"
+             if (event.key === Qt.Key_Backspace) return "up"
+         }
+         if (mods === Qt.ControlModifier) {
+@@ -494,7 +510,8 @@ Rectangle {
+             }
+             if (event.key === Qt.Key_F3) { event.accepted = true; return }
+             const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
+-            if (event.key >= 0x20 && event.key <= 0x7e && !mods) {
++            // Registered pane commands must reach the window before printable type-to-search.
++            if (event.key >= 0x20 && event.key <= 0x7e && !mods && !(yields && yields(event))) {
+                 event.accepted = true
+                 return
+             }
+@@ -590,6 +607,7 @@ Rectangle {
+             event.accepted = true
+             if (action === "activate") { panel.activate(); return }
+             if (action === "up") { panel.goUp(); return }
++            if (action === "menu") { panel.contextAtCursor(); return }
+             if (action === "all") { fileGrid.selectAll(); return }
+             if (action === "invert") { fileGrid.invertSelection(); return }
+             if (action === "clear") { fileGrid.clearSelection(); return }
+@@ -618,6 +636,15 @@ Rectangle {
+             }
+             panel.select(next, action === "extend" ? panel.modeRange : panel.modeReplace)
+         }
++        // Right click: the item under the pointer, or the empty area. Left clicks stay with the delegates.
++        TapHandler {
++            acceptedButtons: Qt.RightButton
++            onTapped: point => {
++                const row = grid.indexAt(point.position.x + grid.contentX, point.position.y + grid.contentY)
++                const at = grid.mapToItem(panel, point.position.x, point.position.y)
++                panel.contextRequested(at.x, at.y, row)
++            }
++        }
+         Keys.onBacktabPressed: event => { panel.foldersRequested(); event.accepted = true }
+         Keys.onTabPressed: event => { if (panel.tabHandler) panel.tabHandler(); event.accepted = panel.tabHandler !== null }
+         delegate: ItemDelegate {

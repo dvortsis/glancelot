@@ -1,0 +1,20 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+QWARN  : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+FAIL!  : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication() 'pane->z()<h.window->findChild<QQuickItem*>("topBar")->z()' returned FALSE. (tree pane z=0 toolbar z=0)
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(56) : failure location
+PASS   : MonitorCustomizationUiTests::nativeHostCloseAndEscapePreserveController()
+PASS   : MonitorCustomizationUiTests::detachedCanvasPopupAndFrozenCloseHaveVisibleFeedback()
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() No QRhi found for window 0x1a26d0f5f30, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() file:///C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/ui/PhotoGrid.qml:706:21: QML QQuickImage: Invalid image provider: image://thumb/1/256/QzovVXNlcnMvZHZvcnQvQXBwRGF0YS9Mb2NhbC9UZW1wL21vbml0b3JfY3VzdG9taXphdGlvbl91aV90ZXN0cy1YdmFJbnUvZ2VuZXJhdGVkLnBuZw
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() No QRhi found for window 0x1a26d0f5f30, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() QFileSystemWatcher: FindNextChangeNotification failed for "C:\Users\dvort\AppData\Local\Temp\monitor_customization_ui_tests-XvaInu"  (Access is denied.)
+PASS   : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration()
+SKIP   : MonitorCustomizationUiTests::nativeUiEvidence() Native screenshots are an explicit separate run.
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(83) : failure location
+PASS   : MonitorCustomizationUiTests::registryRouteAndLockedPredicateRemainShared()
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 6 passed, 1 failed, 1 skipped, 0 blacklisted, 137176ms
+********* Finished testing of MonitorCustomizationUiTests *********

@@ -1,0 +1,1063 @@
+{
+  "run": "build-codex-startup-window-01\\recovery-process\\run-7s8dvcy0",
+  "passed": true,
+  "commands": 35,
+  "reports": [
+    {
+      "file": "viewer-026.json",
+      "safe": true,
+      "startup": {
+        "after": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "before": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "chosen_frame": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "frame_margins": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 31
+        },
+        "status": "Unchanged"
+      },
+      "pre_grab": {
+        "first_image_frame_ms": 1382,
+        "frames": 21,
+        "rhi": {
+          "backend": 3,
+          "device_name": "Microsoft Basic Render Driver",
+          "device_type": 5,
+          "observed": true,
+          "render_callbacks": 21,
+          "scenegraph_invalidations": 0,
+          "software_detection": "cpu-device-type"
+        },
+        "snapshot_ms": 3738,
+        "window": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        }
+      },
+      "frames": 21,
+      "first": 1382
+    },
+    {
+      "file": "viewer-027.json",
+      "safe": true,
+      "startup": {
+        "after": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "before": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "chosen_frame": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "frame_margins": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 31
+        },
+        "status": "Unchanged"
+      },
+      "pre_grab": {
+        "first_image_frame_ms": 1441,
+        "frames": 22,
+        "rhi": {
+          "backend": 3,
+          "device_name": "Microsoft Basic Render Driver",
+          "device_type": 5,
+          "observed": true,
+          "render_callbacks": 22,
+          "scenegraph_invalidations": 0,
+          "software_detection": "cpu-device-type"
+        },
+        "snapshot_ms": 3719,
+        "window": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        }
+      },
+      "frames": 22,
+      "first": 1441
+    },
+    {
+      "file": "viewer-028.json",
+      "safe": false,
+      "startup": {
+        "after": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "before": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "chosen_frame": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "frame_margins": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 31
+        },
+        "status": "Unchanged"
+      },
+      "pre_grab": {
+        "first_image_frame_ms": 1396,
+        "frames": 20,
+        "rhi": {
+          "backend": 3,
+          "device_name": "Intel(R) Iris(R) Xe Graphics",
+          "device_type": 0,
+          "observed": true,
+          "render_callbacks": 20,
+          "scenegraph_invalidations": 0,
+          "software_detection": "not-detected"
+        },
+        "snapshot_ms": 3733,
+        "window": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        }
+      },
+      "frames": 20,
+      "first": 1396
+    },
+    {
+      "file": "viewer-031.json",
+      "safe": false,
+      "startup": {
+        "after": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "before": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "chosen_frame": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "frame_margins": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 31
+        },
+        "status": "Unchanged"
+      },
+      "pre_grab": {
+        "first_image_frame_ms": 1474,
+        "frames": 20,
+        "rhi": {
+          "backend": 3,
+          "device_name": "Intel(R) Iris(R) Xe Graphics",
+          "device_type": 0,
+          "observed": true,
+          "render_callbacks": 20,
+          "scenegraph_invalidations": 0,
+          "software_detection": "not-detected"
+        },
+        "snapshot_ms": 3822,
+        "window": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        }
+      },
+      "frames": 20,
+      "first": 1474
+    },
+    {
+      "file": "viewer-034.json",
+      "safe": false,
+      "startup": {
+        "after": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "before": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "chosen_frame": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "frame_margins": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 31
+        },
+        "status": "Unchanged"
+      },
+      "pre_grab": {
+        "first_image_frame_ms": 1445,
+        "frames": 20,
+        "rhi": {
+          "backend": 3,
+          "device_name": "Intel(R) Iris(R) Xe Graphics",
+          "device_type": 0,
+          "observed": true,
+          "render_callbacks": 20,
+          "scenegraph_invalidations": 0,
+          "software_detection": "not-detected"
+        },
+        "snapshot_ms": 3770,
+        "window": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        }
+      },
+      "frames": 20,
+      "first": 1445
+    },
+    {
+      "file": "viewer-035.json",
+      "safe": false,
+      "startup": {
+        "after": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "before": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        },
+        "chosen_frame": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "frame_margins": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 31
+        },
+        "status": "Unchanged"
+      },
+      "pre_grab": {
+        "first_image_frame_ms": -1,
+        "frames": 16,
+        "rhi": {
+          "backend": 3,
+          "device_name": "Intel(R) Iris(R) Xe Graphics",
+          "device_type": 0,
+          "observed": true,
+          "render_callbacks": 16,
+          "scenegraph_invalidations": 0,
+          "software_detection": "not-detected"
+        },
+        "snapshot_ms": 3777,
+        "window": {
+          "available_screens": [
+            {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 752,
+              "width": 1280,
+              "x": 0,
+              "y": -1600
+            }
+          ],
+          "exposed": true,
+          "frame_geometry": {
+            "height": 811,
+            "width": 1180,
+            "x": 690,
+            "y": 275
+          },
+          "height": 780,
+          "screen": {
+            "available": {
+              "height": 1392,
+              "width": 2560,
+              "x": 0,
+              "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+          },
+          "screen_count": 2,
+          "screen_list_truncated": false,
+          "state": 0,
+          "visibility": 2,
+          "visible": true,
+          "width": 1180,
+          "x": 690,
+          "y": 306
+        }
+      },
+      "frames": 16,
+      "first": -1
+    }
+  ]
+}

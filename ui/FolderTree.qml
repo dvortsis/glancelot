@@ -23,12 +23,13 @@ Rectangle {
     signal resizeCommitted(real extent)
     property int maximumWidth: 480
     signal dismissed()
-    // DELETE-01: a row's context menu (right-click, Menu key, Shift+F10) asks the host to confirm a move to the trash.
-    signal deleteRequested(string path)
+    // INPUT-02: the window, for the command-menu rows (scope predicate, live bindings, command routing).
+    property var host: null
     readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
     function openRowMenu(row, x, y) {
         const info = folderTree.rowInfo(row)
         if (!info.path) return
+        list.currentIndex = row // commands from the menu act on the cursor row
         rowMenu.path = info.path; rowMenu.depth = info.depth
         rowMenu.popup(panel, x, y)
     }
@@ -49,8 +50,30 @@ Rectangle {
         if (depth === 0 && expandable) folderTree.toggle(row)
         else if (!isCurrent) viewer.openFolder(path)
     }
+    // The "Open the focused folder" command: the same action as Enter on the cursor row.
+    function openCursor() {
+        if (list.currentIndex < 0) return
+        const info = folderTree.rowInfo(list.currentIndex)
+        if (info && info.path) activate(list.currentIndex, info.depth, info.expandable, info.isCurrent, info.path)
+    }
+    function cursorIsRoot() {
+        if (list.currentIndex < 0) return false
+        const info = folderTree.rowInfo(list.currentIndex)
+        return !!info && info.depth === 0
+    }
+    function focusAddress() { address.forceActiveFocus(Qt.ShortcutFocusReason); address.selectAll() }
+    // "Go to the folder path on the clipboard": paste over the field and navigate, only if something was pasted.
+    function pasteAddress() {
+        address.forceActiveFocus(Qt.ShortcutFocusReason); address.selectAll()
+        const before = address.text
+        address.paste()
+        if (address.text === before) return
+        address.modified = false
+        viewer.navigateDirectory(address.text)
+    }
     function currentSelectedFolder() {
-        if (!list.activeFocus || list.currentIndex < 0 || !folderTree) return ""
+        // The row menu opens on the cursor row and holds focus while a command from it runs.
+        if (!(list.activeFocus || rowMenu.visible) || list.currentIndex < 0 || !folderTree) return ""
         const info = folderTree.rowInfo(list.currentIndex)
         return (info && info.depth > 0 && info.path) ? info.path : ""
     }
@@ -427,6 +450,23 @@ Rectangle {
                 selectByMouse: true
                 onTextEdited: modified = true
                 onAccepted: { modified = false; viewer.navigateDirectory(text) }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { pathMenu.popup(address, Theme.gapMd, address.height); event.accepted = true }
+                }
+                // Right click: the field has no built-in menu, so the path commands are offered here.
+                TapHandler { acceptedButtons: Qt.RightButton; onTapped: point => { address.forceActiveFocus(Qt.MouseFocusReason); pathMenu.popup(address, point.position.x, point.position.y) } }
+                Menu {
+                    id: pathMenu
+                    objectName: "pathContextMenu"
+                    margins: Theme.gapSm
+                    padding: Theme.gapXs
+                    onOpened: panel.focusedControls += 1
+                    onClosed: { panel.focusedControls -= 1; if (panel.visible) address.forceActiveFocus(Qt.PopupFocusReason) }
+                    background: Rectangle { implicitWidth: 304; radius: Theme.radiusControl; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.border }
+                    CommandMenuItem { host: panel.host; commandId: "focus-path" }
+                    CommandMenuItem { host: panel.host; commandId: "copy-folder-path" }
+                    CommandMenuItem { host: panel.host; commandId: "paste-path" }
+                }
                 Keys.onEscapePressed: event => {
                     viewer.cancelDirectoryNavigation(); text = viewer.directory; modified = false; if(panel.arrangementMode)panel.dismissed();else panel.focusList(); event.accepted = true
                 }
@@ -487,7 +527,7 @@ Rectangle {
             // Keys the tree owns while it has focus; without this the window-level shortcuts would also fire.
             Keys.onShortcutOverride: event => {
                 event.accepted = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End,
-                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0
+                                  Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Escape, Qt.Key_Menu].indexOf(event.key) >= 0 && !(event.key === Qt.Key_Escape && panel.host && panel.host.chordPending) && !(panel.host && panel.host.remapped(event))
                                  || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))
             }
             Keys.onUpPressed: currentIndex = Math.max(0, currentIndex - 1)
@@ -649,6 +689,7 @@ Rectangle {
                 id: rowMenu
                 objectName: "folderRowMenu"
                 property string path: ""
+                readonly property string name: { const p = path.replace(/\\/g, "/").replace(/\/+$/, ""); const leaf = p.slice(p.lastIndexOf("/") + 1); return leaf.length > 30 ? leaf.slice(0, 18) + "…" + leaf.slice(-10) : leaf }
                 property int depth: 0
                 property bool handedOff: false // the confirmation dialog owns focus after a choice
                 padding: Theme.gapXs
@@ -687,27 +728,22 @@ Rectangle {
                     }
                     background: Rectangle { radius: Theme.radiusSmall; color: favoriteItem.highlighted ? Theme.hover : "transparent" }
                 }
-                MenuItem {
+                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
+                // The registered "delete-selection" command, like the Delete key: the host picks the target from the cursor
+                // row (this menu opens on it), so the menu and the key cannot disagree. Drives and other roots are never
+                // moved and a running operation blocks a second one; the row stays visible and explains itself.
+                CommandMenuItem {
                     id: trashItem
-                    objectName: "folderMoveToTrash"
-                    // Drives and other roots are never moved; the item stays visible and explains itself.
-                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move to " + panel.trashName
-                    enabled: rowMenu.depth > 0 && !fileOperations.busy
-                    implicitHeight: Theme.controlHeight
-                    leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
-                    onTriggered: { rowMenu.handedOff = true; panel.deleteRequested(rowMenu.path) }
-                    contentItem: RowLayout {
-                        spacing: Theme.gapSm
-                        opacity: trashItem.enabled ? 1 : Theme.disabledOpacity
-                        UiIcon { name: "trash"; color: trashItem.enabled ? Theme.danger : Theme.muted }
-                        Label {
-                            text: trashItem.text
-                            color: trashItem.enabled ? Theme.danger : Theme.muted
-                            font.pixelSize: Theme.textBody
-                            Layout.fillWidth: true
-                        }
-                    }
-                    background: Rectangle { radius: Theme.radiusSmall; color: trashItem.highlighted ? Theme.hover : "transparent" }
+                    host: panel.host
+                    commandId: "delete-selection"
+                    iconName: "trash"; danger: true
+                    label: panel.host && panel.host.commandBlockedReason(commandId).length
+                           ? panel.host.commandBlockedReason(commandId)
+                           : "Move “" + rowMenu.name + "” to the " + panel.trashName
+                }
+                Connections { // the confirmation dialog owns focus after a choice
+                    target: trashItem
+                    function onTriggered() { rowMenu.handedOff = true }
                 }
             }
             Label {

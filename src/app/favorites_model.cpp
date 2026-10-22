@@ -1,5 +1,6 @@
 #include "glancelot/favorites_model.hpp"
 #include "glancelot/settings_file.hpp"
+#include "settings_retry.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -73,17 +74,17 @@ struct FavoritesModel::Private {
         }
     }
 
-    bool save() {
-        return glancelot::updateSettings([this](QJsonObject& settings) {
-            QJsonArray favArray;
-            for (const auto& item : items) {
-                QJsonObject obj;
-                obj["path"] = item.path;
-                if (!item.alias.isEmpty()) obj["alias"] = item.alias;
-                favArray.append(obj);
-            }
+    bool save(QObject* owner) {
+        QJsonArray favArray;
+        for (const auto& item : items) {
+            QJsonObject obj;
+            obj["path"] = item.path;
+            if (!item.alias.isEmpty()) obj["alias"] = item.alias;
+            favArray.append(obj);
+        }
+        return glancelot::settings_detail::saveWithRetry(owner,"favorites",[favArray](QJsonObject& settings) {
             settings["favorites"] = favArray;
-        }).ok();
+        });
     }
 };
 
@@ -153,7 +154,7 @@ bool FavoritesModel::addFavorite(const QString& path, const QString& alias) {
     if (existing >= 0) {
         if (!alias.isEmpty() && d->items[std::size_t(existing)].alias != alias) {
             d->items[std::size_t(existing)].alias = alias.trimmed();
-            d->save();
+            d->save(this);
             emit dataChanged(index(existing), index(existing), {NameRole, AliasRole});
         }
         return true;
@@ -162,7 +163,7 @@ bool FavoritesModel::addFavorite(const QString& path, const QString& alias) {
     beginInsertRows(QModelIndex(), insertIdx, insertIdx);
     d->items.push_back({clean, alias.trimmed()});
     endInsertRows();
-    d->save();
+    d->save(this);
     emit countChanged();
     return true;
 }
@@ -178,7 +179,7 @@ bool FavoritesModel::removeAt(int index) {
     beginRemoveRows(QModelIndex(), index, index);
     d->items.erase(d->items.begin() + index);
     endRemoveRows();
-    d->save();
+    d->save(this);
     emit countChanged();
     return true;
 }
@@ -203,7 +204,7 @@ bool FavoritesModel::move(int from, int to) {
     d->items.erase(d->items.begin() + from);
     d->items.insert(d->items.begin() + to, std::move(item));
     endMoveRows();
-    d->save();
+    d->save(this);
     return true;
 }
 
@@ -211,7 +212,7 @@ bool FavoritesModel::setAlias(const QString& path, const QString& alias) {
     const int idx = d->indexOfPath(path);
     if (idx < 0) return false;
     d->items[std::size_t(idx)].alias = alias.trimmed();
-    d->save();
+    d->save(this);
     emit dataChanged(index(idx), index(idx), {NameRole, AliasRole});
     return true;
 }

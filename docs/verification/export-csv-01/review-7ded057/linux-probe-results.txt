@@ -1,0 +1,15 @@
+mixed-known-unknown order=0 written=2 skipped=0 expected=1/1
+FAIL: mixed identity duplicates must use lexical path fallback
+mixed-known-unknown order=1 written=2 skipped=0 expected=1/1
+FAIL: mixed identity duplicates must use lexical path fallback
+cancel-stage=0 status=0 calls=2 destination-preserved=0 expected=Cancelled/true
+FAIL: last-item/completion cancellation must preserve destination
+FAIL: progress no more than once per item
+FAIL: last-item/completion cancellation must preserve destination
+FAIL: progress no more than once per item
+cancel-stage=1 status=0 calls=2 destination-preserved=0 expected=Cancelled/true
+FAIL: overwrite=false must not replace a destination created during export
+no-overwrite-race status=0 destination-preserved=0 expected=true
+FAIL: relative-root contract compares lexical paths, not symlink targets
+lexical-relative written=0 skipped=1 expected=1/0
+Review probe unmet assertions=8

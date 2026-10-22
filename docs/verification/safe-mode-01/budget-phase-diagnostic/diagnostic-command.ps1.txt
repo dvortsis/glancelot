@@ -1,0 +1,56 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/budget-phase-diagnostic'
+New-Item -ItemType Directory -Force $d | Out-Null
+$source=Join-Path (Get-Location) 'tests/fs_watch_budget_tests.cpp'
+$original=[IO.File]::ReadAllBytes($source)
+$before=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+"original_sha256=$before" | Set-Content "$d/source-restoration.txt"
+& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Run {
+ $vswhere=Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+ $vsPath=& $vswhere -latest -version '[17.0,18.0)' -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+ $devCmd=Join-Path $vsPath 'Common7/Tools/VsDevCmd.bat'
+ $devEnvironment=& cmd.exe /d /c "call `"$devCmd`" -arch=x64 -host_arch=x64 >nul && set"
+ if($LASTEXITCODE -ne 0){throw 'MSVC setup failed'}
+ foreach($entry in $devEnvironment){if($entry -match '^([^=]+)=(.*)$'){[Environment]::SetEnvironmentVariable($Matches[1],$Matches[2],'Process')}}
+ $env:PATH='C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/bin;C:/src/Github/Glancelot/.tools/python/Scripts;'+$env:PATH
+ try {
+  $s=[IO.File]::ReadAllText($source)
+  $needle='        QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("000000.png");'
+  if(!$s.Contains($needle)){throw 'Diagnostic function anchor missing'}
+  $s=$s.Replace($needle, '        QElapsedTimer diagnosticTotal;diagnosticTotal.start();'+"`n"+'        const auto diagnosticExit=qScopeGuard([&]{qInfo()<<"PHASE total method including fixture destruction ms"<<diagnosticTotal.elapsed();});'+"`n"+$needle)
+  $s=$s.Replace('        const auto setupMs=setup.elapsed();','        const auto setupMs=setup.elapsed();qInfo()<<"PHASE setup done total ms"<<diagnosticTotal.elapsed()<<"setup ms"<<setupMs;')
+  $s=$s.Replace('        viewer.clearFilter();','        qInfo()<<"PHASE before clearFilter total ms"<<diagnosticTotal.elapsed();'+"`n"+'        viewer.clearFilter();')
+  $needle='        for(int i=1;i<100000;++i)'+"`r`n"+'            QVERIFY(QFile::remove'
+  if(!$s.Contains($needle)){throw 'Diagnostic cleanup anchor missing'}
+  $s=$s.Replace($needle,'        QElapsedTimer diagnosticRemoval;diagnosticRemoval.start();qInfo()<<"PHASE removal begin total ms"<<diagnosticTotal.elapsed();'+"`n"+$needle)
+  $s=$s.Replace('        const auto renamed=dir.filePath("renamed.png");','        qInfo()<<"PHASE removal done ms"<<diagnosticRemoval.elapsed()<<"total ms"<<diagnosticTotal.elapsed();'+"`n"+'        const auto renamed=dir.filePath("renamed.png");')
+  [IO.File]::WriteAllText($source,$s)
+  git diff -- tests/fs_watch_budget_tests.cpp > "$d/instrumentation.patch.txt"
+  & cmake --build build-codex-safe-mode-01 --target fs_watch_budget_tests --parallel 4
+  if($LASTEXITCODE -ne 0){throw 'Diagnostic build failed'}
+  & ctest --test-dir build-codex-safe-mode-01 --output-on-failure -R '^fs_watch_budget$'
+  $diagnosticExit=$LASTEXITCODE
+  "diagnostic_ctest_exit=$diagnosticExit" | Set-Content "$d/status.txt"
+  Copy-Item build-codex-safe-mode-01/fs-watch-budget-results.txt "$d/instrumented-results.txt"
+  Copy-Item build-codex-safe-mode-01/Testing/Temporary/LastTest.log "$d/instrumented-LastTest.log"
+ } finally {
+  [IO.File]::WriteAllBytes($source,$original)
+  (Get-Item -LiteralPath $source).LastWriteTime=Get-Date
+  $after=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+  "restored_sha256=$after byte_identity=$($before -eq $after)" | Add-Content "$d/source-restoration.txt"
+  & cmake --build build-codex-safe-mode-01 --target fs_watch_budget_tests --parallel 4
+  $restoreBuild=$LASTEXITCODE
+  "restored_build_exit=$restoreBuild" | Add-Content "$d/status.txt"
+  if($restoreBuild -ne 0){throw 'Restored original build failed'}
+ }
+ & ctest --test-dir build-codex-safe-mode-01 --output-on-failure -R '^fs_watch_budget$'
+ $restoredExit=$LASTEXITCODE
+ "restored_original_ctest_exit=$restoredExit" | Add-Content "$d/status.txt"
+ Copy-Item build-codex-safe-mode-01/fs-watch-budget-results.txt "$d/restored-original-results.txt"
+ Copy-Item build-codex-safe-mode-01/Testing/Temporary/LastTest.log "$d/restored-original-LastTest.log"
+ git diff --exit-code -- tests/fs_watch_budget_tests.cpp
+ "source_diff_exit=$LASTEXITCODE"
+ if($restoredExit -ne 0){throw "Original targeted test exit $restoredExit"}
+}
+"diagnostic_script_exit=0"

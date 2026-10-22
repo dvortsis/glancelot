@@ -23,6 +23,14 @@ enum class PresentationMode {
     Comparison   // Comparison display (side-by-side with reference)
 };
 
+// Raw facts used to derive a stable display id. platformCode is a platform adapter value
+// (Windows: hardware id segment of the monitor device interface path, e.g. "DEL40F4").
+struct DisplayIdentitySource {
+    QString manufacturer, model, serial, platformCode;
+    QSize physicalSizeMm;
+    QSize pixelSize;
+};
+
 struct DisplayInfo {
     int index{-1};
     QString id;                 // Stable identity string
@@ -36,7 +44,7 @@ struct DisplayInfo {
     qreal devicePixelRatio{1.0};
     qreal refreshRate{60.0};
     int colorDepth{24};
-    QString colorSpace{"sRGB"};
+    QString colorSpace{"Unknown"};   // "Unknown" when the platform reports none
     bool isPrimary{false};
     bool isAvailable{true};
 
@@ -54,6 +62,12 @@ public:
     virtual void setComparisonMode(bool comparison) = 0;
     virtual void setPrimaryImage(const QImage& image) = 0;
     virtual void setSecondaryImage(const QImage& image) = 0;
+    virtual void setFitMode(const QString& mode) = 0;
+    virtual QVariantMap viewportState() const = 0;
+    virtual void restoreViewport(const QVariantMap& state) = 0;
+    virtual void viewportCommand(const QString& command) = 0;
+    virtual QString outputColorStatus() const = 0;
+    virtual qint64 colorResourceBytes() const = 0;
     virtual QQuickWindow* quickWindow() = 0;
 };
 
@@ -70,6 +84,7 @@ class DisplayManager : public QObject {
     Q_PROPERTY(QString currentPath READ currentPath NOTIFY imageRouted)
     Q_PROPERTY(QString pinnedPath READ pinnedPath NOTIFY pinnedPathChanged)
     Q_PROPERTY(bool isPinned READ isPinned NOTIFY presentationModeChanged)
+    Q_PROPERTY(QString outputColorStatus READ outputColorStatus NOTIFY outputColorStatusChanged)
 
 public:
     explicit DisplayManager(QObject* parent = nullptr);
@@ -86,6 +101,10 @@ public:
     DisplayInfo preferredPresentationDisplay() const;
 
     static QString computeDisplayId(const QScreen* screen);
+    // Pure id derivation for a whole topology. Identical monitors (same key) receive a
+    // disambiguating ordinal in list order; serial-bearing monitors are order independent.
+    static QStringList assignDisplayIds(const QList<DisplayIdentitySource>& sources);
+    static QString colorSpaceName(const QScreen* screen);
 
     // Presentation lifecycle
     bool isPresentationActive() const;
@@ -104,17 +123,50 @@ public:
     Q_INVOKABLE void setPresentationMode(const QString& mode);
     void setMode(PresentationMode mode);
 
-    // Image routing
+    // Image routing. Every producer uses the controller's monotonic selection-generation
+    // space (including pin/comparison requests), never an independent per-producer counter.
     void updateImage(const QString& path, const QImage& image, quint64 generation);
+    // MONITOR-CUSTOM-01: validated coordinator policy. One bounded latest-frame
+    // slot for independent presentation cadence; no independent decode/scan.
+    void setRoutingPolicy(const QVariantMap& policy);
+    // GUI-thread bookkeeping for a real presentation-window screenChanged event.
+    void synchronizePresentationScreen(QScreen* screen);
+    quint64 outputGeneration() const;
+    QString routingStatus() const;
     Q_INVOKABLE void pinCurrentImage();
     Q_INVOKABLE void pinImage(const QString& path, const QImage& image, quint64 generation);
     Q_INVOKABLE void unpin();
     Q_INVOKABLE void setComparisonImage(const QString& path, const QImage& image, quint64 generation);
+    // Comparison against the pinned image, else the previously shown image.
+    Q_INVOKABLE void compareWithPinnedOrPrevious();
+
+    // Per-output fit mode, remembered by display id and restored when that output reopens.
+    Q_INVOKABLE void setOutputFitMode(const QString& mode);
+    QString outputFitMode(const QString& displayId = QString()) const;
+    Q_INVOKABLE void outputViewportCommand(const QString& command);
+    QVariantMap outputViewportState(const QString& displayId = QString()) const;
+    QString outputColorStatus() const;
+    qint64 outputColorResourceBytes() const;
+
+    // Aggregate budget for decoded images retained by the presentation (shared QImages count once).
+    static void setImageBudgetBytes(qint64 bytes);
+    static qint64 imageBudgetBytes();
+    qint64 retainedImageBytes() const;
+    // Drops non-essential retained pixels (previous/comparison); hook for low-memory signals.
+    Q_INVOKABLE void releaseCachedImages();
+
+    // Window-local key handling consults the user-rebindable toggle binding through this provider.
+    void setToggleBindingProvider(std::function<QString()> provider);
+    QString toggleBinding() const;
+    void setOutputBindingProvider(std::function<QString(const QString&)> provider);
+    QString outputBinding(const QString& command) const;
 
     // Presentation Window access (for testing/canvas inspection)
     QQuickWindow* presentationWindow() const;
 
 signals:
+    void routingStatusChanged();
+    void currentImageRequested();
     void displaysChanged();
     void presentationActiveChanged(bool active);
     void presentationModeChanged(PresentationMode mode);
@@ -122,6 +174,7 @@ signals:
     void pinnedPathChanged(const QString& path);
     void presentationClosed();
     void imageRouted(const QString& path, quint64 generation);
+    void outputColorStatusChanged();
 
 private:
     struct Private;

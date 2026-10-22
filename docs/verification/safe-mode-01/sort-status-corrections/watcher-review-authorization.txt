@@ -1,0 +1,1 @@
+2026-10-21 user explicitly answered Yes to sending prepared watcher source/tests and generated logs to Claude Sonnet5.5 for read-only review. User further stated: Automatic review is always OK. Credentials and user media excluded.

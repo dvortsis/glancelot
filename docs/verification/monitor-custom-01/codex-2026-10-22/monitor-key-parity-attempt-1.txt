@@ -1,0 +1,11 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+QWARN  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() No QRhi found for window 0x1e1e83e1840, QQuickRhiItem will not be functional
+FAIL!  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() Compared QObject pointers are not the same
+   Actual   (grid->window()): DetachedPaneHost_QMLTYPE_67/"detached-grid"
+   Expected (h.window)      : Main_QMLTYPE_157/"viewerWindow"
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(112) : failure location
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 21752ms
+********* Finished testing of MonitorCustomizationUiTests *********

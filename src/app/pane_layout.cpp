@@ -1,6 +1,12 @@
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/settings_file.hpp"
+#include "settings_retry.hpp"
+#include <memory>
+#include "layout_defaults.hpp"
+#include "monitor_customization_state.hpp"
 #include <QJsonArray>
+#include <QDir>
+#include <QFileInfo>
 #include <algorithm>
 #include <cmath>
 
@@ -26,25 +32,31 @@ QJsonObject validPane(const QJsonObject& source,QJsonObject fallback) {
 }
 }
 QJsonObject PaneLayout::defaults() {
-    QJsonObject result;
-    const auto add=[&](const char* id,const char* region,int order,int extent,bool visible) {
-        result[id]=QJsonObject{{"region",region},{"order",order},{"extent",extent},{"visible",visible},{"frozen",false}};
-    };
-    add("tree","left",0,280,true);add("preview","center",0,640,true);add("grid","center",1,640,true);
-    add("filmstrip","top",1,112,true);add("topbar","top",0,48,true);add("statusbar","bottom",0,48,true);
-    add("metadata","right",0,320,false);
-    return result;
+    return glancelot::layout_detail::defaults();
 }
 PaneLayout::PaneLayout(QObject* parent):QObject(parent),panes_(defaults()) {}
 QVariantMap PaneLayout::panes() const{return panes_.toVariantMap();}
 QVariantMap PaneLayout::pane(const QString& id) const{return panes_.value(id).toObject().toVariantMap();}
+QVariantMap PaneLayout::snapshot() const {
+    auto center=center_;center["mode"]=mode_;
+    auto result=snapshotExtras_;result["version"]=1;result["locked"]=locked_;result["panes"]=panes_;result["center"]=center;return result.toVariantMap();
+}
+bool PaneLayout::restoreSnapshot(const QVariantMap& state) {
+    if(!glancelot::monitor_state::dock(state))return false;
+    auto next=QJsonObject::fromVariantMap(state);
+    snapshotExtras_=next;for(const auto* key:{"version","locked","panes","center"})snapshotExtras_.remove(key);
+    panes_=next.value("panes").toObject();center_=next.value("center").toObject();mode_=center_.value("mode").toString();
+    center_.remove("mode");locked_=next.value("locked").toBool();feedback_.clear();emit changed();return true;
+}
 void PaneLayout::setSlot(int slot) {if(slot<0||slot==slot_)return;slot_=slot;load();}
 void PaneLayout::load() {
+    snapshotExtras_={};
     panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};mode_="preview";locked_=false;feedback_.clear();
     if(slot_>0) {
         QJsonObject settings;
         if(!glancelot::readSettings(settings).ok())feedback_="Layout settings could not be read; defaults are active.";
         else {
+            glancelot::settings_detail::overlayPendingSettings(this,settings);
             const auto layoutsValue=settings.value("layouts");
             const auto savedValue=layoutsValue.toObject().value(QString::number(slot_));
             const auto saved=savedValue.toObject();
@@ -53,6 +65,7 @@ void PaneLayout::load() {
             if(!saved.isEmpty()&&newerVersion(saved))feedback_="Unsupported layout version; defaults are active.";
             else if(!saved.isEmpty()&&!currentVersion(saved))feedback_="Layout settings are invalid; defaults are active.";
             else {
+                snapshotExtras_=saved;for(const auto* key:{"version","locked","panes","center"})snapshotExtras_.remove(key);
                 locked_=saved.value("locked").toBool(false);
                 const auto center=saved.value("center").toObject();
                 const auto orientation=center.value("orientation").toString();
@@ -67,19 +80,24 @@ void PaneLayout::load() {
             }
         }
     }
+    if(feedback_.isEmpty()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot_)+"/"))feedback_="Saving layout preferences…";
     emit changed();
 }
 void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,bool lockOnly) {
     if(slot_==0)return;
-    bool unsupported=false;
-    const auto result=glancelot::updateSettings([&](QJsonObject& settings) {
+    const auto unsupported=std::make_shared<bool>(false);
+    struct Completion {bool done{},deferred{};};const auto completion=std::make_shared<Completion>();
+    const auto slot=slot_;const auto panes=panes_;const auto centerState=center_;const auto mode=mode_;const auto locked=locked_;
+    const auto directory=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath());
+    const auto channel="layout/"+QString::number(slot)+"/"+id+"/"+fields.keys().join('/')+(reset?"/reset":"")+(lockOnly?"/locked":"");
+    glancelot::settings_detail::saveWithRetry(this,channel,[id,fields,reset,lockOnly,slot,panes,centerState,mode,locked,unsupported](QJsonObject& settings) {
         auto layouts=settings.value("layouts").toObject();
-        auto layout=layouts.value(QString::number(slot_)).toObject();
+        auto layout=layouts.value(QString::number(slot)).toObject();
         // Never downgrade or overwrite a newer layout schema; a malformed one is replaced.
-        if(!layout.isEmpty()&&newerVersion(layout)){unsupported=true;return;}
+        if(!layout.isEmpty()&&newerVersion(layout)){*unsupported=true;return;}
         if(!layout.isEmpty()&&!currentVersion(layout))layout=QJsonObject{};
         layout["version"]=1;
-        if(lockOnly)layout["locked"]=locked_;
+        if(lockOnly)layout["locked"]=locked;
         else if(id=="_center") {
             auto center=layout.value("center").toObject();
             for(auto it=fields.begin();it!=fields.end();++it)center[it.key()]=it.value();
@@ -87,15 +105,15 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
         } else {
             auto stored=layout.value("panes").toObject();
             if(reset) {
-                for(const auto& key:panes_.keys()) {
-                    auto entry=stored.value(key).toObject();const auto replacement=panes_.value(key).toObject();
+                for(const auto& key:panes.keys()) {
+                    auto entry=stored.value(key).toObject();const auto replacement=panes.value(key).toObject();
                     for(auto it=replacement.begin();it!=replacement.end();++it)entry[it.key()]=it.value();
                     stored[key]=entry;
                 }
                 layout["locked"]=false;
                 auto center=layout.value("center").toObject();
-                for(auto it=center_.begin();it!=center_.end();++it)center[it.key()]=it.value();
-                center["mode"]=mode_;
+                for(auto it=centerState.begin();it!=centerState.end();++it)center[it.key()]=it.value();
+                center["mode"]=mode;
                 layout["center"]=center;
             } else if(id=="_panes") { // several panes at once: {paneId: {field: value}}
                 for(auto pane=fields.begin();pane!=fields.end();++pane) {
@@ -110,10 +128,20 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
             }
             layout["panes"]=stored;
         }
-        layouts[QString::number(slot_)]=layout;settings["layouts"]=layouts;
+        layouts[QString::number(slot)]=layout;settings["layouts"]=layouts;
+    },[this,unsupported,completion,slot,directory](glancelot::SettingsStatus result){
+        completion->done=true;
+        if(completion->deferred&&(slot_!=slot||directory!=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath())||feedback_!="Saving layout preferences…")) {
+            if(!result.ok())qWarning("Glancelot: a deferred layout save failed; newer view feedback was preserved");
+            return;
+        }
+        if(completion->deferred&&result.ok()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot)+"/"))return;
+        if(*unsupported)feedback_="Layout changed for this session; a newer saved layout was preserved.";
+        else if(!result.ok())feedback_="Layout changed for this session; settings could not be saved.";
+        else feedback_.clear();
+        if(completion->deferred)emit changed();
     });
-    if(unsupported)feedback_="Layout changed for this session; a newer saved layout was preserved.";
-    else if(!result.ok())feedback_="Layout changed for this session; settings could not be saved.";
+    if(!completion->done){completion->deferred=true;feedback_="Saving layout preferences…";}
 }
 bool PaneLayout::edit(const QString& id,const QJsonObject& fields,bool geometry) {
     if(!panes_.contains(id))return false;

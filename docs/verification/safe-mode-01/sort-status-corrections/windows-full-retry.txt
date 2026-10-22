@@ -1,0 +1,154 @@
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:10:24
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (27.9s)
+-- Generating done (3.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+[1/162] Automatic MOC and UIC for target glancelot_recovery_common
+[2/160] Automatic MOC and UIC for target glancelot_test_argv_capture
+[3/158] Automatic MOC and UIC for target glancelot_platform
+[4/156] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/154] Automatic MOC and UIC for target pane_layout_tests
+[6/152] Automatic MOC and UIC for target file_operation_service_tests
+[7/150] Automatic MOC and UIC for target glancelot
+[8/149] Automatic MOC and UIC for target glancelot-decoder
+[9/147] Running AUTOMOC file extraction for target glancelot
+[10/147] Automatic MOC and UIC for target theme_tests
+[11/145] Automatic MOC and UIC for target recovery_startup_tests
+[12/143] Running moc --collect-json for target glancelot
+[13/96] Automatic MOC and UIC for target grid_ui_tests
+[14/94] Automatic MOC and UIC for target fs_watch_ui_tests
+[15/92] Automatic MOC and UIC for target monitor_output_tests
+[16/90] Automatic MOC and UIC for target recovery_tests
+[17/88] Automatic MOC and UIC for target recovery_controller_tests
+[18/86] Automatic MOC and UIC for target acceptance_tests
+[19/84] Automatic MOC and UIC for target thumbnail_tests
+[20/82] Automatic MOC and UIC for target folder_tree_tests
+[21/80] Automatic MOC and UIC for target window_slot_tests
+[22/78] Automatic MOC and UIC for target directory_model_tests
+[23/76] Automatic MOC and UIC for target canvas_tests
+[24/74] Automatic MOC and UIC for target platform_integration_tests
+[25/72] Automatic MOC and UIC for target grid_search_tests
+[26/70] Automatic MOC and UIC for target grid_density_tests
+[27/68] Automatic MOC and UIC for target ui_settings_tests
+[28/66] Automatic MOC and UIC for target fs_watch_budget_tests
+[29/64] Automatic MOC and UIC for target favorites_tests
+[30/62] Automatic MOC and UIC for target fs_watch_tests
+[31/60] Automatic MOC and UIC for target folder_history_tests
+[32/58] Automatic MOC and UIC for target shortcuts_help_tests
+[33/56] Automatic MOC and UIC for target filter_tests
+[34/54] Automatic MOC and UIC for target cache_tests
+[35/52] Automatic MOC and UIC for target io_scheduler_tests
+[36/50] Automatic MOC and UIC for target metadata_tests
+[37/48] Automatic MOC and UIC for target animation_tests
+[38/46] Automatic MOC and UIC for target mutation_tests
+[39/44] Automatic MOC and UIC for target copy_move_tests
+[40/42] Automatic MOC and UIC for target format_tests
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+      Start  1: perf_trace
+ 1/37 Test  #1: perf_trace .......................   Passed    0.12 sec
+      Start  2: navigation
+ 2/37 Test  #2: navigation .......................   Passed    3.46 sec
+      Start  3: directory_listing
+ 3/37 Test  #3: directory_listing ................   Passed   37.66 sec
+      Start  4: file_operations
+ 4/37 Test  #4: file_operations ..................   Passed    0.28 sec
+      Start  5: viewer_acceptance
+ 5/37 Test  #5: viewer_acceptance ................   Passed   10.81 sec
+      Start  6: thumbnails
+ 6/37 Test  #6: thumbnails .......................   Passed    7.50 sec
+      Start  7: folder_tree
+ 7/37 Test  #7: folder_tree ......................   Passed    9.80 sec
+      Start  8: pane_layout
+ 8/37 Test  #8: pane_layout ......................   Passed    0.70 sec
+      Start  9: window_slots
+ 9/37 Test  #9: window_slots .....................   Passed   26.43 sec
+      Start 10: folder_grid
+10/37 Test #10: folder_grid ......................   Passed  272.07 sec
+      Start 11: file_operation_service
+11/37 Test #11: file_operation_service ...........   Passed    1.45 sec
+      Start 12: directory_model
+12/37 Test #12: directory_model ..................   Passed   59.12 sec
+      Start 13: viewport
+13/37 Test #13: viewport .........................   Passed    0.11 sec
+      Start 14: themes
+14/37 Test #14: themes ...........................   Passed    0.32 sec
+      Start 15: platform_integration
+15/37 Test #15: platform_integration .............   Passed    1.02 sec
+      Start 16: grid_search
+16/37 Test #16: grid_search ......................   Passed    0.36 sec
+      Start 17: grid_density
+17/37 Test #17: grid_density .....................   Passed    0.26 sec
+      Start 18: ui_settings
+18/37 Test #18: ui_settings ......................   Passed    0.46 sec
+      Start 19: fs_watch
+19/37 Test #19: fs_watch .........................***Failed   86.55 sec
+
+      Start 20: fs_watch_budget
+20/37 Test #20: fs_watch_budget ..................***Timeout 179.99 sec
+
+      Start 21: fs_watch_ui
+21/37 Test #21: fs_watch_ui ......................   Passed    2.98 sec
+      Start 22: favorites
+22/37 Test #22: favorites ........................   Passed    0.48 sec
+      Start 23: folder_history
+23/37 Test #23: folder_history ...................   Passed    0.09 sec
+      Start 24: shortcuts_help
+24/37 Test #24: shortcuts_help ...................   Passed    0.15 sec
+      Start 25: filter
+25/37 Test #25: filter ...........................   Passed    2.70 sec
+      Start 26: cache
+26/37 Test #26: cache ............................   Passed    4.22 sec
+      Start 27: io_scheduler
+27/37 Test #27: io_scheduler .....................   Passed    0.15 sec
+      Start 28: metadata
+28/37 Test #28: metadata .........................   Passed    0.15 sec
+      Start 29: animation
+29/37 Test #29: animation ........................   Passed    0.47 sec
+      Start 30: mutation
+30/37 Test #30: mutation .........................   Passed    0.11 sec
+      Start 31: copy_move
+31/37 Test #31: copy_move ........................   Passed    0.15 sec
+      Start 32: format
+32/37 Test #32: format ...........................   Passed    0.14 sec
+      Start 33: monitor_output
+33/37 Test #33: monitor_output ...................   Passed    0.12 sec
+      Start 34: recovery
+34/37 Test #34: recovery .........................   Passed   14.00 sec
+      Start 35: recovery_startup
+35/37 Test #35: recovery_startup .................   Passed    0.24 sec
+      Start 36: recovery_controller
+36/37 Test #36: recovery_controller ..............   Passed   13.22 sec
+      Start 37: recovery_process
+37/37 Test #37: recovery_process .................   Passed   31.03 sec
+
+95% tests passed, 2 tests failed out of 37
+
+Total Test time (real) = 770.96 sec
+
+The following tests FAILED:
+	 19 - fs_watch (Failed)
+	 20 - fs_watch_budget (Timeout)
+Errors while running CTest
+Exception: C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\scripts\build.ps1:34
+Line |
+  34 |  … tput-on-failure; if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' } }
+     |                                                ~~~~~~~~~~~~~~~~~~~~~
+     | Tests failed.
+
+windows_gate_exit=1
