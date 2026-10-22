@@ -1,6 +1,6 @@
 {
   ".gitattributes": "70a8ef32ba3eed59bf1e9398b025195b5237d4ec9360f99f609a5d6334e4a2cb",
-  "README.md": "948d0ccc2af2a43d56c1bcbd9018903704d3e72f5c9f1859e8f0c3f07a5c6d77",
+  "README.md": "b65cfe9b0dd14952e6f037a542caf019569b131a926cd83baa4c7483a4e05fe0",
   "build-monitor-focused.ps1": "82d907e8de4ecc659dc11686dbb0baf89cbd5a74f194f1fa2a5bf7b6887b7a4c",
   "build-monitor-incremental.ps1": "8c58f96342e13e59a8b8488c5f0be66eacf2150fb3c37535cc7999a66a0dd784",
   "compact-correction-monitor_customization-results.txt": "64ec9a57e43404c7d02418f46fbca3fe1a5a1b1a724b553eabe28c5c8b4b69f3",
@@ -25,6 +25,19 @@
   "full-gates-attempt-1/windows-LastTest.log": "94f2b62a02fa66e90149b05257df63103e5caeb62f3d9c82fcc592a6692534d5",
   "full-gates-attempt-1/windows-gate.txt": "98ae6dd334fd7cabb13464592a8a5383ef99b4ecf2838fdc9b717bafb8fd8788",
   "full-gates-attempt-1/wrapper-output.txt": "6d39479f20885d215015dffcba58183a70531f973a6ace08d5f15597a08b54e6",
+  "full-gates/docker-gate.txt": "239e0577ea4422e9a4b7448466091497787294d6ec6e035c30314a9407b07a58",
+  "full-gates/docker-image-identity.txt": "522718e2ba281098ae7d0406422d750175a969b4351b511e46ee4dc11cb16fc6",
+  "full-gates/folder_grid-results.txt": "5c6d251dd272182611508c08fdc9ca88f53b9e166aa4e9c5b9096d3f4e4d7c52",
+  "full-gates/monitor_customization-results.txt": "c4b209ab1975065f36814eb9df6227375bb108f95f053d52ad12325151cf69d4",
+  "full-gates/monitor_customization_ui-results.txt": "2e6448601e6e7c71e6972628a13659464805c3ffb83fa2cf8c6de1dac1a19590",
+  "full-gates/production-build.txt": "676bd33e4a7bc97c45a57366b036e7bde451e665a2a3d558792adb53dfa9affc",
+  "full-gates/production-configure.txt": "cb99ef655fab820c18d0bee38552209c72e90e7d57f472cd70d1c1cf1c14df9d",
+  "full-gates/reviewed-product-equality.json": "322487386030853839c087386784ef3eb51720fdf2a2ef581d9b5fa6bee99cda",
+  "full-gates/source-pin.txt": "6d8de4b4cdaedb3b3bbf5ed82971a22ac9af9df2b575119f29e90afa34dd4219",
+  "full-gates/status.json": "d53c8965ca07bad88fca642bcd7635c8919f650cf90f7fa7ef599aaba1da7a9a",
+  "full-gates/windows-LastTest.log": "cbfa480e837f67dc11e38c6d2d0a5c3454bb383a3292984030a10daf20b100ad",
+  "full-gates/windows-gate.txt": "430a9d01f32807aacb408f7d3244c136b45974a03b04f06ba9039d13c2b3272f",
+  "full-gates/wrapper-output.txt": "d9728a337d8505160963c4ff22091395e57c468ab1f129c34809434af0b6e601",
   "monitor-core-results-attempt-10.txt": "37d6644716e9ac08c8c831235d758bb8f2b38726b10eaf192446ca7d9de777e8",
   "monitor-core-results-attempt-11.txt": "c08bcdcc6fe760ac5abcdf302d2e7023853ecb4fc5865b6aa0d5a621b6bf5b38",
   "monitor-core-results-attempt-12.txt": "7f1ec0abab4b00366893f3bf1339bab93f69533574ce7b16d053dce5dcb542bb",
@@ -368,6 +381,8 @@
   "review-af339f9/result.json": "842e491b5ccfc2afab8d6373245658e933e82361f18743f312425a23f915f78d",
   "review-af339f9/status.txt": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
   "review-af339f9/stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "run-monitor-full-gates.ps1": "2bd221d158c9abf2a666268f0f4cf57c8cc16b1ec846f49bcd9da85f39f43604",
-  "run-monitor-native-proof.ps1": "839287aa4b3acd63b4cbb6b1b48c5d1af143dc41871894d7de03c5575fbec8ad"
+  "run-monitor-full-gates.ps1": "7f645869fdbaa8ee92caa64777c938e0159884635c9df0bf351734be44329f1a",
+  "run-monitor-integrated-proof.ps1": "20be2567e951d3df784fe11d86a2f196f3c87c6adc607604d795020380e6f25a",
+  "run-monitor-native-proof.ps1": "839287aa4b3acd63b4cbb6b1b48c5d1af143dc41871894d7de03c5575fbec8ad",
+  "run-native-monitor-probe-integrated.ps1": "d46954db6938d50948550be0b90437209b4607dcbba66f849ff13b42897b27d4"
 }

@@ -34,6 +34,7 @@ if (-not $QtRoot) { $QtRoot = Join-Path $toolsRoot 'Qt\6.8.3\msvc2022_64' }
 $proofRoot=Join-Path $repoRoot '.cache/monitor-full-gates'
 New-Item -ItemType Directory -Path $proofRoot -Force | Out-Null
 $global:GlancelotMonitorGatePhase='waiting for machine gate lock'
+@{running=$true;exit=$null;source=(git rev-parse HEAD);phase=$global:GlancelotMonitorGatePhase;started=(Get-Date -Format o)} | ConvertTo-Json | Set-Content (Join-Path $proofRoot 'status.json')
 try {
  & C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch codex/monitor-custom-01 -Run {
     git rev-parse HEAD | Set-Content (Join-Path $proofRoot 'source-pin.txt')
