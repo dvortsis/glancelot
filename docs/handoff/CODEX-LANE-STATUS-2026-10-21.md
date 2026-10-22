@@ -1,3 +1,11 @@
+# Current lead closeout, October22,2026
+
+MONITOR-CUSTOM-01 is complete and integrated into main at `008d026951428988e545c63c25ded0b6106e3882`. The user reassigned implementation to Codex; actual independent Sonnet5.5 source/test approvals and all failed/passing evidence are retained. Full Windows41/41 and fresh Linux Docker41/41 pass under one main gate-lock block. Exact-merge targeted5/5, native14/14, rebuilt native two-display frame/move probe and isolated25-frame Intel Iris Xe rendering all pass. [Final handoff with actual output](MONITOR-CUSTOM-01-CODEX-HANDOFF.md). Queue done and integration lock released.
+
+MONITOR-VERIFY-01 is now dependency-unblocked for the remaining physical mixed-DPI/refresh/color/HDR and compositor qualification. Those are not established by synthetic topology or native window-geometry tests. Other packet status is authoritative in [WORK-QUEUE](../WORK-QUEUE.yaml). Older ownership and pending statements below are historical.
+
+---
+
 # Current lead update, October22,2026
 
 MONITOR-CUSTOM-01 was explicitly reassigned by the user from Claude to Codex. Its correction candidate is `6e228045f28b5c73819c37fc20ccf961082a13c4` in `.worktrees/codex-monitor-custom-01`, branch `codex/monitor-custom-01`, build `build-codex-monitor-custom-01`. Actual independent read-only Sonnet5.5 follow-up review is running. Prior review at2f73c84 returned changes required and is retained in [the evidence archive](../verification/monitor-custom-01/codex-2026-10-22/README.md).

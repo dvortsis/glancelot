@@ -1,3 +1,9 @@
+# Lead integration closeout — October22,2026
+
+MONITOR-CUSTOM-01 is integrated at008d026951428988e545c63c25ded0b6106e3882. Source/test approval below is retained verbatim; its pending-gate statements describe the review checkpoint. The lead subsequently recorded full Windows41/41, fresh Linux Docker41/41, exact-merge focused5/5, complete native14/14, native two-display frame/move proof and isolated25-frame production rendering. [Final handoff and actual command output](../handoff/MONITOR-CUSTOM-01-CODEX-HANDOFF.md). Physical mixed-DPI/refresh/color/HDR qualification remains MONITOR-VERIFY. Queue done; serial integration lock released after these checks.
+
+---
+
 I've finished reading the delta, the native failure traces and the CMake registration. I'm writing up the verdict now.
 
 # MONITOR-CUSTOM-01 at a0b00ff: APPROVE SOURCE / FULL GATES PENDING
