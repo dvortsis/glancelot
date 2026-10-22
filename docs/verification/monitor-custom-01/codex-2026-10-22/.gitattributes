@@ -4,3 +4,4 @@
 *.png binary
 README.md text eol=lf
 .gitattributes text eol=lf
+*.ps1 binary

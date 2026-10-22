@@ -1,8 +1,11 @@
 {
-  ".gitattributes": "8903b2eecfa3a47ba464f8ffa24c93d78b9c4cc536f21b2d8e7ce95b22bed071",
+  ".gitattributes": "0652b083e528028682e279349409844e47859a133ba9ed1f9aa09fdefd4d6724",
+  "README.md": "998f3f694ff6333e527740ae850afde8868f7d887320748321d66f2d54e3e8b1",
+  "build-monitor-focused.ps1": "82d907e8de4ecc659dc11686dbb0baf89cbd5a74f194f1fa2a5bf7b6887b7a4c",
+  "build-monitor-incremental.ps1": "8c58f96342e13e59a8b8488c5f0be66eacf2150fb3c37535cc7999a66a0dd784",
+  "early-sonnet-review-079a/REVIEW.md": "45bee8c8e4e4eba1c438a503932f16cc9aae516bfcebe79cf40f8c9c325bcdbd",
   "early-sonnet-review-079a/prompt.txt": "8d0bd518a08af2f3b8e362dac7c2c295a54a82bcf19861140e2df5c8b1ade910",
   "early-sonnet-review-079a/result.json": "94571fb62a68ba92d96fd8ef8c399822e53e52f50a51950de1a76f4990e845ee",
-  "early-sonnet-review-079a/REVIEW.md": "45bee8c8e4e4eba1c438a503932f16cc9aae516bfcebe79cf40f8c9c325bcdbd",
   "early-sonnet-review-079a/scope-note.txt": "2ae93edf425bae4ff3fc12082c13128cbc13a5d467504a9e136d14a39b26bdda",
   "early-sonnet-review-079a/status.txt": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061",
   "early-sonnet-review-079a/stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -69,6 +72,5 @@
   "native-ui/light-720-page1.png": "5bdaff5f89589644d938c1899d7eb3758ca005993ce6a5cf4b17456fc955fd33",
   "native-ui/light-720-page2.png": "53ae4dd06596af138c1d785bdfb58a3de4404f9e40489817d59121a0b8406605",
   "native-ui/light-720-page3.png": "7027a6af0dc07a6b1878da5cd9801f767ed982033ea2d922145564b26968dcc7",
-  "native-ui/preview-after-six-native-migrations.png": "d6c413de01c6b1eb1399d3a60ab785c65f737d26550380ef6ba0886272929f6a",
-  "README.md": "97debe488f763b6795d9d1dcfed52fd39d6a88f12edb41aa26de3bd44b4dbc48"
+  "native-ui/preview-after-six-native-migrations.png": "d6c413de01c6b1eb1399d3a60ab785c65f737d26550380ef6ba0886272929f6a"
 }
