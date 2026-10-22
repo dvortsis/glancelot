@@ -1,0 +1,7 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+    Start 11: folder_grid
+1/1 Test #11: folder_grid ......................   Passed  213.49 sec
+
+100% tests passed out of 1
+
+Total Test time (real) = 213.51 sec
