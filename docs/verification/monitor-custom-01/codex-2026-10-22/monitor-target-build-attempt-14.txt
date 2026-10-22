@@ -1,0 +1,11 @@
+Incremental focused build (configured build directory)
+[1/13] Automatic MOC and UIC for target glancelot_platform
+[2/12] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[3/12] Linking CXX static library glancelot_platform.lib
+[4/12] Linking CXX executable glancelot-decoder.exe
+[5/12] Automatic MOC and UIC for target monitor_customization_tests
+[6/11] Automatic MOC and UIC for target monitor_customization_ui_tests
+[7/10] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[8/10] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\monitor_customization.cpp.obj
+[9/10] Linking CXX executable monitor_customization_ui_tests.exe
+[10/10] Linking CXX executable monitor_customization_tests.exe

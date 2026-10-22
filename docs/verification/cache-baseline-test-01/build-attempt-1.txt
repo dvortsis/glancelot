@@ -1,0 +1,65 @@
+[1/41] Automatic MOC and UIC for target glancelot_recovery_common
+[2/41] Automatic MOC and UIC for target glancelot_platform
+[3/41] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[4/41] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[5/41] Building CXX object CMakeFiles\glancelot_core.dir\src\core\file_operations.cpp.obj
+[6/41] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[7/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\platform_integration.cpp.obj
+[8/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\io_scheduler.cpp.obj
+[9/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_model.cpp.obj
+[10/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_parser.cpp.obj
+[11/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\animation_controller.cpp.obj
+[12/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\mutation_service.cpp.obj
+[13/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\raw_preview.cpp.obj
+[14/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\copy_move_service.cpp.obj
+[15/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\glancelot_recovery_common_autogen\mocs_compilation.cpp.obj
+[16/41] Building CXX object CMakeFiles\glancelot_core.dir\src\core\selection_export.cpp.obj
+[17/41] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[18/41] Linking CXX static library glancelot_platform.lib
+[19/41] Automatic MOC and UIC for target glancelot-decoder
+[20/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_recovery.cpp.obj
+[21/41] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[22/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_diff.cpp.obj
+[23/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj
+[24/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_checkpoint.cpp.obj
+[25/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_restore.cpp.obj
+[26/41] Building CXX object CMakeFiles\glancelot-decoder.dir\glancelot-decoder_autogen\mocs_compilation.cpp.obj
+[27/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_session.cpp.obj
+[28/41] Linking CXX static library glancelot_core.lib
+[29/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\app\settings_maintenance.cpp.obj
+[30/41] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\command_registry.cpp.obj
+[31/41] Linking CXX static library glancelot_recovery_common.lib
+[32/41] Building CXX object CMakeFiles\glancelot-decoder.dir\src\worker\main.cpp.obj
+[33/41] Linking CXX executable glancelot-decoder.exe
+[34/41] Automatic MOC and UIC for target cache_tests
+[35/41] Building CXX object CMakeFiles\cache_tests.dir\cache_tests_autogen\mocs_compilation.cpp.obj
+[36/41] Building CXX object CMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj
+FAILED: [code=2] CMakeFiles/cache_tests.dir/tests/cache_tests.cpp.obj 
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe"  /nologo /TP -DGLANCELOT_FS_WATCH_TESTING -DQT_CONCURRENT_LIB -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_TESTCASE_BUILDDIR=\"C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01/build-codex-cache-baseline-test-01\" -DQT_TESTCASE_SOURCEDIR=\"C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01\" -DQT_TESTLIB_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IC:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\build-codex-cache-baseline-test-01\cache_tests_autogen\include -IC:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\include -IC:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\src\app -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtCore -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\mkspecs\win32-msvc -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtGui -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtConcurrent -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtTest -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD -Zc:__cplusplus -permissive- -utf-8 /showIncludes /FoCMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj /FdCMakeFiles\cache_tests.dir\ /FS -c C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(288): error C3083: 'fs_watch': the symbol to the left of a '::' must be a type
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(288): error C2039: 'ControllerTestHooks': is not a member of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\include\glancelot/viewer_controller.hpp(15): note: see declaration of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(288): error C2065: 'ControllerTestHooks': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(288): error C2146: syntax error: missing ';' before identifier 'hooks'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(288): error C2065: 'hooks': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(289): error C2065: 'hooks': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(290): error C3083: 'fs_watch': the symbol to the left of a '::' must be a type
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(290): error C2039: 'controllerTestHooks': is not a member of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\include\glancelot/viewer_controller.hpp(15): note: see declaration of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(290): error C2065: 'controllerTestHooks': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(290): error C3535: cannot deduce type for 'const auto *' from '<error type>'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(291): error C3083: 'fs_watch': the symbol to the left of a '::' must be a type
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(291): error C2039: 'controllerTestHooks': is not a member of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\include\glancelot/viewer_controller.hpp(15): note: see declaration of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(291): error C2065: 'controllerTestHooks': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(291): error C2065: 'hooks': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(293): error C3083: 'fs_watch': the symbol to the left of a '::' must be a type
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(293): error C2039: 'controllerTestHooks': is not a member of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\include\glancelot/viewer_controller.hpp(15): note: see declaration of 'glancelot'
+C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\tests\cache_tests.cpp(293): error C2065: 'controllerTestHooks': undeclared identifier
+[37/41] Building CXX object CMakeFiles\cache_tests.dir\src\app\directory_entry_model.cpp.obj
+[38/41] Building CXX object CMakeFiles\cache_tests.dir\src\app\viewer_controller.cpp.obj
+[39/41] Building CXX object CMakeFiles\cache_tests.dir\src\app\settings_file.cpp.obj
+ninja: build stopped: subcommand failed.

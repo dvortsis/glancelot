@@ -1,0 +1,42 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+PASS   : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication()
+PASS   : MonitorCustomizationUiTests::nativeHostCloseAndEscapePreserveController()
+PASS   : MonitorCustomizationUiTests::detachedCanvasPopupAndFrozenCloseHaveVisibleFeedback()
+PASS   : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration()
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native settings captures complete; loading generated image
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native generated image ready; beginning migrations
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detach 0
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detached
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native exposed; grab
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native redock
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detach 1
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detached
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native exposed; grab
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native redock
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detach 2
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detached
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native exposed; grab
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native redock
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detach 3
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detached
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native exposed; grab
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native redock
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detach 4
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detached
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native exposed; grab
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native redock
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detach 5
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native detached
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native exposed; grab
+QINFO  : MonitorCustomizationUiTests::nativeUiEvidence() Native redock
+PASS   : MonitorCustomizationUiTests::nativeUiEvidence()
+PASS   : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting()
+PASS   : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration()
+PASS   : MonitorCustomizationUiTests::busyDragFailureRestoresTheSavedHostGeometry()
+PASS   : MonitorCustomizationUiTests::actualImportAndResetReloadCoordinatorPreferences()
+PASS   : MonitorCustomizationUiTests::registryRouteAndLockedPredicateRemainShared()
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 12 passed, 0 failed, 0 skipped, 0 blacklisted, 56793ms
+********* Finished testing of MonitorCustomizationUiTests *********

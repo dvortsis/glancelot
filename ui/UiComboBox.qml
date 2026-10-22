@@ -41,7 +41,8 @@ ComboBox {
         leftPadding: Theme.gapSm
         rightPadding: Theme.gapSm
         highlighted: control.highlightedIndex === index
-        Accessible.name: modelData
+        readonly property string optionText: control.textAt(index)
+        Accessible.name: optionText
         contentItem: Row {
             spacing: Theme.gapSm
             UiIcon {
@@ -52,7 +53,7 @@ ComboBox {
             }
             Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: option.modelData
+                text: option.optionText
                 font.pixelSize: Theme.textBody
                 color: Theme.text
             }

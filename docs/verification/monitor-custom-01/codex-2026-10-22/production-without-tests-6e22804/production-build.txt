@@ -1,0 +1,72 @@
+[1/76] Copying glancelot qml sources into build dir
+[2/76] Automatic MOC and UIC for target glancelot_recovery_common
+[3/74] Automatic MOC and UIC for target glancelot_platform
+[4/72] Running qmlimportscanner for glancelot
+[5/72] Automatic MOC and UIC for target glancelot
+[6/72] Running AUTOMOC file extraction for target glancelot
+[7/72] Running rcc for resource glancelot_raw_qml_1
+[8/72] Running rcc for resource glancelot_raw_qml_0
+[9/72] Running moc --collect-json for target glancelot
+[10/72] Automatic QML type registration for target glancelot
+[11/72] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+[12/72] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+[13/72] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+[14/72] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[15/72] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+[16/72] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+[17/72] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+[18/72] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+[19/72] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+[20/72] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+[21/72] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+[22/72] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+[23/72] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+[24/72] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[25/72] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+[26/72] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+[27/72] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+[28/72] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+[29/72] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+[30/72] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+[31/72] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+[32/72] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+[33/72] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+[34/72] Generating .rcc/qmlcache/glancelot_ui/DetachedPaneHost_qml.cpp
+[35/72] Generating .rcc/qmlcache/glancelot_ui/MonitorSettings_qml.cpp
+[36/72] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[37/72] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[38/72] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[39/72] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[40/72] Building CXX object CMakeFiles\glancelot.dir\src\app\pane_layout.cpp.obj
+[41/72] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[42/72] Building CXX object CMakeFiles\glancelot.dir\glancelot_qmltyperegistrations.cpp.obj
+[43/72] Building CXX object CMakeFiles\glancelot.dir\src\app\settings_file.cpp.obj
+[44/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\Theme_qml.cpp.obj
+[45/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\ThemePicker_qml.cpp.obj
+[46/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[47/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\Filmstrip_qml.cpp.obj
+[48/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\PhotoGrid_qml.cpp.obj
+[49/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[50/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\PaneArrangement_qml.cpp.obj
+[51/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\SettingsDialog_qml.cpp.obj
+[52/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\SettingRow_qml.cpp.obj
+[53/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiButton_qml.cpp.obj
+[54/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiComboBox_qml.cpp.obj
+[55/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiDialog_qml.cpp.obj
+[56/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiScrollBar_qml.cpp.obj
+[57/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiIcon_qml.cpp.obj
+[58/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiSwitch_qml.cpp.obj
+[59/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\UiTextField_qml.cpp.obj
+[60/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\DeleteFlow_qml.cpp.obj
+[61/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\ShortcutCheatSheet_qml.cpp.obj
+[62/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\MetadataHud_qml.cpp.obj
+[63/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\AnimationBar_qml.cpp.obj
+[64/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[65/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\RenameFlow_qml.cpp.obj
+[66/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\TransferHud_qml.cpp.obj
+[67/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\CommandMenuItem_qml.cpp.obj
+[68/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_glancelot_raw_qml_1.cpp.obj
+[69/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\MonitorSettings_qml.cpp.obj
+[70/72] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\DetachedPaneHost_qml.cpp.obj
+[71/72] Building CXX object CMakeFiles\glancelot.dir\src\app\monitor_customization.cpp.obj
+[72/72] Linking CXX executable glancelot.exe

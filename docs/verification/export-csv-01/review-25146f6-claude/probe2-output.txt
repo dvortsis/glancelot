@@ -1,0 +1,16 @@
+P1 unicode-dest+dir+progress status=0 exists=1 temp=0
+P2a cancel@done==total plain.csv status=0 (0=Written: the callback never reports done==total) calls=1 lastDone=0
+P2b cancel@done==0 status=1 calls=1 preserved=1 temp=0
+P2c cancel@last-item-start status=1 calls=2 preserved=1 temp=0
+P2d dest=cancel-1.csv first progress done=0 (expect 0) status=0
+P6 unknown-identity n=2000 status=0 written=2000 ms=32.6996
+P6 unknown-identity n=6000 status=0 written=6000 ms=91.678
+P6 unknown-identity n=100000 status=0 written=100000 ms=1681.2
+P6b cancel@50000/100000 status=1 stop-to-return-ms=22.0272 total-ms=1520.44 temp=0 dest-exists=0
+P9 mixed order=0 written=1 skipped=1 (expect 1/1)
+P9 mixed order=1 written=1 skipped=1 (expect 1/1)
+P9 case-variant unknown/unknown written=1 (Windows expect 1, Linux expect 2)
+P9 dotdot-normalised unknown/unknown written=1 (expect 1)
+P9 hardlink known/known written=1 skipped=1 (expect 1/1)
+P9 distinct known written=2 (expect 2)
+P8 lone-surrogate THREW: No mapping for the Unicode character exists in the target multi-byte code page. temp-after=0

@@ -1,0 +1,35 @@
+********* Start testing of MonitorCustomizationTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationTests::initTestCase()
+PASS   : MonitorCustomizationTests::optionsRejectWholeInvalidPatch()
+PASS   : MonitorCustomizationTests::snapshotsValidateWithoutPartialMutation()
+PASS   : MonitorCustomizationTests::presetsCrudIsolationAndUnknownFields()
+PASS   : MonitorCustomizationTests::freezeLockAndEmergencyRecovery()
+PASS   : MonitorCustomizationTests::invalidSlotDoesNotEraseValidPresets()
+PASS   : MonitorCustomizationTests::busySaveRollsBackUntilCommittedAndCancellationIsFenced()
+PASS   : MonitorCustomizationTests::writeFailureDoesNotMutateRuntime()
+PASS   : MonitorCustomizationTests::presetAndDisplayBoundsAreAtomic()
+PASS   : MonitorCustomizationTests::serializedBoundsPreserveOriginalSettings()
+PASS   : MonitorCustomizationTests::outputMovePreservesTransformAndLayoutAndMissingPreferenceCanClear()
+PASS   : MonitorCustomizationTests::folderResumeReopenAndStaleGenerations()
+PASS   : MonitorCustomizationTests::identifyIsBoundedAndPaneGeometryRetainsPreference()
+PASS   : MonitorCustomizationTests::dockTransactionRetainsLatestUnknownFieldsWithoutDuplicateOwner()
+PASS   : MonitorCustomizationTests::pinnedOutputIgnoresFollowFolderAndTimingPolicy()
+PASS   : MonitorCustomizationTests::linkedComparisonRotationAndOutputGestureUseDisplayedGeneration()
+PASS   : MonitorCustomizationTests::duplicateAndPlaceholderSerialsAreWeak()
+PASS   : MonitorCustomizationTests::canonicalFreezeIsSharedBySettingsArrangementAndReset()
+PASS   : MonitorCustomizationTests::layoutUnlockAndFreezePreserveUnsupportedMonitorData()
+PASS   : MonitorCustomizationTests::realCoordinatorMovesSwapsAndRecoversAcrossSyntheticScreens()
+PASS   : MonitorCustomizationTests::newerVersionIsNeverOverwritten()
+PASS   : MonitorCustomizationTests::simultaneousSlotEditRefusesStaleOverwrite()
+PASS   : MonitorCustomizationTests::optionsReachRealPresentationAndPreserveBudgets()
+QWARN  : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded() No QRhi found for window 0x1a81de4f360, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded() No QRhi found for window 0x1a81de4f360, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationTests::heldAndTimedRoutingKeepLatestGenerationBounded()
+PASS   : MonitorCustomizationTests::generatedTopologiesRecoverMissingAndReusedIdentities()
+PASS   : MonitorCustomizationTests::rendererIncarnationsShareAdmissionUntilOldTextureReleases()
+PASS   : MonitorCustomizationTests::nestedUnknownFieldsSurviveEditsAndPortableImport()
+PASS   : MonitorCustomizationTests::safeLayoutRestoreOwnsMonitorFieldsAndPreservesOtherSlots()
+PASS   : MonitorCustomizationTests::cleanupTestCase()
+Totals: 29 passed, 0 failed, 0 skipped, 0 blacklisted, 9020ms
+********* Finished testing of MonitorCustomizationTests *********

@@ -1,0 +1,8 @@
+[1/6] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[2/6] Building CXX object CMakeFiles\glancelot_core.dir\src\core\file_operations.cpp.obj
+[3/6] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-integrate-export-csv-01\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[4/6] Building CXX object CMakeFiles\glancelot_core.dir\src\core\selection_export.cpp.obj
+[5/6] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-integrate-export-csv-01\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[6/6] Linking CXX static library glancelot_core.lib

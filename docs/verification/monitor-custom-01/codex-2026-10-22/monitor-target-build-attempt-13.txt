@@ -1,0 +1,4 @@
+Incremental focused build (configured build directory)
+[1/4] Automatic MOC and UIC for target monitor_customization_ui_tests
+[2/3] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\tests\monitor_customization_ui_tests.cpp.obj
+[3/3] Linking CXX executable monitor_customization_ui_tests.exe

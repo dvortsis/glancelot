@@ -195,3 +195,12 @@ Gates on Gemini-owned work are marked ⛔<task>. A packet starts only after that
 | F039 | Codex core, Claude reading UI (E1 extension). |
 | F048 | Codex (E3 extension). |
 | F077 | Codex, behind an authentication design gate. |
+
+## User amendment, October 21, 2026: MONITOR-CUSTOM-01
+
+The user explicitly reassigned MONITOR-CUSTOM-01 to Codex for implementation. Use codex/monitor-custom-01, .worktrees/codex-monitor-custom-01 and build-codex-monitor-custom-01. Claude Code Sonnet5.5 independently reviews this packet; Gemini remains ineligible to approve changes to its original monitor code. All frozen acceptance remains intact; this replaces the earlier Claude assignment for this packet only. Codex owns ui/Main.qml for this wave; other branches synchronize serially after review.
+
+
+## Lead closeout, October 22, 2026
+
+MONITOR-CUSTOM-01 is integrated and its Codex Main.qml implementation wave is closed. Claude owns Main.qml for the serial current-main stack correction wave in its existing assigned worktrees. Codex MONITOR-VERIFY uses separate feature tests/harness files. The lead-frozen correction contract, recovery extension and independent confirmation requirements are in [LEAD-WRAPUP-2026-10-22.md](handoff/LEAD-WRAPUP-2026-10-22.md). Root CMake and integration remain lead-only under the integration lock; Gemini reviews only the Claude stack, never its original monitor implementation.

@@ -1,0 +1,21 @@
+{
+  "session_id": "6e403759-2c2d-41b7-8d55-7f391668f5c9",
+  "is_error": false,
+  "permission_denials": [],
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 9811,
+      "cacheReadInputTokens": 334415,
+      "cacheCreationInputTokens": 54918,
+      "webSearchRequests": 0,
+      "costUSD": 0.3512595,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 4433,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+Start testing: Oct 22 13:56 Mountain Daylight Time
+----------------------------------------------------------
+12/41 Testing: input_ui
+12/41 Test: input_ui
+Command: "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/input_ui_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+"input_ui" start time: Oct 22 13:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  40.82 sec
+----------------------------------------------------------
+Test Passed.
+"input_ui" end time: Oct 22 13:57 Mountain Daylight Time
+"input_ui" time elapsed: 00:00:40
+----------------------------------------------------------
+
+35/41 Testing: monitor_output
+35/41 Test: monitor_output
+Command: "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/monitor_output_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+"monitor_output" start time: Oct 22 13:57 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.32 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_output" end time: Oct 22 13:57 Mountain Daylight Time
+"monitor_output" time elapsed: 00:00:02
+----------------------------------------------------------
+
+38/41 Testing: recovery_controller
+38/41 Test: recovery_controller
+Command: "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/recovery_controller_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/recovery-controller-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+"recovery_controller" start time: Oct 22 13:57 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  14.03 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_controller" end time: Oct 22 13:57 Mountain Daylight Time
+"recovery_controller" time elapsed: 00:00:14
+----------------------------------------------------------
+
+40/41 Testing: monitor_customization
+40/41 Test: monitor_customization
+Command: "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/monitor_customization_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/monitor_customization-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+"monitor_customization" start time: Oct 22 13:57 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   8.24 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization" end time: Oct 22 13:57 Mountain Daylight Time
+"monitor_customization" time elapsed: 00:00:08
+----------------------------------------------------------
+
+41/41 Testing: monitor_customization_ui
+41/41 Test: monitor_customization_ui
+Command: "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/monitor_customization_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01/monitor_customization_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+"monitor_customization_ui" start time: Oct 22 13:57 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  22.98 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization_ui" end time: Oct 22 13:58 Mountain Daylight Time
+"monitor_customization_ui" time elapsed: 00:00:22
+----------------------------------------------------------
+
+End testing: Oct 22 13:58 Mountain Daylight Time

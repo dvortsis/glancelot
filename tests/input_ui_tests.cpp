@@ -1,3 +1,4 @@
+#include "glancelot/monitor_customization.hpp"
 // INPUT-02: scoped keys, chords, held keys, the wheel matrix and context menus, driven through the shipped Main.qml.
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"

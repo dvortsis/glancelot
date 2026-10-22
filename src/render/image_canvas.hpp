@@ -1,4 +1,6 @@
 #pragma once
+#include "canvas_texture_admission.hpp"
+#include <memory>
 #include <QQuickRhiItem>
 #include <QImage>
 #include <QColor>
@@ -35,13 +37,17 @@ public:
     // Per-canvas GPU texture admission limit (default 256 MiB). Owners of several canvases lower it
     // so the aggregate stays bounded.
     qint64 textureBudget() const { return m_textureBudget; }
+    qint64 admittedTextureBytes() const { return m_gpuAdmission->bytes(); }
     void setTextureBudget(qint64 bytes);
+    // Internal presentation ownership: both canvases and all renderer incarnations share one cap.
+    void shareTextureAdmissionWith(ImageCanvas* owner){m_gpuAdmission=owner->m_gpuAdmission;}
+    void setAggregateTextureBudget(qint64 bytes){m_aggregateTextureBudget=bytes;update();}
     Q_INVOKABLE void fit(const QString& mode = QStringLiteral("shrink"));
     Q_INVOKABLE void actualSize();
     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
     Q_INVOKABLE void panBy(qreal dx, qreal dy);
-    QVariantMap viewState() const;
-    void setViewState(const QVariantMap& state);
+    Q_INVOKABLE QVariantMap viewState() const;
+    Q_INVOKABLE void setViewState(const QVariantMap& state);
     // Fixed 33-cube RGB atlas, shared by presentation canvases; null means identity.
     void setOutputColorLut(const QImage& atlas);
     // Continuous source coordinates, including points outside the image bounds.
@@ -86,7 +92,9 @@ private:
     QPointF m_savedPan;
     QString m_savedFit;
     QString m_rendererError;
+    qint64 m_aggregateTextureBudget{256LL * 1024 * 1024};
     qint64 m_textureBudget{256LL * 1024 * 1024};
+    std::shared_ptr<CanvasTextureAdmission> m_gpuAdmission=std::make_shared<CanvasTextureAdmission>();
 };
 
 

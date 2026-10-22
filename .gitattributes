@@ -1,2 +1,8 @@
 # Sealed recovery packages and raw preimages must retain their exact bytes.
 docs/verification/safe-mode-01/process-*/** binary
+
+docs/verification/export-csv-01/integration-2026-10-22/** -text
+
+docs/verification/grid-resize-test-01/** -text
+
+docs/verification/cache-baseline-test-01/** -text

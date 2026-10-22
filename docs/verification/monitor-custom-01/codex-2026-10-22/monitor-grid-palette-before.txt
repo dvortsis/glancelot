@@ -1,0 +1,12 @@
+********* Start testing of GridUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : GridUiTests::initTestCase()
+QWARN  : GridUiTests::paletteKeyboardCursorStaysInViewport() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : GridUiTests::paletteKeyboardCursorStaysInViewport() No QRhi found for window 0x18d4f108df0, QQuickRhiItem will not be functional
+QWARN  : GridUiTests::paletteKeyboardCursorStaysInViewport() No QRhi found for window 0x18d4f108df0, QQuickRhiItem will not be functional
+FAIL!  : GridUiTests::paletteKeyboardCursorStaysInViewport() '[&] { for(auto* ancestor=palettes->parentItem();ancestor;ancestor=ancestor->parentItem()) { if(!ancestor->clip())continue; const auto point=current->mapToItem(ancestor,QPointF(current->width()/2,current->height()/2)); if(point.y()<0 || point.y()>ancestor->height()) return false; } return true; }()' returned FALSE. (Keyboard palette cursor is outside its scroll viewport)
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\grid_ui_tests.cpp(1224) : failure location
+PASS   : GridUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 20243ms
+********* Finished testing of GridUiTests *********

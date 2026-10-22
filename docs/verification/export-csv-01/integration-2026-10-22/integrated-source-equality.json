@@ -1,0 +1,59 @@
+[
+  {
+    "before": "845509f1930bd62cb24194a3182d94267c67dafc",
+    "after": "5db97272926105e7b6185eca671b5f6a837b9dd4",
+    "paths": [
+      "CMakeLists.txt",
+      "cmake",
+      "app",
+      "assets",
+      "include",
+      "src",
+      "ui",
+      "tests",
+      "scripts",
+      "Dockerfile",
+      "docker"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "before": "a17b882",
+    "after": "5db97272926105e7b6185eca671b5f6a837b9dd4",
+    "paths": [
+      "entire tree"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "before": "25146f6",
+    "after": "5db97272926105e7b6185eca671b5f6a837b9dd4",
+    "paths": [
+      "src/core/selection_export.cpp",
+      "tests/selection_export_tests.cpp"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "before": "498d922",
+    "after": "5db97272926105e7b6185eca671b5f6a837b9dd4",
+    "paths": [
+      "tests/grid_ui_tests.cpp"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "before": "d63cd9d",
+    "after": "5db97272926105e7b6185eca671b5f6a837b9dd4",
+    "paths": [
+      "tests/cache_tests.cpp",
+      "CMakeLists.txt"
+    ],
+    "exit": 0,
+    "output": ""
+  }
+]

@@ -1,0 +1,1 @@
+Interrupted after native rendering proof became unresponsive; not a pass.

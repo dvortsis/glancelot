@@ -1,0 +1,3 @@
+COMMAND: cmake -S . -B build-codex-monitor-custom-01 -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DGLANCELOT_BUILD_VIEWER=ON -DCMAKE_PREFIX_PATH=<project-local Qt6.8.3>
+COMMAND: cmake --build build-codex-monitor-custom-01 --target glancelot --parallel 4
+COMMAND: & ./scripts/build.ps1 -BuildDir build-codex-monitor-custom-01 -Test

@@ -29,6 +29,10 @@ public:
     Q_INVOKABLE bool setVisible(const QString& id,bool visible);
     Q_INVOKABLE void reset();
     Q_INVOKABLE QVariantMap pane(const QString& id) const;
+    // MONITOR-CUSTOM-01 lead-frozen, non-QML snapshot extension. Implemented by
+    // that packet; unused declarations do not change the current runtime.
+    QVariantMap snapshot() const;
+    bool restoreSnapshot(const QVariantMap& snapshot);
 signals:
     void changed();
 private:
@@ -36,6 +40,7 @@ private:
     bool locked_{};
     QString feedback_;
     QJsonObject panes_;
+    QJsonObject snapshotExtras_; // MONITOR-CUSTOM-01: unknown root layout fields
     QJsonObject center_{{"orientation","horizontal"},{"ratio",0.5}};
     QString mode_{QStringLiteral("preview")};
     bool editCenter(const QJsonObject& fields);

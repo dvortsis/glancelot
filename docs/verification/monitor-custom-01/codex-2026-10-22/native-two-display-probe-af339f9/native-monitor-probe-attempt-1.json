@@ -1,0 +1,42 @@
+{
+    "appearanceRetainsMaximized": true,
+    "displayCount": 2,
+    "firstWorkArea": {
+        "height": 1392,
+        "width": 2560,
+        "x": 0,
+        "y": 0
+    },
+    "initialFrame": {
+        "height": 594,
+        "width": 1011,
+        "x": 135,
+        "y": -1541
+    },
+    "initialFrameFits": true,
+    "initialWorkArea": {
+        "height": 752,
+        "width": 1280,
+        "x": 0,
+        "y": -1600
+    },
+    "maximizedMoveAccepted": true,
+    "maximizedMoveActiveId": "f32125f773c2be00",
+    "maximizedMoveVisibility": 2,
+    "minimizedMoveAccepted": true,
+    "passed": true,
+    "restoredAfterMaxMoveFits": true,
+    "restoredAfterMaxMoveFrame": {
+        "height": 793,
+        "width": 1290,
+        "x": 635,
+        "y": 287
+    },
+    "restoredAfterMinMoveFits": true,
+    "restoredAfterMinMoveFrame": {
+        "height": 752,
+        "width": 1280,
+        "x": 0,
+        "y": -1600
+    }
+}

@@ -1,0 +1,8 @@
+********* Start testing of CacheTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : CacheTests::initTestCase()
+FAIL!  : CacheTests::bidirectionalNavigation() 'controller.isLastDecodeCacheHit()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-integrate-export-csv-01\tests\cache_tests.cpp(114) : failure location
+PASS   : CacheTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1353ms
+********* Finished testing of CacheTests *********

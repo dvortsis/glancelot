@@ -1,0 +1,1 @@
+Initial launch used the former VSCode extension2.1.304 executable path, which no longer existed after editor extension upgrade; PowerShell reported command not recognized before review started. Retried using installed2.1.308 native binary. This was a launcher failure, not a review verdict.
