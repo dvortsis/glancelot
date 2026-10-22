@@ -1,0 +1,9 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+    Start 40: monitor_customization
+1/2 Test #40: monitor_customization ............   Passed    9.22 sec
+    Start 41: monitor_customization_ui
+2/2 Test #41: monitor_customization_ui .........   Passed   26.63 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  35.94 sec

@@ -193,6 +193,8 @@ public:
 
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
+    // MONITOR-CUSTOM-01: explicit successful import/reset/restore; not navigation.
+    void configurationReloaded();
     void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged(); void cacheChanged();
     void storageProfileChanged(); void currentStorageTypeChanged(); void ioStatsChanged();
     void metadataVisibleChanged();

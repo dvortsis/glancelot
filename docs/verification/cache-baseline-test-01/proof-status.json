@@ -1,0 +1,6 @@
+{
+  "source": "d63cd9d5f36f0134a4b42bcddeaa4b62ddad198f",
+  "binary": "3C0599D35D963F40E82A792F170E0630157300BF7FB7FA0DA900157F90078AB4",
+  "test": "ten ctest repetitions plus ten exact five-decode warm traces",
+  "exit": 0
+}

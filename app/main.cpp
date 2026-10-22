@@ -1,6 +1,7 @@
 #include "perf_replay.hpp"
 #include "glancelot/perf_trace.hpp"
 #include "glancelot/pane_layout.hpp"
+#include "glancelot/monitor_customization.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
 #include "glancelot/theme_manager.hpp"
@@ -197,6 +198,10 @@ int main(int argc,char** argv) {
     }
     PaneLayout paneLayout;paneLayout.setSlot(viewer.windowSlot());
     QObject::connect(&viewer,&ViewerController::stateChanged,&paneLayout,[&]{paneLayout.setSlot(viewer.windowSlot());});
+    glancelot::MonitorCustomization monitorCustomization(viewer.displayManager(), &paneLayout);
+    monitorCustomization.setSlot(viewer.windowSlot());
+    QObject::connect(&viewer,&ViewerController::configurationReloaded,&monitorCustomization,&glancelot::MonitorCustomization::reloadPreferences);
+    QObject::connect(&viewer,&ViewerController::stateChanged,&monitorCustomization,[&]{monitorCustomization.setSlot(viewer.windowSlot());});
     ThemeManager theme;
     if(parser.isSet("theme"))theme.setFamily(parser.value("theme"));
     if(parser.isSet("theme-mode"))theme.setMode(parser.value("theme-mode"));
@@ -246,6 +251,7 @@ int main(int argc,char** argv) {
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
     engine.rootContext()->setContextProperty("viewer",&viewer);
     engine.rootContext()->setContextProperty("paneLayout",&paneLayout);
+    engine.rootContext()->setContextProperty("monitorCustomization",&monitorCustomization);
     engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
     engine.rootContext()->setContextProperty("folderTree",&folderTree);
     engine.rootContext()->setContextProperty("favoritesModel",&favorites);
@@ -260,6 +266,7 @@ int main(int argc,char** argv) {
     if(parser.isSet("show-settings"))QTimer::singleShot(100,&viewer,[&]{viewer.trigger("settings");});
     if(parser.isSet("show-grid"))QTimer::singleShot(100,&viewer,[&]{viewer.trigger("grid");});
     auto* window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+    monitorCustomization.setControllerWindow(window);
     const auto graphicsEvidence=std::make_shared<GraphicsEvidence>();
     if(window) {
         QObject::connect(window,&QQuickWindow::beforeRendering,&app,[window,graphicsEvidence]{

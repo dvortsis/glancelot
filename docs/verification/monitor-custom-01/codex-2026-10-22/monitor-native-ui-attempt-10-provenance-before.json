@@ -1,0 +1,6 @@
+{
+  "started": "2026-10-22T08:13:25.6899496-06:00",
+  "source": "af339f93e0d0463962914296ade684edb98606eb",
+  "binarySha256Before": "2535A8060F967902BFB0971AE7AC9A84D0DEC20079853FE0D2068A2B970170DB",
+  "command": "monitor_customization_ui_tests.exe -o .cache/monitor-native-ui-attempt-10.txt,txt"
+}

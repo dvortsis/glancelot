@@ -1,4 +1,5 @@
 // F002: breadcrumbs and path completion in the path bar.
+#define GLANCELOT_TEST_WITHOUT_MONITOR // this fixture is not linked with MonitorCustomization
 #include "ui_test_support.hpp"
 #include <QDir>
 

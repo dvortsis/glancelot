@@ -9,9 +9,50 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <QScreen>
 #include <cmath>
+#include <QQuickPaintedItem>
+#include <QPainter>
+#include <QSGGeometryNode>
+#include <QSGFlatColorMaterial>
+#include <QScopedValueRollback>
 
 namespace glancelot {
 namespace {
+constexpr qint64 informationReservation=1024*1024;
+class PresentationInformation final:public QQuickPaintedItem {
+    ImageCanvas* canvas;
+    bool requested{};
+    void scaleTexture() {
+        const auto scale=window()?window()->effectiveDevicePixelRatio():qreal(1);
+        const bool valid=std::isfinite(scale)&&scale>0&&scale<=64;
+        if(valid)setTextureSize({std::max(1,int(std::floor(512/scale))),std::max(1,int(std::floor(96/scale)))});
+        setVisible(requested&&valid);
+    }
+protected:
+    void itemChange(ItemChange change,const ItemChangeData& data) override {
+        QQuickPaintedItem::itemChange(change,data);
+        if(change==ItemSceneChange||change==ItemDevicePixelRatioHasChanged)scaleTexture();
+    }
+public:
+    PresentationInformation(ImageCanvas* value,QQuickItem* parent):QQuickPaintedItem(parent),canvas(value){setSize({320,48});scaleTexture();setZ(20);connect(canvas,&ImageCanvas::viewChanged,this,[this]{update();});connect(canvas,&ImageCanvas::imageChanged,this,[this]{update();});}
+    void setRequestedVisible(bool value){requested=value;scaleTexture();}
+    void paint(QPainter* painter) override {
+        painter->fillRect(boundingRect(),QColor(0,0,0,190));painter->setPen(Qt::white);
+        const auto image=canvas->image();painter->drawText(boundingRect().adjusted(8,4,-8,-4),Qt::AlignVCenter,
+            QString("%1 × %2  ·  %3%  ·  %4°").arg(image.width()).arg(image.height()).arg(canvas->zoom()*100,0,'f',0).arg(canvas->rotation()));
+    }
+};
+class PresentationGuides final:public QQuickItem {
+public:
+    explicit PresentationGuides(QQuickItem* parent):QQuickItem(parent){setFlag(ItemHasContents);setZ(19);}
+    QSGNode* updatePaintNode(QSGNode* old,UpdatePaintNodeData*) override {
+        delete old;auto* node=new QSGGeometryNode;auto* geometry=new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(),8);
+        geometry->setDrawingMode(QSGGeometry::DrawLines);auto* points=geometry->vertexDataAsPoint2D();
+        const float w=float(width()),h=float(height());
+        points[0].set(w/3,0);points[1].set(w/3,h);points[2].set(2*w/3,0);points[3].set(2*w/3,h);
+        points[4].set(0,h/3);points[5].set(w,h/3);points[6].set(0,2*h/3);points[7].set(w,2*h/3);
+        node->setGeometry(geometry);node->setFlag(QSGNode::OwnsGeometry);auto* material=new QSGFlatColorMaterial;material->setColor(QColor(255,255,255,150));node->setMaterial(material);node->setFlag(QSGNode::OwnsMaterial);return node;
+    }
+};
 void copyViewport(ImageCanvas* from,ImageCanvas* to) {
     if (from->image().isNull() || to->image().isNull()) return;
     to->setViewState(from->viewState());
@@ -30,10 +71,16 @@ PresentationWindow::PresentationWindow(QWindow* parent)
     m_canvasA->fit(m_fitMode);
 
     m_canvasB = new ImageCanvas(contentItem());
+    m_canvasB->shareTextureAdmissionWith(m_canvasA);
     m_canvasB->setTextureBudget(0);
     m_canvasB->setBackground(QColor(0, 0, 0));
     m_canvasB->fit(m_fitMode);
     m_canvasB->setVisible(false);
+    m_guides=new PresentationGuides(contentItem());m_guides->setVisible(false);
+    m_information=new PresentationInformation(m_canvasA,contentItem());m_information->setPosition({12,12});m_information->setVisible(false);
+    m_cursorTimer.setSingleShot(true);m_cursorTimer.setInterval(2000);
+    connect(&m_cursorTimer,&QTimer::timeout,this,[this]{if(m_customOptions.value("cursorPolicy")=="auto")setCursor(Qt::BlankCursor);});
+    connect(m_canvasA,&ImageCanvas::viewChanged,this,[this]{if(m_userViewport)emit primaryViewportChanged(m_canvasA->viewState());});
 
     updateLayout();
     m_colorRetry.setSingleShot(true); m_colorRetry.setInterval(50);
@@ -55,10 +102,34 @@ PresentationWindow::PresentationWindow(QWindow* parent)
 }
 
 PresentationWindow::~PresentationWindow() = default;
+void PresentationWindow::applyControllerViewport(const QVariantMap& state) {
+    m_canvasA->setViewState(state);if(m_linked)copyViewport(m_canvasA,m_canvasB);
+}
+
+void PresentationWindow::setWindowedGeometry(const QRect& geometry) {setGeometry(geometry);updateLayout();}
+
+void PresentationWindow::applyCustomization(const QVariantMap& options) {
+    const auto previous=m_customOptions;m_customOptions=options;
+    if(previous.value("fitMode")!=options.value("fitMode"))setFitMode(options.value("fitMode","shrink").toString());
+    const QColor background(options.value("backgroundColor","#000000").toString());
+    m_canvasA->setBackground(background);m_canvasB->setBackground(background);setColor(background);
+    const bool checker=options.value("background")=="checker";
+    m_canvasA->setCheckerboard(checker);m_canvasB->setCheckerboard(checker);
+    m_guides->setVisible(options.value("guides").toBool());static_cast<PresentationInformation*>(m_information)->setRequestedVisible(options.value("imageInfo").toBool());
+    setComparisonMode(m_comparisonMode);
+    const auto cursor=options.value("cursorPolicy").toString();m_cursorTimer.stop();
+    setCursor(cursor=="hidden"?Qt::BlankCursor:Qt::ArrowCursor);if(cursor=="auto")m_cursorTimer.start();
+    if(previous.value("windowMode")!=options.value("windowMode"))setFlags(options.value("windowMode")=="windowed"?Qt::WindowFlags(Qt::Window):Qt::WindowFlags(Qt::Window|Qt::FramelessWindowHint));
+    if(options.value("windowMode")=="windowed"&&previous.value("windowMode")!="windowed")showNormal();
+    else if(options.value("windowMode")=="fullscreen"&&visibility()!=QWindow::FullScreen)showFullScreen();
+    updateLayout();
+}
 
 void PresentationWindow::setComparisonMode(bool comparison) {
-    m_canvasA->setTextureBudget(comparison?kPresentationTextureBudget/2:kPresentationTextureBudget);
-    m_canvasB->setTextureBudget(comparison?kPresentationTextureBudget/2:0);
+    const auto budget=kPresentationTextureBudget-(m_customOptions.value("imageInfo").toBool()?informationReservation:0);
+    m_canvasA->setAggregateTextureBudget(budget);m_canvasB->setAggregateTextureBudget(budget);
+    m_canvasA->setTextureBudget(comparison?budget/2:budget);
+    m_canvasB->setTextureBudget(comparison?budget/2:0);
     if (m_comparisonMode == comparison) return;
     m_comparisonMode = comparison;
     if (!comparison) m_activeSecondary=false;
@@ -138,10 +209,12 @@ void PresentationWindow::panOutput(const QPointF& delta,bool secondary) {
     m_fitMode=target->fitMode();
 }
 void PresentationWindow::viewportCommand(const QString& command) {
+    QScopedValueRollback<bool> gesture(m_userViewport,true);
     if (command=="reference") { if(m_comparisonMode) m_activeSecondary=!m_activeSecondary; return; }
     auto* active=m_activeSecondary?m_canvasB:m_canvasA;
     auto* other=m_activeSecondary?m_canvasA:m_canvasB;
     if (command=="actual") { if(m_linked) setFitMode("actual"); else active->actualSize(); return; }
+    if (command=="rotate") { active->rotateClockwise();if(m_linked&&m_comparisonMode)copyViewport(active,other);return; }
     if (command=="linked") { m_linked=!m_linked; if(m_linked && m_comparisonMode) copyViewport(active,other); return; }
     if (command=="fit") {
         const QStringList modes{"shrink","fit","fill"}; const auto mode=modes[(modes.indexOf(active->fitMode())+1)%modes.size()];
@@ -176,6 +249,7 @@ void PresentationWindow::requestColor() {
 }
 
 void PresentationWindow::updateLayout() {
+    if(m_guides)m_guides->setSize(QSizeF(width(),height()));
     const qreal w = width();
     const qreal h = height();
     if (w <= 0 || h <= 0) return;
@@ -226,8 +300,8 @@ void PresentationWindow::keyPressEvent(QKeyEvent* event) {
         emit escapePressed(); return;
     }
     const QKeyCombination combo(event->modifiers(),Qt::Key(event->key()));
-    QStringList ids{"presentation-toggle","presentation-fit"};
-    for (const auto* suffix : {"actual","zoom-in","zoom-out","pan-left","pan-right","pan-up","pan-down","linked","reference"}) ids<<QStringLiteral("presentation-view-")+QLatin1String(suffix);
+    QStringList ids{"presentation-toggle","presentation-fit","monitor-recover","monitor-disable","monitor-settings"};
+    for (const auto* suffix : {"rotate","actual","zoom-in","zoom-out","pan-left","pan-right","pan-up","pan-down","linked","reference"}) ids<<QStringLiteral("presentation-view-")+QLatin1String(suffix);
     if (!m_chordPrefix.isEmpty()) ids={m_chordCommand};
     for (const auto& id:ids) {
         const auto bound=bindingFor(id);
@@ -238,6 +312,7 @@ void PresentationWindow::keyPressEvent(QKeyEvent* event) {
         if (m_chordPrefix.size()==bound.count()) {
             m_chordPrefix.clear();
             if (id=="presentation-toggle") emit escapePressed();
+            else if(id.startsWith("monitor-"))emit customizationCommand(id);
             else viewportCommand(id=="presentation-fit"?QStringLiteral("fit"):id.mid(18));
         }
         return;
@@ -258,6 +333,7 @@ void PresentationWindow::hideEvent(QHideEvent* event) {
     QQuickWindow::hideEvent(event);
 }
 void PresentationWindow::wheelEvent(QWheelEvent* event) {
+    QScopedValueRollback<bool> gesture(m_userViewport,true);
     if (event->modifiers() & Qt::ControlModifier) {
         const qreal steps=!event->pixelDelta().isNull()?event->pixelDelta().y()/120.0:event->angleDelta().y()/120.0;
         zoomOutput(std::pow(1.2,qBound(qreal(-20),steps,qreal(20))),event->position());
@@ -274,6 +350,9 @@ void PresentationWindow::mousePressEvent(QMouseEvent* event) {
     m_lastPointer=event->position(); event->accept();
 }
 void PresentationWindow::mouseMoveEvent(QMouseEvent* event) {
+    QScopedValueRollback<bool> gesture(m_userViewport,true);
+    const auto cursor=m_customOptions.value("cursorPolicy").toString();
+    if(cursor=="auto"){setCursor(Qt::ArrowCursor);m_cursorTimer.start();}
     if (!m_dragging) { QQuickWindow::mouseMoveEvent(event); return; }
     panOutput(event->position()-m_lastPointer,m_dragSecondary); m_lastPointer=event->position(); event->accept();
 }

@@ -1,0 +1,19 @@
+Incremental focused build (configured build directory)
+[1/21] Automatic MOC and UIC for target glancelot_platform
+[2/20] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[3/20] Linking CXX static library glancelot_platform.lib
+[4/20] Linking CXX executable glancelot-decoder.exe
+[5/20] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj
+[6/20] Linking CXX static library glancelot_recovery_common.lib
+[7/20] Automatic MOC and UIC for target monitor_customization_ui_tests
+[8/19] Automatic MOC and UIC for target monitor_customization_tests
+[9/18] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\pane_layout.cpp.obj
+[10/18] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\tests\monitor_customization_ui_tests.cpp.obj
+[11/18] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[12/18] Building CXX object CMakeFiles\monitor_customization_tests.dir\tests\monitor_customization_tests.cpp.obj
+[13/18] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\pane_layout.cpp.obj
+[14/18] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\monitor_customization.cpp.obj
+[15/18] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\settings_file.cpp.obj
+[16/18] Linking CXX executable monitor_customization_tests.exe
+[17/18] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\settings_file.cpp.obj
+[18/18] Linking CXX executable monitor_customization_ui_tests.exe

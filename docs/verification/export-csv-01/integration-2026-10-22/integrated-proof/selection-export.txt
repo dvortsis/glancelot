@@ -1,0 +1,35 @@
+UpdateCTestConfiguration  from :C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01/DartConfiguration.tcl
+Parse Config file:C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01/DartConfiguration.tcl
+Test project C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start  1: selection_export
+
+1: Test command: C:\src\Github\Glancelot\.worktrees\codex-integrate-export-csv-01\build-codex-integrate-export-csv-01\selection_export_tests.exe
+1: Working Directory: C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01
+1: Test timeout computed to be: 60
+1: Running selection_export tests...
+1: All selection_export tests PASSED!
+1/2 Test  #1: selection_export .................   Passed    0.35 sec
+test 29
+    Start 29: cache
+
+29: Test command: C:\src\Github\Glancelot\.worktrees\codex-integrate-export-csv-01\build-codex-integrate-export-csv-01\cache_tests.exe "-o" "C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01/cache-results.txt,txt" "-o" "-,txt"
+29: Working Directory: C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01
+29: Environment variables: 
+29:  QT_QPA_PLATFORM=offscreen
+29: Test timeout computed to be: 180
+2/2 Test #29: cache ............................   Passed    5.89 sec
+
+The following tests passed:
+	selection_export
+	cache
+
+100% tests passed out of 2
+
+Total Test time (real) =   6.24 sec

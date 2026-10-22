@@ -1,0 +1,8 @@
+{
+  "integrated": "008d026951428988e545c63c25ded0b6106e3882",
+  "gated": "3f570dc3f9319267ff21054e39e68fcd21abcdb9",
+  "allNonDocumentationDiffExit": 0,
+  "mergeTree": "6fe8acf37bb27e1f36ac62311679210f9f6798b9",
+  "acceptedBranchTree": "6fe8acf37bb27e1f36ac62311679210f9f6798b9",
+  "entireMergeTreeEqualsAcceptedBranch": true
+}

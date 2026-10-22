@@ -1,0 +1,18 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+PASS   : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication()
+PASS   : MonitorCustomizationUiTests::nativeHostCloseAndEscapePreserveController()
+PASS   : MonitorCustomizationUiTests::detachedCanvasPopupAndFrozenCloseHaveVisibleFeedback()
+PASS   : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration()
+FAIL!  : MonitorCustomizationUiTests::nativeUiEvidence() 'h.window->isExposed()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(95) : failure location
+PASS   : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting()
+PASS   : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration()
+PASS   : MonitorCustomizationUiTests::busyDragFailureRestoresTheSavedHostGeometry()
+PASS   : MonitorCustomizationUiTests::parameterizedDetachConfirmsTheDestinationBeforeMoving()
+PASS   : MonitorCustomizationUiTests::actualImportAndResetReloadCoordinatorPreferences()
+PASS   : MonitorCustomizationUiTests::registryRouteAndLockedPredicateRemainShared()
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 12 passed, 1 failed, 0 skipped, 0 blacklisted, 44817ms
+********* Finished testing of MonitorCustomizationUiTests *********

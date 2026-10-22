@@ -1,0 +1,27 @@
+Incremental focused build (configured build directory)
+[1/28] Automatic MOC and UIC for target monitor_customization_tests
+[2/27] Building CXX object CMakeFiles\monitor_customization_tests.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_monitor_customization_theme.cpp.obj
+[3/27] Automatic MOC and UIC for target monitor_customization_ui_tests
+[4/26] Building CXX object CMakeFiles\monitor_customization_tests.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_monitor_customization_shaders.cpp.obj
+[5/26] Building CXX object CMakeFiles\monitor_customization_tests.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_monitor_customization_brand.cpp.obj
+[6/26] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\render\image_canvas.cpp.obj
+[7/26] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\window_slot.cpp.obj
+[8/26] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\monitor_customization.cpp.obj
+[9/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\tests\monitor_customization_ui_tests.cpp.obj
+[10/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\theme_manager.cpp.obj
+[11/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[12/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[13/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[14/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[15/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\pane_layout.cpp.obj
+[16/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[17/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[18/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\settings_file.cpp.obj
+[19/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_monitor_customization_ui_theme.cpp.obj
+[20/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_monitor_customization_ui_shaders.cpp.obj
+[21/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_monitor_customization_ui_brand.cpp.obj
+[22/26] Linking CXX executable monitor_customization_tests.exe
+[23/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\render\image_canvas.cpp.obj
+[24/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\render\presentation_window.cpp.obj
+[25/26] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\window_slot.cpp.obj
+[26/26] Linking CXX executable monitor_customization_ui_tests.exe
