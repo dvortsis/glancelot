@@ -248,12 +248,23 @@ tasks:
     owner: lead
     owner_lane: codex
     reviewer_lane: claude
-    state: implementing
+    state: integration
     branch: codex/grid-resize-test-01
     worktree: .worktrees/codex-grid-resize-test-01
     build: build-codex-grid-resize-test-01
     outcome: Wait for asynchronous GridView resize cleanup before the existing stable delegate assertion
     acceptance: Preserve delegate limit and geometry assertions; bounded wait only; source/test independent review; actual repeated targeted output and complete integration gates
+  - id: CACHE-BASELINE-TEST-01
+    requirements: [SYS-05, SYS-02]
+    owner: lead
+    owner_lane: codex
+    reviewer_lane: claude
+    state: implementing
+    branch: codex/cache-baseline-test-01
+    worktree: .worktrees/codex-cache-baseline-test-01
+    build: build-codex-cache-baseline-test-01
+    outcome: Exercise verified cache reuse independently from the separately tested late-baseline fallback
+    acceptance: Existing private test-only baseline hook; production100ms unchanged; no assertion removal; actual repeated native logs; independent review and full integration gates
   - id: CANVAS-UI
     requirements: [PERF-01, UX-01, VIEW-01, VIEW-03, VIEW-04, IN-04]
     owner: canvas
