@@ -18,7 +18,61 @@ concurrency:
   group: windows-gate-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  # Advisory fast check on a GitHub-hosted Windows VM (free for public repositories). No GPU (WARP),
+  # shared 4-vCPU timing and possibly no full desktop, so it never replaces the authoritative gate below.
+  hosted:
+    name: hosted-windows (advisory)
+    runs-on: windows-2022
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Windows native fixture hold
+        run: |
+          git merge-base --is-ancestor 334065e HEAD
+          if ($LASTEXITCODE) { throw 'The gated commit must contain merge 334065e' }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cache Qt 6.8.3 msvc2022_64
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\Qt
+          key: qt-6.8.3-win64_msvc2022_64-qtbase-qtdeclarative-qtshadertools-aqt3.3.0
+      - name: Install Qt (same archives as the Dockerfile)
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --disable-pip-version-check aqtinstall==3.3.0
+          python -m aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 -O C:\Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+          if ($LASTEXITCODE) { throw 'Qt install failed' }
+      - name: Build and test
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $logs = Join-Path $env:RUNNER_TEMP 'gate-logs'; New-Item -ItemType Directory -Force $logs | Out-Null
+          "GATE_LOGS=$logs" >> $env:GITHUB_ENV
+          try { & ./scripts/build.ps1 -BuildDir build-hosted -QtRoot C:\Qt\6.8.3\msvc2022_64 -Test *>&1 | Tee-Object -FilePath (Join-Path $logs 'hosted-windows.log'); $ok = $true }
+          catch { "$_" | Tee-Object -Append -FilePath (Join-Path $logs 'hosted-windows.log'); $ok = $false }
+          Copy-Item -ErrorAction SilentlyContinue build-hosted/Testing/Temporary/LastTest.log (Join-Path $logs 'hosted-LastTest.log')
+          $summary = @("## Hosted Windows (advisory) for ``${{ github.ref_name }}`` at ``${{ github.sha }}``", '', "Result: $(if ($ok) {'PASS'} else {'FAIL'})", '', '```')
+          $summary += Select-String -Path (Join-Path $logs 'hosted-windows.log') -Pattern 'tests passed|tests failed|\*\*\*Failed|\*\*\*Timeout|Test +#\d+: .*(Failed|Timeout)' | ForEach-Object { $_.Line.Trim() }
+          $summary += '```'
+          $summary -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          if (-not $ok) { throw 'Hosted Windows build/test failed' }
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-windows-logs-${{ github.run_id }}
+          path: ${{ env.GATE_LOGS }}
+          if-no-files-found: ignore
+
   gate:
+    name: lead-windows-gate (authoritative)
     runs-on: [self-hosted, windows, glancelot-gate]
     timeout-minutes: 240
     env:

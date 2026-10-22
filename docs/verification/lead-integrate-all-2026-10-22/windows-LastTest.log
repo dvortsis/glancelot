@@ -1,0 +1,680 @@
+Start testing: Oct 22 16:28 Mountain Daylight Time
+----------------------------------------------------------
+1/43 Testing: selection_export
+1/43 Test: selection_export
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/selection_export_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"selection_export" start time: Oct 22 16:28 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Running selection_export tests...
+All selection_export tests PASSED!
+<end of output>
+Test time =   0.41 sec
+----------------------------------------------------------
+Test Passed.
+"selection_export" end time: Oct 22 16:28 Mountain Daylight Time
+"selection_export" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/43 Testing: perf_trace
+2/43 Test: perf_trace
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/perf_trace_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"perf_trace" start time: Oct 22 16:28 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+PASS ring_bound multithread_drops drain_order flags percentiles redaction monotonic_clock
+disabled_ns_per_span=1.977 enabled_ns_per_span=71.717 disabled_bound_ns=1000
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"perf_trace" end time: Oct 22 16:28 Mountain Daylight Time
+"perf_trace" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/43 Testing: navigation
+3/43 Test: navigation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/navigation_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"navigation" start time: Oct 22 16:28 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+in-progress cancellation observed=1
+link creation: directory=0 cycle=0 file=0
+navigation: all generated fixture tests passed
+<end of output>
+Test time =   2.37 sec
+----------------------------------------------------------
+Test Passed.
+"navigation" end time: Oct 22 16:28 Mountain Daylight Time
+"navigation" time elapsed: 00:00:02
+----------------------------------------------------------
+
+4/43 Testing: directory_listing
+4/43 Test: directory_listing
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/directory_listing_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"directory_listing" start time: Oct 22 16:28 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+ordering and types ok
+empty/missing ok
+hidden ok
+windows junction ok
+UNVERIFIED: directory symlink not creatable here (A required privilege is not held by the client.)
+UNVERIFIED: file symlink not creatable here (A required privilege is not held by the client.)
+permission denied ok
+cancellation ok (5/5 racing runs cancelled); 20000 entries listed in 126 ms
+truncation ok
+sort keys ok
+delete burst ok (161 listings, 0 inaccessible)
+churn ok (3139 listings, 0 inaccessible)
+directory listing tests passed
+<end of output>
+Test time =  15.58 sec
+----------------------------------------------------------
+Test Passed.
+"directory_listing" end time: Oct 22 16:29 Mountain Daylight Time
+"directory_listing" time elapsed: 00:00:15
+----------------------------------------------------------
+
+5/43 Testing: file_operations
+5/43 Test: file_operations
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/file_operations_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"file_operations" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+dedupe ok
+rejections ok
+UNVERIFIED: read-only volume rejection (set GLANCELOT_READONLY_FILE to a file on a read-only mount)
+UNVERIFIED: file symlink (needs Developer Mode or privilege on Windows): A required privilege is not held by the client.
+links ok
+bounded count ok
+revalidation ok
+cancellation ok
+backend failures ok
+snapshot ok
+file_operations: all checks passed
+<end of output>
+Test time =   0.16 sec
+----------------------------------------------------------
+Test Passed.
+"file_operations" end time: Oct 22 16:29 Mountain Daylight Time
+"file_operations" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/43 Testing: startup_window_geometry
+6/43 Test: startup_window_geometry
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/startup_window_geometry_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"startup_window_geometry" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.06 sec
+----------------------------------------------------------
+Test Passed.
+"startup_window_geometry" end time: Oct 22 16:29 Mountain Daylight Time
+"startup_window_geometry" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/43 Testing: viewer_acceptance
+7/43 Test: viewer_acceptance
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/acceptance_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/acceptance-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"viewer_acceptance" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  10.35 sec
+----------------------------------------------------------
+Test Passed.
+"viewer_acceptance" end time: Oct 22 16:29 Mountain Daylight Time
+"viewer_acceptance" time elapsed: 00:00:10
+----------------------------------------------------------
+
+8/43 Testing: thumbnails
+8/43 Test: thumbnails
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/thumbnail_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"thumbnails" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   5.42 sec
+----------------------------------------------------------
+Test Passed.
+"thumbnails" end time: Oct 22 16:29 Mountain Daylight Time
+"thumbnails" time elapsed: 00:00:05
+----------------------------------------------------------
+
+9/43 Testing: folder_tree
+9/43 Test: folder_tree
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/folder_tree_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"folder_tree" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   9.25 sec
+----------------------------------------------------------
+Test Passed.
+"folder_tree" end time: Oct 22 16:29 Mountain Daylight Time
+"folder_tree" time elapsed: 00:00:09
+----------------------------------------------------------
+
+10/43 Testing: pane_layout
+10/43 Test: pane_layout
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/pane_layout_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"pane_layout" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.31 sec
+----------------------------------------------------------
+Test Passed.
+"pane_layout" end time: Oct 22 16:29 Mountain Daylight Time
+"pane_layout" time elapsed: 00:00:01
+----------------------------------------------------------
+
+11/43 Testing: window_slots
+11/43 Test: window_slots
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/window_slot_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"window_slots" start time: Oct 22 16:29 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  28.25 sec
+----------------------------------------------------------
+Test Passed.
+"window_slots" end time: Oct 22 16:30 Mountain Daylight Time
+"window_slots" time elapsed: 00:00:28
+----------------------------------------------------------
+
+12/43 Testing: folder_grid
+12/43 Test: folder_grid
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/grid_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/folder_grid-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"folder_grid" start time: Oct 22 16:30 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 228.39 sec
+----------------------------------------------------------
+Test Passed.
+"folder_grid" end time: Oct 22 16:33 Mountain Daylight Time
+"folder_grid" time elapsed: 00:03:48
+----------------------------------------------------------
+
+13/43 Testing: input_ui
+13/43 Test: input_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/input_ui_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"input_ui" start time: Oct 22 16:33 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  79.03 sec
+----------------------------------------------------------
+Test Passed.
+"input_ui" end time: Oct 22 16:35 Mountain Daylight Time
+"input_ui" time elapsed: 00:01:19
+----------------------------------------------------------
+
+14/43 Testing: pathbar_ui
+14/43 Test: pathbar_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/pathbar_ui_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"pathbar_ui" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   4.81 sec
+----------------------------------------------------------
+Test Passed.
+"pathbar_ui" end time: Oct 22 16:35 Mountain Daylight Time
+"pathbar_ui" time elapsed: 00:00:04
+----------------------------------------------------------
+
+15/43 Testing: file_operation_service
+15/43 Test: file_operation_service
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/file_operation_service_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"file_operation_service" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.21 sec
+----------------------------------------------------------
+Test Passed.
+"file_operation_service" end time: Oct 22 16:35 Mountain Daylight Time
+"file_operation_service" time elapsed: 00:00:01
+----------------------------------------------------------
+
+16/43 Testing: directory_model
+16/43 Test: directory_model
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/directory_model_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"directory_model" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  28.48 sec
+----------------------------------------------------------
+Test Passed.
+"directory_model" end time: Oct 22 16:35 Mountain Daylight Time
+"directory_model" time elapsed: 00:00:28
+----------------------------------------------------------
+
+17/43 Testing: viewport
+17/43 Test: viewport
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/canvas_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"viewport" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.10 sec
+----------------------------------------------------------
+Test Passed.
+"viewport" end time: Oct 22 16:35 Mountain Daylight Time
+"viewport" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/43 Testing: themes
+18/43 Test: themes
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/theme_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"themes" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.58 sec
+----------------------------------------------------------
+Test Passed.
+"themes" end time: Oct 22 16:35 Mountain Daylight Time
+"themes" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/43 Testing: platform_integration
+19/43 Test: platform_integration
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/platform_integration_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/platform-integration-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"platform_integration" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.35 sec
+----------------------------------------------------------
+Test Passed.
+"platform_integration" end time: Oct 22 16:35 Mountain Daylight Time
+"platform_integration" time elapsed: 00:00:01
+----------------------------------------------------------
+
+20/43 Testing: grid_search
+20/43 Test: grid_search
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/grid_search_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"grid_search" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"grid_search" end time: Oct 22 16:35 Mountain Daylight Time
+"grid_search" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/43 Testing: grid_density
+21/43 Test: grid_density
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/grid_density_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"grid_density" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Passed.
+"grid_density" end time: Oct 22 16:35 Mountain Daylight Time
+"grid_density" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/43 Testing: ui_settings
+22/43 Test: ui_settings
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/ui_settings_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"ui_settings" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.44 sec
+----------------------------------------------------------
+Test Passed.
+"ui_settings" end time: Oct 22 16:35 Mountain Daylight Time
+"ui_settings" time elapsed: 00:00:01
+----------------------------------------------------------
+
+23/43 Testing: fs_watch
+23/43 Test: fs_watch
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/fs_watch_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/fs-watch-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"fs_watch" start time: Oct 22 16:35 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  87.47 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch" end time: Oct 22 16:37 Mountain Daylight Time
+"fs_watch" time elapsed: 00:01:27
+----------------------------------------------------------
+
+24/43 Testing: fs_watch_budget
+24/43 Test: fs_watch_budget
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/fs_watch_budget_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/fs-watch-budget-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"fs_watch_budget" start time: Oct 22 16:37 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  88.69 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_budget" end time: Oct 22 16:38 Mountain Daylight Time
+"fs_watch_budget" time elapsed: 00:01:28
+----------------------------------------------------------
+
+25/43 Testing: fs_watch_ui
+25/43 Test: fs_watch_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/fs_watch_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/fs-watch-ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"fs_watch_ui" start time: Oct 22 16:38 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.96 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_ui" end time: Oct 22 16:38 Mountain Daylight Time
+"fs_watch_ui" time elapsed: 00:00:03
+----------------------------------------------------------
+
+26/43 Testing: favorites
+26/43 Test: favorites
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/favorites_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"favorites" start time: Oct 22 16:38 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.52 sec
+----------------------------------------------------------
+Test Passed.
+"favorites" end time: Oct 22 16:38 Mountain Daylight Time
+"favorites" time elapsed: 00:00:00
+----------------------------------------------------------
+
+27/43 Testing: folder_history
+27/43 Test: folder_history
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/folder_history_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"folder_history" start time: Oct 22 16:38 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.10 sec
+----------------------------------------------------------
+Test Passed.
+"folder_history" end time: Oct 22 16:38 Mountain Daylight Time
+"folder_history" time elapsed: 00:00:00
+----------------------------------------------------------
+
+28/43 Testing: shortcuts_help
+28/43 Test: shortcuts_help
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/shortcuts_help_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"shortcuts_help" start time: Oct 22 16:38 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.91 sec
+----------------------------------------------------------
+Test Passed.
+"shortcuts_help" end time: Oct 22 16:38 Mountain Daylight Time
+"shortcuts_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+29/43 Testing: filter
+29/43 Test: filter
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/filter_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"filter" start time: Oct 22 16:38 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.42 sec
+----------------------------------------------------------
+Test Passed.
+"filter" end time: Oct 22 16:39 Mountain Daylight Time
+"filter" time elapsed: 00:00:03
+----------------------------------------------------------
+
+30/43 Testing: cache
+30/43 Test: cache
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/cache_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/cache-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"cache" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   6.39 sec
+----------------------------------------------------------
+Test Passed.
+"cache" end time: Oct 22 16:39 Mountain Daylight Time
+"cache" time elapsed: 00:00:06
+----------------------------------------------------------
+
+31/43 Testing: io_scheduler
+31/43 Test: io_scheduler
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/io_scheduler_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"io_scheduler" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"io_scheduler" end time: Oct 22 16:39 Mountain Daylight Time
+"io_scheduler" time elapsed: 00:00:00
+----------------------------------------------------------
+
+32/43 Testing: metadata
+32/43 Test: metadata
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/metadata_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"metadata" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.19 sec
+----------------------------------------------------------
+Test Passed.
+"metadata" end time: Oct 22 16:39 Mountain Daylight Time
+"metadata" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/43 Testing: animation
+33/43 Test: animation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/animation_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"animation" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"animation" end time: Oct 22 16:39 Mountain Daylight Time
+"animation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/43 Testing: mutation
+34/43 Test: mutation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/mutation_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"mutation" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"mutation" end time: Oct 22 16:39 Mountain Daylight Time
+"mutation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/43 Testing: copy_move
+35/43 Test: copy_move
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/copy_move_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"copy_move" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"copy_move" end time: Oct 22 16:39 Mountain Daylight Time
+"copy_move" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/43 Testing: format
+36/43 Test: format
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/format_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"format" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.16 sec
+----------------------------------------------------------
+Test Passed.
+"format" end time: Oct 22 16:39 Mountain Daylight Time
+"format" time elapsed: 00:00:00
+----------------------------------------------------------
+
+37/43 Testing: monitor_output
+37/43 Test: monitor_output
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/monitor_output_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"monitor_output" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.50 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_output" end time: Oct 22 16:39 Mountain Daylight Time
+"monitor_output" time elapsed: 00:00:02
+----------------------------------------------------------
+
+38/43 Testing: recovery
+38/43 Test: recovery
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"recovery" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  14.58 sec
+----------------------------------------------------------
+Test Passed.
+"recovery" end time: Oct 22 16:39 Mountain Daylight Time
+"recovery" time elapsed: 00:00:14
+----------------------------------------------------------
+
+39/43 Testing: recovery_startup
+39/43 Test: recovery_startup
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery_startup_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery-startup-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"recovery_startup" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.58 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_startup" end time: Oct 22 16:39 Mountain Daylight Time
+"recovery_startup" time elapsed: 00:00:00
+----------------------------------------------------------
+
+40/43 Testing: recovery_controller
+40/43 Test: recovery_controller
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery_controller_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery-controller-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"recovery_controller" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  15.58 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_controller" end time: Oct 22 16:39 Mountain Daylight Time
+"recovery_controller" time elapsed: 00:00:15
+----------------------------------------------------------
+
+41/43 Testing: recovery_process
+41/43 Test: recovery_process
+Command: "C:/Python315/python.exe" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/scripts/verify-recovery.py" "--executable" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/glancelot.exe" "--work-dir" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/recovery-process"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"recovery_process" start time: Oct 22 16:39 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Recovery process verification passed (35 completed commands); evidence: C:\src\Github\Glancelot\.worktrees\lead-integrate-all\build-lead-integrate-all\recovery-process\run-l6exnmbl
+<end of output>
+Test time =  35.87 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_process" end time: Oct 22 16:40 Mountain Daylight Time
+"recovery_process" time elapsed: 00:00:35
+----------------------------------------------------------
+
+42/43 Testing: monitor_customization
+42/43 Test: monitor_customization
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/monitor_customization_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/monitor_customization-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"monitor_customization" start time: Oct 22 16:40 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   9.19 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization" end time: Oct 22 16:40 Mountain Daylight Time
+"monitor_customization" time elapsed: 00:00:09
+----------------------------------------------------------
+
+43/43 Testing: monitor_customization_ui
+43/43 Test: monitor_customization_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/monitor_customization_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all/monitor_customization_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+"monitor_customization_ui" start time: Oct 22 16:40 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  29.33 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization_ui" end time: Oct 22 16:40 Mountain Daylight Time
+"monitor_customization_ui" time elapsed: 00:00:29
+----------------------------------------------------------
+
+End testing: Oct 22 16:40 Mountain Daylight Time

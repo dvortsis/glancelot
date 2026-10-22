@@ -1,0 +1,163 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (14.5s)
+-- Generating done (1.6s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+[1/188] Automatic MOC and UIC for target glancelot_recovery_common
+[2/186] Automatic MOC and UIC for target glancelot_platform
+[3/184] Automatic MOC and UIC for target glancelot_test_argv_capture
+[4/182] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/180] Automatic MOC and UIC for target startup_window_geometry_tests
+[6/178] Automatic MOC and UIC for target glancelot-decoder
+[7/176] Automatic MOC and UIC for target glancelot
+[8/175] Automatic MOC and UIC for target theme_tests
+[9/173] Running AUTOMOC file extraction for target glancelot
+[10/173] Automatic MOC and UIC for target recovery_startup_tests
+[11/171] Running moc --collect-json for target glancelot
+[12/116] Automatic MOC and UIC for target grid_ui_tests
+[13/114] Automatic MOC and UIC for target fs_watch_ui_tests
+[14/112] Automatic MOC and UIC for target monitor_output_tests
+[15/110] Automatic MOC and UIC for target recovery_tests
+[16/108] Automatic MOC and UIC for target recovery_controller_tests
+[17/106] Automatic MOC and UIC for target monitor_customization_tests
+[18/104] Automatic MOC and UIC for target monitor_customization_ui_tests
+[19/102] Automatic MOC and UIC for target acceptance_tests
+[20/100] Automatic MOC and UIC for target thumbnail_tests
+[21/98] Automatic MOC and UIC for target folder_tree_tests
+[22/96] Automatic MOC and UIC for target window_slot_tests
+[23/94] Automatic MOC and UIC for target pane_layout_tests
+[24/92] Automatic MOC and UIC for target file_operation_service_tests
+[25/90] Automatic MOC and UIC for target directory_model_tests
+[26/88] Automatic MOC and UIC for target canvas_tests
+[27/86] Automatic MOC and UIC for target grid_search_tests
+[28/84] Automatic MOC and UIC for target platform_integration_tests
+[29/82] Automatic MOC and UIC for target grid_density_tests
+[30/80] Automatic MOC and UIC for target ui_settings_tests
+[31/78] Automatic MOC and UIC for target fs_watch_tests
+[32/76] Automatic MOC and UIC for target fs_watch_budget_tests
+[33/74] Automatic MOC and UIC for target input_ui_tests
+[34/73] Automatic MOC and UIC for target favorites_tests
+[35/71] Automatic MOC and UIC for target pathbar_ui_tests
+[36/70] Automatic MOC and UIC for target folder_history_tests
+[37/68] Automatic MOC and UIC for target shortcuts_help_tests
+[38/66] Automatic MOC and UIC for target filter_tests
+[39/64] Automatic MOC and UIC for target io_scheduler_tests
+[40/62] Automatic MOC and UIC for target metadata_tests
+[41/60] Automatic MOC and UIC for target animation_tests
+[42/58] Automatic MOC and UIC for target mutation_tests
+[43/56] Automatic MOC and UIC for target copy_move_tests
+[44/54] Automatic MOC and UIC for target format_tests
+[45/52] Automatic MOC and UIC for target cache_tests
+[46/51] Building CXX object CMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj
+[47/51] Linking CXX executable cache_tests.exe
+[48/51] Building CXX object CMakeFiles\pathbar_ui_tests.dir\tests\pathbar_ui_tests.cpp.obj
+[49/51] Linking CXX executable pathbar_ui_tests.exe
+[50/51] Building CXX object CMakeFiles\input_ui_tests.dir\tests\input_ui_tests.cpp.obj
+[51/51] Linking CXX executable input_ui_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/lead-integrate-all/build-lead-integrate-all
+      Start  1: selection_export
+ 1/43 Test  #1: selection_export .................   Passed    0.41 sec
+      Start  2: perf_trace
+ 2/43 Test  #2: perf_trace .......................   Passed    0.29 sec
+      Start  3: navigation
+ 3/43 Test  #3: navigation .......................   Passed    2.37 sec
+      Start  4: directory_listing
+ 4/43 Test  #4: directory_listing ................   Passed   15.58 sec
+      Start  5: file_operations
+ 5/43 Test  #5: file_operations ..................   Passed    0.16 sec
+      Start  6: startup_window_geometry
+ 6/43 Test  #6: startup_window_geometry ..........   Passed    0.06 sec
+      Start  7: viewer_acceptance
+ 7/43 Test  #7: viewer_acceptance ................   Passed   10.35 sec
+      Start  8: thumbnails
+ 8/43 Test  #8: thumbnails .......................   Passed    5.42 sec
+      Start  9: folder_tree
+ 9/43 Test  #9: folder_tree ......................   Passed    9.25 sec
+      Start 10: pane_layout
+10/43 Test #10: pane_layout ......................   Passed    1.31 sec
+      Start 11: window_slots
+11/43 Test #11: window_slots .....................   Passed   28.25 sec
+      Start 12: folder_grid
+12/43 Test #12: folder_grid ......................   Passed  228.39 sec
+      Start 13: input_ui
+13/43 Test #13: input_ui .........................   Passed   79.03 sec
+      Start 14: pathbar_ui
+14/43 Test #14: pathbar_ui .......................   Passed    4.81 sec
+      Start 15: file_operation_service
+15/43 Test #15: file_operation_service ...........   Passed    1.21 sec
+      Start 16: directory_model
+16/43 Test #16: directory_model ..................   Passed   28.48 sec
+      Start 17: viewport
+17/43 Test #17: viewport .........................   Passed    0.10 sec
+      Start 18: themes
+18/43 Test #18: themes ...........................   Passed    0.58 sec
+      Start 19: platform_integration
+19/43 Test #19: platform_integration .............   Passed    1.35 sec
+      Start 20: grid_search
+20/43 Test #20: grid_search ......................   Passed    0.35 sec
+      Start 21: grid_density
+21/43 Test #21: grid_density .....................   Passed    0.24 sec
+      Start 22: ui_settings
+22/43 Test #22: ui_settings ......................   Passed    1.44 sec
+      Start 23: fs_watch
+23/43 Test #23: fs_watch .........................   Passed   87.47 sec
+      Start 24: fs_watch_budget
+24/43 Test #24: fs_watch_budget ..................   Passed   88.69 sec
+      Start 25: fs_watch_ui
+25/43 Test #25: fs_watch_ui ......................   Passed    3.96 sec
+      Start 26: favorites
+26/43 Test #26: favorites ........................   Passed    0.52 sec
+      Start 27: folder_history
+27/43 Test #27: folder_history ...................   Passed    0.10 sec
+      Start 28: shortcuts_help
+28/43 Test #28: shortcuts_help ...................   Passed    0.91 sec
+      Start 29: filter
+29/43 Test #29: filter ...........................   Passed    3.42 sec
+      Start 30: cache
+30/43 Test #30: cache ............................   Passed    6.39 sec
+      Start 31: io_scheduler
+31/43 Test #31: io_scheduler .....................   Passed    0.31 sec
+      Start 32: metadata
+32/43 Test #32: metadata .........................   Passed    0.19 sec
+      Start 33: animation
+33/43 Test #33: animation ........................   Passed    0.47 sec
+      Start 34: mutation
+34/43 Test #34: mutation .........................   Passed    0.23 sec
+      Start 35: copy_move
+35/43 Test #35: copy_move ........................   Passed    0.31 sec
+      Start 36: format
+36/43 Test #36: format ...........................   Passed    0.16 sec
+      Start 37: monitor_output
+37/43 Test #37: monitor_output ...................   Passed    2.50 sec
+      Start 38: recovery
+38/43 Test #38: recovery .........................   Passed   14.58 sec
+      Start 39: recovery_startup
+39/43 Test #39: recovery_startup .................   Passed    0.58 sec
+      Start 40: recovery_controller
+40/43 Test #40: recovery_controller ..............   Passed   15.58 sec
+      Start 41: recovery_process
+41/43 Test #41: recovery_process .................   Passed   35.87 sec
+      Start 42: monitor_customization
+42/43 Test #42: monitor_customization ............   Passed    9.19 sec
+      Start 43: monitor_customization_ui
+43/43 Test #43: monitor_customization_ui .........   Passed   29.33 sec
+
+100% tests passed out of 43
+
+Total Test time (real) = 722.35 sec

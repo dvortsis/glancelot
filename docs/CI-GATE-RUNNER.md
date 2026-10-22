@@ -10,6 +10,16 @@ Cloud sessions cannot run `scripts/build.ps1 -Test` themselves. To get a real Wi
 
 The workflow refuses any commit that does not contain merge `334065e` (the Windows native fixture hold).
 
+The same push also starts the **hosted-windows (advisory)** job on a GitHub-hosted `windows-2022` VM. That VM is free for public repositories and runs even when this machine is off. The job installs Qt 6.8.3 with the Dockerfile's archives (cached between runs), builds with MSVC and runs the full CTest suite.
+
+The hosted job only catches MSVC compile errors and most test failures early. It never qualifies a packet:
+
+- it has no GPU (it renders with the WARP software rasterizer);
+- its timing is noisy on 4 shared vCPUs, so the budget tests flake there;
+- its native desktop session is not guaranteed.
+
+A failure seen only on the hosted job is triaged against the authoritative **lead-windows-gate** job before anyone acts on it.
+
 ## One-time setup (owner, on this machine)
 
 The repository is public, so these steps are done by hand.
