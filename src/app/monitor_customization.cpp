@@ -100,7 +100,7 @@ struct MonitorCustomization::Private {
         if(!displays->isPresentationActive())return;
         auto* window=qobject_cast<PresentationWindow*>(displays->presentationWindow());if(!window)return;
         const auto live=window->viewportState();const auto liveGeometry=window->geometry();
-        const bool initialWindowed=opts.value("windowMode")=="windowed"&&(lastAppliedOptions.value("windowMode")!="windowed"||window->visibility()!=QWindow::Windowed||(window->flags()&Qt::FramelessWindowHint));
+        const bool initialWindowed=opts.value("windowMode")=="windowed"&&(lastAppliedOptions.value("windowMode")!="windowed"||(window->flags()&Qt::FramelessWindowHint));
         const bool preserveViewport=!lastAppliedOptions.isEmpty()&&lastAppliedOptions.value("fitMode")==opts.value("fitMode");
         auto* target=sessionScreen.data();
         if(!target||!QGuiApplication::screens().contains(target))target=window->screen();
@@ -121,7 +121,7 @@ struct MonitorCustomization::Private {
             });
         }
         syncing=true;window->applyCustomization(opts);
-        if(opts.value("windowMode")=="windowed"&&target)window->setWindowedGeometry(monitor_topology::windowedClient(liveGeometry,target->availableGeometry(),window->frameMargins(),initialWindowed));
+        if(opts.value("windowMode")=="windowed"&&target&&(initialWindowed||window->visibility()==QWindow::Windowed))window->setWindowedGeometry(monitor_topology::windowedClient(liveGeometry,target->availableGeometry(),window->frameMargins(),initialWindowed));
         if(preserveViewport)window->restoreViewport(live);
         lastAppliedOptions=opts;syncing=false;
     }

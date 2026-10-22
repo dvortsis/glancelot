@@ -31,7 +31,7 @@ UiDialog {
     }
     function option(key, value) { const patch = ({}); patch[key] = value; customization.setOutputOptions(patch) }
     function finishEnable() {
-        if(!pendingEnableDisplay.length || customization.feedback.indexOf("Saving monitor") === 0) return
+        if(!pendingEnableDisplay.length || customization.saving) return
         const target=pendingEnableDisplay; pendingEnableDisplay=""
         if(customization.outputOptions.displayId === target && customization.feedback.length === 0) host.invoke("monitor-enable")
     }
@@ -76,7 +76,7 @@ UiDialog {
                     Label {
                         Layout.fillWidth: true; wrapMode: Text.Wrap; color: Theme.muted
                         readonly property var info: dialog.manager.displays[displayChoice.currentIndex] || ({})
-                        text: info.name ? info.width + " × " + info.height + " · " + info.devicePixelRatio + "× scale · " + Math.round(info.refreshRate) + " Hz\n" + (info.identityConfidence === "strong" ? "Strong serial identity: " + info.serialNumber : "Weak identity: reselect similar displays after reconnect") + "\nConnected · " + info.colorSpace : "No display is available."
+                        text: info.name ? info.width + " × " + info.height + " · " + info.devicePixelRatio + "× scale · " + Math.round(info.refreshRate) + " Hz\n" + (info.identityConfidence === "strong" ? "Strong serial identity: " + info.serialNumber : "Weak identity: reselect similar displays after reconnect") + "\nConnection type unavailable · Color: " + info.colorSpace : "No display is available."
                     }
                     Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: dialog.manager.presentationActive; text: "Output active on " + dialog.manager.activeDisplayName; color: Theme.text }
                     Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: customization.outputOptions.displayId.length>0 && !dialog.manager.displays.some(display => display.id===customization.outputOptions.displayId); text: "The saved presentation display is unavailable. Choose a connected display to enable output."; color: Theme.muted }

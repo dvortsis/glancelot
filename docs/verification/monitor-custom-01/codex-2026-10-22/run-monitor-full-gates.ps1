@@ -53,8 +53,8 @@ try {
     Copy-Item -LiteralPath (Join-Path $BuildDir 'Testing/Temporary/LastTest.log') -Destination (Join-Path $proofRoot 'windows-LastTest.log')
     foreach($name in @('monitor_customization-results.txt','monitor_customization_ui-results.txt')) { Copy-Item -LiteralPath (Join-Path $BuildDir $name) -Destination (Join-Path $proofRoot $name) }
     $global:GlancelotMonitorGatePhase='fresh source Docker gate'
-    Write-Host 'COMMAND: docker build --progress=plain -t glancelot-browser:monitor-custom-01 .'
-    docker build --progress=plain -t glancelot-browser:monitor-custom-01 . *> (Join-Path $proofRoot 'docker-gate.txt')
+    Write-Host 'COMMAND: docker build --progress=plain -t glancelot-browser:main .'
+    docker build --progress=plain -t glancelot-browser:main . *> (Join-Path $proofRoot 'docker-gate.txt')
     if($LASTEXITCODE -ne 0){throw 'Docker gate failed'}
     $global:GlancelotMonitorGatePhase='complete'
  }

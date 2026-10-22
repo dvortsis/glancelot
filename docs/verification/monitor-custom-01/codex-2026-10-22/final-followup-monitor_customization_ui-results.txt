@@ -1,0 +1,31 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+QWARN  : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+PASS   : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication()
+PASS   : MonitorCustomizationUiTests::nativeHostCloseAndEscapePreserveController()
+PASS   : MonitorCustomizationUiTests::detachedCanvasPopupAndFrozenCloseHaveVisibleFeedback()
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() No QRhi found for window 0x1d2b9b9a490, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() No QRhi found for window 0x1d2b9b9a490, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration()
+SKIP   : MonitorCustomizationUiTests::nativeUiEvidence() Native screenshots are an explicit separate run.
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(94) : failure location
+QWARN  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() No QRhi found for window 0x1d2b9b9a890, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() No QRhi found for window 0x1d2b9b9a890, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting()
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x1d2b911a890, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x1d2b911a890, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x1d2b911a890, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x1d2b911a890, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x1d2b911a890, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration()
+QWARN  : MonitorCustomizationUiTests::busyDragFailureRestoresTheSavedHostGeometry() No QRhi found for window 0x1d2ba876ea0, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::busyDragFailureRestoresTheSavedHostGeometry()
+QWARN  : MonitorCustomizationUiTests::parameterizedDetachConfirmsTheDestinationBeforeMoving() No QRhi found for window 0x1d2b911bc90, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::parameterizedDetachConfirmsTheDestinationBeforeMoving()
+PASS   : MonitorCustomizationUiTests::actualImportAndResetReloadCoordinatorPreferences()
+PASS   : MonitorCustomizationUiTests::registryRouteAndLockedPredicateRemainShared()
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 12 passed, 0 failed, 1 skipped, 0 blacklisted, 41601ms
+********* Finished testing of MonitorCustomizationUiTests *********

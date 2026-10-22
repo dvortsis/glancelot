@@ -120,7 +120,7 @@ void PresentationWindow::applyCustomization(const QVariantMap& options) {
     const auto cursor=options.value("cursorPolicy").toString();m_cursorTimer.stop();
     setCursor(cursor=="hidden"?Qt::BlankCursor:Qt::ArrowCursor);if(cursor=="auto")m_cursorTimer.start();
     if(previous.value("windowMode")!=options.value("windowMode"))setFlags(options.value("windowMode")=="windowed"?Qt::WindowFlags(Qt::Window):Qt::WindowFlags(Qt::Window|Qt::FramelessWindowHint));
-    if(options.value("windowMode")=="windowed"&&visibility()!=QWindow::Windowed)showNormal();
+    if(options.value("windowMode")=="windowed"&&previous.value("windowMode")!="windowed")showNormal();
     else if(options.value("windowMode")=="fullscreen"&&visibility()!=QWindow::FullScreen)showFullScreen();
     updateLayout();
 }

@@ -55,3 +55,18 @@ Total Test time (real) =  35.78 sec
 Actual Qt totals:30 coordinator passed;12 UI passed,1 native-only skipped. Native Windows/D3D11 complete attempt7 passed12 methods but failed nativeUiEvidence because the controller was not exposed. This failure is retained and is not a pass. An unchanged-source isolated nativeUiEvidence attempt8 passed (3 including init/cleanup,0 failures), capturing25 screenshots and verifying six actual rendered red-image migrations, bounded admissions and final old-renderer retirement. Earlier complete native attempt6 passed12, predating the new picker-focus method. Functional native coverage combines attempt7's12 successful checks with attempt8's rendering proof; no single final complete native pass is claimed. Test-only QPA screens are used only offscreen and never alter OS displays.
 
 Full Windows/Docker gates and follow-up independent approval remain pending. Physical color/HDR/refresh/mixed-DPI qualification remains MONITOR-VERIFY.
+
+## Actual source approval and final narrow follow-up
+
+Actual Sonnet5.5 review at6e22804 returned APPROVE SOURCE / FULL GATES PENDING (session e7d762ae-9ef5-471f-bcdd-8c62515579c8,533245ms,exit0,no permission denials). Complete result retained in review-6e22804. It requested a realistic native-frame-margin helper test before integration and complete native UI proof on the integrated commit. Physical monitor qualification remains unverified. The later complete native attempt9 at unchanged6e22804 passed13/13 in85426ms (whole-suite PNGs preserved separately); source provenance was recorded, but a pre-run binary hash was not captured historically. Production without BUILD_TESTING build72/72 and fresh26-frame exposed native runtime passed; generated input unchanged. These are supplementary proofs, not full Windows/Docker gates.
+
+The follow-up adds the requested negative-origin work-area test with8/31/8/8 margins (initial and oversized client bounds plus reachable geometry retention). It also preserves maximized/minimized output state on unrelated appearance changes with regressions, uses the saving property instead of feedback-text matching, and explicitly reports unavailable connection type. Actual focused attempt16:
+
+```text
+1/2 Test #40: monitor_customization ............   Passed   11.19 sec
+2/2 Test #41: monitor_customization_ui .........   Passed   41.98 sec
+100% tests passed out of 2
+Total Test time (real) =  53.46 sec
+```
+
+Qt totals:31 coordinator pass,12 UI pass,1 native-only skip. A narrow actual Sonnet follow-up and full locked gates remain pending for this last delta. Future native runs record the exact source and binary SHA256 before and after execution. Integration Docker command uses glancelot-browser:main under the same wrapper.

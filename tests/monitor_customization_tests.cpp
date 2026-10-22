@@ -231,6 +231,10 @@ private slots:
         QTRY_COMPARE(window->primaryCanvas()->fitMode(),QString("actual"));QCOMPARE(window->primaryCanvas()->zoom(),qreal(1));QVERIFY(window->primaryCanvas()->checkerboard());
         QVERIFY(window->primaryCanvas()->textureBudget()+window->secondaryCanvas()->textureBudget()<=glancelot::kPresentationTextureBudget-1024*1024);
         QCOMPARE(window->cursor().shape(),Qt::BlankCursor);
+        window->showMaximized();QTRY_COMPARE(window->visibility(),QWindow::Maximized);
+        QVERIFY(h.customization.setOutputOptions({{"guides",false}}));QTRY_COMPARE(window->visibility(),QWindow::Maximized);
+        window->showMinimized();QTRY_COMPARE(window->visibility(),QWindow::Minimized);
+        QVERIFY(h.customization.setOutputOptions({{"imageInfo",false}}));QTRY_COMPARE(window->visibility(),QWindow::Minimized);window->showNormal();
         QVERIFY(h.customization.setOutputOptions({{"viewportLink","linked"}}));
         QVERIFY(!h.customization.syncControllerViewport({{"fit","actual"}},0));
         QVERIFY(h.customization.syncControllerViewport({{"fit","fit"},{"rotation",90}},1));QCOMPARE(window->primaryCanvas()->rotation(),90);
@@ -260,6 +264,16 @@ private slots:
         const auto reused=glancelot::monitor_topology::place("display-2",QRect(4000,0,800,600),displays,"display-0",false);
         QVERIFY(reused.recovered);QCOMPARE(reused.displayId,QString("display-0"));
         const auto minimum=glancelot::monitor_topology::clamp(QRect(100,100,20,20),QRect(0,0,100,100));QCOMPARE(minimum.size(),QSize(360,280));
+    }
+    void windowedNativeFrameFitsNegativeOriginWorkArea() {
+        const QRect work(-1920,-1200,1920,1080);const QMargins frame(8,31,8,8);
+        for(bool initial:{false,true}) {
+            const auto client=glancelot::monitor_topology::windowedClient(QRect(5000,5000,5000,4000),work,frame,initial);
+            QVERIFY(work.contains(client.marginsAdded(frame)));QVERIFY(client.width()>=320);QVERIFY(client.height()>=240);
+            if(initial)QCOMPARE(client.size(),QSize(1520,825));
+        }
+        const QRect reachable(-1800,-1100,800,600);
+        QCOMPARE(glancelot::monitor_topology::windowedClient(reachable,work,frame,false),reachable);
     }
     void rendererIncarnationsShareAdmissionUntilOldTextureReleases() {
         CanvasTextureAdmission shared;
