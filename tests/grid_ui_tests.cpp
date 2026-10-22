@@ -278,7 +278,13 @@ private slots:
             panel->setWidth(w); panel->setHeight(ph); QCoreApplication::processEvents(); QCoreApplication::processEvents();
             const bool compact = panel->property("compact").toBool();
             const qreal gh = view->height(), cell = view->property("cellHeight").toReal();
-            const int columns = panel->property("columns").toInt(), live = panel->property("liveDelegateCount").toInt();
+            const int columns = panel->property("columns").toInt();
+            // GridView retires resized delegates asynchronously. Wait for that bounded
+            // cleanup before sampling the settled count; keep the original limit.
+            QTRY_VERIFY2_WITH_TIMEOUT(panel->property("liveDelegateCount").toInt() <= columns * 8,
+                qPrintable(QString("w %1 h %2 delegates %3 columns %4")
+                    .arg(w).arg(ph).arg(panel->property("liveDelegateCount").toInt()).arg(columns)), 2000);
+            const int live = panel->property("liveDelegateCount").toInt();
             QVERIFY2(cell > 0 && std::isfinite(cell), qPrintable(QString("w %1 h %2 cell %3").arg(w).arg(ph).arg(cell)));
             worstDelegates = std::max(worstDelegates, live);
             QVERIFY2(live <= columns * 8, qPrintable(QString("w %1 h %2 delegates %3 columns %4").arg(w).arg(ph).arg(live).arg(columns)));
