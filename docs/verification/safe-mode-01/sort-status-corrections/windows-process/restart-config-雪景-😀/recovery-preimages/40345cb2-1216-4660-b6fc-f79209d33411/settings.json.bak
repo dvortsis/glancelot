@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "8b328580-e28d-4553-a8df-fcc6d270153a",
+                "claimNonce": "3aea74b9-62eb-40ed-89ed-fca3537c271f",
+                "origin": "navigation",
+                "pid": 23120,
+                "sequence": "1",
+                "start": "13437028464222",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-process/run-dcrajion/generated-media",
+            "image": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-process/run-dcrajion/generated-media/雪景-😀.png",
+            "saved": 1792554866
+        }
+    }
+}

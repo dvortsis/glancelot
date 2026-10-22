@@ -1,0 +1,166 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (22.2s)
+-- Generating done (1.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/build-codex-input-02-r3
+[1/342] Automatic MOC and UIC for target glancelot_platform
+[2/342] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[3/342] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-input-02-r3\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[4/342] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[5/342] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-input-02-r3\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[6/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\platform_integration.cpp.obj
+[7/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\io_scheduler.cpp.obj
+[8/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_parser.cpp.obj
+[9/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_model.cpp.obj
+[10/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\mutation_service.cpp.obj
+[11/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\animation_controller.cpp.obj
+[12/342] Linking CXX static library glancelot_core.lib
+[13/342] Copying glancelot qml sources into build dir
+[14/342] Running qmlimportscanner for glancelot
+[15/342] Automatic MOC and UIC for target glancelot_test_argv_capture
+[16/342] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[17/342] Running qmlimportscanner for fs_watch_ui_tests
+[18/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\raw_preview.cpp.obj
+[19/342] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\glancelot_test_argv_capture_autogen\mocs_compilation.cpp.obj
+[20/342] Running qmlimportscanner for monitor_output_tests
+[21/342] Building CXX object CMakeFiles\fs_watch_decoder_fixture.dir\fs_watch_decoder_fixture_autogen\mocs_compilation.cpp.obj
+[22/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[23/342] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\copy_move_service.cpp.obj
+[24/342] Linking CXX static library glancelot_platform.lib
+[25/342] Automatic MOC and UIC for target glancelot
+[26/342] Automatic MOC and UIC for target glancelot-decoder
+[27/342] Running AUTOMOC file extraction for target glancelot
+[28/342] Building CXX object CMakeFiles\glancelot-decoder.dir\glancelot-decoder_autogen\mocs_compilation.cpp.obj
+[29/342] Automatic MOC and UIC for target pane_layout_tests
+[30/341] Running moc --collect-json for target glancelot
+[31/341] Automatic QML type registration for target glancelot
+[32/341] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\tests\platform_argv_capture.cpp.obj
+[33/341] Linking CXX executable "native argv ☂ 🧪\glancelot_test_argv_capture.exe"
+[34/341] Running rcc for resource qmake_Glancelot
+[35/341] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+[36/341] Building CXX object CMakeFiles\fs_watch_decoder_fixture.dir\tests\fs_watch_decoder_fixture.cpp.obj
+[37/341] Automatic MOC and UIC for target theme_tests
+[38/341] Linking CXX executable fs_watch_decoder_fixture.exe
+[39/341] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+[40/341] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+[41/341] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+[42/341] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[43/341] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+[44/341] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+[45/341] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[46/341] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+[47/341] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+[48/341] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+[49/341] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+[50/341] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+[51/341] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+[52/341] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+[53/341] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+[54/341] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+[55/341] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+[56/341] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+[57/341] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+[58/341] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+[59/341] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+[60/341] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+[61/341] Running rcc for resource glancelot_raw_qml_0
+[62/341] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+[63/341] Automatic MOC and UIC for target file_operation_service_tests
+[64/340] Automatic MOC and UIC for target platform_integration_tests
+[65/340] Building CXX object CMakeFiles\glancelot-decoder.dir\src\worker\main.cpp.obj
+[66/340] Automatic MOC and UIC for target directory_model_tests
+[67/340] Linking CXX executable glancelot-decoder.exe
+[68/340] Automatic MOC and UIC for target canvas_tests
+[69/340] Automatic MOC and UIC for target grid_search_tests
+[70/340] Automatic MOC and UIC for target grid_density_tests
+[71/340] Automatic MOC and UIC for target input_ui_tests
+[72/340] Automatic MOC and UIC for target grid_ui_tests
+[73/340] Automatic MOC and UIC for target fs_watch_ui_tests
+[74/340] Automatic MOC and UIC for target monitor_output_tests
+[75/340] Automatic MOC and UIC for target acceptance_tests
+[76/340] Automatic MOC and UIC for target folder_tree_tests
+[77/340] Automatic MOC and UIC for target thumbnail_tests
+[78/340] Automatic MOC and UIC for target window_slot_tests
+[79/340] Automatic MOC and UIC for target ui_settings_tests
+[80/340] Automatic MOC and UIC for target favorites_tests
+[81/340] Automatic MOC and UIC for target fs_watch_budget_tests
+[82/340] Automatic MOC and UIC for target fs_watch_tests
+[83/340] Automatic MOC and UIC for target folder_history_tests
+[84/340] Automatic MOC and UIC for target shortcuts_help_tests
+[85/340] Automatic MOC and UIC for target filter_tests
+[86/340] Automatic MOC and UIC for target io_scheduler_tests
+[87/340] Automatic MOC and UIC for target cache_tests
+[88/340] Automatic MOC and UIC for target metadata_tests
+[89/340] Automatic MOC and UIC for target animation_tests
+[90/340] Running rcc for resource fs_watch_ui_theme
+[91/340] Automatic MOC and UIC for target mutation_tests
+[92/340] Automatic MOC and UIC for target copy_move_tests
+[93/340] Running rcc for resource fs_watch_ui_shaders
+[94/340] Running rcc for resource fs_watch_ui_brand
+[95/340] Running rcc for resource monitor_output_shaders
+[96/340] Automatic MOC and UIC for target format_tests
+[97/340] Building CXX object CMakeFiles\perf_trace_tests.dir\tests\perf_trace_tests.cpp.obj
+[98/340] Building CXX object CMakeFiles\navigation_tests.dir\tests\navigation_tests.cpp.obj
+[99/340] Building CXX object CMakeFiles\directory_listing_tests.dir\tests\directory_listing_tests.cpp.obj
+[100/340] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[101/340] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[102/340] Building CXX object CMakeFiles\glancelot.dir\src\app\theme_manager.cpp.obj
+[103/340] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[104/340] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[105/340] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_service.cpp.obj
+[106/340] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[107/340] Building CXX object CMakeFiles\glancelot.dir\src\app\filmstrip_model.cpp.obj
+[108/340] Building CXX object CMakeFiles\glancelot.dir\src\app\pane_layout.cpp.obj
+[109/340] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_provider.cpp.obj
+[110/340] Building CXX object CMakeFiles\glancelot.dir\src\app\folder_tree_model.cpp.obj
+[111/340] Building CXX object CMakeFiles\glancelot.dir\src\app\directory_entry_model.cpp.obj
+[112/340] Building CXX object CMakeFiles\glancelot.dir\src\app\window_slot.cpp.obj
+[113/340] Building CXX object CMakeFiles\glancelot.dir\src\app\settings_file.cpp.obj
+[114/340] Building CXX object CMakeFiles\glancelot.dir\src\app\favorites_model.cpp.obj
+[115/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_qmake_Glancelot.cpp.obj
+[116/340] Building CXX object CMakeFiles\glancelot.dir\src\app\folder_history.cpp.obj
+[117/340] Building CXX object CMakeFiles\glancelot.dir\glancelot_qmltyperegistrations.cpp.obj
+[118/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_qmlcache_loader.cpp.obj
+[119/340] Building CXX object CMakeFiles\glancelot.dir\src\app\file_operation_service.cpp.obj
+[120/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[121/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\Theme_qml.cpp.obj
+[122/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\ThemePicker_qml.cpp.obj
+[123/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\Filmstrip_qml.cpp.obj
+[124/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\PhotoGrid_qml.cpp.obj
+[125/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[126/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\PaneArrangement_qml.cpp.obj
+[127/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\SettingsDialog_qml.cpp.obj
+[128/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\SettingRow_qml.cpp.obj
+[129/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiButton_qml.cpp.obj
+[130/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiComboBox_qml.cpp.obj
+[131/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiDialog_qml.cpp.obj
+[132/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiScrollBar_qml.cpp.obj
+[133/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiSwitch_qml.cpp.obj
+[134/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiIcon_qml.cpp.obj
+[135/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\UiTextField_qml.cpp.obj
+[136/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\ShortcutCheatSheet_qml.cpp.obj
+[137/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\DeleteFlow_qml.cpp.obj
+[138/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\MetadataHud_qml.cpp.obj
+[139/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\AnimationBar_qml.cpp.obj
+[140/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[141/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_glancelot_raw_qml_0_extra_qmldirs.cpp.obj
+[142/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_ui_fonts.cpp.obj
+[143/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_brand_assets.cpp.obj
+[144/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\TransferHud_qml.cpp.obj
+[145/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\RenameFlow_qml.cpp.obj
+[146/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_canvas_shaders.cpp.obj
+[147/340] Building RC object CMakeFiles\glancelot.dir\app\glancelot.rc.res
+[148/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\CommandMenuItem_qml.cpp.obj
+[149/340] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_brand_images.cpp.obj

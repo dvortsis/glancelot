@@ -1,0 +1,3 @@
+# Preserve sealed generated evidence on Windows and Linux checkouts.
+windows-process/** binary
+linux-raw/recovery-process/** binary

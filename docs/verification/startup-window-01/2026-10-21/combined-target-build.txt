@@ -1,0 +1,163 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (10.4s)
+-- Generating done (1.0s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+[1/152] Copying glancelot qml sources into build dir
+[2/152] Automatic MOC and UIC for target glancelot_recovery_common
+[3/151] Automatic MOC and UIC for target glancelot_platform
+[4/151] Running qmlimportscanner for glancelot
+[5/151] Running qmlimportscanner for input_ui_tests
+[6/151] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj
+[7/151] Automatic MOC and UIC for target startup_window_geometry_tests
+[8/149] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\command_registry.cpp.obj
+[9/149] Linking CXX static library glancelot_recovery_common.lib
+[10/149] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[11/149] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[12/149] Linking CXX static library glancelot_platform.lib
+[13/149] Automatic MOC and UIC for target glancelot-decoder
+[14/148] Generating .qsb/src/render/image.frag.qsb
+[15/148] Linking CXX executable glancelot-decoder.exe
+[16/148] Automatic MOC and UIC for target glancelot
+[17/148] Running AUTOMOC file extraction for target glancelot
+[18/148] Running moc --collect-json for target glancelot
+[19/148] Automatic QML type registration for target glancelot
+[20/148] Running rcc for resource qmake_Glancelot
+[21/148] Automatic MOC and UIC for target recovery_controller_tests
+[22/148] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+[23/148] Automatic MOC and UIC for target recovery_tests
+[24/148] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+[25/148] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+[26/148] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+[27/148] Automatic MOC and UIC for target input_ui_tests
+[28/148] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[29/148] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+[30/148] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+[31/148] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+[32/148] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[33/148] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+[34/148] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+[35/148] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+[36/148] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+[37/148] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+[38/148] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+[39/148] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+[40/148] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+[41/148] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+[42/148] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+[43/148] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+[44/148] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+[45/148] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+[46/148] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+[47/148] Running rcc for resource canvas_shaders
+[48/148] Running rcc for resource glancelot_raw_qml_0
+[49/148] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+[50/148] Running rcc for resource input_canvas_shaders
+[51/148] Running rcc for resource input_brand_assets
+[52/148] Running rcc for resource input_theme_catalog
+[53/148] Running rcc for resource recovery_test_catalog
+[54/148] Running rcc for resource recovery_controller_catalog
+[55/148] Automatic MOC and UIC for target window_slot_tests
+[56/148] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[57/148] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[58/148] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[59/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.qt\rcc\qrc_qmake_Glancelot.cpp.obj
+[60/148] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[61/148] Building CXX object CMakeFiles\glancelot.dir\glancelot_qmltyperegistrations.cpp.obj
+[62/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_qmlcache_loader.cpp.obj
+[63/148] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[64/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\Theme_qml.cpp.obj
+[65/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[66/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\ThemePicker_qml.cpp.obj
+[67/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\Filmstrip_qml.cpp.obj
+[68/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\PhotoGrid_qml.cpp.obj
+[69/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[70/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\PaneArrangement_qml.cpp.obj
+[71/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\SettingsDialog_qml.cpp.obj
+[72/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\SettingRow_qml.cpp.obj
+[73/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiButton_qml.cpp.obj
+[74/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiComboBox_qml.cpp.obj
+[75/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiDialog_qml.cpp.obj
+[76/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiScrollBar_qml.cpp.obj
+[77/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiSwitch_qml.cpp.obj
+[78/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiIcon_qml.cpp.obj
+[79/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\UiTextField_qml.cpp.obj
+[80/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\DeleteFlow_qml.cpp.obj
+[81/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\ShortcutCheatSheet_qml.cpp.obj
+[82/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\AnimationBar_qml.cpp.obj
+[83/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\MetadataHud_qml.cpp.obj
+[84/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[85/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.qt\rcc\qrc_canvas_shaders.cpp.obj
+[86/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\TransferHud_qml.cpp.obj
+[87/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\RenameFlow_qml.cpp.obj
+[88/148] Building CXX object CMakeFiles\glancelot.dir\build-codex-startup-window-01\.rcc\qmlcache\glancelot_ui\CommandMenuItem_qml.cpp.obj
+[89/148] Building CXX object CMakeFiles\input_ui_tests.dir\input_ui_tests_autogen\mocs_compilation.cpp.obj
+[90/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\settings_file.cpp.obj
+[91/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\pane_layout.cpp.obj
+[92/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[93/148] Building CXX object CMakeFiles\input_ui_tests.dir\tests\input_ui_tests.cpp.obj
+[94/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\theme_manager.cpp.obj
+[95/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[96/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[97/148] Building CXX object CMakeFiles\input_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_input_theme_catalog.cpp.obj
+[98/148] Building CXX object CMakeFiles\input_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_input_brand_assets.cpp.obj
+[99/148] Building CXX object CMakeFiles\input_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_input_canvas_shaders.cpp.obj
+[100/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[101/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[102/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\render\image_canvas.cpp.obj
+[103/148] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\window_slot.cpp.obj
+[104/148] Building CXX object CMakeFiles\recovery_tests.dir\recovery_tests_autogen\mocs_compilation.cpp.obj
+[105/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_recovery.cpp.obj
+[106/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_diff.cpp.obj
+[107/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_policy.cpp.obj
+[108/148] Building CXX object CMakeFiles\recovery_tests.dir\tests\recovery_tests.cpp.obj
+[109/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\recovery_checkpoint.cpp.obj
+[110/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_restore.cpp.obj
+[111/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\recovery_session.cpp.obj
+[112/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\command_registry.cpp.obj
+[113/148] Building CXX object CMakeFiles\recovery_tests.dir\app\settings_maintenance.cpp.obj
+[114/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\window_slot.cpp.obj
+[115/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_file.cpp.obj
+[116/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\filmstrip_model.cpp.obj
+[117/148] Building CXX object CMakeFiles\recovery_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_recovery_test_catalog.cpp.obj
+[118/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\directory_entry_model.cpp.obj
+[119/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\folder_tree_model.cpp.obj
+[120/148] Building CXX object CMakeFiles\recovery_tests.dir\src\app\viewer_controller.cpp.obj
+[121/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\recovery_controller_tests_autogen\mocs_compilation.cpp.obj
+[122/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\pane_layout.cpp.obj
+[123/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\theme_manager.cpp.obj
+[124/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\favorites_model.cpp.obj
+[125/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\directory_entry_model.cpp.obj
+[126/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\window_slot.cpp.obj
+[127/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\tests\recovery_controller_tests.cpp.obj
+[128/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\viewer_controller.cpp.obj
+[129/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_file.cpp.obj
+[130/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_diff.cpp.obj
+[131/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_policy.cpp.obj
+[132/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_recovery.cpp.obj
+[133/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\recovery_checkpoint.cpp.obj
+[134/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\recovery_session.cpp.obj
+[135/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_recovery_controller_catalog.cpp.obj
+[136/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_restore.cpp.obj
+[137/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\command_registry.cpp.obj
+[138/148] Building CXX object CMakeFiles\recovery_controller_tests.dir\app\settings_maintenance.cpp.obj
+[139/148] Building CXX object CMakeFiles\window_slot_tests.dir\window_slot_tests_autogen\mocs_compilation.cpp.obj
+[140/148] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\window_slot.cpp.obj
+[141/148] Linking CXX executable glancelot.exe
+[142/148] Linking CXX executable input_ui_tests.exe
+[143/148] Linking CXX executable recovery_tests.exe
+[144/148] Linking CXX executable recovery_controller_tests.exe
+[145/148] Building CXX object CMakeFiles\window_slot_tests.dir\tests\window_slot_tests.cpp.obj
+[146/148] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\settings_file.cpp.obj
+[147/148] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\viewer_controller.cpp.obj
+[148/148] Linking CXX executable window_slot_tests.exe

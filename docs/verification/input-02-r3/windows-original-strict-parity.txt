@@ -1,0 +1,16 @@
+********* Start testing of InputUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : InputUiTests::initTestCase()
+QWARN  : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot() No QRhi found for window 0x2a312cfef10, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot() No QRhi found for window 0x2a312cfef10, QQuickRhiItem will not be functional
+FAIL!  : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot() '!allowed(h, "delete-selection")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-input-02-r3\tests\input_ui_tests.cpp(442) : failure location
+QWARN  : InputUiTests::treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() No QRhi found for window 0x2a31458f580, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() No QRhi found for window 0x2a31458f580, QQuickRhiItem will not be functional
+FAIL!  : InputUiTests::treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() '!allowed(h, "delete-selection")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-input-02-r3\tests\input_ui_tests.cpp(497) : failure location
+PASS   : InputUiTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 2654ms
+********* Finished testing of InputUiTests *********

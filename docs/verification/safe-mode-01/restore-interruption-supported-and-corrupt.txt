@@ -1,0 +1,14 @@
+********* Start testing of RecoveryTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : RecoveryTests::initTestCase()
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(supported-primary-before-evidence)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(supported-primary-after-sealed-preimage)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(supported-primary-before-primary-replacement)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(supported-primary-after-primary-replacement)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(corrupt-primary-before-evidence)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(corrupt-primary-after-sealed-preimage)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(corrupt-primary-before-primary-replacement)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(corrupt-primary-after-primary-replacement)
+PASS   : RecoveryTests::cleanupTestCase()
+Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 1571ms
+********* Finished testing of RecoveryTests *********

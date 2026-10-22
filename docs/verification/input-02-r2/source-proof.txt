@@ -1,0 +1,33 @@
+git rev-parse HEAD:
+87b063d1523808c9c7dc28a53f2030dd989c01c4
+git diff --exit-code 87b063d -- src include ui tests CMakeLists.txt:
+exit=0
+tests/input_ui_tests.cpp:113:    return QMetaObject::invokeMethod(h.window, "scopeAllows", Q_RETURN_ARG(QVariant, result), Q_ARG(QVariant, id)) && result.toBool();
+tests/input_ui_tests.cpp:159:    for (auto* item : menu->findChildren<QQuickItem*>(QRegularExpression("^menuItem-"))) rows << item;
+tests/input_ui_tests.cpp:178:        const QString id = row->objectName().mid(QString("menuItem-").size());
+tests/input_ui_tests.cpp:430:        QVERIFY(!rowMenu->findChild<QQuickItem*>("folderMoveToTrash")->isEnabled()); // the menu refuses a root...
+tests/input_ui_tests.cpp:445:        auto* last = menu->findChild<QQuickItem*>("menuItem-delete-current-file"); QVERIFY(last);
+tests/input_ui_tests.cpp:642:        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-current-file"); QVERIFY(trash);
+tests/input_ui_tests.cpp:646:        auto* rotate = menu->findChild<QQuickItem*>("menuItem-rotate"); QVERIFY(rotate);
+tests/input_ui_tests.cpp:651:        rotate = menu->findChild<QQuickItem*>("menuItem-rotate");
+tests/input_ui_tests.cpp:664:        QVERIFY(!allowed(h, "rotate")); QVERIFY(!menu->findChild<QQuickItem*>("menuItem-rotate")->isEnabled());
+tests/input_ui_tests.cpp:684:        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash && trash->isVisible());
+tests/input_ui_tests.cpp:686:        auto* open = menu->findChild<QQuickItem*>("menuItem-grid-open"); QVERIFY(open);
+tests/input_ui_tests.cpp:696:        trash = menu->findChild<QQuickItem*>("menuItem-delete-selection");
+tests/input_ui_tests.cpp:715:        QVERIFY(!menu->findChild<QQuickItem*>("menuItem-grid-open")->isVisible());
+tests/input_ui_tests.cpp:716:        QVERIFY(menu->findChild<QQuickItem*>("menuItem-grid-select-all")->isEnabled());
+tests/input_ui_tests.cpp:719:        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(menu->findChild<QQuickItem*>("menuItem-grid-select-all")));
+tests/input_ui_tests.cpp:739:            auto* trash = rowMenu->findChild<QQuickItem*>("folderMoveToTrash"); QVERIFY(trash);
+tests/input_ui_tests.cpp:744:            QVERIFY(rowMenu->findChild<QQuickItem*>("menuItem-tree-open-folder")->isEnabled());
+tests/input_ui_tests.cpp:766:            for (const char* id : {"menuItem-focus-path", "menuItem-copy-path", "menuItem-paste-path"}) QVERIFY(pathMenu->findChild<QQuickItem*>(id));
+tests/input_ui_tests.cpp:773:        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(pathMenu->findChild<QQuickItem*>("menuItem-copy-path")));
+ui/Main.qml:336:    function scopeAllows(id) {
+ui/Main.qml:378:            if (!info || (firstStep !== undefined && (info.steps.length !== 2 || info.steps[0] !== firstStep)) || !scopeAllows(id)) continue
+ui/Main.qml:392:    onFocusRegionChanged: chordCancel() // a chord started in one pane never finishes in another
+ui/Main.qml:478:            if (focusRegion === "tree" && treePanel.cursorIsRoot()) { // the menu row is disabled here, so the key explains instead of retargeting
+ui/Main.qml:709:        onCanceled: { endPointerLoupe(); canvas.endLoupe() } // a cancelled grab restores a key hold too
+ui/Main.qml:750:            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain) // keyboard navigation keeps the current row visible
+ui/FolderTree.qml:59:    function cursorIsRoot() {
+ui/FolderTree.qml:444:                    objectName: "folderMoveToTrash"
+ui/FolderTree.qml:447:                    enabled: rowMenu.depth > 0 && !fileOperations.busy
+ui/FolderTree.qml:450:                    onTriggered: { rowMenu.handedOff = true; panel.deleteRequested(rowMenu.path) }

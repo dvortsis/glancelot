@@ -1,0 +1,11 @@
+{
+  "path": "tests/fs_watch_budget_tests.cpp",
+  "baseline_commit": "61a8861f392984798d576127befe0c595188d6e7",
+  "candidate_commit": "029ad478fc08a49b07f3710f9307c3d25572af31",
+  "baseline_blob": "55122d20f36c4e5aca831874b3607117cf86618b",
+  "candidate_blob": "96d42bf55b48cc83cef8e0f9be09014fca9aa2a1",
+  "comparison": "LF-normalized source after removing only logging/guard additions and two added loop brace pairs",
+  "baseline_sha256": "5851f7184f84105b02ba86ad9a256afce3f37e019578bdff77dafa0f26d309a0",
+  "stripped_candidate_sha256": "5851f7184f84105b02ba86ad9a256afce3f37e019578bdff77dafa0f26d309a0",
+  "equal_after_only_logging_and_braces_removed": true
+}

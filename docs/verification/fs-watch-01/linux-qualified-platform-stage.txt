@@ -1,0 +1,102 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.23kB 0.0s done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 0.7s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 0.4s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 136B 0.0s done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#9 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#9 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 20.56kB 0.0s done
+#8 DONE 0.0s
+
+#10 [qt 5/5] RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [qt 3/5] RUN python3 -m venv /opt/aqt && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==3.3.0 && /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+#11 CACHED
+
+#12 [build  5/11] COPY assets assets
+#12 CACHED
+
+#13 [build 10/11] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+#13 CACHED
+
+#14 [build  1/11] WORKDIR /src
+#14 CACHED
+
+#15 [build  6/11] COPY include include
+#15 CACHED
+
+#16 [build  2/11] COPY CMakeLists.txt ./
+#16 CACHED
+
+#17 [qt 4/5] RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
+#17 CACHED
+
+#18 [build  7/11] COPY src src
+#18 CACHED
+
+#19 [build  9/11] COPY tests tests
+#19 CACHED
+
+#20 [qt 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-venv build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libxkbcommon-x11-0 libegl1 && rm -rf /var/lib/apt/lists/*
+#20 CACHED
+
+#21 [build  3/11] COPY cmake cmake
+#21 CACHED
+
+#22 [build  8/11] COPY ui ui
+#22 CACHED
+
+#23 [build  4/11] COPY app app
+#23 CACHED
+
+#24 [build 11/11] RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+#24 CACHED
+
+#25 exporting to image
+#25 exporting layers
+#25 exporting layers 9.4s done
+#25 exporting manifest sha256:c99adf072bde1fc7b18f2eeab20c4655234807736be37fe2fde3bc9588e48ebb 0.0s done
+#25 exporting config sha256:1cd73d714005d538b268d8f31a9f942cfdbce1a0f0b43aeff91e20b9506bbbbd 0.0s done
+#25 exporting attestation manifest sha256:5d82c235bd1b9c0ba11cfc2e2d1be3da81daf438c6c1a48e2f50cc45e075bc6c 0.0s done
+#25 exporting manifest list sha256:f880c7dfb50163d4f5d1cda4729d02ed6b9c390542124ee54319d93c185d1de3
+#25 exporting manifest list sha256:f880c7dfb50163d4f5d1cda4729d02ed6b9c390542124ee54319d93c185d1de3 0.0s done
+#25 naming to docker.io/library/glancelot-fs-watch-qualified-build:latest done
+#25 unpacking to docker.io/library/glancelot-fs-watch-qualified-build:latest
+#25 unpacking to docker.io/library/glancelot-fs-watch-qualified-build:latest 1.5s done
+#25 DONE 11.1s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/w2rua137nookpt4cghn0wby2y

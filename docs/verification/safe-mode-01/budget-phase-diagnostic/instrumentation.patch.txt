@@ -1,0 +1,37 @@
+diff --git a/tests/fs_watch_budget_tests.cpp b/tests/fs_watch_budget_tests.cpp
+index 55122d2..439a208 100644
+--- a/tests/fs_watch_budget_tests.cpp
++++ b/tests/fs_watch_budget_tests.cpp
+@@ -52,6 +52,8 @@ class FSWatchBudgetTests : public QObject {
+ private slots:
+     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+     void hundredThousandEntriesSustainedWriterKeepsGuiResponsive() {
++        QElapsedTimer diagnosticTotal;diagnosticTotal.start();
++        const auto diagnosticExit=qScopeGuard([&]{qInfo()<<"PHASE total method including fixture destruction ms"<<diagnosticTotal.elapsed();});
+         QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("000000.png");
+         QVERIFY(png(image,Qt::red));const auto original=hash(image);
+         QVector<fs_watch::ModelPublicationStats> publications;
+@@ -79,7 +81,7 @@ private slots:
+         QElapsedTimer setup;setup.start();
+         for(int i=1;i<100000;++i)
+             QVERIFY(write(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0'))),"generated"));
+-        const auto setupMs=setup.elapsed();
++        const auto setupMs=setup.elapsed();qInfo()<<"PHASE setup done total ms"<<diagnosticTotal.elapsed()<<"setup ms"<<setupMs;
+         publications.clear();
+         QElapsedTimer clock;clock.start();qint64 previous=0,worst=0;
+         QTimer heartbeat;heartbeat.setInterval(1);
+@@ -159,11 +161,14 @@ private slots:
+         QVERIFY2(filterChangeMs<250,"100k filter change exceeded the unchanged 250ms GUI budget");
+         QVERIFY2(filteredMaximum<250,"100k filtered publication exceeded the unchanged 250ms GUI budget");
+         QVERIFY2(worst<250,"100k filtered writer exceeded the unchanged 250ms GUI budget");
++        qInfo()<<"PHASE before clearFilter total ms"<<diagnosticTotal.elapsed();
+         viewer.clearFilter();
+         // Return to a complete observation and rename the selected original.
+         // Keeping a partial baseline instead of the original complete one loses it.
++        QElapsedTimer diagnosticRemoval;diagnosticRemoval.start();qInfo()<<"PHASE removal begin total ms"<<diagnosticTotal.elapsed();
+         for(int i=1;i<100000;++i)
+             QVERIFY(QFile::remove(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0')))));
++        qInfo()<<"PHASE removal done ms"<<diagnosticRemoval.elapsed()<<"total ms"<<diagnosticTotal.elapsed();
+         const auto renamed=dir.filePath("renamed.png");QVERIFY(QFile::rename(image,renamed));grid.refresh();
+         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==1&&grid.rowOf(renamed)>=0,10000);
+         for(const auto& value:publications)

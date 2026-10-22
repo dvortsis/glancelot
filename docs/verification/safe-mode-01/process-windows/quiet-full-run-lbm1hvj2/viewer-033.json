@@ -1,0 +1,70 @@
+{
+    "canvas": {
+        "height": 780,
+        "renderer_error": "",
+        "visible": true,
+        "width": 1180,
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+    },
+    "decoded_ms": -1,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": -1,
+    "folder_count": 0,
+    "frameless": false,
+    "frames": 21,
+    "graphics_api": 4,
+    "grid_live_cells": 0,
+    "grid_visible": false,
+    "height": 0,
+    "image_path": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-process/run-lbm1hvj2/generated-media/missing.png",
+    "loading": false,
+    "native_title_bar": {
+        "border_color": true,
+        "caption_color": true,
+        "dark_mode": true,
+        "text_color": true
+    },
+    "qt": "6.8.3",
+    "requested_backend": "",
+    "rhi": {
+        "backend": 3,
+        "device_name": "Intel(R) Iris(R) Xe Graphics",
+        "device_type": 0,
+        "observed": true,
+        "render_callbacks": 21,
+        "scenegraph_invalidations": 0,
+        "software_detection": "not-detected"
+    },
+    "safe_mode": false,
+    "settings_directory": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-process/run-lbm1hvj2/restart-config",
+    "status": "Cannot read this file. Check that it exists and is accessible.",
+    "theme": "slate-ice",
+    "theme_mode": "system",
+    "thumbnail_active": 0,
+    "thumbnail_cache_bytes": 0,
+    "thumbnail_pending": 0,
+    "version": "0.1.0-alpha.1",
+    "wheel_mode": "navigate",
+    "width": 0,
+    "window": {
+        "exposed": true,
+        "height": 780,
+        "screen": {
+            "device_pixel_ratio": 1,
+            "height": 1463,
+            "logical_dpi": 96,
+            "name": "WinDisc",
+            "width": 2240,
+            "x": 0,
+            "y": 0
+        },
+        "state": 0,
+        "visibility": 2,
+        "visible": true,
+        "width": 1180
+    },
+    "window_active": true,
+    "window_slot": 1
+}

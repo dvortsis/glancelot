@@ -13,7 +13,8 @@ Rectangle {
     property alias hovered: hover.hovered
     // The HUD must stay open while the pointer is over the panel or the keyboard cursor is inside it.
     property int focusedControls: 0
-    readonly property bool keepOpen: hover.hovered || list.activeFocus || focusedControls > 0 || address.activeFocus || resizer.pressed
+    property bool favoritesExpanded: true
+    readonly property bool keepOpen: hover.hovered || list.activeFocus || (typeof favoritesList !== "undefined" && favoritesList.activeFocus) || focusedControls > 0 || address.activeFocus || resizer.pressed
     readonly property int indent: 12
     // Drag the trailing edge to resize (this session); the host bounds it so the photo keeps most of the window.
     property int userWidth: 0
@@ -22,8 +23,6 @@ Rectangle {
     signal resizeCommitted(real extent)
     property int maximumWidth: 480
     signal dismissed()
-    // DELETE-01: a row's context menu (right-click, Menu key, Shift+F10) asks the host to confirm a move to the trash.
-    signal deleteRequested(string path)
     // INPUT-02: the window, for the command-menu rows (scope predicate, live bindings, command routing).
     property var host: null
     // F002: ancestors of the current folder as [{label, path}], split from text only (drive, UNC share and "/" roots kept).
@@ -65,6 +64,7 @@ Rectangle {
     function openRowMenu(row, x, y) {
         const info = folderTree.rowInfo(row)
         if (!info.path) return
+        list.currentIndex = row // commands from the menu act on the cursor row
         rowMenu.path = info.path; rowMenu.depth = info.depth
         rowMenu.popup(panel, x, y)
     }
@@ -107,7 +107,8 @@ Rectangle {
         viewer.navigateDirectory(address.text)
     }
     function currentSelectedFolder() {
-        if (!list.activeFocus || list.currentIndex < 0 || !folderTree) return ""
+        // The row menu opens on the cursor row and holds focus while a command from it runs.
+        if (!(list.activeFocus || rowMenu.visible) || list.currentIndex < 0 || !folderTree) return ""
         const info = folderTree.rowInfo(list.currentIndex)
         return (info && info.depth > 0 && info.path) ? info.path : ""
     }
@@ -189,6 +190,240 @@ Rectangle {
             }
         }
 
+        // FAVORITES-01: Collapsible pinned favorites section
+        ColumnLayout {
+            id: favoritesSection
+            visible: typeof favoritesModel !== "undefined"
+            Layout.fillWidth: true
+            spacing: 0
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Theme.controlHeight
+                Layout.leftMargin: Theme.gapSm
+                Layout.rightMargin: Theme.gapSm
+                Layout.topMargin: Theme.gapXs
+                spacing: Theme.gapXs
+
+                Rectangle {
+                    id: favHeaderArea
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: Theme.radiusSmall
+                    color: favHeaderHover.hovered ? Theme.hover : "transparent"
+                    HoverHandler { id: favHeaderHover }
+                    TapHandler {
+                        onTapped: panel.favoritesExpanded = !panel.favoritesExpanded
+                    }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.gapXs
+                        anchors.rightMargin: Theme.gapXs
+                        spacing: Theme.gapXs
+                        UiIcon {
+                            name: "chevron-right"
+                            size: 14
+                            color: Theme.muted
+                            rotation: panel.favoritesExpanded ? 90 : 0
+                            Behavior on rotation { NumberAnimation { duration: Theme.durationFast; easing.type: Easing.OutCubic } }
+                        }
+                        UiIcon {
+                            name: "star"
+                            size: 14
+                            color: Theme.primary
+                        }
+                        Label {
+                            text: "Favorites"
+                            color: Theme.text
+                            font.pixelSize: Theme.textSmall
+                            font.weight: Font.DemiBold
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                        Label {
+                            text: (typeof favoritesModel !== "undefined" && favoritesModel.count > 0) ? ("(" + favoritesModel.count + ")") : ""
+                            color: Theme.muted
+                            font.pixelSize: Theme.textCaption
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+                }
+
+                PanelButton {
+                    objectName: "addCurrentFavorite"
+                    text: "Add current folder to favorites"
+                    iconName: "plus"
+                    iconOnly: true
+                    tip: "Add current folder to favorites"
+                    enabled: typeof favoritesModel !== "undefined" && viewer.directory.length > 0 && !favoritesModel.isFavorite(viewer.directory)
+                    onClicked: {
+                        if (typeof favoritesModel !== "undefined") {
+                            favoritesModel.addFavorite(viewer.directory)
+                        }
+                    }
+                }
+            }
+
+            ListView {
+                id: favoritesList
+                objectName: "favoritesList"
+                Layout.fillWidth: true
+                Layout.preferredHeight: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0) ? Math.min(favoritesModel.count * Theme.rowHeight, 144) : 0
+                visible: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0)
+                leftMargin: Theme.gapSm
+                rightMargin: Theme.gapSm
+                clip: true
+                model: panel.visible && (typeof favoritesModel !== "undefined") ? favoritesModel : null
+                currentIndex: -1
+                boundsBehavior: Flickable.StopAtBounds
+                reuseItems: false
+                Accessible.role: Accessible.List
+                Accessible.name: "Favorite folders"
+                ScrollBar.vertical: UiScrollBar {}
+
+                Keys.onShortcutOverride: event => {
+                    event.accepted = [Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space, Qt.Key_Delete, Qt.Key_Backspace, Qt.Key_Menu].indexOf(event.key) >= 0
+                                     || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))
+                }
+                Keys.onUpPressed: event => {
+                    if (event.modifiers & Qt.AltModifier) {
+                        if (currentIndex > 0) {
+                            favoritesModel.moveUp(currentIndex)
+                            currentIndex = currentIndex - 1
+                        }
+                        event.accepted = true
+                    } else {
+                        currentIndex = Math.max(0, currentIndex - 1)
+                    }
+                }
+                Keys.onDownPressed: event => {
+                    if (event.modifiers & Qt.AltModifier) {
+                        if (currentIndex >= 0 && currentIndex + 1 < count) {
+                            favoritesModel.moveDown(currentIndex)
+                            currentIndex = currentIndex + 1
+                        }
+                        event.accepted = true
+                    } else {
+                        currentIndex = Math.min(count - 1, currentIndex + 1)
+                    }
+                }
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Escape) { panel.dismissed(); event.accepted = true; return }
+                    if (currentIndex < 0 || currentIndex >= count) return
+                    const row = currentIndex
+                    const item = favoritesModel.get(row)
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                        viewer.openFolder(item.path)
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
+                        favoritesModel.removeAt(row)
+                        if (currentIndex >= count) currentIndex = count - 1
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                        favMenu.path = item.path
+                        favMenu.row = row
+                        favMenu.alias = item.alias
+                        favMenu.popup(panel, Theme.gapXl, (row + 1) * Theme.rowHeight)
+                        event.accepted = true
+                    }
+                }
+
+                delegate: Item {
+                    id: favRow
+                    objectName: "favoriteRow"
+                    required property int index
+                    required property string name
+                    required property string path
+                    required property string alias
+                    required property bool isCurrent
+                    readonly property bool cursor: ListView.isCurrentItem && favoritesList.activeFocus
+                    width: ListView.view.width - favoritesList.leftMargin - favoritesList.rightMargin
+                    height: Theme.rowHeight
+                    Accessible.role: Accessible.ListItem
+                    Accessible.name: name + (isCurrent ? ", current folder" : "")
+                    Accessible.selected: isCurrent
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Theme.radiusControl
+                        color: favRow.isCurrent ? Theme.selection : (favHover.hovered ? Theme.hover : "transparent")
+                        border.width: favRow.cursor ? Theme.focusWidth : 0
+                        border.color: Theme.focusRing
+                        Rectangle {
+                            visible: favRow.isCurrent
+                            anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 6; bottomMargin: 6 }
+                            width: 3; radius: 1.5
+                            color: Theme.primary
+                        }
+                    }
+                    HoverHandler { id: favHover }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: point => {
+                            favoritesList.currentIndex = favRow.index
+                            favoritesList.forceActiveFocus(Qt.MouseFocusReason)
+                            const at = favRow.mapToItem(panel, point.position.x, point.position.y)
+                            favMenu.path = favRow.path
+                            favMenu.row = favRow.index
+                            favMenu.alias = favRow.alias
+                            favMenu.popup(panel, at.x, at.y)
+                        }
+                    }
+                    TapHandler {
+                        onTapped: {
+                            favoritesList.currentIndex = favRow.index
+                            favoritesList.forceActiveFocus(Qt.MouseFocusReason)
+                            viewer.openFolder(favRow.path)
+                        }
+                    }
+                    UiIcon {
+                        id: favGlyph
+                        x: Theme.gapXs
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "star"
+                        color: favRow.isCurrent ? Theme.primary : Theme.muted
+                        size: 14
+                    }
+                    Label {
+                        id: favLabel
+                        anchors { left: favGlyph.right; leftMargin: Theme.gapXs; right: parent.right; rightMargin: Theme.gapSm; verticalCenter: parent.verticalCenter }
+                        text: favRow.name
+                        elide: Text.ElideRight
+                        color: Theme.text
+                        font.pixelSize: Theme.textBody
+                        font.weight: favRow.isCurrent ? Font.DemiBold : Font.Normal
+                    }
+                    ToolTip.visible: favHover.hovered && (favLabel.truncated || favRow.alias.length > 0)
+                    ToolTip.delay: 400
+                    ToolTip.text: favRow.alias.length > 0 ? (favRow.alias + " (" + favRow.path + ")") : favRow.path
+                }
+            }
+
+            Label {
+                visible: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count === 0)
+                text: "No favorite folders yet. Click + or right-click any folder to add."
+                color: Theme.muted
+                font.pixelSize: Theme.textCaption
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.gapMd
+                Layout.rightMargin: Theme.gapMd
+                Layout.topMargin: Theme.gapXs
+                Layout.bottomMargin: Theme.gapXs
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.gapSm
+                Layout.rightMargin: Theme.gapSm
+                Layout.topMargin: Theme.gapXs
+                Layout.bottomMargin: Theme.gapXs
+                height: Theme.borderWidth
+                color: Theme.border
+            }
+        }
+
         PanelButton {
             objectName: "allLocations"
             text: "All locations"
@@ -248,6 +483,35 @@ Rectangle {
             Layout.leftMargin: Theme.gapSm; Layout.rightMargin: Theme.gapSm
             Layout.bottomMargin: Theme.gapXs
             spacing: Theme.gapXs
+
+            PanelButton {
+                id: historyBackButton
+                objectName: "historyBack"
+                iconName: "chevron-left"
+                iconOnly: true
+                text: "Back"
+                tip: typeof folderHistory !== "undefined" && folderHistory.backDirectory.length > 0
+                     ? ("Back to " + folderHistory.backDirectory + " (Alt+Left)")
+                     : "Back (Alt+Left)"
+                enabled: typeof folderHistory !== "undefined" && folderHistory.canGoBack
+                visible: typeof folderHistory !== "undefined"
+                onClicked: if (typeof folderHistory !== "undefined") folderHistory.navigateBack()
+            }
+
+            PanelButton {
+                id: historyForwardButton
+                objectName: "historyForward"
+                iconName: "chevron-right"
+                iconOnly: true
+                text: "Forward"
+                tip: typeof folderHistory !== "undefined" && folderHistory.forwardDirectory.length > 0
+                     ? ("Forward to " + folderHistory.forwardDirectory + " (Alt+Right)")
+                     : "Forward (Alt+Right)"
+                enabled: typeof folderHistory !== "undefined" && folderHistory.canGoForward
+                visible: typeof folderHistory !== "undefined"
+                onClicked: if (typeof folderHistory !== "undefined") folderHistory.navigateForward()
+            }
+
             UiTextField {
                 id: address
                 objectName: "folderAddress"
@@ -538,35 +802,48 @@ Rectangle {
                     border.width: Theme.borderWidth
                     border.color: Theme.border
                 }
-                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
                 MenuItem {
-                    id: trashItem
-                    objectName: "folderMoveToTrash"
-                    // Drives and other roots are never moved; the item stays visible and explains itself.
-                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move “" + rowMenu.name + "” to the " + panel.trashName
-                    enabled: rowMenu.depth > 0 && !fileOperations.busy
+                    id: favoriteItem
+                    objectName: "folderFavoriteToggle"
+                    property bool isFav: typeof favoritesModel !== "undefined" && favoritesModel.isFavorite(rowMenu.path)
+                    text: isFav ? "Remove from Favorites" : "Add to Favorites"
+                    enabled: typeof favoritesModel !== "undefined" && rowMenu.path.length > 0
                     implicitHeight: Theme.controlHeight
                     leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
-                    onTriggered: { rowMenu.handedOff = true; panel.deleteRequested(rowMenu.path) }
+                    onTriggered: {
+                        if (typeof favoritesModel !== "undefined") {
+                            if (favoriteItem.isFav) favoritesModel.removeFavorite(rowMenu.path)
+                            else favoritesModel.addFavorite(rowMenu.path)
+                        }
+                    }
                     contentItem: RowLayout {
                         spacing: Theme.gapSm
-                        opacity: trashItem.enabled ? 1 : Theme.disabledOpacity
-                        UiIcon { name: "trash"; color: trashItem.enabled ? Theme.danger : Theme.muted }
+                        UiIcon { name: "star"; color: favoriteItem.isFav ? Theme.primary : Theme.text }
                         Label {
-                            text: trashItem.text
-                            color: trashItem.enabled ? Theme.danger : Theme.muted
+                            text: favoriteItem.text
+                            color: Theme.text
                             font.pixelSize: Theme.textBody
                             Layout.fillWidth: true
                         }
-                        Label { // the live binding of the command this row stands for
-                            visible: trashItem.enabled && text.length > 0
-                            text: panel.host ? panel.host.keyHint("delete-selection") : ""
-                            color: Theme.muted
-                            font.family: Theme.monoFamily
-                            font.pixelSize: Theme.textSmall
-                        }
                     }
-                    background: Rectangle { radius: Theme.radiusSmall; color: trashItem.highlighted ? Theme.hover : "transparent" }
+                    background: Rectangle { radius: Theme.radiusSmall; color: favoriteItem.highlighted ? Theme.hover : "transparent" }
+                }
+                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
+                // The registered "delete-selection" command, like the Delete key: the host picks the target from the cursor
+                // row (this menu opens on it), so the menu and the key cannot disagree. Drives and other roots are never
+                // moved and a running operation blocks a second one; the row stays visible and explains itself.
+                CommandMenuItem {
+                    id: trashItem
+                    host: panel.host
+                    commandId: "delete-selection"
+                    iconName: "trash"; danger: true
+                    label: panel.host && panel.host.commandBlockedReason(commandId).length
+                           ? panel.host.commandBlockedReason(commandId)
+                           : "Move “" + rowMenu.name + "” to the " + panel.trashName
+                }
+                Connections { // the confirmation dialog owns focus after a choice
+                    target: trashItem
+                    function onTriggered() { rowMenu.handedOff = true }
                 }
             }
             Label {
@@ -578,6 +855,182 @@ Rectangle {
                 text: "No filesystem locations are available."
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
+            }
+        }
+    }
+
+    Menu {
+        id: favMenu
+        objectName: "favoriteItemMenu"
+        property string path: ""
+        property int row: -1
+        property string alias: ""
+        padding: Theme.gapXs
+        onOpened: panel.focusedControls += 1
+        onClosed: { panel.focusedControls -= 1; if (panel.visible && favoritesList.visible) favoritesList.forceActiveFocus(Qt.PopupFocusReason) }
+        background: Rectangle {
+            implicitWidth: 200
+            radius: Theme.radiusControl
+            color: Theme.surface
+            border.width: Theme.borderWidth
+            border.color: Theme.border
+        }
+        MenuItem {
+            id: miOpen
+            text: "Open folder"
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: viewer.openFolder(favMenu.path)
+            background: Rectangle { radius: Theme.radiusSmall; color: miOpen.highlighted ? Theme.hover : "transparent" }
+        }
+        MenuItem {
+            id: miUp
+            text: "Move up (Alt+Up)"
+            enabled: favMenu.row > 0
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: {
+                if (typeof favoritesModel !== "undefined") {
+                    favoritesModel.moveUp(favMenu.row)
+                    favoritesList.currentIndex = favMenu.row - 1
+                }
+            }
+            background: Rectangle { radius: Theme.radiusSmall; color: miUp.highlighted ? Theme.hover : "transparent" }
+        }
+        MenuItem {
+            id: miDown
+            text: "Move down (Alt+Down)"
+            enabled: favMenu.row >= 0 && favMenu.row + 1 < (typeof favoritesModel !== "undefined" ? favoritesModel.count : 0)
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: {
+                if (typeof favoritesModel !== "undefined") {
+                    favoritesModel.moveDown(favMenu.row)
+                    favoritesList.currentIndex = favMenu.row + 1
+                }
+            }
+            background: Rectangle { radius: Theme.radiusSmall; color: miDown.highlighted ? Theme.hover : "transparent" }
+        }
+        MenuItem {
+            id: miAlias
+            text: favMenu.alias.length > 0 ? "Edit alias…" : "Set alias…"
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: {
+                aliasDialog.targetPath = favMenu.path
+                aliasField.text = favMenu.alias
+                aliasDialog.open()
+            }
+            background: Rectangle { radius: Theme.radiusSmall; color: miAlias.highlighted ? Theme.hover : "transparent" }
+        }
+        MenuItem {
+            id: miRemoveAlias
+            visible: favMenu.alias.length > 0
+            text: "Remove alias"
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: {
+                if (typeof favoritesModel !== "undefined") {
+                    favoritesModel.setAlias(favMenu.path, "")
+                }
+            }
+            background: Rectangle { radius: Theme.radiusSmall; color: miRemoveAlias.highlighted ? Theme.hover : "transparent" }
+        }
+        MenuItem {
+            id: miCopy
+            text: "Copy path"
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: viewer.copyFilePath([favMenu.path])
+            background: Rectangle { radius: Theme.radiusSmall; color: miCopy.highlighted ? Theme.hover : "transparent" }
+        }
+        MenuItem {
+            id: miRemove
+            text: "Remove from Favorites"
+            implicitHeight: Theme.controlHeight
+            leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+            onTriggered: {
+                if (typeof favoritesModel !== "undefined") {
+                    favoritesModel.removeAt(favMenu.row)
+                }
+            }
+            background: Rectangle { radius: Theme.radiusSmall; color: miRemove.highlighted ? Theme.hover : "transparent" }
+        }
+    }
+
+    UiDialog {
+        id: aliasDialog
+        objectName: "favoriteAliasDialog"
+        title: "Favorite Alias"
+        property string targetPath: ""
+        x: Math.round((panel.width - width) / 2)
+        y: Math.round((panel.height - height) / 2)
+        width: Math.min(360, panel.width - 2 * Theme.gapLg)
+        onOpened: {
+            panel.focusedControls += 1
+            aliasField.forceActiveFocus(Qt.TabFocusReason)
+            aliasField.selectAll()
+        }
+        onClosed: {
+            panel.focusedControls -= 1
+            if (panel.visible && favoritesList.visible) favoritesList.forceActiveFocus(Qt.PopupFocusReason)
+        }
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Theme.gapMd
+            Label {
+                text: "Set a custom display name for this folder:"
+                color: Theme.muted
+                font.pixelSize: Theme.textSmall
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            UiTextField {
+                id: aliasField
+                objectName: "favoriteAliasField"
+                placeholderText: "e.g. Vacation 2026"
+                Layout.fillWidth: true
+                onAccepted: {
+                    if (typeof favoritesModel !== "undefined") {
+                        favoritesModel.setAlias(aliasDialog.targetPath, text.trim())
+                    }
+                    aliasDialog.close()
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.gapSm
+                spacing: Theme.gapSm
+                Item { Layout.fillWidth: true }
+                UiButton {
+                    text: "Cancel"
+                    onClicked: aliasDialog.close()
+                }
+                UiButton {
+                    text: "Save"
+                    variant: "primary"
+                    onClicked: {
+                        if (typeof favoritesModel !== "undefined") {
+                            favoritesModel.setAlias(aliasDialog.targetPath, aliasField.text.trim())
+                        }
+                        aliasDialog.close()
+                    }
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: viewer
+        function onViewCommand(command) {
+            if (command === "add-to-favorites") {
+                if (typeof favoritesModel !== "undefined" && viewer.directory.length > 0) {
+                    favoritesModel.addFavorite(viewer.directory)
+                }
+            } else if (command === "navigate-back") {
+                if (typeof folderHistory !== "undefined") folderHistory.navigateBack()
+            } else if (command === "navigate-forward") {
+                if (typeof folderHistory !== "undefined") folderHistory.navigateForward()
             }
         }
     }

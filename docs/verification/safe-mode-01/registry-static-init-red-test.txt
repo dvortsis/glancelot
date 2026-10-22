@@ -1,0 +1,12 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/registry-component
+    Start 1: recovery_registry_component
+1/1 Test #1: recovery_registry_component ......***Failed    0.22 sec
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   0.26 sec
+
+The following tests FAILED:
+	  1 - recovery_registry_component (Failed)
+Errors while running CTest

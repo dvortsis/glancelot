@@ -1,0 +1,44 @@
+[1/47] Automatic MOC for target recovery_component_core
+[2/47] Building CXX object CMakeFiles\recovery_component_core.dir\recovery_component_core_autogen\mocs_compilation.cpp.obj
+[3/47] Automatic MOC for target recovery_component_platform
+[4/47] Building CXX object CMakeFiles\recovery_component_core.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\core\navigation.cpp.obj
+[5/47] Building CXX object CMakeFiles\recovery_component_platform.dir\recovery_component_platform_autogen\mocs_compilation.cpp.obj
+[6/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\platform_integration.cpp.obj
+[7/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\io_scheduler.cpp.obj
+[8/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\metadata_model.cpp.obj
+[9/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\metadata_parser.cpp.obj
+[10/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\mutation_service.cpp.obj
+[11/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\animation_controller.cpp.obj
+[12/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\raw_preview.cpp.obj
+[13/47] Building CXX object CMakeFiles\recovery_component_platform.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\copy_move_service.cpp.obj
+[14/47] Linking CXX static library recovery_component_platform.lib
+[15/47] Automatic MOC for target glancelot-decoder
+[16/47] Building CXX object CMakeFiles\recovery_component_core.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\core\directory_listing.cpp.obj
+[17/47] Building CXX object CMakeFiles\recovery_component_core.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\core\file_operations.cpp.obj
+[18/47] Building CXX object CMakeFiles\glancelot-decoder.dir\glancelot-decoder_autogen\mocs_compilation.cpp.obj
+[19/47] Building CXX object CMakeFiles\glancelot-decoder.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\worker\main.cpp.obj
+[20/47] Linking CXX executable glancelot-decoder.exe
+[21/47] Building CXX object CMakeFiles\recovery_component_core.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\core\perf_trace.cpp.obj
+[22/47] Linking CXX static library recovery_component_core.lib
+[23/47] Automatic MOC for target recovery_raw_component
+[24/46] Automatic MOC for target recovery_registry_component
+[25/44] Automatic MOC for target recovery_controller_component
+[26/44] Running rcc for resource recovery_controller_catalog
+[27/44] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\recovery_session.cpp.obj
+[28/44] Building CXX object CMakeFiles\recovery_controller_component.dir\recovery_controller_component_autogen\mocs_compilation.cpp.obj
+[29/44] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp.obj
+[30/44] Building CXX object CMakeFiles\recovery_controller_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp.obj
+FAILED: [code=2] CMakeFiles/recovery_controller_component.dir/C_/src/Github/Glancelot/.worktrees/codex-safe-mode-01/src/app/viewer_controller.cpp.obj 
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe"  /nologo /TP -DGLANCELOT_RECOVERY_TESTING -DQT_CONCURRENT_LIB -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_TESTCASE_BUILDDIR=\"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/registry-component\" -DQT_TESTCASE_SOURCEDIR=\"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/.cache/registry-component\" -DQT_TESTLIB_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IC:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\build-codex-safe-mode-01\registry-component\recovery_controller_component_autogen\include -IC:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\include -IC:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtCore -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\mkspecs\win32-msvc -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtGui -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtConcurrent -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtTest -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD -Zc:__cplusplus -permissive- -utf-8 /showIncludes /FoCMakeFiles\recovery_controller_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp.obj /FdCMakeFiles\recovery_controller_component.dir\ /FS -c C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): error C2679: binary '=': no operator found which takes a right-hand operand of type 'QVariantMap' (or there is no acceptable conversion)
+C:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtCore\qjsonobject.h(33): note: could be 'QJsonObject &QJsonObject::operator =(QJsonObject &&) noexcept'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: 'QJsonObject &QJsonObject::operator =(QJsonObject &&) noexcept': cannot convert argument 2 from 'QVariantMap' to 'QJsonObject &&'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: Reason: cannot convert from 'QVariantMap' to 'QJsonObject'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtCore\qjsonobject.h(29): note: or       'QJsonObject &QJsonObject::operator =(const QJsonObject &) noexcept'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: 'QJsonObject &QJsonObject::operator =(const QJsonObject &) noexcept': cannot convert argument 2 from 'QVariantMap' to 'const QJsonObject &'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: Reason: cannot convert from 'QVariantMap' to 'const QJsonObject'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp(421): note: while trying to match the argument list '(QJsonObject, QVariantMap)'
+[31/44] Building CXX object CMakeFiles\recovery_controller_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_controller_tests.cpp.obj
+ninja: build stopped: subcommand failed.

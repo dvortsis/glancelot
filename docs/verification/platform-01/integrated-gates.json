@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "scope": "PLATFORM-01 software gate evidence; physical gates remain unverified",
+  "integrated_source": "1d51c17d083cd689da5aaff7ec9d67f8c0cbff30",
+  "windows": {
+    "command": "scripts/build.ps1 -BuildDir build-codex-platform-native-fixture -Test",
+    "executed": true,
+    "passed": 18,
+    "failed": 0,
+    "seconds": 176.11,
+    "raw_log_sha256": "f614d6e0db501564bd64ed787434cdce5695d098af97b3ad2d6c5f8234d759a1",
+    "terminal_excerpt": "Test project <build>\r\n      Start  1: perf_trace\r\n 1/18 Test  #1: perf_trace .......................   Passed    0.04 sec\r\n      Start  2: navigation\r\n 2/18 Test  #2: navigation .......................   Passed    2.50 sec\r\n      Start  3: directory_listing\r\n 3/18 Test  #3: directory_listing ................   Passed   15.16 sec\r\n      Start  4: file_operations\r\n 4/18 Test  #4: file_operations ..................   Passed    0.14 sec\r\n      Start  5: viewer_acceptance\r\n 5/18 Test  #5: viewer_acceptance ................   Passed    5.64 sec\r\n      Start  6: thumbnails\r\n 6/18 Test  #6: thumbnails .......................   Passed    6.04 sec\r\n      Start  7: folder_tree\r\n 7/18 Test  #7: folder_tree ......................   Passed    6.59 sec\r\n      Start  8: pane_layout\r\n 8/18 Test  #8: pane_layout ......................   Passed    0.32 sec\r\n      Start  9: window_slots\r\n 9/18 Test  #9: window_slots .....................   Passed   19.69 sec\r\n      Start 10: folder_grid\r\n10/18 Test #10: folder_grid ......................   Passed   95.20 sec\r\n      Start 11: file_operation_service\r\n11/18 Test #11: file_operation_service ...........   Passed    1.20 sec\r\n      Start 12: directory_model\r\n12/18 Test #12: directory_model ..................   Passed   21.60 sec\r\n      Start 13: viewport\r\n13/18 Test #13: viewport .........................   Passed    0.06 sec\r\n      Start 14: themes\r\n14/18 Test #14: themes ...........................   Passed    0.22 sec\r\n      Start 15: platform_integration\r\n15/18 Test #15: platform_integration .............   Passed    1.14 sec\r\n      Start 16: grid_search\r\n16/18 Test #16: grid_search ......................   Passed    0.30 sec\r\n      Start 17: grid_density\r\n17/18 Test #17: grid_density .....................   Passed    0.20 sec\r\n      Start 18: ui_settings\r\n18/18 Test #18: ui_settings ......................   Passed    0.04 sec\r\n\r\n100% tests passed out of 18\r\n\r\nTotal Test time (real) = 176.11 sec"
+  },
+  "linux": {
+    "command": "docker build -t glancelot-browser:main .",
+    "executed_suite_source": "5b0333910d778524f2a8321a2f1247cb5f323fd1",
+    "passed": 18,
+    "failed": 0,
+    "seconds": 110.41,
+    "raw_log_sha256": "775188d800d090d86e37db47476fce68b480a9b4e9ea24d4ebf2d1bae7285f5c",
+    "terminal_excerpt": "Test project <build>\n      Start  1: perf_trace\n 1/18 Test  #1: perf_trace .......................   Passed    0.04 sec\n      Start  2: navigation\n 2/18 Test  #2: navigation .......................   Passed    0.27 sec\n      Start  3: directory_listing\n 3/18 Test  #3: directory_listing ................   Passed    1.35 sec\n      Start  4: file_operations\n 4/18 Test  #4: file_operations ..................   Passed    0.01 sec\n      Start  5: viewer_acceptance\n 5/18 Test  #5: viewer_acceptance ................   Passed    3.27 sec\n      Start  6: thumbnails\n 6/18 Test  #6: thumbnails .......................   Passed    3.67 sec\n      Start  7: folder_tree\n 7/18 Test  #7: folder_tree ......................   Passed    4.93 sec\n      Start  8: pane_layout\n 8/18 Test  #8: pane_layout ......................   Passed    0.18 sec\n      Start  9: window_slots\n 9/18 Test  #9: window_slots .....................   Passed   14.18 sec\n      Start 10: folder_grid\n10/18 Test #10: folder_grid ......................   Passed   77.58 sec\n      Start 11: file_operation_service\n11/18 Test #11: file_operation_service ...........   Passed    0.96 sec\n      Start 12: directory_model\n12/18 Test #12: directory_model ..................   Passed    3.24 sec\n      Start 13: viewport\n13/18 Test #13: viewport .........................   Passed    0.02 sec\n      Start 14: themes\n14/18 Test #14: themes ...........................   Passed    0.07 sec\n      Start 15: platform_integration\n15/18 Test #15: platform_integration .............   Passed    0.46 sec\n      Start 16: grid_search\n16/18 Test #16: grid_search ......................   Passed    0.10 sec\n      Start 17: grid_density\n17/18 Test #17: grid_density .....................   Passed    0.06 sec\n      Start 18: ui_settings\n18/18 Test #18: ui_settings ......................   Passed    0.01 sec\n\n100% tests passed, 0 tests failed out of 18\n\nTotal Test time (real) = 110.41 sec",
+    "integrated_command_exit": 0,
+    "integrated_command_cached": true,
+    "integrated_command_new_test_execution": false,
+    "integrated_log_sha256": "cf13bec7e5f029cd28531c03ad8207c566d913bb4b084c38bca592f7b4115e34",
+    "identical_image": "sha256:0ba808df636ddcd1a66115898c9d46cce5f486b5190c956eee6e42f8ce542692"
+  },
+  "independent_review": {
+    "software_closeout": "91b3e11",
+    "fixture_runtime": "8888d41",
+    "docker_wiring": "7bb7b80",
+    "new_runtime_in_closeout_review": false
+  },
+  "sanitization": "Only build-project paths in test summaries replaced with <build>; compiler/setup output omitted. No source media or credentials included."
+}

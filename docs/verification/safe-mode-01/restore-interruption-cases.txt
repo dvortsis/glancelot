@@ -1,0 +1,174 @@
+********* Start testing of RecoveryTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : RecoveryTests::initTestCase()
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(before-evidence)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(after-sealed-preimage)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(before-primary-replacement)
+PASS   : RecoveryTests::interruptedRestoreProcessPreservesAtomicState(after-primary-replacement)
+PASS   : RecoveryTests::absentAndPresentEmptyHaveDifferentRevisions()
+PASS   : RecoveryTests::exactPairBytesSurviveClassification()
+PASS   : RecoveryTests::formattingAndBackupOnlyEditsInvalidateRevision()
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(future)
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(fractional)
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(missing)
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(wrong-type)
+PASS   : RecoveryTests::oversizedMemberYieldsNoSnapshot(primary)
+PASS   : RecoveryTests::oversizedMemberYieldsNoSnapshot(backup)
+PASS   : RecoveryTests::directoryMemberIsNotAbsence()
+PASS   : RecoveryTests::maximumSizedMemberIsReadExactly()
+PASS   : RecoveryTests::namespaceIsSeparateFromRawRevision()
+PASS   : RecoveryTests::invalidRequestAndCancellationDoNotReadOrCreate()
+PASS   : RecoveryTests::contendedLockCanCancelWithoutTouchingMembers()
+PASS   : RecoveryTests::ordinaryWriterStillMergesAndKeepsExactLastGood()
+PASS   : RecoveryTests::ordinaryWriterRecoversCorruptButRefusesFuture()
+PASS   : RecoveryTests::ordinaryBackupFailureAndOversizeLeavePrimaryUntouched()
+PASS   : RecoveryTests::restoreMustHaveRawGuardsAndPreimageWriter()
+PASS   : RecoveryTests::failedPreimageNeverReplacesPrimary()
+PASS   : RecoveryTests::preimageCannotClaimPrimaryWasAlreadyCommitted()
+PASS   : RecoveryTests::staleRestoreConflictsBeforeNoChangeOrPreimage()
+PASS   : RecoveryTests::checkedNoChangeDoesNotRewriteEvidence()
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(0-failure)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(0-cancel)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(1-failure)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(1-cancel)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(2-failure)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(2-cancel)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(3-failure)
+PASS   : RecoveryTests::restoreFailureAndCancelRetainOriginals(3-cancel)
+PASS   : RecoveryTests::cancelAfterReplacementIsCommitted()
+PASS   : RecoveryTests::captureRetainsExactDiagnosticMembersAndSealedRevision()
+PASS   : RecoveryTests::captureAbsentAndEmptyRemainDistinct()
+PASS   : RecoveryTests::destinationWorkDoesNotHoldSettingsLock()
+PASS   : RecoveryTests::packageTamperingRefuses(bytes)
+PASS   : RecoveryTests::packageTamperingRefuses(missing)
+PASS   : RecoveryTests::packageTamperingRefuses(extra)
+PASS   : RecoveryTests::packageTamperingRefuses(unsealed)
+PASS   : RecoveryTests::packageTamperingRefuses(future)
+PASS   : RecoveryTests::packageTamperingRefuses(path)
+PASS   : RecoveryTests::packageTamperingRefuses(duplicate)
+PASS   : RecoveryTests::packageTamperingRefuses(length)
+PASS   : RecoveryTests::packageTamperingRefuses(hash)
+PASS   : RecoveryTests::packageTamperingRefuses(undeclared)
+PASS   : RecoveryTests::packageTamperingRefuses(manifest-overflow)
+PASS   : RecoveryTests::packageCancellationAtSeal(0)
+PASS   : RecoveryTests::packageCancellationAtSeal(1)
+PASS   : RecoveryTests::packageCancellationAtSeal(2)
+PASS   : RecoveryTests::packageCancellationAtSeal(3)
+PASS   : RecoveryTests::packageCancellationAtSeal(4)
+PASS   : RecoveryTests::failedPackageWriteLeavesNoApplicableSeal()
+FAIL!  : RecoveryTests::globalPolicyPreservesUnknownAndPerSlotData() Compared values are not the same
+   Actual   (merged.status.code): 8
+   Expected (Code::Ok)          : 0
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(416) : failure location
+PASS   : RecoveryTests::missingSelectedKnownValuesResetOnlyTheirKeys()
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(bad-boundary) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(wrong-bool) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(fractional-seed) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(oversize-scale) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(unknown-family) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(bad-profile) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(escape) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(wrong-binding-type) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::selectedInvalidValuesRejectWholeMerge(prefix-conflict) Compared values are not the same
+   Actual   (result.status.code): 8
+   Expected (Code::Corrupt)     : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(447) : failure location
+FAIL!  : RecoveryTests::unrelatedMalformedSectionsAreUntouched() Compared values are not the same
+   Actual   (refused.status.code): 8
+   Expected (Code::Corrupt)      : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(458) : failure location
+PASS   : RecoveryTests::positionPolicyTouchesOnlySelectedKnownSlotFields()
+PASS   : RecoveryTests::layoutPolicyPreservesUnknownPanesAndFutureSlots()
+PASS   : RecoveryTests::policyRevisionIsStableAndCoversShippedData()
+PASS   : RecoveryTests::diffSeparatesAppliedAndPreservedSourceChanges()
+PASS   : RecoveryTests::diffDistinguishesMissingNullAndEmpty()
+PASS   : RecoveryTests::diffUsesPathComponentsNotDottedNames()
+PASS   : RecoveryTests::diffRowBoundary(limit)
+PASS   : RecoveryTests::diffRowBoundary(over)
+PASS   : RecoveryTests::diffDepthBoundary(limit)
+PASS   : RecoveryTests::diffDepthBoundary(over)
+PASS   : RecoveryTests::repeatedLongAncestorPathsHitAggregateBound()
+PASS   : RecoveryTests::objectTypeReplacementDoesNotDuplicateSubtrees()
+PASS   : RecoveryTests::diffCancellationReturnsNoUsableSuccess()
+PASS   : RecoveryTests::realClaimOwnsOneSlotAndBlocksOfflineRestore()
+PASS   : RecoveryTests::sameProcessReleaseReclaimRevokesOldNonce()
+PASS   : RecoveryTests::claimsInSameProcessAndOtherNamespacesStayDistinct()
+PASS   : RecoveryTests::changedLiveRecordCannotAuthorizeCapturedClaim(nonce)
+PASS   : RecoveryTests::changedLiveRecordCannotAuthorizeCapturedClaim(start)
+PASS   : RecoveryTests::changedLiveRecordCannotAuthorizeCapturedClaim(legacy)
+PASS   : RecoveryTests::changedLiveRecordCannotAuthorizeCapturedClaim(unknown-start)
+PASS   : RecoveryTests::offlineRefusesDamagedFutureAndAmbiguousBookkeeping(corrupt)
+PASS   : RecoveryTests::offlineRefusesDamagedFutureAndAmbiguousBookkeeping(future)
+PASS   : RecoveryTests::offlineRefusesDamagedFutureAndAmbiguousBookkeeping(fractional)
+PASS   : RecoveryTests::offlineRefusesDamagedFutureAndAmbiguousBookkeeping(invalid-record)
+PASS   : RecoveryTests::offlineRefusesDamagedFutureAndAmbiguousBookkeeping(oversized)
+PASS   : RecoveryTests::offlineGuardDoesNotResetOrRewriteSessions()
+PASS   : RecoveryTests::ownershipGuardContentionAndCancellation()
+PASS   : RecoveryTests::directoryBookkeepingCannotAuthorizeOfflineRestore()
+PASS   : RecoveryTests::capturedClaimAndOfflineGuardRetainPrivateRootOwner()
+PASS   : RecoveryTests::publicPreviewApplyCreatesExactSealedPreimage()
+PASS   : RecoveryTests::publicNoChangeAndBackupOnlyConflictNeverCreatePreimages()
+PASS   : RecoveryTests::changedPackageAfterPreviewAndAfterPreimageRefuses(before-apply)
+PASS   : RecoveryTests::changedPackageAfterPreviewAndAfterPreimageRefuses(after-preimage)
+FAIL!  : RecoveryTests::invalidTruncatedAndFuturePreviewNeverYieldsPlan() Compared values are not the same
+   Actual   (invalidPreview.status.code): 8
+   Expected (Code::Corrupt)             : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(702) : failure location
+PASS   : RecoveryTests::oversizedMergedReplacementNeverYieldsPlan()
+PASS   : RecoveryTests::publicOwnedAndOfflinePositionRestoreKeepOtherSlots()
+PASS   : RecoveryTests::immutablePlanIgnoresEditedPreviewFieldsAndBindsScope()
+PASS   : RecoveryTests::lastGoodSourceIsExplicitAndCorruptCurrentIsPreserved()
+PASS   : RecoveryTests::publicPreimageFailureAndCancellationKeepOriginal()
+PASS   : RecoveryTests::checkpointLifecyclePreservesUnknownsAndEmptyFolder()
+PASS   : RecoveryTests::checkpointStaleCompletionCannotCleanNewerPosition()
+PASS   : RecoveryTests::beginCapturesDirtyPayloadBeforeNewClaimAndNoNavigationExit()
+PASS   : RecoveryTests::checkpointFailureLeavesPrimaryDirtyAndCannotAcknowledge()
+PASS   : RecoveryTests::checkpointInvalidInputContentionAndCancellationDoNotWrite()
+PASS   : RecoveryTests::checkpointKeepsUnknownRecoveryAndOtherSlots()
+PASS   : RecoveryTests::checkpointCancellationAfterCommitStillAcknowledgesRevision()
+PASS   : RecoveryTests::checkpointRevokedBeforeReplaceLeavesDirtyOriginal()
+PASS   : RecoveryTests::checkpointFutureAndMalformedRecoveryPreserved(future-root)
+PASS   : RecoveryTests::checkpointFutureAndMalformedRecoveryPreserved(malformed-root)
+PASS   : RecoveryTests::checkpointFutureAndMalformedRecoveryPreserved(missing-version)
+PASS   : RecoveryTests::checkpointFutureAndMalformedRecoveryPreserved(future-slot)
+PASS   : RecoveryTests::checkpointFutureAndMalformedRecoveryPreserved(malformed-sequence)
+PASS   : RecoveryTests::headlessMaintenanceBackupDiffAndCheckedRestore()
+PASS   : RecoveryTests::headlessMaintenanceOfflineRestoreUsesHistoricalCleanRecord()
+FAIL!  : RecoveryTests::headlessMaintenanceTruncationAndCancellationHaveBoundedErrors() Compared values are not the same
+   Actual   (limited.exitCode): 7
+   Expected (6)               : 6
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp(974) : failure location
+PASS   : RecoveryTests::maintenanceExitCodesRemainStable()
+PASS   : RecoveryTests::recoverySessionBoundsWorkToActiveAndLatestPending()
+PASS   : RecoveryTests::recoverySessionFailedLatestCheckpointNeverCleans()
+PASS   : RecoveryTests::recoverySessionRetainsPrivateLifetimeAfterOwnerTeardown()
+PASS   : RecoveryTests::recoverySessionNoNavigationCanCloseAndInvalidClaimCannotBegin()
+PASS   : RecoveryTests::recoverySessionCannotCleanWhenCallerHasUnqueuedSuccess()
+PASS   : RecoveryTests::revokedOwnerImmediatelyBeforeReplaceCannotApply()
+PASS   : RecoveryTests::cleanupTestCase()
+Totals: 118 passed, 13 failed, 0 skipped, 0 blacklisted, 13561ms
+********* Finished testing of RecoveryTests *********
