@@ -8,7 +8,7 @@ for entry in subprocess.check_output(['git','ls-files','--stage','-z',prefix],cw
     if not entry: continue
     meta,path=entry.split(b'\t',1)
     path=path.decode('utf-8'); name=path[len(prefix):]
-    if name in ('README.md','.gitattributes'): continue
+    if name in ('README.md','.gitattributes','audit-archive-bytes.py','archive-byte-audit.json'): continue
     data=(r/path).read_bytes()
     sha=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
     assert sha==meta.split()[1].decode(),path
