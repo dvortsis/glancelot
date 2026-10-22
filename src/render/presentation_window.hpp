@@ -51,6 +51,7 @@ public:
     QImage outputColorAtlas() const { return m_colorAtlas; }
     qint64 colorResourceBytes() const { return kPresentationColorReservation; }
     void applyCustomization(const QVariantMap& options);
+    void setWindowedGeometry(const QRect& geometry);
     void applyControllerViewport(const QVariantMap& state);
 
     ImageCanvas* primaryCanvas() const { return m_canvasA; }

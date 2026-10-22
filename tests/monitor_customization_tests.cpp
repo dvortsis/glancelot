@@ -17,6 +17,7 @@
 #include "settings_policy.hpp"
 #include "file_lock.hpp"
 #include "settings_retry.hpp"
+#include "monitor_customization_screens.hpp"
 #include <QDir>
 
 class MonitorCustomizationTests:public QObject {
@@ -172,6 +173,44 @@ private slots:
     void duplicateAndPlaceholderSerialsAreWeak() {
         glancelot::DisplayInfo a;a.id="a";a.serialNumber="unique";QList<glancelot::DisplayInfo> displays{a};QVERIFY(glancelot::monitor_topology::strongIdentity(a,displays));
         auto b=a;b.id="b";displays.append(b);QVERIFY(!glancelot::monitor_topology::strongIdentity(a,displays));a.serialNumber="0000";QVERIFY(!glancelot::monitor_topology::strongIdentity(a,{a}));
+    }
+    void canonicalFreezeIsSharedBySettingsArrangementAndReset() {
+        Harness h;const auto display=h.manager.displays().first().id;QVERIFY(h.customization.detachPane("grid",display));QVERIFY(h.customization.setPaneFrozen("grid",true));QVERIFY(h.panes.pane("grid")["frozen"].toBool());
+        QVERIFY(h.panes.freeze("grid",false));QVERIFY(!h.customization.paneRoutes()["grid"].toMap()["frozen"].toBool());QVERIFY(h.customization.redockPane("grid"));
+        QVERIFY(h.customization.setPaneFrozen("grid",true));h.panes.reset();QVERIFY(!h.customization.paneRoutes()["grid"].toMap()["frozen"].toBool());QVERIFY(h.customization.detachPane("grid",display));
+        QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());QVERIFY(!root["monitorCustomization"].toObject()["slots"].toObject()["1"].toObject()["panes"].toObject()["grid"].toObject().contains("frozen"));
+        QVERIFY(h.panes.freeze("grid",true));QVERIFY(h.customization.savePreset({},"Canonical workspace","workspace"));QVERIFY(h.customization.presets().first().toMap()["snapshot"].toMap()["dock"].toMap()["panes"].toMap()["grid"].toMap()["frozen"].toBool());
+    }
+    void workspacePresetAlsoHonorsControllerOnlyPaneFreeze() {
+        Harness h;QVERIFY(h.customization.savePreset({},"Workspace","workspace"));const auto id=h.customization.presets().first().toMap()["id"].toString();QVERIFY(h.panes.freeze("topbar",true));QVERIFY(!h.customization.applyPreset(id));
+        QVERIFY(h.customization.savePreset({},"Presentation","presentation"));const auto presentation=h.customization.presets().last().toMap()["id"].toString();QVERIFY(h.customization.applyPreset(presentation));QVERIFY(h.panes.pane("topbar")["frozen"].toBool());
+    }
+    void layoutUnlockAndFreezePreserveUnsupportedMonitorData() {
+        Harness h;h.customization.setLayoutLocked(true);QVERIFY(h.customization.layoutLocked());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["monitorCustomization"]=QJsonObject{{"version",2},{"future","retain"}};}).ok());h.customization.reloadPreferences();
+        h.customization.setLayoutLocked(false);QTRY_VERIFY(!h.customization.layoutLocked());QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.paneRoutes()["tree"].toMap()["frozen"].toBool());
+        QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());QCOMPARE(root["monitorCustomization"].toObject(),(QJsonObject{{"version",2},{"future","retain"}}));
+    }
+    void realCoordinatorMovesSwapsAndRecoversAcrossSyntheticScreens() {
+        if(QGuiApplication::platformName()!="offscreen")QSKIP("Synthetic QPA topology belongs only to the isolated offscreen backend.");
+        MonitorSyntheticScreens topology;Harness h;QCOMPARE(h.manager.displayCount(),1);auto* primary=QGuiApplication::primaryScreen();const auto primaryId=glancelot::DisplayManager::computeDisplayId(primary);
+        auto* second=topology.add({1000,0,1600,1200},"strong-A",2);auto* screenA=second->screen();const auto idA=glancelot::DisplayManager::computeDisplayId(screenA);QCOMPARE(h.manager.displayCount(),2);
+        QQuickWindow controller;controller.setScreen(primary);controller.setGeometry(primary->availableGeometry().adjusted(20,20,-20,-20));h.customization.setControllerWindow(&controller);
+        QImage image(400,300,QImage::Format_RGBA8888);image.fill(Qt::red);h.manager.updateImage("/generated/a.png",image,1);h.manager.pinCurrentImage();QVERIFY(h.manager.openPresentation(idA,glancelot::PresentationMode::Pinned));
+        QVERIFY(h.customization.setOutputOptions({{"fitMode","actual"},{"windowMode","windowed"}}));auto* output=qobject_cast<glancelot::PresentationWindow*>(h.manager.presentationWindow());QVERIFY(output);
+        QTRY_COMPARE(output->visibility(),QWindow::Windowed);QVERIFY2(screenA->availableGeometry().contains(output->frameGeometry()),qPrintable(QString("frame%1,%2 %3x%4 outside%5,%6 %7x%8").arg(output->frameGeometry().x()).arg(output->frameGeometry().y()).arg(output->frameGeometry().width()).arg(output->frameGeometry().height()).arg(screenA->availableGeometry().x()).arg(screenA->availableGeometry().y()).arg(screenA->availableGeometry().width()).arg(screenA->availableGeometry().height())));
+        QCOMPARE(output->primaryCanvas()->zoom(),qreal(1));output->primaryCanvas()->rotateClockwise();const auto view=output->viewportState();auto dock=h.panes.snapshot();dock["locked"]=true;QVERIFY(h.panes.restoreSnapshot(dock));
+        QVERIFY(h.customization.swapControllerAndOutput());QCOMPARE(h.manager.activeDisplayId(),primaryId);QCOMPARE(controller.screen(),screenA);QCOMPARE(output->viewportState(),view);QVERIFY(h.panes.locked());QCOMPARE(h.manager.presentationMode(),glancelot::PresentationMode::Pinned);
+        QVERIFY(h.customization.moveOutput(idA));QCOMPARE(h.manager.activeDisplayId(),idA);QCOMPARE(output->viewportState(),view);QCOMPARE(output->primaryCanvas()->image().cacheKey(),image.cacheKey());QVERIFY(screenA->availableGeometry().contains(output->frameGeometry()));
+        output->setScreen(primary);QCOMPARE(h.manager.activeDisplayId(),primaryId);QVERIFY(h.customization.setOutputOptions({{"guides",true}}));QCOMPARE(output->screen(),primary);QCOMPARE(output->viewportState(),view);QVERIFY(h.customization.moveOutput(idA));
+        h.customization.setLayoutLocked(false);QVERIFY(h.customization.detachPane("tree",idA));
+        auto* third=topology.add({3000,0,1920,1080},"",1);const auto weakId=glancelot::DisplayManager::computeDisplayId(third->screen());QCOMPARE(h.manager.displayCount(),3);
+        const auto dragged=third->screen()->availableGeometry().adjusted(20,20,-20,-20);QVariantMap geometry{{"x",dragged.x()},{"y",dragged.y()},{"width",dragged.width()},{"height",dragged.height()}};
+        QVERIFY(h.customization.updatePaneGeometry("tree",geometry));QCOMPARE(h.customization.paneRoutes()["tree"].toMap()["displayId"].toString(),weakId);QCOMPARE(h.customization.paneRoutes()["tree"].toMap()["effectiveDisplayId"].toString(),weakId);
+        topology.remove(third);QVERIFY(h.customization.paneRoutes()["tree"].toMap()["recovered"].toBool());third=topology.add({3000,0,1920,1080},"",1);QCOMPARE(glancelot::DisplayManager::computeDisplayId(third->screen()),weakId);QVERIFY(h.customization.paneRoutes()["tree"].toMap()["recovered"].toBool());
+        QVERIFY(h.customization.detachPane("tree",idA));topology.remove(second);QVERIFY(!h.manager.isPresentationActive());QVERIFY(h.customization.paneRoutes()["tree"].toMap()["recovered"].toBool());
+        second=topology.add({1000,0,1600,1200},"strong-A",2);QCOMPARE(glancelot::DisplayManager::computeDisplayId(second->screen()),idA);QVERIFY(!h.customization.paneRoutes()["tree"].toMap()["recovered"].toBool());QCOMPARE(h.customization.paneRoutes()["tree"].toMap()["effectiveDisplayId"].toString(),idA);QVERIFY(!h.manager.isPresentationActive());
+        QVERIFY(h.customization.setPaneFrozen("tree",true));h.customization.setLayoutLocked(true);h.customization.recoverToController();QVERIFY(!h.customization.paneRoutes()["tree"].toMap()["detached"].toBool());QVERIFY(h.customization.paneRoutes()["tree"].toMap()["frozen"].toBool());QVERIFY(h.customization.layoutLocked());
     }
     void newerVersionIsNeverOverwritten() {
         QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["monitorCustomization"]=QJsonObject{{"version",2},{"future",123}};}).ok());

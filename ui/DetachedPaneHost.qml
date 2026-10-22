@@ -22,9 +22,9 @@ Window {
     flags: Qt.Window | Qt.FramelessWindowHint
     function restoreGeometry() {
         const r = route.effectiveGeometry
-        if(!r || movingGeometry) return
+        if(!r || movingGeometry || customization.saving) return
         const signature=JSON.stringify(r)
-        if(signature === appliedGeometry)return
+        if(signature === appliedGeometry && x===r.x && y===r.y && width===r.width && height===r.height)return
         appliedGeometry=signature
         applyingGeometry = true
         x=r.x; y=r.y; width=r.width; height=r.height
@@ -51,7 +51,7 @@ Window {
                     text: window.paneId.charAt(0).toUpperCase()+window.paneId.slice(1); color: Theme.text; Layout.fillWidth: true
                     Accessible.name: text + " pane; move with the title or choose a display in Settings"
                     MouseArea {
-                        anchors.fill: parent; enabled: !customization.layoutLocked && !route.frozen
+                        anchors.fill: parent; enabled: !customization.saving && !customization.layoutLocked && !route.frozen
                         cursorShape: Qt.SizeAllCursor
                         property point origin
                         property point start
@@ -66,8 +66,8 @@ Window {
             Flow {
                 Layout.fillWidth: true; spacing: Theme.gapXs
                 UiButton { text: route.frozen ? "Unfreeze" : "Freeze"; enabled: !customization.layoutLocked; onClicked: appHost.invoke("pane-freeze-"+paneId) }
-                UiButton { text: "Move to display…"; enabled: !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-detach-"+paneId) }
-                UiButton { text: "Re-dock"; enabled: !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-redock-"+paneId) }
+                UiButton { text: "Move to display…"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-detach-"+paneId) }
+                UiButton { text: "Re-dock"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-redock-"+paneId) }
                 UiButton { text: "Recover all"; onClicked: appHost.invoke("monitor-recover") }
             }
         }
@@ -77,7 +77,7 @@ Window {
     MouseArea {
         anchors.right: parent.right; anchors.bottom: parent.bottom
         width: Theme.iconSize+Theme.gapSm; height: width
-        enabled: !customization.layoutLocked && !route.frozen
+        enabled: !customization.saving && !customization.layoutLocked && !route.frozen
         cursorShape: Qt.SizeFDiagCursor
         property point origin
         property size start

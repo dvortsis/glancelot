@@ -106,6 +106,8 @@ void PresentationWindow::applyControllerViewport(const QVariantMap& state) {
     m_canvasA->setViewState(state);if(m_linked)copyViewport(m_canvasA,m_canvasB);
 }
 
+void PresentationWindow::setWindowedGeometry(const QRect& geometry) {setGeometry(geometry);updateLayout();}
+
 void PresentationWindow::applyCustomization(const QVariantMap& options) {
     const auto previous=m_customOptions;m_customOptions=options;
     if(previous.value("fitMode")!=options.value("fitMode"))setFitMode(options.value("fitMode","shrink").toString());

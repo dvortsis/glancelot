@@ -26,6 +26,12 @@ inline QRect clamp(QRect preferred,QRect area,QSize minimum={360,280}) {
     const auto x=std::clamp<qint64>(r.x(),lowX,highX),y=std::clamp<qint64>(r.y(),lowY,highY);
     return {QPoint(int(x),int(y)),QPoint(int(x+w-1),int(y+h-1))};
 }
+inline QRect windowedClient(QRect preferred,QRect area,QMargins frame,bool initial) {
+    frame={std::clamp(frame.left(),0,128),std::clamp(frame.top(),0,128),std::clamp(frame.right(),0,128),std::clamp(frame.bottom(),0,128)};
+    if(initial){preferred.setSize({std::max(320,area.width()*4/5-frame.left()-frame.right()),std::max(240,area.height()*4/5-frame.top()-frame.bottom())});preferred.moveCenter(area.center());}
+    const auto outer=clamp(preferred.marginsAdded(frame),area,{320+frame.left()+frame.right(),240+frame.top()+frame.bottom()});
+    return outer.marginsRemoved(frame);
+}
 inline Placement place(const QString& preferredId,QRect preferred,const QList<DisplayInfo>& displays,
                        const QString& controllerId,bool allowPreferred) {
     const DisplayInfo* target=nullptr;const DisplayInfo* fallback=nullptr;

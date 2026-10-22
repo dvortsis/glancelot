@@ -390,7 +390,7 @@ void resetMonitorPreferences(QJsonObject& root,bool all) {
         auto slot=row.value().toObject();
         const auto clearFields=[](QJsonObject value,const QStringList& fields){for(const auto& key:fields)value.remove(key);return value;};
         auto paneRoutes=slot.value("panes").toObject();
-        for(const auto& id:monitor_state::paneIds){auto p=paneRoutes.value(id).toObject();auto geometry=clearFields(p.value("geometry").toObject(),{"x","y","width","height"});p=clearFields(p,{"detached","frozen","displayId","geometry"});if(!geometry.isEmpty())p["geometry"]=geometry;if(p.isEmpty())paneRoutes.remove(id);else paneRoutes[id]=p;}
+        for(const auto& id:monitor_state::paneIds){auto p=paneRoutes.value(id).toObject();auto geometry=clearFields(p.value("geometry").toObject(),{"x","y","width","height"});p=clearFields(p,{"detached","displayId","geometry"});if(!geometry.isEmpty())p["geometry"]=geometry;if(p.isEmpty())paneRoutes.remove(id);else paneRoutes[id]=p;}
         if(paneRoutes.isEmpty())slot.remove("panes");else slot["panes"]=paneRoutes;
         if(all){
             auto output=clearFields(slot.value("output").toObject(),monitor_state::options().keys());if(output.isEmpty())slot.remove("output");else slot["output"]=output;

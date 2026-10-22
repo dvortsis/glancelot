@@ -11,7 +11,7 @@ namespace glancelot::monitor_state {
 inline const QStringList paneIds{"tree","grid","preview","metadata"};
 inline QVariantMap options() {
     return {{"displayId",""},{"windowMode","fullscreen"},{"fitMode","shrink"},
-        {"viewportLink","independent"},{"background","theme"},{"backgroundColor","#000000"},
+        {"viewportLink","independent"},{"background","solid"},{"backgroundColor","#000000"},
         {"guides",false},{"imageInfo",false},{"cursorPolicy","auto"},
         {"followSelection",true},{"folderChange","follow"},{"slideshowTiming","shared"}};
 }
@@ -126,7 +126,7 @@ inline bool normalize(const QVariantMap& raw,QVariantMap& result) {
                 if(it.key()=="geometry") {
                     if(it.value().metaType().id()!=QMetaType::QVariantMap)return false;
                     auto geom=route.value("geometry").toMap();const auto extra=it.value().toMap();for(auto g=extra.begin();g!=extra.end();++g)if(geom.contains(g.key()))geom[g.key()]=g.value();route["geometry"]=geom;
-                }else route[it.key()]=it.value();
+                }else if(it.key()!="frozen")route[it.key()]=it.value();
             }paneRoutes[id]=route;
         }
     }
@@ -143,7 +143,9 @@ inline bool normalize(const QVariantMap& raw,QVariantMap& result) {
     return slot(result);
 }
 inline QVariantMap known(const QVariantMap& s) {
-    QVariantMap k;for(const auto& key:QStringList{"output","panes","presets","selectedPreset","outputsByDisplay"})if(s.contains(key))k[key]=s[key];return k;
+    QVariantMap k;for(const auto& key:QStringList{"output","panes","presets","selectedPreset","outputsByDisplay"})if(s.contains(key))k[key]=s[key];
+    if(k.value("panes").metaType().id()==QMetaType::QVariantMap){auto routes=k["panes"].toMap();for(const auto& id:paneIds)if(routes.value(id).metaType().id()==QMetaType::QVariantMap){auto route=routes[id].toMap();route.remove("frozen");routes[id]=route;}k["panes"]=routes;}
+    return k;
 }
 inline bool feature(const QJsonObject& object) {
     if(object.value("version")!=QJsonValue(1)||QJsonDocument(object).toJson(QJsonDocument::Indented).size()>256*1024||!object.value("slots").isObject())return false;

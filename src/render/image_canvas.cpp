@@ -318,18 +318,20 @@ void ImageCanvas::setViewState(const QVariantMap& state) {
     if(state.contains("rotation")) {
         bool ok=false;const auto rotation=state.value("rotation").toInt(&ok);
         if(!ok||rotation<0||rotation>270||rotation%90)return;
-        m_rotation=rotation;
+
     }
+    const auto rotation=state.value("rotation",m_rotation).toInt();
     const auto mode=state.value("fit").toString();
-    if (mode=="actual") { actualSize(); return; }
-    if (!mode.isEmpty()) { fit(mode); return; }
+    if(!mode.isEmpty()&&!QStringList{"actual","shrink","fit","fill","width","height"}.contains(mode))return;
+    if (mode=="actual") { m_rotation=rotation;actualSize(); return; }
+    if (!mode.isEmpty()) { m_rotation=rotation;fit(mode); return; }
     bool okZ=false,okX=false,okY=false;
     const qreal z=state.value("zoom").toDouble(&okZ);
     qreal x=state.value("centerX").toDouble(&okX), y=state.value("centerY").toDouble(&okY);
     const int sourceWidth=state.value("sourceWidth").toInt(),sourceHeight=state.value("sourceHeight").toInt();
     if(sourceWidth>0 && sourceHeight>0 && !m_image.isNull()) { x*=qreal(m_image.width())/sourceWidth; y*=qreal(m_image.height())/sourceHeight; }
     if (!okZ || !okX || !okY || !std::isfinite(z) || z<.001 || z>64 || !std::isfinite(x) || !std::isfinite(y) || std::abs(x)>1e9 || std::abs(y)>1e9) return;
-    endLoupe(); m_zoom=z; m_fitMode.clear(); m_lastDpr=dpr();
+    m_rotation=rotation;endLoupe(); m_zoom=z; m_fitMode.clear(); m_lastDpr=dpr();
     const QPointF centered(x-m_image.width()/2.0,y-m_image.height()/2.0);
     const qreal radians=qDegreesToRadians(qreal(m_rotation));
     m_pan=-QPointF(std::cos(radians)*centered.x()-std::sin(radians)*centered.y(),std::sin(radians)*centered.x()+std::cos(radians)*centered.y())*(z/dpr());

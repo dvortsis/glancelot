@@ -1,4 +1,4 @@
-param([string]$BuildDir = 'build', [string]$QtRoot = '', [switch]$Test, [switch]$CoreOnly, [switch]$Package)
+param([string]$BuildDir = 'build', [string]$QtRoot = '', [switch]$Test, [switch]$CoreOnly, [switch]$Package, [switch]$ProductionOnly)
 $ErrorActionPreference = 'Stop'
 # Full test gates are serialized machine-wide (AGENTS.md gate lock); scripts/gate-lock.ps1 is re-entrant.
 if ($Test -and $env:GLANCELOT_GATE_LOCK_HELD -ne "$PID") {
@@ -33,32 +33,33 @@ if (-not $QtRoot) { $QtRoot = Join-Path $toolsRoot 'Qt\6.8.3\msvc2022_64' }
 
 $proofRoot=Join-Path $repoRoot '.cache/monitor-full-gates'
 New-Item -ItemType Directory -Path $proofRoot -Force | Out-Null
-$script:monitorGatePhase='waiting for machine gate lock'
+$global:GlancelotMonitorGatePhase='waiting for machine gate lock'
 try {
  & C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch codex/monitor-custom-01 -Run {
     git rev-parse HEAD | Set-Content (Join-Path $proofRoot 'source-pin.txt')
-    $script:monitorGatePhase='production configure without tests'
+    $global:GlancelotMonitorGatePhase='production configure without tests'
     Write-Host 'COMMAND: cmake -S . -B build-codex-monitor-custom-01 -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DGLANCELOT_BUILD_VIEWER=ON -DCMAKE_PREFIX_PATH=<project-local Qt6.8.3>'
     & cmake -S . -B $BuildDir -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DGLANCELOT_BUILD_VIEWER=ON "-DCMAKE_PREFIX_PATH=$QtRoot" *> (Join-Path $proofRoot 'production-configure.txt')
     if($LASTEXITCODE -ne 0){throw 'Production configure failed'}
-    $script:monitorGatePhase='production build without tests'
+    $global:GlancelotMonitorGatePhase='production build without tests'
     Write-Host 'COMMAND: cmake --build build-codex-monitor-custom-01 --target glancelot --parallel 4'
     & cmake --build $BuildDir --target glancelot --parallel 4 *> (Join-Path $proofRoot 'production-build.txt')
     if($LASTEXITCODE -ne 0){throw 'Production build failed'}
-    $script:monitorGatePhase='full Windows gate'
+    if($ProductionOnly){$global:GlancelotMonitorGatePhase='production-only complete';return}
+    $global:GlancelotMonitorGatePhase='full Windows gate'
     Write-Host 'COMMAND: & ./scripts/build.ps1 -BuildDir build-codex-monitor-custom-01 -Test'
     & ./scripts/build.ps1 -BuildDir $BuildDir -Test *> (Join-Path $proofRoot 'windows-gate.txt')
     if($LASTEXITCODE -ne 0){throw 'Windows gate failed'}
     Copy-Item -LiteralPath (Join-Path $BuildDir 'Testing/Temporary/LastTest.log') -Destination (Join-Path $proofRoot 'windows-LastTest.log')
     foreach($name in @('monitor_customization-results.txt','monitor_customization_ui-results.txt')) { Copy-Item -LiteralPath (Join-Path $BuildDir $name) -Destination (Join-Path $proofRoot $name) }
-    $script:monitorGatePhase='fresh source Docker gate'
+    $global:GlancelotMonitorGatePhase='fresh source Docker gate'
     Write-Host 'COMMAND: docker build --progress=plain -t glancelot-browser:monitor-custom-01 .'
     docker build --progress=plain -t glancelot-browser:monitor-custom-01 . *> (Join-Path $proofRoot 'docker-gate.txt')
     if($LASTEXITCODE -ne 0){throw 'Docker gate failed'}
-    $script:monitorGatePhase='complete'
+    $global:GlancelotMonitorGatePhase='complete'
  }
- @{exit=0;phase=$script:monitorGatePhase;source=(git rev-parse HEAD);finished=(Get-Date -Format o)} | ConvertTo-Json | Set-Content (Join-Path $proofRoot 'status.json')
+ @{exit=0;phase=$global:GlancelotMonitorGatePhase;source=(git rev-parse HEAD);finished=(Get-Date -Format o)} | ConvertTo-Json | Set-Content (Join-Path $proofRoot 'status.json')
 } catch {
- @{exit=1;phase=$script:monitorGatePhase;source=(git rev-parse HEAD);error="$_";finished=(Get-Date -Format o)} | ConvertTo-Json | Set-Content (Join-Path $proofRoot 'status.json')
+ @{exit=1;phase=$global:GlancelotMonitorGatePhase;source=(git rev-parse HEAD);error="$_";finished=(Get-Date -Format o)} | ConvertTo-Json | Set-Content (Join-Path $proofRoot 'status.json')
  throw
 }

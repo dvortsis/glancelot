@@ -302,6 +302,36 @@ ApplicationWindow {
         else metadataPanel.forceActiveFocus(Qt.OtherFocusReason)
     }
     property bool closingWorkspace: false
+    property var paneMigrationStates: ({})
+    function rememberPaneView(id, destination) {
+        const root=paneItems(id)[0], rows=[], work=[root]
+        let visited=0
+        while(work.length && visited++<256 && rows.length<16) {
+            const item=work.pop()
+            if(typeof item.contentY === "number" && typeof item.contentHeight === "number")rows.push({item:item,x:item.contentX,y:item.contentY})
+            for(const child of item.children)if(work.length<256)work.push(child)
+        }
+        let focused=inputFocusItem, inside=false
+        for(let item=focused;item;item=item.parent)if(item===root){inside=true;break}
+        const states=Object.assign({},paneMigrationStates)
+        states[id]={destination:destination,rows:rows,focused:inside?focused:null,media:viewer.filePath,directory:fileGrid.directory,cursor:fileGrid.cursorRow>=0?fileGrid.pathAt(fileGrid.cursorRow):""}
+        paneMigrationStates=states;paneMigrationRestore.restart()
+    }
+    onWorkspaceChanged: if(Object.keys(paneMigrationStates).length)paneMigrationRestore.restart()
+    Timer {
+        id: paneMigrationRestore; interval: 16
+        onTriggered: {
+            const waiting=({})
+            for(const id of Object.keys(app.paneMigrationStates)) {
+                const state=app.paneMigrationStates[id], item=app.paneItems(id)[0]
+                if(app.closingWorkspace || item.parent!==state.destination || state.media!==viewer.filePath || state.directory!==fileGrid.directory || state.cursor!==(fileGrid.cursorRow>=0?fileGrid.pathAt(fileGrid.cursorRow):""))continue
+                if(!item.visible || item.width<=0 || item.height<=0){waiting[id]=state;continue}
+                for(const row of state.rows)if(row.item){row.item.contentX=Math.max(row.item.originX||0,Math.min(row.x,row.item.contentWidth-row.item.width));row.item.contentY=Math.max(row.item.originY||0,Math.min(row.y,row.item.contentHeight-row.item.height))}
+                if(state.focused && state.focused.visible && !app.modalOpen){if(app.isDetached(id)&&app.detachedHosts[id])app.detachedHosts[id].requestActivate();else app.requestActivate();state.focused.forceActiveFocus(Qt.OtherFocusReason)}
+            }
+            app.paneMigrationStates=waiting
+        }
+    }
     function syncDetachedPanes() {
         if(!monitor || closingWorkspace) return
         const hosts=Object.assign({},detachedHosts)
@@ -310,20 +340,20 @@ ApplicationWindow {
                 if(!hosts[id]) hosts[id]=detachedPaneComponent.createObject(app,{appHost:app,customization:monitor,paneId:id})
                 if(hosts[id]) {
                     for(const item of paneItems(id)) {
-                        item.parent=hosts[id].paneContent
+                        if(item.parent!==hosts[id].paneContent){rememberPaneView(id,hosts[id].paneContent);item.parent=hosts[id].paneContent}
                     }
                     hosts[id].visible=true
                     if(pendingPaneFocus === id && !modalOpen){ pendingPaneFocus=""; Qt.callLater(() => app.focusDetachedPane(id)) }
                 }
             } else if(hosts[id]) {
-                for(const item of paneItems(id)) item.parent=app.contentItem
+                for(const item of paneItems(id))if(item.parent!==app.contentItem){rememberPaneView(id,app.contentItem);item.parent=app.contentItem}
                 hosts[id].hide(); hosts[id].destroy(); delete hosts[id]
             }
         }
         detachedHosts=hosts
     }
     onClosing: {
-        closingWorkspace=true
+        closingWorkspace=true;paneMigrationRestore.stop();paneMigrationStates=({})
         for(const id of Object.keys(detachedHosts)) {
             for(const item of paneItems(id)) item.parent=app.contentItem
             detachedHosts[id].hide(); detachedHosts[id].destroy()

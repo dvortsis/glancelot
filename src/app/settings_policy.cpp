@@ -54,7 +54,7 @@ QString revision() {
     const auto append=[&](const QByteArray& field){for(int shift=0;shift<64;shift+=8)bytes.append(char((quint64(field.size())>>shift)&255));bytes.append(field);};
     append(QJsonDocument(commands).toJson(QJsonDocument::Compact));append(themeCatalog());
     append(QJsonDocument(layout_detail::defaults()).toJson(QJsonDocument::Compact));
-    append(QByteArrayLiteral("known-fields-v4-monitor-customization"));
+    append(QByteArrayLiteral("known-fields-v5-monitor-canonical-freeze"));
     return "policy1:"+QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
 }
 Result merge(const QJsonObject& current,const QJsonObject& source,Selection selection,Options options) {
@@ -105,7 +105,7 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
             for(const auto& key:monitor_state::options().keys())add(monitorBase+QStringList{"output",key},[key](const QJsonValue& v){auto o=monitor_state::options();return monitor_state::patchOptions({{key,v.toVariant()}},o);});
             for(const auto& pane:monitor_state::paneIds) {
                 const auto route=monitorBase+QStringList{"panes",pane};
-                add(route+QStringList{"detached"},boolean);add(route+QStringList{"frozen"},boolean);
+                add(route+QStringList{"detached"},boolean);
                 add(route+QStringList{"displayId"},[](const QJsonValue& v){return monitor_state::text(v.toVariant());});
                 for(const auto* coordinate:{"x","y"})add(route+QStringList{"geometry",QLatin1String(coordinate)},[](const QJsonValue& v){return number(v,-10000000,10000000,true);});
                 add(route+QStringList{"geometry","width"},[](const QJsonValue& v){return number(v,160,16384,true);});

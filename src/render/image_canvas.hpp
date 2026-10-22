@@ -37,6 +37,7 @@ public:
     // Per-canvas GPU texture admission limit (default 256 MiB). Owners of several canvases lower it
     // so the aggregate stays bounded.
     qint64 textureBudget() const { return m_textureBudget; }
+    qint64 admittedTextureBytes() const { return m_gpuAdmission->bytes(); }
     void setTextureBudget(qint64 bytes);
     // Internal presentation ownership: both canvases and all renderer incarnations share one cap.
     void shareTextureAdmissionWith(ImageCanvas* owner){m_gpuAdmission=owner->m_gpuAdmission;}

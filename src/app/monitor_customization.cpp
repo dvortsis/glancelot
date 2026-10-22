@@ -67,7 +67,7 @@ struct MonitorCustomization::Private {
     QVariantMap lastAppliedOptions;
     bool movingOutput{};
     QHash<QString,QPointer<QScreen>> boundScreens;
-    QMetaObject::Connection outputConnection,commandConnection;
+    QMetaObject::Connection outputConnection,commandConnection,outputScreenConnection;
     QMetaObject::Connection themeConnection,controllerScreenConnection;
     QVariantMap data, persisted;
     mutable QVariantMap routeCache;
@@ -85,10 +85,13 @@ struct MonitorCustomization::Private {
     }
     void notify(){routeCache.clear();emit q->changed();}
     bool fail(QString message) {feedback=std::move(message);notify();return false;}
+    QVariantMap canonicalRoutes() const {
+        auto routes=data.value("panes").toMap();for(const auto& id:monitor_state::paneIds){auto route=routes[id].toMap();route["frozen"]=panes->pane(id).value("frozen").toBool();routes[id]=route;}return routes;
+    }
     bool editable(const QString& id) {
         if(!monitor_state::paneIds.contains(id))return fail("Unknown pane.");
         if(panes->locked())return fail("Unlock the layout before moving panes.");
-        if(data.value("panes").toMap().value(id).toMap().value("frozen").toBool()||panes->pane(id).value("frozen").toBool())return fail("Unfreeze the pane before moving it.");
+        if(panes->pane(id).value("frozen").toBool())return fail("Unfreeze the pane before moving it.");
         return true;
     }
     void applyOutput() {
@@ -97,6 +100,7 @@ struct MonitorCustomization::Private {
         if(!displays->isPresentationActive())return;
         auto* window=qobject_cast<PresentationWindow*>(displays->presentationWindow());if(!window)return;
         const auto live=window->viewportState();const auto liveGeometry=window->geometry();
+        const bool initialWindowed=opts.value("windowMode")=="windowed"&&(lastAppliedOptions.value("windowMode")!="windowed"||window->visibility()!=QWindow::Windowed||(window->flags()&Qt::FramelessWindowHint));
         const bool preserveViewport=!lastAppliedOptions.isEmpty()&&lastAppliedOptions.value("fitMode")==opts.value("fitMode");
         auto* target=sessionScreen.data();
         if(!target||!QGuiApplication::screens().contains(target))target=window->screen();
@@ -105,21 +109,26 @@ struct MonitorCustomization::Private {
         const bool moved=target&&DisplayManager::computeDisplayId(target)!=displays->activeDisplayId();
         if(moved){movingOutput=true;displays->openPresentation(DisplayManager::computeDisplayId(target),displays->presentationMode());movingOutput=false;}
         if(outputWindow!=window) {
-            QObject::disconnect(outputConnection);QObject::disconnect(commandConnection);outputWindow=window;
+            QObject::disconnect(outputConnection);QObject::disconnect(commandConnection);QObject::disconnect(outputScreenConnection);outputWindow=window;
             outputConnection=QObject::connect(window,&PresentationWindow::primaryViewportChanged,q,[this](const QVariantMap& state){
                 if(syncing||data.value("output").toMap().value("viewportLink")!="linked"||!data.value("output").toMap().value("followSelection").toBool()||displays->isPinned()||displays->outputGeneration()!=displays->currentGeneration())return;
                 syncing=true;emit q->controllerViewportRequested(state,displays->outputGeneration());syncing=false;
             });
             commandConnection=QObject::connect(window,&PresentationWindow::customizationCommand,q,&MonitorCustomization::commandRequested);
+            outputScreenConnection=QObject::connect(window,&QWindow::screenChanged,q,[this,expected=QPointer<QQuickWindow>(window)](QScreen* screen){
+                if(!expected||expected!=displays->presentationWindow()||!screen)return;
+                sessionScreen=screen;displays->synchronizePresentationScreen(screen);notify();
+            });
         }
-        syncing=true;window->applyCustomization(opts);if(preserveViewport)window->restoreViewport(live);
-        if(moved&&opts.value("windowMode")=="windowed")window->setGeometry(reachable(liveGeometry,target));
+        syncing=true;window->applyCustomization(opts);
+        if(opts.value("windowMode")=="windowed"&&target)window->setWindowedGeometry(monitor_topology::windowedClient(liveGeometry,target->availableGeometry(),window->frameMargins(),initialWindowed));
+        if(preserveViewport)window->restoreViewport(live);
         lastAppliedOptions=opts;syncing=false;
     }
-    bool commit(QVariantMap next,QString routing={},std::function<void()> committed={},std::optional<QVariantMap> dockOverride={},bool resetInvalid=false) {
+    bool commit(QVariantMap next,QString routing={},std::function<void()> committed={},std::optional<QVariantMap> dockOverride={},bool resetInvalid=false,bool layoutOnly=false) {
         if(pending)return fail("A preference save is still pending. Try again when it completes.");
-        if(unsupported)return fail("A newer customization version is preserved; these preferences cannot be edited.");
-        if(invalid&&!resetInvalid)return fail("Invalid preferences were preserved. Reset monitor preferences explicitly before editing them.");
+        if(unsupported&&!layoutOnly)return fail("A newer customization version is preserved; these preferences cannot be edited.");
+        if(invalid&&!resetInvalid&&!layoutOnly)return fail("Invalid preferences were preserved. Reset monitor preferences explicitly before editing them.");
         if(slot<1)return fail("No window slot is available.");
         const auto currentDock=panes->snapshot();const auto plannedDock=dockOverride.value_or(currentDock);
         if(!monitor_state::slot(next)||!monitor_state::dock(plannedDock))return fail("Invalid monitor preferences.");
@@ -127,15 +136,17 @@ struct MonitorCustomization::Private {
         const auto expected=monitor_state::known(persisted);
         const auto owned=monitor_state::known(next);
         const bool dockChanged=plannedDock!=currentDock;
+        if(layoutOnly&&!dockChanged)return true;
         QJsonValue expectedLayout;
         if(dockChanged){QJsonObject root;if(!readSettings(root).ok())return fail("Layout settings could not be read.");expectedLayout=root.value("layouts").toObject().value(QString::number(slot));}
         const QPointer<QQuickWindow> expectedWindow=displays->presentationWindow();
         const auto number=QString::number(slot);const auto capturedSlot=slot;const auto capturedRevision=++revision;
-        auto applied=std::make_shared<bool>(false);auto refused=std::make_shared<QString>();auto written=std::make_shared<QVariantMap>();auto writtenDock=std::make_shared<QVariantMap>(plannedDock);
+        auto applied=std::make_shared<bool>(false);auto refused=std::make_shared<QString>();auto written=std::make_shared<QVariantMap>(persisted);auto writtenDock=std::make_shared<QVariantMap>(plannedDock);
         pending=true;feedback="Saving monitor preferences…";
         const bool accepted=settings_detail::saveWithRetry(q,"monitor-customization/"+number,
-            [number,expected,owned,dockChanged,plannedDock,expectedLayout,applied,refused,written,writtenDock](QJsonObject& root) {
-                *applied=false;auto feature=root.value("monitorCustomization").toObject();
+            [number,expected,owned,dockChanged,plannedDock,expectedLayout,applied,refused,written,writtenDock,layoutOnly](QJsonObject& root) {
+                *applied=false;auto candidate=root;
+                if(!layoutOnly){auto feature=root.value("monitorCustomization").toObject();
                 if(feature.contains("version")&&feature.value("version")!=QJsonValue(1)){*refused="A newer customization version was preserved.";return;}
                 auto slotRows=feature.value("slots").toObject();auto old=slotRows.value(number).toObject();
                 if(monitor_state::known(old.toVariantMap())!=expected){*refused="This slot changed in another window. Reload it before retrying.";return;}
@@ -155,7 +166,8 @@ struct MonitorCustomization::Private {
                 if(!owned.contains("selectedPreset"))old.remove("selectedPreset");
                 slotRows[number]=old;feature["slots"]=slotRows;feature["version"]=1;
                 if(QJsonDocument(feature).toJson(QJsonDocument::Indented).size()>256*1024){*refused="Monitor preferences exceed the 256 KiB limit.";return;}
-                auto candidate=root;candidate["monitorCustomization"]=feature;
+                candidate["monitorCustomization"]=feature;*written=old.toVariantMap();
+                }
                 if(dockChanged){auto layouts=candidate.value("layouts").toObject();auto existing=layouts.value(number).toObject();
                     if(layouts.value(number)!=expectedLayout){*refused="The pane layout changed while saving. Retry with its current state.";return;}
                     if(existing.contains("version")&&existing.value("version")!=QJsonValue(1)){*refused="A newer pane layout was preserved.";return;}
@@ -163,12 +175,12 @@ struct MonitorCustomization::Private {
                     for(const auto& key:QStringList{"version","locked"})existing[key]=dock.value(key);
                     for(const auto& section:QStringList{"center","panes"})existing[section]=mergeFields(existing.value(section).toObject(),dock.value(section).toObject());layouts[number]=existing;candidate["layouts"]=layouts;*writtenDock=existing.toVariantMap();}
                 if(QJsonDocument(candidate).toJson(QJsonDocument::Indented).size()>1024*1024){*refused="Settings exceed the 1 MiB limit.";return;}
-                root=candidate;*written=old.toVariantMap();*applied=true;
-            },[this,next,routing,committed,expectedWindow,capturedSlot,capturedRevision,applied,refused,written,writtenDock,dockChanged](SettingsStatus status){
+                root=candidate;*applied=true;
+            },[this,next,routing,committed,expectedWindow,capturedSlot,capturedRevision,applied,refused,written,writtenDock,dockChanged,layoutOnly](SettingsStatus status){
                 if(slot!=capturedSlot||revision!=capturedRevision)return;
                 pending=false;
                 if(!status.ok()||!*applied){feedback=refused->isEmpty()?"Monitor preferences could not be saved; previous state is unchanged.":*refused;notify();return;}
-                data=next;data["dock"]=*writtenDock;persisted=*written;invalid=false;
+                if(!layoutOnly){data=next;persisted=*written;invalid=false;}data["dock"]=*writtenDock;
                 QSignalBlocker blocked(panes);
                 if(dockChanged){settings_detail::cancelPendingSettings(panes,"layout/"+QString::number(slot)+"/");panes->restoreSnapshot(data.value("dock").toMap());}
                 feedback.clear();if(committed)committed();
@@ -238,7 +250,7 @@ void MonitorCustomization::setSlot(int slot) {
 QVariantMap MonitorCustomization::outputOptions() const{return d->data.value("output").toMap();}
 QVariantMap MonitorCustomization::paneRoutes() const {
     if(!d->routeCache.isEmpty())return d->routeCache;
-    auto routes=d->data.value("panes").toMap();
+    auto routes=d->canonicalRoutes();
     const auto all=d->displays->displays();const auto screens=QGuiApplication::screens();QHash<QString,QScreen*> byId;
     for(const auto& info:all)if(info.index>=0&&info.index<screens.size())byId[info.id]=screens[info.index];
     for(const auto& id:monitor_state::paneIds){auto route=routes[id].toMap();auto* screen=byId.value(route.value("displayId").toString());
@@ -249,14 +261,15 @@ QVariantMap MonitorCustomization::paneRoutes() const {
         const auto placement=monitor_topology::place(live?DisplayManager::computeDisplayId(live):route.value("displayId").toString(),rect(route.value("geometry").toMap()),all,controllerScreen?DisplayManager::computeDisplayId(controllerScreen):QString{},screen&&(live==screen||strong));
         route["effectiveDisplayId"]=placement.displayId;route["recovered"]=placement.recovered&&route.value("detached").toBool();
         route["effectiveGeometry"]=mapRect(placement.geometry);
-        route["frozen"]=route.value("frozen").toBool()||d->panes->pane(id).value("frozen").toBool();routes[id]=route;
+        routes[id]=route;
     }d->routeCache=routes;return routes;
 }
 QVariantList MonitorCustomization::presets() const{return d->data.value("presets").toList();}
+bool MonitorCustomization::saving() const{return d->pending;}
 bool MonitorCustomization::layoutLocked() const{return d->panes->locked();}
 QString MonitorCustomization::feedback() const{return d->feedback;}
 QString MonitorCustomization::outputRoutingStatus() const{return d->displays->routingStatus();}
-void MonitorCustomization::setLayoutLocked(bool locked){auto dock=d->panes->snapshot();dock["locked"]=locked;d->commit(d->data,{},{},dock);}
+void MonitorCustomization::setLayoutLocked(bool locked){auto dock=d->panes->snapshot();dock["locked"]=locked;d->commit(d->data,{},{},dock,false,true);}
 bool MonitorCustomization::setOutputOptions(const QVariantMap& patch) {
     auto opts=outputOptions();auto saved=d->data.value("outputsByDisplay").toMap();
     const auto previousId=opts.value("displayId").toString();
@@ -325,19 +338,22 @@ bool MonitorCustomization::redockPane(const QString& id) {
 bool MonitorCustomization::setPaneFrozen(const QString& id,bool frozen) {
     if(!monitor_state::paneIds.contains(id))return d->fail("Unknown pane.");
     if(layoutLocked())return d->fail("Unlock the layout before changing pane freeze.");
-    auto next=d->data;auto routes=next.value("panes").toMap();auto route=routes[id].toMap();route["frozen"]=frozen;routes[id]=route;next["panes"]=routes;
-    auto dock=d->panes->snapshot();auto panes=dock.value("panes").toMap();if(panes.contains(id)){auto p=panes[id].toMap();p["frozen"]=frozen;panes[id]=p;dock["panes"]=panes;}return d->commit(next,{},{},dock);
+    auto next=d->data;
+    auto dock=d->panes->snapshot();auto panes=dock.value("panes").toMap();if(panes.contains(id)){auto p=panes[id].toMap();p["frozen"]=frozen;panes[id]=p;dock["panes"]=panes;}return d->commit(next,{},{},dock,false,true);
 }
 bool MonitorCustomization::updatePaneGeometry(const QString& id,const QVariantMap& geometry) {
     if(!d->editable(id))return false;if(!monitor_state::geometry(geometry))return d->fail("Invalid pane geometry.");
-    auto next=d->data;auto routes=next.value("panes").toMap();auto route=routes[id].toMap();route["geometry"]=geometry;routes[id]=route;next["panes"]=routes;next["dock"]=d->panes->snapshot();return d->commit(next);
+    auto next=d->data;auto routes=next.value("panes").toMap();auto route=routes[id].toMap();route["geometry"]=geometry;
+    QPointer<QScreen> selected;
+    for(const auto& display:d->displays->displays())if(display.isAvailable&&display.geometry.contains(rect(geometry).center())){route["displayId"]=display.id;selected=screenFor(display.id);break;}
+    routes[id]=route;next["panes"]=routes;next["dock"]=d->panes->snapshot();return d->commit(next,{},[this,id,selected]{if(selected)d->boundScreens[id]=selected;});
 }
 bool MonitorCustomization::savePreset(const QString& id,const QString& name,const QString& kind) {
     if(!QStringList{"presentation","workspace"}.contains(kind))return d->fail("Choose a presentation or workspace preset.");
     auto rows=presets();int index=-1;for(int i=0;i<rows.size();++i)if(rows[i].toMap().value("id")==id)index=i;
     if(!id.isEmpty()&&index<0)return d->fail("That preset no longer exists.");
     QVariantMap snapshot{{"output",outputOptions()},{"routingMode",d->displays->presentationModeString()}};
-    if(kind=="workspace"){snapshot["panes"]=d->data.value("panes");snapshot["dock"]=d->panes->snapshot();}
+    if(kind=="workspace"){snapshot["panes"]=d->canonicalRoutes();snapshot["dock"]=d->panes->snapshot();}
     QVariantMap record=index<0?QVariantMap{}:rows[index].toMap();record["id"]=id.isEmpty()?QUuid::createUuid().toString(QUuid::WithoutBraces):id;record["name"]=name.trimmed();record["kind"]=kind;record["snapshot"]=snapshot;
     if(index<0)rows.append(record);else rows[index]=record;
     if(!monitor_state::presets(rows))return d->fail("Preset names must be unique, nonempty and at most80 characters; at most64 presets are allowed.");
@@ -355,7 +371,8 @@ bool MonitorCustomization::applyPreset(const QString& id) {
     QVariantMap record;for(const auto& v:presets())if(v.toMap().value("id")==id)record=v.toMap();
     if(record.isEmpty())return d->fail("That preset no longer exists.");const auto kind=record.value("kind").toString();const auto snapshot=record.value("snapshot").toMap();
     if(!monitor_state::snapshot(snapshot,kind))return d->fail("This preset is invalid.");
-    if(kind=="workspace"&&(layoutLocked()||std::any_of(monitor_state::paneIds.begin(),monitor_state::paneIds.end(),[this](const QString& pane){return paneRoutes().value(pane).toMap().value("frozen").toBool();})))return d->fail("Unlock the layout and unfreeze panes before applying a workspace preset.");
+    const auto livePanes=d->panes->panes();
+    if(kind=="workspace"&&(layoutLocked()||std::any_of(livePanes.begin(),livePanes.end(),[](const QVariant& pane){return pane.toMap().value("frozen").toBool();})))return d->fail("Unlock the layout and unfreeze panes before applying a workspace preset.");
     auto next=d->data;next["output"]=snapshot.value("output");next["dock"]=d->panes->snapshot();
     if(kind=="workspace"){next["panes"]=snapshot.value("panes");next["dock"]=snapshot.value("dock");}
     next["selectedPreset"]=id;return d->commit(next,snapshot.value("routingMode").toString(),[this,kind]{

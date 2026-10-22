@@ -15,7 +15,20 @@ UiDialog {
     width: Math.min(760, parent ? parent.width - 2 * Theme.gapMd : 760)
     height: Math.min(680, parent ? parent.height - 2 * Theme.gapMd : 680)
     anchors.centerIn: parent
-    function openPage(index, pane) { pages.currentIndex = index; targetPane = pane || ""; open(); Qt.callLater(() => { if(index === 3)presetChoice.forceActiveFocus(); else if(index === 2)paneDisplayChoice.forceActiveFocus(); else displayChoice.forceActiveFocus() }) }
+    function focusRequestedPane() {
+        const card=paneCards.itemAt(["tree","grid","preview","metadata"].indexOf(targetPane))
+        if(card){panesScroll.contentItem.contentY=Math.max(0,Math.min(card.y,panesScroll.contentItem.contentHeight-panesScroll.availableHeight));card.detachAction.forceActiveFocus(Qt.OtherFocusReason)}
+    }
+    function focusPage() {
+        if(pages.currentIndex === 3)presetChoice.forceActiveFocus()
+        else if(pages.currentIndex === 2){panesScroll.contentItem.contentY=0;paneDisplayChoice.forceActiveFocus()}
+        else displayChoice.forceActiveFocus()
+    }
+    function openPage(index, pane) { pages.currentIndex = index; targetPane = pane || ""; open(); Qt.callLater(dialog.focusPage) }
+    function choiceLabel(key,value) {
+        const labels={windowMode:{windowed:"Windowed",fullscreen:"Full screen"},fitMode:{shrink:"Shrink to fit",fit:"Fit image",fill:"Fill display",actual:"Actual size (1:1)"},viewportLink:{linked:"Linked to controller",independent:"Independent"},background:{theme:"Match controller theme",solid:"Solid color",checker:"Checkerboard"},cursorPolicy:{auto:"Hide when idle",visible:"Always visible",hidden:"Hidden"},folderChange:{follow:"Follow folder changes",hold:"Hold displayed image",disable:"Disable output"},slideshowTiming:{shared:"Follow controller timing",independent:"Latest selection every 3 seconds"}}
+        return labels[key][value]
+    }
     function option(key, value) { const patch = ({}); patch[key] = value; customization.setOutputOptions(patch) }
     function finishEnable() {
         if(!pendingEnableDisplay.length || customization.feedback.indexOf("Saving monitor") === 0) return
@@ -50,6 +63,7 @@ UiDialog {
             Layout.fillWidth: true
             Layout.fillHeight: true
             ScrollView {
+                objectName: "monitorDisplaysScroll"
                 clip: true
                 contentWidth: availableWidth
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -64,6 +78,9 @@ UiDialog {
                         readonly property var info: dialog.manager.displays[displayChoice.currentIndex] || ({})
                         text: info.name ? info.width + " × " + info.height + " · " + info.devicePixelRatio + "× scale · " + Math.round(info.refreshRate) + " Hz\n" + (info.identityConfidence === "strong" ? "Strong serial identity: " + info.serialNumber : "Weak identity: reselect similar displays after reconnect") + "\nConnected · " + info.colorSpace : "No display is available."
                     }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: dialog.manager.presentationActive; text: "Output active on " + dialog.manager.activeDisplayName; color: Theme.text }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: customization.outputOptions.displayId.length>0 && !dialog.manager.displays.some(display => display.id===customization.outputOptions.displayId); text: "The saved presentation display is unavailable. Choose a connected display to enable output."; color: Theme.muted }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: dialog.manager.displays.some(display => !display.canPosition); text: "This compositor chooses window positions. Use your window manager to move windows; choosing a destination display here is unavailable."; color: Theme.muted }
                     Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: dialog.manager.outputColorStatus; color: Theme.muted }
                     Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: customization.outputRoutingStatus; color: Theme.muted }
                     Flow {
@@ -78,6 +95,7 @@ UiDialog {
                 }
             }
             ScrollView {
+                objectName: "monitorPresentationScroll"
                 clip: true
                 contentWidth: availableWidth
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -98,7 +116,7 @@ UiDialog {
                             required property var modelData
                             Layout.fillWidth: true
                             Label { text: modelData.label; color: Theme.text }
-                            UiComboBox { Layout.fillWidth: true; model: modelData.choices; enabled: !(dialog.manager.isPinned && ["viewportLink","folderChange","slideshowTiming"].indexOf(modelData.key)>=0); currentIndex: modelData.choices.indexOf(customization.outputOptions[modelData.key]); Accessible.name: modelData.label; onActivated: dialog.option(modelData.key, currentText) }
+                            UiComboBox { Layout.fillWidth: true; model: modelData.choices.map(value => ({value:value,label:dialog.choiceLabel(modelData.key,value)})); textRole: "label"; valueRole: "value"; enabled: !(dialog.manager.isPinned && ["viewportLink","folderChange","slideshowTiming"].indexOf(modelData.key)>=0); currentIndex: modelData.choices.indexOf(customization.outputOptions[modelData.key]); Accessible.name: modelData.label; onActivated: dialog.option(modelData.key, currentValue) }
                         }
                     }
                     Flow { Layout.fillWidth: true; spacing: Theme.gapSm
@@ -110,47 +128,54 @@ UiDialog {
                     UiTextField { Layout.fillWidth: true; text: customization.outputOptions.backgroundColor; Accessible.name: "Background color"; onEditingFinished: dialog.option("backgroundColor",text) }
                     Repeater {
                         model: [{key:"guides",label:"Show composition guides"},{key:"imageInfo",label:"Show image information"},{key:"followSelection",label:"Follow controller selection"}]
-                        UiSwitch { required property var modelData; text: modelData.label; enabled: !dialog.manager.isPinned || modelData.key !== "followSelection"; checked: customization.outputOptions[modelData.key]; onClicked: dialog.option(modelData.key,checked) }
+                        UiSwitch { Layout.fillWidth: true; required property var modelData; text: modelData.label; enabled: !dialog.manager.isPinned || modelData.key !== "followSelection"; checked: customization.outputOptions[modelData.key]; onClicked: dialog.option(modelData.key,checked) }
                     }
-                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; color: Theme.muted; text: "Linked viewports require a following, unpinned output showing the current generation. Compositor restrictions may prevent display positioning. Actual size is one image pixel per physical output pixel. Independent timing presents the latest selected image every 3 seconds. Pinned images remain fixed." }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: dialog.manager.isPinned; color: Theme.muted; text: "Pinned output keeps its reference image. Follow, folder-change and timing controls apply after leaving pinned mode." }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; color: Theme.muted; text: "Linked views require both windows to show the same photo and follow selection. Pinned output keeps its reference. Some compositors prevent window positioning. Actual size shows one image pixel per display pixel. Independent timing presents the latest selection every 3 seconds." }
                 }
             }
             ScrollView {
+                objectName: "monitorPanesScroll"
+                id: panesScroll
                 clip: true
                 contentWidth: availableWidth
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical: UiScrollBar {}
                 ColumnLayout {
                     width: parent.width; spacing: Theme.gapLg
-                    UiSwitch { text: "Lock workspace layout"; checked: customization.layoutLocked; onClicked: customization.layoutLocked = checked }
-                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: "Choose a display above, then detach a pane. Frozen panes remain interactive. Recovery is always available."; color: Theme.muted }
-                    UiComboBox { id: paneDisplayChoice; Layout.fillWidth: true; model: dialog.manager.displays; textRole: "label"; valueRole: "id"; Accessible.name: "Pane destination display" }
+                    UiSwitch { objectName: "monitorLayoutLock"; Layout.fillWidth: true; enabled: !customization.saving; text: "Lock workspace layout"; checked: customization.layoutLocked; onClicked: customization.layoutLocked = checked }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: "Choose a destination on this page, then detach a pane. Frozen panes remain interactive. Recovery is always available."; color: Theme.muted }
+                    Label { objectName: "monitorPaneDestinationLabel"; text: dialog.targetPane.length ? "Destination for " + dialog.targetPane + " pane" : "Pane destination"; color: Theme.text }
+                    UiComboBox { id: paneDisplayChoice; objectName: "monitorPaneDestination"; Layout.fillWidth: true; model: dialog.manager.displays; textRole: "label"; valueRole: "id"; Accessible.name: "Pane destination display"; onActivated: { if(dialog.targetPane.length)Qt.callLater(dialog.focusRequestedPane) } }
                     Repeater {
+                        id: paneCards
                         model: ["tree","grid","preview","metadata"]
                         ColumnLayout {
                             required property string modelData
                             readonly property var route: customization.paneRoutes[modelData] || ({})
+                            property alias detachAction: paneDetachButton
                             Layout.fillWidth: true; spacing: Theme.gapSm
                             Label { text: modelData.charAt(0).toUpperCase()+modelData.slice(1) + (route.detached ? " — detached" : " — controller"); color: Theme.text; font.pixelSize: Theme.textTitle }
                             Flow {
                                 Layout.fillWidth: true; spacing: Theme.gapSm
-                                UiButton { text: "Detach to selected display"; enabled: !customization.layoutLocked && !route.frozen && displayChoice.currentIndex >= 0; onClicked: host.invokeTarget("pane-detach-"+modelData,paneDisplayChoice.currentValue) }
-                                UiButton { text: "Re-dock"; enabled: route.detached && !customization.layoutLocked && !route.frozen; onClicked: host.invoke("pane-redock-"+modelData) }
-                                UiButton { text: route.frozen ? "Unfreeze" : "Freeze"; enabled: !customization.layoutLocked; onClicked: host.invoke("pane-freeze-"+modelData) }
+                                UiButton { id: paneDetachButton; objectName: "paneDetach-"+modelData; text: "Detach to selected display"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen && paneDisplayChoice.currentIndex >= 0 && dialog.manager.displays[paneDisplayChoice.currentIndex].canPosition; onClicked: host.invokeTarget("pane-detach-"+modelData,paneDisplayChoice.currentValue) }
+                                UiButton { text: "Re-dock"; enabled: !customization.saving && route.detached && !customization.layoutLocked && !route.frozen; onClicked: host.invoke("pane-redock-"+modelData) }
+                                UiButton { text: route.frozen ? "Unfreeze" : "Freeze"; enabled: !customization.saving && !customization.layoutLocked; onClicked: host.invoke("pane-freeze-"+modelData) }
                             }
                             Label { visible: route.recovered === true; text: "Preferred display unavailable; controls recovered onscreen."; color: Theme.muted; wrapMode: Text.Wrap; Layout.fillWidth: true }
                             RowLayout {
                                 Layout.fillWidth: true
                                 Label { text: "Width"; color: Theme.text }
-                                UiTextField { Layout.fillWidth: true; text: route.geometry ? route.geometry.width : "800"; Accessible.name: modelData+" pane width"; enabled: !customization.layoutLocked && !route.frozen; onEditingFinished: {const r=Object.assign({},route.geometry);r.width=Number(text);customization.updatePaneGeometry(modelData,r)} }
+                                UiTextField { Layout.fillWidth: true; text: route.geometry ? route.geometry.width : "800"; Accessible.name: modelData+" pane width"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onEditingFinished: {const r=Object.assign({},route.geometry);r.width=Number(text);customization.updatePaneGeometry(modelData,r)} }
                                 Label { text: "Height"; color: Theme.text }
-                                UiTextField { Layout.fillWidth: true; text: route.geometry ? route.geometry.height : "600"; Accessible.name: modelData+" pane height"; enabled: !customization.layoutLocked && !route.frozen; onEditingFinished: {const r=Object.assign({},route.geometry);r.height=Number(text);customization.updatePaneGeometry(modelData,r)} }
+                                UiTextField { Layout.fillWidth: true; text: route.geometry ? route.geometry.height : "600"; Accessible.name: modelData+" pane height"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onEditingFinished: {const r=Object.assign({},route.geometry);r.height=Number(text);customization.updatePaneGeometry(modelData,r)} }
                             }
                         }
                     }
                 }
             }
             ScrollView {
+                objectName: "monitorPresetsScroll"
                 clip: true
                 contentWidth: availableWidth
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -158,12 +183,15 @@ UiDialog {
                 ColumnLayout {
                     width: parent.width; spacing: Theme.gapMd
                     Label { text: "Named presets for this window slot"; color: Theme.text; font.pixelSize: Theme.textTitle }
-                    UiComboBox { id: presetChoice; Layout.fillWidth: true; model: customization.presets; textRole: "name"; valueRole: "id"; Accessible.name: "Saved preset"; onActivated: { const saved=customization.presets[currentIndex]; if(saved) {presetName.text=saved.name;presetKind.currentIndex=saved.kind === "workspace" ? 1 : 0} } }
+                    Label { text: "Saved preset"; color: Theme.text }
+                    UiComboBox { id: presetChoice; Layout.fillWidth: true; model: customization.presets; displayText: count > 0 ? currentText : "No saved presets"; textRole: "name"; valueRole: "id"; Accessible.name: "Saved preset"; onActivated: { const saved=customization.presets[currentIndex]; if(saved) {presetName.text=saved.name;presetKind.currentIndex=saved.kind === "workspace" ? 1 : 0} } }
+                    Label { text: "Preset name"; color: Theme.text }
                     UiTextField { id: presetName; Layout.fillWidth: true; placeholderText: "Preset name"; Accessible.name: "Preset name"; maximumLength: 160 }
-                    UiComboBox { id: presetKind; model: ["presentation","workspace"]; Accessible.name: "Preset type" }
+                    Label { text: "Preset type"; color: Theme.text }
+                    UiComboBox { id: presetKind; model: [{value:"presentation",label:"Presentation"},{value:"workspace",label:"Workspace"}]; textRole: "label"; valueRole: "value"; Accessible.name: "Preset type" }
                     Flow {
                         Layout.fillWidth: true; spacing: Theme.gapSm
-                        UiButton { text: "Create preset"; onClicked: customization.savePreset("",presetName.text,presetKind.currentText) }
+                        UiButton { text: "Create preset"; onClicked: customization.savePreset("",presetName.text,presetKind.currentValue) }
                         UiButton { text: "Update snapshot"; enabled: presetChoice.currentIndex >= 0; onClicked: { const saved=customization.presets[presetChoice.currentIndex]; customization.savePreset(saved.id,saved.name,saved.kind) } }
                         UiButton { text: "Rename"; enabled: presetChoice.currentIndex >= 0; onClicked: customization.renamePreset(presetChoice.currentValue,presetName.text) }
                         UiButton { text: "Apply"; enabled: presetChoice.currentIndex >= 0; onClicked: customization.applyPreset(presetChoice.currentValue) }

@@ -36,3 +36,22 @@ The latest native command ran the entire executable (no test-name filter), with 
 ```text
 Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 37544ms
 ```
+
+## Corrections after independent review at2f73c84
+
+The actual Sonnet5.5 review returned CHANGES REQUIRED; its complete prompt, pinned diff, result and findings are retained in review-2f73. Historical screenshots it reviewed are retained in native-ui-reviewed-2f73. The latest native-ui screenshots are correction attempt8.
+
+Corrected canonical freeze ownership (layouts[slot] only), layout-only invalid/newer-state transactions, pending-save geometry rollback, native output windowed frame bounds and live screen bookkeeping, explicit cross-display drag preference, black output default, atomic viewport validation, and labeled/focused destination/preset controls with full-width switches. Real coordinator QPA tests now exercise one/two/three displays, positive move/swap, pin/transform retention, strong/weak hotplug and mixed origins/DPR. Real native grid tests preserve focus, scroll, content mode and selection. Workspace preset guards include all seven canonical panes.
+
+Final focused command: ctest --test-dir build-codex-monitor-custom-01 -R '^monitor_customization(_ui)?$' --output-on-failure (MSVC/project Qt bootstrap). Actual attempt15 output:
+
+```text
+1/2 Test #40: monitor_customization ............   Passed    9.00 sec
+2/2 Test #41: monitor_customization_ui .........   Passed   26.62 sec
+100% tests passed out of 2
+Total Test time (real) =  35.78 sec
+```
+
+Actual Qt totals:30 coordinator passed;12 UI passed,1 native-only skipped. Native Windows/D3D11 complete attempt7 passed12 methods but failed nativeUiEvidence because the controller was not exposed. This failure is retained and is not a pass. An unchanged-source isolated nativeUiEvidence attempt8 passed (3 including init/cleanup,0 failures), capturing25 screenshots and verifying six actual rendered red-image migrations, bounded admissions and final old-renderer retirement. Earlier complete native attempt6 passed12, predating the new picker-focus method. Functional native coverage combines attempt7's12 successful checks with attempt8's rendering proof; no single final complete native pass is claimed. Test-only QPA screens are used only offscreen and never alter OS displays.
+
+Full Windows/Docker gates and follow-up independent approval remain pending. Physical color/HDR/refresh/mixed-DPI qualification remains MONITOR-VERIFY.

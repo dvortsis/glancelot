@@ -573,8 +573,19 @@ void DisplayManager::setRoutingPolicy(const QVariantMap& policy) {
     }
 }
 
+void DisplayManager::synchronizePresentationScreen(QScreen* screen) {
+    if(!d->active||!screen||!QGuiApplication::screens().contains(screen))return;
+    const auto id=computeDisplayId(screen);if(id==d->activeId)return;
+    if(d->presentationWindow&&!d->activeId.isEmpty()) {
+        if(d->viewports.size()>=64&&!d->viewports.contains(d->activeId))d->viewports.erase(d->viewports.begin());
+        d->viewports[d->activeId]=d->presentationWindow->viewportState();
+    }
+    d->presentationScreen=screen;d->activeId=id;d->activeName=screen->name();
+    emit activeDisplayIdChanged(id);emit outputColorStatusChanged();
+}
+
 void DisplayManager::pinCurrentImage() {
-    pinImage(d->currentPath, d->currentImage, d->currentGeneration);
+    pinImage(d->currentPath, d->currentImage, d->displayedGeneration);
 }
 
 void DisplayManager::pinImage(const QString& path, const QImage& image, quint64 generation) {

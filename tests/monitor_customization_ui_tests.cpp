@@ -18,6 +18,8 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "file_grid_wiring.hpp"
+#include "file_lock.hpp"
+#include "glancelot/settings_file.hpp"
 #include "image_canvas.hpp"
 
 class MonitorTestThumbnails final:public QQuickImageProvider {
@@ -95,15 +97,18 @@ private slots:
         auto* dialog=h.window->findChild<QObject*>("monitorSettings");QVERIFY(dialog);
         for(const auto& mode:QStringList{"dark","light"})for(const auto& size:QList<QSize>{{720,540},{1280,900}}){
             h.theme.setMode(mode);h.viewer.setTextScale(size.width()==720?1.5:1.0);h.window->resize(size);
-            for(int page=0;page<4;++page){QVERIFY(QMetaObject::invokeMethod(dialog,"openPage",Q_ARG(QVariant,page),Q_ARG(QVariant,"")));QTest::qWait(150);const auto screenshot=h.window->grabWindow();QVERIFY(!screenshot.isNull());QVERIFY(screenshot.save(QDir(destination).filePath(QString("%1-%2-page%3.png").arg(mode).arg(size.width()).arg(page))));}
+            for(int page=0;page<4;++page){QVERIFY(QMetaObject::invokeMethod(dialog,"openPage",Q_ARG(QVariant,page),Q_ARG(QVariant,"")));QTest::qWait(150);const auto screenshot=h.window->grabWindow();QVERIFY(!screenshot.isNull());QVERIFY(screenshot.save(QDir(destination).filePath(QString("%1-%2-page%3.png").arg(mode).arg(size.width()).arg(page))));
+                if(page==1||page==2){auto* scroll=h.window->findChild<QQuickItem*>(page==1?"monitorPresentationScroll":"monitorPanesScroll");QVERIFY(scroll);auto* flickable=qvariant_cast<QQuickItem*>(scroll->property("contentItem"));QVERIFY(flickable);flickable->setProperty("contentY",std::max(0.,flickable->property("contentHeight").toDouble()-flickable->height()));QTest::qWait(150);QVERIFY(h.window->grabWindow().save(QDir(destination).filePath(QString("%1-%2-page%3-bottom.png").arg(mode).arg(size.width()).arg(page))));}
+            }
             QMetaObject::invokeMethod(dialog,"close");
         }
         qInfo("Native settings captures complete; loading generated image");
         QImage generated(1200,800,QImage::Format_RGB32);generated.fill(QColor("#f02020"));const auto path=media.filePath("render.png");QVERIFY(generated.save(path));h.viewer.open(path);QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(),15000);
         auto* canvas=h.window->findChild<ImageCanvas*>("canvas");QVERIFY(canvas);const auto display=h.viewer.displayManager()->displays().first().id;
         qInfo("Native generated image ready; beginning migrations");
-        for(int i=0;i<6;++i){qInfo("Native detach %d",i);QVERIFY(h.monitor.detachPane("preview",display));QTRY_VERIFY(canvas->window()!=h.window);qInfo("Native detached");auto* host=canvas->window();QTRY_VERIFY_WITH_TIMEOUT(host->isExposed(),5000);QTest::qWait(150);qInfo("Native exposed; grab");QVERIFY(!host->grabWindow().isNull());QVERIFY(canvas->rendererError().isEmpty());qInfo("Native redock");QVERIFY(h.monitor.redockPane("preview"));QTRY_COMPARE(canvas->window(),h.window);}
+        for(int i=0;i<6;++i){qInfo("Native detach %d",i);QVERIFY(h.monitor.detachPane("preview",display));QTRY_VERIFY(canvas->window()!=h.window);qInfo("Native detached");auto* host=canvas->window();QTRY_VERIFY_WITH_TIMEOUT(host->isExposed(),5000);QTest::qWait(150);qInfo("Native exposed; grab");const auto rendered=host->grabWindow();QVERIFY(!rendered.isNull());const auto point=canvas->mapToScene(QPointF(canvas->width()/2,canvas->height()/2));const auto factor=qreal(rendered.width())/host->width();const auto pixel=rendered.pixelColor(std::clamp(int(point.x()*factor),0,rendered.width()-1),std::clamp(int(point.y()*factor),0,rendered.height()-1));QVERIFY(pixel.red()>200&&pixel.green()<80&&pixel.blue()<80);QVERIFY(canvas->admittedTextureBytes()>0);QVERIFY(canvas->admittedTextureBytes()<=canvas->textureBudget());QVERIFY(canvas->rendererError().isEmpty());qInfo("Native redock");QVERIFY(h.monitor.redockPane("preview"));QTRY_COMPARE(canvas->window(),h.window);}
         QVERIFY(h.window->grabWindow().save(QDir(destination).filePath("preview-after-six-native-migrations.png")));
+        QTRY_COMPARE_WITH_TIMEOUT(canvas->admittedTextureBytes(),qint64(canvas->image().sizeInBytes()),5000);
     }
     void recoveryKeyPointerAndPaletteShareLockedRouting() {
         Harness h;QVERIFY(h.window);h.window->show();const auto display=h.viewer.displayManager()->displays().first().id;
@@ -114,6 +119,26 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"monitor-settings")));auto* button=h.window->findChild<QQuickItem*>("monitorRecover");QVERIFY(button);h.window->requestActivate();QTRY_VERIFY(button->isVisible());
         QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,button->mapToScene(QPointF(button->width()/2,button->height()/2)).toPoint());QTRY_COMPARE(grid->window(),h.window);QVERIFY(h.monitor.paneRoutes()["grid"].toMap()["frozen"].toBool());
         QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"monitor-recover")));QVERIFY(h.monitor.paneRoutes()["grid"].toMap()["frozen"].toBool());
+    }
+    void realGridRetainsFocusScrollAndContentAcrossMigration() {
+        QTemporaryDir media;Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QImage generated(64,48,QImage::Format_RGB32);generated.fill(Qt::red);
+        for(int i=0;i<80;++i)QVERIFY(generated.save(media.filePath(QString("photo-%1.png").arg(i,3,10,QChar('0')))));
+        h.layout.setContentMode("combined");h.viewer.open(media.filePath("photo-000.png"));QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(),15000);QTRY_COMPARE(h.grid.count(),80);
+        auto* panel=h.window->findChild<QQuickItem*>("photoGrid");auto* view=h.window->findChild<QQuickItem*>("photoGridView");QVERIFY(panel);QVERIFY(view);panel->setProperty("bucketIndex",1);h.grid.select(2);QTRY_COMPARE(h.viewer.filePath(),media.filePath("photo-002.png"));QTRY_VERIFY(h.viewer.imageReady());QTest::qWait(100);view->setProperty("contentY",120.);h.window->requestActivate();view->forceActiveFocus();QTRY_VERIFY(view->hasActiveFocus());const auto scroll=view->property("contentY").toDouble();QVERIFY(scroll>0);
+        const auto selected=h.grid.selectedPaths();const auto display=h.viewer.displayManager()->displays().first().id;
+        QVERIFY(h.monitor.detachPane("grid",display));QTRY_VERIFY(panel->window()!=h.window);QTRY_VERIFY(view->hasActiveFocus());QTRY_VERIFY(std::abs(view->property("contentY").toDouble()-scroll)<1.);
+        QVERIFY(h.monitor.redockPane("grid"));QTRY_COMPARE(panel->window(),h.window);QTRY_VERIFY(view->hasActiveFocus());QTRY_VERIFY(std::abs(view->property("contentY").toDouble()-scroll)<1.);QCOMPARE(panel->property("bucketIndex").toInt(),1);QCOMPARE(h.grid.selectedPaths(),selected);
+        QVERIFY(h.monitor.setPaneFrozen("grid",true));QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"layout-reset")));QVERIFY(!h.monitor.paneRoutes()["grid"].toMap()["frozen"].toBool());
+    }
+    void busyDragFailureRestoresTheSavedHostGeometry() {
+        Harness h;QVERIFY(h.window);h.window->show();const auto display=h.viewer.displayManager()->displays().first().id;QVERIFY(h.monitor.detachPane("grid",display));auto* panel=h.window->findChild<QQuickItem*>("photoGrid");QVERIFY(panel);QTRY_VERIFY(panel->window()!=h.window);auto* host=panel->window();QTest::qWait(100);const auto original=host->geometry();const auto preference=h.monitor.paneRoutes()["grid"].toMap()["geometry"];
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));host->setPosition(original.topLeft()+QPoint(12,16));QVERIFY(QMetaObject::invokeMethod(host,"commitUserGeometry"));QVERIFY(h.monitor.saving());QVERIFY(host->position()!=original.topLeft());
+        QTRY_VERIFY_WITH_TIMEOUT(!h.monitor.saving(),5500);QTRY_COMPARE(host->geometry(),original);QCOMPARE(h.monitor.paneRoutes()["grid"].toMap()["geometry"],preference);lock.release();
+    }
+    void parameterizedDetachConfirmsTheDestinationBeforeMoving() {
+        Harness h;QVERIFY(h.window);h.window->show();QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"pane-detach-metadata")));auto* dialog=h.window->findChild<QObject*>("monitorSettings");QVERIFY(dialog);QTRY_VERIFY(dialog->property("opened").toBool());
+        auto* choice=h.window->findChild<QQuickItem*>("monitorPaneDestination");auto* label=h.window->findChild<QObject*>("monitorPaneDestinationLabel");QVERIFY(choice);QVERIFY(label);QVERIFY(label->property("text").toString().contains("metadata"));QTRY_VERIFY(choice->hasActiveFocus());QVERIFY(!h.monitor.paneRoutes()["metadata"].toMap()["detached"].toBool());
+        QVERIFY(QMetaObject::invokeMethod(choice,"activated",Q_ARG(int,choice->property("currentIndex").toInt())));QTRY_VERIFY(h.window->activeFocusItem()&&h.window->activeFocusItem()->objectName()=="paneDetach-metadata");auto* action=h.window->activeFocusItem();QVERIFY(action);QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,action->mapToScene(QPointF(action->width()/2,action->height()/2)).toPoint());QTRY_VERIFY(h.monitor.paneRoutes()["metadata"].toMap()["detached"].toBool());
     }
     void actualImportAndResetReloadCoordinatorPreferences() {
         Harness h;QVERIFY(h.window);QVERIFY(h.monitor.savePreset({},"Portable","presentation"));
