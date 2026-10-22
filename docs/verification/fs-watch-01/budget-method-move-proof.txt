@@ -1,0 +1,3 @@
+Moved complete method unchanged from fs_watch_tests.cpp to fs_watch_budget_tests.cpp
+SHA256 UTF-8 method including whitespace: 4eb41023fe7e220a62e3b7ca9390ef6b36e24a1992b439599c575fe1065593cb
+Same PNG/write/hash helpers and isolated configuration initializer. No removed assertions.

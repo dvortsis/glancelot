@@ -1,0 +1,15 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+    Start  8: pane_layout
+1/5 Test  #8: pane_layout ......................   Passed    0.52 sec
+    Start 14: themes
+2/5 Test #14: themes ...........................   Passed    0.27 sec
+    Start 22: favorites
+3/5 Test #22: favorites ........................   Passed    0.43 sec
+    Start 34: recovery
+4/5 Test #34: recovery .........................   Passed   13.81 sec
+    Start 36: recovery_controller
+5/5 Test #36: recovery_controller ..............   Passed    2.37 sec
+
+100% tests passed out of 5
+
+Total Test time (real) =  17.59 sec

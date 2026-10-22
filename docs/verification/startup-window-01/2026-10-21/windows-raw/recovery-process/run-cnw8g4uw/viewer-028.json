@@ -1,0 +1,274 @@
+{
+    "canvas": {
+        "height": 1361,
+        "renderer_error": "",
+        "visible": true,
+        "width": 2360,
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+    },
+    "decoded_ms": 1204,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": 1221,
+    "folder_count": 2,
+    "frameless": false,
+    "frames": 19,
+    "graphics_api": 4,
+    "grid_live_cells": 0,
+    "grid_visible": false,
+    "height": 36,
+    "image_path": "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery-process/run-cnw8g4uw/generated-media/雪景-😀.png",
+    "loading": false,
+    "native_title_bar": {
+        "border_color": true,
+        "caption_color": true,
+        "dark_mode": true,
+        "text_color": true
+    },
+    "pre_grab": {
+        "first_image_frame_ms": 1221,
+        "frames": 19,
+        "rhi": {
+            "backend": 3,
+            "device_name": "Intel(R) Iris(R) Xe Graphics",
+            "device_type": 0,
+            "observed": true,
+            "render_callbacks": 19,
+            "scenegraph_invalidations": 0,
+            "software_detection": "not-detected"
+        },
+        "snapshot_ms": 3355,
+        "window": {
+            "available_screens": [
+                {
+                    "height": 1392,
+                    "width": 2560,
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "height": 752,
+                    "width": 1280,
+                    "x": 0,
+                    "y": -1600
+                }
+            ],
+            "exposed": true,
+            "frame_geometry": {
+                "height": 1392,
+                "width": 2360,
+                "x": 100,
+                "y": 0
+            },
+            "height": 1361,
+            "screen": {
+                "available": {
+                    "height": 1392,
+                    "width": 2560,
+                    "x": 0,
+                    "y": 0
+                },
+                "device_pixel_ratio": 1,
+                "height": 1440,
+                "logical_dpi": 96,
+                "name": "P27h-20",
+                "width": 2560,
+                "x": 0,
+                "y": 0
+            },
+            "screen_count": 2,
+            "screen_list_truncated": false,
+            "state": 0,
+            "visibility": 2,
+            "visible": true,
+            "width": 2360,
+            "x": 100,
+            "y": 31
+        }
+    },
+    "qt": "6.8.3",
+    "quit_after_ms": 2500,
+    "quit_callback_ms": 3355,
+    "quit_timer_started_ms": 848,
+    "report_ms": 3355,
+    "requested_backend": "",
+    "rhi": {
+        "backend": 3,
+        "device_name": "Intel(R) Iris(R) Xe Graphics",
+        "device_type": 0,
+        "observed": true,
+        "render_callbacks": 19,
+        "scenegraph_invalidations": 0,
+        "software_detection": "not-detected"
+    },
+    "safe_mode": false,
+    "settings_directory": "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery-process/run-cnw8g4uw/safe-original-配置-😀",
+    "startup_placement": {
+        "after": {
+            "available_screens": [
+                {
+                    "height": 1392,
+                    "width": 2560,
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "height": 752,
+                    "width": 1280,
+                    "x": 0,
+                    "y": -1600
+                }
+            ],
+            "exposed": false,
+            "frame_geometry": {
+                "height": 1392,
+                "width": 2360,
+                "x": 100,
+                "y": 0
+            },
+            "height": 1361,
+            "screen": {
+                "available": {
+                    "height": 1392,
+                    "width": 2560,
+                    "x": 0,
+                    "y": 0
+                },
+                "device_pixel_ratio": 1,
+                "height": 1440,
+                "logical_dpi": 96,
+                "name": "P27h-20",
+                "width": 2560,
+                "x": 0,
+                "y": 0
+            },
+            "screen_count": 2,
+            "screen_list_truncated": false,
+            "state": 0,
+            "visibility": 2,
+            "visible": true,
+            "width": 2360,
+            "x": 100,
+            "y": 31
+        },
+        "before": {
+            "available_screens": [
+                {
+                    "height": 1392,
+                    "width": 2560,
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "height": 752,
+                    "width": 1280,
+                    "x": 0,
+                    "y": -1600
+                }
+            ],
+            "exposed": false,
+            "frame_geometry": {
+                "height": 1591,
+                "width": 2360,
+                "x": 0,
+                "y": 1569
+            },
+            "height": 1560,
+            "screen": {
+                "available": {
+                    "height": 1392,
+                    "width": 2560,
+                    "x": 0,
+                    "y": 0
+                },
+                "device_pixel_ratio": 1,
+                "height": 1440,
+                "logical_dpi": 96,
+                "name": "P27h-20",
+                "width": 2560,
+                "x": 0,
+                "y": 0
+            },
+            "screen_count": 2,
+            "screen_list_truncated": false,
+            "state": 0,
+            "visibility": 2,
+            "visible": true,
+            "width": 2360,
+            "x": 0,
+            "y": 1600
+        },
+        "chosen_frame": {
+            "height": 1392,
+            "width": 2360,
+            "x": 100,
+            "y": 0
+        },
+        "frame_margins": {
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "top": 31
+        },
+        "status": "Recovered"
+    },
+    "status": "Untagged source assumed sRGB · display profile not yet managed",
+    "theme": "slate-ice",
+    "theme_mode": "system",
+    "thumbnail_active": 0,
+    "thumbnail_cache_bytes": 17280,
+    "thumbnail_pending": 0,
+    "version": "0.1.0-alpha.1",
+    "wheel_mode": "pan",
+    "width": 60,
+    "window": {
+        "available_screens": [
+            {
+                "height": 1392,
+                "width": 2560,
+                "x": 0,
+                "y": 0
+            },
+            {
+                "height": 752,
+                "width": 1280,
+                "x": 0,
+                "y": -1600
+            }
+        ],
+        "exposed": true,
+        "frame_geometry": {
+            "height": 1392,
+            "width": 2360,
+            "x": 100,
+            "y": 0
+        },
+        "height": 1361,
+        "screen": {
+            "available": {
+                "height": 1392,
+                "width": 2560,
+                "x": 0,
+                "y": 0
+            },
+            "device_pixel_ratio": 1,
+            "height": 1440,
+            "logical_dpi": 96,
+            "name": "P27h-20",
+            "width": 2560,
+            "x": 0,
+            "y": 0
+        },
+        "screen_count": 2,
+        "screen_list_truncated": false,
+        "state": 0,
+        "visibility": 2,
+        "visible": true,
+        "width": 2360,
+        "x": 100,
+        "y": 31
+    },
+    "window_active": true,
+    "window_slot": 0
+}

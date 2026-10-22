@@ -1,0 +1,1 @@
+{"code":"ArgumentError","detail":"Settings maintenance cannot use --safe-mode.","generation":"0","schema":1}

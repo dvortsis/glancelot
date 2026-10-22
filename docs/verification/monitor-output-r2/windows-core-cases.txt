@@ -1,0 +1,45 @@
+********* Start testing of MonitorOutputTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorOutputTests::initTestCase()
+SKIP   : MonitorOutputTests::testNativeGpuColorPatch() Opt-in native GPU readback; headless state tests do not qualify presentation pixels
+C:\src\Github\Glancelot\.worktrees\codex-monitor-output-r2\tests\monitor_output_tests.cpp(25) : failure location
+PASS   : MonitorOutputTests::testOutputViewportSurvivesNavigationAndReopen()
+PASS   : MonitorOutputTests::testComparisonViewportsLinkAndSeparate()
+QINFO  : MonitorOutputTests::testActualSizeUsesPhysicalPixels() actual-size physical-pixel ratio 1 source pixels per logical pixel 1
+PASS   : MonitorOutputTests::testActualSizeUsesPhysicalPixels()
+PASS   : MonitorOutputTests::testOutputProfileTransitionsAreBoundedAndLatestWins()
+PASS   : MonitorOutputTests::testGeneratedColorAtlasMatchesSdrReferencePatches()
+QWARN  : MonitorOutputTests::testDismissChordExpiresAndBindingChangesCancelIt() No QRhi found for window 0x14dcddb7590, QQuickRhiItem will not be functional
+QWARN  : MonitorOutputTests::testDismissChordExpiresAndBindingChangesCancelIt() No QRhi found for window 0x14dcddb7590, QQuickRhiItem will not be functional
+PASS   : MonitorOutputTests::testDismissChordExpiresAndBindingChangesCancelIt()
+QWARN  : MonitorOutputTests::testReboundOutputCommandActsOnlyOnPresentation() No QRhi found for window 0x14dcddc0f30, QQuickRhiItem will not be functional
+PASS   : MonitorOutputTests::testReboundOutputCommandActsOnlyOnPresentation()
+PASS   : MonitorOutputTests::testDisplayEnumeration()
+PASS   : MonitorOutputTests::testStableIdentity()
+PASS   : MonitorOutputTests::testPreferredDisplay()
+PASS   : MonitorOutputTests::testOpenCloseLifecycle()
+PASS   : MonitorOutputTests::testTogglePresentation()
+PASS   : MonitorOutputTests::testRoutingModes()
+PASS   : MonitorOutputTests::testMirrorRoutingAndStaleRejection()
+PASS   : MonitorOutputTests::testPinnedImageIsolation()
+PASS   : MonitorOutputTests::testComparisonMode()
+PASS   : MonitorOutputTests::testEscapeDismissal()
+PASS   : MonitorOutputTests::testControllerIntegration()
+PASS   : MonitorOutputTests::flushDeletes()
+PASS   : MonitorOutputTests::testIdentityIdenticalMonitorsWithoutSerialAreDistinct()
+PASS   : MonitorOutputTests::testIdentitySerialSurvivesReorderAndReconnect()
+PASS   : MonitorOutputTests::testColorSpaceIsNotHardcoded()
+PASS   : MonitorOutputTests::testCompareCommandSuppliesSecondImage()
+PASS   : MonitorOutputTests::testStalePinAndComparisonRejected()
+PASS   : MonitorOutputTests::testOutputFitModeCommandAndPerOutputState()
+PASS   : MonitorOutputTests::testAggregateImageBudgetAndCloseRelease()
+PASS   : MonitorOutputTests::testScreenRemovedAndAddedPaths()
+PASS   : MonitorOutputTests::testFailedDecodeAndRepeatedOpenCloseDoNotLeak()
+PASS   : MonitorOutputTests::testEscapeClosesOnceAndToggleKeyIsRebindable()
+PASS   : MonitorOutputTests::testHiddenCanvasMustReleaseShedImage()
+PASS   : MonitorOutputTests::testOldComparisonCannotOverrideNewCompareCommand()
+PASS   : MonitorOutputTests::testInvalidFitMustNotDestroyRememberedFit()
+PASS   : MonitorOutputTests::testChordToggleKeyDismissesAndEscapeCancelsChord()
+PASS   : MonitorOutputTests::cleanupTestCase()
+Totals: 35 passed, 0 failed, 1 skipped, 0 blacklisted, 1880ms
+********* Finished testing of MonitorOutputTests *********

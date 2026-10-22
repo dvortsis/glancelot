@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "a39a6e5e-b794-4cbe-a6ef-962d84cb7442",
+                "claimNonce": "d25540d7-cbeb-4ffd-9ebe-13c421fc83ed",
+                "origin": "navigation",
+                "pid": 1470,
+                "sequence": "1",
+                "start": "11230872",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-azgvnfyf/generated-media",
+            "image": "/build/recovery-process/run-azgvnfyf/generated-media/雪景-😀.png",
+            "saved": 1792531523
+        }
+    }
+}

@@ -1,0 +1,3616 @@
+{
+  "checked_files": 722,
+  "mismatches": [],
+  "files": [
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/CLAUDE-COMBINED.md",
+      "bytes": 5338,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/CLAUDE-COMPAT-ACCEPT.md",
+      "bytes": 5921,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/all-native-proof-audit.json",
+      "bytes": 16813,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-combined-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-combined-stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-combined.json",
+      "bytes": 7234,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-compat-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-compat-stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-compat.json",
+      "bytes": 7784,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-review-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-review-stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/claude-review.json",
+      "bytes": 1306,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-review-prompt.txt",
+      "bytes": 2422,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-review.patch",
+      "bytes": 58279,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-target-build-r2.txt",
+      "bytes": 2146,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-target-build-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-target-build.txt",
+      "bytes": 16238,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-target-tests-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/combined-target-tests.txt",
+      "bytes": 780,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/command-table-equivalence.json",
+      "bytes": 316,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/compat-review-prompt.txt",
+      "bytes": 1815,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/decoder-build.txt",
+      "bytes": 1474,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/docker-full-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/docker-full.txt",
+      "bytes": 80465,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/export-linux.ps1",
+      "bytes": 1028,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/full-gates.ps1",
+      "bytes": 697,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/geometry-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/geometry.txt",
+      "bytes": 1509,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/integrated-checks-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/integrated-checks.txt",
+      "bytes": 689,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/integrated-commit.txt",
+      "bytes": 41,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/integrated-tree-equivalence.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-build-export-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-build-export.txt",
+      "bytes": 4011,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-copy-Testing.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-copy-recovery-controller-results.txt.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-copy-recovery-process.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-copy-recovery-results.txt.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-copy-recovery-startup-results.txt.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-evidence-container-remove.txt",
+      "bytes": 66,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/Testing/Temporary/CTestCostData.txt",
+      "bytes": 930,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/Testing/Temporary/LastTest.log",
+      "bytes": 546353,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-controller-results.txt",
+      "bytes": 3038,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-001.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-001.stdout.txt",
+      "bytes": 216,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-002.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-002.stdout.txt",
+      "bytes": 916,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-003.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-003.stdout.txt",
+      "bytes": 985,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-004.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-004.stdout.txt",
+      "bytes": 1140,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-005.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-005.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-006.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-006.stdout.txt",
+      "bytes": 793,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-007.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-007.stdout.txt",
+      "bytes": 905,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-008.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-008.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-009.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-009.stdout.txt",
+      "bytes": 1560,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-010.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-010.stdout.txt",
+      "bytes": 1786,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-011.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-011.stdout.txt",
+      "bytes": 105,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-012.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-012.stdout.txt",
+      "bytes": 109,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-013.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-013.stdout.txt",
+      "bytes": 106,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-014.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-014.stdout.txt",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-015.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-015.stdout.txt",
+      "bytes": 113,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-016.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-016.stdout.txt",
+      "bytes": 90,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-017.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-017.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-018.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-018.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-019.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-019.stdout.txt",
+      "bytes": 3131,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-020.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-020.stdout.txt",
+      "bytes": 24,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-021.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-021.stdout.txt",
+      "bytes": 200,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-022.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-022.stdout.txt",
+      "bytes": 215,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-023.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-023.stdout.txt",
+      "bytes": 240,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-024.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-024.stdout.txt",
+      "bytes": 770,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-025.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-025.stdout.txt",
+      "bytes": 196,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-026.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-026.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-026.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-027.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-027.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-027.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-028.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-028.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-028.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-029.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-029.stdout.txt",
+      "bytes": 214,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-030.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-030.stdout.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-031.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-031.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-031.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-032.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-032.stdout.txt",
+      "bytes": 1945,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-033.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-033.stdout.txt",
+      "bytes": 2177,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-034.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-034.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-034.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-035.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-035.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/command-035.trace.txt",
+      "bytes": 212,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/corrupt-source/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/corrupt-source/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/corrupt-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/future/settings.json",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/future/settings.json.bak",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/future/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/generated-media/-explicit-\u914d\u7f6e.png",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/generated-media/\u96ea\u666f-\ud83d\ude00.png",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/interrupted.stderr.txt",
+      "bytes": 3376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/interrupted.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/interruption.json",
+      "bytes": 380,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/last-good-package/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/last-good-package/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/last-good-package/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/layout-target-\u914d\u7f6e/recovery-preimages/7c20f082-1fa7-43af-b6ca-bbc6f7f95ada/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/layout-target-\u914d\u7f6e/recovery-preimages/7c20f082-1fa7-43af-b6ca-bbc6f7f95ada/settings.json",
+      "bytes": 163,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/layout-target-\u914d\u7f6e/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/layout-target-\u914d\u7f6e/settings.json",
+      "bytes": 376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/layout-target-\u914d\u7f6e/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/position-package/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/position-package/settings.json",
+      "bytes": 188,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/position-source/settings.json",
+      "bytes": 188,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/position-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/ddbde254-deca-432a-bf57-92f3b429a4af/manifest.json",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/ddbde254-deca-432a-bf57-92f3b429a4af/settings.json",
+      "bytes": 733,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/ddbde254-deca-432a-bf57-92f3b429a4af/settings.json.bak",
+      "bytes": 733,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json",
+      "bytes": 34,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 738,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 738,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/result.json",
+      "bytes": 8691,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/safe-original-\u914d\u7f6e-\ud83d\ude00/sessions.json",
+      "bytes": 39,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 58,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.bak",
+      "bytes": 43,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.damaged",
+      "bytes": 47,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/sealed-\u914d\u7f6e-\ud83d\ude00/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/sealed-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 53,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/source-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 52,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/source-\u914d\u7f6e-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/514b9899-7785-41b6-9658-725c788bdb01/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/514b9899-7785-41b6-9658-725c788bdb01/settings.json",
+      "bytes": 71,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/target-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 134,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/target-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 19,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/target-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-026-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-026.json",
+      "bytes": 6724,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-026.png",
+      "bytes": 36421,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-027-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-027.json",
+      "bytes": 6721,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-027.png",
+      "bytes": 36421,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-028.json",
+      "bytes": 6727,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-031.json",
+      "bytes": 6733,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-034.json",
+      "bytes": 6738,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/viewer-035.json",
+      "bytes": 6719,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-process/run-smv7l0fv/xvfb.stderr.txt",
+      "bytes": 9392,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-results.txt",
+      "bytes": 10508,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/linux-raw/recovery-startup-results.txt",
+      "bytes": 5917,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/native-audit.json",
+      "bytes": 24041,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/recovery-process-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/recovery-process.txt",
+      "bytes": 275,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/review-prompt.txt",
+      "bytes": 2136,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/review.patch",
+      "bytes": 26707,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/sync-conflicts.patch",
+      "bytes": 19349,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/target-build-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/target-build.txt",
+      "bytes": 15150,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-full-native-audit.json",
+      "bytes": 26191,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-full-status.txt",
+      "bytes": 8,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-full.txt",
+      "bytes": 28247,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/Testing/Temporary/CTestCostData.txt",
+      "bytes": 958,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/Testing/Temporary/LastTest.log",
+      "bytes": 4610,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/acceptance-results.txt",
+      "bytes": 1802,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/fs-watch-budget-results.txt",
+      "bytes": 3526,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/fs-watch-results.txt",
+      "bytes": 6892,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/fs-watch-ui-results.txt",
+      "bytes": 8672,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/platform-integration-results.txt",
+      "bytes": 2416,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-controller-results.txt",
+      "bytes": 3043,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-001.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-001.stdout.txt",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-002.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-002.stdout.txt",
+      "bytes": 916,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-003.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-003.stdout.txt",
+      "bytes": 985,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-004.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-004.stdout.txt",
+      "bytes": 1222,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-005.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-005.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-006.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-006.stdout.txt",
+      "bytes": 793,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-007.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-007.stdout.txt",
+      "bytes": 905,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-008.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-008.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-009.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-009.stdout.txt",
+      "bytes": 1560,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-010.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-010.stdout.txt",
+      "bytes": 1868,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-011.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-011.stdout.txt",
+      "bytes": 105,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-012.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-012.stdout.txt",
+      "bytes": 109,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-013.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-013.stdout.txt",
+      "bytes": 106,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-014.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-014.stdout.txt",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-015.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-015.stdout.txt",
+      "bytes": 113,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-016.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-016.stdout.txt",
+      "bytes": 90,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-017.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-017.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-018.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-018.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-019.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-019.stdout.txt",
+      "bytes": 3217,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-020.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-020.stdout.txt",
+      "bytes": 24,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-021.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-021.stdout.txt",
+      "bytes": 200,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-022.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-022.stdout.txt",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-023.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-023.stdout.txt",
+      "bytes": 240,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-024.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-024.stdout.txt",
+      "bytes": 770,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-025.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-025.stdout.txt",
+      "bytes": 196,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-026.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-026.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-026.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-027.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-027.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-027.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-028.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-028.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-028.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-029.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-029.stdout.txt",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-030.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-030.stdout.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-031.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-031.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-031.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-032.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-032.stdout.txt",
+      "bytes": 2534,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-033.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-033.stdout.txt",
+      "bytes": 2848,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-034.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-034.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-034.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-035.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-035.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/command-035.trace.txt",
+      "bytes": 212,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/corrupt-source/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/corrupt-source/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/corrupt-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/future/settings.json",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/future/settings.json.bak",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/future/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/generated-media/-explicit-\u914d\u7f6e.png",
+      "bytes": 116,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/generated-media/\u96ea\u666f-\ud83d\ude00.png",
+      "bytes": 114,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/interrupted.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/interrupted.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/interruption.json",
+      "bytes": 572,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/last-good-package/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/last-good-package/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/last-good-package/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/layout-target-\u914d\u7f6e/recovery-preimages/6faa203b-b4ce-4364-b273-154e7a400b08/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/layout-target-\u914d\u7f6e/recovery-preimages/6faa203b-b4ce-4364-b273-154e7a400b08/settings.json",
+      "bytes": 163,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/layout-target-\u914d\u7f6e/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/layout-target-\u914d\u7f6e/settings.json",
+      "bytes": 376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/layout-target-\u914d\u7f6e/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/position-package/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/position-package/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/position-source/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/position-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/315298a5-a4cd-4874-b85b-b32bbbe535b7/manifest.json",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/315298a5-a4cd-4874-b85b-b32bbbe535b7/settings.json",
+      "bytes": 904,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/315298a5-a4cd-4874-b85b-b32bbbe535b7/settings.json.bak",
+      "bytes": 904,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json",
+      "bytes": 34,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 909,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 909,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/result.json",
+      "bytes": 18318,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/safe-original-\u914d\u7f6e-\ud83d\ude00/sessions.json",
+      "bytes": 39,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 58,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.bak",
+      "bytes": 43,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.damaged",
+      "bytes": 47,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/sealed-\u914d\u7f6e-\ud83d\ude00/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/sealed-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 53,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/source-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 52,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/source-\u914d\u7f6e-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/08f2bf30-fd50-447c-9f5e-ea8f3b87b984/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/08f2bf30-fd50-447c-9f5e-ea8f3b87b984/settings.json",
+      "bytes": 71,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/target-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 134,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/target-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 19,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/target-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-026-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-026.json",
+      "bytes": 7391,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-026.png",
+      "bytes": 5501,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-027-rgb.json",
+      "bytes": 152,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-027.json",
+      "bytes": 7390,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-027.png",
+      "bytes": 47667,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-028.json",
+      "bytes": 7446,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-031.json",
+      "bytes": 7452,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-034.json",
+      "bytes": 7457,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-223ms761/viewer-035.json",
+      "bytes": 7435,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-001.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-001.stdout.txt",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-002.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-002.stdout.txt",
+      "bytes": 916,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-003.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-003.stdout.txt",
+      "bytes": 985,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-004.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-004.stdout.txt",
+      "bytes": 1222,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-005.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-005.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-006.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-006.stdout.txt",
+      "bytes": 793,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-007.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-007.stdout.txt",
+      "bytes": 905,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-008.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-008.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-009.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-009.stdout.txt",
+      "bytes": 1560,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-010.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-010.stdout.txt",
+      "bytes": 1868,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-011.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-011.stdout.txt",
+      "bytes": 105,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-012.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-012.stdout.txt",
+      "bytes": 109,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-013.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-013.stdout.txt",
+      "bytes": 106,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-014.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-014.stdout.txt",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-015.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-015.stdout.txt",
+      "bytes": 113,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-016.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-016.stdout.txt",
+      "bytes": 90,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-017.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-017.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-018.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-018.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-019.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-019.stdout.txt",
+      "bytes": 3217,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-020.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-020.stdout.txt",
+      "bytes": 24,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-021.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-021.stdout.txt",
+      "bytes": 200,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-022.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-022.stdout.txt",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-023.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-023.stdout.txt",
+      "bytes": 240,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-024.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-024.stdout.txt",
+      "bytes": 770,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-025.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-025.stdout.txt",
+      "bytes": 196,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-026.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-026.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-026.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-027.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-027.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-027.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-028.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-028.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-028.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-029.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-029.stdout.txt",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-030.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-030.stdout.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-031.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-031.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-031.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-032.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-032.stdout.txt",
+      "bytes": 2534,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-033.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-033.stdout.txt",
+      "bytes": 2848,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-034.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-034.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-034.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-035.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-035.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/command-035.trace.txt",
+      "bytes": 212,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/corrupt-source/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/corrupt-source/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/corrupt-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/future/settings.json",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/future/settings.json.bak",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/future/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/generated-media/-explicit-\u914d\u7f6e.png",
+      "bytes": 116,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/generated-media/\u96ea\u666f-\ud83d\ude00.png",
+      "bytes": 114,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/interrupted.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/interrupted.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/interruption.json",
+      "bytes": 572,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/last-good-package/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/last-good-package/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/last-good-package/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/layout-target-\u914d\u7f6e/recovery-preimages/07e1b180-b3b4-4bd5-ade3-816584e9fd8b/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/layout-target-\u914d\u7f6e/recovery-preimages/07e1b180-b3b4-4bd5-ade3-816584e9fd8b/settings.json",
+      "bytes": 163,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/layout-target-\u914d\u7f6e/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/layout-target-\u914d\u7f6e/settings.json",
+      "bytes": 376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/layout-target-\u914d\u7f6e/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/position-package/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/position-package/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/position-source/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/position-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/c3e9b21e-a01f-4e56-951e-243cfe734c6a/manifest.json",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/c3e9b21e-a01f-4e56-951e-243cfe734c6a/settings.json",
+      "bytes": 904,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/c3e9b21e-a01f-4e56-951e-243cfe734c6a/settings.json.bak",
+      "bytes": 904,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json",
+      "bytes": 34,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 908,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 908,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/result.json",
+      "bytes": 18320,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/safe-original-\u914d\u7f6e-\ud83d\ude00/sessions.json",
+      "bytes": 39,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 58,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.bak",
+      "bytes": 43,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.damaged",
+      "bytes": 47,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/sealed-\u914d\u7f6e-\ud83d\ude00/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/sealed-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 53,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/source-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 52,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/source-\u914d\u7f6e-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/95c74f2b-4001-4bd9-94cd-fef5a00bd6a4/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/95c74f2b-4001-4bd9-94cd-fef5a00bd6a4/settings.json",
+      "bytes": 71,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/target-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 134,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/target-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 19,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/target-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-026-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-026.json",
+      "bytes": 7391,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-026.png",
+      "bytes": 5501,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-027-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-027.json",
+      "bytes": 7391,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-027.png",
+      "bytes": 5501,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-028.json",
+      "bytes": 7447,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-031.json",
+      "bytes": 7453,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-034.json",
+      "bytes": 7458,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-60s9y01c/viewer-035.json",
+      "bytes": 7436,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-001.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-001.stdout.txt",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-002.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-002.stdout.txt",
+      "bytes": 916,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-003.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-003.stdout.txt",
+      "bytes": 985,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-004.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-004.stdout.txt",
+      "bytes": 1222,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-005.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-005.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-006.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-006.stdout.txt",
+      "bytes": 793,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-007.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-007.stdout.txt",
+      "bytes": 905,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-008.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-008.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-009.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-009.stdout.txt",
+      "bytes": 1560,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-010.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-010.stdout.txt",
+      "bytes": 1868,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-011.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-011.stdout.txt",
+      "bytes": 105,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-012.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-012.stdout.txt",
+      "bytes": 109,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-013.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-013.stdout.txt",
+      "bytes": 106,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-014.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-014.stdout.txt",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-015.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-015.stdout.txt",
+      "bytes": 113,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-016.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-016.stdout.txt",
+      "bytes": 90,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-017.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-017.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-018.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-018.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-019.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-019.stdout.txt",
+      "bytes": 3217,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-020.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-020.stdout.txt",
+      "bytes": 24,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-021.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-021.stdout.txt",
+      "bytes": 200,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-022.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-022.stdout.txt",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-023.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-023.stdout.txt",
+      "bytes": 240,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-024.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-024.stdout.txt",
+      "bytes": 770,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-025.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-025.stdout.txt",
+      "bytes": 196,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-026.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-026.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-026.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-027.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-027.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-027.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-028.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-028.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-028.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-029.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-029.stdout.txt",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-030.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-030.stdout.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-031.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-031.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-031.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-032.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-032.stdout.txt",
+      "bytes": 2534,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-033.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-033.stdout.txt",
+      "bytes": 2848,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-034.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-034.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-034.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-035.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-035.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/command-035.trace.txt",
+      "bytes": 212,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/corrupt-source/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/corrupt-source/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/corrupt-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/future/settings.json",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/future/settings.json.bak",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/future/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/generated-media/-explicit-\u914d\u7f6e.png",
+      "bytes": 116,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/generated-media/\u96ea\u666f-\ud83d\ude00.png",
+      "bytes": 114,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/interrupted.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/interrupted.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/interruption.json",
+      "bytes": 572,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/last-good-package/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/last-good-package/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/last-good-package/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/layout-target-\u914d\u7f6e/recovery-preimages/2fdee84e-046c-4dd7-80a0-f588faba0bcb/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/layout-target-\u914d\u7f6e/recovery-preimages/2fdee84e-046c-4dd7-80a0-f588faba0bcb/settings.json",
+      "bytes": 163,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/layout-target-\u914d\u7f6e/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/layout-target-\u914d\u7f6e/settings.json",
+      "bytes": 376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/layout-target-\u914d\u7f6e/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/position-package/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/position-package/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/position-source/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/position-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/c0a35c46-52e2-45d1-b43b-f698725efb5c/manifest.json",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/c0a35c46-52e2-45d1-b43b-f698725efb5c/settings.json",
+      "bytes": 904,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/c0a35c46-52e2-45d1-b43b-f698725efb5c/settings.json.bak",
+      "bytes": 904,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json",
+      "bytes": 34,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 909,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 909,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/result.json",
+      "bytes": 18316,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/safe-original-\u914d\u7f6e-\ud83d\ude00/sessions.json",
+      "bytes": 39,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 58,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.bak",
+      "bytes": 43,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.damaged",
+      "bytes": 47,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/sealed-\u914d\u7f6e-\ud83d\ude00/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/sealed-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 53,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/source-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 52,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/source-\u914d\u7f6e-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/f610c23a-88ac-4470-91c7-d0d50e8ebde9/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/f610c23a-88ac-4470-91c7-d0d50e8ebde9/settings.json",
+      "bytes": 71,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/target-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 134,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/target-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 19,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/target-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-026-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-026.json",
+      "bytes": 7391,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-026.png",
+      "bytes": 5501,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-027-rgb.json",
+      "bytes": 148,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-027.json",
+      "bytes": 7391,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-027.png",
+      "bytes": 5501,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-028.json",
+      "bytes": 7447,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-031.json",
+      "bytes": 7453,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-034.json",
+      "bytes": 7458,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-7s8dvcy0/viewer-035.json",
+      "bytes": 7436,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-001.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-001.stdout.txt",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-002.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-002.stdout.txt",
+      "bytes": 916,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-003.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-003.stdout.txt",
+      "bytes": 985,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-004.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-004.stdout.txt",
+      "bytes": 1222,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-005.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-005.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-006.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-006.stdout.txt",
+      "bytes": 793,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-007.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-007.stdout.txt",
+      "bytes": 905,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-008.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-008.stdout.txt",
+      "bytes": 862,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-009.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-009.stdout.txt",
+      "bytes": 1560,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-010.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-010.stdout.txt",
+      "bytes": 1868,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-011.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-011.stdout.txt",
+      "bytes": 105,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-012.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-012.stdout.txt",
+      "bytes": 109,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-013.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-013.stdout.txt",
+      "bytes": 106,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-014.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-014.stdout.txt",
+      "bytes": 115,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-015.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-015.stdout.txt",
+      "bytes": 113,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-016.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-016.stdout.txt",
+      "bytes": 90,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-017.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-017.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-018.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-018.stdout.txt",
+      "bytes": 108,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-019.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-019.stdout.txt",
+      "bytes": 3217,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-020.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-020.stdout.txt",
+      "bytes": 24,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-021.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-021.stdout.txt",
+      "bytes": 200,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-022.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-022.stdout.txt",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-023.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-023.stdout.txt",
+      "bytes": 240,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-024.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-024.stdout.txt",
+      "bytes": 770,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-025.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-025.stdout.txt",
+      "bytes": 196,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-026.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-026.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-026.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-027.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-027.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-027.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-028.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-028.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-028.trace.txt",
+      "bytes": 155,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-029.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-029.stdout.txt",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-030.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-030.stdout.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-031.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-031.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-031.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-032.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-032.stdout.txt",
+      "bytes": 2533,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-033.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-033.stdout.txt",
+      "bytes": 2847,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-034.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-034.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-034.trace.txt",
+      "bytes": 193,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-035.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-035.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/command-035.trace.txt",
+      "bytes": 212,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/corrupt-source/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/corrupt-source/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/corrupt-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/future/settings.json",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/future/settings.json.bak",
+      "bytes": 12,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/future/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/generated-media/-explicit-\u914d\u7f6e.png",
+      "bytes": 116,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/generated-media/\u96ea\u666f-\ud83d\ude00.png",
+      "bytes": 114,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/interrupted.stderr.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/interrupted.stdout.txt",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/interruption.json",
+      "bytes": 572,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/last-good-package/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/last-good-package/settings.json",
+      "bytes": 15,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/last-good-package/settings.json.bak",
+      "bytes": 26,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/layout-target-\u914d\u7f6e/recovery-preimages/e9c940cc-bb17-4c7a-b9c3-f1771e8265f2/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/layout-target-\u914d\u7f6e/recovery-preimages/e9c940cc-bb17-4c7a-b9c3-f1771e8265f2/settings.json",
+      "bytes": 163,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/layout-target-\u914d\u7f6e/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/layout-target-\u914d\u7f6e/settings.json",
+      "bytes": 376,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/layout-target-\u914d\u7f6e/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/position-package/manifest.json",
+      "bytes": 297,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/position-package/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/position-source/settings.json",
+      "bytes": 371,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/position-source/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/6d4c3411-8f26-47ee-ae08-659dbe85cfb4/manifest.json",
+      "bytes": 298,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/6d4c3411-8f26-47ee-ae08-659dbe85cfb4/settings.json",
+      "bytes": 903,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/recovery-preimages/6d4c3411-8f26-47ee-ae08-659dbe85cfb4/settings.json.bak",
+      "bytes": 903,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json",
+      "bytes": 34,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/sessions.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 909,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 909,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/restart-config-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/result.json",
+      "bytes": 18318,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/safe-original-\u914d\u7f6e-\ud83d\ude00/sessions.json",
+      "bytes": 39,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 58,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.bak",
+      "bytes": 43,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/safe-original-\u914d\u7f6e-\ud83d\ude00/settings.json.damaged",
+      "bytes": 47,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/sealed-\u914d\u7f6e-\ud83d\ude00/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/sealed-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 53,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/source-\u914d\u7f6e-\ud83d\ude00/settings.json",
+      "bytes": 52,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/source-\u914d\u7f6e-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/36a07d89-212c-4da8-85ff-93753fdbaeeb/manifest.json",
+      "bytes": 296,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/target-\u96ea\u666f-\ud83d\ude00/recovery-preimages/36a07d89-212c-4da8-85ff-93753fdbaeeb/settings.json",
+      "bytes": 71,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/target-\u96ea\u666f-\ud83d\ude00/settings.json",
+      "bytes": 134,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/target-\u96ea\u666f-\ud83d\ude00/settings.json.bak",
+      "bytes": 19,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/target-\u96ea\u666f-\ud83d\ude00/settings.json.lock",
+      "bytes": 0,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-026-rgb.json",
+      "bytes": 152,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-026.json",
+      "bytes": 7390,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-026.png",
+      "bytes": 47695,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-027-rgb.json",
+      "bytes": 152,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-027.json",
+      "bytes": 7389,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-027.png",
+      "bytes": 15964,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-028.json",
+      "bytes": 7445,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-031.json",
+      "bytes": 7451,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-034.json",
+      "bytes": 7456,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-process/run-cnw8g4uw/viewer-035.json",
+      "bytes": 7434,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-results.txt",
+      "bytes": 10621,
+      "matches_staged_blob": true
+    },
+    {
+      "file": "docs/verification/startup-window-01/2026-10-21/windows-raw/recovery-startup-results.txt",
+      "bytes": 5953,
+      "matches_staged_blob": true
+    }
+  ]
+}

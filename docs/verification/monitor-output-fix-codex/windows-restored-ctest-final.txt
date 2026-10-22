@@ -1,0 +1,7 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-review-monitor-output-fix/build-codex-review-monitor-output-fix
+    Start 33: monitor_output
+1/1 Test #33: monitor_output ...................   Passed    0.24 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   0.30 sec

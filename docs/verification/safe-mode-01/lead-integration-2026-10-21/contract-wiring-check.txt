@@ -1,0 +1,4 @@
+contract_fragment_parse_exit=0
+6:include(CTest)
+36:  find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick QuickControls2 ShaderTools Test Concurrent)
+64:  include(cmake/StartupWindowGeometryTests.cmake)

@@ -1,0 +1,15 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+try {
+ & C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Run {
+  if((git rev-parse HEAD) -ne '03bd32687b0e47cc71306d7667927eeb896785e3'){throw 'Watcher diagnostic pin changed'}
+  $env:PATH='C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/bin;C:/src/Github/Glancelot/.tools/python/Scripts;'+$env:PATH
+  ctest --test-dir build-codex-safe-mode-01 --output-on-failure -R '^fs_watch$'
+  $result=$LASTEXITCODE
+  Copy-Item build-codex-safe-mode-01/fs-watch-results.txt docs/verification/safe-mode-01/sort-status-corrections/quiet-fs-watch-results.txt
+  if($result -ne 0){throw "Watcher diagnostic exit $result"}
+ }
+ $code=0
+} catch {Write-Output $_;$code=1}
+"watcher_diagnostic_exit=$code"
+exit $code

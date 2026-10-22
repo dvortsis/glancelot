@@ -7,6 +7,13 @@
 #include <QVariantMap>
 #include <memory>
 
+#include "glancelot/metadata_model.hpp"
+#include "glancelot/animation_controller.hpp"
+#include "glancelot/mutation_service.hpp"
+#include "glancelot/copy_move_service.hpp"
+#include "glancelot/display_manager.hpp"
+namespace glancelot { class WindowClaim; }
+
 class ViewerController : public QObject {
     Q_OBJECT
     Q_PROPERTY(QImage image READ image NOTIFY imageChanged)
@@ -45,6 +52,21 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterChanged)
     Q_PROPERTY(bool filterPersistent READ isFilterPersistent WRITE setFilterPersistent NOTIFY filterChanged)
     Q_PROPERTY(bool hasFilter READ hasFilter NOTIFY filterChanged)
+    Q_PROPERTY(qint64 decodedCacheBytes READ decodedCacheBytes NOTIFY cacheChanged)
+    Q_PROPERTY(int decodedCacheCount READ decodedCacheCount NOTIFY cacheChanged)
+    Q_PROPERTY(bool isLastDecodeCacheHit READ isLastDecodeCacheHit NOTIFY imageChanged)
+    Q_PROPERTY(QString storageProfile READ storageProfile WRITE setStorageProfile NOTIFY storageProfileChanged)
+    Q_PROPERTY(QString currentStorageType READ currentStorageType NOTIFY currentStorageTypeChanged)
+    Q_PROPERTY(int activeIoJobs READ activeIoJobs NOTIFY ioStatsChanged)
+    Q_PROPERTY(qint64 admittedIoBytes READ admittedIoBytes NOTIFY ioStatsChanged)
+    Q_PROPERTY(MetadataModel* metadataModel READ metadataModel CONSTANT)
+    Q_PROPERTY(bool metadataVisible READ isMetadataVisible WRITE setMetadataVisible NOTIFY metadataVisibleChanged)
+    Q_PROPERTY(glancelot::AnimationController* animationController READ animationController CONSTANT)
+    Q_PROPERTY(glancelot::MutationService* mutationService READ mutationService CONSTANT)
+    Q_PROPERTY(glancelot::CopyMoveService* copyMoveService READ copyMoveService CONSTANT)
+    Q_PROPERTY(glancelot::DisplayManager* displayManager READ displayManager CONSTANT)
+    Q_PROPERTY(bool presentationActive READ isPresentationActive NOTIFY presentationChanged)
+    Q_PROPERTY(QString presentationMode READ presentationMode NOTIFY presentationChanged)
 public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
@@ -131,6 +153,11 @@ public:
     // Per-window position memory (UX-12). Slot 0 disables it. The last folder and image are written (debounced,
     // atomically, through the shared settings writer) only after an image decodes successfully.
     int windowSlot() const; void setWindowSlot(int slot);
+    // SAFE-MODE-01: application attaches its real claim for guarded checkpoints.
+    // Numeric setWindowSlot retains ordinary legacy position-memory behavior,
+    // but never authorizes recovery metadata, restore, or clean-exit marking.
+    void setWindowClaim(const glancelot::WindowClaim& claim);
+    void setSafeMode(bool enabled); // startup-only, session feedback; never persisted
     // Reopens this slot's saved image, or the first image of its saved folder, unless something is already open;
     // an explicit open() always wins. A missing folder reports an actionable status and never erases the saved slot.
     Q_INVOKABLE void restoreWindow();
@@ -145,11 +172,54 @@ public:
     Q_INVOKABLE void setFilter(const QString& pattern, bool persistent = false);
     Q_INVOKABLE void clearFilter();
     Q_INVOKABLE void toggleFilterPersistence();
+    qint64 decodedCacheBytes() const;
+    int decodedCacheCount() const;
+    bool isLastDecodeCacheHit() const;
+    Q_INVOKABLE void clearDecodedCache();
+
+    // Storage & I/O Scheduling (IO-01 / PERF-05 / SYS-02)
+    QString storageProfile() const;
+    void setStorageProfile(const QString& profile);
+    QString currentStorageType() const;
+    int activeIoJobs() const;
+    qint64 admittedIoBytes() const;
+
+    // Metadata Inspector (META-HUD-01 / META-01 / UX-04)
+    MetadataModel* metadataModel() const;
+    bool isMetadataVisible() const;
+    void setMetadataVisible(bool visible);
+    Q_INVOKABLE void toggleMetadata();
+
+    // Animation & Multipage Playback (ANIM-01 / ADV-06 / FMT-03)
+    glancelot::AnimationController* animationController() const;
+
+    // Mutation Service (RENAME-01 / F018 / SYS-06)
+    glancelot::MutationService* mutationService() const;
+    Q_INVOKABLE void reconcileRenamedPath(const QString& oldPath, const QString& newPath);
+    Q_INVOKABLE void reconcileCreatedFolder(const QString& folderPath);
+
+    // Copy / Move Service (COPY-MOVE-01 / F020 / META-07 / SYS-06)
+    glancelot::CopyMoveService* copyMoveService() const;
 
     // Current folder listing; valid until the next stateChanged. Copy before use across event-loop turns.
+    // Presentation & Second Display (MONITOR-OUTPUT-01 / UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
+    glancelot::DisplayManager* displayManager() const;
+    bool isPresentationActive() const;
+    QString presentationMode() const;
+    Q_INVOKABLE void togglePresentation();
+    Q_INVOKABLE void openPresentation(const QString& displayId = QString(), const QString& mode = QStringLiteral("mirror"));
+    Q_INVOKABLE void closePresentation();
+    Q_INVOKABLE void setPresentationFitMode(const QString& mode);
+    Q_INVOKABLE void cyclePresentationFit();
+    Q_INVOKABLE void pinPresentationImage();
+    Q_INVOKABLE void unpinPresentationImage();
+
     const glancelot::NavigationSnapshot& snapshot() const;
 signals:
-    void imageChanged(); void stateChanged(); void bindingsChanged(); void referenceChanged(); void filterChanged();
+    void imageChanged(); void stateChanged(); void bindingsChanged(); void referenceChanged(); void filterChanged(); void cacheChanged();
+    void storageProfileChanged(); void currentStorageTypeChanged(); void ioStatsChanged();
+    void metadataVisibleChanged();
+    void presentationChanged();
     // The watched file or folder changed on disk; cached derived data (thumbnails) is stale.
     void filesInvalidated();
     // The folder tree was just shown by command; the UI should move keyboard focus into it.

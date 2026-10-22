@@ -1,0 +1,116 @@
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:08:51
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:08:51
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 22:08:51
+2026/10/20 22:10:39 http2: server: error reading preface from client //./pipe/dockerDesktopLinuxEngine: file has already been closed
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.37kB 0.1s done
+#1 DONE 0.1s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 6.8s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 5.9s
+
+#7 [internal] load .dockerignore
+#7 transferring context:
+#7 transferring context: 136B 2.5s done
+#7 DONE 2.5s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#9 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#9 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#9 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context:
+#8 transferring context: 7.49kB 5.8s
+#8 transferring context: 22.84kB 7.7s done
+#8 DONE 7.7s
+
+#10 [build  9/13] COPY ui ui
+#10 CACHED
+
+#11 [qt 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-venv build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libxkbcommon-x11-0 libegl1 && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [build  3/13] COPY CMakeLists.txt ./
+#12 CACHED
+
+#13 [build  4/13] COPY cmake cmake
+#13 CACHED
+
+#14 [build  6/13] COPY assets assets
+#14 CACHED
+
+#15 [build 11/13] COPY scripts scripts
+#15 CACHED
+
+#16 [build  2/13] WORKDIR /src
+#16 CACHED
+
+#17 [build  5/13] COPY app app
+#17 CACHED
+
+#18 [qt 5/5] RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
+#18 CACHED
+
+#19 [build  8/13] COPY src src
+#19 CACHED
+
+#20 [qt 3/5] RUN python3 -m venv /opt/aqt && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==3.3.0 && /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+#20 CACHED
+
+#21 [qt 4/5] RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
+#21 CACHED
+
+#22 [build  1/13] RUN apt-get update && apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri && rm -rf /var/lib/apt/lists/*
+#22 CACHED
+
+#23 [build 12/13] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+#23 CACHED
+
+#24 [build  7/13] COPY include include
+#24 CACHED
+
+#25 [build 10/13] COPY tests tests
+#25 CACHED
+
+#26 [build 13/13] RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+#26 CACHED
+
+#27 exporting to image
+#27 exporting layers
+#27 exporting layers 11.4s done
+#27 exporting manifest sha256:1084613cf2a2ce6c9827009e46be68c8381a7a5a91ad0293c60fb7c911a0e105 0.0s done
+#27 exporting config sha256:dbb80d7abbd8abd5dfd3112f1c0f6dc536ff538e3da79532886c9619ac2212fc 0.0s done
+#27 exporting attestation manifest sha256:0b222248d8d4276ba92a0687f4c46d47042985506a0a79549d492c965ffe037e 0.0s done
+#27 exporting manifest list sha256:27049b4478fef486cb595000fe442ac053e4091d5593bcd1a27a83ab887d9c62 0.0s done
+#27 naming to docker.io/library/glancelot-safe-mode-verification:03bd326 done
+#27 unpacking to docker.io/library/glancelot-safe-mode-verification:03bd326
+#27 unpacking to docker.io/library/glancelot-safe-mode-verification:03bd326 1.9s done
+#27 DONE 13.5s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/u69m3dqemfklrkqj0myegfd97
+54374a63172d0e6f8dd55c94128da91d44f9ba58716825f7a4e9947a6e2de479

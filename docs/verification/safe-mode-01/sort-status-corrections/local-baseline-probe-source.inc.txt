@@ -1,0 +1,30 @@
+    void diagnosticLateBaselineCache_data() {
+        QTest::addColumn<int>("readDelay");
+        QTest::newRow("baseline-before-fallback")<<0;
+        QTest::newRow("baseline-after-fallback")<<70;
+    }
+    void diagnosticLateBaselineCache() {
+        QFETCH(int,readDelay);Fixture fixture;QVERIFY(fixture.prepare());
+        fixture.hooks.baselineDeadlineMs=100;fixture.hooks.options.registerNative=false;
+        fixture.hooks.options.read=[readDelay](const QString& path,std::stop_token stop){
+            if(readDelay)QThread::msleep(readDelay);return fs_watch::snapshot(path,stop);
+        };
+        QElapsedTimer elapsed;elapsed.start();QString baseline;int revisions=0,decodes=0;
+        fixture.hooks.pending=[&](const fs_watch::Observation& value){if(value.baseline){baseline=value.image;qInfo()<<elapsed.elapsed()<<"baseline"<<value.image;}};
+        fixture.hooks.workerStarted=[&](QProcess*,const QString& purpose,const QString& path){
+            if(purpose=="revision")++revisions;else ++decodes;
+            qInfo()<<elapsed.elapsed()<<"worker"<<purpose<<path;
+        };
+        HookScope hooks(fixture.hooks);ViewerController viewer;viewer.setBoundaryMode("stop");
+        const auto a=fixture.path("a.png"),b=fixture.path("b.png");const auto before=hash(a);
+        viewer.open(a);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QTRY_COMPARE_WITH_TIMEOUT(baseline,a,5000);QTest::qWait(150);
+        viewer.open(b);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),5000);
+        QTRY_COMPARE_WITH_TIMEOUT(baseline,b,5000);QTest::qWait(150);
+        QVERIFY(viewer.decodedCacheCount()>=2);QVERIFY(fixture.configure({{"revisionDelayMs",1200}}));
+        baseline.clear();viewer.previous();
+        QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath()==a&&viewer.imageReady()&&!viewer.loading(),5000);
+        QCOMPARE(hash(a),before);
+        qInfo()<<"readDelay"<<readDelay<<"revisionStarts"<<revisions<<"decodeStarts"<<decodes<<"unchangedHit"<<viewer.isLastDecodeCacheHit();
+        QVERIFY(viewer.isLastDecodeCacheHit());
+    }

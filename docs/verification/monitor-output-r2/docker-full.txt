@@ -1,0 +1,138 @@
+2026/10/21 11:58:05 http2: server: error reading preface from client //./pipe/dockerDesktopLinuxEngine: file has already been closed
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 3.37kB 0.9s done
+#1 DONE 0.9s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.0s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 0.5s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 136B 0.0s done
+#7 DONE 0.1s
+
+#8 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#8 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 979.81kB 4.9s
+#9 transferring context: 1.53MB 10.0s
+#9 transferring context: 1.65MB 15.0s
+#9 transferring context: 1.75MB 21.3s
+#9 transferring context: 1.82MB 27.2s
+#9 transferring context: 1.99MB 32.7s
+#9 transferring context: 2.10MB 37.7s
+#9 transferring context: 3.02MB 43.5s
+#9 transferring context: 3.25MB 48.8s
+#9 transferring context: 3.48MB 54.8s
+#9 transferring context: 3.61MB 62.0s
+#9 transferring context: 3.70MB 68.7s
+#9 transferring context: 3.80MB 73.9s
+#9 transferring context: 3.84MB 80.3s
+#9 transferring context: 3.87MB 86.8s
+#9 transferring context: 3.93MB 93.9s
+#9 transferring context: 4.00MB 103.8s
+#9 transferring context: 4.03MB 122.8s
+#9 transferring context: 4.03MB 129.7s done
+#9 CANCELED
+ERROR: failed to build: failed to solve: Canceled: rpc error: code = Canceled desc = context canceled
+52384 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:codex-monitor-output-r2 .
+github.com/docker/buildx/commands.runBuildWithOptions
+	github.com/docker/buildx/commands/build.go:504
+github.com/docker/buildx/commands.runBuild
+	github.com/docker/buildx/commands/build.go:419
+github.com/docker/buildx/commands.buildCmd.func1
+	github.com/docker/buildx/commands/build.go:540
+github.com/docker/cli/cli-plugins/plugin.RunPlugin.func1.1.2
+	github.com/docker/cli@v29.6.2+incompatible/cli-plugins/plugin/plugin.go:65
+github.com/spf13/cobra.(*Command).execute
+	github.com/spf13/cobra@v1.10.2/command.go:1015
+github.com/spf13/cobra.(*Command).ExecuteC
+	github.com/spf13/cobra@v1.10.2/command.go:1148
+github.com/spf13/cobra.(*Command).Execute
+	github.com/spf13/cobra@v1.10.2/command.go:1071
+github.com/docker/cli/cli-plugins/plugin.RunPlugin
+	github.com/docker/cli@v29.6.2+incompatible/cli-plugins/plugin/plugin.go:80
+main.runPlugin
+	github.com/docker/buildx/cmd/buildx/main.go:66
+main.run
+	github.com/docker/buildx/cmd/buildx/main.go:80
+main.main
+	github.com/docker/buildx/cmd/buildx/main.go:90
+runtime.main
+	runtime/proc.go:290
+runtime.goexit
+	runtime/asm_amd64.s:1771
+
+115  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json
+github.com/moby/buildkit/session/filesync.recvDiffCopy
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/session/filesync/diffcopy.go:103
+github.com/moby/buildkit/session/filesync.FSSync
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/session/filesync/filesync.go:250
+github.com/moby/buildkit/source/local.(*localSourceHandler).snapshot
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/source/local/source.go:304
+github.com/moby/buildkit/source/local.(*localSourceHandler).Snapshot
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/source/local/source.go:180
+github.com/moby/buildkit/solver/llbsolver/ops.(*SourceOp).Exec
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/source.go:112
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1248
+github.com/moby/buildkit/util/flightcontrol.(*call[...]).run
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/util/flightcontrol/flightcontrol.go:122
+sync.(*Once).doSlow
+	/usr/local/go/src/sync/once.go:78
+sync.(*Once).Do
+	/usr/local/go/src/sync/once.go:69
+runtime.goexit
+	/usr/local/go/src/runtime/asm_amd64.s:1771
+
+52384 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:codex-monitor-output-r2 .
+google.golang.org/grpc.(*ClientConn).Invoke
+	google.golang.org/grpc@v1.82.1/call.go:35
+github.com/moby/buildkit/api/services/control.(*controlClient).Solve
+	github.com/moby/buildkit@v0.32.2/api/services/control/control_grpc.pb.go:88
+github.com/moby/buildkit/client.(*Client).solve.func2
+	github.com/moby/buildkit@v0.32.2/client/solve.go:337
+golang.org/x/sync/errgroup.(*Group).Go.func1
+	golang.org/x/sync@v0.22.0/errgroup/errgroup.go:93
+runtime.goexit
+	runtime/asm_amd64.s:1771
+
+115  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json
+github.com/moby/buildkit/solver.(*edge).execOp
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/edge.go:979
+github.com/moby/buildkit/solver/internal/pipe.NewWithFunction[...].func2
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/internal/pipe/pipe.go:78
+runtime.goexit
+	/usr/local/go/src/runtime/asm_amd64.s:1771
+
+52384 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:codex-monitor-output-r2 .
+github.com/moby/buildkit/client.(*Client).solve.func2
+	github.com/moby/buildkit@v0.32.2/client/solve.go:339
+golang.org/x/sync/errgroup.(*Group).Go.func1
+	golang.org/x/sync@v0.22.0/errgroup/errgroup.go:93
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ko86suvcujwcujvqdpv3d330x

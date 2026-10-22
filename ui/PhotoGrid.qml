@@ -57,8 +57,6 @@ Rectangle {
     }
     // Short panes (minimum window, docked bars) use a smaller header and tiles so more than one row shows.
     readonly property bool compact: height < 420
-    // Capped so delegates (and thumbnail requests) stay under the service queue on very large displays.
-    // Measured on the full view width so a half-width combined pane (about 360 px) still gets two columns.
     // F009: one row per item with name, size and modified time instead of thumbnail tiles.
     property bool details: false
     function sizeText(bytes) { return bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : bytes < 1073741824 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1073741824).toFixed(2) + " GB" }
@@ -508,7 +506,6 @@ Rectangle {
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
         cellHeight: panel.details ? Theme.rowHeight + Theme.gapSm : panel.compact
                     ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(panel.currentBucketSize, cellWidth * 0.6 + 40))))
-
                                      : Math.max(100, height))
                     : Math.max(Math.floor(panel.currentBucketSize * 0.9), Math.min(Math.floor(panel.currentBucketSize * 1.4), cellWidth * 0.75 + 46),
                                Math.ceil(height / Math.max(1, Math.floor(panel.currentBucketSize / panel.columns) - 4)))
@@ -530,7 +527,6 @@ Rectangle {
         }
         // Grid keys beat remapped window shortcuts while the grid has focus (same key, correct scope).
         Keys.onShortcutOverride: event => {
-            if (panel.yields && panel.yields(event)) return // INPUT-02: a registered grid-command key beats type-to-select and native keys
             if (panel.searchQuery.length > 0) {
                 if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter ||
                     event.key === Qt.Key_Backspace || event.key === Qt.Key_F3 || event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
@@ -540,14 +536,14 @@ Rectangle {
             }
             if (event.key === Qt.Key_F3) { event.accepted = true; return }
             const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
-            if (event.key >= 0x20 && event.key <= 0x7e && !mods) {
+            // Registered pane commands must reach the window before printable type-to-search.
+            if (event.key >= 0x20 && event.key <= 0x7e && !mods && !(yields && yields(event))) {
                 event.accepted = true
                 return
             }
             if (panel.keyAction(event).length) event.accepted = true
         }
         Keys.onPressed: event => {
-            if (panel.yields && panel.yields(event)) return
             if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_F) {
                 panel.openFilter()
                 event.accepted = true

@@ -1,0 +1,9 @@
+{
+  "source": "80964f799cca1df542706b497e2cb012c92efe5f",
+  "buildTestExit": 0,
+  "windowsRerun": false,
+  "wrapperFailure": "literal summary wording check before Docker",
+  "seconds": 625.1,
+  "wrapperExit": 1,
+  "testPasses": 32
+}

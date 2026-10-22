@@ -5,6 +5,7 @@
 #include "glancelot/settings_file.hpp"
 #include "../src/app/thumbnail_id.hpp"
 #include "../src/app/file_grid_wiring.hpp"
+#include <QFileInfo>
 #include "../src/app/file_operation_wiring.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
@@ -1149,7 +1150,7 @@ private slots:
         QCOMPARE(dialog->property("section").toString(), QString("controls"));
         auto* search = h.window->findChild<QQuickItem*>("commandSearch"); QVERIFY(search);
         QTRY_VERIFY(search->hasActiveFocus());
-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
+        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(!h.window->property("modalOpen").toBool());
         QVERIFY(commands.contains(QVariantList{QString("rotate")}));
@@ -1163,9 +1164,7 @@ private slots:
         h.fill(20); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
         commands.clear();
         h.viewer.trigger("palette"); QTRY_VERIFY(search->hasActiveFocus());
-        // A longer query so that only the canvas command matches; global commands (for example "Add current folder to favorites")
-        // are runnable from the grid and would otherwise match "rotat" too.
-        for (const char c : std::string("rotate v")) QTest::keyClick(h.window, c);
+        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
         QTest::keyClick(h.window, Qt::Key_Return);
         QTest::qWait(50);
         QVERIFY(!commands.contains(QVariantList{QString("rotate")}));
@@ -1619,6 +1618,7 @@ private slots:
         h.fileGrid.select(h.fileGrid.rowOf(media.file("README")), DirectoryEntryModel::Toggle);
         h.fileGrid.select(h.fileGrid.rowOf(media.file("notes.txt")), DirectoryEntryModel::Toggle);
         QCOMPARE(h.fileGrid.selectedCount(), 3);
+        const bool renameKnown=QFileInfo(media.file("README")).birthTime().isValid();
         QVERIFY(QFile::rename(media.file("README"), media.file("README.md")));
         QVERIFY(QFile::remove(media.file("itinerary.pdf")));
         QVERIFY(QFile::remove(media.file("notes.txt")));
@@ -1630,7 +1630,10 @@ private slots:
         QVERIFY(h.fileGrid.rowOf(media.file("README.md")) >= 0);
         QTRY_COMPARE(h.fileGrid.rowOf(media.file("notes.txt")), -1);
         QTest::qWait(150); // past the grid's post-listing cursor placement
-        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.file("sunset.jpg")});
+        QStringList expected;
+        if(renameKnown)expected<<media.file("README.md");
+        expected<<media.file("sunset.jpg");
+        QCOMPARE(h.fileGrid.selectedPaths(), expected);
         QCOMPARE(h.selected(), -1); // the cursor's file is gone; nothing else was selected in its place
         QVERIFY(h.window->property("gridMode").toBool());
     }
@@ -2434,7 +2437,7 @@ private slots:
         QTRY_VERIFY(list->hasActiveFocus());
         QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
         QTRY_VERIFY(menu->property("visible").toBool());
-        QObject* item = h.window->findChild<QObject*>("folderMoveToTrash"); QVERIFY(item);
+        QObject* item = menu->findChild<QObject*>("menuItem-delete-selection"); QVERIFY(item);
         QVERIFY(!item->property("enabled").toBool());
         QVERIFY(item->property("text").toString().startsWith("Drives can't"));
         QTest::keyClick(h.window, Qt::Key_Escape);

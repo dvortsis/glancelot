@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "42606c92-b12b-4cdf-8915-46d147079166",
+                "claimNonce": "790b3d61-a05e-4393-afa1-486ee4540814",
+                "origin": "navigation",
+                "pid": 1615,
+                "sequence": "0",
+                "start": "17536519",
+                "state": "clean",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-luj861te/generated-media",
+            "image": "/build/recovery-process/run-luj861te/generated-media/-explicit-配置.png",
+            "saved": 1792594577
+        }
+    }
+}

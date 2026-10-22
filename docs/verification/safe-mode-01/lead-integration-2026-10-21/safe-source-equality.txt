@@ -1,0 +1,7 @@
+safe_product_tests_recovery_contract_diff=0
+M	AGENTS.md
+M	CMakeLists.txt
+A	cmake/ExportTests.cmake
+A	include/glancelot/selection_export.hpp
+M	scripts/build.ps1
+A	scripts/gate-lock.ps1

@@ -23,8 +23,6 @@ Rectangle {
     signal resizeCommitted(real extent)
     property int maximumWidth: 480
     signal dismissed()
-    // DELETE-01: a row's context menu (right-click, Menu key, Shift+F10) asks the host to confirm a move to the trash.
-    signal deleteRequested(string path)
     // INPUT-02: the window, for the command-menu rows (scope predicate, live bindings, command routing).
     property var host: null
     // F002: ancestors of the current folder as [{label, path}], split from text only (drive, UNC share and "/" roots kept).
@@ -66,6 +64,7 @@ Rectangle {
     function openRowMenu(row, x, y) {
         const info = folderTree.rowInfo(row)
         if (!info.path) return
+        list.currentIndex = row // commands from the menu act on the cursor row
         rowMenu.path = info.path; rowMenu.depth = info.depth
         rowMenu.popup(panel, x, y)
     }
@@ -108,7 +107,8 @@ Rectangle {
         viewer.navigateDirectory(address.text)
     }
     function currentSelectedFolder() {
-        if (!list.activeFocus || list.currentIndex < 0 || !folderTree) return ""
+        // The row menu opens on the cursor row and holds focus while a command from it runs.
+        if (!(list.activeFocus || rowMenu.visible) || list.currentIndex < 0 || !folderTree) return ""
         const info = folderTree.rowInfo(list.currentIndex)
         return (info && info.depth > 0 && info.path) ? info.path : ""
     }
@@ -802,7 +802,6 @@ Rectangle {
                     border.width: Theme.borderWidth
                     border.color: Theme.border
                 }
-                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
                 MenuItem {
                     id: favoriteItem
                     objectName: "folderFavoriteToggle"
@@ -829,34 +828,22 @@ Rectangle {
                     }
                     background: Rectangle { radius: Theme.radiusSmall; color: favoriteItem.highlighted ? Theme.hover : "transparent" }
                 }
-                MenuItem {
+                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
+                // The registered "delete-selection" command, like the Delete key: the host picks the target from the cursor
+                // row (this menu opens on it), so the menu and the key cannot disagree. Drives and other roots are never
+                // moved and a running operation blocks a second one; the row stays visible and explains itself.
+                CommandMenuItem {
                     id: trashItem
-                    objectName: "folderMoveToTrash"
-                    // Drives and other roots are never moved; the item stays visible and explains itself.
-                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move “" + rowMenu.name + "” to the " + panel.trashName
-                    enabled: rowMenu.depth > 0 && !fileOperations.busy
-                    implicitHeight: Theme.controlHeight
-                    leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
-                    onTriggered: { rowMenu.handedOff = true; panel.deleteRequested(rowMenu.path) }
-                    contentItem: RowLayout {
-                        spacing: Theme.gapSm
-                        opacity: trashItem.enabled ? 1 : Theme.disabledOpacity
-                        UiIcon { name: "trash"; color: trashItem.enabled ? Theme.danger : Theme.muted }
-                        Label {
-                            text: trashItem.text
-                            color: trashItem.enabled ? Theme.danger : Theme.muted
-                            font.pixelSize: Theme.textBody
-                            Layout.fillWidth: true
-                        }
-                        Label { // the live binding of the command this row stands for
-                            visible: trashItem.enabled && text.length > 0
-                            text: panel.host ? panel.host.keyHint("delete-selection") : ""
-                            color: Theme.muted
-                            font.family: Theme.monoFamily
-                            font.pixelSize: Theme.textSmall
-                        }
-                    }
-                    background: Rectangle { radius: Theme.radiusSmall; color: trashItem.highlighted ? Theme.hover : "transparent" }
+                    host: panel.host
+                    commandId: "delete-selection"
+                    iconName: "trash"; danger: true
+                    label: panel.host && panel.host.commandBlockedReason(commandId).length
+                           ? panel.host.commandBlockedReason(commandId)
+                           : "Move “" + rowMenu.name + "” to the " + panel.trashName
+                }
+                Connections { // the confirmation dialog owns focus after a choice
+                    target: trashItem
+                    function onTriggered() { rowMenu.handedOff = true }
                 }
             }
             Label {

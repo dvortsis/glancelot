@@ -1,0 +1,1216 @@
+diff --git a/include/glancelot/display_manager.hpp b/include/glancelot/display_manager.hpp
+index 0e2773b..03bb31c 100644
+--- a/include/glancelot/display_manager.hpp
++++ b/include/glancelot/display_manager.hpp
+@@ -63,6 +63,11 @@ public:
+     virtual void setPrimaryImage(const QImage& image) = 0;
+     virtual void setSecondaryImage(const QImage& image) = 0;
+     virtual void setFitMode(const QString& mode) = 0;
++    virtual QVariantMap viewportState() const = 0;
++    virtual void restoreViewport(const QVariantMap& state) = 0;
++    virtual void viewportCommand(const QString& command) = 0;
++    virtual QString outputColorStatus() const = 0;
++    virtual qint64 colorResourceBytes() const = 0;
+     virtual QQuickWindow* quickWindow() = 0;
+ };
+ 
+@@ -79,6 +84,7 @@ class DisplayManager : public QObject {
+     Q_PROPERTY(QString currentPath READ currentPath NOTIFY imageRouted)
+     Q_PROPERTY(QString pinnedPath READ pinnedPath NOTIFY pinnedPathChanged)
+     Q_PROPERTY(bool isPinned READ isPinned NOTIFY presentationModeChanged)
++    Q_PROPERTY(QString outputColorStatus READ outputColorStatus NOTIFY outputColorStatusChanged)
+ 
+ public:
+     explicit DisplayManager(QObject* parent = nullptr);
+@@ -129,6 +135,10 @@ public:
+     // Per-output fit mode, remembered by display id and restored when that output reopens.
+     Q_INVOKABLE void setOutputFitMode(const QString& mode);
+     QString outputFitMode(const QString& displayId = QString()) const;
++    Q_INVOKABLE void outputViewportCommand(const QString& command);
++    QVariantMap outputViewportState(const QString& displayId = QString()) const;
++    QString outputColorStatus() const;
++    qint64 outputColorResourceBytes() const;
+ 
+     // Aggregate budget for decoded images retained by the presentation (shared QImages count once).
+     static void setImageBudgetBytes(qint64 bytes);
+@@ -140,6 +150,8 @@ public:
+     // Window-local key handling consults the user-rebindable toggle binding through this provider.
+     void setToggleBindingProvider(std::function<QString()> provider);
+     QString toggleBinding() const;
++    void setOutputBindingProvider(std::function<QString(const QString&)> provider);
++    QString outputBinding(const QString& command) const;
+ 
+     // Presentation Window access (for testing/canvas inspection)
+     QQuickWindow* presentationWindow() const;
+@@ -152,6 +164,7 @@ signals:
+     void pinnedPathChanged(const QString& path);
+     void presentationClosed();
+     void imageRouted(const QString& path, quint64 generation);
++    void outputColorStatusChanged();
+ 
+ private:
+     struct Private;
+diff --git a/src/app/display_manager.cpp b/src/app/display_manager.cpp
+index 69d9f57..9d697ec 100644
+--- a/src/app/display_manager.cpp
++++ b/src/app/display_manager.cpp
+@@ -9,6 +9,9 @@
+ #include <QHash>
+ #include <QSet>
+ #ifdef Q_OS_WIN
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
+ #include <windows.h>
+ #endif
+ 
+@@ -88,11 +91,14 @@ struct DisplayManager::Private {
+     QString comparisonPath;
+     QImage comparisonImage;
+     quint64 comparisonGeneration{0};
++    quint64 comparisonGenerationHighWater{0};
+ 
+     QString previousPath;
+     QImage previousImage;
+ 
+     QHash<QString, QString> fitModes;           // per display id
++    QHash<QString, QVariantMap> viewports;      // bounded session state by display identity
++    std::function<QString(const QString&)> outputBindingProvider;
+     std::function<QString()> toggleBindingProvider;
+ 
+     std::unique_ptr<IPresentationWindow> presentationWindow;
+@@ -157,14 +163,21 @@ struct DisplayManager::Private {
+     void enforceBudget() {
+         if (retainedBytes() <= s_imageBudgetBytes) return;
+         previousImage = QImage(); previousPath.clear();
+-        if (retainedBytes() <= s_imageBudgetBytes) return;
++        if (retainedBytes() <= s_imageBudgetBytes) {
++            applyImagesToWindow();
++            return;
++        }
+         comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0;
+-        if (retainedBytes() <= s_imageBudgetBytes) return;
++        if (retainedBytes() <= s_imageBudgetBytes) {
++            applyImagesToWindow();
++            return;
++        }
+         if (!pinnedImage.isNull()) {
+             pinnedImage = QImage(); pinnedPath.clear(); pinnedGeneration = 0;
+             emit q->pinnedPathChanged(pinnedPath);
+             if (mode == PresentationMode::Pinned) q->setMode(PresentationMode::Mirror);
+         }
++        applyImagesToWindow();
+     }
+ 
+     void applyImagesToWindow() {
+@@ -175,12 +188,14 @@ struct DisplayManager::Private {
+ 
+         if (mode == PresentationMode::Pinned) {
+             presentationWindow->setPrimaryImage(pinnedImage);
++            presentationWindow->setSecondaryImage(QImage());
+         } else if (mode == PresentationMode::Comparison) {
+             presentationWindow->setPrimaryImage(currentImage);
+             presentationWindow->setSecondaryImage(secondaryImage());
+         } else {
+             // Mirror
+             presentationWindow->setPrimaryImage(currentImage);
++            presentationWindow->setSecondaryImage(QImage());
+         }
+     }
+ };
+@@ -349,6 +364,10 @@ quint64 DisplayManager::currentGeneration() const {
+ }
+ 
+ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode mode) {
++    if (d->presentationWindow && !d->activeId.isEmpty()) {
++        if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
++        d->viewports[d->activeId]=d->presentationWindow->viewportState();
++    }
+     QScreen* targetScreen = nullptr;
+     if (!displayId.isEmpty()) {
+         targetScreen = d->findScreenById(displayId);
+@@ -380,6 +399,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
+         d->presentationWindow->setScreen(targetScreen);
+         d->presentationWindow->setGeometry(targetScreen->geometry());
+         d->applyImagesToWindow();
++        d->presentationWindow->restoreViewport(d->viewports.value(d->activeId));
+         d->presentationWindow->show();
+     }
+ 
+@@ -387,11 +407,16 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
+     emit activeDisplayIdChanged(d->activeId);
+     emit presentationModeChanged(d->mode);
+     emit presentationActiveChanged(true);
++    emit outputColorStatusChanged();
+     return true;
+ }
+ 
+ void DisplayManager::closePresentation() {
+     if (!d->active && !d->presentationWindow) return;
++    if (d->presentationWindow && !d->activeId.isEmpty()) {
++        if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
++        d->viewports[d->activeId]=d->presentationWindow->viewportState();
++    }
+ 
+     d->active = false;
+     d->activeId.clear();
+@@ -402,6 +427,8 @@ void DisplayManager::closePresentation() {
+     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
+ 
+     if (d->presentationWindow) {
++        d->presentationWindow->setPrimaryImage(QImage());
++        d->presentationWindow->setSecondaryImage(QImage());
+         d->presentationWindow->hide();
+         d->presentationWindow->deleteLater();
+         d->presentationWindow.reset();
+@@ -410,6 +437,7 @@ void DisplayManager::closePresentation() {
+     emit activeDisplayIdChanged(d->activeId);
+     emit presentationActiveChanged(false);
+     emit presentationClosed();
++    emit outputColorStatusChanged();
+ }
+ 
+ void DisplayManager::togglePresentation() {
+@@ -447,6 +475,7 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
+     d->currentPath = path;
+     d->currentImage = image;
+     d->currentGeneration = generation;
++    d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
+     d->enforceBudget();
+ 
+     if (d->mode == PresentationMode::Mirror || d->mode == PresentationMode::Comparison) {
+@@ -480,7 +509,8 @@ void DisplayManager::unpin() {
+ }
+ 
+ void DisplayManager::setComparisonImage(const QString& path, const QImage& image, quint64 generation) {
+-    if (generation < d->comparisonGeneration) return;   // stale comparison request
++    if (generation < d->comparisonGenerationHighWater) return;   // stale comparison request
++    d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
+     d->comparisonPath = path;
+     d->comparisonImage = image;
+     d->comparisonGeneration = generation;
+@@ -491,19 +521,52 @@ void DisplayManager::setComparisonImage(const QString& path, const QImage& image
+ 
+ void DisplayManager::compareWithPinnedOrPrevious() {
+     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
++    d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, d->currentGeneration);
+     setMode(PresentationMode::Comparison);
+     d->applyImagesToWindow();
+ }
+ 
++static bool isValidFitMode(const QString& mode) {
++    return (mode == QLatin1String("shrink") || mode == QLatin1String("fit") ||
++            mode == QLatin1String("fill") || mode == QLatin1String("width") ||
++            mode == QLatin1String("height") || mode==QLatin1String("actual"));
++}
++
+ void DisplayManager::setOutputFitMode(const QString& mode) {
++    if (!isValidFitMode(mode)) return;
+     if (!d->active || d->activeId.isEmpty()) return;
++    if (d->fitModes.size()>=64 && !d->fitModes.contains(d->activeId)) d->fitModes.erase(d->fitModes.begin());
+     d->fitModes[d->activeId] = mode;
+     if (d->presentationWindow) d->presentationWindow->setFitMode(mode);
+ }
++void DisplayManager::outputViewportCommand(const QString& command) {
++    if (!d->active || !d->presentationWindow) return;
++    d->presentationWindow->viewportCommand(command);
++}
++QVariantMap DisplayManager::outputViewportState(const QString& displayId) const {
++    if (d->presentationWindow && (displayId.isEmpty() || displayId==d->activeId)) return d->presentationWindow->viewportState();
++    return d->viewports.value(displayId);
++}
++void DisplayManager::setOutputBindingProvider(std::function<QString(const QString&)> provider) {
++    d->outputBindingProvider=std::move(provider);
++}
++QString DisplayManager::outputBinding(const QString& command) const {
++    return d->outputBindingProvider ? d->outputBindingProvider(command) : QString();
++}
+ 
+ QString DisplayManager::outputFitMode(const QString& displayId) const {
++    if (d->presentationWindow && (displayId.isEmpty() || displayId==d->activeId)) {
++        const auto fit=d->presentationWindow->viewportState().value("primary").toMap().value("fit").toString();
++        return fit.isEmpty()?QStringLiteral("custom"):fit;
++    }
+     return d->fitModes.value(displayId.isEmpty() ? d->activeId : displayId, QStringLiteral("shrink"));
+ }
++QString DisplayManager::outputColorStatus() const {
++    return d->presentationWindow?d->presentationWindow->outputColorStatus():QStringLiteral("Presentation closed");
++}
++qint64 DisplayManager::outputColorResourceBytes() const {
++    return d->presentationWindow?d->presentationWindow->colorResourceBytes():0;
++}
+ 
+ qint64 DisplayManager::retainedImageBytes() const { return d->retainedBytes(); }
+ 
+@@ -511,6 +574,9 @@ void DisplayManager::releaseCachedImages() {
+     d->previousImage = QImage(); d->previousPath.clear();
+     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
+     d->applyImagesToWindow();
++    if (d->presentationWindow && d->mode != PresentationMode::Comparison) {
++        d->presentationWindow->setSecondaryImage(QImage());
++    }
+ }
+ 
+ void DisplayManager::setToggleBindingProvider(std::function<QString()> provider) {
+diff --git a/src/app/viewer_controller.cpp b/src/app/viewer_controller.cpp
+index 076c5f8..aca53a7 100644
+--- a/src/app/viewer_controller.cpp
++++ b/src/app/viewer_controller.cpp
+@@ -155,6 +155,16 @@ const std::vector<Command> registry {
+     {"presentation-compare", "Presentation: Comparison mode", ""},
+     {"presentation-close", "Close presentation display", ""},
+     {"presentation-fit", "Presentation: Cycle fit mode for this display", ""},
++    // MONITOR-OUTPUT-01 core correction: output viewport; never modifies the controller canvas.
++    {"presentation-view-actual", "Presentation: Actual physical pixel size", ""},
++    {"presentation-view-zoom-in", "Presentation: Zoom in", ""},
++    {"presentation-view-zoom-out", "Presentation: Zoom out", ""},
++    {"presentation-view-pan-left", "Presentation: Pan left", ""},
++    {"presentation-view-pan-right", "Presentation: Pan right", ""},
++    {"presentation-view-pan-up", "Presentation: Pan up", ""},
++    {"presentation-view-pan-down", "Presentation: Pan down", ""},
++    {"presentation-view-linked", "Presentation: Toggle linked comparison viewports", ""},
++    {"presentation-view-reference", "Presentation: Switch active comparison viewport", ""},
+ #ifdef Q_OS_WIN
+     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
+     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
+@@ -417,6 +427,7 @@ struct ViewerController::Private {
+             emit q->presentationChanged();
+         });
+         displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
++        displayManager.setOutputBindingProvider([this](const QString& id) { return q->bindingFor(id); });
+         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
+             emit q->presentationChanged();
+         });
+@@ -1419,6 +1430,7 @@ void ViewerController::trigger(const QString& id){
+     else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
+     else if(id=="presentation-compare") { d->displayManager.compareWithPinnedOrPrevious(); emit viewCommand(id); }
+     else if(id=="presentation-fit") { cyclePresentationFit(); emit viewCommand(id); }
++    else if(id.startsWith("presentation-view-")) { d->displayManager.outputViewportCommand(id.mid(18)); emit viewCommand(id); }
+     else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
+     else if(d->bindings.contains(id))emit viewCommand(id);
+ }
+diff --git a/src/render/image.frag b/src/render/image.frag
+index 44d92fc..9e1c078 100644
+--- a/src/render/image.frag
++++ b/src/render/image.frag
+@@ -3,8 +3,17 @@ layout(location=0) in vec2 texCoord;
+ layout(location=0) out vec4 fragColor;
+ layout(std140,binding=0) uniform Params { mat4 matrix; vec4 background; vec4 options; } params;
+ layout(binding=1) uniform sampler2D sourceImage;
++layout(binding=2) uniform sampler2D outputColorLut;
++vec3 outputColor(vec3 rgb) {
++    vec3 p=clamp(rgb,0.0,1.0)*32.0;
++    float b=floor(p.b);
++    vec2 lo=vec2(b*33.0+p.r+0.5,p.g+0.5)/vec2(1089.0,33.0);
++    vec2 hi=vec2(min(b+1.0,32.0)*33.0+p.r+0.5,p.g+0.5)/vec2(1089.0,33.0);
++    return mix(texture(outputColorLut,lo).rgb,texture(outputColorLut,hi).rgb,p.b-b);
++}
+ void main() {
+     vec4 source=texture(sourceImage,texCoord);
++    if (params.options.y>0.5) source.rgb=outputColor(source.rgb);
+     vec3 backdrop=params.background.rgb;
+     if (params.options.x>0.5) {
+         float tile=mod(floor(gl_FragCoord.x/12.0)+floor(gl_FragCoord.y/12.0),2.0);
+diff --git a/src/render/image_canvas.cpp b/src/render/image_canvas.cpp
+index 4d07282..d7d03d0 100644
+--- a/src/render/image_canvas.cpp
++++ b/src/render/image_canvas.cpp
+@@ -23,11 +23,15 @@ constexpr qint64 defaultTextureBudget = 256LL * 1024 * 1024;
+ class ImageRenderer final : public QQuickRhiItemRenderer {
+     std::unique_ptr<QRhiBuffer> vertices, uniforms;
+     std::unique_ptr<QRhiTexture> texture;
++    std::unique_ptr<QRhiTexture> colorTexture;
++    std::unique_ptr<QRhiSampler> colorSampler;
+     std::unique_ptr<QRhiSampler> sampler;
+     std::unique_ptr<QRhiShaderResourceBindings> bindings;
+     std::unique_ptr<QRhiGraphicsPipeline> pipeline;
+     QRhi* device{};
+     QImage image;
++    QImage colorLut;
++    bool colorUpload{true};
+     qint64 imageKey{};
+     qint64 textureBudget{defaultTextureBudget};
+     bool upload{}, vertexUpload{}, nearest{}, checker{};
+@@ -47,7 +51,7 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
+         }, Qt::QueuedConnection);
+     }
+     void reset() {
+-        pipeline.reset(); bindings.reset(); texture.reset(); sampler.reset();
++        pipeline.reset(); bindings.reset(); texture.reset(); sampler.reset(); colorTexture.reset(); colorSampler.reset(); colorUpload=true;
+         uniforms.reset(); vertices.reset(); imageKey=0; vertexUpload=true; upload=true;
+     }
+ protected:
+@@ -55,6 +59,11 @@ protected:
+         auto* item=static_cast<ImageCanvas*>(base);
+         owner=item;
+         if (image.cacheKey()!=item->m_image.cacheKey()) { image=item->m_image; upload=true; }
++        if (colorLut.cacheKey()!=item->m_outputColorLut.cacheKey()) {
++            colorLut=item->m_outputColorLut; colorUpload=true;
++            const QSize required=colorLut.isNull()?QSize(1,1):colorLut.size();
++            if (colorTexture && colorTexture->pixelSize()!=required) { bindings.reset(); colorTexture.reset(); }
++        }
+         if (nearest != item->m_nearest) {
+             nearest=item->m_nearest; pipeline.reset(); bindings.reset(); sampler.reset();
+         }
+@@ -102,11 +111,25 @@ protected:
+             sampler.reset(rhi()->newSampler(filter,filter,QRhiSampler::None,QRhiSampler::ClampToEdge,QRhiSampler::ClampToEdge));
+             if (!sampler->create()) { sampler.reset(); drawable=false; fail(QStringLiteral("GPU sampler creation failed.")); }
+         }
++        if (drawable && !colorTexture) {
++            colorTexture.reset(rhi()->newTexture(QRhiTexture::RGBA8, colorLut.isNull() ? QSize(1,1) : colorLut.size()));
++            if (!colorTexture->create()) { colorTexture.reset(); drawable=false; fail(QStringLiteral("Output color lookup allocation failed.")); }
++            colorUpload=true;
++        }
++        if (drawable && !colorSampler) {
++            colorSampler.reset(rhi()->newSampler(QRhiSampler::Linear,QRhiSampler::Linear,QRhiSampler::None,QRhiSampler::ClampToEdge,QRhiSampler::ClampToEdge));
++            if (!colorSampler->create()) { colorSampler.reset(); drawable=false; fail(QStringLiteral("Output color sampler creation failed.")); }
++        }
++        if (drawable && colorUpload) {
++            QImage identity(1,1,QImage::Format_RGBA8888); identity.fill(Qt::white);
++            updates->uploadTexture(colorTexture.get(), colorLut.isNull() ? identity : colorLut); colorUpload=false;
++        }
+         if (drawable && !bindings) {
+             bindings.reset(rhi()->newShaderResourceBindings());
+             bindings->setBindings({
+                 QRhiShaderResourceBinding::uniformBuffer(0,QRhiShaderResourceBinding::VertexStage|QRhiShaderResourceBinding::FragmentStage,uniforms.get()),
+-                QRhiShaderResourceBinding::sampledTexture(1,QRhiShaderResourceBinding::FragmentStage,texture.get(),sampler.get())});
++                QRhiShaderResourceBinding::sampledTexture(1,QRhiShaderResourceBinding::FragmentStage,texture.get(),sampler.get()),
++                QRhiShaderResourceBinding::sampledTexture(2,QRhiShaderResourceBinding::FragmentStage,colorTexture.get(),colorSampler.get())});
+             if (!bindings->create()) { bindings.reset(); drawable=false; fail(QStringLiteral("GPU resource binding failed.")); }
+         }
+         if (drawable && !pipeline) {
+@@ -162,6 +185,7 @@ protected:
+             data[16]=float(background.redF()); data[17]=float(background.greenF());
+             data[18]=float(background.blueF()); data[19]=1;
+             data[20]=checker?1.f:0.f;
++            data[21]=colorLut.isNull()?0.f:1.f;
+             updates->updateDynamicBuffer(uniforms.get(),0,sizeof(data),data);
+             fail({});
+         }
+@@ -211,6 +235,9 @@ void ImageCanvas::setNearest(bool value) {
+     m_nearest=value; emit appearanceChanged(); update();
+ }
+ void ImageCanvas::refreshFit() {
++    const qreal currentDpr=dpr();
++    if (m_fitMode.isEmpty() && currentDpr>0) m_pan*=m_lastDpr/currentDpr;
++    m_lastDpr=currentDpr;
+     if (!m_image.isNull() && !m_fitMode.isEmpty() && width()>0 && height()>0) {
+         const bool quarter=m_rotation%180!=0;
+         const qreal iw=quarter?m_image.height():m_image.width();
+@@ -250,6 +277,31 @@ void ImageCanvas::panBy(qreal dx,qreal dy) {
+     if (m_image.isNull() || !std::isfinite(dx) || !std::isfinite(dy)) return;
+     m_pan+=QPointF(dx,dy); m_fitMode.clear(); emit viewChanged(); update();
+ }
++QVariantMap ImageCanvas::viewState() const {
++    const auto center=imagePointAt(width()/2, height()/2);
++    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()},{"sourceWidth",m_image.width()},{"sourceHeight",m_image.height()}};
++}
++void ImageCanvas::setViewState(const QVariantMap& state) {
++    const auto mode=state.value("fit").toString();
++    if (mode=="actual") { actualSize(); return; }
++    if (!mode.isEmpty()) { fit(mode); return; }
++    bool okZ=false,okX=false,okY=false;
++    const qreal z=state.value("zoom").toDouble(&okZ);
++    qreal x=state.value("centerX").toDouble(&okX), y=state.value("centerY").toDouble(&okY);
++    const int sourceWidth=state.value("sourceWidth").toInt(),sourceHeight=state.value("sourceHeight").toInt();
++    if(sourceWidth>0 && sourceHeight>0 && !m_image.isNull()) { x*=qreal(m_image.width())/sourceWidth; y*=qreal(m_image.height())/sourceHeight; }
++    if (!okZ || !okX || !okY || !std::isfinite(z) || z<.001 || z>64 || !std::isfinite(x) || !std::isfinite(y) || std::abs(x)>1e9 || std::abs(y)>1e9) return;
++    endLoupe(); m_zoom=z; m_fitMode.clear(); m_lastDpr=dpr();
++    const QPointF centered(x-m_image.width()/2.0,y-m_image.height()/2.0);
++    const qreal radians=qDegreesToRadians(qreal(m_rotation));
++    m_pan=-QPointF(std::cos(radians)*centered.x()-std::sin(radians)*centered.y(),std::sin(radians)*centered.x()+std::cos(radians)*centered.y())*(z/dpr());
++    emit viewChanged(); update();
++}
++void ImageCanvas::setOutputColorLut(const QImage& atlas) {
++    if (!atlas.isNull() && (atlas.size()!=QSize(1089,33) || atlas.format()!=QImage::Format_RGBA8888)) return;
++    if (atlas.cacheKey()==m_outputColorLut.cacheKey()) return;
++    m_outputColorLut=atlas; update();
++}
+ void ImageCanvas::rotateClockwise() {
+     endLoupe(); m_rotation=(m_rotation+90)%360;
+     if (!m_fitMode.isEmpty()) refreshFit(); else { emit viewChanged(); update(); }
+diff --git a/src/render/image_canvas.hpp b/src/render/image_canvas.hpp
+index 500125e..920bc7b 100644
+--- a/src/render/image_canvas.hpp
++++ b/src/render/image_canvas.hpp
+@@ -2,6 +2,7 @@
+ #include <QQuickRhiItem>
+ #include <QImage>
+ #include <QColor>
++#include <QVariantMap>
+ 
+ // All viewport distances are logical pixels; zoom is physical pixels per source pixel.
+ class ImageCanvas : public QQuickRhiItem {
+@@ -36,6 +37,10 @@ public:
+     Q_INVOKABLE void actualSize();
+     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
+     Q_INVOKABLE void panBy(qreal dx, qreal dy);
++    QVariantMap viewState() const;
++    void setViewState(const QVariantMap& state);
++    // Fixed 33-cube RGB atlas, shared by presentation canvases; null means identity.
++    void setOutputColorLut(const QImage& atlas);
+     // Continuous source coordinates, including points outside the image bounds.
+     Q_INVOKABLE QPointF imagePointAt(qreal x, qreal y) const;
+     Q_INVOKABLE void rotateClockwise();
+@@ -56,7 +61,9 @@ private:
+     qreal dpr() const;
+     void refreshFit();
+     QImage m_image;
++    QImage m_outputColorLut;
+     qreal m_zoom{1};
++    qreal m_lastDpr{1};
+     QPointF m_pan;
+     QString m_fitMode{"shrink"};
+     int m_rotation{};
+diff --git a/src/render/output_color.hpp b/src/render/output_color.hpp
+new file mode 100644
+index 0000000..f626f6e
+--- /dev/null
++++ b/src/render/output_color.hpp
+@@ -0,0 +1,73 @@
++#pragma once
++#include <QColorSpace>
++#include <QFile>
++#include <QImage>
++#include <QLibrary>
++#include <atomic>
++#ifdef Q_OS_WIN
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++#endif
++
++namespace glancelot::output_color {
++inline constexpr int cubeSize=33;
++inline constexpr qint64 atlasBytes=qint64(cubeSize)*cubeSize*cubeSize*4;
++inline constexpr qint64 maximumProfileBytes=4*1024*1024;
++// One process-wide permit: closing/reopening windows cannot accumulate background tasks.
++inline std::atomic_bool workerBusy{false};
++struct Result { QImage atlas; QString status; quint64 revision{}; };
++
++inline QImage makeAtlas(const QColorSpace& destination) {
++    if (!destination.isValid() || destination==QColorSpace(QColorSpace::SRgb)) return {};
++    QImage input(cubeSize*cubeSize,cubeSize,QImage::Format_RGBA8888);
++    input.setColorSpace(QColorSpace::SRgb);
++    for (int g=0;g<cubeSize;++g) for (int b=0;b<cubeSize;++b) for (int r=0;r<cubeSize;++r)
++        input.setPixelColor(b*cubeSize+r,g,QColor(qRound(r*255.0/32),qRound(g*255.0/32),qRound(b*255.0/32)));
++    return input.convertedToColorSpace(destination,QImage::Format_RGBA8888);
++}
++
++// Worker only. Public QScreen does not expose ICC in Qt6.8. Other platforms use the
++// explicit sRGB fallback until a native profile is available; never claim an unknown profile.
++inline QColorSpace systemProfile(const QString& screenName) {
++#ifdef Q_OS_WIN
++    wchar_t directory[MAX_PATH]{};
++    const UINT n=GetSystemDirectoryW(directory,MAX_PATH);
++    if (!n || n>=MAX_PATH) return {};
++    QLibrary gdi(QString::fromWCharArray(directory)+QStringLiteral("/gdi32.dll"));
++    const auto createDc=reinterpret_cast<decltype(&CreateDCW)>(gdi.resolve("CreateDCW"));
++    const auto getProfile=reinterpret_cast<decltype(&GetICMProfileW)>(gdi.resolve("GetICMProfileW"));
++    const auto deleteDc=reinterpret_cast<decltype(&DeleteDC)>(gdi.resolve("DeleteDC"));
++    if (!createDc || !getProfile || !deleteDc) return {};
++    const auto name=screenName.toStdWString();
++    HDC dc=createDc(L"DISPLAY",name.c_str(),nullptr,nullptr);
++    if (!dc) return {};
++    DWORD length=0; getProfile(dc,&length,nullptr);
++    if (!length || length>32768) { deleteDc(dc); return {}; }
++    std::wstring path(length,L'\0');
++    const bool found=getProfile(dc,&length,path.data()); deleteDc(dc);
++    if (!found) return {};
++    path.resize(wcslen(path.c_str()));
++    // Do not let an unreachable UNC or mapped network profile hold the only worker.
++    if (path.size()<3 || path[1]!=L':' || GetDriveTypeW(path.substr(0,3).c_str())!=DRIVE_FIXED) return {};
++    QFile file(QString::fromStdWString(path));
++    if (!file.open(QIODevice::ReadOnly) || file.size()<=0 || file.size()>maximumProfileBytes) return {};
++    const auto bytes=file.read(maximumProfileBytes);
++    if (!file.atEnd()) return {};
++    return QColorSpace::fromIccProfile(bytes);
++#else
++    Q_UNUSED(screenName);
++    return {};
++#endif
++}
++inline Result build(const QString& screenName, QColorSpace destination, bool injected, quint64 revision) {
++    struct Release { ~Release() { workerBusy.store(false); } } release;
++    if (!injected) destination=systemProfile(screenName);
++    if (!destination.isValid()) return {{},QStringLiteral("sRGB fallback (monitor profile unavailable)"),revision};
++    auto atlas=makeAtlas(destination);
++    if (atlas.isNull() && destination!=QColorSpace(QColorSpace::SRgb))
++        return {{},QStringLiteral("sRGB fallback (monitor transform unavailable)"),revision};
++    return {atlas,QStringLiteral("SDR output profile: ")+destination.description(),revision};
++}
++} // namespace glancelot::output_color
+diff --git a/src/render/presentation_window.cpp b/src/render/presentation_window.cpp
+index 2394606..131a72a 100644
+--- a/src/render/presentation_window.cpp
++++ b/src/render/presentation_window.cpp
+@@ -4,8 +4,19 @@
+ #include <QQuickItem>
+ #include <QColor>
+ #include <QPointer>
++#include <QMouseEvent>
++#include <QWheelEvent>
++#include <QtConcurrent/QtConcurrentRun>
++#include <QScreen>
++#include <cmath>
+ 
+ namespace glancelot {
++namespace {
++void copyViewport(ImageCanvas* from,ImageCanvas* to) {
++    if (from->image().isNull() || to->image().isNull()) return;
++    to->setViewState(from->viewState());
++}
++}
+ 
+ PresentationWindow::PresentationWindow(QWindow* parent)
+     : QQuickWindow(parent) {
+@@ -25,6 +36,21 @@ PresentationWindow::PresentationWindow(QWindow* parent)
+     m_canvasB->setVisible(false);
+ 
+     updateLayout();
++    m_colorRetry.setSingleShot(true); m_colorRetry.setInterval(50);
++    connect(&m_colorRetry,&QTimer::timeout,this,&PresentationWindow::requestColor);
++    m_colorRefresh.setInterval(5000);
++    connect(&m_colorRefresh,&QTimer::timeout,this,[this] { if (isVisible() && !m_hasInjectedProfile) { ++m_colorRevision; requestColor(); } });
++    m_colorRefresh.start();
++    connect(this,&QWindow::screenChanged,this,[this] { refreshOutputColorProfile(); updateLayout(); });
++    connect(&m_colorWatcher,&QFutureWatcher<output_color::Result>::finished,this,[this] {
++        m_colorInFlight=false; m_colorRetry.stop();
++        const auto result=m_colorWatcher.result();
++        if (result.revision!=m_colorRevision) { requestColor(); return; }
++        m_colorAtlas=result.atlas; m_colorStatus=result.status;
++        m_canvasA->setOutputColorLut(m_colorAtlas); m_canvasB->setOutputColorLut(m_colorAtlas);
++        emit outputColorChanged();
++    });
++    refreshOutputColorProfile();
+ }
+ 
+ PresentationWindow::~PresentationWindow() = default;
+@@ -32,29 +58,118 @@ PresentationWindow::~PresentationWindow() = default;
+ void PresentationWindow::setComparisonMode(bool comparison) {
+     if (m_comparisonMode == comparison) return;
+     m_comparisonMode = comparison;
++    if (!comparison) m_activeSecondary=false;
+     m_canvasB->setVisible(m_comparisonMode);
++    if (!m_comparisonMode && m_canvasB) {
++        setSecondaryImage(QImage());
++    }
+     updateLayout();
+ }
+ 
+ void PresentationWindow::setPrimaryImage(const QImage& image) {
+     if (m_canvasA) {
++        const auto previous=m_canvasA->image();
++        const auto state=previous.isNull()?m_pendingPrimary:m_canvasA->viewState();
++        if (!previous.isNull()) m_pendingPrimary=state;
+         m_canvasA->setImage(image);
+-        m_canvasA->fit(m_fitMode);
++        if (!image.isNull()) {
++            if(!state.isEmpty()) m_canvasA->setViewState(state);
++            else if(m_fitMode=="actual") m_canvasA->actualSize(); else m_canvasA->fit(m_fitMode);
++        }
+     }
+ }
+ 
+ void PresentationWindow::setSecondaryImage(const QImage& image) {
+     if (m_canvasB) {
++        const auto previous=m_canvasB->image();
++        const auto state=previous.isNull()?m_pendingSecondary:m_canvasB->viewState();
++        if (!previous.isNull()) m_pendingSecondary=state;
+         m_canvasB->setImage(image);
+-        m_canvasB->fit(m_fitMode);
++        if (!image.isNull()) {
++            if (!state.isEmpty()) m_canvasB->setViewState(state);
++            else if(m_fitMode=="actual") m_canvasB->actualSize(); else m_canvasB->fit(m_fitMode);
++            if (m_linked) copyViewport(m_canvasA,m_canvasB);
++        }
+     }
+ }
+ 
+ void PresentationWindow::setFitMode(const QString& mode) {
+-    if (mode != "shrink" && mode != "fit" && mode != "fill" && mode != "width" && mode != "height") return;
++    if (mode != "shrink" && mode != "fit" && mode != "fill" && mode != "width" && mode != "height" && mode!="actual") return;
+     m_fitMode = mode;
+-    if (m_canvasA) m_canvasA->fit(mode);
+-    if (m_canvasB) m_canvasB->fit(mode);
++    m_pendingPrimary={{"fit",mode}}; m_pendingSecondary={{"fit",mode}};
++    if (mode=="actual") { m_canvasA->actualSize(); m_canvasB->actualSize(); }
++    else { if (m_canvasA) m_canvasA->fit(mode); if (m_canvasB) m_canvasB->fit(mode); }
++}
++
++QVariantMap PresentationWindow::viewportState() const {
++    return {{"primary",m_canvasA->image().isNull()?m_pendingPrimary:m_canvasA->viewState()},{"secondary",m_canvasB->image().isNull()?m_pendingSecondary:m_canvasB->viewState()},{"linked",m_linked},{"activeSecondary",m_activeSecondary}};
++}
++void PresentationWindow::restoreViewport(const QVariantMap& state) {
++    if (state.isEmpty()) return;
++    m_pendingPrimary=state.value("primary").toMap(); m_pendingSecondary=state.value("secondary").toMap();
++    if(!m_canvasA->image().isNull()) m_canvasA->setViewState(m_pendingPrimary);
++    if(!m_canvasB->image().isNull()) m_canvasB->setViewState(m_pendingSecondary);
++    m_linked=state.value("linked",true).toBool(); m_fitMode=m_canvasA->fitMode();
++    m_activeSecondary=m_comparisonMode && state.value("activeSecondary",false).toBool();
++}
++void PresentationWindow::zoomOutput(qreal factor,const QPointF& at) {
++    const bool secondary=m_comparisonMode && at.x()>=m_canvasB->x();
++    m_activeSecondary=secondary;
++    auto* target=secondary?m_canvasB:m_canvasA;
++    const auto local=at-QPointF(target->x(),target->y());
++    target->zoomAt(factor,local.x(),local.y());
++    if (m_comparisonMode && m_linked) {
++        auto* other=secondary?m_canvasA:m_canvasB;
++        copyViewport(target,other);
++    }
++    m_fitMode=target->fitMode();
++}
++void PresentationWindow::panOutput(const QPointF& delta,bool secondary) {
++    m_activeSecondary=m_comparisonMode && secondary;
++    auto* target=secondary?m_canvasB:m_canvasA;
++    target->panBy(delta.x(),delta.y());
++    if (m_comparisonMode && m_linked) {
++        auto* other=secondary?m_canvasA:m_canvasB;
++        copyViewport(target,other);
++    }
++    m_fitMode=target->fitMode();
++}
++void PresentationWindow::viewportCommand(const QString& command) {
++    if (command=="reference") { if(m_comparisonMode) m_activeSecondary=!m_activeSecondary; return; }
++    auto* active=m_activeSecondary?m_canvasB:m_canvasA;
++    auto* other=m_activeSecondary?m_canvasA:m_canvasB;
++    if (command=="actual") { if(m_linked) setFitMode("actual"); else active->actualSize(); return; }
++    if (command=="linked") { m_linked=!m_linked; if(m_linked && m_comparisonMode) copyViewport(active,other); return; }
++    if (command=="fit") {
++        const QStringList modes{"shrink","fit","fill"}; const auto mode=modes[(modes.indexOf(active->fitMode())+1)%modes.size()];
++        if(m_linked) setFitMode(mode); else active->fit(mode); return;
++    }
++    if (command=="zoom-in" || command=="zoom-out") zoomOutput(command=="zoom-in"?1.25:.8,QPointF(active->x()+active->width()/2,height()/2));
++    else if (command=="pan-left") panOutput({40,0},m_activeSecondary);
++    else if (command=="pan-right") panOutput({-40,0},m_activeSecondary);
++    else if (command=="pan-up") panOutput({0,40},m_activeSecondary);
++    else if (command=="pan-down") panOutput({0,-40},m_activeSecondary);
++}
++void PresentationWindow::setOutputColorProfile(const QColorSpace& profile) {
++    m_hasInjectedProfile=true;
++    m_injectedProfile=profile.isValid() && profile.iccProfile().size()<=output_color::maximumProfileBytes ? profile : QColorSpace{};
++    refreshOutputColorProfile();
++}
++void PresentationWindow::refreshOutputColorProfile() {
++    ++m_colorRevision;
++    m_colorAtlas={}; m_colorStatus=QStringLiteral("sRGB fallback (monitor profile pending)");
++    m_canvasA->setOutputColorLut({}); m_canvasB->setOutputColorLut({});
++    emit outputColorChanged();
++    requestColor();
++}
++void PresentationWindow::requestColor() {
++    if (m_colorInFlight) { m_colorRetry.start(); return; }
++    bool expected=false;
++    if (!output_color::workerBusy.compare_exchange_strong(expected,true)) { m_colorRetry.start(); return; }
++    m_colorRetry.stop(); m_colorInFlight=true;
++    const auto name=screen()?screen()->name():QString();
++    const auto profile=m_injectedProfile; const bool injected=m_hasInjectedProfile; const auto revision=m_colorRevision;
++    m_colorWatcher.setFuture(QtConcurrent::run([name,profile,injected,revision] { return output_color::build(name,profile,injected,revision); }));
+ }
+ 
+ void PresentationWindow::updateLayout() {
+@@ -85,23 +200,85 @@ void PresentationWindow::updateLayout() {
+ }
+ 
+ void PresentationWindow::keyPressEvent(QKeyEvent* event) {
+-    // Escape is the reserved dismiss key. The toggle key follows the user-rebindable binding
+-    // of presentation-toggle (supplied by the owner); it is not hard-coded.
+-    bool dismiss = event->key() == Qt::Key_Escape && event->modifiers() == Qt::NoModifier;
+-    if (!dismiss && m_toggleBinding) {
+-        const QKeySequence bound = QKeySequence::fromString(m_toggleBinding(), QKeySequence::PortableText);
+-        dismiss = bound.count() == 1 && bound[0] == QKeyCombination(event->modifiers(), Qt::Key(event->key()));
++    switch (event->key()) {
++    case Qt::Key_Shift:
++    case Qt::Key_Control:
++    case Qt::Key_Alt:
++    case Qt::Key_Meta:
++    case Qt::Key_AltGr:
++        QQuickWindow::keyPressEvent(event);
++        return;
++    default:
++        break;
+     }
+-    if (dismiss) {
++
++    if (event->isAutoRepeat()) { event->accept(); return; }
++    const auto bindingFor=[this](const QString& id) {
++        return QKeySequence::fromString(id=="presentation-toggle" ? (m_toggleBinding?m_toggleBinding():QString()) : (m_commandBinding?m_commandBinding(id):QString()),QKeySequence::PortableText);
++    };
++    if (!m_chordPrefix.isEmpty() && (!m_chordElapsed.isValid() || m_chordElapsed.elapsed()>=1500 || bindingFor(m_chordCommand)!=m_chordBinding)) m_chordPrefix.clear();
++    if (event->key()==Qt::Key_Escape && event->modifiers()==Qt::NoModifier) {
+         event->accept();
+-        // One close path only: the owner closes (and deletes) this window in response.
+-        emit escapePressed();
++        if (!m_chordPrefix.isEmpty()) { m_chordPrefix.clear(); return; }
++        emit escapePressed(); return;
++    }
++    const QKeyCombination combo(event->modifiers(),Qt::Key(event->key()));
++    QStringList ids{"presentation-toggle","presentation-fit"};
++    for (const auto* suffix : {"actual","zoom-in","zoom-out","pan-left","pan-right","pan-up","pan-down","linked","reference"}) ids<<QStringLiteral("presentation-view-")+QLatin1String(suffix);
++    if (!m_chordPrefix.isEmpty()) ids={m_chordCommand};
++    for (const auto& id:ids) {
++        const auto bound=bindingFor(id);
++        const int step=m_chordPrefix.size();
++        if (bound.isEmpty() || step>=bound.count() || bound[step]!=combo) continue;
++        if (!step) { m_chordBinding=bound; m_chordCommand=id; m_chordElapsed.start(); }
++        m_chordPrefix.append(combo); event->accept();
++        if (m_chordPrefix.size()==bound.count()) {
++            m_chordPrefix.clear();
++            if (id=="presentation-toggle") emit escapePressed();
++            else viewportCommand(id=="presentation-fit"?QStringLiteral("fit"):id.mid(18));
++        }
+         return;
+     }
+-
++    m_chordPrefix.clear();
+     QQuickWindow::keyPressEvent(event);
+ }
+ 
++void PresentationWindow::focusOutEvent(QFocusEvent* event) {
++    m_chordPrefix.clear();
++    m_dragging=false;
++    QQuickWindow::focusOutEvent(event);
++}
++
++void PresentationWindow::hideEvent(QHideEvent* event) {
++    m_chordPrefix.clear();
++    m_dragging=false;
++    QQuickWindow::hideEvent(event);
++}
++void PresentationWindow::wheelEvent(QWheelEvent* event) {
++    if (event->modifiers() & Qt::ControlModifier) {
++        const qreal steps=!event->pixelDelta().isNull()?event->pixelDelta().y()/120.0:event->angleDelta().y()/120.0;
++        zoomOutput(std::pow(1.2,qBound(qreal(-20),steps,qreal(20))),event->position());
++    } else {
++        const QPointF delta=!event->pixelDelta().isNull()?QPointF(event->pixelDelta()):QPointF(event->angleDelta())/3;
++        panOutput(delta,m_comparisonMode && event->position().x()>=m_canvasB->x());
++    }
++    event->accept();
++}
++void PresentationWindow::mousePressEvent(QMouseEvent* event) {
++    if (event->button()!=Qt::LeftButton && event->button()!=Qt::MiddleButton) { QQuickWindow::mousePressEvent(event); return; }
++    m_dragging=true; m_dragSecondary=m_comparisonMode && event->position().x()>=m_canvasB->x();
++    m_activeSecondary=m_dragSecondary;
++    m_lastPointer=event->position(); event->accept();
++}
++void PresentationWindow::mouseMoveEvent(QMouseEvent* event) {
++    if (!m_dragging) { QQuickWindow::mouseMoveEvent(event); return; }
++    panOutput(event->position()-m_lastPointer,m_dragSecondary); m_lastPointer=event->position(); event->accept();
++}
++void PresentationWindow::mouseReleaseEvent(QMouseEvent* event) {
++    if (!m_dragging) { QQuickWindow::mouseReleaseEvent(event); return; }
++    m_dragging=false; event->accept();
++}
++
+ void PresentationWindow::closeEvent(QCloseEvent* event) {
+     emit closedByUser();
+     event->accept();
+@@ -118,8 +295,10 @@ public:
+         m_window = new PresentationWindow();
+         if (owner) {
+             m_window->setToggleBindingProvider([owner] { return owner->toggleBinding(); });
++            m_window->setCommandBindingProvider([owner](const QString& id) { return owner->outputBinding(id); });
+             QObject::connect(m_window.data(), &PresentationWindow::escapePressed, owner, &DisplayManager::closePresentation);
+             QObject::connect(m_window.data(), &PresentationWindow::closedByUser, owner, &DisplayManager::closePresentation);
++            QObject::connect(m_window.data(), &PresentationWindow::outputColorChanged, owner, &DisplayManager::outputColorStatusChanged);
+         }
+     }
+     void setScreen(QScreen* screen) override { if (m_window) m_window->setScreen(screen); }
+@@ -131,6 +310,11 @@ public:
+     void setPrimaryImage(const QImage& image) override { if (m_window) m_window->setPrimaryImage(image); }
+     void setSecondaryImage(const QImage& image) override { if (m_window) m_window->setSecondaryImage(image); }
+     void setFitMode(const QString& mode) override { if (m_window) m_window->setFitMode(mode); }
++    QVariantMap viewportState() const override { return m_window ? m_window->viewportState() : QVariantMap{}; }
++    void restoreViewport(const QVariantMap& state) override { if (m_window) m_window->restoreViewport(state); }
++    void viewportCommand(const QString& command) override { if (m_window) m_window->viewportCommand(command); }
++    QString outputColorStatus() const override { return m_window?m_window->outputColorStatus():QStringLiteral("Presentation closed"); }
++    qint64 colorResourceBytes() const override { return m_window?m_window->colorResourceBytes():0; }
+     QQuickWindow* quickWindow() override { return m_window.data(); }
+ 
+ private:
+diff --git a/src/render/presentation_window.hpp b/src/render/presentation_window.hpp
+index 6fc4e35..403cee9 100644
+--- a/src/render/presentation_window.hpp
++++ b/src/render/presentation_window.hpp
+@@ -4,6 +4,14 @@
+ #include <QKeyEvent>
+ #include <QCloseEvent>
+ #include <QResizeEvent>
++#include <QFocusEvent>
++#include <QHideEvent>
++#include <QList>
++#include <QKeyCombination>
++#include <QElapsedTimer>
++#include <QFutureWatcher>
++#include <QTimer>
++#include "output_color.hpp"
+ 
+ #include <functional>
+ 
+@@ -15,6 +23,9 @@ class DisplayManager;
+ 
+ // Aggregate GPU texture admission limit for one presentation window (split across its canvases).
+ constexpr qint64 kPresentationTextureBudget = 256LL * 1024 * 1024;
++// Conservative reservation for shared CPU atlas, two GPU atlases and in-flight uploads.
++// Separately reported from retained decoded pixels; no full-size converted rasters.
++constexpr qint64 kPresentationColorReservation = 4LL * 1024 * 1024;
+ 
+ class PresentationWindow : public QQuickWindow {
+     Q_OBJECT
+@@ -30,6 +41,15 @@ public:
+     void setFitMode(const QString& mode);
+     QString fitMode() const { return m_fitMode; }
+     void setToggleBindingProvider(std::function<QString()> provider) { m_toggleBinding = std::move(provider); }
++    void setCommandBindingProvider(std::function<QString(const QString&)> provider) { m_commandBinding=std::move(provider); }
++    QVariantMap viewportState() const;
++    void restoreViewport(const QVariantMap& state);
++    void viewportCommand(const QString& command);
++    void setOutputColorProfile(const QColorSpace& profile);
++    void refreshOutputColorProfile();
++    QString outputColorStatus() const { return m_colorStatus; }
++    QImage outputColorAtlas() const { return m_colorAtlas; }
++    qint64 colorResourceBytes() const { return kPresentationColorReservation; }
+ 
+     ImageCanvas* primaryCanvas() const { return m_canvasA; }
+     ImageCanvas* secondaryCanvas() const { return m_canvasB; }
+@@ -37,20 +57,45 @@ public:
+ signals:
+     void escapePressed();
+     void closedByUser();
++    void outputColorChanged();
+ 
+ protected:
+     void keyPressEvent(QKeyEvent* event) override;
+     void closeEvent(QCloseEvent* event) override;
+     void resizeEvent(QResizeEvent* event) override;
++    void focusOutEvent(QFocusEvent* event) override;
++    void hideEvent(QHideEvent* event) override;
++    void wheelEvent(QWheelEvent* event) override;
++    void mousePressEvent(QMouseEvent* event) override;
++    void mouseMoveEvent(QMouseEvent* event) override;
++    void mouseReleaseEvent(QMouseEvent* event) override;
+ 
+ private:
+     void updateLayout();
++    void requestColor();
++    void zoomOutput(qreal factor, const QPointF& at);
++    void panOutput(const QPointF& delta, bool secondary=false);
+ 
+     ImageCanvas* m_canvasA{nullptr};
+     ImageCanvas* m_canvasB{nullptr};
+     bool m_comparisonMode{false};
+     QString m_fitMode{"shrink"};
+     std::function<QString()> m_toggleBinding;
++    QList<QKeyCombination> m_chordPrefix;
++    QKeySequence m_chordBinding;
++    QString m_chordCommand;
++    std::function<QString(const QString&)> m_commandBinding;
++    QElapsedTimer m_chordElapsed;
++    bool m_linked{true},m_dragging{},m_dragSecondary{},m_activeSecondary{};
++    QPointF m_lastPointer;
++    QVariantMap m_pendingPrimary,m_pendingSecondary;
++    QImage m_colorAtlas;
++    QString m_colorStatus{QStringLiteral("sRGB fallback (monitor profile pending)")};
++    QColorSpace m_injectedProfile;
++    bool m_hasInjectedProfile{},m_colorInFlight{};
++    quint64 m_colorRevision{};
++    QFutureWatcher<output_color::Result> m_colorWatcher;
++    QTimer m_colorRetry,m_colorRefresh;
+ };
+ 
+ void registerPresentationWindowFactory();
+diff --git a/tests/monitor_output_tests.cpp b/tests/monitor_output_tests.cpp
+index 59ac133..d4f3256 100644
+--- a/tests/monitor_output_tests.cpp
++++ b/tests/monitor_output_tests.cpp
+@@ -2,6 +2,10 @@
+ #include <QGuiApplication>
+ #include <QScreen>
+ #include <QSignalSpy>
++#include <QColorSpace>
++#include <QColorTransform>
++#include <QMouseEvent>
++#include <QWheelEvent>
+ #include "glancelot/display_manager.hpp"
+ #include "glancelot/viewer_controller.hpp"
+ #include "presentation_window.hpp"
+@@ -17,6 +21,186 @@ class MonitorOutputTests : public QObject {
+     }
+ 
+ private slots:
++    void testIndependentReferenceViewSurvivesTemporarilyMissingImage() {
++        glancelot::PresentationWindow window; window.resize(800,600); window.setComparisonMode(true);
++        window.setPrimaryImage(createTestImage(640,480,Qt::red));
++        window.setSecondaryImage(createTestImage(320,240,Qt::green));
++        window.viewportCommand("linked"); window.viewportCommand("reference");
++        window.viewportCommand("actual"); window.viewportCommand("zoom-in"); window.viewportCommand("pan-up");
++        const auto saved=window.secondaryCanvas()->viewState();
++        window.setComparisonMode(false); window.setSecondaryImage({});
++        window.setComparisonMode(true); window.setSecondaryImage(createTestImage(320,240,Qt::blue));
++        const auto restored=window.secondaryCanvas()->viewState();
++        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(restored[key].toDouble()-saved[key].toDouble())<1e-6,key);
++        const auto state=window.viewportState();
++        window.setSecondaryImage({}); window.restoreViewport(state);
++        window.setSecondaryImage(createTestImage(320,240,Qt::yellow));
++        const auto reopened=window.secondaryCanvas()->viewState();
++        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(reopened[key].toDouble()-saved[key].toDouble())<1e-6,key);
++    }
++    void testColorStatusNotifiesWhenPresentationCloses() {
++        glancelot::DisplayManager dm; QVERIFY(dm.openPresentation());
++        QSignalSpy changed(&dm,&glancelot::DisplayManager::outputColorStatusChanged);
++        dm.closePresentation();
++        QCOMPARE(dm.outputColorStatus(),QStringLiteral("Presentation closed"));
++        QCOMPARE(changed.count(),1); flushDeletes();
++    }
++    void testNativeDisplayIdentityStateRestore() {
++        if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) QSKIP("Requires native display topology; headless state tests do not qualify mixed DPI");
++        glancelot::DisplayManager dm;
++        const auto displays=dm.displays();
++        if (displays.size()<2) QSKIP("Two native displays unavailable");
++        dm.updateImage("generated-native",createTestImage(640,480,Qt::red),1);
++        QVERIFY(dm.openPresentation(displays[0].id));
++        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
++        QTRY_VERIFY_WITH_TIMEOUT(window->isExposed(),10000);
++        dm.outputViewportCommand("actual"); dm.outputViewportCommand("zoom-in"); dm.outputViewportCommand("pan-right");
++        const auto first=window->primaryCanvas()->viewState();
++        QVERIFY(dm.openPresentation(displays[1].id));
++        QTRY_COMPARE(glancelot::DisplayManager::computeDisplayId(window->screen()),displays[1].id);
++        QTest::qWait(100);
++        dm.outputViewportCommand("actual"); dm.outputViewportCommand("zoom-out"); dm.outputViewportCommand("pan-up");
++        const auto second=window->primaryCanvas()->viewState();
++        QVERIFY(dm.openPresentation(displays[0].id)); QTest::qWait(100);
++        auto restored=window->primaryCanvas()->viewState();
++        qInfo()<<"native display0 DPR"<<displays[0].devicePixelRatio<<"saved"<<first<<"restored"<<restored;
++        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(restored[key].toDouble()-first[key].toDouble())<1e-6,key);
++        QVERIFY(dm.openPresentation(displays[1].id)); QTest::qWait(100);
++        restored=window->primaryCanvas()->viewState();
++        qInfo()<<"native display1 DPR"<<displays[1].devicePixelRatio<<"saved"<<second<<"restored"<<restored;
++        for (const auto* key:{"zoom","centerX","centerY"}) QVERIFY2(qAbs(restored[key].toDouble()-second[key].toDouble())<1e-6,key);
++        qInfo()<<"native output profile status"<<dm.outputColorStatus();
++        dm.closePresentation(); flushDeletes();
++    }
++
++    void testNativeGpuColorPatch() {
++        if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) QSKIP("Opt-in native GPU readback; headless state tests do not qualify presentation pixels");
++        glancelot::PresentationWindow window;
++        const QRect available=QGuiApplication::primaryScreen()->availableGeometry();
++        window.setGeometry(QRect(available.center()-QPoint(200,150),QSize(400,300)));
++        auto source=createTestImage(64,64,QColor(180,120,70)); source.setColorSpace(QColorSpace::SRgb);
++        const auto expected=source.convertedToColorSpace(QColorSpace::DisplayP3).pixelColor(32,32);
++        window.setPrimaryImage(source); window.setFitMode("fit"); window.setOutputColorProfile(QColorSpace::DisplayP3);
++        QTRY_VERIFY_WITH_TIMEOUT(!window.outputColorAtlas().isNull(),15000);
++        window.show(); QTRY_VERIFY_WITH_TIMEOUT(window.isExposed(),10000);
++        QImage pixels;
++        auto matches=[&] {
++            pixels=window.grabWindow(); if(pixels.isNull()) return false;
++            const auto actual=pixels.pixelColor(pixels.width()/2,pixels.height()/2);
++            return qAbs(actual.red()-expected.red())<=4 && qAbs(actual.green()-expected.green())<=4 && qAbs(actual.blue()-expected.blue())<=4;
++        };
++        QTRY_VERIFY_WITH_TIMEOUT(matches(),10000);
++        qInfo()<<"native output shader patch"<<pixels.pixelColor(pixels.width()/2,pixels.height()/2)<<"Qt reference"<<expected<<"DPR"<<window.effectiveDevicePixelRatio();
++        window.hide();
++    }
++    void testOutputViewportSurvivesNavigationAndReopen() {
++        glancelot::DisplayManager dm;
++        QVERIFY(dm.openPresentation());
++        const auto id=dm.activeDisplayId();
++        dm.updateImage("generated-a",createTestImage(640,480,Qt::red),1);
++        dm.outputViewportCommand("actual");
++        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
++        QCOMPARE(window->primaryCanvas()->zoom(),qreal(1));
++        dm.outputViewportCommand("zoom-in"); dm.outputViewportCommand("pan-right");
++        const auto state=window->primaryCanvas()->viewState();
++        QCOMPARE(state["zoom"].toDouble(),1.25);
++        dm.updateImage("generated-b",createTestImage(640,480,Qt::blue),2);
++        QCOMPARE(window->primaryCanvas()->viewState(),state);
++        dm.closePresentation(); QVERIFY(dm.openPresentation(id));
++        window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
++        QCOMPARE(window->primaryCanvas()->viewState(),state);
++        // Distinct manager/controller output state cannot overwrite this output's state.
++        glancelot::DisplayManager other; QVERIFY(other.openPresentation());
++        other.setOutputFitMode("fill"); QCOMPARE(window->primaryCanvas()->viewState(),state);
++        other.closePresentation(); dm.closePresentation(); flushDeletes();
++    }
++    void testComparisonViewportsLinkAndSeparate() {
++        glancelot::PresentationWindow window; window.resize(800,600);
++        window.setComparisonMode(true);
++        window.setPrimaryImage(createTestImage(640,480,Qt::red));
++        window.setSecondaryImage(createTestImage(320,240,Qt::green));
++        window.viewportCommand("actual"); window.viewportCommand("zoom-in"); window.viewportCommand("pan-right");
++        QCOMPARE(window.primaryCanvas()->zoom(),window.secondaryCanvas()->zoom());
++        const auto a=window.primaryCanvas()->viewState(),b=window.secondaryCanvas()->viewState();
++        QVERIFY(qAbs(a["centerX"].toDouble()/640-b["centerX"].toDouble()/320)<1e-6);
++        window.viewportCommand("linked");
++        const auto independent=window.secondaryCanvas()->viewState();
++        window.viewportCommand("zoom-in"); window.viewportCommand("pan-up");
++        QCOMPARE(window.secondaryCanvas()->viewState(),independent);
++        const auto primary=window.primaryCanvas()->viewState();
++        window.viewportCommand("reference"); window.viewportCommand("zoom-in");
++        QCOMPARE(window.primaryCanvas()->viewState(),primary);
++        QVERIFY(window.secondaryCanvas()->viewState()!=independent);
++        window.viewportCommand("linked");
++        QCOMPARE(window.primaryCanvas()->zoom(),window.secondaryCanvas()->zoom());
++    }
++    void testActualSizeUsesPhysicalPixels() {
++        glancelot::PresentationWindow window; window.resize(800,600);
++        window.setPrimaryImage(createTestImage(320,240,Qt::red)); window.viewportCommand("actual");
++        const qreal dpr=window.effectiveDevicePixelRatio();
++        const auto a=window.primaryCanvas()->imagePointAt(400,300),b=window.primaryCanvas()->imagePointAt(401,300);
++        QCOMPARE(window.primaryCanvas()->zoom(),qreal(1));
++        QVERIFY(qAbs((b.x()-a.x())-dpr)<1e-6);
++        qInfo()<<"actual-size physical-pixel ratio"<<dpr<<"source pixels per logical pixel"<<b.x()-a.x();
++    }
++    void testOutputProfileTransitionsAreBoundedAndLatestWins() {
++        glancelot::PresentationWindow window;
++        auto source=createTestImage(40,40,QColor(180,120,70)); const auto key=source.cacheKey();
++        window.setPrimaryImage(source);
++        window.setOutputColorProfile(QColorSpace::DisplayP3);
++        QTRY_VERIFY_WITH_TIMEOUT(!window.outputColorAtlas().isNull(),15000);
++        QCOMPARE(window.outputColorAtlas().sizeInBytes(),glancelot::output_color::atlasBytes);
++        QCOMPARE(window.colorResourceBytes(),glancelot::kPresentationColorReservation);
++        QCOMPARE(window.primaryCanvas()->image().cacheKey(),key); // no full-raster copy/mutation
++        window.setOutputColorProfile(QColorSpace::AdobeRgb);
++        window.setOutputColorProfile(QColorSpace::SRgb);
++        QTRY_VERIFY_WITH_TIMEOUT(window.outputColorStatus().startsWith("SDR output profile:"),15000);
++        QVERIFY(window.outputColorAtlas().isNull()); QCOMPARE(window.colorResourceBytes(),glancelot::kPresentationColorReservation);
++        window.setOutputColorProfile({});
++        QTRY_VERIFY_WITH_TIMEOUT(window.outputColorStatus().contains("unavailable"),15000);
++        QVERIFY(window.outputColorAtlas().isNull());
++    }
++    void testGeneratedColorAtlasMatchesSdrReferencePatches() {
++        const QColorSpace srgb(QColorSpace::SRgb),p3(QColorSpace::DisplayP3);
++        const auto atlas=glancelot::output_color::makeAtlas(p3);
++        QVERIFY(!atlas.isNull());
++        const auto transform=srgb.transformationToColorSpace(p3);
++        for (int r : {0,4,16,24,32}) for (int g : {0,4,16,24,32}) for (int b : {0,4,16,24,32}) {
++            const QColor input(qRound(r*255.0/32),qRound(g*255.0/32),qRound(b*255.0/32));
++            const QColor expected=transform.map(input),actual=atlas.pixelColor(b*33+r,g);
++            QVERIFY(qAbs(actual.red()-expected.red())<=1 && qAbs(actual.green()-expected.green())<=1 && qAbs(actual.blue()-expected.blue())<=1);
++        }
++        QVERIFY(glancelot::output_color::makeAtlas(srgb).isNull());
++        QVERIFY(glancelot::output_color::makeAtlas({}).isNull());
++    }
++    void testDismissChordExpiresAndBindingChangesCancelIt() {
++        glancelot::DisplayManager dm; QString binding="Ctrl+K, P";
++        dm.setToggleBindingProvider([&] { return binding; }); QVERIFY(dm.openPresentation());
++        auto* window=dm.presentationWindow();
++        QTest::keyClick(window,Qt::Key_K,Qt::ControlModifier); QTest::qWait(1550);
++        QTest::keyClick(window,Qt::Key_P); QVERIFY(dm.isPresentationActive());
++        QTest::keyClick(window,Qt::Key_K,Qt::ControlModifier); binding="Ctrl+J, P";
++        QTest::keyClick(window,Qt::Key_P); QVERIFY(dm.isPresentationActive());
++        QTest::keyClick(window,Qt::Key_J,Qt::ControlModifier);
++        QFocusEvent focusOut(QEvent::FocusOut); QCoreApplication::sendEvent(window,&focusOut);
++        QTest::keyClick(window,Qt::Key_P); QVERIFY(dm.isPresentationActive());
++        binding="F9";
++        QKeyEvent repeat(QEvent::KeyPress,Qt::Key_F9,Qt::NoModifier,QString(),true);
++        QCoreApplication::sendEvent(window,&repeat); QVERIFY(dm.isPresentationActive());
++        QTest::keyClick(window,Qt::Key_F9); QVERIFY(!dm.isPresentationActive()); flushDeletes();
++    }
++    void testReboundOutputCommandActsOnlyOnPresentation() {
++        ViewerController controller;
++        QVERIFY(controller.setBinding("presentation-view-actual","Ctrl+Alt+1"));
++        auto* dm=controller.displayManager(); QVERIFY(dm->openPresentation());
++        dm->updateImage("generated",createTestImage(400,300,Qt::red),1);
++        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(window);
++        QTest::keyClick(window,Qt::Key_1,Qt::ControlModifier|Qt::AltModifier);
++        QCOMPARE(window->primaryCanvas()->fitMode(),QStringLiteral("actual"));
++        QCOMPARE(window->primaryCanvas()->zoom(),qreal(1));
++        controller.trigger("presentation-view-zoom-in"); QCOMPARE(window->primaryCanvas()->zoom(),qreal(1.25));
++        dm->closePresentation(); flushDeletes();
++    }
+     void initTestCase() {
+         QVERIFY(qApp != nullptr);
+         glancelot::registerPresentationWindowFactory();
+@@ -453,10 +637,89 @@ private slots:
+         QCOMPARE(closedSpy.count(), 2);
+         flushDeletes();
+     }
++
++    void testHiddenCanvasMustReleaseShedImage() {
++        const qint64 saved = glancelot::DisplayManager::imageBudgetBytes();
++        struct Reset { qint64 n; ~Reset() { glancelot::DisplayManager::setImageBudgetBytes(n); } } reset{saved};
++        glancelot::DisplayManager dm;
++        QVERIFY(dm.openPresentation());
++        dm.updateImage("a", createTestImage(40, 40, Qt::red), 1);
++        dm.setComparisonImage("b", createTestImage(40, 40, Qt::blue), 2);
++        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
++        QVERIFY(pw);
++        dm.setMode(glancelot::PresentationMode::Mirror);
++        const qint64 one = 40 * 40 * 4;
++        glancelot::DisplayManager::setImageBudgetBytes(one);
++        dm.updateImage("c", createTestImage(40, 40, Qt::green), 3);
++        QCOMPARE(dm.retainedImageBytes(), one);
++        dm.releaseCachedImages();
++        QVERIFY2(pw->secondaryCanvas()->image().isNull(), "Shed/low-memory-released secondary pixels are retained by the hidden canvas outside accounting");
++        dm.closePresentation();
++        flushDeletes();
++    }
++
++    void testOldComparisonCannotOverrideNewCompareCommand() {
++        glancelot::DisplayManager dm;
++        QVERIFY(dm.openPresentation());
++        dm.updateImage("a", createTestImage(64, 64, Qt::red), 1);
++        dm.updateImage("b", createTestImage(80, 80, Qt::green), 2);
++        dm.setComparisonImage("new", createTestImage(40, 40, Qt::blue), 20);
++        dm.compareWithPinnedOrPrevious();
++        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
++        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(64, 64));
++        dm.setComparisonImage("old", createTestImage(30, 30, Qt::yellow), 7);
++        QCOMPARE(pw->secondaryCanvas()->image().size(), QSize(64, 64));
++        dm.closePresentation();
++        flushDeletes();
++    }
++
++    void testInvalidFitMustNotDestroyRememberedFit() {
++        glancelot::DisplayManager dm;
++        QVERIFY(dm.openPresentation());
++        dm.setOutputFitMode("fill");
++        dm.setOutputFitMode("bogus");
++        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
++        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
++        dm.closePresentation();
++        QVERIFY(dm.openPresentation());
++        pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
++        QCOMPARE(pw->fitMode(), QStringLiteral("fill"));
++        dm.closePresentation();
++        flushDeletes();
++    }
++
++    void testChordToggleKeyDismissesAndEscapeCancelsChord() {
++        glancelot::DisplayManager dm;
++        dm.setToggleBindingProvider([] { return QStringLiteral("Ctrl+K, P"); });
++        QSignalSpy closedSpy(&dm, &glancelot::DisplayManager::presentationClosed);
++        dm.openPresentation();
++        auto* pw = qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow());
++        QVERIFY(pw);
++
++        // Step 1: chord prefix Ctrl+K
++        QKeyEvent step1(QEvent::KeyPress, Qt::Key_K, Qt::ControlModifier);
++        QCoreApplication::sendEvent(pw, &step1);
++        QVERIFY(dm.isPresentationActive());
++
++        // Escape cancels chord without closing window
++        QKeyEvent escCancel(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
++        QCoreApplication::sendEvent(pw, &escCancel);
++        QVERIFY(dm.isPresentationActive());
++        QCOMPARE(closedSpy.count(), 0);
++
++        // Retrying: step 1 Ctrl+K, then step 2 P -> dismisses!
++        QCoreApplication::sendEvent(pw, &step1);
++        QVERIFY(dm.isPresentationActive());
++        QKeyEvent step2(QEvent::KeyPress, Qt::Key_P, Qt::NoModifier);
++        QCoreApplication::sendEvent(pw, &step2);
++        QVERIFY(!dm.isPresentationActive());
++        QCOMPARE(closedSpy.count(), 1);
++        flushDeletes();
++    }
+ };
+ 
+ int main(int argc, char** argv) {
+-    qputenv("QT_QPA_PLATFORM", "offscreen");
++    if (!qEnvironmentVariableIsSet("GLANCELOT_MONITOR_NATIVE_COLOR_PROOF")) qputenv("QT_QPA_PLATFORM", "offscreen");
+     QGuiApplication app(argc, argv);
+     MonitorOutputTests tests;
+     return QTest::qExec(&tests, argc, argv);

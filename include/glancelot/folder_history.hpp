@@ -81,6 +81,9 @@ public:
     // Clears all history.
     Q_INVOKABLE void clear();
 
+    // Reconciles history entries when a file or directory has been renamed (RENAME-01 / F018).
+    void reconcileRenamedPath(const QString& oldPath, const QString& newPath);
+
     // QML-invokable navigation actions
     Q_INVOKABLE bool navigateBack();
     Q_INVOKABLE bool navigateForward();

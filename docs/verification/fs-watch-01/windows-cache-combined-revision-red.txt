@@ -1,0 +1,11 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache() noncurrent replacement: source QColor(ARGB 1, 0, 0, 1) display QColor(ARGB 1, 1, 0, 0) cache hit true
+FAIL!  : FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache() Compared values are not the same
+   Actual   (viewer.image().pixelColor(0,0)): #ffff0000
+   Expected (QColor(Qt::blue))              : #ff0000ff
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(219) : failure location
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1089ms
+********* Finished testing of FSWatchTests *********
