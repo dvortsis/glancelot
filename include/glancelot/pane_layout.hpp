@@ -40,6 +40,7 @@ private:
     bool locked_{};
     QString feedback_;
     QJsonObject panes_;
+    QJsonObject snapshotExtras_; // MONITOR-CUSTOM-01: unknown root layout fields
     QJsonObject center_{{"orientation","horizontal"},{"ratio",0.5}};
     QString mode_{QStringLiteral("preview")};
     bool editCenter(const QJsonObject& fields);

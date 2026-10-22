@@ -1,5 +1,7 @@
 # Claude start handoff: MONITOR-CUSTOM-01
 
+**Superseded by the user's explicit reassignment to Codex. Do not start a Claude implementation from this historical handoff.** Current implementation: `codex/monitor-custom-01`, `.worktrees/codex-monitor-custom-01`, `build-codex-monitor-custom-01`. Claude Code Sonnet5.5 is the independent reviewer. Current assignment and acceptance are in docs/MONITOR-CUSTOM-01-PLAN.md and the main queue.
+
 The lead-owned contract blocker is removed. Implement the complete [frozen packet](../MONITOR-CUSTOM-01-PLAN.md) using Claude Code Sonnet5.5 in:
 
 - Branch: `claude/monitor-custom-01`

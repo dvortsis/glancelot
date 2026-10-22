@@ -59,6 +59,8 @@ Lead adds the unused C++ declarations `PaneLayout::snapshot() const` and `PaneLa
 
 ## UI and verification handoff
 
+Lead compatibility amendment: PaneLayout stores unknown root snapshot fields in the private `snapshotExtras_` value member. Load/snapshot/restore preserve these fields alongside unknown pane/center fields. This has no separate persistence channel and changes no existing layout command semantics.
+
 Lead implementation amendment: `ViewerController::configurationReloaded()` is emitted after successful explicit settings import/reset/restore, and drives `MonitorCustomization::reloadPreferences()`. Ordinary navigation does not reload preferences. Per-display appearance is stored in the optional bounded `outputsByDisplay` map (at most16 identity keys) inside each slot; it is owned monitor layout state for SAFE/portable settings. Existing fs_watch_ui tests also receive the real coordinator when loading shipped Main.qml. These additions are frozen before implementation and do not waive acceptance.
 
 Read application-interface-design plus layout-grids, layout-spacing, typography-ui, component-geometry, iconography-ui, motion-ui, responsive-layout and design-review; adapt to native Qt/QML. Reuse supplied Slate/Ice branding, Geist typefaces, Theme tokens and existing Ui* controls. Settings are controller-side, grouped into Displays, Presentation, Panes and Presets, with visible labels, nearby validation, truthful unsupported states, sensible initial/restored focus, complete keyboard operation and no clipped recovery action at supported minimum widths/large text. Preserve dark/light themes and reduced motion. Display identity/status cannot be conveyed only by color or an icon. Native detached panes remain operable without pointer-only dragging.
