@@ -635,8 +635,8 @@ private slots:
         QTRY_COMPARE(h.viewer.bindingFor("rotate"), QString());
         QCOMPARE(rotate()->property("text").toString(), QString("Unassigned"));
         // A free single key is saved after the pause.
-        begin(zoom()); QTest::keyClick(h.window, Qt::Key_F8); QTest::qWait(1700);
-        QTRY_COMPARE(h.viewer.bindingFor("zoom-200"), QString("F8"));
+        begin(zoom()); QTest::keyClick(h.window, Qt::Key_F7); QTest::qWait(1700); // F8 is the presentation toggle on main
+        QTRY_COMPARE(h.viewer.bindingFor("zoom-200"), QString("F7"));
         QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
     }
 
