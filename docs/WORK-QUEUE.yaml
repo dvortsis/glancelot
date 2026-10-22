@@ -455,14 +455,14 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: implementing
+    state: integration
     branch: codex/monitor-custom-01
     worktree: .worktrees/codex-monitor-custom-01
     build: build-codex-monitor-custom-01
     plan: docs/MONITOR-CUSTOM-01-PLAN.md
-    candidate_commit: af339f93e0d0463962914296ade684edb98606eb
+    candidate_commit: a0b00ff5aa8c946b1b510355034aa3c6c07b4525
     candidate_evidence: docs/verification/monitor-custom-01/codex-2026-10-22/README.md
-    review_status: Sonnet approved sourceaf339f9; synchronized Windows gate7f887ed failed40of41 solelyfolder_grid (712.77s total); Docker notrun; detailed grid Qt logger rerun and correction pending; lead lock retained
+    review_status: Actual Sonnet5.5 source/test approval ata0b00ff (f6bcf65f-83fb-4740-a4c9-4adf8f8801fd); native14of14 pass56738ms with exact source/binary hashes; compact correction fullgrid74 Qt pass and focused31core/13UI+1native skip; repeat locked Windows/Docker gates pending
     contract_commit: 5387bbde328861fa667b129d8fb2414526909a21
     contract: include/glancelot/monitor_customization.hpp; PaneLayout snapshot extension; cmake/MonitorCustomization.cmake
     reviewer_lane: claude

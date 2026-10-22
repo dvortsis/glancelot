@@ -1,37 +1,55 @@
-# MONITOR-CUSTOM-01 at af339f9: APPROVE SOURCE / FULL GATES PENDING
+I've finished reading the delta, the native failure traces and the CMake registration. I'm writing up the verdict now.
 
-I found no blocking delta bug. I read the delta patch and the source around it, and ran nothing. This is not an integration approval, and the Windows/Docker gates and the native run are unverified. The review is read-only and was not saved to a plan file.
+# MONITOR-CUSTOM-01 at a0b00ff: APPROVE SOURCE / FULL GATES PENDING
 
-## Delta assessment
+I found no blocking test-delta issue. I read only; I ran nothing and edited nothing. I took "product code is Git-identical to 70a6903" from `delta.patch`, which touches only `tests/monitor_customization_ui_tests.cpp`. I did not check it with Git. Native run 12 is unverified. The offscreen 31/13 results and the full `folder_grid` pass come from your report and the archive, and I did not re-check them.
 
-| Delta item | Verdict | Evidence |
-|---|---|---|
-| Windowed output keeps its maximized/minimized state | **Correct for option and color changes.** | `presentation_window.cpp:123` calls `showNormal()` only on a transition into windowed. A new window has an empty `previous`, so first show still works. `monitor_customization.cpp:124` rewrites geometry only when the call is initial or `visibility()==Windowed`. `initialWindowed` (`:103`) no longer fires on `visibility!=Windowed`, but still fires on a mode change or a frameless window. A fullscreen-to-windowed switch is initial and gets `showNormal` plus the 80% centred size. Theme changes go through `colorChanged` (`:213`) into the same path, so closing prior non-blocking item 3 is correct. |
-| Native frame-margin test | **Right test, right numbers.** | `monitor_customization_tests.cpp:268` uses margins 8/31/8/8 on the work area (-1920,-1200,1920,1080). Initial size is 1920·4/5−16 = 1520 wide and 1080·4/5−39 = 825 high, matching `QCOMPARE(…,QSize(1520,825))` against `windowedClient` (`monitor_customization_topology.hpp:29`). The oversized preferred rectangle is clamped inside the work area. A reachable rectangle is returned unchanged. This closes pre-integration requirement 2 from review-6e22804 at helper level. A native frame is still unproven (see below). |
-| `customization.saving` replaces feedback matching | **Correct.** | `pending=false` is set at `monitor_customization.cpp:181`, before `feedback.clear()` and `notify()` (`:186,189`). `finishEnable` therefore runs once the save finishes. During the save, `pending` is true and `notify()` at `:192` returns early. The `saving` property exists (`monitor_customization.hpp:22`). This closes the open `finishEnable` minor. |
-| Connection-type text | **Honest and consistent.** | `DisplayInfo` and `display_manager.cpp` have no connection field, so "Connection type unavailable · Color: …" is accurate. The old hard-coded "Connected" is gone. The label keeps `Layout.fillWidth`, `Text.Wrap` and `Theme.muted`, so typography, spacing and theme tokens are unchanged, and the longer string wraps instead of clipping. No new controls or framework changes, so no design-review concerns. Connection type stays an unmet plan §1 detail, now stated honestly. |
-| New maximized/minimized regression | **Catches the presentation-side regression.** | `monitor_customization_tests.cpp:234-237` maximizes, changes `guides`, and expects Maximized. It then minimizes, changes `imageInfo`, and expects Minimized. The old `visibility()!=Windowed → showNormal` would fail this. |
+## Fixture validity
 
-## Non-blocking concerns from this delta
+**Native run 11 shows two failures, not one.** Evidence is `monitor-native-ui-attempt-11.txt` lines 8 and 13.
+- `nativeUiEvidence` failed `h.window->isExposed()` before any click.
+- `settingsWorkspaceEntryOpensMonitorDialog` failed on the monitor dialog not opening.
 
-1. **Moving the output while it is maximized or minimized is unproven natively.** The trigger is `moveOutput` (`:310`) or a `moved` display change, which reaches `openPresentation` (`display_manager.cpp:442-448`). That call runs `setScreen`, then `setGeometry(screen->geometry())`, then `show()` on the existing window.
-   - Before af339f9, a non-Windowed state made `initialWindowed` true, so the window was reset to a clamped 80% size with `showNormal`. Now neither the geometry rewrite nor `showNormal` runs.
-   - A maximized window may then stay maximized on the new display. A minimized window may later restore at the raw full-screen rectangle (frame included) instead of the work area.
-   - It is user-initiated, recoverable and loses no data. If it misbehaves in the native run, the fix is small: treat `moved` with a Maximized or Minimized window as initial.
-2. **The new test covers only the presentation half.** The offscreen QPA ignores `setGeometry` on a non-normal window, as far as I recall. I could not check Qt sources here. `:124` could therefore regress and the test would still pass. That coordinator condition is protected only by reading the code.
-3. **No window opens with real frame margins.** The helper test proves the arithmetic on supplied margins. The native run should still open one windowed output and confirm it fits.
+The first failure points at the native window not being reliably exposed or raised at that point. That fits the second one: a window that isn't exposed or active may not have a settled layout.
 
-## Carried forward, unchanged
+**The signal trace fits a stale click point.**
+- `native-entry-signal-extract.txt` lines 39-41 show `openMonitorSettings` getting `yChanged`, `widthChanged` and `availableWidthChanged` after Settings reports `opened`.
+- Nothing follows that, and no `pressed` or `clicked` signal appears anywhere.
+- Settings only closes at teardown (line 48).
+- So the click did not land on the button. A point computed before a late layout change explains this. So does a window that was never really exposed or active.
 
-- The review-6e22804 notes still apply: emergency recovery does not survive a restart, and bounded retries are counter-only.
-- The unchanged minors remain: the `computeDisplayId` O(n²) enumeration, `qInfo` prints in `nativeUiEvidence`, repeated accessible names, and the 720 px / 150% text layout.
-- Hardware, mixed-DPI, colour and HDR behaviour, and a fullscreen controller swap on real multi-display hardware, remain unverified and belong to MONITOR-VERIFY.
+**The cause is inferred, not proven.** The trace shows what did not happen, not why. Run 12 is what tests the explanation. The delta covers both candidate causes, so it is a reasonable fix either way.
+
+## Does it strengthen the native proof?
+
+Yes. Nothing is loosened or bypassed.
+
+- **`raise()` before `requestActivate()` (`:95`).** The existing `isExposed` timeout of 5000 ms and the `frameSwapped` requirement are unchanged. This only makes the existing requirement more likely to be met.
+- **The entry test now requires `isExposed()` and `isActive()` before interacting (`:140`).** Before, it had no such precondition. A window that never became exposed would now fail at that line with a clear message. Before, it failed later with a misleading "dialog did not open". This is a stricter precondition, not a weaker one.
+- **The click point is computed after the screenshot (`:144-145`).** The screenshot still saves first, so the evidence PNG is captured before any point-related assertion. `mapToScene` and the in-window `QVERIFY` run right before `QTest::mouseClick`. The click is still a real `QTest::mouseClick` at the real scene point. The assertions that the monitor dialog opens and Settings closes are unchanged.
+- **Gate impact.** `cmake/MonitorCustomization.cmake:57-59` runs both suites with `QT_QPA_PLATFORM=offscreen`. The new `isActive()` wait therefore applies to the offscreen gate as well. Your focused offscreen run passes. `recoveryKeyPointerAndPaletteShareLockedRouting` already waits on `host->isActive()` (`:117`), so the pattern is established. I see no new gate hazard.
+
+## Races
+
+- **None introduced.** Between `mapToScene` and `mouseClick` there is no event-loop turn. `QTest::mouseClick` on a window delivers synchronously. Moving the computation after the grab narrows the stale-position window, and does not widen it.
+- **One residual risk, non-blocking.** The `qWait(100)` and `QTRY_VERIFY(action->isVisible())` pair is still a fixed delay. It is not a stability check on the button's geometry. If layout can still change after the wait, the click point could still be stale. A stronger fixture would use `QTRY` to wait until the button's scene point is unchanged across two consecutive polls, or until the dialog's open transition has finished. Run 12 will show whether this matters.
+- **The screenshot is a fresh synchronous render.** It does not capture a pre-layout frame, so it is a valid record of the layout at that moment.
+- **The native-only grab ordering has no effect in the normal gate.** `grabWindow` is only called when `GLANCELOT_MONITOR_UI_EVIDENCE` is set. The reorder cannot change what the normal gate exercises.
+
+## Non-blocking suggestions
+
+1. **Check the hit target before clicking.** Check that `action->contains(action->mapFromScene(point))` holds, or that the click target really is the button. On a miss, the assertion fails with a clearer message than a closed dialog.
+2. **Record foreground state in the native proof.** `run-monitor-native-proof.ps1` could log whether the session was foreground and unlocked. If Windows refuses `requestActivate()` because the process isn't foreground, `QTRY_VERIFY(isActive())` will time out. That would be an environment fault and not a product regression.
+3. **Keep the exposure and activation waits.** If run 12 passes only after they are added, record that in the evidence.
 
 ## Before integration
 
-- Run the locked Windows and Docker gates on the exact integrated commit.
-- Make one clean native run with the planned binary hash and source equality.
-- In that run, include one windowed output frame fit and the maximize-then-move case from concern 1.
+- Native run 12 on this immutable candidate, with the binary hash provenance. I haven't seen it, and I'm not assuming it passes. If it fails again, the failing line and its signal trace are the discriminator between a stale click point and an environment fault.
+- Complete `folder_grid` on this exact commit, since the test file changed.
+- The locked Windows gate and `docker build` on the exact integrated commit.
+- The carried-forward 70a6903 items stand. Those are the search-reach gap for the new Browsing button, the maximize-then-move native case, and the windowed output frame-fit check.
+
+No new product concern. Approved as a test-only delta; gates pending.
 
 
-Lead provenance: actual Claude Code Sonnet5.5 session fcc1ab9f-4a81-4dbc-b2d9-18b72e945d4a;120526ms;exit0;is_errorfalse;no permission denials. Base approval at6e22804 retained in packet archive. Subsequent candidate native run13/13 and real two-display frame/move probe pass; raw source/binary hashes and outputs retained in packet archive. Full locked gates and integrated native proof remain pending. These lead notes do not alter the actual reviewer verdict above.
+Lead provenance: actual Sonnet5.5 session f6bcf65f-83fb-4740-a4c9-4adf8f8801fd;73086ms;exit0;is_errorfalse;no permission denials. Product code equals approved70a6903; this approval covers stricter test setup only. Subsequent exact-candidate native12 passed14/14 in56738ms with identical source/binary hashes. Full gate retry and integrated native proof pending. Earlier source reviews and all failed/native attempts remain in packet archive. These notes do not alter the actual reviewer verdict above.
