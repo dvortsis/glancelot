@@ -460,9 +460,9 @@ tasks:
     worktree: .worktrees/codex-monitor-custom-01
     build: build-codex-monitor-custom-01
     plan: docs/MONITOR-CUSTOM-01-PLAN.md
-    candidate_commit: 70a6903b9b9618fcd7c7cdc71a884d7cfa359d3c
+    candidate_commit: a0b00ff5aa8c946b1b510355034aa3c6c07b4525
     candidate_evidence: docs/verification/monitor-custom-01/codex-2026-10-22/README.md
-    review_status: Actual Sonnet5.5 source approval at70a6903 (f186607c-11f3-416f-9e40-dabb9e85789b); compact palette regression fixed unchanged; completefolder_grid pass213.49s; focused features pass31core/13UI+1native skip; repeat full locked gates and integrated native proof pending
+    review_status: Actual Sonnet5.5 source/test approval ata0b00ff (f6bcf65f-83fb-4740-a4c9-4adf8f8801fd); native14of14 pass56738ms with exact source/binary hashes; compact correction fullgrid74 Qt pass and focused31core/13UI+1native skip; repeat locked Windows/Docker gates pending
     contract_commit: 5387bbde328861fa667b129d8fb2414526909a21
     contract: include/glancelot/monitor_customization.hpp; PaneLayout snapshot extension; cmake/MonitorCustomization.cmake
     reviewer_lane: claude
