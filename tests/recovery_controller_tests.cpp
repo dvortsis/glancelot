@@ -72,13 +72,18 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("bindings").toObject().value("fullscreen"),QJsonValue("Ctrl+Alt+F11"),3000);
         QTRY_VERIFY_WITH_TIMEOUT(layout.feedback().isEmpty(),3000);
     }
-    void importedModifierAbsenceRestoresDefaultsInTheLiveController() {
-        QTemporaryDir config,source; QVERIFY(config.isValid()&&source.isValid());
+    void restoredModifierAbsenceRestoresDefaultsInTheLiveController() {
+        using namespace glancelot::recovery;
+        QTemporaryDir config,source,packages; QVERIFY(config.isValid()&&source.isValid()&&packages.isValid());
         qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         const auto write=[](const QString& path,const QJsonObject& root){QFile file(path);return file.open(QIODevice::WriteOnly)&&file.write(QJsonDocument(root).toJson())>0;};
         QVERIFY(write(config.filePath("settings.json"),{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","pan"},{"shift","zoom"},{"alt","pan-horizontal"}}}}));
         QVERIFY(write(source.filePath("settings.json"),{{"schema",1}}));
         ViewerController viewer; QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(),QString("pan"));
+        const auto captured=captureBackup({source.path()},packages.filePath("source")); QCOMPARE(captured.status.code,Code::Ok);
+        const auto proposed=preview({config.path()},captured.destination,GlobalScope{GlobalSection::Viewing});
+        QVERIFY(proposed.plan.applicable()); QCOMPARE(apply(proposed.plan).status.code,Code::Committed);
+        // The ordinary import path reloads the live controller; schema-only import itself merges no preferences.
         QVERIFY(viewer.importSettings(source.filePath("settings.json")));
         QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(),QString("zoom"));
         QCOMPARE(viewer.wheelModifiers().value("shift").toString(),QString("pan-horizontal"));
