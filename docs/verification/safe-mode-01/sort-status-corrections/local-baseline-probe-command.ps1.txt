@@ -1,0 +1,33 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/sort-status-corrections'
+if((git rev-parse HEAD) -ne '03bd32687b0e47cc71306d7667927eeb896785e3'){throw 'Diagnostic pin changed'}
+git diff --exit-code -- tests/fs_watch_tests.cpp
+if($LASTEXITCODE -ne 0){throw 'Watcher test source already dirty'}
+$testPath=(Resolve-Path tests/fs_watch_tests.cpp).Path
+$original=[IO.File]::ReadAllBytes($testPath)
+[IO.File]::WriteAllBytes((Join-Path $PWD '.cache/fs-watch-original.cpp'),$original)
+$text=[Text.Encoding]::UTF8.GetString($original)
+$marker='private slots:'
+$snippet=Get-Content -Raw .cache/watcher-baseline-probe.inc
+$updated=$text.Replace($marker,$marker+"`r`n"+$snippet)
+if($updated -eq $text){throw 'Injection point missing'}
+$runner=(Get-Content -Raw .cache/continued-corrections-build.ps1).Replace('--target recovery_tests recovery_startup_tests recovery_controller_tests','--target fs_watch_tests')
+[IO.File]::WriteAllText((Join-Path $PWD '.cache/watcher-probe-build.ps1'),$runner,[Text.UTF8Encoding]::new($false))
+try {
+ [IO.File]::WriteAllText($testPath,$updated,[Text.UTF8Encoding]::new($false))
+ git diff -- tests/fs_watch_tests.cpp > "$d/local-baseline-probe.patch"
+ & ./.cache/watcher-probe-build.ps1 -BuildDir build-codex-safe-mode-01 *> "$d/local-baseline-probe-build.txt"
+ if($LASTEXITCODE -ne 0){throw 'Probe build failed'}
+ $env:PATH='C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/bin;C:/src/Github/Glancelot/.tools/python/Scripts;'+$env:PATH
+ $env:QT_QPA_PLATFORM='offscreen'
+ & ./build-codex-safe-mode-01/fs_watch_tests.exe diagnosticLateBaselineCache -o "$d/local-baseline-probe-results.txt,txt" | Out-Null
+ "probe_exit=$LASTEXITCODE" | Set-Content "$d/local-baseline-probe-status.txt"
+} finally {
+ [IO.File]::WriteAllBytes($testPath,$original)
+ (Get-Item -LiteralPath $testPath).LastWriteTimeUtc=[DateTime]::UtcNow
+ & ./.cache/watcher-probe-build.ps1 -BuildDir build-codex-safe-mode-01 *> "$d/local-baseline-restored-build.txt"
+ if($LASTEXITCODE -ne 0){throw 'Restored original build failed'}
+ git diff --exit-code -- tests/fs_watch_tests.cpp > "$d/local-baseline-restored-source.txt"
+ if($LASTEXITCODE -ne 0){throw 'Original watcher source not restored'}
+}

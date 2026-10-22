@@ -1,0 +1,3 @@
+
+build-codex-safe-mode-01\release\CMakeCache.txt:18:BUILD_TESTING:BOOL=OFF
+

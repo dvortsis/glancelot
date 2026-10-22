@@ -1,0 +1,18 @@
+UNAPPLIED PROPOSAL FOR INDEPENDENT REVIEW. Not qualified source.
+Keep production's100ms fallback and every existing assertion/CTest timeout.
+Use the existing IPC Fixture's5000ms baseline wait only for these two
+cache/admission identity tests, which require exercising the cached path.
+Keep separate production late-registration/fallback coverage unchanged.
+
+--- a/tests/fs_watch_tests.cpp
++++ b/tests/fs_watch_tests.cpp
+@@
+     void controllerCannotReleaseForeignAdmissions() {
++        fs_watch::ControllerTestHooks cacheHooks;cacheHooks.baselineDeadlineMs=5000;
++        HookScope awaitBaseline(cacheHooks);
+         auto& scheduler=glancelot::IoScheduler::instance();scheduler.reset();
+@@
+     void noncurrentSameTupleReplacementInvalidatesCache() {
++        fs_watch::ControllerTestHooks cacheHooks;cacheHooks.baselineDeadlineMs=5000;
++        HookScope awaitBaseline(cacheHooks);
+         QTemporaryDir files;QVERIFY(files.isValid());QVERIFY(QDir(files.path()).mkpath("sub/leaf"));

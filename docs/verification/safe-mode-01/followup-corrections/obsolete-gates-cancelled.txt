@@ -1,0 +1,4 @@
+Cancelled obsolete1a205fc Windows/Docker wrappers while queued behind live agent/export-csv gate.
+Verified wrapper PIDs: 48640, 4604
+Only console-host children present; no gate command started.
+Reason: independent review N1 superseded optimistic rollback requires correction.
