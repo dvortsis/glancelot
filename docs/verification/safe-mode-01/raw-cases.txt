@@ -1,0 +1,20 @@
+********* Start testing of RecoveryTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : RecoveryTests::initTestCase()
+PASS   : RecoveryTests::absentAndPresentEmptyHaveDifferentRevisions()
+PASS   : RecoveryTests::exactPairBytesSurviveClassification()
+PASS   : RecoveryTests::formattingAndBackupOnlyEditsInvalidateRevision()
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(future)
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(fractional)
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(missing)
+PASS   : RecoveryTests::unsupportedSchemasRemainDiagnostic(wrong-type)
+PASS   : RecoveryTests::oversizedMemberYieldsNoSnapshot(primary)
+PASS   : RecoveryTests::oversizedMemberYieldsNoSnapshot(backup)
+PASS   : RecoveryTests::directoryMemberIsNotAbsence()
+PASS   : RecoveryTests::maximumSizedMemberIsReadExactly()
+PASS   : RecoveryTests::namespaceIsSeparateFromRawRevision()
+PASS   : RecoveryTests::invalidRequestAndCancellationDoNotReadOrCreate()
+PASS   : RecoveryTests::contendedLockCanCancelWithoutTouchingMembers()
+PASS   : RecoveryTests::cleanupTestCase()
+Totals: 16 passed, 0 failed, 0 skipped, 0 blacklisted, 246ms
+********* Finished testing of RecoveryTests *********

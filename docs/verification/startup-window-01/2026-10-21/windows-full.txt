@@ -1,0 +1,361 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (10.2s)
+-- Generating done (1.6s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+[1/329] Automatic MOC and UIC for target glancelot_recovery_common
+[2/327] Automatic MOC and UIC for target glancelot_test_argv_capture
+[3/327] Automatic MOC and UIC for target glancelot_platform
+[4/325] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/325] Automatic MOC and UIC for target glancelot-decoder
+[6/323] Automatic MOC and UIC for target glancelot
+[7/322] Running AUTOMOC file extraction for target glancelot
+[8/322] Running moc --collect-json for target glancelot
+[9/273] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\glancelot_test_argv_capture_autogen\mocs_compilation.cpp.obj
+[10/273] Running qmlimportscanner for grid_ui_tests
+[11/273] Running qmlimportscanner for fs_watch_ui_tests
+[12/273] Building CXX object CMakeFiles\fs_watch_decoder_fixture.dir\fs_watch_decoder_fixture_autogen\mocs_compilation.cpp.obj
+[13/273] Running qmlimportscanner for monitor_output_tests
+[14/273] Automatic MOC and UIC for target input_ui_tests
+[15/271] Automatic MOC and UIC for target recovery_tests
+[16/269] Automatic MOC and UIC for target theme_tests
+[17/269] Automatic MOC and UIC for target recovery_startup_tests
+[18/269] Automatic MOC and UIC for target recovery_controller_tests
+[19/267] Running qmlimportscanner for thumbnail_tests
+[20/267] Automatic MOC and UIC for target grid_ui_tests
+[21/267] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\tests\platform_argv_capture.cpp.obj
+[22/267] Running qmlimportscanner for canvas_tests
+[23/267] Linking CXX executable "native argv ☂ 🧪\glancelot_test_argv_capture.exe"
+[24/267] Automatic MOC and UIC for target startup_window_geometry_tests
+[25/265] Building CXX object CMakeFiles\fs_watch_decoder_fixture.dir\tests\fs_watch_decoder_fixture.cpp.obj
+[26/265] Automatic MOC and UIC for target fs_watch_ui_tests
+[27/265] Linking CXX executable fs_watch_decoder_fixture.exe
+[28/265] Automatic MOC and UIC for target monitor_output_tests
+[29/265] Automatic MOC and UIC for target acceptance_tests
+[30/265] Automatic MOC and UIC for target window_slot_tests
+[31/263] Automatic MOC and UIC for target folder_tree_tests
+[32/263] Automatic MOC and UIC for target pane_layout_tests
+[33/263] Automatic MOC and UIC for target file_operation_service_tests
+[34/263] Automatic MOC and UIC for target directory_model_tests
+[35/263] Automatic MOC and UIC for target platform_integration_tests
+[36/263] Automatic MOC and UIC for target grid_search_tests
+[37/263] Automatic MOC and UIC for target grid_density_tests
+[38/263] Automatic MOC and UIC for target ui_settings_tests
+[39/263] Automatic MOC and UIC for target fs_watch_tests
+[40/263] Automatic MOC and UIC for target fs_watch_budget_tests
+[41/263] Automatic MOC and UIC for target favorites_tests
+[42/263] Automatic MOC and UIC for target folder_history_tests
+[43/263] Automatic MOC and UIC for target shortcuts_help_tests
+[44/263] Automatic MOC and UIC for target io_scheduler_tests
+[45/263] Automatic MOC and UIC for target filter_tests
+[46/263] Automatic MOC and UIC for target cache_tests
+[47/263] Automatic MOC and UIC for target metadata_tests
+[48/263] Automatic MOC and UIC for target animation_tests
+[49/263] Automatic MOC and UIC for target mutation_tests
+[50/263] Automatic MOC and UIC for target copy_move_tests
+[51/263] Running rcc for resource grid_theme_catalog
+[52/263] Running rcc for resource grid_brand_assets
+[53/263] Automatic MOC and UIC for target format_tests
+[54/263] Running rcc for resource theme_catalog
+[55/263] Running rcc for resource grid_canvas_shaders
+[56/263] Running rcc for resource fs_watch_ui_brand
+[57/263] Automatic MOC and UIC for target thumbnail_tests
+[58/263] Running rcc for resource fs_watch_ui_theme
+[59/263] Running rcc for resource fs_watch_ui_shaders
+[60/263] Running rcc for resource monitor_output_shaders
+[61/263] Running rcc for resource recovery_startup_catalog
+[62/263] Automatic MOC and UIC for target canvas_tests
+[63/263] Building CXX object CMakeFiles\perf_trace_tests.dir\tests\perf_trace_tests.cpp.obj
+[64/263] Building CXX object CMakeFiles\navigation_tests.dir\tests\navigation_tests.cpp.obj
+[65/263] Building CXX object CMakeFiles\directory_listing_tests.dir\tests\directory_listing_tests.cpp.obj
+[66/263] Building CXX object CMakeFiles\file_operations_tests.dir\tests\file_operations_tests.cpp.obj
+[67/263] Building CXX object CMakeFiles\grid_ui_tests.dir\grid_ui_tests_autogen\mocs_compilation.cpp.obj
+[68/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\settings_file.cpp.obj
+[69/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\pane_layout.cpp.obj
+[70/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[71/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\theme_manager.cpp.obj
+[72/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[73/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[74/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[75/263] Building CXX object CMakeFiles\grid_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_grid_theme_catalog.cpp.obj
+[76/263] Building CXX object CMakeFiles\grid_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_grid_brand_assets.cpp.obj
+[77/263] Building CXX object CMakeFiles\grid_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_grid_canvas_shaders.cpp.obj
+[78/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[79/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\render\image_canvas.cpp.obj
+[80/263] Building CXX object CMakeFiles\grid_ui_tests.dir\tests\grid_ui_tests.cpp.obj
+[81/263] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\window_slot.cpp.obj
+[82/263] Building CXX object CMakeFiles\theme_tests.dir\theme_tests_autogen\mocs_compilation.cpp.obj
+[83/263] Building CXX object CMakeFiles\theme_tests.dir\tests\theme_tests.cpp.obj
+[84/263] Building CXX object CMakeFiles\theme_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_theme_catalog.cpp.obj
+[85/263] Building CXX object CMakeFiles\theme_tests.dir\src\app\theme_manager.cpp.obj
+[86/263] Building CXX object CMakeFiles\theme_tests.dir\src\app\settings_file.cpp.obj
+[87/263] Building CXX object CMakeFiles\theme_tests.dir\src\app\window_slot.cpp.obj
+[88/263] Building CXX object CMakeFiles\theme_tests.dir\src\app\viewer_controller.cpp.obj
+[89/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\fs_watch_ui_tests_autogen\mocs_compilation.cpp.obj
+[90/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\pane_layout.cpp.obj
+[91/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\tests\fs_watch_ui_tests.cpp.obj
+[92/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\settings_file.cpp.obj
+[93/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[94/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\theme_manager.cpp.obj
+[95/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[96/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[97/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_fs_watch_ui_theme.cpp.obj
+[98/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_fs_watch_ui_brand.cpp.obj
+[99/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_fs_watch_ui_shaders.cpp.obj
+[100/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[101/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[102/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\render\image_canvas.cpp.obj
+[103/263] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\window_slot.cpp.obj
+[104/263] Building CXX object CMakeFiles\monitor_output_tests.dir\monitor_output_tests_autogen\mocs_compilation.cpp.obj
+[105/263] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\settings_file.cpp.obj
+[106/263] Building CXX object CMakeFiles\monitor_output_tests.dir\tests\monitor_output_tests.cpp.obj
+[107/263] Building CXX object CMakeFiles\monitor_output_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_monitor_output_shaders.cpp.obj
+[108/263] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\viewer_controller.cpp.obj
+[109/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\recovery_startup_tests_autogen\mocs_compilation.cpp.obj
+[110/263] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\presentation_window.cpp.obj
+[111/263] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\image_canvas.cpp.obj
+[112/263] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\window_slot.cpp.obj
+[113/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\tests\recovery_startup_tests.cpp.obj
+[114/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\app\startup_environment.cpp.obj
+[115/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\build-codex-startup-window-01\.qt\rcc\qrc_recovery_startup_catalog.cpp.obj
+[116/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\app\startup_intent.cpp.obj
+[117/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\src\app\window_slot.cpp.obj
+[118/263] Building CXX object CMakeFiles\acceptance_tests.dir\acceptance_tests_autogen\mocs_compilation.cpp.obj
+[119/263] Building CXX object CMakeFiles\recovery_startup_tests.dir\src\app\settings_file.cpp.obj
+[120/263] Building CXX object CMakeFiles\acceptance_tests.dir\tests\acceptance_tests.cpp.obj
+[121/263] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\settings_file.cpp.obj
+[122/263] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\window_slot.cpp.obj
+[123/263] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\viewer_controller.cpp.obj
+[124/263] Building CXX object CMakeFiles\thumbnail_tests.dir\thumbnail_tests_autogen\mocs_compilation.cpp.obj
+[125/263] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\filmstrip_model.cpp.obj
+[126/263] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\thumbnail_service.cpp.obj
+[127/263] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\thumbnail_provider.cpp.obj
+[128/263] Building CXX object CMakeFiles\thumbnail_tests.dir\tests\thumbnail_tests.cpp.obj
+[129/263] Building CXX object CMakeFiles\folder_tree_tests.dir\folder_tree_tests_autogen\mocs_compilation.cpp.obj
+[130/263] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\folder_tree_model.cpp.obj
+[131/263] Building CXX object CMakeFiles\folder_tree_tests.dir\tests\folder_tree_tests.cpp.obj
+[132/263] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\settings_file.cpp.obj
+[133/263] Building CXX object CMakeFiles\pane_layout_tests.dir\pane_layout_tests_autogen\mocs_compilation.cpp.obj
+[134/263] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\viewer_controller.cpp.obj
+[135/263] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\window_slot.cpp.obj
+[136/263] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\pane_layout.cpp.obj
+[137/263] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\window_slot.cpp.obj
+[138/263] Building CXX object CMakeFiles\pane_layout_tests.dir\tests\pane_layout_tests.cpp.obj
+[139/263] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\settings_file.cpp.obj
+[140/263] Building CXX object CMakeFiles\file_operation_service_tests.dir\file_operation_service_tests_autogen\mocs_compilation.cpp.obj
+[141/263] Building CXX object CMakeFiles\directory_model_tests.dir\directory_model_tests_autogen\mocs_compilation.cpp.obj
+[142/263] Building CXX object CMakeFiles\file_operation_service_tests.dir\src\app\file_operation_service.cpp.obj
+[143/263] Building CXX object CMakeFiles\file_operation_service_tests.dir\tests\file_operation_service_tests.cpp.obj
+[144/263] Building CXX object CMakeFiles\directory_model_tests.dir\tests\directory_model_tests.cpp.obj
+[145/263] Building CXX object CMakeFiles\directory_model_tests.dir\src\app\directory_entry_model.cpp.obj
+[146/263] Building CXX object CMakeFiles\platform_integration_tests.dir\platform_integration_tests_autogen\mocs_compilation.cpp.obj
+[147/263] Building CXX object CMakeFiles\canvas_tests.dir\canvas_tests_autogen\mocs_compilation.cpp.obj
+[148/263] Building CXX object CMakeFiles\canvas_tests.dir\src\render\image_canvas.cpp.obj
+[149/263] Building CXX object CMakeFiles\canvas_tests.dir\tests\canvas_tests.cpp.obj
+[150/263] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_tests.cpp.obj
+[151/263] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_test_adapter.cpp.obj
+[152/263] Building CXX object CMakeFiles\grid_search_tests.dir\grid_search_tests_autogen\mocs_compilation.cpp.obj
+[153/263] Building CXX object CMakeFiles\grid_density_tests.dir\grid_density_tests_autogen\mocs_compilation.cpp.obj
+[154/263] Building CXX object CMakeFiles\grid_search_tests.dir\tests\grid_search_tests.cpp.obj
+[155/263] Building CXX object CMakeFiles\grid_search_tests.dir\src\app\directory_entry_model.cpp.obj
+[156/263] Building CXX object CMakeFiles\grid_density_tests.dir\tests\grid_density_tests.cpp.obj
+[157/263] Building CXX object CMakeFiles\ui_settings_tests.dir\ui_settings_tests_autogen\mocs_compilation.cpp.obj
+[158/263] Building CXX object CMakeFiles\grid_density_tests.dir\src\app\directory_entry_model.cpp.obj
+[159/263] Building CXX object CMakeFiles\ui_settings_tests.dir\tests\ui_settings_tests.cpp.obj
+[160/263] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\settings_file.cpp.obj
+[161/263] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\window_slot.cpp.obj
+[162/263] Building CXX object CMakeFiles\fs_watch_tests.dir\fs_watch_tests_autogen\mocs_compilation.cpp.obj
+[163/263] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\viewer_controller.cpp.obj
+[164/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\thumbnail_service.cpp.obj
+[165/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\settings_file.cpp.obj
+[166/263] Building CXX object CMakeFiles\fs_watch_tests.dir\tests\fs_watch_tests.cpp.obj
+[167/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\directory_entry_model.cpp.obj
+[168/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\viewer_controller.cpp.obj
+[169/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\filmstrip_model.cpp.obj
+[170/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\folder_tree_model.cpp.obj
+[171/263] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\window_slot.cpp.obj
+[172/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\fs_watch_budget_tests_autogen\mocs_compilation.cpp.obj
+[173/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\thumbnail_service.cpp.obj
+[174/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\tests\fs_watch_budget_tests.cpp.obj
+[175/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\settings_file.cpp.obj
+[176/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\viewer_controller.cpp.obj
+[177/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\filmstrip_model.cpp.obj
+[178/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\directory_entry_model.cpp.obj
+[179/263] Building CXX object CMakeFiles\favorites_tests.dir\favorites_tests_autogen\mocs_compilation.cpp.obj
+[180/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\folder_tree_model.cpp.obj
+[181/263] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\window_slot.cpp.obj
+[182/263] Building CXX object CMakeFiles\favorites_tests.dir\tests\favorites_tests.cpp.obj
+[183/263] Building CXX object CMakeFiles\favorites_tests.dir\src\app\favorites_model.cpp.obj
+[184/263] Building CXX object CMakeFiles\folder_history_tests.dir\folder_history_tests_autogen\mocs_compilation.cpp.obj
+[185/263] Building CXX object CMakeFiles\favorites_tests.dir\src\app\settings_file.cpp.obj
+[186/263] Building CXX object CMakeFiles\favorites_tests.dir\src\app\window_slot.cpp.obj
+[187/263] Building CXX object CMakeFiles\folder_history_tests.dir\tests\folder_history_tests.cpp.obj
+[188/263] Building CXX object CMakeFiles\folder_history_tests.dir\src\app\folder_history.cpp.obj
+[189/263] Building CXX object CMakeFiles\shortcuts_help_tests.dir\shortcuts_help_tests_autogen\mocs_compilation.cpp.obj
+[190/263] Building CXX object CMakeFiles\shortcuts_help_tests.dir\tests\shortcuts_help_tests.cpp.obj
+[191/263] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\settings_file.cpp.obj
+[192/263] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\window_slot.cpp.obj
+[193/263] Building CXX object CMakeFiles\filter_tests.dir\filter_tests_autogen\mocs_compilation.cpp.obj
+[194/263] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\viewer_controller.cpp.obj
+[195/263] Building CXX object CMakeFiles\filter_tests.dir\src\app\directory_entry_model.cpp.obj
+[196/263] Building CXX object CMakeFiles\filter_tests.dir\tests\filter_tests.cpp.obj
+[197/263] Building CXX object CMakeFiles\filter_tests.dir\src\app\settings_file.cpp.obj
+[198/263] Building CXX object CMakeFiles\filter_tests.dir\src\app\viewer_controller.cpp.obj
+[199/263] Building CXX object CMakeFiles\cache_tests.dir\cache_tests_autogen\mocs_compilation.cpp.obj
+[200/263] Building CXX object CMakeFiles\filter_tests.dir\src\app\window_slot.cpp.obj
+[201/263] Building CXX object CMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj
+[202/263] Building CXX object CMakeFiles\cache_tests.dir\src\app\directory_entry_model.cpp.obj
+[203/263] Building CXX object CMakeFiles\cache_tests.dir\src\app\settings_file.cpp.obj
+[204/263] Building CXX object CMakeFiles\cache_tests.dir\src\app\viewer_controller.cpp.obj
+[205/263] Building CXX object CMakeFiles\cache_tests.dir\src\app\window_slot.cpp.obj
+[206/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\io_scheduler_tests_autogen\mocs_compilation.cpp.obj
+[207/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\tests\io_scheduler_tests.cpp.obj
+[208/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\thumbnail_service.cpp.obj
+[209/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\settings_file.cpp.obj
+[210/263] Building CXX object CMakeFiles\metadata_tests.dir\metadata_tests_autogen\mocs_compilation.cpp.obj
+[211/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\directory_entry_model.cpp.obj
+[212/263] Building CXX object CMakeFiles\animation_tests.dir\animation_tests_autogen\mocs_compilation.cpp.obj
+[213/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\viewer_controller.cpp.obj
+[214/263] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\window_slot.cpp.obj
+[215/263] Building CXX object CMakeFiles\metadata_tests.dir\tests\metadata_tests.cpp.obj
+[216/263] Building CXX object CMakeFiles\animation_tests.dir\tests\animation_tests.cpp.obj
+[217/263] Building CXX object CMakeFiles\mutation_tests.dir\mutation_tests_autogen\mocs_compilation.cpp.obj
+[218/263] Building CXX object CMakeFiles\mutation_tests.dir\tests\mutation_tests.cpp.obj
+[219/263] Building CXX object CMakeFiles\mutation_tests.dir\src\app\folder_history.cpp.obj
+[220/263] Building CXX object CMakeFiles\mutation_tests.dir\src\app\settings_file.cpp.obj
+[221/263] Building CXX object CMakeFiles\copy_move_tests.dir\copy_move_tests_autogen\mocs_compilation.cpp.obj
+[222/263] Building CXX object CMakeFiles\mutation_tests.dir\src\app\window_slot.cpp.obj
+[223/263] Building CXX object CMakeFiles\mutation_tests.dir\src\app\viewer_controller.cpp.obj
+[224/263] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\folder_history.cpp.obj
+[225/263] Building CXX object CMakeFiles\copy_move_tests.dir\tests\copy_move_tests.cpp.obj
+[226/263] Building CXX object CMakeFiles\format_tests.dir\format_tests_autogen\mocs_compilation.cpp.obj
+[227/263] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\settings_file.cpp.obj
+[228/263] Linking CXX executable perf_trace_tests.exe
+[229/263] Linking CXX executable navigation_tests.exe
+[230/263] Linking CXX executable directory_listing_tests.exe
+[231/263] Linking CXX executable file_operations_tests.exe
+[232/263] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\window_slot.cpp.obj
+[233/263] Linking CXX executable acceptance_tests.exe
+[234/263] Linking CXX executable thumbnail_tests.exe
+[235/263] Linking CXX executable pane_layout_tests.exe
+[236/263] Linking CXX executable folder_tree_tests.exe
+[237/263] Linking CXX executable file_operation_service_tests.exe
+[238/263] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\viewer_controller.cpp.obj
+[239/263] Linking CXX executable grid_ui_tests.exe
+[240/263] Linking CXX executable directory_model_tests.exe
+[241/263] Linking CXX executable canvas_tests.exe
+[242/263] Linking CXX executable platform_integration_tests.exe
+[243/263] Linking CXX executable theme_tests.exe
+[244/263] Linking CXX executable grid_search_tests.exe
+[245/263] Linking CXX executable grid_density_tests.exe
+[246/263] Linking CXX executable ui_settings_tests.exe
+[247/263] Linking CXX executable fs_watch_tests.exe
+[248/263] Linking CXX executable fs_watch_budget_tests.exe
+[249/263] Linking CXX executable favorites_tests.exe
+[250/263] Linking CXX executable folder_history_tests.exe
+[251/263] Linking CXX executable fs_watch_ui_tests.exe
+[252/263] Linking CXX executable shortcuts_help_tests.exe
+[253/263] Linking CXX executable filter_tests.exe
+[254/263] Linking CXX executable cache_tests.exe
+[255/263] Linking CXX executable metadata_tests.exe
+[256/263] Linking CXX executable animation_tests.exe
+[257/263] Linking CXX executable io_scheduler_tests.exe
+[258/263] Linking CXX executable mutation_tests.exe
+[259/263] Linking CXX executable copy_move_tests.exe
+[260/263] Linking CXX executable monitor_output_tests.exe
+[261/263] Linking CXX executable recovery_startup_tests.exe
+[262/263] Building CXX object CMakeFiles\format_tests.dir\tests\format_tests.cpp.obj
+[263/263] Linking CXX executable format_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+      Start  1: perf_trace
+ 1/39 Test  #1: perf_trace .......................   Passed    0.09 sec
+      Start  2: navigation
+ 2/39 Test  #2: navigation .......................   Passed    2.54 sec
+      Start  3: directory_listing
+ 3/39 Test  #3: directory_listing ................   Passed   18.74 sec
+      Start  4: file_operations
+ 4/39 Test  #4: file_operations ..................   Passed    0.20 sec
+      Start  5: startup_window_geometry
+ 5/39 Test  #5: startup_window_geometry ..........   Passed    0.08 sec
+      Start  6: viewer_acceptance
+ 6/39 Test  #6: viewer_acceptance ................   Passed    8.84 sec
+      Start  7: thumbnails
+ 7/39 Test  #7: thumbnails .......................   Passed    6.39 sec
+      Start  8: folder_tree
+ 8/39 Test  #8: folder_tree ......................   Passed    8.89 sec
+      Start  9: pane_layout
+ 9/39 Test  #9: pane_layout ......................   Passed    0.70 sec
+      Start 10: window_slots
+10/39 Test #10: window_slots .....................   Passed   25.88 sec
+      Start 11: folder_grid
+11/39 Test #11: folder_grid ......................   Passed  231.07 sec
+      Start 12: input_ui
+12/39 Test #12: input_ui .........................   Passed   51.43 sec
+      Start 13: file_operation_service
+13/39 Test #13: file_operation_service ...........   Passed    1.35 sec
+      Start 14: directory_model
+14/39 Test #14: directory_model ..................   Passed   39.45 sec
+      Start 15: viewport
+15/39 Test #15: viewport .........................   Passed    0.11 sec
+      Start 16: themes
+16/39 Test #16: themes ...........................   Passed    0.46 sec
+      Start 17: platform_integration
+17/39 Test #17: platform_integration .............   Passed    0.92 sec
+      Start 18: grid_search
+18/39 Test #18: grid_search ......................   Passed    0.35 sec
+      Start 19: grid_density
+19/39 Test #19: grid_density .....................   Passed    0.26 sec
+      Start 20: ui_settings
+20/39 Test #20: ui_settings ......................   Passed    0.98 sec
+      Start 21: fs_watch
+21/39 Test #21: fs_watch .........................   Passed   84.08 sec
+      Start 22: fs_watch_budget
+22/39 Test #22: fs_watch_budget ..................   Passed  110.70 sec
+      Start 23: fs_watch_ui
+23/39 Test #23: fs_watch_ui ......................   Passed    3.53 sec
+      Start 24: favorites
+24/39 Test #24: favorites ........................   Passed    0.51 sec
+      Start 25: folder_history
+25/39 Test #25: folder_history ...................   Passed    0.10 sec
+      Start 26: shortcuts_help
+26/39 Test #26: shortcuts_help ...................   Passed    0.43 sec
+      Start 27: filter
+27/39 Test #27: filter ...........................   Passed    2.73 sec
+      Start 28: cache
+28/39 Test #28: cache ............................   Passed    4.58 sec
+      Start 29: io_scheduler
+29/39 Test #29: io_scheduler .....................   Passed    0.23 sec
+      Start 30: metadata
+30/39 Test #30: metadata .........................   Passed    0.21 sec
+      Start 31: animation
+31/39 Test #31: animation ........................   Passed    0.50 sec
+      Start 32: mutation
+32/39 Test #32: mutation .........................   Passed    0.16 sec
+      Start 33: copy_move
+33/39 Test #33: copy_move ........................   Passed    0.21 sec
+      Start 34: format
+34/39 Test #34: format ...........................   Passed    0.26 sec
+      Start 35: monitor_output
+35/39 Test #35: monitor_output ...................   Passed    2.30 sec
+      Start 36: recovery
+36/39 Test #36: recovery .........................   Passed   14.14 sec
+      Start 37: recovery_startup
+37/39 Test #37: recovery_startup .................   Passed    0.39 sec
+      Start 38: recovery_controller
+38/39 Test #38: recovery_controller ..............   Passed   14.18 sec
+      Start 39: recovery_process
+39/39 Test #39: recovery_process .................   Passed   30.51 sec
+
+100% tests passed out of 39
+
+Total Test time (real) = 670.61 sec

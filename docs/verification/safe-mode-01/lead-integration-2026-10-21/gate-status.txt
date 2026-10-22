@@ -1,0 +1,3 @@
+windows_gate_exit=1
+docker_gate_exit=0
+integration_gate_exit=1

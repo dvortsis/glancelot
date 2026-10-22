@@ -1,0 +1,153 @@
+# Local performance measurement tools
+
+This is PERF-MEASURE-01 tooling. Candidate 8e2b1fd has independent Claude review
+approval; integration and checks on the integrated commit remain required.
+Nothing uploads data or changes the viewer cache/scheduler policy.
+
+## Build and generate fixtures
+
+Windows, from this lane worktree:
+
+```powershell
+./tools/perf/build_tools.ps1
+$env:PATH = "C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/bin;" + $env:PATH
+./build-codex-perf-measure/perf-tools/glancelot-perf-fixtures.exe tools/perf/fixtures-v1.json .cache/new-fixtures --smoke
+python tools/perf/verify_fixtures.py .cache/new-fixtures
+```
+
+Linux, with the pinned Qt 6.8.3 toolchain on PATH/CMAKE_PREFIX_PATH:
+
+```sh
+sh tools/perf/build_tools.sh
+build-codex-perf-measure/perf-tools/glancelot-perf-fixtures tools/perf/fixtures-v1.json .cache/new-fixtures --smoke
+python3 tools/perf/verify_fixtures.py .cache/new-fixtures
+```
+
+The Windows wrapper reuses scripts/build.ps1 to import MSVC and the shared .tools
+Qt environment; it compiles the viewer but does not rerun unrelated UI tests.
+The standalone tools CMake project adds no generator/encoder dependency to the viewer.
+
+Omit --smoke for the full matrix: JPEG and PNG at 12/24/45/60 MP, mixed folders
+with exactly 1,000/10,000/100,000 entries, and a six-level binary nested tree.
+The generator writes only into a new or empty directory, leaves a generated-root
+marker, and refuses to overwrite an existing output. It never removes files.
+Use a distinct ignored directory for another run, including after an interrupted run.
+
+Smoke mode explicitly identifies itself with an id ending in -smoke and profile
+smoke. Its images are 64x48, mixed directories are capped at 100 entries each, and
+its tree depth is two. It is correctness evidence only, never a large-image benchmark.
+
+fixture-index.json records the source manifest hash, Qt version, actual relative
+paths, encoded SHA256 hashes and actual image dimensions. The verifier independently
+parses JPEG/PNG headers, hashes every file and counts mixed-folder entries.
+For comparable reports, use the fixture id plus the index SHA256 as the fixture
+identifier. Do not assume encoded bytes match across different Qt/codec builds;
+verify the hashes. No user images are required.
+
+## Reports and checks
+
+The viewer's --perf-report option writes schema-1 JSON atomically on quit. It opts
+into tracing; GLANCELOT_PERF_TRACE=1 can also enable instrumentation. Set
+GLANCELOT_PERF_FIXTURE_ID to the public generated-fixture identifier and
+GLANCELOT_PERF_BUILD to the measured version/commit. Unspecified/unversioned metadata
+is explicit and cannot pass comparison. No path or EXIF field is accepted in the
+performance report context. The older --report option is separate and contains paths.
+
+report.schema.json defines the structural schema. validate_report.py additionally
+checks percentile order and split totals. When raw spans are present it independently
+recomputes every metric and flag split, rejecting raw/summary disagreements. All durations
+are nanoseconds on a process-relative steady clock. A generation is stage-local:
+worker/navigation request generation or rendered QImage revision. Worker clock origins
+must not be subtracted from parent timestamps.
+
+CPU upload/render submission spans do not measure GPU completion, compositor or
+physical display latency. Startup ends at a Qt image frame-swap notification, not
+proof of calibrated/physically correct presentation. A hidden/unexposed window may
+successfully decode without any upload or frame-swap spans. Cold currently denotes
+process-first full decode/startup, not a cold filesystem/server/shader cache.
+
+The current cache_lookup stage mixes two operations: ThumbnailService performs
+real memory-cache lookups, while explicit full-image opens only stat the source
+and build a revision key inside that span. The viewer never reads its retained
+image cache on this path. Only real thumbnail hits set CacheHit, but the miss
+split includes viewer key preparation as well as real thumbnail misses. Therefore
+the combined count, miss count, percentiles and totals cannot establish a cache
+hit rate or pure cache-lookup latency. Interpret existing baseline cache_lookup
+tables with this limitation; do not use them to claim cache effectiveness.
+This caveat changes no cache policy (CACHE-01 remains Gemini-owned).
+
+```powershell
+./build-codex-perf-measure/perf_trace_tests.exe
+python tools/perf/test_report.py build-codex-perf-measure/perf_trace_tests.exe
+python tools/perf/test_fixture_integrity.py .cache/perf-fixtures-smoke-a
+python tools/perf/test_compare.py build-codex-perf-measure/perf_trace_tests.exe
+python tools/perf/validate_report.py .cache/report.json
+python tools/perf/compare.py .cache/baseline.json .cache/changed.json --percent 10 --min-samples 50 --split useful
+```
+
+Comparison requires matching fixture, platform/backend, measured conditions, equal
+sample counts and zero dropped spans. It compares each measured stage's p95 with
+an optional JSON --thresholds object, for example {"decode": 5, "upload": 10}.
+--noise-floor-ns supplies an explicit absolute tolerance. --split selects a flag
+condition such as hit, miss, cold, warm or useful. Useful excludes failed, cancelled
+and stale spans. The other conditions can overlap; never sum stage p95 values and
+call that end-to-end p95.
+
+Exit codes are 0 (passes thresholds), 1 (regression) and 2 (incomparable/inadequate
+evidence). The default 50-sample minimum deliberately refuses a one-open smoke
+report as broad benchmark evidence. No-sample stages are reported explicitly.
+Thresholds never turn a missing, truncated or mismatched workload into a pass.
+
+## Replay and repeated captures
+
+```powershell
+./tools/perf/replay.ps1 -Exe ./build-codex-perf-measure/glancelot.exe -Fixtures .cache/new-fixtures -Output .cache/new-replay -Python python -Runs 1 -Steps 5 -Cycles 2 -RequireRender
+```
+
+```sh
+sh tools/perf/replay.sh --exe ./build-codex-perf-measure/glancelot --fixtures .cache/new-fixtures --output .cache/new-replay --runs 1 --steps 5 --cycles 2 --require-render
+```
+
+Use a new or empty output directory outside the source fixtures. Both wrappers use
+replay.py, which verifies all source hashes before and after. The app's bounded,
+explicit standard-v1 test driver exercises open, next N, reverse N, folder jumps,
+scrolling, combined cursor preview, a real thumbnail cache miss/hit pair, rapid-open
+cancellation, corrupt-file failure and recovery. It requires --perf-report and
+--no-resume; normal launches do not construct it. No QML/keyboard bindings, decoder
+policy or original media are changed. An independent correctness verdict and the
+trace assertions must both pass.
+
+Each capture fixes Slate & Ice dark and 1180x780, isolates preferences, records actual
+executable SHA256 and source commit, and incorporates the dataset index hash and
+steps/cycles into the fixture identifier. For a packaged/container runtime without
+Git, replay.py accepts --source-commit with 40 hex digits, explicitly labeling it as
+declared provenance while still measuring the binary hash. Logs stay local.
+
+--runs supports 1..50 fresh processes. aggregate.json recomputes percentiles from
+raw duration samples, preserves condition splits and omits a fictitious combined
+process timeline. aggregate.aggregation.json records input report hashes and capture
+count. The tool caps aggregation at 200 captures, 64 MiB per input and two million
+spans. It never averages p95 values. A one-run smoke remains inadequate for broad
+performance qualification. Startup, filesystem-cache state and native physical
+presentation remain distinct concepts.
+
+## Remaining packet work
+
+Final full viewer Docker checks, owner-controlled baseline failures, worker phase boundary
+review, independent Claude review and integration remain open. Hardware/SMB/high-refresh
+claims require separate measured evidence.
+
+
+For an isolated Docker software-GL display, container_replay.sh accepts EXE FIXTURES
+NEW_OUTPUT SOURCE_COMMIT [RUNS]. Run it in an ephemeral container with --network none,
+no published ports, read-only source/fixture mounts and a writable results mount.
+It creates a private authenticated localhost VNC display, refuses existing display 99
+endpoints, and terminates only its own server. It does not use the production browser
+entrypoint. Native and Linux 50-capture evidence is in the verification record; it is a smoke
+workload under uncontrolled hardware conditions, not a hardware qualification result.
+
+The verifier derives every expected image, mixed-folder entry and nested-tree path
+from the versioned manifest. It rejects incomplete indexes, dimensions inconsistent
+with the manifest, unexpected files/directories and mismatched Qt provenance.
+test_fixture_integrity.py uses only a temporary copy of generated smoke fixtures
+and checks these failures both normally and under Python -O.

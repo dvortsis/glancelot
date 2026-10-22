@@ -1,0 +1,74 @@
+cmake_minimum_required(VERSION 3.24)
+project(GlancelotRecoveryRegistryComponent LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+enable_testing()
+find_package(Qt6 6.8.3 REQUIRED COMPONENTS Core Gui Test Concurrent)
+set(recovery_repo "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01")
+add_executable(recovery_registry_component
+  "${recovery_repo}/tests/recovery_startup_tests.cpp" "${recovery_repo}/app/startup_intent.cpp"
+  "${recovery_repo}/src/app/command_registry.cpp")
+target_include_directories(recovery_registry_component PRIVATE "${recovery_repo}/include" "${recovery_repo}/src/app" "${recovery_repo}/app")
+target_link_libraries(recovery_registry_component PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME recovery_registry_component COMMAND recovery_registry_component
+  -o "${CMAKE_CURRENT_BINARY_DIR}/registry-results.txt,txt" -o -,txt)
+set_tests_properties(recovery_registry_component PROPERTIES TIMEOUT 30)
+add_executable(recovery_raw_component "${recovery_repo}/tests/recovery_tests.cpp"
+  "${recovery_repo}/src/app/settings_recovery.cpp" "${recovery_repo}/src/app/settings_file.cpp"
+  "${recovery_repo}/src/app/settings_policy.cpp" "${recovery_repo}/src/app/settings_diff.cpp" "${recovery_repo}/src/app/settings_restore.cpp" "${recovery_repo}/src/app/recovery_checkpoint.cpp" "${recovery_repo}/src/app/recovery_session.cpp" "${recovery_repo}/app/settings_maintenance.cpp"
+  "${recovery_repo}/src/app/command_registry.cpp" "${recovery_repo}/src/app/window_slot.cpp")
+target_compile_definitions(recovery_raw_component PRIVATE GLANCELOT_RECOVERY_TESTING)
+target_include_directories(recovery_raw_component PRIVATE "${recovery_repo}/include" "${recovery_repo}/src/app" "${recovery_repo}/app")
+target_link_libraries(recovery_raw_component PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+qt_add_resources(recovery_raw_component recovery_component_catalog PREFIX "/themes"
+  BASE "${recovery_repo}/assets/themes" FILES "${recovery_repo}/assets/themes/catalog.json")
+add_test(NAME recovery_raw_component COMMAND recovery_raw_component
+  -o "${CMAKE_CURRENT_BINARY_DIR}/raw-results.txt,txt" -o -,txt)
+set_tests_properties(recovery_raw_component PROPERTIES TIMEOUT 30)
+
+
+if(WIN32)
+  target_link_libraries(recovery_registry_component PRIVATE shell32)
+endif()
+
+
+
+
+add_library(recovery_component_core STATIC
+  "${recovery_repo}/src/core/navigation.cpp" "${recovery_repo}/src/core/directory_listing.cpp"
+  "${recovery_repo}/src/core/file_operations.cpp" "${recovery_repo}/src/core/perf_trace.cpp")
+target_include_directories(recovery_component_core PUBLIC "${recovery_repo}/include")
+add_library(recovery_component_platform STATIC
+  "${recovery_repo}/src/app/platform_integration.cpp" "${recovery_repo}/include/glancelot/platform_integration.hpp"
+  "${recovery_repo}/src/app/io_scheduler.cpp" "${recovery_repo}/include/glancelot/io_scheduler.hpp"
+  "${recovery_repo}/src/app/metadata_parser.cpp" "${recovery_repo}/include/glancelot/metadata_parser.hpp"
+  "${recovery_repo}/src/app/metadata_model.cpp" "${recovery_repo}/include/glancelot/metadata_model.hpp"
+  "${recovery_repo}/src/app/animation_controller.cpp" "${recovery_repo}/include/glancelot/animation_controller.hpp"
+  "${recovery_repo}/src/app/mutation_service.cpp" "${recovery_repo}/include/glancelot/mutation_service.hpp"
+  "${recovery_repo}/src/app/copy_move_service.cpp" "${recovery_repo}/include/glancelot/copy_move_service.hpp"
+  "${recovery_repo}/src/app/raw_preview.cpp" "${recovery_repo}/include/glancelot/raw_preview.hpp")
+target_include_directories(recovery_component_platform PUBLIC "${recovery_repo}/include")
+target_link_libraries(recovery_component_platform PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent)
+if(WIN32)
+  target_link_libraries(recovery_component_platform PUBLIC shell32 ole32)
+endif()
+add_executable(glancelot-decoder "${recovery_repo}/src/worker/main.cpp")
+target_link_libraries(glancelot-decoder PRIVATE recovery_component_platform)
+add_executable(recovery_controller_component
+  "${recovery_repo}/tests/recovery_controller_tests.cpp"
+  "${recovery_repo}/src/app/viewer_controller.cpp" "${recovery_repo}/include/glancelot/viewer_controller.hpp"
+  "${recovery_repo}/src/app/directory_entry_model.cpp" "${recovery_repo}/include/glancelot/directory_entry_model.hpp"
+  "${recovery_repo}/src/app/settings_file.cpp" "${recovery_repo}/src/app/window_slot.cpp"
+  "${recovery_repo}/src/app/settings_recovery.cpp" "${recovery_repo}/src/app/settings_policy.cpp"
+  "${recovery_repo}/src/app/settings_diff.cpp" "${recovery_repo}/src/app/settings_restore.cpp"
+  "${recovery_repo}/src/app/recovery_checkpoint.cpp" "${recovery_repo}/src/app/recovery_session.cpp"
+  "${recovery_repo}/src/app/command_registry.cpp")
+target_include_directories(recovery_controller_component PRIVATE "${recovery_repo}/include" "${recovery_repo}/src/app")
+target_compile_definitions(recovery_controller_component PRIVATE GLANCELOT_RECOVERY_TESTING)
+target_link_libraries(recovery_controller_component PRIVATE recovery_component_core recovery_component_platform Qt6::Test)
+add_dependencies(recovery_controller_component glancelot-decoder)
+qt_add_resources(recovery_controller_component recovery_controller_catalog PREFIX "/themes"
+  BASE "${recovery_repo}/assets/themes" FILES "${recovery_repo}/assets/themes/catalog.json")
+add_test(NAME recovery_controller_component COMMAND recovery_controller_component
+  -o "${CMAKE_CURRENT_BINARY_DIR}/controller-results.txt,txt" -o -,txt)
+set_tests_properties(recovery_controller_component PROPERTIES TIMEOUT 45 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

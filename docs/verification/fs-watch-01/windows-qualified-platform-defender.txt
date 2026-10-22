@@ -1,0 +1,24 @@
+
+ThreatID         : 2147738096
+IsActive         : False
+DidThreatExecute : False
+ThreatName       : Behavior:Win32/DefenseEvasion.A!ml
+
+
+
+ThreatID             : 2147738096
+InitialDetectionTime : 10/20/2026 9:01:55 AM
+ActionSuccess        : True
+Resources            : {file:_C:\src\Github\Glancelot\.worktrees\monitor-output\build-monitor-output\platform_launcher_stub.exe}
+
+ThreatID             : 2147738096
+InitialDetectionTime : 10/20/2026 9:02:18 AM
+ActionSuccess        : True
+Resources            : {file:_C:\src\Github\Glancelot\.worktrees\monitor-output\build-monitor-output\platform_launcher_stub.exe}
+
+ThreatID             : 2147738096
+InitialDetectionTime : 10/20/2026 8:03:03 AM
+ActionSuccess        : True
+Resources            : {file:_C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\build-codex-fs-watch-01\platform_launcher_stub.exe}
+
+

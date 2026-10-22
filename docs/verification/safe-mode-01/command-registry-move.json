@@ -1,0 +1,11 @@
+{
+  "base": "3149b6a91763aa3b43983e07a1e9017706a25a05",
+  "normalization": "UTF-8 text LF",
+  "commandInitializerEqual": true,
+  "initializerSha256": "257E12A62E40A9A40A12072448B70998951BCCB3B2B67B65C6E7680BC5C6C70C",
+  "helpersEqualExceptInline": true,
+  "helperSha256": "2CBBCC92E294D380A1361D555C6EA33FCC4115AAC3056FF45D6870F24A36C6FA",
+  "initialization": "function-local static, verified before main from another translation unit",
+  "runtimePlatform": "Windows Qt6.8.3",
+  "featureGate": "not run; component only"
+}

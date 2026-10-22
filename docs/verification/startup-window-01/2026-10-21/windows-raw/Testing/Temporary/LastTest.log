@@ -1,0 +1,79 @@
+Start testing: Oct 21 18:48 Mountain Daylight Time
+----------------------------------------------------------
+5/39 Testing: startup_window_geometry
+5/39 Test: startup_window_geometry
+Command: "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/startup_window_geometry_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+"startup_window_geometry" start time: Oct 21 18:48 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.19 sec
+----------------------------------------------------------
+Test Passed.
+"startup_window_geometry" end time: Oct 21 18:48 Mountain Daylight Time
+"startup_window_geometry" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/39 Testing: recovery
+36/39 Test: recovery
+Command: "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+"recovery" start time: Oct 21 18:48 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  15.04 sec
+----------------------------------------------------------
+Test Passed.
+"recovery" end time: Oct 21 18:48 Mountain Daylight Time
+"recovery" time elapsed: 00:00:15
+----------------------------------------------------------
+
+37/39 Testing: recovery_startup
+37/39 Test: recovery_startup
+Command: "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery_startup_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery-startup-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+"recovery_startup" start time: Oct 21 18:48 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.46 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_startup" end time: Oct 21 18:48 Mountain Daylight Time
+"recovery_startup" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/39 Testing: recovery_controller
+38/39 Test: recovery_controller
+Command: "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery_controller_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery-controller-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+"recovery_controller" start time: Oct 21 18:48 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  14.50 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_controller" end time: Oct 21 18:48 Mountain Daylight Time
+"recovery_controller" time elapsed: 00:00:14
+----------------------------------------------------------
+
+39/39 Testing: recovery_process
+39/39 Test: recovery_process
+Command: "C:/Python315/python.exe" "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/scripts/verify-recovery.py" "--executable" "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/glancelot.exe" "--work-dir" "C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01/recovery-process"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+"recovery_process" start time: Oct 21 18:48 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Recovery process verification passed (35 completed commands); evidence: C:\src\Github\Glancelot\.worktrees\codex-startup-window-01\build-codex-startup-window-01\recovery-process\run-223ms761
+<end of output>
+Test time =  36.82 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_process" end time: Oct 21 18:49 Mountain Daylight Time
+"recovery_process" time elapsed: 00:00:36
+----------------------------------------------------------
+
+End testing: Oct 21 18:49 Mountain Daylight Time

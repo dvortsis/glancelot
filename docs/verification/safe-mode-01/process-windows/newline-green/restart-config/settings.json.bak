@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "1fcfd474-7acf-4d81-9047-e72fa10235ae",
+                "claimNonce": "88f57f67-39b2-49d5-a4aa-85c9d53a2158",
+                "origin": "navigation",
+                "pid": 43016,
+                "sequence": "0",
+                "start": "13437001403106",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/process/run-nruyp8zf/generated-media",
+            "image": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/process/run-nruyp8zf/generated-media/-explicit-配置.png",
+            "saved": 1792527801
+        }
+    }
+}

@@ -1,0 +1,1 @@
+Interrupted after source review found test binding conflict; not qualified. No Docker run.

@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "7638c81f-95cb-466c-bea5-4ba863eea1a6",
+                "claimNonce": "324d0712-186f-45bd-bb48-1370b20cc120",
+                "origin": "navigation",
+                "pid": 1511,
+                "sequence": "1",
+                "start": "13648013",
+                "state": "clean",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-bnux246p/generated-media",
+            "image": "/build/recovery-process/run-bnux246p/generated-media/雪景-😀.png",
+            "saved": 1792555697
+        }
+    }
+}

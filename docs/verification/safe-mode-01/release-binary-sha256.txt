@@ -1,0 +1,5 @@
+
+Algorithm : SHA256
+Hash      : F76DC3E244F31FA4B436B895D11D3870EB15A3B348E29E5DD50FC4F8415659CB
+Path      : C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\build-codex-safe-mode-01\release\glancelot.exe
+

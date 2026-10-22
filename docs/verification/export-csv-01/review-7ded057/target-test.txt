@@ -1,0 +1,7 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-review-export-csv-01/build-codex-review-export-csv-01
+    Start 1: selection_export
+1/1 Test #1: selection_export .................   Passed    0.24 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   0.31 sec

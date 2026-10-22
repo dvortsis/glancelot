@@ -24,6 +24,16 @@ inline void followViewer(ViewerController& viewer, DirectoryEntryModel& grid) {
     };
     QObject::connect(&viewer, &ViewerController::stateChanged, &grid, sync);
     QObject::connect(&viewer, &ViewerController::filesInvalidated, &grid, [&grid] { grid.refresh(); });
+    QObject::connect(&viewer, &ViewerController::filterChanged, &grid, [&viewer, &grid] {
+        if (grid.filterPattern() != viewer.filterPattern() || grid.isFilterPersistent() != viewer.isFilterPersistent()) {
+            grid.setFilter(viewer.filterPattern(), viewer.isFilterPersistent());
+        }
+    });
+    QObject::connect(&grid, &DirectoryEntryModel::filterChanged, &viewer, [&viewer, &grid] {
+        if (viewer.filterPattern() != grid.filterPattern() || viewer.isFilterPersistent() != grid.isFilterPersistent()) {
+            viewer.setFilter(grid.filterPattern(), grid.isFilterPersistent());
+        }
+    });
 }
 // ThumbnailService accepts exactly one content epoch, which the filmstrip drives (folder changes and on-disk
 // invalidation). The grid's thumbnail URLs must carry the same epoch or every grid request is rejected.

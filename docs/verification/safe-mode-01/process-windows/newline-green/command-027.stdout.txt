@@ -1,0 +1,1 @@
+{"code":"Ok","destination":"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/process/run-nruyp8zf/position-package","detail":"","generation":"0","package_revision":"sp1:a410563263551c64987b771a31dd39fa21d9c925824536f32a03c6bca3affc5f","schema":1}

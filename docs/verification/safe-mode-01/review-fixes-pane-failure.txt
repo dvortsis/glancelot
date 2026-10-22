@@ -1,0 +1,20 @@
+********* Start testing of PaneLayoutTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : PaneLayoutTests::initTestCase()
+PASS   : PaneLayoutTests::persistenceAndConcurrentFieldMerges()
+FAIL!  : PaneLayoutTests::centerContractAndWriteFailure() '!restored.feedback().isEmpty()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\pane_layout_tests.cpp(39) : failure location
+PASS   : PaneLayoutTests::newerVersionsCorruptionAndNoOps()
+PASS   : PaneLayoutTests::corruptSettingsFileFallsBackWithFeedback()
+PASS   : PaneLayoutTests::malformedVersionIsReplaceableAndOrdersRenumber()
+FAIL!  : PaneLayoutTests::contentModeRoundTripsPerSlot() Compared values are not the same
+   Actual   (changes.count()): 2
+   Expected (1)              : 1
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\pane_layout_tests.cpp(93) : failure location
+PASS   : PaneLayoutTests::unknownContentModeFallsBackIndividually()
+PASS   : PaneLayoutTests::contentModeAllowedUnderLockAndFreeze()
+PASS   : PaneLayoutTests::resetRestoresPreviewAndMergesKeepOtherWindowsMode()
+PASS   : PaneLayoutTests::invalidAndUnknownFields()
+PASS   : PaneLayoutTests::cleanupTestCase()
+Totals: 10 passed, 2 failed, 0 skipped, 0 blacklisted, 273ms
+********* Finished testing of PaneLayoutTests *********

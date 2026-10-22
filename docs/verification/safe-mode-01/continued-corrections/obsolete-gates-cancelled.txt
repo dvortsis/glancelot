@@ -1,0 +1,4 @@
+Cancelled only queued SAFE-MODE wrapper PIDs36628 and62560 before either acquired the gate. Only console-host children were present.
+Reason: independent Claude review found corrections required. No obsolete-source SAFE full gate ran.
+Pinned INPUT-02 gate holder50296 left running.
+Retained Windows/Linux wait logs are cancelled-before-start, not failed/passed qualification.

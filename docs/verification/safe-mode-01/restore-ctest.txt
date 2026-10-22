@@ -1,0 +1,9 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/registry-component
+    Start 1: recovery_registry_component
+1/2 Test #1: recovery_registry_component ......   Passed    0.05 sec
+    Start 2: recovery_raw_component
+2/2 Test #2: recovery_raw_component ...........   Passed    4.41 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =   4.51 sec

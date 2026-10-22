@@ -1,0 +1,356 @@
+{
+  "checked_files": 70,
+  "mismatches": [],
+  "files": [
+    {
+      "file": "docs/verification/integration-2026-10-21/input/CLAUDE-NARROW-ACCEPT.md",
+      "bytes": 3239,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/CLAUDE-REVIEW.md",
+      "bytes": 5582,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/CLAUDE-ROUTING-REVIEW.md",
+      "bytes": 2683,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-followup-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-followup-stderr.txt",
+      "bytes": 0,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-followup.json",
+      "bytes": 3556,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-narrow-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-narrow-stderr.txt",
+      "bytes": 0,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-narrow.json",
+      "bytes": 5105,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-routing-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-routing-stderr.txt",
+      "bytes": 0,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-routing.json",
+      "bytes": 4552,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude-stderr.txt",
+      "bytes": 0,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/claude.json",
+      "bytes": 7493,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/docker-4e91fe6-interrupted-status.txt",
+      "bytes": 78,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/docker-4e91fe6-interrupted.txt",
+      "bytes": 32540,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/docker-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/docker.txt",
+      "bytes": 69026,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/followup-prompt.txt",
+      "bytes": 461,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/gate.ps1",
+      "bytes": 682,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/input-direct-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/input-direct.txt",
+      "bytes": 126153,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/input-routing-corrected-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/input-routing-corrected.txt",
+      "bytes": 17020,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/integrated-commit.txt",
+      "bytes": 41,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/integrated-ctest-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/integrated-ctest.txt",
+      "bytes": 461,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/integrated-initial-tool-error.txt",
+      "bytes": 130,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/integrated-tree-equivalence.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/interrupted-status.txt",
+      "bytes": 92,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/main-delta.patch",
+      "bytes": 148304,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/narrow-review-prompt.txt",
+      "bytes": 1532,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/narrow-routing.patch",
+      "bytes": 3561,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/printable-corrected-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/printable-corrected.txt",
+      "bytes": 24999,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/printable-original-failed.txt",
+      "bytes": 9026,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/printable-original-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/rehearsal-delta.patch",
+      "bytes": 29353,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/review-prompt.txt",
+      "bytes": 1314,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/routing-fix.patch",
+      "bytes": 1123,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/routing-review-prompt.txt",
+      "bytes": 1308,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/routing-test-build.txt",
+      "bytes": 1604,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows-3672036-interrupted-status.txt",
+      "bytes": 104,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows-3672036-interrupted.txt",
+      "bytes": 4827,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows-4e91fe6-failed.txt",
+      "bytes": 25192,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows-4e91fe6-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows-interrupted-a7d96db.txt",
+      "bytes": 15641,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/input/windows.txt",
+      "bytes": 7720,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/CLAUDE-ACCEPT.md",
+      "bytes": 6064,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/claude-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/claude-stderr.txt",
+      "bytes": 0,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/claude.json",
+      "bytes": 7969,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/docker-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/docker.txt",
+      "bytes": 69261,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/gate.ps1",
+      "bytes": 704,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-checks.ps1",
+      "bytes": 1363,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-commit.txt",
+      "bytes": 41,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-ctest-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-ctest.txt",
+      "bytes": 463,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-native-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-native.txt",
+      "bytes": 1894,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/integrated-tree-equivalence.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/main-delta.patch",
+      "bytes": 93013,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/merge-source-equivalence.json",
+      "bytes": 4324,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/review-prompt.txt",
+      "bytes": 1453,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/sync-delta.patch",
+      "bytes": 121460,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/windows-status.txt",
+      "bytes": 8,
+      "index_matches_raw_bytes": true
+    },
+    {
+      "file": "docs/verification/integration-2026-10-21/monitor/windows.txt",
+      "bytes": 22621,
+      "index_matches_raw_bytes": true
+    }
+  ]
+}

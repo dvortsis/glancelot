@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "b9418693-1bcf-4d3b-a1ac-7f3d67c31801",
+                "claimNonce": "40289ed6-a660-485c-8682-ca792b6a4dc1",
+                "origin": "navigation",
+                "pid": 1570,
+                "sequence": "0",
+                "start": "11231461",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-azgvnfyf/generated-media",
+            "image": "/build/recovery-process/run-azgvnfyf/generated-media/-explicit-配置.png",
+            "saved": 1792531526
+        }
+    }
+}
