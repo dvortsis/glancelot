@@ -1,0 +1,4 @@
+[1/12] Automatic MOC and UIC for target glancelot_recovery_common
+[2/10] Automatic MOC and UIC for target glancelot_platform
+[3/8] Automatic MOC and UIC for target glancelot-decoder
+[4/6] Automatic MOC and UIC for target grid_ui_tests
