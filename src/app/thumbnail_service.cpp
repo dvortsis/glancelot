@@ -1,4 +1,9 @@
+#include "../core/perf_context.hpp"
 #include "glancelot/thumbnail_service.hpp"
+#include "glancelot/io_scheduler.hpp"
+#include "io_job_lease.hpp"
+
+using namespace glancelot;
 #include <QCache>
 #include <QHash>
 #include <QJsonDocument>
@@ -19,7 +24,7 @@ constexpr int kIdleShutdownMs = 30000;
 }
 
 struct ThumbnailService::Private {
-    struct Job { quint64 id{}; QString path; int edge{}; quint64 epoch{}; bool cancelled{}; };
+    struct Job { quint64 id{}; QString path; int edge{}; quint64 epoch{}; bool cancelled{}; qint64 queued{-1}, started{-1}; std::shared_ptr<glancelot::detail::IoJobLease> admission; };
     struct Worker {
         QProcess* process{};
         QTimer* deadline{};
@@ -42,11 +47,18 @@ struct ThumbnailService::Private {
     QHash<quint64, Immediate> immediate; // cache hits and rejected paths awaiting queued delivery
     QCache<QString, QImage> cache{int(kCacheBytes)};
     QTimer idle;
+    bool pumpQueued{};
 
     Private(ThumbnailService* owner, const QString& workerProgram) : q(owner), program(workerProgram) {
         idle.setSingleShot(true);
         idle.setInterval(kIdleShutdownMs);
         QObject::connect(&idle, &QTimer::timeout, q, [this] { if (activeCount() == 0 && pending.empty()) stopWorkers(false); });
+        QObject::connect(&IoScheduler::instance(),&IoScheduler::admissionAvailable,q,[this]{schedulePump();});
+        QObject::connect(&IoScheduler::instance(),&IoScheduler::profileChanged,q,[this]{schedulePump();});
+    }
+    void schedulePump() {
+        if(pumpQueued)return;pumpQueued=true;
+        QTimer::singleShot(0,q,[this]{pumpQueued=false;pump();});
     }
     static QString key(const QString& path, int edge) { return QString::number(edge) + '|' + path; }
     int activeCount() const { return int(std::count_if(workers.begin(), workers.end(), [](const auto& w) { return w->busy; })); }
@@ -61,21 +73,23 @@ struct ThumbnailService::Private {
         });
     }
     void retire(Worker& worker, bool wait) {
+        auto admission=std::move(worker.job.admission);worker.job={};
         worker.busy = false;
         worker.buffer.clear(); worker.bodyBytes = -1;
         if (worker.deadline) { worker.deadline->stop(); worker.deadline->deleteLater(); worker.deadline = nullptr; }
         if (QProcess* process = worker.process) {
             worker.process = nullptr;
             process->disconnect(q);
-            if (process->state() == QProcess::NotRunning) { process->deleteLater(); return; }
+            if (process->state() == QProcess::NotRunning) { admission.reset();process->deleteLater(); return; }
             process->closeWriteChannel();
             process->kill();
-            if (wait) { process->waitForFinished(3000); delete process; return; }
+            if (wait&&process->waitForFinished(3000)) { admission.reset();delete process;return; }
             // Deleted only after the process has really exited; shutdown() waits for any still listed here.
             retiring.append(process);
-            QObject::connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), process, [this, process] {
-                retiring.removeAll(process);
-                process->deleteLater();
+            glancelot::detail::retireIoProcess(process,std::move(admission),q,[this,retired=QPointer<QProcess>(process)]{
+                // Deferred deletion may clear the pointer before this queued notification.
+                retiring.removeIf([retired](const QPointer<QProcess>& entry){return !entry||entry==retired;});
+                schedulePump();
             });
         }
     }
@@ -87,15 +101,19 @@ struct ThumbnailService::Private {
         retiring.clear();
         for (const QPointer<QProcess>& process : leftovers) {
             if (!process) continue;
-            process->disconnect();
-            process->waitForFinished(3000);
-            delete process.data();
+            process->disconnect(q); // Keep the independent reservation-release connection.
+            if(process->state()==QProcess::NotRunning||process->waitForFinished(3000)) {
+                if(process)delete process.data();
+            }
         }
     }
     bool deliverable(const Job& job) const { return !job.cancelled && job.epoch == epoch; }
 
     void finish(Worker& worker, const QImage& image, const QString& error) {
-        const Job job = worker.job;
+        Job job = worker.job;worker.job={};job.admission.reset();
+        const auto flags = std::uint8_t((job.cancelled ? glancelot::perf::Cancelled : 0)
+            | (job.epoch != epoch ? glancelot::perf::Stale : 0) | (!error.isEmpty() ? glancelot::perf::Failed : 0));
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,job.epoch,job.started,flags,std::uint64_t(image.sizeInBytes()));
         worker.busy = false; worker.buffer.clear(); worker.bodyBytes = -1;
         if (worker.deadline) worker.deadline->stop();
         if (deliverable(job)) {
@@ -110,6 +128,8 @@ struct ThumbnailService::Private {
     void breakWorker(Worker& worker, const QString& error) {
         const Job job = worker.job;
         const bool hadJob = worker.busy;
+        if (hadJob) glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,job.epoch,job.started,
+            std::uint8_t(glancelot::perf::Failed | (job.cancelled ? glancelot::perf::Cancelled : 0) | (job.epoch != epoch ? glancelot::perf::Stale : 0)));
         retire(worker, false);
         if (hadJob && deliverable(job)) emit q->failed(job.id, error);
         // Defer removal so pump() cannot reuse this slot and the vector is not mutated mid-iteration.
@@ -185,14 +205,30 @@ struct ThumbnailService::Private {
     static QString missingMessage() { return "Thumbnail worker is missing. Keep glancelot-decoder next to the viewer."; }
     void pump() {
         while (!pending.empty()) {
+            const auto& candidate = pending.front();
+            const auto targetPath = candidate.path;
+            const int storageWorkerCap = IoScheduler::instance().maxConcurrentBackgroundWorkers(targetPath);
+            const int effectiveMax = std::min(workerCount, storageWorkerCap);
+            const int deadline = std::min(deadlineMs, IoScheduler::instance().recommendedThumbnailDeadlineMs(targetPath));
+
             std::shared_ptr<Worker> idleWorker;
             for (auto& worker : workers) if (worker->process && !worker->busy) { idleWorker = worker; break; }
             if (!idleWorker) {
                 const int live = int(std::count_if(workers.begin(), workers.end(), [](const auto& w) { return w->process != nullptr; }));
-                if (live >= workerCount) break;
+                if (live >= effectiveMax) break;
                 idleWorker = spawn();
             }
+
+            const qint64 estimatedBytes = qint64(candidate.edge) * candidate.edge * 4;
+            auto admission=glancelot::detail::admitIoJob(JobPriority::Thumbnail,estimatedBytes,targetPath);
+            if (!admission) {
+                break;
+            }
+
             idleWorker->job = pending.front(); pending.pop_front();
+            idleWorker->job.admission=std::move(admission);
+            glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,idleWorker->job.epoch,idleWorker->job.queued);
+            idleWorker->job.started = glancelot::perf::detail::begin();
             idleWorker->busy = true; idleWorker->buffer.clear(); idleWorker->bodyBytes = -1;
             if (idleWorker->process->state() == QProcess::NotRunning) {
                 // start() failed synchronously; fail this job on the next turn so callers never see a re-entrant signal.
@@ -203,7 +239,7 @@ struct ThumbnailService::Private {
             const auto request = QJsonDocument(QJsonObject{{"id", double(idleWorker->job.id)}, {"path", idleWorker->job.path}, {"edge", idleWorker->job.edge}})
                                      .toJson(QJsonDocument::Compact) + '\n';
             idleWorker->process->write(request);
-            idleWorker->deadline->start(deadlineMs);
+            idleWorker->deadline->start(deadline);
         }
         if (pending.empty() && activeCount() == 0) idle.start();
         else idle.stop();
@@ -223,12 +259,18 @@ quint64 ThumbnailService::request(const QString& path, int edge, quint64 epoch) 
         d->deliverImmediate(id);
         return id;
     }
-    if (const QImage* hit = d->cache.object(Private::key(path, edge))) {
+    const QImage* hit = [&] {
+        glancelot::perf::ScopedSpan lookup(glancelot::perf::Stage::CacheLookup,epoch);
+        const auto* value = d->cache.object(Private::key(path, edge));
+        if (value) { lookup.setFlags(glancelot::perf::CacheHit); lookup.setBytes(std::uint64_t(value->sizeInBytes())); }
+        return value;
+    }();
+    if (hit) {
         d->immediate.insert(id, {*hit, {}});
         d->deliverImmediate(id);
         return id;
     }
-    d->pending.push_back({id, path, edge, epoch, false});
+    d->pending.push_back({id, path, edge, epoch, false, glancelot::perf::detail::begin(), -1});
     d->pump();
     return id;
 }
@@ -236,7 +278,10 @@ quint64 ThumbnailService::request(const QString& path, int edge, quint64 epoch) 
 void ThumbnailService::cancel(quint64 id) {
     d->immediate.remove(id);
     const auto it = std::find_if(d->pending.begin(), d->pending.end(), [id](const auto& job) { return job.id == id; });
-    if (it != d->pending.end()) d->pending.erase(it);
+    if (it != d->pending.end()) {
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,it->epoch,it->queued,glancelot::perf::Cancelled);
+        d->pending.erase(it);
+    }
     for (auto& worker : d->workers) if (worker->busy && worker->job.id == id) worker->job.cancelled = true;
     if (d->pending.empty() && d->activeCount() == 0) d->idle.start();
 }
@@ -244,6 +289,9 @@ void ThumbnailService::cancel(quint64 id) {
 void ThumbnailService::setEpoch(quint64 epoch) {
     if (epoch == d->epoch) return;
     d->epoch = epoch;
+    for (const auto& job : d->pending) {
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Stale);
+    }
     d->cache.clear(); d->pending.clear(); d->immediate.clear();
     // In-flight jobs finish on their workers but fail the deliverable() epoch check.
 }
@@ -254,6 +302,12 @@ int ThumbnailService::pending() const { return int(d->pending.size()); }
 int ThumbnailService::active() const { return d->activeCount(); }
 qint64 ThumbnailService::cacheBytes() const { return d->cache.totalCost(); }
 void ThumbnailService::shutdown() {
+    for (const auto& job : d->pending) {
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailQueue,job.epoch,job.queued,glancelot::perf::Cancelled);
+    }
+    for (const auto& worker : d->workers) if (worker->busy) {
+        glancelot::perf::detail::finish(glancelot::perf::Stage::ThumbnailDecode,worker->job.epoch,worker->job.started,glancelot::perf::Cancelled);
+    }
     d->pending.clear(); d->immediate.clear(); d->idle.stop();
     d->stopWorkers(true);
 }

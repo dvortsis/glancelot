@@ -1,0 +1,97 @@
+diff --git a/tests/fs_watch_budget_tests.cpp b/tests/fs_watch_budget_tests.cpp
+index 55122d2..96d42bf 100644
+--- a/tests/fs_watch_budget_tests.cpp
++++ b/tests/fs_watch_budget_tests.cpp
+@@ -52,6 +52,11 @@ class FSWatchBudgetTests : public QObject {
+ private slots:
+     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+     void hundredThousandEntriesSustainedWriterKeepsGuiResponsive() {
++        // FS-WATCH-HARNESS-01: declared before fixtures, so the guard also observes their destruction.
++        QElapsedTimer lifetime;lifetime.start();const char* phase="baseline";
++        const auto phaseLog=[&](const char* next){phase=next;qInfo()<<"FS_WATCH_PHASE"<<phase<<"total_ms"<<lifetime.elapsed();};
++        const auto lifetimeLog=qScopeGuard([&]{qInfo()<<"FS_WATCH_LIFETIME last_phase"<<phase<<"total_ms"<<lifetime.elapsed();});
++        phaseLog("baseline");
+         QTemporaryDir dir;QVERIFY(dir.isValid());const auto image=dir.filePath("000000.png");
+         QVERIFY(png(image,Qt::red));const auto original=hash(image);
+         QVector<fs_watch::ModelPublicationStats> publications;
+@@ -76,16 +81,21 @@ private slots:
+         viewer.open(image);QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!grid.loading()&&grid.count()==1,10000);
+         grid.select(0);QCOMPARE(grid.selectedPaths(),QStringList{image});
+         const auto nativeIdentity=fs_watch::probe(fs_watch::native(image)).identity();
++        phaseLog("fixture-generation");
+         QElapsedTimer setup;setup.start();
+-        for(int i=1;i<100000;++i)
++        for(int i=1;i<100000;++i) {
+             QVERIFY(write(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0'))),"generated"));
++            if(i%25000==0)qInfo()<<"FS_WATCH_PROGRESS generated"<<i<<"total_ms"<<lifetime.elapsed();
++        }
+         const auto setupMs=setup.elapsed();
+         publications.clear();
++        phaseLog("initial-publication");
+         QElapsedTimer clock;clock.start();qint64 previous=0,worst=0;
+         QTimer heartbeat;heartbeat.setInterval(1);
+         QObject::connect(&heartbeat,&QTimer::timeout,this,[&]{const auto now=clock.elapsed();worst=std::max(worst,now-previous);previous=now;});
+         heartbeat.start();grid.refresh();
+         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==100000&&viewer.imageReady(),30000);
++        phase="ordinary-writer"; // No synchronous logging while the heartbeat is measured.
+         const auto initialGap=worst;worst=0;previous=clock.elapsed();
+         QSignalSpy invalidations(&viewer,&ViewerController::filesInvalidated);
+         QSignalSpy metadata(&grid,&QAbstractItemModel::dataChanged);
+@@ -102,9 +112,11 @@ private slots:
+         });
+         QTest::qWait(8000);writer.request_stop();writer.join();
+         QVERIFY(!failed.load());QVERIFY(writes.load()>20);
++        phase="ordinary-recovery";
+         QTRY_VERIFY_WITH_TIMEOUT(invalidations.count()>0,10000);
+         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&metadata.count()>0,30000);
+         heartbeat.stop();worst=std::max(worst,clock.elapsed()-previous);
++        phaseLog("ordinary-measurement-complete");
+         qInfo()<<"100000 entries: generated setup"<<setupMs<<"ms; initial GUI gap"<<initialGap
+                <<"ms; sustained-writer/recovery GUI gap"<<worst<<"ms; writes"<<writes.load()<<"invalidations"<<invalidations.count();
+         qint64 maxPublication=-1;bool admittedWithoutPrefix=false;
+@@ -122,6 +134,7 @@ private slots:
+         // Exercise the real active-filter projection at the same dense row limit.
+         // "0" matches every generated name; it cannot hide publication costs.
+         const auto firstFilteredPublication=publications.size();
++        phaseLog("filtered-writer");
+         worst=0;previous=clock.elapsed();heartbeat.start();
+         QElapsedTimer filterChange;filterChange.start();viewer.setFilter("0",true);
+         const auto filterChangeMs=filterChange.elapsed();
+@@ -143,9 +156,11 @@ private slots:
+         });
+         QTest::qWait(2000);filteredWriter.request_stop();filteredWriter.join();
+         QVERIFY(!filteredFailure.load());QVERIFY(filteredWrites.load()>20);
++        phase="filtered-recovery";
+         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.rowOf(destination)>=0&&
+             grid.data(grid.index(grid.rowOf(destination)),DirectoryEntryModel::SizeRole).toLongLong()==filteredSize.load(),30000);
+         heartbeat.stop();worst=std::max(worst,clock.elapsed()-previous);
++        phaseLog("filtered-measurement-complete");
+         qint64 filteredMaximum=-1;bool filteredPublished=false;
+         for(auto i=firstFilteredPublication;i<publications.size();++i) {
+             const auto& value=publications[i];
+@@ -159,11 +174,16 @@ private slots:
+         QVERIFY2(filterChangeMs<250,"100k filter change exceeded the unchanged 250ms GUI budget");
+         QVERIFY2(filteredMaximum<250,"100k filtered publication exceeded the unchanged 250ms GUI budget");
+         QVERIFY2(worst<250,"100k filtered writer exceeded the unchanged 250ms GUI budget");
++        phaseLog("clear-filter");
+         viewer.clearFilter();
+         // Return to a complete observation and rename the selected original.
+         // Keeping a partial baseline instead of the original complete one loses it.
+-        for(int i=1;i<100000;++i)
++        phaseLog("fixture-removal");
++        for(int i=1;i<100000;++i) {
+             QVERIFY(QFile::remove(dir.filePath(QString("%1.dat").arg(i,6,10,QChar('0')))));
++            if(i%25000==0)qInfo()<<"FS_WATCH_PROGRESS removed"<<i<<"total_ms"<<lifetime.elapsed();
++        }
++        phaseLog("rename-complete-baseline");
+         const auto renamed=dir.filePath("renamed.png");QVERIFY(QFile::rename(image,renamed));grid.refresh();
+         QTRY_VERIFY_WITH_TIMEOUT(!grid.loading()&&grid.count()==1&&grid.rowOf(renamed)>=0,10000);
+         for(const auto& value:publications)
+@@ -171,6 +191,7 @@ private slots:
+         if(nativeIdentity.isEmpty())QSKIP("No native identity: budget assertions ran, rename retention is unqualified");
+         QCOMPARE(grid.selectedPaths(),QStringList{renamed});QCOMPARE(grid.cursorRow(),grid.rowOf(renamed));
+         QCOMPARE(hash(renamed),original);
++        phaseLog("fixture-destruction");
+     }
+ };
+ QTEST_MAIN(FSWatchBudgetTests)

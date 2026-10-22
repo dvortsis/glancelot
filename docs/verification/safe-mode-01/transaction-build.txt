@@ -1,0 +1,4 @@
+[1/5] Automatic MOC for target recovery_raw_component
+[2/4] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_file.cpp.obj
+[3/4] Building CXX object CMakeFiles\recovery_raw_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_tests.cpp.obj
+[4/4] Linking CXX executable recovery_raw_component.exe

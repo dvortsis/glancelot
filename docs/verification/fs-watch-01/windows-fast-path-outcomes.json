@@ -1,0 +1,26 @@
+[
+  {
+    "timedOut": false,
+    "exit": 0,
+    "limitSeconds": 30,
+    "name": "metadata-regression"
+  },
+  {
+    "timedOut": false,
+    "exit": 0,
+    "limitSeconds": 30,
+    "name": "cache"
+  },
+  {
+    "timedOut": true,
+    "exit": 124,
+    "limitSeconds": 300,
+    "name": "grid"
+  },
+  {
+    "timedOut": false,
+    "exit": 0,
+    "limitSeconds": 180,
+    "name": "budget"
+  }
+]

@@ -1,0 +1,11 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+if(!(Test-Path .cache/watcher-review-explicit-approval.txt)){throw 'Broader watcher export awaits explicit user approval; do not create the marker without that approval message'}
+git diff --exit-code 796ab411776068a6a7b8d40f26b64930818fd279 HEAD -- src tests include app ui cmake scripts CMakeLists.txt Dockerfile
+if($LASTEXITCODE -ne 0){throw 'Qualified review source/test pin changed'}
+if(git status --porcelain -- src tests include app ui cmake scripts CMakeLists.txt Dockerfile){throw 'Review source/test worktree is dirty'}
+$d='docs/verification/safe-mode-01/sort-status-corrections'
+Get-Content -Raw .cache/watcher-cache-review-prompt.txt | & 'C:/Users/dvort/.vscode/extensions/anthropic.claude-code-2.1.304-win32-x64/resources/native-binary/claude.exe' -p --model claude-sonnet-5-5 --permission-mode plan --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --disallowedTools Bash,Edit,Write,Agent,Task --strict-mcp-config '{"mcpServers":{}}' --no-session-persistence --output-format json > "$d/watcher-claude-result.json" 2> "$d/watcher-claude-stderr.txt"
+$code=$LASTEXITCODE
+"review_exit=$code" | Set-Content "$d/watcher-claude-status.txt"
+exit $code

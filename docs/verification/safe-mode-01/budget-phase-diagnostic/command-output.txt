@@ -1,0 +1,25 @@
+'vswhere.exe' is not recognized as an internal or external command,
+operable program or batch file.
+warning: in the working copy of 'tests/fs_watch_budget_tests.cpp', LF will be replaced by CRLF the next time Git touches it
+[1/4] Automatic MOC and UIC for target fs_watch_budget_tests
+[2/3] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\tests\fs_watch_budget_tests.cpp.obj
+[3/3] Linking CXX executable fs_watch_budget_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+    Start 20: fs_watch_budget
+1/1 Test #20: fs_watch_budget ..................   Passed   96.29 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =  96.43 sec
+[1/4] Automatic MOC and UIC for target fs_watch_budget_tests
+[2/3] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\tests\fs_watch_budget_tests.cpp.obj
+[3/3] Linking CXX executable fs_watch_budget_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+    Start 20: fs_watch_budget
+1/1 Test #20: fs_watch_budget ..................   Passed   85.43 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =  85.52 sec
+source_diff_exit=0
+diagnostic_script_exit=0

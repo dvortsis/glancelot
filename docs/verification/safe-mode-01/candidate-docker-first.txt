@@ -1,0 +1,582 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 3.37kB 0.2s done
+#1 DONE 0.9s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 3.4s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.1s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 0.5s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 136B 0.1s done
+#7 DONE 0.2s
+
+#8 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#8 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.1s done
+#8 DONE 0.1s
+
+#9 [qt 3/5] RUN python3 -m venv /opt/aqt && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==3.3.0 && /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+#9 CACHED
+
+#10 [qt 4/5] RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
+#10 CACHED
+
+#11 [qt 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-venv build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libxkbcommon-x11-0 libegl1 && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [qt 5/5] RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [internal] load build context
+#13 transferring context: 10.66MB 4.7s
+#13 transferring context: 13.06MB 5.6s done
+#13 DONE 5.8s
+
+#14 [build  1/13] RUN apt-get update && apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri && rm -rf /var/lib/apt/lists/*
+#14 6.699 Get:1 http://archive.ubuntu.com/ubuntu noble InRelease [256 kB]
+#14 6.973 Get:2 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+#14 7.047 Get:3 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+#14 7.187 Get:4 http://archive.ubuntu.com/ubuntu noble/universe amd64 Packages [19.3 MB]
+#14 8.675 Get:5 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages [1808 kB]
+#14 8.810 Get:6 http://archive.ubuntu.com/ubuntu noble/restricted amd64 Packages [117 kB]
+#14 8.818 Get:7 http://archive.ubuntu.com/ubuntu noble/multiverse amd64 Packages [331 kB]
+#14 8.844 Get:8 http://archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [2231 kB]
+#14 9.058 Get:9 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1729 kB]
+#14 9.140 Get:10 http://archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Packages [61.7 kB]
+#14 9.144 Get:11 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [2168 kB]
+#14 9.236 Get:12 http://archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Packages [669 B]
+#14 9.236 Get:13 http://archive.ubuntu.com/ubuntu noble-backports/main amd64 Packages [49.0 kB]
+#14 9.237 Get:14 http://archive.ubuntu.com/ubuntu noble-backports/universe amd64 Packages [36.0 kB]
+#14 16.14 Get:15 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+#14 16.93 Get:16 http://security.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [2122 kB]
+#14 17.94 Get:17 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Packages [1549 kB]
+#14 18.06 Get:18 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Packages [55.6 kB]
+#14 18.06 Get:19 http://security.ubuntu.com/ubuntu noble-security/main amd64 Packages [1410 kB]
+#14 18.40 Fetched 33.6 MB in 13s (2672 kB/s)
+#14 18.40 Reading package lists...
+#14 20.30 Reading package lists...
+#14 22.28 Building dependency tree...
+#14 22.58 Reading state information...
+#14 22.97 libgl1-mesa-dri is already the newest version (25.2.8-0ubuntu0.24.04.4).
+#14 22.97 libgl1-mesa-dri set to manually installed.
+#14 22.97 The following additional packages will be installed:
+#14 22.97   libfontenc1 libice6 libpixman-1-0 libsm6 libunwind8 libxaw7 libxfont2
+#14 22.97   libxkbfile1 libxmu6 libxmuu1 libxpm4 libxrandr2 libxrender1 libxt6t64
+#14 22.97   x11-common x11-xkb-utils xauth xserver-common
+#14 22.97 Recommended packages:
+#14 22.97   xfonts-base
+#14 23.05 The following NEW packages will be installed:
+#14 23.06   libfontenc1 libice6 libpixman-1-0 libsm6 libunwind8 libxaw7 libxfont2
+#14 23.06   libxkbfile1 libxmu6 libxmuu1 libxpm4 libxrandr2 libxrender1 libxt6t64
+#14 23.06   x11-common x11-xkb-utils xauth xserver-common xvfb
+#14 23.27 0 upgraded, 19 newly installed, 0 to remove and 2 not upgraded.
+#14 23.27 Need to get 2189 kB of archives.
+#14 23.27 After this operation, 6100 kB of additional disk space will be used.
+#14 23.27 Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libxmuu1 amd64 2:1.1.3-3build2 [8958 B]
+#14 23.33 Get:2 http://archive.ubuntu.com/ubuntu noble/main amd64 xauth amd64 1:1.1.2-1build1 [25.6 kB]
+#14 23.39 Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libfontenc1 amd64 1:1.1.8-1build1 [14.0 kB]
+#14 23.41 Get:4 http://archive.ubuntu.com/ubuntu noble/main amd64 x11-common all 1:7.7+23ubuntu3 [21.7 kB]
+#14 23.44 Get:5 http://archive.ubuntu.com/ubuntu noble/main amd64 libice6 amd64 2:1.0.10-1build3 [41.4 kB]
+#14 23.48 Get:6 http://archive.ubuntu.com/ubuntu noble/main amd64 libpixman-1-0 amd64 0.42.2-1build1 [279 kB]
+#14 23.60 Get:7 http://archive.ubuntu.com/ubuntu noble/main amd64 libsm6 amd64 2:1.2.3-1build3 [15.7 kB]
+#14 23.60 Get:8 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libunwind8 amd64 1.6.2-3build1.1 [55.3 kB]
+#14 23.61 Get:9 http://archive.ubuntu.com/ubuntu noble/main amd64 libxt6t64 amd64 1:1.2.1-1.2build1 [171 kB]
+#14 23.64 Get:10 http://archive.ubuntu.com/ubuntu noble/main amd64 libxmu6 amd64 2:1.1.3-3build2 [47.6 kB]
+#14 23.64 Get:11 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libxpm4 amd64 1:3.5.17-1ubuntu0.24.04.2 [36.7 kB]
+#14 23.65 Get:12 http://archive.ubuntu.com/ubuntu noble/main amd64 libxaw7 amd64 2:1.0.14-1build2 [187 kB]
+#14 23.67 Get:13 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libxfont2 amd64 1:2.0.6-1+deb13u1build0.24.04.2 [94.0 kB]
+#14 23.68 Get:14 http://archive.ubuntu.com/ubuntu noble/main amd64 libxkbfile1 amd64 1:1.1.0-1build4 [70.0 kB]
+#14 23.68 Get:15 http://archive.ubuntu.com/ubuntu noble/main amd64 libxrender1 amd64 1:0.9.10-1.1build1 [19.0 kB]
+#14 23.68 Get:16 http://archive.ubuntu.com/ubuntu noble/main amd64 libxrandr2 amd64 2:1.5.2-2build1 [19.7 kB]
+#14 23.69 Get:17 http://archive.ubuntu.com/ubuntu noble/main amd64 x11-xkb-utils amd64 7.7+8build2 [170 kB]
+#14 23.70 Get:18 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 xserver-common all 2:21.1.12-1ubuntu1.9 [35.0 kB]
+#14 23.70 Get:19 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 xvfb amd64 2:21.1.12-1ubuntu1.9 [877 kB]
+#14 24.15 debconf: delaying package configuration, since apt-utils is not installed
+#14 24.25 Fetched 2189 kB in 1s (3324 kB/s)
+#14 24.33 Selecting previously unselected package libxmuu1:amd64.
+#14 24.33 (Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 17216 files and directories currently installed.)
+#14 24.56 Preparing to unpack .../00-libxmuu1_2%3a1.1.3-3build2_amd64.deb ...
+#14 24.58 Unpacking libxmuu1:amd64 (2:1.1.3-3build2) ...
+#14 24.68 Selecting previously unselected package xauth.
+#14 24.68 Preparing to unpack .../01-xauth_1%3a1.1.2-1build1_amd64.deb ...
+#14 24.69 Unpacking xauth (1:1.1.2-1build1) ...
+#14 24.78 Selecting previously unselected package libfontenc1:amd64.
+#14 24.79 Preparing to unpack .../02-libfontenc1_1%3a1.1.8-1build1_amd64.deb ...
+#14 24.79 Unpacking libfontenc1:amd64 (1:1.1.8-1build1) ...
+#14 24.89 Selecting previously unselected package x11-common.
+#14 24.89 Preparing to unpack .../03-x11-common_1%3a7.7+23ubuntu3_all.deb ...
+#14 24.90 Unpacking x11-common (1:7.7+23ubuntu3) ...
+#14 25.03 Selecting previously unselected package libice6:amd64.
+#14 25.03 Preparing to unpack .../04-libice6_2%3a1.0.10-1build3_amd64.deb ...
+#14 25.04 Unpacking libice6:amd64 (2:1.0.10-1build3) ...
+#14 25.15 Selecting previously unselected package libpixman-1-0:amd64.
+#14 25.15 Preparing to unpack .../05-libpixman-1-0_0.42.2-1build1_amd64.deb ...
+#14 25.16 Unpacking libpixman-1-0:amd64 (0.42.2-1build1) ...
+#14 25.28 Selecting previously unselected package libsm6:amd64.
+#14 25.28 Preparing to unpack .../06-libsm6_2%3a1.2.3-1build3_amd64.deb ...
+#14 25.33 Unpacking libsm6:amd64 (2:1.2.3-1build3) ...
+#14 25.41 Selecting previously unselected package libunwind8:amd64.
+#14 25.42 Preparing to unpack .../07-libunwind8_1.6.2-3build1.1_amd64.deb ...
+#14 25.43 Unpacking libunwind8:amd64 (1.6.2-3build1.1) ...
+#14 25.55 Selecting previously unselected package libxt6t64:amd64.
+#14 25.56 Preparing to unpack .../08-libxt6t64_1%3a1.2.1-1.2build1_amd64.deb ...
+#14 25.57 Unpacking libxt6t64:amd64 (1:1.2.1-1.2build1) ...
+#14 25.65 Selecting previously unselected package libxmu6:amd64.
+#14 25.66 Preparing to unpack .../09-libxmu6_2%3a1.1.3-3build2_amd64.deb ...
+#14 25.67 Unpacking libxmu6:amd64 (2:1.1.3-3build2) ...
+#14 25.75 Selecting previously unselected package libxpm4:amd64.
+#14 25.75 Preparing to unpack .../10-libxpm4_1%3a3.5.17-1ubuntu0.24.04.2_amd64.deb ...
+#14 25.76 Unpacking libxpm4:amd64 (1:3.5.17-1ubuntu0.24.04.2) ...
+#14 25.84 Selecting previously unselected package libxaw7:amd64.
+#14 25.84 Preparing to unpack .../11-libxaw7_2%3a1.0.14-1build2_amd64.deb ...
+#14 25.85 Unpacking libxaw7:amd64 (2:1.0.14-1build2) ...
+#14 25.92 Selecting previously unselected package libxfont2:amd64.
+#14 25.93 Preparing to unpack .../12-libxfont2_1%3a2.0.6-1+deb13u1build0.24.04.2_amd64.deb ...
+#14 25.94 Unpacking libxfont2:amd64 (1:2.0.6-1+deb13u1build0.24.04.2) ...
+#14 26.03 Selecting previously unselected package libxkbfile1:amd64.
+#14 26.04 Preparing to unpack .../13-libxkbfile1_1%3a1.1.0-1build4_amd64.deb ...
+#14 26.06 Unpacking libxkbfile1:amd64 (1:1.1.0-1build4) ...
+#14 26.14 Selecting previously unselected package libxrender1:amd64.
+#14 26.14 Preparing to unpack .../14-libxrender1_1%3a0.9.10-1.1build1_amd64.deb ...
+#14 26.15 Unpacking libxrender1:amd64 (1:0.9.10-1.1build1) ...
+#14 26.23 Selecting previously unselected package libxrandr2:amd64.
+#14 26.23 Preparing to unpack .../15-libxrandr2_2%3a1.5.2-2build1_amd64.deb ...
+#14 26.24 Unpacking libxrandr2:amd64 (2:1.5.2-2build1) ...
+#14 26.30 Selecting previously unselected package x11-xkb-utils.
+#14 26.31 Preparing to unpack .../16-x11-xkb-utils_7.7+8build2_amd64.deb ...
+#14 26.32 Unpacking x11-xkb-utils (7.7+8build2) ...
+#14 26.40 Selecting previously unselected package xserver-common.
+#14 26.40 Preparing to unpack .../17-xserver-common_2%3a21.1.12-1ubuntu1.9_all.deb ...
+#14 26.41 Unpacking xserver-common (2:21.1.12-1ubuntu1.9) ...
+#14 26.47 Selecting previously unselected package xvfb.
+#14 26.47 Preparing to unpack .../18-xvfb_2%3a21.1.12-1ubuntu1.9_amd64.deb ...
+#14 26.48 Unpacking xvfb (2:21.1.12-1ubuntu1.9) ...
+#14 26.59 Setting up libpixman-1-0:amd64 (0.42.2-1build1) ...
+#14 26.62 Setting up libxpm4:amd64 (1:3.5.17-1ubuntu0.24.04.2) ...
+#14 26.68 Setting up libxrender1:amd64 (1:0.9.10-1.1build1) ...
+#14 26.72 Setting up x11-common (1:7.7+23ubuntu3) ...
+#14 27.19 invoke-rc.d: could not determine current runlevel
+#14 27.20 invoke-rc.d: policy-rc.d denied execution of start.
+#14 27.22 Setting up libunwind8:amd64 (1.6.2-3build1.1) ...
+#14 27.25 Setting up libfontenc1:amd64 (1:1.1.8-1build1) ...
+#14 27.27 Setting up libxrandr2:amd64 (2:1.5.2-2build1) ...
+#14 27.30 Setting up libxkbfile1:amd64 (1:1.1.0-1build4) ...
+#14 27.33 Setting up libxfont2:amd64 (1:2.0.6-1+deb13u1build0.24.04.2) ...
+#14 27.35 Setting up libxmuu1:amd64 (2:1.1.3-3build2) ...
+#14 27.38 Setting up libice6:amd64 (2:1.0.10-1build3) ...
+#14 27.40 Setting up xauth (1:1.1.2-1build1) ...
+#14 27.43 Setting up libsm6:amd64 (2:1.2.3-1build3) ...
+#14 27.45 Setting up libxt6t64:amd64 (1:1.2.1-1.2build1) ...
+#14 27.49 Setting up libxmu6:amd64 (2:1.1.3-3build2) ...
+#14 27.51 Setting up libxaw7:amd64 (2:1.0.14-1build2) ...
+#14 27.54 Setting up x11-xkb-utils (7.7+8build2) ...
+#14 27.57 Setting up xserver-common (2:21.1.12-1ubuntu1.9) ...
+#14 27.61 Setting up xvfb (2:21.1.12-1ubuntu1.9) ...
+#14 27.68 Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+#14 DONE 28.2s
+
+#15 [build  2/13] WORKDIR /src
+#15 DONE 0.1s
+
+#16 [build  3/13] COPY CMakeLists.txt ./
+#16 DONE 0.1s
+
+#17 [build  4/13] COPY cmake cmake
+#17 DONE 0.1s
+
+#18 [build  5/13] COPY app app
+#18 DONE 0.2s
+
+#19 [build  6/13] COPY assets assets
+#19 DONE 0.2s
+
+#20 [build  7/13] COPY include include
+#20 DONE 0.1s
+
+#21 [build  8/13] COPY src src
+#21 DONE 0.2s
+
+#22 [build  9/13] COPY ui ui
+#22 DONE 0.1s
+
+#23 [build 10/13] COPY tests tests
+#23 DONE 0.1s
+
+#24 [build 11/13] COPY scripts scripts
+#24 DONE 0.1s
+
+#25 [build 12/13] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+#25 0.722 -- The CXX compiler identification is GNU 13.3.0
+#25 0.791 -- Detecting CXX compiler ABI info
+#25 0.949 -- Detecting CXX compiler ABI info - done
+#25 0.970 -- Check for working CXX compiler: /usr/bin/c++ - skipped
+#25 0.974 -- Detecting CXX compile features
+#25 0.976 -- Detecting CXX compile features - done
+#25 1.011 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+#25 1.214 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+#25 1.219 -- Found Threads: TRUE  
+#25 1.323 -- Performing Test HAVE_STDATOMIC
+#25 1.645 -- Performing Test HAVE_STDATOMIC - Success
+#25 1.647 -- Found WrapAtomic: TRUE  
+#25 1.739 -- Found OpenGL: /usr/lib/x86_64-linux-gnu/libOpenGL.so   
+#25 1.741 -- Found WrapOpenGL: TRUE  
+#25 1.761 -- Found XKB: /usr/lib/x86_64-linux-gnu/libxkbcommon.so (Required is at least version "0.5.0") 
+#25 1.782 -- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+#25 2.604 -- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+#25 2.908 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 2.908 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 2.926 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 2.926 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 2.945 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 2.946 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 3.275 -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+#25 3.411 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 3.411 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 3.411 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 3.411 for more information.
+#25 4.012 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 4.012 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 4.012 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 4.012 for more information.
+#25 4.179 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 4.179 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 4.179 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 4.179 for more information.
+#25 4.379 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 4.379 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 4.379 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 4.379 for more information.
+#25 4.660 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 4.660 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 4.660 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 4.660 for more information.
+#25 4.799 -- Configuring done (4.3s)
+#25 6.041 -- Generating done (1.0s)
+#25 6.060 -- Build files have been written to: /build
+#25 11.27 [1/398] Building CXX object CMakeFiles/glancelot_core.dir/src/core/perf_trace.cpp.o
+#25 12.04 [2/398] Building CXX object CMakeFiles/glancelot_core.dir/src/core/file_operations.cpp.o
+#25 13.81 [3/398] Building CXX object CMakeFiles/glancelot_core.dir/src/core/directory_listing.cpp.o
+#25 14.11 [4/398] Building CXX object CMakeFiles/perf_trace_tests.dir/tests/perf_trace_tests.cpp.o
+#25 15.53 [5/398] Building CXX object CMakeFiles/glancelot_core.dir/src/core/navigation.cpp.o
+#25 15.56 [6/398] Linking CXX static library libglancelot_core.a
+#25 15.69 [7/398] Linking CXX executable perf_trace_tests
+#25 17.95 [8/398] Automatic MOC and UIC for target glancelot_platform
+#25 17.97 [9/398] Copying glancelot qml sources into build dir
+#25 17.99 [10/398] Copying glancelot qml resources into build dir
+#25 18.07 [11/398] Automatic MOC and UIC for target glancelot_recovery_common
+#25 20.08 [12/398] Automatic MOC and UIC for target pane_layout_tests
+#25 20.16 [13/398] Automatic MOC and UIC for target fs_watch_decoder_fixture
+#25 20.33 [14/398] Running qmlimportscanner for thumbnail_tests
+#25 20.33 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 20.33 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 20.33 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 20.33 for more information.
+#25 20.49 [15/398] Running qmlimportscanner for grid_ui_tests
+#25 20.49 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 20.49 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 20.49 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 20.49 for more information.
+#25 20.64 [16/398] Running qmlimportscanner for canvas_tests
+#25 20.64 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 20.64 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 20.64 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 20.64 for more information.
+#25 20.80 [17/398] Running qmlimportscanner for fs_watch_ui_tests
+#25 20.80 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 20.80 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 20.80 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 20.80 for more information.
+#25 20.97 [18/398] Running qmlimportscanner for glancelot
+#25 20.97 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 20.97 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 20.97 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 20.97 for more information.
+#25 20.97 [19/398] Building CXX object CMakeFiles/directory_listing_tests.dir/tests/directory_listing_tests.cpp.o
+#25 21.09 [20/398] Linking CXX executable directory_listing_tests
+#25 21.65 [21/398] Building CXX object CMakeFiles/navigation_tests.dir/tests/navigation_tests.cpp.o
+#25 21.79 [22/398] Linking CXX executable navigation_tests
+#25 22.17 [23/398] Building CXX object CMakeFiles/file_operations_tests.dir/tests/file_operations_tests.cpp.o
+#25 22.28 [24/398] Linking CXX executable file_operations_tests
+#25 26.23 [25/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/platform_integration.cpp.o
+#25 28.25 [26/398] Building CXX object CMakeFiles/glancelot_platform.dir/glancelot_platform_autogen/mocs_compilation.cpp.o
+#25 28.35 [27/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/io_scheduler.cpp.o
+#25 33.61 [28/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/metadata_parser.cpp.o
+#25 35.10 [29/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/metadata_model.cpp.o
+#25 36.24 [30/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/mutation_service.cpp.o
+#25 36.27 [31/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/glancelot_recovery_common_autogen/mocs_compilation.cpp.o
+#25 36.73 [32/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/animation_controller.cpp.o
+#25 40.40 [33/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/raw_preview.cpp.o
+#25 41.47 [34/398] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/copy_move_service.cpp.o
+#25 41.51 [35/398] Linking CXX static library libglancelot_platform.a
+#25 44.65 [36/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_recovery.cpp.o
+#25 46.58 [37/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_policy.cpp.o
+#25 48.26 [38/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_diff.cpp.o
+#25 52.70 [39/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_restore.cpp.o
+#25 55.12 [40/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/recovery_checkpoint.cpp.o
+#25 55.22 [41/398] Automatic MOC and UIC for target glancelot-decoder
+#25 55.25 [42/398] Building CXX object CMakeFiles/glancelot-decoder.dir/glancelot-decoder_autogen/mocs_compilation.cpp.o
+#25 56.38 [43/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/recovery_session.cpp.o
+#25 58.40 [44/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/command_registry.cpp.o
+#25 61.56 [45/398] Building CXX object CMakeFiles/glancelot_recovery_common.dir/app/settings_maintenance.cpp.o
+#25 61.62 [46/398] Linking CXX static library libglancelot_recovery_common.a
+#25 63.39 [47/398] Building CXX object CMakeFiles/pane_layout_tests.dir/pane_layout_tests_autogen/mocs_compilation.cpp.o
+#25 66.93 [48/398] Building CXX object CMakeFiles/glancelot-decoder.dir/src/worker/main.cpp.o
+#25 67.93 [49/398] Linking CXX executable glancelot-decoder
+#25 68.17 [50/398] Generating .qsb/src/render/image.vert.qsb
+#25 68.17 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 68.17 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 68.17 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 68.17 for more information.
+#25 68.33 [51/398] Generating .qsb/src/render/image.frag.qsb
+#25 68.33 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 68.33 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 68.33 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 68.33 for more information.
+#25 70.77 [52/398] Automatic MOC and UIC for target thumbnail_tests
+#25 73.71 [53/398] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/pane_layout.cpp.o
+#25 74.21 [54/398] Automatic MOC and UIC for target glancelot
+#25 74.23 [55/398] Running rcc for resource qmake_Glancelot
+#25 74.23 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 74.23 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 74.23 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 74.23 for more information.
+#25 74.28 [56/398] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+#25 74.28 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 74.28 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 74.28 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 74.28 for more information.
+#25 74.81 [57/398] Running rcc for resource glancelot_raw_qml_0
+#25 74.81 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 74.81 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 74.81 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 74.81 for more information.
+#25 74.86 [58/398] Running rcc for resource glancelot_raw_qml_0_extra_qmldirs
+#25 74.86 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 74.86 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 74.86 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 74.86 for more information.
+#25 75.49 [59/398] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/settings_file.cpp.o
+#25 75.51 [60/398] Running rcc for resource ui_fonts
+#25 75.51 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 75.51 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 75.51 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 75.51 for more information.
+#25 75.57 [61/398] Running rcc for resource brand_assets
+#25 75.57 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 75.57 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 75.57 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 75.57 for more information.
+#25 75.58 [62/398] Running rcc for resource canvas_shaders
+#25 75.58 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 75.58 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 75.58 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 75.58 for more information.
+#25 75.60 [63/398] Running AUTOMOC file extraction for target glancelot
+#25 75.63 [64/398] Running moc --collect-json for target glancelot
+#25 75.77 [65/398] Automatic QML type registration for target glancelot
+#25 75.77 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 75.77 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 75.77 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 75.77 for more information.
+#25 76.21 [66/398] Automatic MOC and UIC for target acceptance_tests
+#25 76.36 [67/398] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+#25 76.36 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 76.36 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 76.36 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 76.36 for more information.
+#25 76.58 [68/398] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+#25 76.58 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 76.58 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 76.58 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 76.58 for more information.
+#25 76.85 [69/398] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+#25 76.85 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 76.85 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 76.85 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 76.85 for more information.
+#25 76.95 [70/398] Running rcc for resource brand_images
+#25 76.95 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 76.95 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 76.95 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 76.95 for more information.
+#25 77.09 [71/398] Building CXX object CMakeFiles/pane_layout_tests.dir/tests/pane_layout_tests.cpp.o
+#25 77.45 [72/398] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+#25 77.45 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 77.45 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 77.45 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 77.45 for more information.
+#25 77.51 [73/398] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+#25 77.51 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 77.51 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 77.51 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 77.51 for more information.
+#25 77.51 [74/398] Linking CXX executable pane_layout_tests
+#25 77.51 FAILED: pane_layout_tests 
+#25 77.51 : && /usr/bin/c++ -O3 -DNDEBUG  CMakeFiles/pane_layout_tests.dir/pane_layout_tests_autogen/mocs_compilation.cpp.o CMakeFiles/pane_layout_tests.dir/tests/pane_layout_tests.cpp.o CMakeFiles/pane_layout_tests.dir/src/app/pane_layout.cpp.o CMakeFiles/pane_layout_tests.dir/src/app/settings_file.cpp.o -o pane_layout_tests  -Wl,-rpath,/opt/Qt/6.8.3/gcc_64/lib  /opt/Qt/6.8.3/gcc_64/lib/libQt6Test.so.6.8.3  /opt/Qt/6.8.3/gcc_64/lib/libQt6Core.so.6.8.3 && :
+#25 77.51 /usr/bin/ld: CMakeFiles/pane_layout_tests.dir/src/app/settings_file.cpp.o: in function `glancelot::settings_detail::transact(glancelot::settings_detail::Request const&, std::function<glancelot::settings_detail::Edit (glancelot::settings_detail::View const&)> const&, std::function<glancelot::settings_detail::Seal (glancelot::recovery::RawSnapshot const&)> const&)':
+#25 77.51 settings_file.cpp:(.text+0x20e3): undefined reference to `glancelot::recovery::raw::resolve(glancelot::recovery::Context const&, glancelot::recovery::Options, QString&, QString&)'
+#25 77.51 /usr/bin/ld: settings_file.cpp:(.text+0x2ab8): undefined reference to `glancelot::recovery::raw::readLocked(QString const&, QString const&, glancelot::recovery::Options)'
+#25 77.51 /usr/bin/ld: settings_file.cpp:(.text+0x4900): undefined reference to `glancelot::recovery::raw::classify(QByteArray)'
+#25 77.51 /usr/bin/ld: settings_file.cpp:(.text+0x4952): undefined reference to `glancelot::recovery::raw::classify(QByteArray)'
+#25 77.51 /usr/bin/ld: settings_file.cpp:(.text+0x4964): undefined reference to `glancelot::recovery::raw::revision(glancelot::recovery::RawMember const&, glancelot::recovery::RawMember const&)'
+#25 77.51 collect2: error: ld returned 1 exit status
+#25 77.53 [75/398] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+#25 77.53 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 77.53 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 77.53 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 77.53 for more information.
+#25 77.64 [76/398] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+#25 77.64 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 77.64 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 77.64 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 77.64 for more information.
+#25 77.83 [77/398] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+#25 77.83 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 77.83 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 77.83 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 77.83 for more information.
+#25 77.83 ninja: build stopped: subcommand failed.
+#25 ERROR: process "/bin/sh -c cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4" did not complete successfully: exit code: 1
+------
+ > [build 12/13] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4:
+77.64 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+77.64 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+77.64 If this causes problems, reconfigure your locale. See the locale(1) manual
+77.64 for more information.
+77.83 [77/398] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+77.83 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+77.83 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+77.83 If this causes problems, reconfigure your locale. See the locale(1) manual
+77.83 for more information.
+77.83 ninja: build stopped: subcommand failed.
+------
+Dockerfile:21
+--------------------
+  19 |     COPY tests tests
+  20 |     COPY scripts scripts
+  21 | >>> RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+  22 |     RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+  23 |     
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4" did not complete successfully: exit code: 1
+51664 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build -t glancelot-browser:main .
+github.com/docker/buildx/commands.runBuildWithOptions
+	github.com/docker/buildx/commands/build.go:504
+github.com/docker/buildx/commands.runBuild
+	github.com/docker/buildx/commands/build.go:419
+github.com/docker/buildx/commands.buildCmd.func1
+	github.com/docker/buildx/commands/build.go:540
+github.com/docker/cli/cli-plugins/plugin.RunPlugin.func1.1.2
+	github.com/docker/cli@v29.6.2+incompatible/cli-plugins/plugin/plugin.go:65
+github.com/spf13/cobra.(*Command).execute
+	github.com/spf13/cobra@v1.10.2/command.go:1015
+github.com/spf13/cobra.(*Command).ExecuteC
+	github.com/spf13/cobra@v1.10.2/command.go:1148
+github.com/spf13/cobra.(*Command).Execute
+	github.com/spf13/cobra@v1.10.2/command.go:1071
+github.com/docker/cli/cli-plugins/plugin.RunPlugin
+	github.com/docker/cli@v29.6.2+incompatible/cli-plugins/plugin/plugin.go:80
+main.runPlugin
+	github.com/docker/buildx/cmd/buildx/main.go:66
+main.run
+	github.com/docker/buildx/cmd/buildx/main.go:80
+main.main
+	github.com/docker/buildx/cmd/buildx/main.go:90
+runtime.main
+	runtime/proc.go:290
+runtime.goexit
+	runtime/asm_amd64.s:1771
+
+115  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json
+github.com/moby/buildkit/executor/runcexecutor.exitError
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/executor/runcexecutor/executor.go:434
+github.com/moby/buildkit/executor/runcexecutor.(*runcExecutor).Run
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/executor/runcexecutor/executor.go:382
+github.com/moby/buildkit/solver/llbsolver/ops.(*ExecOp).Exec
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/exec.go:524
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1248
+github.com/moby/buildkit/util/flightcontrol.(*call[...]).run
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/util/flightcontrol/flightcontrol.go:122
+sync.(*Once).doSlow
+	/usr/local/go/src/sync/once.go:78
+sync.(*Once).Do
+	/usr/local/go/src/sync/once.go:69
+runtime.goexit
+	/usr/local/go/src/runtime/asm_amd64.s:1771
+
+51664 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build -t glancelot-browser:main .
+google.golang.org/grpc.(*ClientConn).Invoke
+	google.golang.org/grpc@v1.82.1/call.go:35
+github.com/moby/buildkit/api/services/control.(*controlClient).Solve
+	github.com/moby/buildkit@v0.32.2/api/services/control/control_grpc.pb.go:88
+github.com/moby/buildkit/client.(*Client).solve.func2
+	github.com/moby/buildkit@v0.32.2/client/solve.go:337
+golang.org/x/sync/errgroup.(*Group).Go.func1
+	golang.org/x/sync@v0.22.0/errgroup/errgroup.go:93
+runtime.goexit
+	runtime/asm_amd64.s:1771
+
+115  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json
+github.com/moby/buildkit/solver.(*edge).execOp
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/edge.go:979
+github.com/moby/buildkit/solver/internal/pipe.NewWithFunction[...].func2
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/internal/pipe/pipe.go:78
+runtime.goexit
+	/usr/local/go/src/runtime/asm_amd64.s:1771
+
+51664 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build -t glancelot-browser:main .
+github.com/moby/buildkit/client.(*Client).solve.func2
+	github.com/moby/buildkit@v0.32.2/client/solve.go:339
+golang.org/x/sync/errgroup.(*Group).Go.func1
+	golang.org/x/sync@v0.22.0/errgroup/errgroup.go:93
+
+115  /usr/local/bin/dockerd --config-file /run/config/docker/daemon.json
+github.com/moby/buildkit/solver/llbsolver/ops.(*ExecOp).Exec
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/llbsolver/ops/exec.go:555
+github.com/moby/buildkit/solver.(*sharedOp).Exec.func2
+	/root/build-deb/engine/vendor/github.com/moby/buildkit/solver/jobs.go:1248
+
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/udkfxtgkisvrjgqrf3jz59060

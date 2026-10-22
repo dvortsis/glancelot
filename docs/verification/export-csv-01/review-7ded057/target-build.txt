@@ -1,0 +1,26 @@
+-- The CXX compiler identification is MSVC 19.44.35229.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - not found
+-- Found Threads: TRUE
+-- Configuring done (5.4s)
+-- Generating done (0.1s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-review-export-csv-01/build-codex-review-export-csv-01
+[1/8] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[2/8] Building CXX object CMakeFiles\glancelot_core.dir\src\core\file_operations.cpp.obj
+[3/8] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-review-export-csv-01\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[4/8] Building CXX object CMakeFiles\selection_export_tests.dir\tests\selection_export_tests.cpp.obj
+[5/8] Building CXX object CMakeFiles\glancelot_core.dir\src\core\selection_export.cpp.obj
+[6/8] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-review-export-csv-01\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[7/8] Linking CXX static library glancelot_core.lib
+[8/8] Linking CXX executable selection_export_tests.exe

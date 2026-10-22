@@ -1,0 +1,123 @@
+[1/121] Automatic MOC and UIC for target glancelot_recovery_common
+[2/121] Automatic MOC and UIC for target glancelot_platform
+[3/121] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[4/121] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[5/121] Building CXX object CMakeFiles\glancelot_core.dir\src\core\file_operations.cpp.obj
+[6/121] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[7/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\platform_integration.cpp.obj
+[8/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\io_scheduler.cpp.obj
+[9/121] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[10/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_model.cpp.obj
+[11/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\mutation_service.cpp.obj
+[12/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_parser.cpp.obj
+[13/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\glancelot_recovery_common_autogen\mocs_compilation.cpp.obj
+[14/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\animation_controller.cpp.obj
+[15/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\raw_preview.cpp.obj
+[16/121] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\copy_move_service.cpp.obj
+[17/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj
+[18/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_recovery.cpp.obj
+[19/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_diff.cpp.obj
+[20/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_session.cpp.obj
+[21/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_restore.cpp.obj
+[22/121] Linking CXX static library glancelot_core.lib
+[23/121] Linking CXX static library glancelot_platform.lib
+[24/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_checkpoint.cpp.obj
+[25/121] Copying glancelot qml sources into build dir
+[26/121] Copying glancelot qml resources into build dir
+[27/121] Automatic MOC and UIC for target glancelot-decoder
+[28/121] Building CXX object CMakeFiles\glancelot-decoder.dir\glancelot-decoder_autogen\mocs_compilation.cpp.obj
+[29/121] Running qmlimportscanner for glancelot
+[30/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\command_registry.cpp.obj
+[31/121] Building CXX object CMakeFiles\glancelot_recovery_common.dir\app\settings_maintenance.cpp.obj
+[32/121] Linking CXX static library glancelot_recovery_common.lib
+[33/121] Automatic MOC and UIC for target glancelot
+[34/121] Running AUTOMOC file extraction for target glancelot
+[35/121] Generating .qsb/src/render/image.vert.qsb
+[36/121] Generating .qsb/src/render/image.frag.qsb
+[37/121] Running moc --collect-json for target glancelot
+[38/121] Running rcc for resource qmake_Glancelot
+[39/121] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+[40/121] Running rcc for resource glancelot_raw_qml_0
+[41/121] Running rcc for resource glancelot_raw_qml_0_extra_qmldirs
+[42/121] Running rcc for resource brand_assets
+[43/121] Running rcc for resource ui_fonts
+[44/121] Automatic QML type registration for target glancelot
+[45/121] Running rcc for resource canvas_shaders
+[46/121] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+[47/121] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+[48/121] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+[49/121] Building CXX object CMakeFiles\glancelot-decoder.dir\src\worker\main.cpp.obj
+[50/121] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[51/121] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[52/121] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+[53/121] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+[54/121] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+[55/121] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+[56/121] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+[57/121] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+[58/121] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+[59/121] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+[60/121] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+[61/121] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+[62/121] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+[63/121] Running rcc for resource brand_images
+[64/121] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+[65/121] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+[66/121] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+[67/121] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+[68/121] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+[69/121] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+[70/121] Linking CXX executable glancelot-decoder.exe
+[71/121] Building CXX object CMakeFiles\glancelot.dir\src\app\theme_manager.cpp.obj
+[72/121] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[73/121] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[74/121] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[75/121] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[76/121] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_service.cpp.obj
+[77/121] Building CXX object CMakeFiles\glancelot.dir\src\app\filmstrip_model.cpp.obj
+[78/121] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_provider.cpp.obj
+[79/121] Building CXX object CMakeFiles\glancelot.dir\src\app\folder_tree_model.cpp.obj
+[80/121] Building CXX object CMakeFiles\glancelot.dir\src\app\pane_layout.cpp.obj
+[81/121] Building CXX object CMakeFiles\glancelot.dir\src\app\directory_entry_model.cpp.obj
+[82/121] Building CXX object CMakeFiles\glancelot.dir\src\app\favorites_model.cpp.obj
+[83/121] Building CXX object CMakeFiles\glancelot.dir\src\app\settings_file.cpp.obj
+[84/121] Building CXX object CMakeFiles\glancelot.dir\src\app\window_slot.cpp.obj
+[85/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_qmake_Glancelot.cpp.obj
+[86/121] Building CXX object CMakeFiles\glancelot.dir\src\app\folder_history.cpp.obj
+[87/121] Building CXX object CMakeFiles\glancelot.dir\glancelot_qmltyperegistrations.cpp.obj
+[88/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_qmlcache_loader.cpp.obj
+[89/121] Building CXX object CMakeFiles\glancelot.dir\src\app\file_operation_service.cpp.obj
+[90/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\Theme_qml.cpp.obj
+[91/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[92/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\ThemePicker_qml.cpp.obj
+[93/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\Filmstrip_qml.cpp.obj
+[94/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[95/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\PhotoGrid_qml.cpp.obj
+[96/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\PaneArrangement_qml.cpp.obj
+[97/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\SettingsDialog_qml.cpp.obj
+[98/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\SettingRow_qml.cpp.obj
+[99/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiButton_qml.cpp.obj
+[100/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiComboBox_qml.cpp.obj
+[101/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiDialog_qml.cpp.obj
+[102/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiScrollBar_qml.cpp.obj
+[103/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiIcon_qml.cpp.obj
+[104/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiSwitch_qml.cpp.obj
+[105/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\UiTextField_qml.cpp.obj
+[106/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\ShortcutCheatSheet_qml.cpp.obj
+[107/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\DeleteFlow_qml.cpp.obj
+[108/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\MetadataHud_qml.cpp.obj
+[109/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[110/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_glancelot_raw_qml_0_extra_qmldirs.cpp.obj
+[111/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\AnimationBar_qml.cpp.obj
+[112/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_brand_assets.cpp.obj
+[113/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_ui_fonts.cpp.obj
+[114/121] Building RC object CMakeFiles\glancelot.dir\app\glancelot.rc.res
+[115/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_canvas_shaders.cpp.obj
+[116/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\RenameFlow_qml.cpp.obj
+[117/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.qt\rcc\qrc_brand_images.cpp.obj
+[118/121] Building CXX object CMakeFiles\glancelot.dir\build-codex-safe-mode-01\release\.rcc\qmlcache\glancelot_ui\TransferHud_qml.cpp.obj
+[119/121] Building CXX object CMakeFiles\glancelot.dir\app\startup_intent.cpp.obj
+[120/121] Building CXX object CMakeFiles\glancelot.dir\app\startup_environment.cpp.obj
+[121/121] Linking CXX executable glancelot.exe

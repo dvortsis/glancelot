@@ -1,0 +1,24 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/sort-status-corrections'
+& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Run {
+ if((git rev-parse HEAD) -ne '03bd32687b0e47cc71306d7667927eeb896785e3'){throw 'Linux evidence pin changed'}
+ # Export the same successful cached build stage; do not present this as a second executed test gate.
+ docker build --target build -t glancelot-safe-mode-verification:03bd326 .
+ if($LASTEXITCODE -ne 0){throw 'Verification stage export failed'}
+ $containerId=(& docker create glancelot-safe-mode-verification:03bd326 /bin/true).Trim()
+ if($LASTEXITCODE -ne 0 -or $containerId -notmatch '^[0-9a-f]{64}$'){throw 'Evidence container creation failed'}
+ try {
+  New-Item -ItemType Directory -Force "$d/linux-raw" | Out-Null
+  docker cp "${containerId}:/build/recovery-process" "$d/linux-raw/recovery-process"
+  if($LASTEXITCODE -ne 0){throw 'Process evidence copy failed'}
+  foreach($file in @('recovery-results.txt','recovery-startup-results.txt','recovery-controller-results.txt','fs-watch-results.txt','fs-watch-budget-results.txt')) {
+   docker cp "${containerId}:/build/$file" "$d/linux-raw/$file"
+   if($LASTEXITCODE -ne 0){throw "Evidence copy failed: $file"}
+  }
+  docker cp "${containerId}:/build/Testing/Temporary/LastTest.log" "$d/linux-raw/LastTest.log"
+  if($LASTEXITCODE -ne 0){throw 'CTest evidence copy failed'}
+ } finally {
+  docker rm $containerId
+ }
+}

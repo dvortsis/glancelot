@@ -1,0 +1,21 @@
+import hashlib,json,subprocess
+from pathlib import Path
+root=Path("docs/verification/safe-mode-01/lead-integration-2026-10-21")
+groups=[root/p for p in ("windows-first-process","windows-isolated-process","windows-qtlog-process","windows-qtstderr-process","linux-raw/recovery-process")]
+algorithm=subprocess.check_output(["git","rev-parse","--show-object-format"],text=True).strip()
+data=subprocess.check_output(["git","ls-files","--stage","-z","--",*[p.as_posix() for p in groups]])
+mismatches=[];count=0
+for entry in data.split(b"\0"):
+    if not entry:continue
+    head,name=entry.split(b"\t",1)
+    mode,expected,stage=head.split()
+    if stage!=b"0":raise RuntimeError("Unmerged index entry")
+    p=Path(name.decode("utf-8"))
+    raw=p.read_bytes()
+    actual=hashlib.new(algorithm,b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
+    count+=1
+    if actual!=expected.decode():mismatches.append(p.as_posix())
+result={"staged_raw_members_checked":count,"byte_mismatches":mismatches}
+(root/"raw-evidence-index-byte-check.json").write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
+print(json.dumps(result))
+if not count or mismatches:raise SystemExit(1)

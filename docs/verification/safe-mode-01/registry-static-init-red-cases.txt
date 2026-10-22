@@ -1,0 +1,14 @@
+********* Start testing of RecoveryStartupTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : RecoveryStartupTests::initTestCase()
+FAIL!  : RecoveryStartupTests::registryDefaultsNeedNoViewerOrPreferences() Compared values are not the same
+   Actual   (earlyRegistrySize)                  : 0
+   Expected (glancelot::commandRegistry().size()): 66
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_startup_tests.cpp(28) : failure location
+PASS   : RecoveryStartupTests::restoredUserChoiceWinsOverNewCommandDefault()
+PASS   : RecoveryStartupTests::reservedEscapeAndPrefixConflictsRefuse()
+PASS   : RecoveryStartupTests::unknownFutureBindingNeverBecomesActive()
+PASS   : RecoveryStartupTests::ordinaryLoaderKeepsLegacyWrongTypeFallback()
+PASS   : RecoveryStartupTests::cleanupTestCase()
+Totals: 6 passed, 1 failed, 0 skipped, 0 blacklisted, 12ms
+********* Finished testing of RecoveryStartupTests *********

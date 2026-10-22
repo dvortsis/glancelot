@@ -7,6 +7,7 @@
 #include "../src/app/file_grid_wiring.hpp"
 #include "../src/app/file_operation_wiring.hpp"
 #include "glancelot/file_operation_service.hpp"
+#include "glancelot/file_operations.hpp"
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "image_canvas.hpp"
@@ -24,6 +25,8 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QRegularExpression>
+#include <QSemaphore>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QWheelEvent>
 #include <QWindow>
@@ -65,7 +68,7 @@ struct Harness {
     FileOperationService fileOperations;
     QQmlApplicationEngine engine;
     QQuickWindow* window{};
-    Harness() {
+    explicit Harness(std::unique_ptr<glancelot::TrashBackend> backend = {}) : fileOperations(std::move(backend)) {
         QStringList imports = engine.importPathList();
         imports.removeAll(QCoreApplication::applicationDirPath()); // load the UI from source, not a build-tree module
         engine.setImportPathList(imports);

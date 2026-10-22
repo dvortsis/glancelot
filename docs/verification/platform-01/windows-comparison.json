@@ -1,0 +1,31 @@
+{
+  "added": [],
+  "archive_bytes_equal": false,
+  "artifacts": [
+    {
+      "path": "platform-windows-clean-a/Glancelot-windows-x86_64.zip",
+      "sha256": "c0dba2b38aa0679e28cf5dad09b79dbe279180e686137f086604ce7f01e7eba9"
+    },
+    {
+      "path": "platform-windows-clean-b/Glancelot-windows-x86_64.zip",
+      "sha256": "91fe80709d3ca1e2318b8f69aacbe651035c116b813e534fe11ab3c0080e5e8a"
+    }
+  ],
+  "changed": [
+    "bin/glancelot-decoder.exe",
+    "bin/glancelot.exe"
+  ],
+  "compiled_source_commit": "765a84efc0bae712006e767bf59a9f63a4196399",
+  "executables_equal": false,
+  "independent_builds": 2,
+  "metadata_equal": true,
+  "packaging_commit": "e4532d2",
+  "payloads_equal": false,
+  "removed": [],
+  "repackaged_existing_independent_builds": true,
+  "schema": 1,
+  "source_commit": "765a84efc0bae712006e767bf59a9f63a4196399",
+  "source_date_epoch": 1792381582,
+  "status": "different",
+  "target": "windows"
+}

@@ -1,0 +1,15 @@
+{
+  "app_version": "0.1.0-alpha.1",
+  "build_type": "Release",
+  "cmake_version": "3.28.3",
+  "compiler_id": "GNU",
+  "compiler_version": "13.3.0",
+  "cxx_standard": 20,
+  "flags": [
+    "-O3",
+    "-DNDEBUG",
+    "-std=c++20",
+    "-fPIC"
+  ],
+  "qt_version": "6.8.3"
+}

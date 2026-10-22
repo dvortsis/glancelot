@@ -1,0 +1,1 @@
+All 229 registry literal/flag/platform tokens exactly match integrated main, including five presentation commands.

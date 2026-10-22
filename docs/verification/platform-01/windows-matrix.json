@@ -1,0 +1,156 @@
+{
+  "checks": [
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "package.integrity",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "package.qt-isolation",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "decode.generated-png",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "decode.generated-jpeg",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "render.source-colors",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "decoder.missing-sibling",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "source.no-write",
+      "status": "passed"
+    },
+    {
+      "id": "package.elf-closure",
+      "reason": "No independent ELF dependency report supplied.",
+      "status": "unverified"
+    },
+    {
+      "evidence": [
+        "repeat_builds"
+      ],
+      "id": "reproducibility.executables_equal",
+      "status": "failed"
+    },
+    {
+      "evidence": [
+        "repeat_builds"
+      ],
+      "id": "reproducibility.archive_bytes_equal",
+      "status": "failed"
+    },
+    {
+      "id": "CANVAS-UI.physical-dpi",
+      "reason": "Operator must measure 100/125/150/200 percent and cross-monitor transitions on named displays.",
+      "status": "unverified"
+    },
+    {
+      "id": "CANVAS-UI.physical-refresh",
+      "reason": "Measure input/presentation traces on named 60/144 Hz displays; 240 Hz remains conditional.",
+      "status": "unverified"
+    },
+    {
+      "id": "COLOR-01.icc-hdr",
+      "reason": "Use a calibrated reference and named profiles/output modes; software RGB counts do not establish color accuracy.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R1",
+      "reason": "Measure versioned 12/24/45/60 MP fixtures on the actual 16 GiB/NVMe/iGPU reference configuration.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R2",
+      "reason": "Measure actual 8 GiB/HDD or explicitly throttled storage conditions.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R3",
+      "reason": "Measure named discrete GPU and mixed-DPI/display conditions.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R4",
+      "reason": "Measure controlled SMB storage, including disconnect/recovery and source integrity.",
+      "status": "unverified"
+    },
+    {
+      "id": "PLATFORM.native-linux",
+      "reason": "Record native X11/Wayland compositor/driver evidence; a container software-GL run is insufficient.",
+      "status": "unverified"
+    },
+    {
+      "id": "PLATFORM.clean-windows",
+      "reason": "Run without development tools on an independently provisioned Windows machine and record runtime prerequisites.",
+      "status": "unverified"
+    }
+  ],
+  "declared_reference_case": "W-NATIVE",
+  "evidence": [
+    {
+      "name": "smoke.json",
+      "role": "package_smoke",
+      "sha256": "07ffe33371650a40f281002e3f80467135bf3a943b9e167fa078e6a91a1d34c7"
+    },
+    {
+      "name": "platform-windows-clean-comparison.json",
+      "role": "repeat_builds",
+      "sha256": "cfd7601024148ab0f4b5077ad4ecce5c8dd466578763c8e98e38e9f253b63fa2"
+    }
+  ],
+  "manifest_sha256": "e891d14ef2846f696cc20ffff198d61edde63f31d368743e7c2d8b526be7a22e",
+  "observations": {
+    "device_pixel_ratio": 1,
+    "environment": {
+      "active_gpu_identity": "unverified",
+      "cpu_affinity_count": null,
+      "filesystem_cache_state": "uncontrolled",
+      "logical_cpu_count_visible": 20,
+      "machine": "AMD64",
+      "os": "Windows",
+      "power_thermal_state": "uncontrolled",
+      "python": "3.14.8",
+      "release": "11",
+      "version": "10.0.26200"
+    },
+    "first_image_frame_ms": 703,
+    "graphics_api": 4
+  },
+  "physical_gates_closed": false,
+  "schema": 1,
+  "source": {
+    "commit": "765a84efc0bae712006e767bf59a9f63a4196399",
+    "dirty": false,
+    "origin": "declared"
+  },
+  "target": "windows-x86_64"
+}

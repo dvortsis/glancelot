@@ -1,0 +1,12 @@
+********* Start testing of MonitorOutputTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorOutputTests::initTestCase()
+FAIL!  : MonitorOutputTests::testIndependentReferenceViewSurvivesTemporarilyMissingImage() 'qAbs(restored[key].toDouble()-saved[key].toDouble())<1e-6' returned FALSE. (zoom)
+C:\src\Github\Glancelot\.worktrees\codex-monitor-output-r2\tests\monitor_output_tests.cpp(34) : failure location
+FAIL!  : MonitorOutputTests::testColorStatusNotifiesWhenPresentationCloses() Compared values are not the same
+   Actual   (changed.count()): 0
+   Expected (1)              : 1
+C:\src\Github\Glancelot\.worktrees\codex-monitor-output-r2\tests\monitor_output_tests.cpp(46) : failure location
+PASS   : MonitorOutputTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 14ms
+********* Finished testing of MonitorOutputTests *********

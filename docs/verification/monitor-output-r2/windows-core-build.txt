@@ -1,0 +1,29 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (6.2s)
+-- Generating done (1.1s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-monitor-output-r2/build-codex-monitor-output-r2
+[1/17] Automatic MOC and UIC for target glancelot_platform
+[2/17] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[3/17] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[4/17] Linking CXX static library glancelot_platform.lib
+[5/17] Generating .qsb/src/render/image.frag.qsb
+[6/17] Automatic MOC and UIC for target glancelot-decoder
+[7/16] Linking CXX executable glancelot-decoder.exe
+[8/16] Automatic MOC and UIC for target monitor_output_tests
+[9/16] Running rcc for resource monitor_output_shaders
+[10/16] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\presentation_window.cpp.obj
+[11/16] Building CXX object CMakeFiles\monitor_output_tests.dir\monitor_output_tests_autogen\mocs_compilation.cpp.obj
+[12/16] Building CXX object CMakeFiles\monitor_output_tests.dir\build-codex-monitor-output-r2\.qt\rcc\qrc_monitor_output_shaders.cpp.obj
+[13/16] Building CXX object CMakeFiles\monitor_output_tests.dir\tests\monitor_output_tests.cpp.obj
+[14/16] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\viewer_controller.cpp.obj
+[15/16] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\image_canvas.cpp.obj
+[16/16] Linking CXX executable monitor_output_tests.exe
