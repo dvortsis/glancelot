@@ -859,9 +859,9 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     owner_lane: gemini
     reviewer_lane: codex or claude (first free reviewer slot; never gemini)
     state: review
-    review_verdict: CHANGES REQUIRED at 7ded057bdc706c0040d8ed7b321ee53985753d08; independent Codex review b925b26, published main1226d33
-    review_evidence: docs/verification/EXPORT-CSV-01-CODEX-REVIEW.md
-    blocked_by: Gemini correction commit for no-replace publication, final-item cancellation/progress bound, Unicode destination, mixed identity duplicates and lexical relative-root policy; new pinned commit and actual tests required before re-review
+    review_verdict: CHANGES REQUIRED at d3df4ed1a368fcd4a1668ffd005524dc6e319b0c (second review); independent Claude review bf3d4c1a750b0f3ef29f29fc13c8eee4cf499326 on claude/review-export-csv-01-r2. Earlier CHANGES REQUIRED at 7ded057bdc706c0040d8ed7b321ee53985753d08 by Codex b925b26, published main1226d33
+    review_evidence: docs/verification/EXPORT-CSV-01-CODEX-REVIEW.md; docs/verification/EXPORT-CSV-01-CLAUDE-REVIEW.md and docs/verification/export-csv-01/review-d3df4ed-claude/ (on claude/review-export-csv-01-r2 at bf3d4c1, not yet on main)
+    blocked_by: Gemini correction commit for four required corrections from the d3df4ed review. (1) Remove the destination-filename branch at src/core/selection_export.cpp:361 (production code keyed on test name cancel-1), call progress unconditionally, rework cancel tests with ordinary destination names (cancel at done==0 and on the last item's callback; drop cancel at done==total), assert Cancelled, destination unchanged, no temp left. (2) Unicode destination and directory test with a progress callback supplied; assert Written and no leftover .glancelot_export_*.tmp; exception-safe (RAII) temp cleanup. (3) Real symlink/junction regression for the lexical relative-root policy, shown to fail against the fs::relative form. (4) Replace O(n^2) per-pair filesystem dedup with hash sets (known identities plus lexically normalised, Windows case-folded path key for unknown) and add a bounded-time test (about 5000 unknown-identity items in seconds); SYS-02. New pinned commit and actual test output required before re-review. Linux/Docker still unverified.
     depends: [DELETE-01]
     branch: agent/export-csv
     worktree: .worktrees/export-csv
