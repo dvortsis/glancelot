@@ -37,6 +37,18 @@ fs::path pathFromUtf8(const std::string& s) {
     return fs::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
 }
 
+int countTempFiles(const fs::path& dir) {
+    int count = 0;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(dir, ec)) {
+        std::wstring name = entry.path().filename().wstring();
+        if (name.find(L".glancelot_export_") != std::wstring::npos) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 struct Fixture {
     fs::path root;
     Fixture() {
@@ -416,17 +428,36 @@ void testReviewerProbes() {
         check(r.written == 1 && r.skipped.size() == 1, "mixed identity duplicates must use lexical path fallback");
     }
 
-    // 2. Cancellation and once-per-item progress
-    for (int stage = 0; stage < 2; ++stage) {
+    // 2. Cancellation and once-per-item progress (ordinary destination names, single-item and multi-item)
+    {
+        // Single item cancel at done == 0
         ExportRequest q; q.items = {known}; q.overwrite = true;
-        q.destination = f.file("cancel-" + std::to_string(stage) + ".csv", "original");
+        q.destination = f.file("cancel-single.csv", "original");
         std::stop_source stop; std::size_t calls = 0;
         auto r = exportSelection(q, stop.get_token(), [&](auto done, auto total) {
             ++calls;
-            if ((stage == 0 && done == 0) || (stage == 1 && done == total)) stop.request_stop();
+            if (done == 0) stop.request_stop();
         });
-        check(r.status == ExportStatus::Cancelled && readFile(q.destination) == "original", "last-item/completion cancellation must preserve destination");
-        check(calls <= q.items.size(), "progress no more than once per item");
+        check(r.status == ExportStatus::Cancelled && readFile(q.destination) == "original", "single-item start cancellation preserves destination");
+        check(calls == 1 && calls <= q.items.size(), "progress called once for single-item cancel");
+        check(countTempFiles(f.root) == 0, "no temp files left after single-item cancel");
+    }
+    {
+        // Multi-item cancel at last item callback (done + 1 == total)
+        auto p2 = f.file("source2.png", "source2");
+        auto snap2 = snapshotTarget(p2, ec);
+        ExportItem known2{p2, TargetKind::File, snap2->identity, snap2->bytes, snap2->modified};
+
+        ExportRequest q; q.items = {known, known2}; q.overwrite = true;
+        q.destination = f.file("cancel-multi.csv", "original");
+        std::stop_source stop; std::size_t calls = 0;
+        auto r = exportSelection(q, stop.get_token(), [&](auto done, auto total) {
+            ++calls;
+            if (done + 1 == total) stop.request_stop();
+        });
+        check(r.status == ExportStatus::Cancelled && readFile(q.destination) == "original", "multi-item last item callback cancel preserves destination");
+        check(calls == 2 && calls <= q.items.size(), "progress called no more than once per item on multi-item cancel");
+        check(countTempFiles(f.root) == 0, "no temp files left after multi-item cancel");
     }
 
     // 3. No overwrite race
@@ -439,35 +470,86 @@ void testReviewerProbes() {
                 created = true;
             }
         });
+        check(r.status == ExportStatus::DestinationExists, "status DestinationExists on late destination collision");
         check(readFile(q.destination) == "created-after-precheck", "overwrite=false must not replace a destination created during export");
+        check(countTempFiles(f.root) == 0, "no temp file left after overwrite race");
     }
 
-    // 4. Unicode destination
-#ifdef _WIN32
+    // 4. Unicode destination and directory with progress callback
     {
+        auto uniDir = f.root / fs::path(L"目錄-\U0001f4c1");
+        fs::create_directories(uniDir);
         ExportRequest q; q.items = {known};
-        q.destination = f.root / fs::path(L"\u6e2c\u8a66-\U0001f5bc.csv");
+        q.destination = uniDir / fs::path(L"測試-\U0001f5bc.csv");
+        std::size_t progressCalls = 0;
         try {
-            auto r = exportSelection(q);
-            check(r.status == ExportStatus::Written, "Unicode destination must export successfully");
+            auto r = exportSelection(q, {}, [&](auto done, auto total) {
+                ++progressCalls;
+            });
+            check(r.status == ExportStatus::Written, "Unicode destination with progress callback must export successfully");
             check(fs::exists(q.destination), "Unicode destination file exists");
+            check(progressCalls == 1, "progress callback invoked for Unicode destination");
+            check(countTempFiles(uniDir) == 0, "no leftover temp in unicode dir");
         } catch (const std::exception& e) {
             check(false, std::string("Unicode destination must not throw: ") + e.what());
         }
     }
-#endif
 
-    // 5. Lexical relative root
+    // 5. Deterministic link regression for lexical relative-root policy
     {
-        auto root = f.dir("relative-root");
-        auto sub = f.dir("relative-root/alias");
-        auto img = f.file("relative-root/alias/image.png", "img");
-        ExportRequest q; q.destination = f.root / "lexical-relative.csv";
-        q.revalidate = false; q.pathPolicy = PathPolicy::RelativeToRoot; q.root = root;
-        q.columns = {ExportColumn::Path};
-        q.items = {ExportItem{img}};
+        auto root = f.dir("relative-root-link");
+        auto outside = f.dir("outside-root-link");
+        write(outside / "image.png", "img_link");
+        bool linkCreated = false;
+#ifdef _WIN32
+        std::error_code linkEc;
+        fs::create_directory_symlink(outside, root / "alias", linkEc);
+        if (!linkEc) {
+            linkCreated = true;
+        } else {
+            std::string cmd = "cmd /c mklink /J \"" + (root / "alias").string() + "\" \"" + outside.string() + "\" >nul 2>&1";
+            if (std::system(cmd.c_str()) == 0) {
+                linkCreated = true;
+            }
+        }
+#else
+        std::error_code linkEc;
+        fs::create_directory_symlink(outside, root / "alias", linkEc);
+        if (!linkEc) linkCreated = true;
+#endif
+        if (linkCreated) {
+            ExportRequest q; q.destination = f.root / "lexical-relative-link.csv";
+            q.revalidate = false; q.pathPolicy = PathPolicy::RelativeToRoot; q.root = root;
+            q.columns = {ExportColumn::Path};
+            q.items = {ExportItem{root / "alias/image.png"}};
+            auto r = exportSelection(q);
+            check(r.written == 1 && r.skipped.empty(), "relative-root contract compares lexical paths across link");
+            std::string csv = readFile(q.destination);
+            check(csv.find("alias/image.png") != std::string::npos, "output path is alias/image.png");
+        }
+    }
+
+    // 6. Bounded-time deduplication test (SYS-02)
+    {
+        ExportRequest q;
+        q.destination = f.root / "perf-unknown-dedup.csv";
+        q.revalidate = false;
+        const int uniqueCount = 5000;
+        const int dupeCount = 1000;
+        q.items.reserve(uniqueCount + dupeCount);
+        for (int i = 0; i < uniqueCount; ++i) {
+            q.items.push_back(ExportItem{f.root / ("perf_item_" + std::to_string(i) + ".png")});
+        }
+        for (int i = 0; i < dupeCount; ++i) {
+            q.items.push_back(ExportItem{f.root / ("perf_item_" + std::to_string(i) + ".png")});
+        }
+        auto t0 = std::chrono::steady_clock::now();
         auto r = exportSelection(q);
-        check(r.written == 1 && r.skipped.empty(), "relative-root contract compares lexical paths");
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+        check(r.status == ExportStatus::Written, "perf unknown dedup status Written");
+        check(r.written == uniqueCount, "5000 unique items written");
+        check(r.skipped.size() == dupeCount, "1000 duplicates skipped");
+        check(ms < 5000, "5000 items dedup completed in bounded time (took " + std::to_string(ms) + " ms)");
     }
 }
 

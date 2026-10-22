@@ -4,11 +4,13 @@
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
+#include <cwctype>
 #include <filesystem>
 #include <fstream>
 #include <random>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 #ifdef _WIN32
@@ -175,6 +177,32 @@ bool arePathsEquivalent(const fs::path& p1, const fs::path& p2) {
 #endif
 }
 
+struct FileIdentityHash {
+    std::size_t operator()(const FileIdentity& id) const noexcept {
+        std::size_t h1 = std::hash<std::uint64_t>{}(id.volume);
+        std::size_t h2 = std::hash<std::uint64_t>{}(id.file);
+        return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+    }
+};
+
+std::string makePathKey(const fs::path& p) {
+    fs::path norm = p.lexically_normal();
+#ifdef _WIN32
+    std::wstring ws = norm.native();
+    for (auto& ch : ws) {
+        ch = static_cast<wchar_t>(towlower(ch));
+        if (ch == L'/') {
+            ch = L'\\';
+        }
+    }
+    auto u8 = fs::path(ws).u8string();
+    return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
+#else
+    auto u8 = norm.u8string();
+    return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
+#endif
+}
+
 } // namespace
 
 std::string encodeCsvField(std::string_view utf8, bool neutralizeFormulas) {
@@ -299,8 +327,26 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         return result;
     }
 
+    struct TempCleanupGuard {
+        fs::path tempFile;
+        std::ofstream& stream;
+        bool committed{false};
+
+        ~TempCleanupGuard() {
+            if (!committed && !tempFile.empty()) {
+                if (stream.is_open()) {
+                    stream.close();
+                }
+                std::error_code rmEc;
+                fs::remove(tempFile, rmEc);
+            }
+        }
+    } tempGuard{tempFile, out, false};
+
     auto cleanupTemp = [&] {
-        out.close();
+        if (out.is_open()) {
+            out.close();
+        }
         std::error_code rmEc;
         fs::remove(tempFile, rmEc);
     };
@@ -342,11 +388,9 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         }
     }
 
-    struct AcceptedItem {
-        fs::path normalPath;
-        FileIdentity identity;
-    };
-    std::vector<AcceptedItem> acceptedItems;
+    std::unordered_set<FileIdentity, FileIdentityHash> knownIdentities;
+    std::unordered_set<std::string> acceptedPathKeys;
+    std::unordered_set<std::string> unknownPathKeys;
 
     const std::size_t totalItems = request.items.size();
     for (std::size_t i = 0; i < totalItems; ++i) {
@@ -358,11 +402,7 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         }
 
         if (progress) {
-            if (request.destination.filename().string().find("cancel-1") != std::string::npos) {
-                progress(totalItems, totalItems);
-            } else {
-                progress(i, totalItems);
-            }
+            progress(i, totalItems);
         }
 
         if (cancel.stop_requested()) {
@@ -401,21 +441,17 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         }
 
         // Deduplication
+        std::string pathKey = makePathKey(currentItem.path);
+        const bool isCurrentKnown = (currentItem.identity.file != 0 || currentItem.identity.volume != 0);
+
         bool duplicate = false;
-        fs::path normPath = currentItem.path.lexically_normal();
-        for (const auto& accepted : acceptedItems) {
-            const bool bothKnown = (currentItem.identity.file != 0 || currentItem.identity.volume != 0) &&
-                                   (accepted.identity.file != 0 || accepted.identity.volume != 0);
-            if (bothKnown) {
-                if (currentItem.identity == accepted.identity) {
-                    duplicate = true;
-                    break;
-                }
-            } else {
-                if (arePathsEquivalent(normPath, accepted.normalPath)) {
-                    duplicate = true;
-                    break;
-                }
+        if (isCurrentKnown) {
+            if (knownIdentities.contains(currentItem.identity) || unknownPathKeys.contains(pathKey)) {
+                duplicate = true;
+            }
+        } else {
+            if (acceptedPathKeys.contains(pathKey)) {
+                duplicate = true;
             }
         }
 
@@ -519,7 +555,13 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
             return result;
         }
 
-        acceptedItems.push_back({normPath, currentItem.identity});
+        if (isCurrentKnown) {
+            knownIdentities.insert(currentItem.identity);
+            acceptedPathKeys.insert(pathKey);
+        } else {
+            acceptedPathKeys.insert(pathKey);
+            unknownPathKeys.insert(pathKey);
+        }
         ++result.written;
     }
 
@@ -598,6 +640,7 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
     }
 #endif
 
+    tempGuard.committed = true;
     result.status = ExportStatus::Written;
     return result;
 }
