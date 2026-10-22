@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QStringList>
 #include <QVariantMap>
 #include <QJsonObject>
 
@@ -11,6 +12,8 @@ class PaneLayout final : public QObject {
     Q_PROPERTY(bool locked READ locked WRITE setLocked NOTIFY changed)
     Q_PROPERTY(QString feedback READ feedback NOTIFY changed)
     Q_PROPERTY(QString contentMode READ contentMode NOTIFY changed)   // "preview" | "grid" | "combined"
+    // F049 named layout presets: three built-ins plus up to 12 user presets stored once for all windows ("layoutPresets").
+    Q_PROPERTY(QStringList presetNames READ presetNames NOTIFY presetsChanged)
 public:
     explicit PaneLayout(QObject* parent=nullptr);
     QVariantMap panes() const;
@@ -33,8 +36,14 @@ public:
     // that packet; unused declarations do not change the current runtime.
     QVariantMap snapshot() const;
     bool restoreSnapshot(const QVariantMap& snapshot);
+    QStringList presetNames() const;                                  // built-ins first, then user presets by name
+    Q_INVOKABLE bool isBuiltInPreset(const QString& name) const;
+    Q_INVOKABLE bool savePreset(const QString& name);                 // current geometry, visibility and content mode; not lock or freeze
+    Q_INVOKABLE bool applyPreset(const QString& name);                // refused while locked or while any pane is frozen
+    Q_INVOKABLE bool deletePreset(const QString& name);               // user presets only
 signals:
     void changed();
+    void presetsChanged();
 private:
     int slot_{};
     bool locked_{};
@@ -44,6 +53,10 @@ private:
     QJsonObject center_{{"orientation","horizontal"},{"ratio",0.5}};
     QString mode_{QStringLiteral("preview")};
     bool editCenter(const QJsonObject& fields);
+    QJsonObject userPresets() const;
+    QJsonObject presetObject(const QString& name) const;
+    void persistWhole();
+    QStringList builtIns() const;
     static QJsonObject defaults();
     void load();
     bool edit(const QString& id,const QJsonObject& fields,bool geometry);

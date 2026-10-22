@@ -42,6 +42,13 @@ class ViewerController : public QObject {
     Q_PROPERTY(bool sortDescending READ sortDescending WRITE setSortDescending NOTIFY stateChanged)
     Q_PROPERTY(qreal textScale READ textScale WRITE setTextScale NOTIFY stateChanged)
     Q_PROPERTY(bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY stateChanged)
+    // F053: a high-contrast palette (WCAG AAA text and non-text contrast) and 44 px touch-sized targets. Both persist.
+    // F015 tabs (shape A: a tab is a saved location; switching navigates). Empty while there is one tab. At most 8 tabs; they persist
+    // with the window's position and restore with the active one navigated.
+    Q_PROPERTY(QVariantList tabs READ tabs NOTIFY tabsChanged)
+    Q_PROPERTY(int activeTab READ activeTab NOTIFY tabsChanged)
+    Q_PROPERTY(bool highContrast READ highContrast WRITE setHighContrast NOTIFY stateChanged)
+    Q_PROPERTY(bool largeTargets READ largeTargets WRITE setLargeTargets NOTIFY stateChanged)
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterChanged)
     Q_PROPERTY(bool filterPersistent READ isFilterPersistent WRITE setFilterPersistent NOTIFY filterChanged)
     Q_PROPERTY(bool hasFilter READ hasFilter NOTIFY filterChanged)
@@ -64,6 +71,13 @@ public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
     QImage image() const;
+    // F040 reference window: a pinned copy of the current photo (shares its pixels, so it costs no decode or memory beyond
+    // the one image) that stays put while the main window browses on. Empty until pinned.
+    Q_PROPERTY(QImage referenceImage READ referenceImage NOTIFY referenceChanged)
+    Q_PROPERTY(QString referenceName READ referenceName NOTIFY referenceChanged)
+    QImage referenceImage() const; QString referenceName() const;
+    Q_INVOKABLE bool pinReference();   // false when no photo has decoded
+    Q_INVOKABLE void clearReference();
     QString filePath() const; QString fileName() const; QString directory() const; QString status() const;
     // True only when the currently requested file decoded successfully; a retained old image is not a success.
     bool imageReady() const;
@@ -89,6 +103,9 @@ public:
     Q_INVOKABLE QString bindingConflict(const QString& id, const QString& sequence) const;
     // The portable text of one key press (as it appears in a binding step), so panes can tell whether a key is remapped.
     Q_INVOKABLE QString keyStep(int key, int modifiers) const;
+    // Why `sequence` cannot be saved for `id` (reserved Escape, too many steps, a hold that needs one key, or the command it
+    // would take a key from), in a sentence for the user; empty when it can. Clearing ("") is always fine.
+    Q_INVOKABLE QString bindingProblem(const QString& id, const QString& sequence) const;
     bool filmstripVisible() const; void setFilmstripVisible(bool visible);
     bool canRaiseRoot() const;
     bool treeVisible() const; void setTreeVisible(bool visible);
@@ -105,6 +122,9 @@ public:
     // Exact asynchronous address visit; empty directories are valid and errors retain the location.
     Q_INVOKABLE void navigateDirectory(const QString& folder);
     Q_INVOKABLE void copyDirectory() const;
+    // F002: asynchronous, cancellable folder-name completion for the typed path. Emits pathCompletions(text, names) for the
+    // newest request only; names are child folders of the typed scope whose names start with the last segment (at most 20).
+    Q_INVOKABLE void completePath(const QString& text);
     Q_INVOKABLE bool copyFilePath(const QStringList& paths = QStringList());
     Q_INVOKABLE bool copyFileUrls(const QStringList& paths = QStringList());
     Q_INVOKABLE bool copyImageBitmap();
@@ -113,6 +133,12 @@ public:
     Q_INVOKABLE bool openTerminal(const QString& directory = QString());
     qreal textScale() const; void setTextScale(qreal scale);
     bool reducedMotion() const; void setReducedMotion(bool reduced);
+    QVariantList tabs() const; int activeTab() const;
+    Q_INVOKABLE bool newTab();
+    Q_INVOKABLE bool closeTab(int index);
+    Q_INVOKABLE bool activateTab(int index);
+    bool highContrast() const; void setHighContrast(bool on);
+    bool largeTargets() const; void setLargeTargets(bool on);
     Q_INVOKABLE bool exportSettings(const QString& targetFilePath);
     Q_INVOKABLE bool importSettings(const QString& sourceFilePath);
     Q_INVOKABLE bool resetSection(const QString& sectionName);
@@ -192,7 +218,7 @@ public:
 signals:
     // MONITOR-CUSTOM-01: explicit successful import/reset/restore; not navigation.
     void configurationReloaded();
-    void imageChanged(); void stateChanged(); void bindingsChanged(); void filterChanged(); void cacheChanged();
+    void imageChanged(); void stateChanged(); void bindingsChanged(); void referenceChanged(); void filterChanged(); void cacheChanged();
     void storageProfileChanged(); void currentStorageTypeChanged(); void ioStatsChanged();
     void metadataVisibleChanged();
     void presentationChanged();
@@ -201,6 +227,8 @@ signals:
     // The folder tree was just shown by command; the UI should move keyboard focus into it.
     void treeShown();
     void viewCommand(const QString& id);
+    void tabsChanged();
+    void pathCompletions(const QString& text, const QStringList& names);
 private:
     struct Private;
     std::unique_ptr<Private> d;

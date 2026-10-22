@@ -1,4 +1,5 @@
 #include "glancelot/pane_layout.hpp"
+#include <QCoreApplication>
 #include "glancelot/settings_file.hpp"
 #include "settings_retry.hpp"
 #include <memory>
@@ -11,6 +12,7 @@
 #include <cmath>
 
 namespace {
+QString savingFeedback(){return QCoreApplication::translate("Layout","Saving layout preferences…");}
 // Only an integer schema above ours is "newer" and preserved; anything else malformed is replaceable.
 bool newerVersion(const QJsonObject& layout) {
     const auto value=layout.value("version");
@@ -54,16 +56,16 @@ void PaneLayout::load() {
     panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};mode_="preview";locked_=false;feedback_.clear();
     if(slot_>0) {
         QJsonObject settings;
-        if(!glancelot::readSettings(settings).ok())feedback_="Layout settings could not be read; defaults are active.";
+        if(!glancelot::readSettings(settings).ok())feedback_=QCoreApplication::translate("Layout","Layout settings could not be read; defaults are active.");
         else {
             glancelot::settings_detail::overlayPendingSettings(this,settings);
             const auto layoutsValue=settings.value("layouts");
             const auto savedValue=layoutsValue.toObject().value(QString::number(slot_));
             const auto saved=savedValue.toObject();
             if((!layoutsValue.isUndefined()&&!layoutsValue.isObject())||(!savedValue.isUndefined()&&!savedValue.isObject()))
-                feedback_="Layout settings are invalid; defaults are active.";
-            if(!saved.isEmpty()&&newerVersion(saved))feedback_="Unsupported layout version; defaults are active.";
-            else if(!saved.isEmpty()&&!currentVersion(saved))feedback_="Layout settings are invalid; defaults are active.";
+                feedback_=QCoreApplication::translate("Layout","Layout settings are invalid; defaults are active.");
+            if(!saved.isEmpty()&&newerVersion(saved))feedback_=QCoreApplication::translate("Layout","Unsupported layout version; defaults are active.");
+            else if(!saved.isEmpty()&&!currentVersion(saved))feedback_=QCoreApplication::translate("Layout","Layout settings are invalid; defaults are active.");
             else {
                 snapshotExtras_=saved;for(const auto* key:{"version","locked","panes","center"})snapshotExtras_.remove(key);
                 locked_=saved.value("locked").toBool(false);
@@ -80,7 +82,7 @@ void PaneLayout::load() {
             }
         }
     }
-    if(feedback_.isEmpty()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot_)+"/"))feedback_="Saving layout preferences…";
+    if(feedback_.isEmpty()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot_)+"/"))feedback_=savingFeedback();
     emit changed();
 }
 void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,bool lockOnly) {
@@ -131,17 +133,17 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
         layouts[QString::number(slot)]=layout;settings["layouts"]=layouts;
     },[this,unsupported,completion,slot,directory](glancelot::SettingsStatus result){
         completion->done=true;
-        if(completion->deferred&&(slot_!=slot||directory!=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath())||feedback_!="Saving layout preferences…")) {
+        if(completion->deferred&&(slot_!=slot||directory!=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath())||feedback_!=savingFeedback())) {
             if(!result.ok())qWarning("Glancelot: a deferred layout save failed; newer view feedback was preserved");
             return;
         }
         if(completion->deferred&&result.ok()&&glancelot::settings_detail::hasPendingSettings(this,"layout/"+QString::number(slot)+"/"))return;
-        if(*unsupported)feedback_="Layout changed for this session; a newer saved layout was preserved.";
-        else if(!result.ok())feedback_="Layout changed for this session; settings could not be saved.";
+        if(*unsupported)feedback_=QCoreApplication::translate("Layout","Layout changed for this session; a newer saved layout was preserved.");
+        else if(!result.ok())feedback_=QCoreApplication::translate("Layout","Layout changed for this session; settings could not be saved.");
         else feedback_.clear();
         if(completion->deferred)emit changed();
     });
-    if(!completion->done){completion->deferred=true;feedback_="Saving layout preferences…";}
+    if(!completion->done){completion->deferred=true;feedback_=savingFeedback();}
 }
 bool PaneLayout::edit(const QString& id,const QJsonObject& fields,bool geometry) {
     if(!panes_.contains(id))return false;
@@ -156,7 +158,7 @@ bool PaneLayout::edit(const QString& id,const QJsonObject& fields,bool geometry)
 bool PaneLayout::move(const QString& id,const QString& region,int order) {
     if(!regionValid(region)||order<0||order>99)return false;
     if(region=="center"&&id!="preview"&&id!="grid") {
-        feedback_="The center is reserved for image and grid content. Choose an edge for this pane.";
+        feedback_=QCoreApplication::translate("Layout","The center is reserved for image and grid content. Choose an edge for this pane.");
         emit changed();return false;
     }
     if(!panes_.contains(id))return false;
@@ -198,7 +200,7 @@ void PaneLayout::reset(){panes_=defaults();center_={{"orientation","horizontal"}
 
 bool PaneLayout::editCenter(const QJsonObject& fields) {
     if(locked_||panes_.value("preview").toObject().value("frozen").toBool()||panes_.value("grid").toObject().value("frozen").toBool()) {
-        feedback_="Unlock the layout and unfreeze the center panes before changing the split.";emit changed();return false;
+        feedback_=QCoreApplication::translate("Layout","Unlock the layout and unfreeze the center panes before changing the split.");emit changed();return false;
     }
     auto next=center_;for(auto it=fields.begin();it!=fields.end();++it)next[it.key()]=it.value();
     if(next==center_)return true;
@@ -218,4 +220,94 @@ bool PaneLayout::setContentMode(const QString& mode) {
     if(!modeValid(mode))return false;
     if(mode==mode_)return true;
     mode_=mode;persist("_center",{{"mode",mode}});emit changed();return true;
+}
+
+// ---- F049 layout presets
+namespace {
+constexpr int maxUserPresets=12;
+bool presetNameValid(const QString& name){const auto trimmed=name.trimmed();return !trimmed.isEmpty()&&trimmed.size()<=40&&trimmed==name;}
+}
+QStringList PaneLayout::builtIns() const{return {QStringLiteral("Default"),QStringLiteral("Review"),QStringLiteral("Browse")};}
+QJsonObject PaneLayout::userPresets() const {
+    QJsonObject settings;
+    if(!glancelot::readSettings(settings).ok())return {};
+    const auto value=settings.value("layoutPresets");
+    return value.isObject()?value.toObject():QJsonObject{};
+}
+QStringList PaneLayout::presetNames() const {
+    auto names=builtIns();
+    auto user=userPresets().keys();user.sort(Qt::CaseInsensitive);
+    for(const auto& name:user)if(!names.contains(name,Qt::CaseInsensitive))names<<name;
+    return names;
+}
+bool PaneLayout::isBuiltInPreset(const QString& name) const{return builtIns().contains(name,Qt::CaseInsensitive);}
+// A stored or built-in preset as {panes, center{orientation,ratio,mode}}, validated field by field against the defaults.
+QJsonObject PaneLayout::presetObject(const QString& name) const {
+    QJsonObject panes=defaults();QJsonObject center{{"orientation","horizontal"},{"ratio",0.5},{"mode","preview"}};
+    if(name.compare("Default",Qt::CaseInsensitive)==0){}
+    else if(name.compare("Review",Qt::CaseInsensitive)==0) { // the photo, the filmstrip under it, nothing else
+        auto set=[&](const char* id,const QJsonObject& fields){auto pane=panes.value(id).toObject();for(auto it=fields.begin();it!=fields.end();++it)pane[it.key()]=it.value();panes[id]=pane;};
+        set("tree",{{"visible",false}});set("filmstrip",{{"region","bottom"},{"order",0},{"extent",112}});set("topbar",{{"visible",false}});
+    } else if(name.compare("Browse",Qt::CaseInsensitive)==0) { // tree, grid and photo side by side
+        center["mode"]="combined";
+    } else {
+        const auto stored=userPresets().value(name).toObject();
+        if(stored.isEmpty()||!currentVersion(stored))return {};
+        const auto savedPanes=stored.value("panes").toObject();
+        for(const auto& id:panes.keys())panes[id]=validPane(savedPanes.value(id).toObject(),panes.value(id).toObject());
+        const auto c=stored.value("center").toObject();
+        if(c.value("orientation").toString()=="vertical")center["orientation"]="vertical";
+        const double ratio=c.value("ratio").toDouble(-1);if(std::isfinite(ratio)&&ratio>=0.1&&ratio<=0.9)center["ratio"]=ratio;
+        if(modeValid(c.value("mode").toString()))center["mode"]=c.value("mode");
+    }
+    for(const auto& id:panes.keys()){auto pane=panes.value(id).toObject();pane["frozen"]=false;panes[id]=pane;} // presets never carry a freeze
+    return QJsonObject{{"version",1},{"panes",panes},{"center",center}};
+}
+bool PaneLayout::savePreset(const QString& name) {
+    if(!presetNameValid(name)){feedback_=QCoreApplication::translate("Layout","Preset names are 1 to 40 characters with no leading or trailing space.");emit changed();return false;}
+    if(isBuiltInPreset(name)){feedback_=QCoreApplication::translate("Layout","That name belongs to a built-in preset. Choose another.");emit changed();return false;}
+    QJsonObject entry{{"version",1},{"panes",panes_},{"center",QJsonObject{{"orientation",center_.value("orientation")},{"ratio",center_.value("ratio")},{"mode",mode_}}}};
+    bool tooMany=false;
+    const auto result=glancelot::updateSettings([&](QJsonObject& settings){
+        auto presets=settings.value("layoutPresets").toObject();
+        if(!presets.contains(name)&&presets.size()>=maxUserPresets){tooMany=true;return;}
+        presets[name]=entry;settings["layoutPresets"]=presets;
+    });
+    if(tooMany){feedback_=QCoreApplication::translate("Layout","You can keep up to 12 presets. Delete one first.");emit changed();return false;}
+    if(!result.ok()){feedback_=QCoreApplication::translate("Layout","The preset could not be saved.");emit changed();return false;}
+    feedback_.clear();emit presetsChanged();emit changed();return true;
+}
+bool PaneLayout::deletePreset(const QString& name) {
+    if(isBuiltInPreset(name))return false;
+    bool found=false;
+    const auto result=glancelot::updateSettings([&](QJsonObject& settings){
+        auto presets=settings.value("layoutPresets").toObject();
+        if(!presets.contains(name))return;
+        presets.remove(name);found=true;settings["layoutPresets"]=presets;
+    });
+    if(!found||!result.ok())return false;
+    emit presetsChanged();return true;
+}
+void PaneLayout::persistWhole() {
+    if(slot_==0)return;
+    glancelot::updateSettings([&](QJsonObject& settings){
+        auto layouts=settings.value("layouts").toObject();
+        auto layout=layouts.value(QString::number(slot_)).toObject();
+        if(!layout.isEmpty()&&newerVersion(layout))return;
+        layout=QJsonObject{{"version",1},{"locked",locked_},{"panes",panes_},{"center",QJsonObject{{"orientation",center_.value("orientation")},{"ratio",center_.value("ratio")},{"mode",mode_}}}};
+        layouts[QString::number(slot_)]=layout;settings["layouts"]=layouts;
+    });
+}
+bool PaneLayout::applyPreset(const QString& name) {
+    bool known=false;for(const auto& candidate:presetNames())if(candidate.compare(name,Qt::CaseInsensitive)==0)known=true;
+    if(!known)return false;
+    if(locked_){feedback_=QCoreApplication::translate("Layout","Unlock the layout before applying a preset.");emit changed();return false;}
+    for(const auto& id:panes_.keys())if(panes_.value(id).toObject().value("frozen").toBool()){feedback_=QCoreApplication::translate("Layout","Unfreeze the panes before applying a preset.");emit changed();return false;}
+    const auto preset=presetObject(name);
+    if(preset.isEmpty()){feedback_=QCoreApplication::translate("Layout","That preset could not be read.");emit changed();return false;}
+    panes_=preset.value("panes").toObject();
+    const auto c=preset.value("center").toObject();
+    center_={{"orientation",c.value("orientation")},{"ratio",c.value("ratio")}};
+    mode_=c.value("mode").toString();
+    feedback_.clear();persistWhole();emit changed();return true;
 }

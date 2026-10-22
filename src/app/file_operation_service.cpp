@@ -1,4 +1,5 @@
 #include "../core/perf_context.hpp"
+#include <QCoreApplication>
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
 #include "platform_trash.hpp"
@@ -126,7 +127,7 @@ public:
         DeleteResult out{target.path, DeleteOutcome::Failed, {}};
         // IFileOperation requires a single-threaded apartment; each call owns its own initialization.
         const HRESULT init = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-        if (init == RPC_E_CHANGED_MODE) { out.message = "the shell file operation is unavailable on this thread"; return out; }
+        if (init == RPC_E_CHANGED_MODE) { out.message = QCoreApplication::translate("Delete","the shell file operation is unavailable on this thread").toStdString(); return out; }
         struct Uninit { bool on; ~Uninit() { if (on) CoUninitialize(); } } uninit{SUCCEEDED(init)};
         ComRef<IFileOperation> operation;
         HRESULT hr = CoCreateInstance(CLSID_FileOperation, nullptr, CLSCTX_ALL, IID_PPV_ARGS(operation.out()));
@@ -148,14 +149,14 @@ public:
         operation.p->GetAnyOperationsAborted(&aborted);
         if (sink->refused) {
             out.outcome = DeleteOutcome::TrashUnavailable;
-            out.message = "the Recycle Bin cannot take this item (no Recycle Bin on this drive, or the item is too large)";
+            out.message = QCoreApplication::translate("Delete","the Recycle Bin cannot take this item (no Recycle Bin on this drive, or the item is too large)").toStdString();
             return out;
         }
         if (sink->posted && FAILED(sink->result)) { out.outcome = outcomeFor(sink->result); out.message = hresultText(sink->result); return out; }
         if (FAILED(hr)) { out.outcome = outcomeFor(hr); out.message = hresultText(hr); return out; }
-        if (aborted || !sink->posted) { out.message = "the shell stopped the operation"; return out; }
-        if (!sink->recycled) { out.message = "Windows did not report a Recycle Bin item"; return out; }
-        if (stillPresent(target)) { out.message = "the item is still in place after the move"; return out; }
+        if (aborted || !sink->posted) { out.message = QCoreApplication::translate("Delete","the shell stopped the operation").toStdString(); return out; }
+        if (!sink->recycled) { out.message = QCoreApplication::translate("Delete","Windows did not report a Recycle Bin item").toStdString(); return out; }
+        if (stillPresent(target)) { out.message = QCoreApplication::translate("Delete","the item is still in place after the move").toStdString(); return out; }
         out.outcome = DeleteOutcome::Trashed;
         return out;
     }
@@ -170,14 +171,14 @@ public:
         // Qt's freedesktop implementation renames into $XDG_DATA_HOME/Trash or the volume's .Trash-$uid; it never
         // copies, and a cross-device or permission failure leaves the original untouched.
         if (file.moveToTrash()) {
-            if (stillPresent(target)) { out.message = "a copy reached the Trash but the original could not be removed"; return out; }
+            if (stillPresent(target)) { out.message = QCoreApplication::translate("Delete","a copy reached the Trash but the original could not be removed").toStdString(); return out; }
             out.outcome = DeleteOutcome::Trashed;
             return out;
         }
         std::error_code error;
-        if (!snapshotTarget(target.path, error) && !error) { out.outcome = DeleteOutcome::Missing; out.message = "it no longer exists"; return out; }
+        if (!snapshotTarget(target.path, error) && !error) { out.outcome = DeleteOutcome::Missing; out.message = QCoreApplication::translate("Delete","it no longer exists").toStdString(); return out; }
         const QFileInfo parent(QFileInfo(path).absolutePath());
-        if (!parent.isWritable()) { out.outcome = DeleteOutcome::Denied; out.message = "you don't have permission to change its folder"; return out; }
+        if (!parent.isWritable()) { out.outcome = DeleteOutcome::Denied; out.message = QCoreApplication::translate("Delete","you don't have permission to change its folder").toStdString(); return out; }
         out.outcome = DeleteOutcome::TrashUnavailable;
         out.message = (file.errorString().isEmpty() ? QStringLiteral("no usable Trash for this location") : file.errorString()).toStdString();
         return out;

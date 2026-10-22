@@ -1,4 +1,5 @@
 #include "glancelot/perf_trace.hpp"
+#include <QCoreApplication>
 #include "../core/perf_context.hpp"
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/directory_listing.hpp"
@@ -150,6 +151,8 @@ struct DirectoryEntryModel::Private {
     QHash<QString, int> index;
     Listing rawListing;
     glancelot::FilterSpec filter;
+    int kindWanted{-1}; // -1: every kind; otherwise a glancelot::EntryKind value (F042 type chip)
+    bool filtering() const { return filter.isActive() || kindWanted >= 0; }
     QSet<QString> selected;
     QSet<QString> previousSelection;
     QString previousAnchor,previousCursor;
@@ -175,14 +178,14 @@ struct DirectoryEntryModel::Private {
         q->beginResetModel();
         rows.clear();
         index.clear();
-        if (!filter.isActive()) {
+        if (!filtering()) {
             rows = rawListing.rows;
             index = rawListing.index;
         } else {
             rows.reserve(rawListing.rows.size());
             index.reserve(rawListing.index.size());
             for (const auto& row : rawListing.rows) {
-                if (filter.matches(row.name)) {
+                if ((!filter.isActive() || filter.matches(row.name)) && (kindWanted < 0 || int(row.kind) == kindWanted)) {
                     index.insert(row.key, int(rows.size()));
                     rows.push_back(row);
                 }
@@ -269,11 +272,11 @@ struct DirectoryEntryModel::Private {
         const int oldCount = int(rows.size());
         // Filtering is a projection: identity matching/pruning uses the full
         // physical listing, never just the visible rows.
-        if (!truncated || (filter.isActive() ? rawListing.rows.empty() : rows.empty())) {
+        if (!truncated || (filtering() ? rawListing.rows.empty() : rows.empty())) {
 #ifdef GLANCELOT_FS_WATCH_TESTING
-            publicationStats.applied=true;publicationStats.filtered=filter.isActive();
+            publicationStats.applied=true;publicationStats.filtered=filtering();
 #endif
-            if (!filter.isActive()) {
+            if (!filtering()) {
                 merge(std::move(listing));
 #ifdef GLANCELOT_FS_WATCH_TESTING
                 publicationStats.mergeMs=phase.restart();
@@ -303,7 +306,7 @@ struct DirectoryEntryModel::Private {
         setLoading(false);
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
         emit q->selectionChanged();
-        if (!accessible) emit q->listingFailed(QStringLiteral("This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
+        if (!accessible) emit q->listingFailed(QCoreApplication::translate("Grid","This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
     }
     // Same folder relisted: remove vanished rows and insert new ones in place when the surviving order is
     // unchanged, so delegates, scroll position and in-flight previews survive a refresh. Otherwise reset.
@@ -614,9 +617,9 @@ QString DirectoryEntryModel::selectedSummary() const {
     const qint64 bytes = selectedBytes();
     const QString countStr = QString::number(count) + (count == 1 ? QStringLiteral(" item") : QStringLiteral(" items"));
     if (bytes > 0) {
-        return QStringLiteral("Selected: %1 (%2)").arg(countStr, selectedBytesFormatted());
+        return QCoreApplication::translate("Grid","Selected: %1 (%2)").arg(countStr, selectedBytesFormatted());
     }
-    return QStringLiteral("Selected: %1").arg(countStr);
+    return QCoreApplication::translate("Grid","Selected: %1").arg(countStr);
 }
 int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
@@ -663,7 +666,16 @@ void DirectoryEntryModel::setFilterPersistent(bool persistent) {
     d->filter.persistence = mode;
     emit filterChanged();
 }
-bool DirectoryEntryModel::hasFilter() const { return d->filter.isActive(); }
+bool DirectoryEntryModel::hasFilter() const { return d->filtering(); }
+QString DirectoryEntryModel::kindFilter() const {
+    return d->kindWanted == int(glancelot::EntryKind::Folder) ? QStringLiteral("folder") : d->kindWanted == int(glancelot::EntryKind::Image) ? QStringLiteral("image") : d->kindWanted == int(glancelot::EntryKind::File) ? QStringLiteral("file") : QString();
+}
+void DirectoryEntryModel::setKindFilter(const QString& kind) {
+    const int wanted = kind == "folder" ? int(glancelot::EntryKind::Folder) : kind == "image" ? int(glancelot::EntryKind::Image) : kind == "file" ? int(glancelot::EntryKind::File) : -1;
+    if (wanted == d->kindWanted) return;
+    d->kindWanted = wanted;
+    d->applyFilter();
+}
 void DirectoryEntryModel::setFilter(const QString& pattern, bool persistent) {
     const auto mode = persistent ? glancelot::FilterPersistence::Persistent : glancelot::FilterPersistence::Temporary;
     if (d->filter.pattern == pattern && d->filter.persistence == mode) return;
@@ -672,8 +684,9 @@ void DirectoryEntryModel::setFilter(const QString& pattern, bool persistent) {
     d->applyFilter();
 }
 void DirectoryEntryModel::clearFilter() {
-    if (!d->filter.isActive()) return;
+    if (!d->filtering()) return;
     d->filter.clear();
+    d->kindWanted = -1;
     d->applyFilter();
 }
 void DirectoryEntryModel::toggleFilterPersistence() {

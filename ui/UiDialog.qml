@@ -31,10 +31,10 @@ Dialog {
             Accessible.role: Accessible.Heading
         }
         UiButton {
-            text: "Close"
+            text: qsTr("Close")
             iconName: "close"
             iconOnly: true
-            tip: "Close (Esc)"
+            tip: qsTr("Close (Esc)")
             focusPolicy: Qt.TabFocus
             enabled: dialog.closable
             opacity: dialog.closable ? 1 : 0 // keeps the title row height stable

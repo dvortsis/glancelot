@@ -118,6 +118,21 @@ static const std::vector<Command> registry {
     // INPUT-02: hold lifecycle, per-pane commands and context-menu routes. Keys the grid and tree handle themselves
     // (Enter, Backspace, Ctrl+A) stay unbound here; the menus show those fixed keys.
     {"hold-actual","Show actual size while held","Z",false,"canvas",true},
+    // F037: presets (physical scale), zoom lock and the navigator overview. Unbound until the user asks.
+    {"zoom-50","Zoom to 50%","",false,"canvas"}, {"zoom-200","Zoom to 200%","",false,"canvas"}, {"zoom-400","Zoom to 400%","",false,"canvas"},
+    // F031 slideshow: advances only after the current photo has shown; any manual step, Escape, a modal or focus loss ends it.
+    // F040: pin the current photo in its own window to compare against while browsing; pinning again replaces it.
+    {"reference-pin","Pin this photo in a reference window","",false,"canvas"}, {"reference-close","Close the reference window","",false,"global"},
+    // F049: content-only focus mode (session state; the saved layout is untouched).
+    {"focus-mode","Focus mode: hide bars and panels","",false,"global"},
+    {"layout-preset-next","Next layout preset","",false,"global"},
+    // F015 tabs (shape A)
+    {"tab-new","New tab","",false,"global"}, {"tab-close","Close tab","",false,"global"}, {"tab-next","Next tab","",false,"global"}, {"tab-previous","Previous tab","",false,"global"},
+    // F009: details (list) mode for the folder grid; session state.
+    {"view-details","Folder grid: details or thumbnails","",false,"grid"},
+    {"slideshow","Start or stop the slideshow","",false,"canvas"}, {"slideshow-slower","Slideshow: longer per photo","",false,"canvas"},
+    {"slideshow-faster","Slideshow: shorter per photo","",false,"canvas"},
+    {"zoom-lock","Keep zoom when changing photos","",false,"canvas"}, {"navigator","Show or hide the zoom navigator","",false,"canvas"},
     {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
     {"grid-select-all","Select all items","",false,"grid"},
     {"tree-open-folder","Open the focused folder","",false,"tree"},

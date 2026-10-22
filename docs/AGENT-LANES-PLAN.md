@@ -26,6 +26,17 @@ Lead decision, October 18, 2026, approved by the user. Three agent tools work co
 - **Reassignment.** F070 (CSV and manifest export) moves from Codex Wave 5 to the Gemini lane as EXPORT-CSV-01. It is engine-only; the UI stays with the Claude lane. The JSON manifest format stays with F030.
 - **Gate lock.** Only one full gate (`scripts/build.ps1 -Test` or `docker build`) runs at a time, enforced by the machine-local `scripts/gate-lock.ps1` (see AGENTS.md).
 
+## Amendment, October 22, 2026: single-lead takeover (user decision)
+
+This amendment supersedes the lane assignments, the lane tools and the cross-lane review routing in this document and in AGENTS.md:
+
+- **Ownership.** The Claude Code Opus 5.5 lead session owns every remaining task in every lane and implements through subagents. The Codex and Gemini lanes are retired for this work.
+- **Review.** A fresh-context Claude subagent reviews each packet. It never implemented or fixed that packet, works read-only in its own worktree, and pins exact SHAs. This replaces the cross-lane rule, and the Gemini restriction no longer applies because Gemini does not review.
+- **Models.** Opus 5.5 implements and reviews.
+- **Scope.** The stack correction wave, then v1 milestones M3 to M6. Conditional items F024, F039, F048, F071, F074, F076, F077 and F078 get feasibility packets first.
+
+The plan, the execution model, the waves and the cloud-run notes are in [LEAD-TAKEOVER-2026-10-22.md](handoff/LEAD-TAKEOVER-2026-10-22.md). Lead-only duties, integration locks, gate locks, frozen contracts and all acceptance criteria are unchanged.
+
 ## Lane strengths, which decide every assignment
 
 - **Claude Code lane (`claude/*`):** design and interaction work.

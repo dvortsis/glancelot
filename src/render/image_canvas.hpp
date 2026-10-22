@@ -55,6 +55,14 @@ public:
     Q_INVOKABLE void rotateClockwise();
     Q_INVOKABLE void beginLoupe(qreal x, qreal y);
     Q_INVOKABLE void endLoupe();
+    // F037: zoom lock keeps a manual magnification across photos; zoomTo() applies a preset about the view centre
+    // (1 = physical 1:1); the navigator reads visibleImageRect() and recentres with centerOn() (source pixels).
+    Q_PROPERTY(bool zoomLock READ zoomLock WRITE setZoomLock NOTIFY zoomLockChanged)
+    bool zoomLock() const { return m_zoomLock; }
+    void setZoomLock(bool value);
+    Q_INVOKABLE void zoomTo(qreal scale);
+    Q_INVOKABLE QRectF visibleImageRect() const;
+    Q_INVOKABLE void centerOn(qreal x, qreal y);
     // INPUT-02: exactly 1:1 around (x,y) while `sequence`'s key is held; releasing it, a deactivated window or an image
     // change restores the previous fit or zoom and pan exactly. A repeated begin keeps the first saved state.
     Q_INVOKABLE void beginHold(qreal x, qreal y, const QString& sequence);
@@ -68,6 +76,7 @@ signals:
     void appearanceChanged();
     void rendererErrorChanged();
     void loupeChanged();
+    void zoomLockChanged();
 protected:
     QQuickRhiItemRenderer* createRenderer() override;
     void geometryChange(const QRectF&, const QRectF&) override;
@@ -75,6 +84,7 @@ protected:
 private:
     void unwatchHold();
     int m_holdKey{};
+    bool m_zoomLock{};
     QPointer<QQuickWindow> m_holdWindow;
     friend class ImageRenderer;
     qreal dpr() const;

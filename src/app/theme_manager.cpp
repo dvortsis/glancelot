@@ -1,4 +1,5 @@
 #include "glancelot/theme_manager.hpp"
+#include <QCoreApplication>
 #include "glancelot/settings_file.hpp"
 #include "settings_retry.hpp"
 #include <memory>
@@ -58,9 +59,9 @@ void ThemeManager::save(const char* key) {
         root["appearance"]=appearance;
     },[this,deferred](glancelot::SettingsStatus status){
         m_error.clear();
-        if(status.code==glancelot::SettingsStatus::Unreadable)m_error="Preferences could not be read; theme applies for this session.";
-        else if(status.code==glancelot::SettingsStatus::Corrupt||status.code==glancelot::SettingsStatus::Unsupported)m_error="Unsupported preferences; theme applies for this session.";
-        else if(!status.ok())m_error="Theme applies for this session; preferences could not be saved.";
+        if(status.code==glancelot::SettingsStatus::Unreadable)m_error=QCoreApplication::translate("Theme","Preferences could not be read; theme applies for this session.");
+        else if(status.code==glancelot::SettingsStatus::Corrupt||status.code==glancelot::SettingsStatus::Unsupported)m_error=QCoreApplication::translate("Theme","Unsupported preferences; theme applies for this session.");
+        else if(!status.ok())m_error=QCoreApplication::translate("Theme","Theme applies for this session; preferences could not be saved.");
         if(*deferred)emit changed();
     });
     *deferred=true;

@@ -32,6 +32,9 @@ if(BUILD_TESTING)
 endif()
 if(GLANCELOT_BUILD_VIEWER)
   find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Quick QuickControls2 ShaderTools Test Concurrent)
+  # F054: translation catalogs are compiled with Qt's lrelease when it can be found (the Linguist CMake package is not needed);
+  # without it the interface stays English.
+  find_program(GLANCELOT_LRELEASE NAMES lrelease lrelease-qt6 HINTS "${Qt6_DIR}/../../../bin" "${Qt6_DIR}/../../../libexec" ENV PATH)
   qt_standard_project_setup(REQUIRES 6.8)
   add_library(glancelot_platform STATIC src/app/platform_integration.cpp include/glancelot/platform_integration.hpp
     src/app/io_scheduler.cpp include/glancelot/io_scheduler.hpp
@@ -62,7 +65,7 @@ if(GLANCELOT_BUILD_VIEWER)
   include(cmake/StartupWindowGeometryTests.cmake)
   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
-    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml ui/CommandMenuItem.qml)
+    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml ui/CommandMenuItem.qml ui/ShortcutRecorder.qml)
   # Interface typefaces (SIL OFL 1.1, assets/fonts/geist/OFL.txt), registered at startup.
   set(ui_fonts assets/fonts/geist/Geist-Light.ttf assets/fonts/geist/Geist-Regular.ttf assets/fonts/geist/Geist-Medium.ttf assets/fonts/geist/Geist-SemiBold.ttf assets/fonts/geist/GeistMono-Regular.ttf)
   qt_add_resources(glancelot ui_fonts PREFIX "/" BASE assets FILES ${ui_fonts})
@@ -75,6 +78,19 @@ if(GLANCELOT_BUILD_VIEWER)
   if(WIN32)
     enable_language(RC)
     target_sources(glancelot PRIVATE app/glancelot.rc)
+  endif()
+  file(GLOB glancelot_ts "${CMAKE_CURRENT_SOURCE_DIR}/translations/glancelot_*.ts")
+  if(GLANCELOT_LRELEASE AND glancelot_ts)
+    set(glancelot_qm)
+    foreach(ts IN LISTS glancelot_ts)
+      get_filename_component(name "${ts}" NAME_WE)
+      set(qm "${CMAKE_CURRENT_BINARY_DIR}/translations/${name}.qm")
+      add_custom_command(OUTPUT "${qm}" COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/translations"
+        COMMAND "${GLANCELOT_LRELEASE}" "${ts}" -qm "${qm}" DEPENDS "${ts}" VERBATIM)
+      list(APPEND glancelot_qm "${qm}")
+    endforeach()
+    set_source_files_properties(${glancelot_qm} PROPERTIES GENERATED TRUE)
+    qt_add_resources(glancelot glancelot_translations PREFIX "/i18n" BASE "${CMAKE_CURRENT_BINARY_DIR}/translations" FILES ${glancelot_qm})
   endif()
   qt_add_shaders(glancelot "canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
   qt_add_executable(glancelot-decoder src/worker/main.cpp)
@@ -154,6 +170,28 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(input_ui_tests glancelot-decoder)
     add_test(NAME input_ui COMMAND input_ui_tests -o -,txt)
     set_tests_properties(input_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
+    # F002: breadcrumbs and path completion (its own file; grid_ui_tests stays untouched).
+    qt_add_executable(pathbar_ui_tests tests/pathbar_ui_tests.cpp
+      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
+      src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
+      src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
+      src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
+      src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
+      src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp
+      src/render/image_canvas.cpp src/render/image_canvas.hpp)
+    target_include_directories(pathbar_ui_tests PRIVATE include src/render)
+    target_compile_definitions(pathbar_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(pathbar_ui_tests PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
+    qt_add_resources(pathbar_ui_tests input_theme_catalog PREFIX "/" BASE assets FILES assets/themes/catalog.json ${ui_fonts})
+    qt_add_resources(pathbar_ui_tests input_brand_assets PREFIX "/" BASE assets FILES
+      assets/brand/icons/app/dark/glancelot-64.png assets/brand/icons/app/light/glancelot-64.png
+      assets/brand/mascots/transparent/01_mascot_standing.png)
+    qt_add_shaders(pathbar_ui_tests "input_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
+    add_dependencies(pathbar_ui_tests glancelot-decoder)
+    add_test(NAME pathbar_ui COMMAND pathbar_ui_tests -o -,txt)
+    set_tests_properties(pathbar_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
     qt_add_executable(file_operation_service_tests tests/file_operation_service_tests.cpp src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp)
     target_include_directories(file_operation_service_tests PRIVATE include src/app)
     target_link_libraries(file_operation_service_tests PRIVATE glancelot_core Qt6::Core Qt6::Test Qt6::Concurrent)

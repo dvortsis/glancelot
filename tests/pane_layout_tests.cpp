@@ -24,6 +24,45 @@ private slots:
         PaneLayout sameSlot;sameSlot.setSlot(3);QCOMPARE(sameSlot.pane("tree")["extent"].toInt(),352);
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
+    // F049: built-in and user presets apply as one step, are shared by every window, never carry lock or freeze, and are refused
+    // while the layout is locked or a pane is frozen.
+    void layoutPresets() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout a;a.setSlot(1);
+        QCOMPARE(a.presetNames().mid(0,3),(QStringList{"Default","Review","Browse"}));
+        QVERIFY(a.isBuiltInPreset("review")); // case-insensitive
+        QVERIFY(a.applyPreset("Browse"));QCOMPARE(a.contentMode(),QString("combined"));
+        QVERIFY(a.applyPreset("Review"));
+        QVERIFY(!a.pane("tree")["visible"].toBool());QVERIFY(!a.pane("topbar")["visible"].toBool());
+        QCOMPARE(a.pane("filmstrip")["region"].toString(),QString("bottom"));
+        QCOMPARE(a.contentMode(),QString("preview"));
+        { PaneLayout again;again.setSlot(1);QVERIFY(!again.pane("tree")["visible"].toBool()); } // applied presets persist per window
+        QVERIFY(a.applyPreset("Default"));QVERIFY(a.pane("tree")["visible"].toBool());
+        // User presets: save what is on screen, change it, bring it back.
+        QVERIFY(a.move("tree","right",0));QVERIFY(a.resize("tree",333));QVERIFY(a.setCenterOrientation("vertical"));QVERIFY(a.setContentMode("combined"));
+        QVERIFY(a.savePreset("Wide tree"));
+        QVERIFY(a.presetNames().contains("Wide tree"));
+        QVERIFY(a.applyPreset("Default"));QCOMPARE(a.pane("tree")["region"].toString(),QString("left"));
+        QVERIFY(a.applyPreset("Wide tree"));
+        QCOMPARE(a.pane("tree")["region"].toString(),QString("right"));QCOMPARE(a.pane("tree")["extent"].toInt(),333);
+        QCOMPARE(a.centerSplit()["orientation"].toString(),QString("vertical"));QCOMPARE(a.contentMode(),QString("combined"));
+        // Another window sees it; deleting works for user presets only.
+        PaneLayout b;b.setSlot(2);QVERIFY(b.presetNames().contains("Wide tree"));
+        QVERIFY(b.applyPreset("Wide tree"));QCOMPARE(b.pane("tree")["extent"].toInt(),333);
+        QVERIFY(!b.deletePreset("Review"));QVERIFY(b.deletePreset("Wide tree"));
+        QVERIFY(!a.presetNames().contains("Wide tree"));QVERIFY(!a.applyPreset("Wide tree"));
+        // Names and limits.
+        QVERIFY(!a.savePreset(""));QVERIFY(!a.savePreset(" padded "));QVERIFY(!a.savePreset(QString(41,'x')));QVERIFY(!a.savePreset("Review"));
+        for(int i=0;i<12;++i)QVERIFY(a.savePreset(QString("p%1").arg(i)));
+        QVERIFY(!a.savePreset("one too many"));QVERIFY(a.savePreset("p3")); // replacing an existing name is not "one more"
+        // A preset is never applied over a lock or a freeze, and it never stores one.
+        QVERIFY(a.freeze("grid",true));QVERIFY(a.savePreset("p0"));QVERIFY(a.freeze("grid",false));
+        a.setLocked(true);QVERIFY(!a.applyPreset("Default"));QVERIFY(a.feedback().contains("Unlock"));a.setLocked(false);
+        QVERIFY(a.freeze("tree",true));QVERIFY(!a.applyPreset("Default"));QVERIFY(a.feedback().contains("Unfreeze"));QVERIFY(a.freeze("tree",false));
+        QVERIFY(a.applyPreset("p0"));QVERIFY(!a.pane("grid")["frozen"].toBool());
+        QVERIFY(!a.applyPreset("no such preset"));
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
     void centerContractAndWriteFailure() {
         QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
         PaneLayout first,stale;first.setSlot(1);stale.setSlot(1);

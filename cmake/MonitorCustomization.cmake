@@ -59,7 +59,7 @@ if(BUILD_TESTING)
       ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
   endforeach()
   # Existing shipped-QML fixtures must supply the real new context provider.
-  foreach(monitor_consumer IN ITEMS input_ui_tests grid_ui_tests fs_watch_ui_tests monitor_output_tests)
+  foreach(monitor_consumer IN ITEMS input_ui_tests pathbar_ui_tests grid_ui_tests fs_watch_ui_tests monitor_output_tests)
     if(TARGET ${monitor_consumer})
       glancelot_attach_monitor_customization(${monitor_consumer})
     endif()

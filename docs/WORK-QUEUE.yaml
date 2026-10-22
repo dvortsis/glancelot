@@ -9,6 +9,7 @@ lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antig
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
 review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/monitor-output-fix ae1b7e4; Gemini reviews stacked Claude packets F002, F037, F031, F040, F049, F009, F014, F051 in stack order, each only for its own changes on top of the previous branch, then a short confirmation pass after the stack is updated onto integrated main; Claude lane reviews SAFE-MODE-01 follow-up; Gemini never reviews MONITOR-OUTPUT-01 fixes
 memory_action: act_mvcridmt_bdf1947ea9e7
+lead_takeover_2026_10_22: "User decision: Claude Code Opus 5.5 lead owns all lanes' remaining work via Opus subagents; fresh-context Claude reviewers replace cross-lane review; scope is stack correction then v1 M3-M6, conditional items feasibility-first. Supersedes lane_tools/review_routing above. Plan: docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
   performance_strategy: docs/PERFORMANCE-STRATEGY.md
@@ -733,13 +734,14 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: "review"
+    state: integration
     depends: [PATH-BAR-01]
     outcome: Breadcrumbs plus cancellable path completion (F002)
     acceptance: Jump to ancestors and siblings; completion only for the typed scope, cancellable off the GUI thread; clipboard, UNC, Unicode, keyboard and long paths keep exact text semantics
     branch: "claude/f002"
     candidate_commit: "e05614f"
-    blocked_by: "Current-main stack synchronization, frozen corrections and per-packet Gemini confirmation; docs/handoff/LEAD-WRAPUP-2026-10-22.md"
+    merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
+    blocked_by: "STACK-CORRECTION-01 frozen corrections, fresh-context confirmation review and full gates; docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
     evidence: "docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md; original Gemini approvals predate integrated monitor customization"
   - id: VIEW-POLISH-01
     requirements: [VIEW-02, VIEW-03, VIEW-04]
@@ -747,13 +749,14 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: "review"
+    state: integration
     depends: [CANVAS-UI]
     outcome: Quick loupe, zoom presets, navigator overview and zoom-lock polish (F037)
     acceptance: Predictable zoom anchor; focus-loss and hold cancellation; physical 1:1 under fractional DPI is unverified without hardware
     branch: "claude/f037"
     candidate_commit: "2891250"
-    blocked_by: "Current-main stack synchronization, frozen corrections and per-packet Gemini confirmation; docs/handoff/LEAD-WRAPUP-2026-10-22.md"
+    merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
+    blocked_by: "STACK-CORRECTION-01 frozen corrections, fresh-context confirmation review and full gates; docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
     evidence: "docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md; original Gemini approvals predate integrated monitor customization"
   - id: FS-WATCH-01
     requirements: [META-04, NAV-08, SYS-02]
@@ -907,6 +910,21 @@ tasks:
     follow_up: "Approved nonblocking O1 invalid native Unicode item path can throw with RAII cleanup; future Qt service must contain worker exceptions. O2 link-test skip visibility and O3 filesystems without hard links remain recorded in independent review. Engine only; no export dialog claimed."
     integrated_commit: 5db97272926105e7b6185eca671b5f6a837b9dd4
     integrated_checks: Windows42/42 620.01s and fresh Docker42/42 375.21s under one main gate-lock block; exact merge tree identical; integrated CSV/cache2/2 6.24s plus grid3/3 3.182s and production core BUILD_TESTING=OFF six steps pass. Actual output in docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md
+  - id: STACK-CORRECTION-01
+    requirements: [UX-12, UX-13, UX-14, UX-11, IN-01, VIEW-02, UX-09, UX-10]
+    milestone: M3
+    priority: 1
+    owner: lead
+    owner_lane: claude
+    state: ready
+    depends: [MONITOR-CUSTOM-01]
+    merged_commit: "3b2b0db (user-directed merge of claude/f051 stack onto main d632a53)"
+    covers: [F002, F037, F031, F040, F049, F009, F014, F051, F053, F052, F054, F015, F042-chips]
+    plan: docs/handoff/LEAD-TAKEOVER-2026-10-22.md
+    contract: docs/handoff/LEAD-WRAPUP-2026-10-22.md
+    outcome: Frozen corrections to the merged stack and fresh-context confirmation on integrated main
+    acceptance: F015 tabs through recovery checkpoint (header diff reviewed); F040 and pinned output share admission with parity tests; F049 presets obey canonical lock/freeze, preserve unknown data, distinct from monitor workspace presets; F054 covers main's newer strings and detached windows with pseudo-locale/RTL evidence; ShortcutCheatSheet ReferenceError fixed
+    verification: Per-packet fresh reviewer; full Linux gate; Windows scripts/build.ps1 -Test before done
 next_milestone: M3
 priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02, MONITOR-OUTPUT-01]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Original planning note; current per-task states and pinned evidence are authoritative.
