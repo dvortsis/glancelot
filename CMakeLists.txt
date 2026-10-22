@@ -132,7 +132,7 @@ if(GLANCELOT_BUILD_VIEWER)
       assets/brand/mascots/transparent/01_mascot_standing.png)
     qt_add_shaders(grid_ui_tests "grid_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
     add_dependencies(grid_ui_tests glancelot-decoder)
-    add_test(NAME folder_grid COMMAND grid_ui_tests -o -,txt)
+    add_test(NAME folder_grid COMMAND grid_ui_tests -o "${CMAKE_CURRENT_BINARY_DIR}/folder_grid-results.txt,txt" -o -,txt)
     set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 400)
     # INPUT-02: scoped keys, chords, holds, wheel matrix and context menus (its own file; grid_ui_tests stays untouched).
     qt_add_executable(input_ui_tests tests/input_ui_tests.cpp
