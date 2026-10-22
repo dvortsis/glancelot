@@ -1,5 +1,6 @@
 # Glancelot agent instructions
 
+- **Current override (user decision, October 22, 2026).** The Claude Code Opus 5.5 lead session owns every lane's remaining work and implements through Opus subagents. Fresh-context Claude reviewers that never implemented a packet replace cross-lane review. Where this conflicts with the lane, tool and reviewer rules below, it wins. See docs/AGENT-LANES-PLAN.md (amendment of October 22) and docs/handoff/LEAD-TAKEOVER-2026-10-22.md. All other rules below still apply.
 - Build C++20 / Qt 6.8.3 Quick with a GPU canvas. Preserve docs/REQUIREMENTS.md and its acceptance criteria.
 - Use the relevant ui-design-skills when designing, implementing or reviewing UI. Read application-interface-design plus applicable layout, spacing, typography, geometry, iconography, motion and responsive skills; use design-review for substantial UI changes. Apply their principles to native Qt/QML, preserve supplied branding and theme tokens, and do not introduce web frameworks solely because a skill uses web examples. Include this requirement in delegated UI tasks.
 - Lead work (shared contracts, root CMake/configuration, docs/WORK-QUEUE.yaml and integration) is done only by the session currently acting as lead or integrator, under the integration lock below. Implementation and review agents never do it.
