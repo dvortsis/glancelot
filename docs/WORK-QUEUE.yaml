@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: Codex lead, branch: codex/fs-watch-harness-01, started: 2026-10-21T18:54:28.9028042-06:00}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -752,6 +752,19 @@ tasks:
     outcome: Safe mode, configuration diff, settings backup/restore and crash-recovery restore engine (F064, F057 engine)
     acceptance: Recover without deleting originals or unknown preferences; isolate bad layout or renderer overrides; preserve last-good state; restore lazily with explicit-open precedence; corrupted state and interrupted migration tests
     integrated_commit: e39eee20f750fbf6ab5fa2e4fc4e56e0114169ae
+  - id: FS-WATCH-HARNESS-01
+    requirements: [SYS-05, SYS-02]
+    owner: lead
+    owner_lane: codex
+    state: implementing
+    depends: [FS-WATCH-01, SAFE-MODE-01, STARTUP-WINDOW-01]
+    branch: codex/fs-watch-harness-01
+    worktree: .worktrees/codex-fs-watch-harness-01
+    build: build-codex-fs-watch-harness-01
+    plan: docs/FS-WATCH-HARNESS-01-PLAN.md
+    memory_action: act_mvitw76e_8dc918aeb751
+    outcome: Bounded phase evidence for existing dense watcher budget fixture and its destruction
+    acceptance: Preserve100k real rows, original fixture lifecycle, native watcher/identity/writer oracles, all250ms assertions and180s total process limit; independent review and locked full Windows/Docker gates. Historical timing risk stays open, no timeout fix claimed.
   - id: STARTUP-WINDOW-01
     requirements: [SYS-03, SYS-05, UX-12]
     milestone: M3
