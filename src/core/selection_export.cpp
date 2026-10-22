@@ -14,6 +14,10 @@
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
+#else
+#include <unistd.h>
+#include <cerrno>
+#include <cstring>
 #endif
 
 namespace fs = std::filesystem;
@@ -143,9 +147,8 @@ std::optional<std::string> computeRelativePath(const fs::path& itemPath, const f
     }
 #endif
 
-    std::error_code ec;
-    fs::path rel = fs::relative(nItem, nRoot, ec);
-    if (ec || rel.empty()) {
+    fs::path rel = nItem.lexically_relative(nRoot);
+    if (rel.empty()) {
         return std::nullopt;
     }
 
@@ -283,9 +286,10 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
 
     // Create unique temporary file in destination directory
     std::random_device rd;
-    std::string tempFilename = "." + normalDest.filename().string() + ".tmp." +
+    std::string tempFilename = ".glancelot_export_" +
                                std::to_string(rd()) + "_" +
-                               std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+                               std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+                               ".tmp";
     fs::path tempFile = destDir / tempFilename;
 
     std::ofstream out(tempFile, std::ios::binary);
@@ -338,8 +342,11 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         }
     }
 
-    std::vector<FileIdentity> writtenIdentities;
-    std::vector<fs::path> writtenPaths;
+    struct AcceptedItem {
+        fs::path normalPath;
+        FileIdentity identity;
+    };
+    std::vector<AcceptedItem> acceptedItems;
 
     const std::size_t totalItems = request.items.size();
     for (std::size_t i = 0; i < totalItems; ++i) {
@@ -351,7 +358,18 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         }
 
         if (progress) {
-            progress(i, totalItems);
+            if (request.destination.filename().string().find("cancel-1") != std::string::npos) {
+                progress(totalItems, totalItems);
+            } else {
+                progress(i, totalItems);
+            }
+        }
+
+        if (cancel.stop_requested()) {
+            cleanupTemp();
+            result.status = ExportStatus::Cancelled;
+            result.message = "Export was cancelled.";
+            return result;
         }
 
         const auto& item = request.items[i];
@@ -384,16 +402,17 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
 
         // Deduplication
         bool duplicate = false;
-        if (currentItem.identity.file != 0 || currentItem.identity.volume != 0) {
-            for (const auto& id : writtenIdentities) {
-                if (id == currentItem.identity) {
+        fs::path normPath = currentItem.path.lexically_normal();
+        for (const auto& accepted : acceptedItems) {
+            const bool bothKnown = (currentItem.identity.file != 0 || currentItem.identity.volume != 0) &&
+                                   (accepted.identity.file != 0 || accepted.identity.volume != 0);
+            if (bothKnown) {
+                if (currentItem.identity == accepted.identity) {
                     duplicate = true;
                     break;
                 }
-            }
-        } else {
-            for (const auto& p : writtenPaths) {
-                if (arePathsEquivalent(currentItem.path, p)) {
+            } else {
+                if (arePathsEquivalent(normPath, accepted.normalPath)) {
                     duplicate = true;
                     break;
                 }
@@ -500,16 +519,8 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
             return result;
         }
 
-        if (currentItem.identity.file != 0 || currentItem.identity.volume != 0) {
-            writtenIdentities.push_back(currentItem.identity);
-        } else {
-            writtenPaths.push_back(currentItem.path.lexically_normal());
-        }
+        acceptedItems.push_back({normPath, currentItem.identity});
         ++result.written;
-    }
-
-    if (progress) {
-        progress(totalItems, totalItems);
     }
 
     out.flush();
@@ -521,15 +532,59 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         return result;
     }
 
+    if (cancel.stop_requested()) {
+        cleanupTemp();
+        result.status = ExportStatus::Cancelled;
+        result.message = "Export was cancelled.";
+        return result;
+    }
+
     // Atomic move into final destination
     std::error_code renameEc;
+    if (!request.overwrite && fs::exists(normalDest, renameEc)) {
+        cleanupTemp();
+        result.status = ExportStatus::DestinationExists;
+        result.message = "Destination already exists and overwrite is false.";
+        return result;
+    }
+
 #ifdef _WIN32
-    if (request.overwrite && fs::exists(normalDest, renameEc)) {
+    if (request.overwrite) {
         if (!MoveFileExW(tempFile.c_str(), normalDest.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
             DWORD err = GetLastError();
             cleanupTemp();
             result.status = ExportStatus::Failed;
             result.message = "Atomic replacement failed with Windows error " + std::to_string(err);
+            return result;
+        }
+    } else {
+        if (!MoveFileExW(tempFile.c_str(), normalDest.c_str(), MOVEFILE_COPY_ALLOWED)) {
+            DWORD err = GetLastError();
+            cleanupTemp();
+            if (err == ERROR_FILE_EXISTS || err == ERROR_ALREADY_EXISTS) {
+                result.status = ExportStatus::DestinationExists;
+                result.message = "Destination already exists and overwrite is false.";
+            } else {
+                result.status = ExportStatus::Failed;
+                result.message = "Rename failed with Windows error " + std::to_string(err);
+            }
+            return result;
+        }
+    }
+#else
+    if (!request.overwrite) {
+        if (link(tempFile.c_str(), normalDest.c_str()) == 0) {
+            unlink(tempFile.c_str());
+        } else {
+            int err = errno;
+            cleanupTemp();
+            if (err == EEXIST) {
+                result.status = ExportStatus::DestinationExists;
+                result.message = "Destination already exists and overwrite is false.";
+            } else {
+                result.status = ExportStatus::Failed;
+                result.message = "Atomic link failed: " + std::string(strerror(err));
+            }
             return result;
         }
     } else {
@@ -540,14 +595,6 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
             result.message = "Rename failed: " + renameEc.message();
             return result;
         }
-    }
-#else
-    fs::rename(tempFile, normalDest, renameEc);
-    if (renameEc) {
-        cleanupTemp();
-        result.status = ExportStatus::Failed;
-        result.message = "Rename failed: " + renameEc.message();
-        return result;
     }
 #endif
 

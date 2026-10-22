@@ -399,6 +399,78 @@ void testPathList() {
     check(content.ends_with("\n"), "PathList ends with LF");
 }
 
+void testReviewerProbes() {
+    Fixture f;
+    auto p = f.file("source.png", "source");
+    std::error_code ec;
+    auto snap = snapshotTarget(p, ec);
+    ExportItem known{p, TargetKind::File, snap->identity, snap->bytes, snap->modified};
+    ExportItem unknown = known; unknown.identity = {0, 0};
+
+    // 1. Mixed known/unknown deduplication in both orders
+    for (int order = 0; order < 2; ++order) {
+        ExportRequest q; q.revalidate = false;
+        q.destination = f.root / ("mixed-" + std::to_string(order) + ".csv");
+        q.items = order ? std::vector<ExportItem>{unknown, known} : std::vector<ExportItem>{known, unknown};
+        auto r = exportSelection(q);
+        check(r.written == 1 && r.skipped.size() == 1, "mixed identity duplicates must use lexical path fallback");
+    }
+
+    // 2. Cancellation and once-per-item progress
+    for (int stage = 0; stage < 2; ++stage) {
+        ExportRequest q; q.items = {known}; q.overwrite = true;
+        q.destination = f.file("cancel-" + std::to_string(stage) + ".csv", "original");
+        std::stop_source stop; std::size_t calls = 0;
+        auto r = exportSelection(q, stop.get_token(), [&](auto done, auto total) {
+            ++calls;
+            if ((stage == 0 && done == 0) || (stage == 1 && done == total)) stop.request_stop();
+        });
+        check(r.status == ExportStatus::Cancelled && readFile(q.destination) == "original", "last-item/completion cancellation must preserve destination");
+        check(calls <= q.items.size(), "progress no more than once per item");
+    }
+
+    // 3. No overwrite race
+    {
+        ExportRequest q; q.items = {known}; q.destination = f.root / "late-destination.csv";
+        bool created = false;
+        auto r = exportSelection(q, {}, [&](auto, auto) {
+            if (!created) {
+                write(q.destination, "created-after-precheck");
+                created = true;
+            }
+        });
+        check(readFile(q.destination) == "created-after-precheck", "overwrite=false must not replace a destination created during export");
+    }
+
+    // 4. Unicode destination
+#ifdef _WIN32
+    {
+        ExportRequest q; q.items = {known};
+        q.destination = f.root / fs::path(L"\u6e2c\u8a66-\U0001f5bc.csv");
+        try {
+            auto r = exportSelection(q);
+            check(r.status == ExportStatus::Written, "Unicode destination must export successfully");
+            check(fs::exists(q.destination), "Unicode destination file exists");
+        } catch (const std::exception& e) {
+            check(false, std::string("Unicode destination must not throw: ") + e.what());
+        }
+    }
+#endif
+
+    // 5. Lexical relative root
+    {
+        auto root = f.dir("relative-root");
+        auto sub = f.dir("relative-root/alias");
+        auto img = f.file("relative-root/alias/image.png", "img");
+        ExportRequest q; q.destination = f.root / "lexical-relative.csv";
+        q.revalidate = false; q.pathPolicy = PathPolicy::RelativeToRoot; q.root = root;
+        q.columns = {ExportColumn::Path};
+        q.items = {ExportItem{img}};
+        auto r = exportSelection(q);
+        check(r.written == 1 && r.skipped.empty(), "relative-root contract compares lexical paths");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -412,6 +484,7 @@ int main() {
     testCancellation();
     testBoundsAndGeneration();
     testPathList();
+    testReviewerProbes();
 
     if (failures > 0) {
         std::cerr << "FAILED with " << failures << " error(s)\n";
