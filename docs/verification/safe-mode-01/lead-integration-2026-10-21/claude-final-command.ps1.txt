@@ -1,0 +1,7 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/lead-integration-2026-10-21'
+Get-Content -Raw .cache/lead-integration-review-prompt.txt | & 'C:/Users/dvort/.vscode/extensions/anthropic.claude-code-2.1.304-win32-x64/resources/native-binary/claude.exe' -p --model claude-sonnet-5-5 --permission-mode plan --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --disallowedTools Bash,Edit,Write,Agent,Task --strict-mcp-config '{"mcpServers":{}}' --no-session-persistence --output-format json > "$d/claude-final-result.json" 2> "$d/claude-final-stderr.txt"
+$code=$LASTEXITCODE
+"claude_final_review_exit=$code" | Set-Content "$d/claude-final-status.txt"
+exit $code

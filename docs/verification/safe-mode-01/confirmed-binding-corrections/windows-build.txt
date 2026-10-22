@@ -1,0 +1,25 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (17.1s)
+-- Generating done (4.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+[1/22] Automatic MOC and UIC for target glancelot_platform
+[2/20] Automatic MOC and UIC for target glancelot_recovery_common
+[3/18] Automatic MOC and UIC for target glancelot-decoder
+[4/16] Automatic MOC and UIC for target recovery_startup_tests
+[5/14] Automatic MOC and UIC for target recovery_tests
+[6/13] Automatic MOC and UIC for target recovery_controller_tests
+[7/12] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\pane_layout.cpp.obj
+[8/12] Building CXX object CMakeFiles\recovery_tests.dir\src\app\viewer_controller.cpp.obj
+[9/12] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\viewer_controller.cpp.obj
+[10/12] Linking CXX executable recovery_tests.exe
+[11/12] Building CXX object CMakeFiles\recovery_controller_tests.dir\tests\recovery_controller_tests.cpp.obj
+[12/12] Linking CXX executable recovery_controller_tests.exe

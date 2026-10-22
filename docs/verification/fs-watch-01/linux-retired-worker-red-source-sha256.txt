@@ -1,0 +1,13 @@
+
+Algorithm : SHA256
+Hash      : F6B4A23A47E677F0086A52DFB14732D947FB5B4068CE4A646ABCF6CEB90CBF4D
+Path      : C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\src\app\io_job_lease.hpp
+
+Algorithm : SHA256
+Hash      : 4ABDD84F0449E8F5D8794F7A058AC123A5C05EA40CC71CFE59F07B41BDEBBDD8
+Path      : C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\src\app\io_scheduler.cpp
+
+Algorithm : SHA256
+Hash      : 0DA4B8A64FE64CD0E2344CC6166066BCE6426C1D917687ED9A9045EF0DBBE786
+Path      : C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\include\glancelot\io_scheduler.hpp
+

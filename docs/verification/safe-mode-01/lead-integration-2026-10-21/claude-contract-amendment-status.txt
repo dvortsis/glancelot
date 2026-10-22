@@ -1,0 +1,1 @@
+claude_contract_amendment_exit=0

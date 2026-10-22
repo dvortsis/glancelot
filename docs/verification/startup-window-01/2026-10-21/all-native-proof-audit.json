@@ -1,0 +1,672 @@
+[
+  {
+    "platform": "windows",
+    "run": "run-223ms761",
+    "passed": true,
+    "commands": 35,
+    "reports": [
+      {
+        "file": "viewer-026.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 24,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1781,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-027.json",
+        "safe_mode": true,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 22,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1890,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-028.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 21,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 2318,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-031.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 21,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 2057,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-034.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 21,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 2018,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-035.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 15,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": -1,
+        "pre_grab_software_detection": "not-detected"
+      }
+    ]
+  },
+  {
+    "platform": "windows",
+    "run": "run-60s9y01c",
+    "passed": true,
+    "commands": 35,
+    "reports": [
+      {
+        "file": "viewer-026.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 20,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 5019,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-027.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 22,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1697,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-028.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 23,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1963,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-031.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 23,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1878,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-034.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 29,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 2382,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-035.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 15,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": -1,
+        "pre_grab_software_detection": "not-detected"
+      }
+    ]
+  },
+  {
+    "platform": "windows",
+    "run": "run-7s8dvcy0",
+    "passed": true,
+    "commands": 35,
+    "reports": [
+      {
+        "file": "viewer-026.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 21,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1382,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-027.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 22,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1441,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-028.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 20,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1396,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-031.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 20,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1474,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-034.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 20,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1445,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-035.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "after": {
+          "height": 811,
+          "width": 1180,
+          "x": 690,
+          "y": 275
+        },
+        "pre_grab_frames": 16,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": -1,
+        "pre_grab_software_detection": "not-detected"
+      }
+    ]
+  },
+  {
+    "platform": "windows",
+    "run": "run-cnw8g4uw",
+    "passed": true,
+    "commands": 35,
+    "reports": [
+      {
+        "file": "viewer-026.json",
+        "safe_mode": true,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 23,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 2283,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-027.json",
+        "safe_mode": true,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 23,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1304,
+        "pre_grab_software_detection": "cpu-device-type"
+      },
+      {
+        "file": "viewer-028.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 19,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1221,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-031.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 20,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1182,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-034.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 19,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1157,
+        "pre_grab_software_detection": "not-detected"
+      },
+      {
+        "file": "viewer-035.json",
+        "safe_mode": false,
+        "placement": "Recovered",
+        "before": {
+          "height": 1591,
+          "width": 2360,
+          "x": 0,
+          "y": 1569
+        },
+        "after": {
+          "height": 1392,
+          "width": 2360,
+          "x": 100,
+          "y": 0
+        },
+        "pre_grab_frames": 13,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": -1,
+        "pre_grab_software_detection": "not-detected"
+      }
+    ]
+  },
+  {
+    "platform": "linux",
+    "run": "run-smv7l0fv",
+    "passed": true,
+    "commands": 35,
+    "reports": [
+      {
+        "file": "viewer-026.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "after": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "pre_grab_frames": 18,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 1050,
+        "pre_grab_software_detection": "renderer-name"
+      },
+      {
+        "file": "viewer-027.json",
+        "safe_mode": true,
+        "placement": "Unchanged",
+        "before": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "after": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "pre_grab_frames": 18,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 606,
+        "pre_grab_software_detection": "renderer-name"
+      },
+      {
+        "file": "viewer-028.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "after": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "pre_grab_frames": 18,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 529,
+        "pre_grab_software_detection": "renderer-name"
+      },
+      {
+        "file": "viewer-031.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "after": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "pre_grab_frames": 18,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 489,
+        "pre_grab_software_detection": "renderer-name"
+      },
+      {
+        "file": "viewer-034.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "after": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "pre_grab_frames": 18,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": 569,
+        "pre_grab_software_detection": "renderer-name"
+      },
+      {
+        "file": "viewer-035.json",
+        "safe_mode": false,
+        "placement": "Unchanged",
+        "before": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "after": {
+          "height": 780,
+          "width": 1180,
+          "x": 0,
+          "y": 0
+        },
+        "pre_grab_frames": 18,
+        "pre_grab_exposed": true,
+        "pre_grab_first_image_frame_ms": -1,
+        "pre_grab_software_detection": "renderer-name"
+      }
+    ]
+  }
+]

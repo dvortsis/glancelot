@@ -1,0 +1,178 @@
+diff --git a/include/glancelot/display_manager.hpp b/include/glancelot/display_manager.hpp
+index 03bb31c..365fc14 100644
+--- a/include/glancelot/display_manager.hpp
++++ b/include/glancelot/display_manager.hpp
+@@ -123,7 +123,8 @@ public:
+     Q_INVOKABLE void setPresentationMode(const QString& mode);
+     void setMode(PresentationMode mode);
+ 
+-    // Image routing
++    // Image routing. Every producer uses the controller's monotonic selection-generation
++    // space (including pin/comparison requests), never an independent per-producer counter.
+     void updateImage(const QString& path, const QImage& image, quint64 generation);
+     Q_INVOKABLE void pinCurrentImage();
+     Q_INVOKABLE void pinImage(const QString& path, const QImage& image, quint64 generation);
+diff --git a/src/app/display_manager.cpp b/src/app/display_manager.cpp
+index 4a86e3e..0462a68 100644
+--- a/src/app/display_manager.cpp
++++ b/src/app/display_manager.cpp
+@@ -400,7 +400,9 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
+         d->presentationWindow->setScreen(targetScreen);
+         d->presentationWindow->setGeometry(targetScreen->geometry());
+         d->applyImagesToWindow();
+-        d->presentationWindow->restoreViewport(d->viewports.value(d->activeId));
++        const auto defaultFit=d->fitModes.value(d->activeId,QStringLiteral("shrink"));
++        const QVariantMap defaults{{"primary",QVariantMap{{"fit",defaultFit}}},{"secondary",QVariantMap{{"fit",defaultFit}}},{"linked",true},{"activeSecondary",false}};
++        d->presentationWindow->restoreViewport(d->viewports.value(d->activeId,defaults));
+         d->presentationWindow->show();
+     }
+ 
+@@ -469,7 +471,8 @@ void DisplayManager::setMode(PresentationMode mode) {
+ void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
+     if (generation < d->currentGeneration) return;
+ 
+-    if (path != d->currentPath && !d->currentImage.isNull()) {
++    if (!d->active) { d->previousImage={}; d->previousPath.clear(); }
++    else if (path != d->currentPath && !d->currentImage.isNull()) {
+         d->previousPath = d->currentPath;
+         d->previousImage = d->currentImage;
+     }
+diff --git a/src/app/viewer_controller.cpp b/src/app/viewer_controller.cpp
+index aca53a7..bf0a789 100644
+--- a/src/app/viewer_controller.cpp
++++ b/src/app/viewer_controller.cpp
+@@ -154,7 +154,7 @@ const std::vector<Command> registry {
+     {"presentation-pin", "Presentation: Pin current photo", ""},
+     {"presentation-compare", "Presentation: Comparison mode", ""},
+     {"presentation-close", "Close presentation display", ""},
+-    {"presentation-fit", "Presentation: Cycle fit mode for this display", ""},
++    {"presentation-fit", "Presentation: Cycle fit mode for this display", "Ctrl+Alt+F"},
+     // MONITOR-OUTPUT-01 core correction: output viewport; never modifies the controller canvas.
+     {"presentation-view-actual", "Presentation: Actual physical pixel size", ""},
+     {"presentation-view-zoom-in", "Presentation: Zoom in", ""},
+diff --git a/src/render/presentation_window.cpp b/src/render/presentation_window.cpp
+index 32f56de..4f98682 100644
+--- a/src/render/presentation_window.cpp
++++ b/src/render/presentation_window.cpp
+@@ -25,12 +25,12 @@ PresentationWindow::PresentationWindow(QWindow* parent)
+     setFlags(Qt::Window | Qt::FramelessWindowHint);
+ 
+     m_canvasA = new ImageCanvas(contentItem());
+-    m_canvasA->setTextureBudget(kPresentationTextureBudget / 2);
++    m_canvasA->setTextureBudget(kPresentationTextureBudget);
+     m_canvasA->setBackground(QColor(0, 0, 0));
+     m_canvasA->fit(m_fitMode);
+ 
+     m_canvasB = new ImageCanvas(contentItem());
+-    m_canvasB->setTextureBudget(kPresentationTextureBudget / 2);
++    m_canvasB->setTextureBudget(0);
+     m_canvasB->setBackground(QColor(0, 0, 0));
+     m_canvasB->fit(m_fitMode);
+     m_canvasB->setVisible(false);
+@@ -39,13 +39,14 @@ PresentationWindow::PresentationWindow(QWindow* parent)
+     m_colorRetry.setSingleShot(true); m_colorRetry.setInterval(50);
+     connect(&m_colorRetry,&QTimer::timeout,this,&PresentationWindow::requestColor);
+     m_colorRefresh.setInterval(5000);
+-    connect(&m_colorRefresh,&QTimer::timeout,this,[this] { if (isVisible() && !m_hasInjectedProfile) { ++m_colorRevision; requestColor(); } });
++    connect(&m_colorRefresh,&QTimer::timeout,this,[this] { if (isVisible() && !m_hasInjectedProfile && !m_colorInFlight) { ++m_colorRevision; requestColor(); } });
+     m_colorRefresh.start();
+     connect(this,&QWindow::screenChanged,this,[this] { refreshOutputColorProfile(); updateLayout(); });
+     connect(&m_colorWatcher,&QFutureWatcher<output_color::Result>::finished,this,[this] {
+         m_colorInFlight=false; m_colorRetry.stop();
+         const auto result=m_colorWatcher.result();
+         if (result.revision!=m_colorRevision) { requestColor(); return; }
++        if (m_colorAtlas==result.atlas && m_colorStatus==result.status) return;
+         m_colorAtlas=result.atlas; m_colorStatus=result.status;
+         m_canvasA->setOutputColorLut(m_colorAtlas); m_canvasB->setOutputColorLut(m_colorAtlas);
+         emit outputColorChanged();
+@@ -56,6 +57,8 @@ PresentationWindow::PresentationWindow(QWindow* parent)
+ PresentationWindow::~PresentationWindow() = default;
+ 
+ void PresentationWindow::setComparisonMode(bool comparison) {
++    m_canvasA->setTextureBudget(comparison?kPresentationTextureBudget/2:kPresentationTextureBudget);
++    m_canvasB->setTextureBudget(comparison?kPresentationTextureBudget/2:0);
+     if (m_comparisonMode == comparison) return;
+     m_comparisonMode = comparison;
+     if (!comparison) m_activeSecondary=false;
+@@ -105,7 +108,7 @@ QVariantMap PresentationWindow::viewportState() const {
+     return {{"primary",m_canvasA->image().isNull()?m_pendingPrimary:m_canvasA->viewState()},{"secondary",m_canvasB->image().isNull()?m_pendingSecondary:m_canvasB->viewState()},{"linked",m_linked},{"activeSecondary",m_activeSecondary}};
+ }
+ void PresentationWindow::restoreViewport(const QVariantMap& state) {
+-    if (state.isEmpty()) return;
++    if (state.isEmpty()) { m_linked=true; m_activeSecondary=false; setFitMode("shrink"); return; }
+     m_pendingPrimary=state.value("primary").toMap(); m_pendingSecondary=state.value("secondary").toMap();
+     if(!m_canvasA->image().isNull() || !m_pendingPrimary.value("fit").toString().isEmpty()) m_canvasA->setViewState(m_pendingPrimary);
+     if(!m_canvasB->image().isNull() || !m_pendingSecondary.value("fit").toString().isEmpty()) m_canvasB->setViewState(m_pendingSecondary);
+diff --git a/src/render/presentation_window.hpp b/src/render/presentation_window.hpp
+index 403cee9..af8f358 100644
+--- a/src/render/presentation_window.hpp
++++ b/src/render/presentation_window.hpp
+@@ -25,7 +25,7 @@ class DisplayManager;
+ constexpr qint64 kPresentationTextureBudget = 256LL * 1024 * 1024;
+ // Conservative reservation for shared CPU atlas, two GPU atlases and in-flight uploads.
+ // Separately reported from retained decoded pixels; no full-size converted rasters.
+-constexpr qint64 kPresentationColorReservation = 4LL * 1024 * 1024;
++constexpr qint64 kPresentationColorReservation = 16LL * 1024 * 1024;
+ 
+ class PresentationWindow : public QQuickWindow {
+     Q_OBJECT
+diff --git a/tests/monitor_output_tests.cpp b/tests/monitor_output_tests.cpp
+index d4f3256..576a8ed 100644
+--- a/tests/monitor_output_tests.cpp
++++ b/tests/monitor_output_tests.cpp
+@@ -21,6 +21,45 @@ class MonitorOutputTests : public QObject {
+     }
+ 
+ private slots:
++    void testUnvisitedOutputStartsWithDefaults() {
++        glancelot::PresentationWindow window; window.resize(800,600); window.setComparisonMode(true);
++        window.setPrimaryImage(createTestImage(640,480,Qt::red)); window.setSecondaryImage(createTestImage(640,480,Qt::blue));
++        window.viewportCommand("linked"); window.viewportCommand("reference"); window.viewportCommand("zoom-in"); window.viewportCommand("pan-up");
++        window.restoreViewport({}); // no saved state on the newly selected identity
++        QCOMPARE(window.primaryCanvas()->fitMode(),QStringLiteral("shrink"));
++        QCOMPARE(window.secondaryCanvas()->fitMode(),QStringLiteral("shrink"));
++        QVERIFY(window.viewportState()["linked"].toBool()); QVERIFY(!window.viewportState()["activeSecondary"].toBool());
++    }
++    void testTextureBudgetTracksPresentationMode() {
++        glancelot::PresentationWindow window;
++        QCOMPARE(window.primaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget);
++        QCOMPARE(window.secondaryCanvas()->textureBudget(),qint64(0));
++        const QImage image=createTestImage(6400,6144,Qt::red); // generated 150 MiB: exceeds the old 128 MiB half-cap
++        QCOMPARE(image.sizeInBytes(),qint64(150)*1024*1024);
++        window.setPrimaryImage(image);
++        QCOMPARE(window.primaryCanvas()->image().cacheKey(),image.cacheKey());
++        QVERIFY(window.primaryCanvas()->image().sizeInBytes()<=window.primaryCanvas()->textureBudget());
++        window.setComparisonMode(true);
++        QCOMPARE(window.primaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget/2);
++        QCOMPARE(window.secondaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget/2);
++        window.setComparisonMode(false);
++        QCOMPARE(window.primaryCanvas()->textureBudget(),glancelot::kPresentationTextureBudget);
++        QCOMPARE(window.secondaryCanvas()->textureBudget(),qint64(0));
++        QVERIFY(window.secondaryCanvas()->image().isNull());
++    }
++    void testClosedOutputDoesNotRetainNavigationHistory() {
++        glancelot::DisplayManager dm; QVERIFY(dm.openPresentation());
++        const auto pinned=createTestImage(40,40,Qt::red);
++        dm.pinImage("pin",pinned,1); dm.closePresentation();
++        dm.updateImage("a",createTestImage(80,80,Qt::green),2);
++        const auto current=createTestImage(64,64,Qt::blue);
++        dm.updateImage("b",current,3);
++        QCOMPARE(dm.retainedImageBytes(),pinned.sizeInBytes()+current.sizeInBytes());
++        QVERIFY(dm.openPresentation()); dm.compareWithPinnedOrPrevious();
++        auto* window=qobject_cast<glancelot::PresentationWindow*>(dm.presentationWindow()); QVERIFY(window);
++        QCOMPARE(window->secondaryCanvas()->image().cacheKey(),pinned.cacheKey());
++        dm.closePresentation(); flushDeletes();
++    }
+     void testIndependentReferenceViewSurvivesTemporarilyMissingImage() {
+         glancelot::PresentationWindow window; window.resize(800,600); window.setComparisonMode(true);
+         window.setPrimaryImage(createTestImage(640,480,Qt::red));
+@@ -59,6 +98,9 @@ private slots:
+         QVERIFY(dm.openPresentation(displays[1].id));
+         QTRY_COMPARE(glancelot::DisplayManager::computeDisplayId(window->screen()),displays[1].id);
+         QTest::qWait(100);
++        // First visit must not inherit A's manual view or comparison interaction state.
++        QCOMPARE(window->primaryCanvas()->fitMode(),QStringLiteral("shrink"));
++        QVERIFY(window->viewportState()["linked"].toBool()); QVERIFY(!window->viewportState()["activeSecondary"].toBool());
+         dm.outputViewportCommand("actual"); dm.outputViewportCommand("zoom-out"); dm.outputViewportCommand("pan-up");
+         const auto second=window->primaryCanvas()->viewState();
+         QVERIFY(dm.openPresentation(displays[0].id)); QTest::qWait(100);

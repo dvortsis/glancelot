@@ -1,0 +1,13 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (3.2s)
+-- Generating done (0.8s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-platform-fixture-security/build-codex-platform-fixture-security
+[1/7] Automatic MOC and UIC for target glancelot_test_argv_capture
+[2/5] Automatic MOC and UIC for target platform_integration_tests
+[3/4] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_tests.cpp.obj
+[4/4] Linking CXX executable platform_integration_tests.exe

@@ -1,0 +1,15 @@
+********* Start testing of RecoveryControllerTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+PASS   : RecoveryControllerTests::initTestCase()
+PASS   : RecoveryControllerTests::successfulEmptyDirectoryIsCheckpointedAndCleaned()
+PASS   : RecoveryControllerTests::failedExplicitVisitBeforeLateClaimPreventsResume()
+PASS   : RecoveryControllerTests::explicitVisitWinsWhileBeginWaitsAndUiKeepsResponding()
+PASS   : RecoveryControllerTests::decodedSuccessPersistsAndFailedDecodeKeepsCheckpoint()
+PASS   : RecoveryControllerTests::reentrantExplicitVisitWinsWhenResumeAnnouncesStatus()
+QINFO  : RecoveryControllerTests::claimReplacementWaitsForOutgoingWorkerWithoutBlockingUi() claim reassignment while outgoing transaction blocked: 0 ms
+PASS   : RecoveryControllerTests::claimReplacementWaitsForOutgoingWorkerWithoutBlockingUi()
+PASS   : RecoveryControllerTests::ownerCanBeDestroyedWhenResumeAnnouncesStatus()
+PASS   : RecoveryControllerTests::safeFeedbackUsesExistingStatusAndSuppressesResume()
+PASS   : RecoveryControllerTests::cleanupTestCase()
+Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 1131ms
+********* Finished testing of RecoveryControllerTests *********

@@ -1,0 +1,22 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 49199 ms; initial GUI gap 11 ms; sustained-writer/recovery GUI gap 136 ms; writes 279 invalidations 9
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 29 ms; GUI gap 63 ms; publication 62 ms; writes 70
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 19 identity 0 merge (includes disposal) 14 merge scan 4 reset 0 projection/raw mirror 4 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 106 identity 0 merge (includes disposal) 99 merge scan 64 reset 0 projection/raw mirror 7 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 115 identity 0 merge (includes disposal) 100 merge scan 63 reset 0 projection/raw mirror 14 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 104 identity 0 merge (includes disposal) 90 merge scan 57 reset 0 projection/raw mirror 14 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 18 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 0 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 12 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 0 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 105 identity 0 merge (includes disposal) 90 merge scan 57 reset 0 projection/raw mirror 14 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 121 identity 0 merge (includes disposal) 106 merge scan 64 reset 0 projection/raw mirror 15 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 110 identity 0 merge (includes disposal) 95 merge scan 61 reset 0 projection/raw mirror 14 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 135 identity 0 merge (includes disposal) 119 merge scan 78 reset 0 projection/raw mirror 15 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 62 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 62 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 53 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 53 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 15 maximum 135 ms; loading at exit false
+PASS   : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 72495ms
+********* Finished testing of FSWatchTests *********

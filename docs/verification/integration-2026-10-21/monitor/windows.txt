@@ -1,0 +1,278 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (15.4s)
+-- Generating done (1.9s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-monitor-output-r2/build-codex-monitor-output-r2
+[1/222] Copying glancelot qml sources into build dir
+[2/222] Automatic MOC and UIC for target glancelot_platform
+[3/220] Automatic MOC and UIC for target glancelot_test_argv_capture
+[4/218] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/216] Automatic MOC and UIC for target glancelot-decoder
+[6/214] Running qmlimportscanner for glancelot
+[7/214] Running qmlimportscanner for input_ui_tests
+[8/214] Automatic MOC and UIC for target theme_tests
+[9/214] Automatic MOC and UIC for target glancelot
+[10/214] Automatic MOC and UIC for target grid_ui_tests
+[11/214] Running AUTOMOC file extraction for target glancelot
+[12/214] Running moc --collect-json for target glancelot
+[13/214] Automatic MOC and UIC for target monitor_output_tests
+[14/214] Automatic MOC and UIC for target fs_watch_ui_tests
+[15/214] Running rcc for resource qmake_Glancelot
+[16/214] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+[17/214] Running rcc for resource glancelot_raw_qml_0
+[18/214] Automatic QML type registration for target glancelot
+[19/214] Automatic MOC and UIC for target thumbnail_tests
+[20/212] Automatic MOC and UIC for target input_ui_tests
+[21/212] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+[22/212] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+[23/212] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+[24/212] Automatic MOC and UIC for target acceptance_tests
+[25/212] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[26/212] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[27/212] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+[28/212] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+[29/212] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+[30/212] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+[31/212] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+[32/212] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+[33/212] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+[34/212] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+[35/212] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+[36/212] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+[37/212] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+[38/212] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+[39/212] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+[40/212] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+[41/212] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+[42/212] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+[43/212] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+[44/212] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+[45/212] Automatic MOC and UIC for target file_operation_service_tests
+[46/210] Automatic MOC and UIC for target pane_layout_tests
+[47/208] Automatic MOC and UIC for target directory_model_tests
+[48/206] Automatic MOC and UIC for target folder_tree_tests
+[49/206] Automatic MOC and UIC for target window_slot_tests
+[50/206] Automatic MOC and UIC for target platform_integration_tests
+[51/204] Automatic MOC and UIC for target grid_search_tests
+[52/202] Automatic MOC and UIC for target grid_density_tests
+[53/200] Automatic MOC and UIC for target canvas_tests
+[54/200] Automatic MOC and UIC for target favorites_tests
+[55/198] Automatic MOC and UIC for target ui_settings_tests
+[56/198] Automatic MOC and UIC for target fs_watch_tests
+[57/198] Automatic MOC and UIC for target fs_watch_budget_tests
+[58/198] Automatic MOC and UIC for target folder_history_tests
+[59/196] Automatic MOC and UIC for target io_scheduler_tests
+[60/196] Automatic MOC and UIC for target shortcuts_help_tests
+[61/196] Automatic MOC and UIC for target filter_tests
+[62/196] Automatic MOC and UIC for target cache_tests
+[63/196] Automatic MOC and UIC for target animation_tests
+[64/194] Automatic MOC and UIC for target metadata_tests
+[65/192] Running rcc for resource input_theme_catalog
+[66/192] Automatic MOC and UIC for target format_tests
+[67/190] Running rcc for resource input_brand_assets
+[68/190] Running rcc for resource input_canvas_shaders
+[69/190] Automatic MOC and UIC for target mutation_tests
+[70/190] Automatic MOC and UIC for target copy_move_tests
+[71/190] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[72/190] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[73/190] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[74/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.qt\rcc\qrc_qmake_Glancelot.cpp.obj
+[75/190] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[76/190] Building CXX object CMakeFiles\glancelot.dir\glancelot_qmltyperegistrations.cpp.obj
+[77/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_qmlcache_loader.cpp.obj
+[78/190] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[79/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[80/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\Theme_qml.cpp.obj
+[81/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\ThemePicker_qml.cpp.obj
+[82/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\Filmstrip_qml.cpp.obj
+[83/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\PhotoGrid_qml.cpp.obj
+[84/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[85/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\PaneArrangement_qml.cpp.obj
+[86/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\SettingsDialog_qml.cpp.obj
+[87/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\SettingRow_qml.cpp.obj
+[88/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiComboBox_qml.cpp.obj
+[89/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiButton_qml.cpp.obj
+[90/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiDialog_qml.cpp.obj
+[91/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiScrollBar_qml.cpp.obj
+[92/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiSwitch_qml.cpp.obj
+[93/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiIcon_qml.cpp.obj
+[94/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\UiTextField_qml.cpp.obj
+[95/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\ShortcutCheatSheet_qml.cpp.obj
+[96/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\DeleteFlow_qml.cpp.obj
+[97/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\AnimationBar_qml.cpp.obj
+[98/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\MetadataHud_qml.cpp.obj
+[99/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[100/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\RenameFlow_qml.cpp.obj
+[101/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\TransferHud_qml.cpp.obj
+[102/190] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-output-r2\.rcc\qmlcache\glancelot_ui\CommandMenuItem_qml.cpp.obj
+[103/190] Building CXX object CMakeFiles\grid_ui_tests.dir\grid_ui_tests_autogen\mocs_compilation.cpp.obj
+[104/190] Building CXX object CMakeFiles\grid_ui_tests.dir\src\render\image_canvas.cpp.obj
+[105/190] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[106/190] Building CXX object CMakeFiles\input_ui_tests.dir\input_ui_tests_autogen\mocs_compilation.cpp.obj
+[107/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\settings_file.cpp.obj
+[108/190] Building CXX object CMakeFiles\input_ui_tests.dir\tests\input_ui_tests.cpp.obj
+[109/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\pane_layout.cpp.obj
+[110/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[111/190] Building CXX object CMakeFiles\grid_ui_tests.dir\tests\grid_ui_tests.cpp.obj
+[112/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[113/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\theme_manager.cpp.obj
+[114/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[115/190] Building CXX object CMakeFiles\input_ui_tests.dir\build-codex-monitor-output-r2\.qt\rcc\qrc_input_theme_catalog.cpp.obj
+[116/190] Building CXX object CMakeFiles\input_ui_tests.dir\build-codex-monitor-output-r2\.qt\rcc\qrc_input_brand_assets.cpp.obj
+[117/190] Building CXX object CMakeFiles\input_ui_tests.dir\build-codex-monitor-output-r2\.qt\rcc\qrc_input_canvas_shaders.cpp.obj
+[118/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[119/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[120/190] Building CXX object CMakeFiles\input_ui_tests.dir\src\render\image_canvas.cpp.obj
+[121/190] Building CXX object CMakeFiles\theme_tests.dir\theme_tests_autogen\mocs_compilation.cpp.obj
+[122/190] Building CXX object CMakeFiles\theme_tests.dir\tests\theme_tests.cpp.obj
+[123/190] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\fs_watch_ui_tests_autogen\mocs_compilation.cpp.obj
+[124/190] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\tests\fs_watch_ui_tests.cpp.obj
+[125/190] Building CXX object CMakeFiles\theme_tests.dir\src\app\viewer_controller.cpp.obj
+[126/190] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\render\image_canvas.cpp.obj
+[127/190] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[128/190] Building CXX object CMakeFiles\monitor_output_tests.dir\monitor_output_tests_autogen\mocs_compilation.cpp.obj
+[129/190] Building CXX object CMakeFiles\monitor_output_tests.dir\tests\monitor_output_tests.cpp.obj
+[130/190] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\presentation_window.cpp.obj
+[131/190] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\image_canvas.cpp.obj
+[132/190] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\viewer_controller.cpp.obj
+[133/190] Building CXX object CMakeFiles\acceptance_tests.dir\acceptance_tests_autogen\mocs_compilation.cpp.obj
+[134/190] Building CXX object CMakeFiles\folder_tree_tests.dir\folder_tree_tests_autogen\mocs_compilation.cpp.obj
+[135/190] Building CXX object CMakeFiles\acceptance_tests.dir\tests\acceptance_tests.cpp.obj
+[136/190] Building CXX object CMakeFiles\folder_tree_tests.dir\tests\folder_tree_tests.cpp.obj
+[137/190] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\viewer_controller.cpp.obj
+[138/190] Building CXX object CMakeFiles\window_slot_tests.dir\window_slot_tests_autogen\mocs_compilation.cpp.obj
+[139/190] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\viewer_controller.cpp.obj
+[140/190] Building CXX object CMakeFiles\canvas_tests.dir\canvas_tests_autogen\mocs_compilation.cpp.obj
+[141/190] Building CXX object CMakeFiles\window_slot_tests.dir\tests\window_slot_tests.cpp.obj
+[142/190] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\viewer_controller.cpp.obj
+[143/190] Building CXX object CMakeFiles\ui_settings_tests.dir\ui_settings_tests_autogen\mocs_compilation.cpp.obj
+[144/190] Building CXX object CMakeFiles\canvas_tests.dir\tests\canvas_tests.cpp.obj
+[145/190] Building CXX object CMakeFiles\canvas_tests.dir\src\render\image_canvas.cpp.obj
+[146/190] Building CXX object CMakeFiles\ui_settings_tests.dir\tests\ui_settings_tests.cpp.obj
+[147/190] Building CXX object CMakeFiles\fs_watch_tests.dir\fs_watch_tests_autogen\mocs_compilation.cpp.obj
+[148/190] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\fs_watch_budget_tests_autogen\mocs_compilation.cpp.obj
+[149/190] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\viewer_controller.cpp.obj
+[150/190] Building CXX object CMakeFiles\fs_watch_tests.dir\tests\fs_watch_tests.cpp.obj
+[151/190] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\viewer_controller.cpp.obj
+[152/190] Building CXX object CMakeFiles\shortcuts_help_tests.dir\shortcuts_help_tests_autogen\mocs_compilation.cpp.obj
+[153/190] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\tests\fs_watch_budget_tests.cpp.obj
+[154/190] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\viewer_controller.cpp.obj
+[155/190] Building CXX object CMakeFiles\shortcuts_help_tests.dir\tests\shortcuts_help_tests.cpp.obj
+[156/190] Building CXX object CMakeFiles\filter_tests.dir\filter_tests_autogen\mocs_compilation.cpp.obj
+[157/190] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\viewer_controller.cpp.obj
+[158/190] Building CXX object CMakeFiles\filter_tests.dir\tests\filter_tests.cpp.obj
+[159/190] Building CXX object CMakeFiles\cache_tests.dir\cache_tests_autogen\mocs_compilation.cpp.obj
+[160/190] Building CXX object CMakeFiles\filter_tests.dir\src\app\viewer_controller.cpp.obj
+[161/190] Building CXX object CMakeFiles\io_scheduler_tests.dir\io_scheduler_tests_autogen\mocs_compilation.cpp.obj
+[162/190] Building CXX object CMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj
+[163/190] Building CXX object CMakeFiles\io_scheduler_tests.dir\tests\io_scheduler_tests.cpp.obj
+[164/190] Building CXX object CMakeFiles\cache_tests.dir\src\app\viewer_controller.cpp.obj
+[165/190] Building CXX object CMakeFiles\mutation_tests.dir\mutation_tests_autogen\mocs_compilation.cpp.obj
+[166/190] Building CXX object CMakeFiles\mutation_tests.dir\tests\mutation_tests.cpp.obj
+[167/190] Building CXX object CMakeFiles\copy_move_tests.dir\copy_move_tests_autogen\mocs_compilation.cpp.obj
+[168/190] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\viewer_controller.cpp.obj
+[169/190] Linking CXX executable glancelot.exe
+[170/190] Linking CXX executable acceptance_tests.exe
+[171/190] Linking CXX executable folder_tree_tests.exe
+[172/190] Linking CXX executable window_slot_tests.exe
+[173/190] Linking CXX executable grid_ui_tests.exe
+[174/190] Linking CXX executable input_ui_tests.exe
+[175/190] Linking CXX executable canvas_tests.exe
+[176/190] Linking CXX executable theme_tests.exe
+[177/190] Linking CXX executable ui_settings_tests.exe
+[178/190] Linking CXX executable fs_watch_tests.exe
+[179/190] Building CXX object CMakeFiles\mutation_tests.dir\src\app\viewer_controller.cpp.obj
+[180/190] Linking CXX executable fs_watch_budget_tests.exe
+[181/190] Linking CXX executable fs_watch_ui_tests.exe
+[182/190] Linking CXX executable shortcuts_help_tests.exe
+[183/190] Linking CXX executable filter_tests.exe
+[184/190] Linking CXX executable cache_tests.exe
+[185/190] Linking CXX executable io_scheduler_tests.exe
+[186/190] Linking CXX executable mutation_tests.exe
+[187/190] Linking CXX executable monitor_output_tests.exe
+[188/190] Building CXX object CMakeFiles\copy_move_tests.dir\tests\copy_move_tests.cpp.obj
+[189/190] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\viewer_controller.cpp.obj
+[190/190] Linking CXX executable copy_move_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-monitor-output-r2/build-codex-monitor-output-r2
+      Start  1: perf_trace
+ 1/34 Test  #1: perf_trace .......................   Passed    0.20 sec
+      Start  2: navigation
+ 2/34 Test  #2: navigation .......................   Passed    7.98 sec
+      Start  3: directory_listing
+ 3/34 Test  #3: directory_listing ................   Passed   28.01 sec
+      Start  4: file_operations
+ 4/34 Test  #4: file_operations ..................   Passed    0.31 sec
+      Start  5: viewer_acceptance
+ 5/34 Test  #5: viewer_acceptance ................   Passed   11.37 sec
+      Start  6: thumbnails
+ 6/34 Test  #6: thumbnails .......................   Passed    7.00 sec
+      Start  7: folder_tree
+ 7/34 Test  #7: folder_tree ......................   Passed    9.67 sec
+      Start  8: pane_layout
+ 8/34 Test  #8: pane_layout ......................   Passed    0.59 sec
+      Start  9: window_slots
+ 9/34 Test  #9: window_slots .....................   Passed   27.88 sec
+      Start 10: folder_grid
+10/34 Test #10: folder_grid ......................   Passed  259.15 sec
+      Start 11: input_ui
+11/34 Test #11: input_ui .........................   Passed   49.91 sec
+      Start 12: file_operation_service
+12/34 Test #12: file_operation_service ...........   Passed    1.41 sec
+      Start 13: directory_model
+13/34 Test #13: directory_model ..................   Passed   34.84 sec
+      Start 14: viewport
+14/34 Test #14: viewport .........................   Passed    0.12 sec
+      Start 15: themes
+15/34 Test #15: themes ...........................   Passed    0.43 sec
+      Start 16: platform_integration
+16/34 Test #16: platform_integration .............   Passed    0.95 sec
+      Start 17: grid_search
+17/34 Test #17: grid_search ......................   Passed    0.35 sec
+      Start 18: grid_density
+18/34 Test #18: grid_density .....................   Passed    0.25 sec
+      Start 19: ui_settings
+19/34 Test #19: ui_settings ......................   Passed    0.91 sec
+      Start 20: fs_watch
+20/34 Test #20: fs_watch .........................   Passed   84.04 sec
+      Start 21: fs_watch_budget
+21/34 Test #21: fs_watch_budget ..................   Passed  114.91 sec
+      Start 22: fs_watch_ui
+22/34 Test #22: fs_watch_ui ......................   Passed    3.71 sec
+      Start 23: favorites
+23/34 Test #23: favorites ........................   Passed    0.64 sec
+      Start 24: folder_history
+24/34 Test #24: folder_history ...................   Passed    0.20 sec
+      Start 25: shortcuts_help
+25/34 Test #25: shortcuts_help ...................   Passed    0.41 sec
+      Start 26: filter
+26/34 Test #26: filter ...........................   Passed    2.76 sec
+      Start 27: cache
+27/34 Test #27: cache ............................   Passed    4.95 sec
+      Start 28: io_scheduler
+28/34 Test #28: io_scheduler .....................   Passed    0.23 sec
+      Start 29: metadata
+29/34 Test #29: metadata .........................   Passed    0.16 sec
+      Start 30: animation
+30/34 Test #30: animation ........................   Passed    0.50 sec
+      Start 31: mutation
+31/34 Test #31: mutation .........................   Passed    0.18 sec
+      Start 32: copy_move
+32/34 Test #32: copy_move ........................   Passed    0.23 sec
+      Start 33: format
+33/34 Test #33: format ...........................   Passed    0.16 sec
+      Start 34: monitor_output
+34/34 Test #34: monitor_output ...................   Passed    2.32 sec
+
+100% tests passed out of 34
+
+Total Test time (real) = 659.04 sec

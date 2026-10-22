@@ -1,0 +1,22 @@
+[1/34] Automatic MOC for target recovery_component_core
+[2/32] Automatic MOC for target recovery_component_platform
+[3/30] Automatic MOC for target recovery_raw_component
+[4/28] Automatic MOC for target glancelot-decoder
+[5/26] Automatic MOC for target recovery_registry_component
+[6/24] Automatic MOC for target recovery_controller_component
+[7/22] Automatic MOC for target recovery_legacy_slot_component
+[8/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\recovery_legacy_slot_component_autogen\mocs_compilation.cpp.obj
+[9/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\window_slot_tests.cpp.obj
+[10/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\viewer_controller.cpp.obj
+[11/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\directory_entry_model.cpp.obj
+[12/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_file.cpp.obj
+[13/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\window_slot.cpp.obj
+[14/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_policy.cpp.obj
+[15/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_recovery.cpp.obj
+[16/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_diff.cpp.obj
+[17/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\settings_restore.cpp.obj
+[18/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\recovery_checkpoint.cpp.obj
+[19/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\recovery_session.cpp.obj
+[20/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\.qt\rcc\qrc_recovery_controller_catalog.cpp.obj
+[21/22] Building CXX object CMakeFiles\recovery_legacy_slot_component.dir\C_\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app\command_registry.cpp.obj
+[22/22] Linking CXX executable recovery_legacy_slot_component.exe

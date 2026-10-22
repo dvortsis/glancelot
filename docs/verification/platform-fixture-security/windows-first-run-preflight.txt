@@ -1,0 +1,28 @@
+Candidate fce50960c10dbfedcfe874bec518985fbe55e9b9
+
+FullName      : C:\src\Github\Glancelot\.worktrees\codex-platform-fixture-security\build-codex-platform-fixture-security\native argv ☂ 🧪\glancelot_test_argv_capture.exe
+Length        : 23552
+LastWriteTime : 10/20/2026 8:20:00 AM
+
+
+
+Algorithm : SHA256
+Hash      : A63F8AA8AC77FFD65FDD34605409EEBDE8E1127B716404D10C007FF0B46F249F
+Path      : C:\src\Github\Glancelot\.worktrees\codex-platform-fixture-security\build-codex-platform-fixture-security\native argv ☂ 🧪\glancelot_test_argv_capture.exe
+
+
+
+ThreatID         : 2147738096
+IsActive         : False
+DidThreatExecute : False
+ThreatName       : Behavior:Win32/DefenseEvasion.A!ml
+
+
+
+ThreatID                   : 2147738096
+InitialDetectionTime       : 10/20/2026 8:03:03 AM
+LastThreatStatusChangeTime : 10/20/2026 8:03:50 AM
+ActionSuccess              : True
+Resources                  : {file:_C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\build-codex-fs-watch-01\platform_launcher_stub.exe}
+
+

@@ -1,0 +1,7 @@
+void decode(QString: identical_to_d4f0e70=True
+void reconcileObservation(): identical_to_d4f0e70=True
+watcher_sources_diff_exit=0
+src/app\fs_source_token.hpp
+src/app\fs_revision.hpp
+src/app\fs_monitor.hpp
+actual_monitor_source_and_test_diff_exit=0

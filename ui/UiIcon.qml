@@ -17,6 +17,7 @@ Item {
 
     readonly property var paths: ({
         "chevron-right": "M6 3.5 L10.5 8 L6 12.5",
+        "chevron-left": "M10 3.5 L5.5 8 L10 12.5",
         "chevron-down": "M3.5 6 L8 10.5 L12.5 6",
         "folder": "M2 4.5 Q2 3.5 3 3.5 H6.2 L7.7 5 H13 Q14 5 14 6 V12 Q14 13 13 13 H3 Q2 13 2 12 Z",
         "folder-open": "M2 12.5 V4.5 Q2 3.5 3 3.5 H6.2 L7.7 5 H12 Q13 5 13 6 V7.5 M2 12.5 L3.7 8.2 Q4 7.5 4.8 7.5 H14.2 Q15 7.5 14.7 8.3 L13.3 12.3 Q13 13 12.3 13 H2.5 Q2 13 2 12.5 Z",
@@ -46,7 +47,9 @@ Item {
         // The brand delete glyph (assets/brand/icons/ui/currentColor/delete.svg) redrawn on the 16-unit grid.
         "trash": "M2.75 4.75 H13.25 M6 4.75 V2.75 H10 V4.75 M12 4.75 L11.35 13.25 H4.65 L4 4.75 M6.75 7.25 V11 M9.25 7.25 V11",
         "alert": "M8 2.25 L14.25 13.25 H1.75 Z M8 6.5 V9.25 M8 11.25 L8.01 11.25",
-        "spinner": "M8 2 A6 6 0 1 1 2 8"
+        "spinner": "M8 2 A6 6 0 1 1 2 8",
+        "star": "M8 1.5 L9.9 5.8 L14.5 6.3 L11.1 9.4 L12 14 L8 11.7 L4 14 L4.9 9.4 L1.5 6.3 L6.1 5.8 Z",
+        "plus": "M8 3 V13 M3 8 H13"
     })
 
     Shape {

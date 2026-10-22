@@ -1,0 +1,30 @@
+19/25 Testing: fs_watch
+19/25 Test: fs_watch
+Command: "C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01/fs_watch_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+"fs_watch" start time: Oct 19 20:18 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 149.52 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch" end time: Oct 19 20:20 Mountain Daylight Time
+"fs_watch" time elapsed: 00:02:29
+----------------------------------------------------------
+
+20/25 Testing: fs_watch_ui
+20/25 Test: fs_watch_ui
+Command: "C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01/fs_watch_ui_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-fs-watch-01/build-codex-fs-watch-01
+"fs_watch_ui" start time: Oct 19 20:20 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.83 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_ui" end time: Oct 19 20:21 Mountain Daylight Time
+"fs_watch_ui" time elapsed: 00:00:01
+----------------------------------------------------------
+

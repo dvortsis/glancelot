@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "34bf9a84-18f9-47d1-ad2e-701ee2053bcf",
+                "claimNonce": "fe4e3857-ae06-4324-b330-c47d1ae4c6e3",
+                "origin": "navigation",
+                "pid": 1515,
+                "sequence": "1",
+                "start": "17535907",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-luj861te/generated-media",
+            "image": "/build/recovery-process/run-luj861te/generated-media/雪景-😀.png",
+            "saved": 1792594574
+        }
+    }
+}

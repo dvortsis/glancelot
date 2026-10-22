@@ -1,0 +1,26 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) 134 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-EYriLi/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) 134 baseline "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-EYriLi/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) 479 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-EYriLi/b.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) 479 baseline "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-EYriLi/b.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) 850 worker "revision" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-EYriLi/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) 850 baseline "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-EYriLi/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback) readDelay 0 revisionStarts 1 decodeStarts 2 unchangedHit true
+PASS   : FSWatchTests::diagnosticLateBaselineCache(baseline-before-fallback)
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 123 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 260 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 260 baseline "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 570 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/b.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 690 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/b.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 690 baseline "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/b.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 1030 worker "revision" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 1170 worker "decode" "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 1170 baseline "C:/Users/dvort/AppData/Local/Temp/fs_watch_tests-VBYYkB/a.png"
+QINFO  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) readDelay 70 revisionStarts 1 decodeStarts 5 unchangedHit false
+FAIL!  : FSWatchTests::diagnosticLateBaselineCache(baseline-after-fallback) 'viewer.isLastDecodeCacheHit()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\fs_watch_tests.cpp(128) : failure location
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 3474ms
+********* Finished testing of FSWatchTests *********

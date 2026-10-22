@@ -1,0 +1,61 @@
+ERROR: failed to build: listing workers for Build: failed to list workers: Unavailable: connection error: desc = "error reading server preface: file has already been closed"
+45920 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:safe-mode-01-review-61e4752 .
+github.com/docker/buildx/commands.runBuildWithOptions
+	github.com/docker/buildx/commands/build.go:504
+github.com/docker/buildx/commands.runBuild
+	github.com/docker/buildx/commands/build.go:419
+github.com/docker/buildx/commands.buildCmd.func1
+	github.com/docker/buildx/commands/build.go:540
+github.com/docker/cli/cli-plugins/plugin.RunPlugin.func1.1.2
+	github.com/docker/cli@v29.6.2+incompatible/cli-plugins/plugin/plugin.go:65
+github.com/spf13/cobra.(*Command).execute
+	github.com/spf13/cobra@v1.10.2/command.go:1015
+github.com/spf13/cobra.(*Command).ExecuteC
+	github.com/spf13/cobra@v1.10.2/command.go:1148
+github.com/spf13/cobra.(*Command).Execute
+	github.com/spf13/cobra@v1.10.2/command.go:1071
+github.com/docker/cli/cli-plugins/plugin.RunPlugin
+	github.com/docker/cli@v29.6.2+incompatible/cli-plugins/plugin/plugin.go:80
+main.runPlugin
+	github.com/docker/buildx/cmd/buildx/main.go:66
+main.run
+	github.com/docker/buildx/cmd/buildx/main.go:80
+main.main
+	github.com/docker/buildx/cmd/buildx/main.go:90
+runtime.main
+	runtime/proc.go:290
+runtime.goexit
+	runtime/asm_amd64.s:1771
+
+45920 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:safe-mode-01-review-61e4752 .
+google.golang.org/grpc.(*ClientConn).Invoke
+	google.golang.org/grpc@v1.82.1/call.go:35
+github.com/moby/buildkit/api/services/control.(*controlClient).ListWorkers
+	github.com/moby/buildkit@v0.32.2/api/services/control/control_grpc.pb.go:130
+github.com/moby/buildkit/client.(*Client).ListWorkers
+	github.com/moby/buildkit@v0.32.2/client/workers.go:32
+github.com/moby/buildkit/client.(*Client).Build
+	github.com/moby/buildkit@v0.32.2/client/build.go:32
+github.com/docker/buildx/build/resolver.(*nodeResolver).opts.func1.1
+	github.com/docker/buildx/build/resolver/driver.go:335
+github.com/moby/buildkit/util/flightcontrol.(*call[...]).run
+	github.com/moby/buildkit@v0.32.2/util/flightcontrol/flightcontrol.go:122
+sync.(*Once).doSlow
+	sync/once.go:78
+sync.(*Once).Do
+	sync/once.go:69
+runtime.goexit
+	runtime/asm_amd64.s:1771
+
+45920 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:safe-mode-01-review-61e4752 .
+github.com/moby/buildkit/client.(*Client).Build
+	github.com/moby/buildkit@v0.32.2/client/build.go:34
+github.com/docker/buildx/build/resolver.(*nodeResolver).opts.func1.1
+	github.com/docker/buildx/build/resolver/driver.go:335
+
+45920 v0.36.1-desktop.1 C:\Users\dvort\.docker\cli-plugins\docker-buildx.exe buildx build --progress=plain -t glancelot-browser:safe-mode-01-review-61e4752 .
+github.com/moby/buildkit/client.(*Client).ListWorkers
+	github.com/moby/buildkit@v0.32.2/client/workers.go:34
+github.com/moby/buildkit/client.(*Client).Build
+	github.com/moby/buildkit@v0.32.2/client/build.go:32
+

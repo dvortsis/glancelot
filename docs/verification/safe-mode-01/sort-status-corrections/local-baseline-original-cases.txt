@@ -1,0 +1,9 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+PASS   : FSWatchTests::controllerCannotReleaseForeignAdmissions()
+QINFO  : FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache() noncurrent replacement: source QColor(ARGB 1, 0, 0, 1) display QColor(ARGB 1, 0, 0, 1) cache hit false
+PASS   : FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache()
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 1954ms
+********* Finished testing of FSWatchTests *********

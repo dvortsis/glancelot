@@ -20,9 +20,15 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(bool accessible READ accessible NOTIFY directoryChanged)
     Q_PROPERTY(bool truncated READ truncated NOTIFY directoryChanged)
     Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
+    Q_PROPERTY(qint64 selectedBytes READ selectedBytes NOTIFY selectionChanged)
+    Q_PROPERTY(QString selectedBytesFormatted READ selectedBytesFormatted NOTIFY selectionChanged)
+    Q_PROPERTY(QString selectedSummary READ selectedSummary NOTIFY selectionChanged)
     Q_PROPERTY(int cursorRow READ cursorRow NOTIFY selectionChanged)
     Q_PROPERTY(QString currentImage READ currentImage WRITE setCurrentImage NOTIFY currentImageChanged)
     Q_PROPERTY(quint64 epoch READ epoch NOTIFY epochChanged)
+    Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterChanged)
+    Q_PROPERTY(bool filterPersistent READ isFilterPersistent WRITE setFilterPersistent NOTIFY filterChanged)
+    Q_PROPERTY(bool hasFilter READ hasFilter NOTIFY filterChanged)
 public:
     enum Role { NameRole = Qt::UserRole + 1, PathRole, KindRole, LinkRole, HiddenRole, SizeRole, ModifiedRole,
                 SelectedRole, CursorRole, CurrentRole };
@@ -49,11 +55,31 @@ public:
     Q_INVOKABLE void select(int row, SelectMode mode = Replace);
     Q_INVOKABLE void selectAll();
     Q_INVOKABLE void clearSelection();
+    Q_INVOKABLE void invertSelection();
     int selectedCount() const; int cursorRow() const;
+    qint64 selectedBytes() const;
+    QString selectedBytesFormatted() const;
+    QString selectedSummary() const;
     Q_INVOKABLE QStringList selectedPaths() const;     // listing order
     Q_INVOKABLE int rowOf(const QString& path) const;  // -1 when absent
     Q_INVOKABLE QString pathAt(int row) const;
     Q_INVOKABLE QString kindAt(int row) const;         // "folder" | "image" | "file" | ""
+
+    // Instant search (F004): case-insensitive substring match across listing names.
+    // Returns matching row index or -1 if no match found.
+    Q_INVOKABLE int findMatch(const QString& query, int startRow = 0, bool forward = true) const;
+    Q_INVOKABLE int matchCount(const QString& query) const;
+    Q_INVOKABLE int matchIndex(const QString& query, int row) const;
+
+    // Filtering (FILTER-01 / NAV-05 / UX-02)
+    QString filterPattern() const;
+    void setFilterPattern(const QString& pattern);
+    bool isFilterPersistent() const;
+    void setFilterPersistent(bool persistent);
+    bool hasFilter() const;
+    Q_INVOKABLE void setFilter(const QString& pattern, bool persistent = false);
+    Q_INVOKABLE void clearFilter();
+    Q_INVOKABLE void toggleFilterPersistence();
 
     QString currentImage() const; void setCurrentImage(const QString& path);
     quint64 epoch() const;
@@ -62,7 +88,7 @@ public:
     Q_INVOKABLE QString thumbnailSource(int row, int edge) const;
 signals:
     void directoryChanged(); void countChanged(); void loadingChanged(); void selectionChanged();
-    void currentImageChanged(); void epochChanged();
+    void currentImageChanged(); void epochChanged(); void filterChanged();
     // Listing failed or the folder became inaccessible; message is user-facing.
     void listingFailed(const QString& message);
 private:

@@ -1,0 +1,28 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (36.9s)
+-- Generating done (3.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-startup-window-01/build-codex-startup-window-01
+[1/78] Automatic MOC and UIC for target glancelot_platform
+[2/76] Automatic MOC and UIC for target glancelot_recovery_common
+[3/74] Automatic MOC and UIC for target startup_window_geometry_tests
+[4/72] Automatic MOC and UIC for target glancelot-decoder
+[5/70] Automatic MOC and UIC for target glancelot
+[6/69] Running AUTOMOC file extraction for target glancelot
+[7/69] Automatic MOC and UIC for target recovery_tests
+[8/67] Automatic MOC and UIC for target input_ui_tests
+[9/65] Running moc --collect-json for target glancelot
+[10/16] Automatic MOC and UIC for target window_slot_tests
+[11/14] Automatic MOC and UIC for target recovery_controller_tests
+[12/13] Building CXX object CMakeFiles\recovery_controller_tests.dir\tests\recovery_controller_tests.cpp.obj
+[13/13] Linking CXX executable recovery_controller_tests.exe

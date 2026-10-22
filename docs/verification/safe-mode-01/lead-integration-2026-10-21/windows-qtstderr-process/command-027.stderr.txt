@@ -1,0 +1,110 @@
+[     0.000] qt.qpa.window: QWindowsContext::setProcessDpiAwareness QtWindows::DpiAwareness::PerMonitorVersion2
+[     0.001] qt.qpa.window: DpiAwareness= QtWindows::DpiAwareness::PerMonitorVersion2 effective process DPI awareness= QtWindows::DpiAwareness::PerMonitorVersion2
+[     0.002] qt.qpa.window: QWindowsContext::registerWindowClass "Qt683PowerDummyWindow" style=0x0 brush=0x0 icon=false atom=50395
+[     0.005] qt.qpa.window: QWindowsContext::registerWindowClass "Qt683ClipboardView" style=0x0 brush=0x0 icon=false atom=50077
+[     0.007] qt.qpa.screen: Initializing screen manager
+[     0.007] qt.qpa.window: QWindowsContext::registerWindowClass "Qt683ScreenChangeObserverWindow" style=0x0 brush=0x0 icon=false atom=50079
+[     0.020] qt.qpa.screen: Created display change observer 0x6a408c0
+[     0.024] qt.qpa.screen: New Monitor:  Screen "P27h-20" 2560x1440+0+0 avail: 2560x1392+0+0 physical: 609x349 DPI: 96x96 Depth: 32 Format: QImage::Format_RGB32 hMonitor: 0x60761 device name: \\.\DISPLAY3 manufacturer: Lenovo Group Limited model: P27h-20 serial number: V907CKED primary virtual desktop
+[     0.024] qt.qpa.screen: New Monitor:  Screen "J560T09" 2560x1600+0+-1600 avail: 2560x1504+0+-1600 physical: 345x215 DPI: 192x192 Depth: 32 Format: QImage::Format_RGB32 hMonitor: 0x200dd device name: \\.\DISPLAY2 manufacturer: BOE model: J560T09 serial number:  virtual desktop
+[     0.028] qt.qpa.window: QWindowsTheme::refreshFonts NONCLIENTMETRICS(iMenu=19x19, lfCaptionFont=LOGFONT("Segoe UI", lfWidth=0, lfHeight=-12), lfSmCaptionFont=LOGFONT("Segoe UI", lfWidth=0, lfHeight=-12), lfMenuFont=LOGFONT("Segoe UI", lfWidth=0, lfHeight=-12), lfMessageFont=LOGFONT("Segoe UI", lfWidth=0, lfHeight=-12), lfStatusFont=LOGFONT("Segoe UI", lfWidth=0, lfHeight=-12))
+[     0.028] qt.qpa.window: QWindowsTheme::refreshIconPixmapSizes QList(QSize(16, 16), QSize(32, 32), QSize(48, 48), QSize(256, 256))
+[     0.226] qt.scenegraph.general: threaded render loop
+[     0.226] qt.scenegraph.general: Using sg animation driver
+[     0.226] qt.scenegraph.general: Animation Driver: using vsync: 16.68 ms
+[     0.966] qt.qpa.window: QWindowsContext::registerWindowClass "Qt683QWindowIcon" style=0x8 brush=0x0 icon=true atom=50420
+[     0.966] qt.qpa.window: QWindowsGeometryHint::frame style=0x86cf0000 exStyle=0x0 dpi=96 RECT(left=-8, top=-31, right=8, bottom=8 (16x39)) QMargins(8, 31, 8, 8)
+[     0.966] qt.qpa.window: QWindowCreationContext::QWindowCreationContext Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") QRect(0,1600 2360x1560) pos incl. frame=false frame=2376x1599+-8+1569 margins=QMargins(8, 31, 8, 8) custom margins=QMargins(0, 0, 0, 0)
+[     0.966] qt.qpa.window: CreateWindowEx: Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") class="Qt683QWindowIcon" title="Glancelot"
+WindowCreationData: QFlags<Qt::WindowType>(Window|WindowTitleHint|WindowSystemMenuHint|WindowMinMaxButtonsHint|WindowCloseButtonHint)
+  topLevel=true popup=false dialog=false embedded=false tool=false
+  style=0x86cf0000 WS_POPUP WS_CLIPSIBLINGS WS_CLIPCHILDREN WS_THICKFRAME WS_DLGFRAME WS_SYSMENU WS_MINIMIZEBOX WS_MAXIMIZEBOX WS_BORDER WS_CAPTION WS_GROUP WS_SIZEBOX WS_TABSTOP
+requested: QRect(0,1600 2360x1560): 2376x1599+-8+1569 custom margins: QMargins(0, 0, 0, 0) invisible margins: QMargins(0, 0, 0, 0)
+[     1.056] qt.qpa.window: >QWindowsGeometryHint::applyToMinMaxInfo< min=1096,759 max=16777215,16777215 margins=QMargins(8, 31, 8, 8) in MINMAXINFO(maxSize=POINT(x=2576, y=1456), maxpos=POINT(x=-8, y=-8), maxtrack=POINT(x=2580, y=3060), mintrack=POINT(x=136, y=39))
+[     1.056] qt.qpa.window: <QWindowsGeometryHint::applyToMinMaxInfo out MINMAXINFO(maxSize=POINT(x=2576, y=1456), maxpos=POINT(x=-8, y=-8), maxtrack=POINT(x=2580, y=3060), mintrack=POINT(x=1096, y=759))
+[     1.060] qt.qpa.window: CreateWindowEx: returns Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") 0x8ee08b4 obtained geometry: QPoint(0,1600)QSize(2360, 1560) QMargins(8, 31, 8, 8)
+[     1.061] qt.qpa.window: QWindowsIntegration::createPlatformWindow Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow")
+    Requested: QRect(0,0 1180x780) frame incl.=false QFlags<Qt::WindowType>(Window)
+    Obtained : QRect(0,1600 2360x1560) margins=QMargins(8, 31, 8, 8) handle=0x8ee08b4 QFlags<Qt::WindowType>(Window|WindowTitleHint|WindowSystemMenuHint|WindowMinMaxButtonsHint|WindowCloseButtonHint)
+
+[     1.068] qt.qpa.window: qWindowsWndProc WM_NCCALCSIZE for 0x8ee08b4 QMargins(8, 31, 8, 8)
+[     1.073] qt.scenegraph.renderloop: reisze() Main_QMLTYPE_0(0x209788bf3c0, visibility=QWindow::Windowed, flags=QFlags<Qt::WindowType>(Window), title="Glancelot", name="viewerWindow", geometry=0,1600 2360x1560)
+[     1.075] qt.qpa.window: QWindowsWindow::setVisible QPlatformSurface(0x2097b7470f0, class=QSurface::Window, type=QSurface::Direct3DSurface, window=Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow")) Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") 0x8ee08b4 true
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+[     1.110] default: qrc:/qt/qml/Glancelot/ui/PhotoGrid.qml:298:25: Unable to assign [undefined] to int
+[     1.131] qt.qpa.window: QWindowsBaseWindow::setWindowTitle_sys QPlatformSurface(0x2097b7470f0, class=QSurface::Window, type=QSurface::Direct3DSurface, window=Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow")) Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") "??-??.png — Glancelot"
+[     1.145] qt.scenegraph.renderloop: - animationStarted()
+[     1.145] qt.scenegraph.renderloop: *** Starting system (not vsync-based) animation timer (exposedWindows=0 unthrottledWindows=0 badVSync=0)
+[     1.148] qt.qpa.window: QWindowsBaseWindow::setWindowTitle_sys QPlatformSurface(0x2097b7470f0, class=QSurface::Window, type=QSurface::Direct3DSurface, window=Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow")) Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") "??-??.png — Glancelot"
+[     1.166] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.181] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.193] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.212] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.226] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.243] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.247] qt.qpa.window: QWindowsBaseWindow::setWindowTitle_sys QPlatformSurface(0x2097b7470f0, class=QSurface::Window, type=QSurface::Direct3DSurface, window=Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow")) Main_QMLTYPE_0(0x209788bf3c0, name="viewerWindow") "??-??.png — Glancelot"
+[     1.258] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.274] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.290] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.306] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.322] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.338] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.353] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.370] qt.scenegraph.renderloop: - ticking non-render thread timer
+[     1.370] qt.scenegraph.renderloop: - animationStopped()
+[     1.370] qt.scenegraph.renderloop: *** Stopping system (not vsync-based) animation timer (exposedWindows=0 unthrottledWindows=0 badVSync=0)
+[     3.546] qt.scenegraph.renderloop: - animationStarted()
+[     3.546] qt.scenegraph.renderloop: *** Starting system (not vsync-based) animation timer (exposedWindows=0 unthrottledWindows=0 badVSync=0)
+[     3.548] qt.scenegraph.renderloop: - animationStopped()
+[     3.548] qt.scenegraph.renderloop: *** Stopping system (not vsync-based) animation timer (exposedWindows=0 unthrottledWindows=0 badVSync=0)
+[     3.617] qt.scenegraph.general: Creating QRhi with backend D3D11 for window 0x209788bf3c0 (wflags 0x1)
+  Graphics API debug/validation layers: 0
+  Debug markers: 0
+  Timestamps: 0
+  Prefer software device: 1
+  Shader/pipeline cache collection: 1
+[     3.623] qt.scenegraph.general: Created QRhi 0x2090f190620 for window 0x209788bf3c0
+[     3.627] qt.scenegraph.general: Attempting to seed pipeline cache for QRhi 0x2090f190620 from 'C:/Users/dvort/AppData/Local/Glancelot/Glancelot/cache/qtpipelinecache-x86_64-little_endian-llp64/qqpc_d3d11'
+[     3.628] qt.scenegraph.general: rhi texture atlas dimensions: 4096x2048
+[     3.846] qt.qpa.window: QWindowsWindow::setVisible QPlatformSurface(0x2097b7470f0, class=QSurface::Window, type=QSurface::Direct3DSurface, window=QQuickWindowQmlImpl(0x209788bf3c0, name="viewerWindow")) QQuickWindowQmlImpl(0x209788bf3c0, name="viewerWindow") 0x8ee08b4 false
+[     3.849] qt.scenegraph.renderloop: hide() QQuickWindowQmlImpl(0x209788bf3c0 active, visibility=QWindow::Hidden, flags=QFlags<Qt::WindowType>(Window), title="??-??.png — Glancelot", name="viewerWindow", geometry=0,1600 2360x1560)
+[     3.850] qt.scenegraph.renderloop: hide() QQuickWindowQmlImpl(0x209788bf3c0 active, visibility=QWindow::Hidden, flags=QFlags<Qt::WindowType>(Window), title="??-??.png — Glancelot", name="viewerWindow", geometry=0,1600 2360x1560)
+[     3.850] qt.qpa.window: QWindowsWindow::destroyWindow QPlatformSurface(0x2097b7470f0, class=QSurface::Window, type=QSurface::Direct3DSurface, window=QQuickWindowQmlImpl(0x209788bf3c0, name="viewerWindow")) QQuickWindowQmlImpl(0x209788bf3c0, name="viewerWindow") 0x8ee08b4
+[     3.853] qt.scenegraph.renderloop: begin windowDestroyed() QQuickWindow(0x209788bf3c0, visibility=QWindow::Hidden, flags=QFlags<Qt::WindowType>(Window), title="??-??.png — Glancelot", name="viewerWindow", geometry=0,1600 2360x1560)
+[     3.945] qt.qpa.screen: Destroying display change observer 0x6a408c0

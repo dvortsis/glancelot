@@ -1,6 +1,7 @@
 #pragma once
 #include <QString>
 #include <QtGlobal>
+#include "window_claim.hpp"
 
 // Stable opening-order window slots, coordinated across independent viewer processes.
 // Contract (frozen by the lead; change only through the lead):
@@ -18,6 +19,8 @@
 class WindowSlot {
 public:
     explicit WindowSlot(const QString& directory = {}, int timeoutMs = 3000);
+    // Safe-mode owner is captured by claims and every value-owned recovery job.
+    WindowSlot(const QString& directory, int timeoutMs, std::shared_ptr<const void> lifetime);
     ~WindowSlot();
     WindowSlot(const WindowSlot&) = delete;
     WindowSlot& operator=(const WindowSlot&) = delete;
@@ -25,8 +28,15 @@ public:
     // Retries the claim after a failed one; true when this window holds a slot.
     // timeoutMs=0 never waits for contention or retries file replacement (interactive callers).
     bool claim(int timeoutMs = 3000);
+    // SAFE-MODE-01: immutable per-claim identity. A new random nonce distinguishes
+    // release/reclaim in the same process. Missing/unverifiable identity returns
+    // an empty capability; numeric slots alone never authorize recovery writes.
+    // Capture on the owner thread; the returned value may be used off-thread.
+    glancelot::WindowClaim claimIdentity() const;
     void release();
 private:
     QString directory_;
     int number_{};
+    std::shared_ptr<glancelot::detail::WindowClaimState> claimState_;
+    std::shared_ptr<const void> lifetime_;
 };
