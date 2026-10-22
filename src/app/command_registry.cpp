@@ -67,6 +67,7 @@ static const std::vector<Command> registry {
     {"paste", "Paste files to current folder", "Ctrl+V"},
     // MONITOR-OUTPUT-01 (UX-10 / COLOR-01 / VIEW-04 / PERF-04 / SYS-02)
     // MONITOR-CUSTOM-01: routes share the registry and scope predicates.
+    {"presentation-view-rotate", "Presentation: Rotate clockwise", ""},
     {"monitor-settings", "Displays and workspaces", ""},
     {"monitor-identify", "Identify displays", ""},
     {"monitor-move-output", "Move presentation to display", ""},

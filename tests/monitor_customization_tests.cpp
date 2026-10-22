@@ -15,6 +15,9 @@
 #include "monitor_customization_topology.hpp"
 #include "canvas_texture_admission.hpp"
 #include "settings_policy.hpp"
+#include "file_lock.hpp"
+#include "settings_retry.hpp"
+#include <QDir>
 
 class MonitorCustomizationTests:public QObject {
     Q_OBJECT
@@ -68,6 +71,98 @@ private slots:
         h.customization.recoverToController();QVERIFY(!h.customization.paneRoutes()["tree"].toMap().value("detached").toBool());
         QVERIFY(h.customization.layoutLocked());QVERIFY(h.customization.paneRoutes()["tree"].toMap().value("frozen").toBool());
         QVERIFY(h.customization.resetPreferences());QTRY_VERIFY(!h.customization.layoutLocked());QVERIFY(!h.panes.pane("tree").value("frozen").toBool());
+    }
+    void invalidSlotDoesNotEraseValidPresets() {
+        Harness first;QVERIFY(first.customization.savePreset({},"Keep","presentation"));
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){auto feature=root["monitorCustomization"].toObject();auto rows=feature["slots"].toObject();auto slot=rows["1"].toObject();auto output=slot["output"].toObject();output["fitMode"]="invalid";slot["output"]=output;rows["1"]=slot;feature["slots"]=rows;root["monitorCustomization"]=feature;}).ok());
+        QJsonObject before;QVERIFY(glancelot::readSettings(before).ok());Harness second;
+        QVERIFY(!second.customization.setOutputOptions({{"guides",true}}));
+        QJsonObject after;QVERIFY(glancelot::readSettings(after).ok());QCOMPARE(after,before);
+        QVERIFY(second.customization.resetPreferences());QTRY_COMPARE(second.customization.presets().size(),0);
+    }
+    void busySaveRollsBackUntilCommittedAndCancellationIsFenced() {
+        Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        QVERIFY(h.customization.setOutputOptions({{"guides",true}}));QVERIFY(!h.customization.outputOptions()["guides"].toBool());
+        QVERIFY(!h.customization.setOutputOptions({{"imageInfo",true}}));lock.release();
+        QTRY_VERIFY_WITH_TIMEOUT(h.customization.outputOptions()["guides"].toBool(),5000);
+        QVERIFY(lock.acquire(0));QVERIFY(h.customization.setOutputOptions({{"imageInfo",true}}));
+        h.customization.recoverToController();lock.release();QTest::qWait(200);
+        QVERIFY(!h.customization.outputOptions()["imageInfo"].toBool());
+        Harness restored;QVERIFY(!restored.customization.outputOptions()["imageInfo"].toBool());
+    }
+    void writeFailureDoesNotMutateRuntime() {
+        Harness h;const auto original=h.customization.outputOptions();
+        QVERIFY(QDir().mkpath(glancelot::settingsFilePath()+".lock"));
+        QVERIFY(!h.customization.setOutputOptions({{"guides",true}}));QCOMPARE(h.customization.outputOptions(),original);
+    }
+    void presetAndDisplayBoundsAreAtomic() {
+        Harness h;QVERIFY(h.customization.savePreset({},QString(80,QChar(0x03bb)),"presentation"));
+        QVERIFY(!h.customization.savePreset({},QString(81,'x'),"presentation"));
+        for(int i=1;i<64;++i)QVERIFY(h.customization.savePreset({},QString("Preset%1").arg(i),"presentation"));
+        QCOMPARE(h.customization.presets().size(),64);QVERIFY(!h.customization.savePreset({},"Overflow","presentation"));
+        auto state=glancelot::monitor_state::options();QVERIFY(!glancelot::monitor_state::patchOptions({{"displayId",QString(257,'x')}},state));
+        QVariantMap normalized;auto raw=QVariantMap{{"output",state},{"panes",glancelot::monitor_state::routes()},{"presets",QVariantList{}}};QVariantMap outputs;
+        for(int i=0;i<16;++i)outputs[QString::number(i)]=state;raw["outputsByDisplay"]=outputs;QVERIFY(glancelot::monitor_state::normalize(raw,normalized));
+        outputs["17"]=state;raw["outputsByDisplay"]=outputs;QVERIFY(!glancelot::monitor_state::normalize(raw,normalized));
+    }
+    void serializedBoundsPreserveOriginalSettings() {
+        Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["monitorCustomization"]=QJsonObject{{"version",1},{"future",QString(256*1024,'x')}};}).ok());
+        h.customization.reloadPreferences();QJsonObject before;QVERIFY(glancelot::readSettings(before).ok());
+        QVERIFY(!h.customization.setOutputOptions({{"guides",true}}));QJsonObject after;QVERIFY(glancelot::readSettings(after).ok());QCOMPARE(after,before);
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root.remove("monitorCustomization");root["future"]=QString(1024*1024-300,'x');}).ok());
+        h.customization.reloadPreferences();QVERIFY(glancelot::readSettings(before).ok());QVERIFY(!h.customization.savePreset({},"Would overflow","workspace"));QVERIFY(glancelot::readSettings(after).ok());QCOMPARE(after,before);
+    }
+    void outputMovePreservesTransformAndLayoutAndMissingPreferenceCanClear() {
+        Harness h;QImage image(300,200,QImage::Format_RGBA8888);image.fill(Qt::red);h.manager.updateImage("/a.png",image,1);QVERIFY(h.manager.openPresentation());
+        QVERIFY(h.customization.setOutputOptions({{"windowMode","windowed"},{"fitMode","fill"}}));
+        auto* output=qobject_cast<glancelot::PresentationWindow*>(h.manager.presentationWindow());QVERIFY(output);output->primaryCanvas()->rotateClockwise();const auto state=output->viewportState();
+        auto dock=h.panes.snapshot();dock["locked"]=true;QVERIFY(h.panes.restoreSnapshot(dock));
+        QVERIFY(h.customization.moveOutput(h.manager.displays().first().id));QCOMPARE(output->viewportState(),state);QVERIFY(h.panes.locked());
+        QVERIFY(h.customization.setOutputOptions({{"displayId",""}}));QVERIFY(h.manager.isPresentationActive());
+        QVERIFY(!h.customization.moveOutput("removed"));QCOMPARE(output->viewportState(),state);
+        QVERIFY(!h.customization.swapControllerAndOutput());QVERIFY(h.manager.isPresentationActive());
+        h.manager.closePresentation();QVERIFY(!h.customization.moveOutput(h.manager.displays().first().id));
+    }
+    void folderResumeReopenAndStaleGenerations() {
+        Harness h;QImage a(20,20,QImage::Format_RGBA8888);a.fill(Qt::red);QImage b=a.copy();b.fill(Qt::blue);
+        h.manager.updateImage("/first/a.png",a,1);QVERIFY(h.manager.openPresentation());
+        QVERIFY(h.customization.setOutputOptions({{"folderChange","hold"},{"viewportLink","linked"}}));
+        h.manager.updateImage("/second/b.png",b,2);QCOMPARE(h.manager.outputGeneration(),quint64(1));
+        QVERIFY(!h.customization.syncControllerViewport({{"fit","actual"}},2));
+        QVERIFY(h.customization.setOutputOptions({{"folderChange","follow"}}));QCOMPARE(h.manager.currentPath(),QString("/second/b.png"));QCOMPARE(h.manager.outputGeneration(),quint64(2));
+        QVERIFY(h.customization.setOutputOptions({{"folderChange","disable"}}));h.manager.updateImage("/third/c.png",a,3);QVERIFY(!h.manager.isPresentationActive());
+        QVERIFY(h.manager.openPresentation());h.manager.updateImage("/third/d.png",b,4);QVERIFY(h.manager.isPresentationActive());
+        h.manager.updateImage("/old.png",a,2);QCOMPARE(h.manager.currentGeneration(),quint64(4));QCOMPARE(h.manager.currentPath(),QString("/third/d.png"));
+        QVERIFY(h.customization.setOutputOptions({{"followSelection",false},{"viewportLink","independent"}}));h.manager.updateImage("/third/e.png",a,5);
+        QVERIFY(h.customization.setOutputOptions({{"followSelection",true}}));QCOMPARE(h.manager.currentPath(),QString("/third/e.png"));
+        h.manager.releaseCachedImages();QVERIFY(h.manager.retainedImageBytes()<=glancelot::DisplayManager::imageBudgetBytes());
+    }
+    void identifyIsBoundedAndPaneGeometryRetainsPreference() {
+        Harness h;const auto count=QGuiApplication::topLevelWindows().size();QVERIFY(h.customization.identifyDisplays());QVERIFY(h.customization.identifyDisplays());
+        QVERIFY(QGuiApplication::topLevelWindows().size()<=count+h.manager.displayCount());QTRY_COMPARE_WITH_TIMEOUT(QGuiApplication::topLevelWindows().size(),count,3500);
+        const auto id=h.manager.displays().first().id;QVERIFY(h.customization.detachPane("metadata",id));
+        const QVariantMap geometry{{"x",10000000},{"y",-10000000},{"width",9000},{"height",7000}};QVERIFY(h.customization.updatePaneGeometry("metadata",geometry));
+        QCOMPARE(h.customization.paneRoutes()["metadata"].toMap()["geometry"].toMap(),geometry);QVERIFY(h.customization.redockPane("metadata"));
+        Harness restored;QCOMPARE(restored.customization.paneRoutes()["metadata"].toMap()["geometry"].toMap(),geometry);
+    }
+    void dockTransactionRetainsLatestUnknownFieldsWithoutDuplicateOwner() {
+        Harness h;const auto layout=QJsonObject::fromVariantMap(h.panes.snapshot());
+        QVERIFY(glancelot::updateSettings([layout](QJsonObject& root){auto row=layout;row["future"]=42;auto center=row["center"].toObject();center["future"]=43;row["center"]=center;auto panes=row["panes"].toObject();auto tree=panes["tree"].toObject();tree["future"]=44;panes["tree"]=tree;row["panes"]=panes;root["layouts"]=QJsonObject{{"1",row}};}).ok());
+        h.customization.setLayoutLocked(true);QTRY_VERIFY(h.customization.layoutLocked());QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());const auto saved=root["layouts"].toObject()["1"].toObject();QCOMPARE(saved["future"].toInt(),42);QCOMPARE(saved["center"].toObject()["future"].toInt(),43);QCOMPARE(saved["panes"].toObject()["tree"].toObject()["future"].toInt(),44);
+        QVERIFY(!root["monitorCustomization"].toObject()["slots"].toObject()["1"].toObject().contains("dock"));
+    }
+    void linkedComparisonRotationAndOutputGestureUseDisplayedGeneration() {
+        Harness h;QImage image(400,200,QImage::Format_RGBA8888);image.fill(Qt::red);h.manager.updateImage("/a.png",image,1);h.manager.pinCurrentImage();h.manager.setPresentationMode("comparison");QVERIFY(h.manager.openPresentation({},glancelot::PresentationMode::Comparison));
+        QVERIFY(h.customization.setOutputOptions({{"viewportLink","linked"}}));auto* window=qobject_cast<glancelot::PresentationWindow*>(h.manager.presentationWindow());QVERIFY(window);
+        QVERIFY(h.customization.syncControllerViewport({{"fit","actual"},{"rotation",90}},1));QCOMPARE(window->secondaryCanvas()->rotation(),90);
+        QSignalSpy gestures(&h.customization,&glancelot::MonitorCustomization::controllerViewportRequested);window->viewportCommand("rotate");QCOMPARE(gestures.size(),1);QCOMPARE(gestures.first()[1].toULongLong(),quint64(1));
+        QCOMPARE(window->primaryCanvas()->rotation(),180);QCOMPARE(window->secondaryCanvas()->rotation(),180);
+        QVERIFY(h.customization.setOutputOptions({{"viewportLink","independent"}}));window->viewportCommand("rotate");QCOMPARE(gestures.size(),1);
+    }
+    void duplicateAndPlaceholderSerialsAreWeak() {
+        glancelot::DisplayInfo a;a.id="a";a.serialNumber="unique";QList<glancelot::DisplayInfo> displays{a};QVERIFY(glancelot::monitor_topology::strongIdentity(a,displays));
+        auto b=a;b.id="b";displays.append(b);QVERIFY(!glancelot::monitor_topology::strongIdentity(a,displays));a.serialNumber="0000";QVERIFY(!glancelot::monitor_topology::strongIdentity(a,{a}));
     }
     void newerVersionIsNeverOverwritten() {
         QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["monitorCustomization"]=QJsonObject{{"version",2},{"future",123}};}).ok());

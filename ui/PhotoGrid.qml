@@ -311,7 +311,7 @@ Rectangle {
                     spacing: Theme.gapXxs
                     UiIcon {
                         name: "search"
-                        size: Theme.iconSizeSmall
+                        size: Theme.iconSize
                         color: fileGrid.hasFilter ? Theme.primary : Theme.muted
                     }
                     TextInput {

@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QRandomGenerator>
@@ -391,12 +392,6 @@ void resetMonitorPreferences(QJsonObject& root,bool all) {
         auto paneRoutes=slot.value("panes").toObject();
         for(const auto& id:monitor_state::paneIds){auto p=paneRoutes.value(id).toObject();auto geometry=clearFields(p.value("geometry").toObject(),{"x","y","width","height"});p=clearFields(p,{"detached","frozen","displayId","geometry"});if(!geometry.isEmpty())p["geometry"]=geometry;if(p.isEmpty())paneRoutes.remove(id);else paneRoutes[id]=p;}
         if(paneRoutes.isEmpty())slot.remove("panes");else slot["panes"]=paneRoutes;
-        auto dock=slot.value("dock").toObject();
-        if(!dock.contains("version")||dock.value("version")==QJsonValue(1)){
-            dock=clearFields(dock,{"version","locked"});auto center=clearFields(dock.value("center").toObject(),{"orientation","ratio","mode"});if(center.isEmpty())dock.remove("center");else dock["center"]=center;
-            auto panes=dock.value("panes").toObject();for(const auto& id:layout_detail::defaults().keys()){const auto p=clearFields(panes.value(id).toObject(),{"region","order","extent","visible","frozen"});if(p.isEmpty())panes.remove(id);else panes[id]=p;}if(panes.isEmpty())dock.remove("panes");else dock["panes"]=panes;
-            if(dock.isEmpty())slot.remove("dock");else {dock["version"]=1;slot["dock"]=dock;}
-        }
         if(all){
             auto output=clearFields(slot.value("output").toObject(),monitor_state::options().keys());if(output.isEmpty())slot.remove("output");else slot["output"]=output;
             auto displays=slot.value("outputsByDisplay").toObject();for(const auto& id:displays.keys()){const auto value=clearFields(displays.value(id).toObject(),monitor_state::options().keys());if(value.isEmpty())displays.remove(id);else displays[id]=value;}if(displays.isEmpty())slot.remove("outputsByDisplay");else slot["outputsByDisplay"]=displays;

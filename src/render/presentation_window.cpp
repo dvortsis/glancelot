@@ -71,6 +71,7 @@ PresentationWindow::PresentationWindow(QWindow* parent)
     m_canvasA->fit(m_fitMode);
 
     m_canvasB = new ImageCanvas(contentItem());
+    m_canvasB->shareTextureAdmissionWith(m_canvasA);
     m_canvasB->setTextureBudget(0);
     m_canvasB->setBackground(QColor(0, 0, 0));
     m_canvasB->fit(m_fitMode);
@@ -101,6 +102,9 @@ PresentationWindow::PresentationWindow(QWindow* parent)
 }
 
 PresentationWindow::~PresentationWindow() = default;
+void PresentationWindow::applyControllerViewport(const QVariantMap& state) {
+    m_canvasA->setViewState(state);if(m_linked)copyViewport(m_canvasA,m_canvasB);
+}
 
 void PresentationWindow::applyCustomization(const QVariantMap& options) {
     const auto previous=m_customOptions;m_customOptions=options;
@@ -113,15 +117,15 @@ void PresentationWindow::applyCustomization(const QVariantMap& options) {
     setComparisonMode(m_comparisonMode);
     const auto cursor=options.value("cursorPolicy").toString();m_cursorTimer.stop();
     setCursor(cursor=="hidden"?Qt::BlankCursor:Qt::ArrowCursor);if(cursor=="auto")m_cursorTimer.start();
-    if(previous.value("windowMode")!=options.value("windowMode")) {
-        if(options.value("windowMode")=="windowed") {setFlags(Qt::Window);showNormal();}
-        else {setFlags(Qt::Window|Qt::FramelessWindowHint);showFullScreen();}
-    }
+    if(previous.value("windowMode")!=options.value("windowMode"))setFlags(options.value("windowMode")=="windowed"?Qt::WindowFlags(Qt::Window):Qt::WindowFlags(Qt::Window|Qt::FramelessWindowHint));
+    if(options.value("windowMode")=="windowed"&&visibility()!=QWindow::Windowed)showNormal();
+    else if(options.value("windowMode")=="fullscreen"&&visibility()!=QWindow::FullScreen)showFullScreen();
     updateLayout();
 }
 
 void PresentationWindow::setComparisonMode(bool comparison) {
     const auto budget=kPresentationTextureBudget-(m_customOptions.value("imageInfo").toBool()?informationReservation:0);
+    m_canvasA->setAggregateTextureBudget(budget);m_canvasB->setAggregateTextureBudget(budget);
     m_canvasA->setTextureBudget(comparison?budget/2:budget);
     m_canvasB->setTextureBudget(comparison?budget/2:0);
     if (m_comparisonMode == comparison) return;
@@ -208,6 +212,7 @@ void PresentationWindow::viewportCommand(const QString& command) {
     auto* active=m_activeSecondary?m_canvasB:m_canvasA;
     auto* other=m_activeSecondary?m_canvasA:m_canvasB;
     if (command=="actual") { if(m_linked) setFitMode("actual"); else active->actualSize(); return; }
+    if (command=="rotate") { active->rotateClockwise();if(m_linked&&m_comparisonMode)copyViewport(active,other);return; }
     if (command=="linked") { m_linked=!m_linked; if(m_linked && m_comparisonMode) copyViewport(active,other); return; }
     if (command=="fit") {
         const QStringList modes{"shrink","fit","fill"}; const auto mode=modes[(modes.indexOf(active->fitMode())+1)%modes.size()];
@@ -293,8 +298,8 @@ void PresentationWindow::keyPressEvent(QKeyEvent* event) {
         emit escapePressed(); return;
     }
     const QKeyCombination combo(event->modifiers(),Qt::Key(event->key()));
-    QStringList ids{"presentation-toggle","presentation-fit"};
-    for (const auto* suffix : {"actual","zoom-in","zoom-out","pan-left","pan-right","pan-up","pan-down","linked","reference"}) ids<<QStringLiteral("presentation-view-")+QLatin1String(suffix);
+    QStringList ids{"presentation-toggle","presentation-fit","monitor-recover","monitor-disable","monitor-settings"};
+    for (const auto* suffix : {"rotate","actual","zoom-in","zoom-out","pan-left","pan-right","pan-up","pan-down","linked","reference"}) ids<<QStringLiteral("presentation-view-")+QLatin1String(suffix);
     if (!m_chordPrefix.isEmpty()) ids={m_chordCommand};
     for (const auto& id:ids) {
         const auto bound=bindingFor(id);
@@ -305,6 +310,7 @@ void PresentationWindow::keyPressEvent(QKeyEvent* event) {
         if (m_chordPrefix.size()==bound.count()) {
             m_chordPrefix.clear();
             if (id=="presentation-toggle") emit escapePressed();
+            else if(id.startsWith("monitor-"))emit customizationCommand(id);
             else viewportCommand(id=="presentation-fit"?QStringLiteral("fit"):id.mid(18));
         }
         return;

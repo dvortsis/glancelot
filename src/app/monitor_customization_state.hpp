@@ -74,6 +74,14 @@ inline bool dock(const QVariantMap& m) {
         if(p.value("region")=="center"&&id!="preview"&&id!="grid")return false;
     }return true;
 }
+inline QJsonObject ownedDock(const QVariantMap& state) {
+    const auto source=QJsonObject::fromVariantMap(state);QJsonObject result;
+    for(const auto* key:{"version","locked"})result[key]=source.value(key);
+    QJsonObject center;for(const auto* key:{"orientation","ratio","mode"})center[key]=source.value("center").toObject().value(key);result["center"]=center;
+    QJsonObject panes;for(const auto& id:layout_detail::defaults().keys()) {
+        QJsonObject pane;for(const auto* key:{"region","order","extent","visible","frozen"})pane[key]=source.value("panes").toObject().value(id).toObject().value(key);panes[id]=pane;
+    }result["panes"]=panes;return result;
+}
 inline bool snapshot(const QVariantMap& s,const QString& kind) {
     auto o=options();if(!s.contains("output")||!patchOptions(s.value("output").toMap(),o))return false;
     if(!QStringList{"mirror","pinned","comparison"}.contains(s.value("routingMode").toString()))return false;
@@ -97,7 +105,7 @@ inline bool slot(const QVariantMap& s) {
         for(auto it=saved.begin();it!=saved.end();++it){auto candidate=options();if(!text(it.key())||it.key().isEmpty()||it.value().metaType().id()!=QMetaType::QVariantMap||!patchOptions(it.value().toMap(),candidate))return false;}
     }
     auto o=options();return patchOptions(s.value("output").toMap(),o)&&validRoutes(s.value("panes").toMap())
-        &&presets(s.value("presets").toList())&&(!s.contains("dock")||dock(s.value("dock").toMap()));
+        &&presets(s.value("presets").toList());
 }
 inline bool normalize(const QVariantMap& raw,QVariantMap& result) {
     result=raw;auto output=options();
@@ -123,17 +131,6 @@ inline bool normalize(const QVariantMap& raw,QVariantMap& result) {
         }
     }
     result["panes"]=paneRoutes;if(!result.contains("presets"))result["presets"]=QVariantList{};
-    if(raw.contains("dock")) {
-        if(raw.value("dock").metaType().id()!=QMetaType::QVariantMap)return false;
-        auto saved=raw.value("dock").toMap();
-        if(!saved.contains("version"))saved["version"]=1;if(!saved.contains("locked"))saved["locked"]=false;
-        QVariantMap center{{"orientation","horizontal"},{"ratio",.5},{"mode","preview"}};
-        if(saved.contains("center")&&saved.value("center").metaType().id()!=QMetaType::QVariantMap)return false;
-        const auto storedCenter=saved.value("center").toMap();for(auto it=storedCenter.begin();it!=storedCenter.end();++it)center[it.key()]=it.value();saved["center"]=center;
-        auto panes=layout_detail::defaults().toVariantMap();
-        if(saved.contains("panes")&&saved.value("panes").metaType().id()!=QMetaType::QVariantMap)return false;
-        const auto storedPanes=saved.value("panes").toMap();for(auto it=storedPanes.begin();it!=storedPanes.end();++it){auto p=panes.value(it.key()).toMap();if(it.value().metaType().id()!=QMetaType::QVariantMap)return false;const auto incoming=it.value().toMap();for(auto field=incoming.begin();field!=incoming.end();++field)p[field.key()]=field.value();panes[it.key()]=p;}saved["panes"]=panes;result["dock"]=saved;
-    }
     if(raw.contains("outputsByDisplay")) {
         if(raw.value("outputsByDisplay").metaType().id()!=QMetaType::QVariantMap)return false;
         const auto stored=raw.value("outputsByDisplay").toMap();if(stored.size()>64)return false;QVariantMap active;
@@ -146,7 +143,7 @@ inline bool normalize(const QVariantMap& raw,QVariantMap& result) {
     return slot(result);
 }
 inline QVariantMap known(const QVariantMap& s) {
-    QVariantMap k;for(const auto& key:QStringList{"output","panes","presets","selectedPreset","dock","outputsByDisplay"})if(s.contains(key))k[key]=s[key];return k;
+    QVariantMap k;for(const auto& key:QStringList{"output","panes","presets","selectedPreset","outputsByDisplay"})if(s.contains(key))k[key]=s[key];return k;
 }
 inline bool feature(const QJsonObject& object) {
     if(object.value("version")!=QJsonValue(1)||QJsonDocument(object).toJson(QJsonDocument::Indented).size()>256*1024||!object.value("slots").isObject())return false;

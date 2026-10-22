@@ -291,15 +291,29 @@ ApplicationWindow {
         if(id === "metadata") return [metadataPanel]
         return [previewVisuals]
     }
+    property string pendingPaneFocus: ""
+    function focusDetachedPane(id) {
+        const window=detachedHosts[id]
+        if(!window)return
+        window.requestActivate()
+        if(id === "tree")treePanel.focusList()
+        else if(id === "grid")photoGrid.focusGrid()
+        else if(id === "preview")canvas.forceActiveFocus(Qt.OtherFocusReason)
+        else metadataPanel.forceActiveFocus(Qt.OtherFocusReason)
+    }
+    property bool closingWorkspace: false
     function syncDetachedPanes() {
-        if(!monitor) return
+        if(!monitor || closingWorkspace) return
         const hosts=Object.assign({},detachedHosts)
         for(const id of ["tree","grid","preview","metadata"]) {
             if(isDetached(id)) {
                 if(!hosts[id]) hosts[id]=detachedPaneComponent.createObject(app,{appHost:app,customization:monitor,paneId:id})
                 if(hosts[id]) {
-                    for(const item of paneItems(id)) item.parent=hosts[id].paneContent
+                    for(const item of paneItems(id)) {
+                        item.parent=hosts[id].paneContent
+                    }
                     hosts[id].visible=true
+                    if(pendingPaneFocus === id && !modalOpen){ pendingPaneFocus=""; Qt.callLater(() => app.focusDetachedPane(id)) }
                 }
             } else if(hosts[id]) {
                 for(const item of paneItems(id)) item.parent=app.contentItem
@@ -308,21 +322,45 @@ ApplicationWindow {
         }
         detachedHosts=hosts
     }
-    onClosing: { if(app.monitor)app.monitor.recoverToController() }
+    onClosing: {
+        closingWorkspace=true
+        for(const id of Object.keys(detachedHosts)) {
+            for(const item of paneItems(id)) item.parent=app.contentItem
+            detachedHosts[id].hide(); detachedHosts[id].destroy()
+        }
+        detachedHosts=({}); viewer.closePresentation()
+    }
+    property bool viewportSyncQueued: false
+    function queueViewportSync() {
+        if(viewportSyncQueued)return
+        viewportSyncQueued=true
+        Qt.callLater(() => { viewportSyncQueued=false; if(app.monitor)app.monitor.syncControllerViewport(canvas.viewState(),app.monitorGeneration) })
+    }
+    function escapeContent() {
+        if(chordPending) { chordCancel(); return }
+        canvas.endLoupe()
+        if(layoutEditing) { layoutEditing=false; return }
+        if(viewer.metadataVisible) { viewer.metadataVisible=false; return }
+        if(gridMode)showCanvas()
+        else if(combinedMode && focusedPane === "preview" && visibility !== Window.FullScreen)focusPane("grid")
+        else if(visibility === Window.FullScreen)showNormal()
+        else wakeHud()
+    }
     Component { id: detachedPaneComponent; DetachedPaneHost {} }
     Connections {
         target: app.monitor
-        function onChanged() { app.syncDetachedPanes() }
+        function onChanged() { app.syncDetachedPanes(); app.queueViewportSync() }
+        function onCommandRequested(id) { app.invoke(id) }
         function onControllerViewportRequested(state,generation) { if(generation === app.monitorGeneration) canvas.setViewState(state) }
         Component.onCompleted: Qt.callLater(app.syncDetachedPanes)
     }
     Connections {
         target: viewer.displayManager
-        function onImageRouted(path,generation) { app.monitorGeneration=generation; Qt.callLater(() => { if(app.monitor) app.monitor.syncControllerViewport(canvas.viewState(),app.monitorGeneration) }) }
+        function onImageRouted(path,generation) { app.monitorGeneration=generation; app.queueViewportSync() }
     }
     Connections {
         target: canvas
-        function onViewChanged() { if(app.monitor) app.monitor.syncControllerViewport(canvas.viewState(),app.monitorGeneration) }
+        function onViewChanged() { app.queueViewportSync() }
     }
     MonitorSettings { id: monitorSettings; host: app; customization: app.monitor }
 
@@ -368,10 +406,12 @@ ApplicationWindow {
     }
     // Explicit routes (toolbar, command search) run canvas commands in the combined view whatever pane has focus;
     // window shortcuts follow the focused pane (`gridScope`).
+    property var commandTarget: null
+    function invokeTarget(id,value) { commandTarget={id:id,value:value}; try { invoke(id) } finally { commandTarget=null } }
     function invoke(id) {
-        if (!routeAllows(id)) return
+        if (!routeAllows(id)) { const reason=commandBlockedReason(id); if(reason.length)showSplitMessage(reason); return }
         if (combinedMode && ["next", "previous", "next-folder", "previous-folder"].indexOf(id) >= 0) previewFollowsCursor = false
-        viewer.trigger(id); wakeHud()
+        viewer.trigger(id); wakeHud(); if(modalOpen)app.requestActivate()
     }
     readonly property bool gridScope: detachedHosts.grid && detachedHosts.grid.active ? true : detachedHosts.preview && detachedHosts.preview.active ? false : gridMode || (combinedMode && focusedPane === "grid")
     function focusContent() { const id=gridScope ? "grid" : "preview"; if(detachedHosts[id])detachedHosts[id].requestActivate(); if (gridMode || (combinedMode && focusedPane === "grid")) photoGrid.focusGrid(); else canvas.forceActiveFocus() }
@@ -541,13 +581,13 @@ ApplicationWindow {
         canvas.endLoupe()
         if(app.monitor && id === "monitor-settings") { app.requestActivate(); monitorSettings.openPage(0,"") }
         else if(app.monitor && id === "monitor-identify") app.monitor.identifyDisplays()
-        else if(app.monitor && id === "monitor-move-output") { app.requestActivate(); monitorSettings.openPage(0,"") }
+        else if(app.monitor && id === "monitor-move-output") { if(commandTarget && commandTarget.id === id)app.monitor.moveOutput(commandTarget.value); else {app.requestActivate();monitorSettings.openPage(0,"")} }
         else if(app.monitor && id === "monitor-swap") app.monitor.swapControllerAndOutput()
         else if(app.monitor && id === "monitor-enable") { const target=app.monitor.outputOptions.displayId; if(viewer.displayManager.displays.some(d => d.id === target))viewer.openPresentation(target,viewer.presentationMode); else {app.requestActivate();monitorSettings.openPage(0,"")} }
         else if(app.monitor && id === "monitor-disable") viewer.closePresentation()
         else if(app.monitor && id === "monitor-recover") app.monitor.recoverToController()
         else if(app.monitor && (id === "workspace-save" || id === "workspace-apply" || id === "workspace-reset")) { app.requestActivate(); monitorSettings.openPage(3,"") }
-        else if(app.monitor && id.indexOf("pane-detach-") === 0) { app.requestActivate(); monitorSettings.openPage(2,id.slice(12)) }
+        else if(app.monitor && id.indexOf("pane-detach-") === 0) { if(commandTarget && commandTarget.id === id) { pendingPaneFocus=id.slice(12); if(!app.monitor.detachPane(id.slice(12),commandTarget.value))pendingPaneFocus=""; } else {app.requestActivate();monitorSettings.openPage(2,id.slice(12))} }
         else if(app.monitor && id.indexOf("pane-redock-") === 0) app.monitor.redockPane(id.slice(12))
         else if(app.monitor && id.indexOf("pane-freeze-") === 0) app.monitor.setPaneFrozen(id.slice(12),!app.monitor.paneRoutes[id.slice(12)].frozen)
         else if (id === "grid") { gridMode = !gridMode; wakeHud(); if (!gridMode) canvas.forceActiveFocus() }
@@ -722,7 +762,10 @@ ApplicationWindow {
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel() }
-    onModalOpenChanged: if (modalOpen) { canvas.endLoupe(); chordCancel() }
+    onModalOpenChanged: {
+        if(modalOpen){canvas.endLoupe();chordCancel();app.requestActivate()}
+        else if(pendingPaneFocus.length){const pane=pendingPaneFocus;pendingPaneFocus="";Qt.callLater(() => app.focusDetachedPane(pane))}
+    }
     Connections {
         target: viewer
         function onViewCommand(id) { app.handleViewCommand(id) }
@@ -760,16 +803,7 @@ ApplicationWindow {
         sequence: "Escape"
         // Text fields own Escape (the address field reverts, then leaves arrangement itself).
         enabled: !app.modalOpen && !app.editingText
-        onActivated: {
-            if (app.chordPending) { app.chordCancel(); return } // the first Escape only abandons the pending chord
-            canvas.endLoupe()
-            if(app.layoutEditing) { app.layoutEditing=false; return }
-            if (viewer.metadataVisible) { viewer.metadataVisible = false; return }
-            if (app.gridMode) app.showCanvas()
-            else if (app.combinedMode && app.focusedPane === "preview" && app.visibility !== Window.FullScreen) app.focusPane("grid")
-            else if (app.visibility === Window.FullScreen) app.showNormal()
-            else app.wakeHud()
-        }
+        onActivated: app.escapeContent()
     }
     Shortcut {
         sequence: "?"
@@ -847,6 +881,7 @@ ApplicationWindow {
 
     Item {
         id: previewVisuals
+        z: -4 // Stable controller layer survives native reparenting.
         anchors.fill: parent
         ImageCanvas {
             id: canvas
@@ -1155,6 +1190,7 @@ ApplicationWindow {
     }
     PhotoGrid {
         id: photoGrid
+        z: -3 // Stable controller layer survives native reparenting.
         objectName: "photoGrid"
         x: app.paneRect("grid").x; y: app.paneRect("grid").y
         width: app.paneRect("grid").width; height: app.paneRect("grid").height
@@ -1624,6 +1660,7 @@ ApplicationWindow {
     }
     FolderTree {
         id: treePanel
+        z: -2 // Stable controller layer survives native reparenting.
         objectName: "folderTree"
         compact: app.width < 720 || app.height < 480
         x: app.paneRect("tree").x; y: app.paneRect("tree").y
@@ -1640,6 +1677,7 @@ ApplicationWindow {
     }
     MetadataHud {
         id: metadataPanel
+        z: -1 // Stable controller layer survives native reparenting.
         objectName: "metadataHud"
         x: app.paneRect("metadata").x; y: app.paneRect("metadata").y
         width: app.paneRect("metadata").width; height: app.paneRect("metadata").height

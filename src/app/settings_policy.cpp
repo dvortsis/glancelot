@@ -113,19 +113,6 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
             }
             add(monitorBase+QStringList{"presets"},[](const QJsonValue& v){return v.isArray()&&QJsonDocument(v.toArray()).toJson(QJsonDocument::Compact).size()<=256*1024&&monitor_state::presets(v.toArray().toVariantList());});
             add(monitorBase+QStringList{"selectedPreset"},[](const QJsonValue& v){return monitor_state::text(v.toVariant());});
-            const auto dockBase=monitorBase+QStringList{"dock"};
-            for(const auto& root:{source,current}){const auto snapshot=valueAt(root,dockBase);if(snapshot.isObject()&&snapshot.toObject().contains("version")&&snapshot.toObject().value("version")!=QJsonValue(1))return refuse(Code::Unsupported,dockBase+QStringList{"version"});}
-            add(dockBase+QStringList{"version"},[](const QJsonValue& v){return v==QJsonValue(1);});
-            add(dockBase+QStringList{"locked"},boolean);
-            add(dockBase+QStringList{"center","orientation"},[](const QJsonValue& v){return choice(v,{"horizontal","vertical"});});
-            add(dockBase+QStringList{"center","ratio"},[](const QJsonValue& v){return number(v,.1,.9);});
-            add(dockBase+QStringList{"center","mode"},[](const QJsonValue& v){return choice(v,{"preview","grid","combined"});});
-            for(const auto& pane:layout_detail::defaults().keys()) {
-                const auto base=dockBase+QStringList{"panes",pane};
-                add(base+QStringList{"region"},[](const QJsonValue& v){return choice(v,{"left","right","top","bottom","center"});});
-                add(base+QStringList{"order"},[](const QJsonValue& v){return number(v,0,99,true);});add(base+QStringList{"extent"},[](const QJsonValue& v){return number(v,32,4096);});
-                add(base+QStringList{"visible"},boolean);add(base+QStringList{"frozen"},boolean);
-            }
             const auto sourceRecords=valueAt(source,monitorBase+QStringList{"outputsByDisplay"});
             const auto currentRecords=valueAt(current,monitorBase+QStringList{"outputsByDisplay"});
             QSet<QString> displayIds;

@@ -1,4 +1,5 @@
 #include "glancelot/display_manager.hpp"
+#include "monitor_customization_topology.hpp"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -62,6 +63,7 @@ QVariantMap DisplayInfo::toVariantMap() const {
     map[QStringLiteral("manufacturer")] = manufacturer;
     map[QStringLiteral("model")] = model;
     map[QStringLiteral("serialNumber")] = serialNumber;
+    map[QStringLiteral("label")] = QStringLiteral("Display %1 · %2").arg(index+1).arg(name);
     map[QStringLiteral("x")] = geometry.x();
     map[QStringLiteral("y")] = geometry.y();
     map[QStringLiteral("width")] = geometry.width();
@@ -85,12 +87,15 @@ struct DisplayManager::Private {
     QString currentPath;
     QImage currentImage;
     quint64 currentGeneration{0};
+    quint64 displayedGeneration{};
+    QString routeStatus{QStringLiteral("Output disabled")};
     QVariantMap routingPolicy;
+    QString preferredId;
     QTimer cadence;
     QImage pendingImage;
     QString pendingPath,followFolder;
     quint64 pendingGeneration{};
-    bool folderHeld{},publishingTimed{};
+    bool folderHeld{},publishingTimed{},pendingValid{};
 
     QString pinnedPath;
     QImage pinnedImage;
@@ -113,13 +118,14 @@ struct DisplayManager::Private {
     QPointer<QScreen> presentationScreen;
 
     explicit Private(DisplayManager* owner) : q(owner) {
-        cadence.setInterval(3000);
+        cadence.setInterval(3000);cadence.setSingleShot(true);
         QObject::connect(&cadence,&QTimer::timeout,q,[this]{
-            if(!active||pendingImage.isNull())return;
+            if(!active||!pendingValid)return;
             const auto image=pendingImage;const auto path=pendingPath;const auto generation=pendingGeneration;
-            pendingImage={};pendingPath.clear();publishingTimed=true;q->updateImage(path,image,generation);publishingTimed=false;
+            pendingValid=false;pendingImage={};pendingPath.clear();publishingTimed=true;q->updateImage(path,image,generation);publishingTimed=false;
         });
     }
+    void status(const QString& value){if(routeStatus==value)return;routeStatus=value;emit q->routingStatusChanged();}
 
     DisplayInfo screenToInfo(const QScreen* screen, int index) const {
         if (!screen) return {};
@@ -142,14 +148,17 @@ struct DisplayManager::Private {
         return info;
     }
 
+    mutable bool displaysDirty{true};
+    mutable QList<DisplayInfo> cachedDisplays;
     QList<DisplayInfo> enumerateDisplays() const {
+        if(!displaysDirty)return cachedDisplays;
         QList<DisplayInfo> result;
         const auto screens = QGuiApplication::screens();
         result.reserve(screens.size());
         for (int i = 0; i < screens.size(); ++i) {
             result.append(screenToInfo(screens[i], i));
         }
-        return result;
+        cachedDisplays=result;displaysDirty=false;return result;
     }
 
     QScreen* findScreenById(const QString& id) const {
@@ -176,14 +185,16 @@ struct DisplayManager::Private {
 
     // Shed in order: previous, comparison, pinned. The current image is never dropped.
     void enforceBudget() {
-        // A delayed frame is optional; never evict the displayed/pinned frame for it.
-        if(retainedBytes()>s_imageBudgetBytes&&!pendingImage.isNull()){pendingImage={};pendingPath.clear();}
         if (retainedBytes() <= s_imageBudgetBytes) return;
         previousImage = QImage(); previousPath.clear();
         if (retainedBytes() <= s_imageBudgetBytes) {
             applyImagesToWindow();
             return;
         }
+        // Admit a latest frame after shedding optional history, but preserve the
+        // displayed and pinned frames if both cannot fit at once.
+        if(pendingValid){pendingValid=false;pendingImage={};pendingPath.clear();status("Output holds its last image: the latest frame exceeds the retained-image budget.");}
+        if(retainedBytes()<=s_imageBudgetBytes){applyImagesToWindow();return;}
         comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0;
         if (retainedBytes() <= s_imageBudgetBytes) {
             applyImagesToWindow();
@@ -219,10 +230,18 @@ struct DisplayManager::Private {
 
 DisplayManager::DisplayManager(QObject* parent)
     : QObject(parent), d(std::make_unique<Private>(this)) {
+    connect(this,&DisplayManager::displaysChanged,this,[this]{d->displaysDirty=true;});
+    auto observe=[this](QScreen* screen) {
+        connect(screen,&QScreen::geometryChanged,this,[this]{emit displaysChanged();});
+        connect(screen,&QScreen::availableGeometryChanged,this,[this]{emit displaysChanged();});
+        connect(screen,&QScreen::logicalDotsPerInchChanged,this,[this]{emit displaysChanged();});
+        connect(screen,&QScreen::refreshRateChanged,this,[this]{emit displaysChanged();});
+    };
+    for(auto* screen:QGuiApplication::screens())observe(screen);
     // Listen to screen topology changes
     if (qApp) {
-        connect(qApp, &QGuiApplication::screenAdded, this, [this](QScreen*) {
-            emit displaysChanged();
+        connect(qApp, &QGuiApplication::screenAdded, this, [this,observe](QScreen* screen) {
+            observe(screen); emit displaysChanged();
         });
         connect(qApp, &QGuiApplication::screenRemoved, this, [this](QScreen* screen) {
             if (d->presentationScreen == screen) {
@@ -249,7 +268,10 @@ QVariantList DisplayManager::displaysVariant() const {
     QVariantList varList;
     varList.reserve(list.size());
     for (const auto& item : list) {
-        varList.append(item.toVariantMap());
+        auto row=item.toVariantMap();
+        row["identityConfidence"]=monitor_topology::strongIdentity(item,list)?"strong":"weak";
+        row["canPosition"]=!QGuiApplication::platformName().startsWith("wayland");
+        varList.append(row);
     }
     return varList;
 }
@@ -379,13 +401,16 @@ bool DisplayManager::isPinned() const {
 quint64 DisplayManager::currentGeneration() const {
     return d->currentGeneration;
 }
+quint64 DisplayManager::outputGeneration() const{return d->mode==PresentationMode::Pinned?d->pinnedGeneration:d->displayedGeneration;}
+QString DisplayManager::routingStatus() const{return d->routeStatus;}
 
 bool DisplayManager::openPresentation(const QString& displayId, PresentationMode mode) {
+    if(!d->active){d->folderHeld=false;emit currentImageRequested();d->followFolder=d->currentPath.isEmpty()?QString{}:QFileInfo(d->currentPath).absolutePath();}
     if (d->presentationWindow && !d->activeId.isEmpty()) {
         if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
         d->viewports[d->activeId]=d->presentationWindow->viewportState();
     }
-    QScreen* targetScreen = nullptr;
+    QScreen* targetScreen = displayId.isEmpty()?d->findScreenById(d->preferredId):nullptr;
     if (!displayId.isEmpty()) {
         targetScreen = d->findScreenById(displayId);
     }
@@ -424,6 +449,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
     }
 
     d->active = true;
+    d->status(mode==PresentationMode::Pinned?QStringLiteral("Reference pinned"):QStringLiteral("Following controller"));
     emit activeDisplayIdChanged(d->activeId);
     emit presentationModeChanged(d->mode);
     emit presentationActiveChanged(true);
@@ -432,7 +458,9 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
 }
 
 void DisplayManager::closePresentation() {
-    d->cadence.stop();d->pendingImage={};d->pendingPath.clear();
+    d->cadence.stop();
+    if(d->pendingValid){d->currentImage=d->pendingImage;d->currentPath=d->pendingPath;d->displayedGeneration=d->pendingGeneration;}
+    d->pendingValid=false;d->pendingImage={};d->pendingPath.clear();d->folderHeld=false;d->followFolder.clear();
     if (!d->active && !d->presentationWindow) return;
     if (d->presentationWindow && !d->activeId.isEmpty()) {
         if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
@@ -459,6 +487,7 @@ void DisplayManager::closePresentation() {
     emit presentationActiveChanged(false);
     emit presentationClosed();
     emit outputColorStatusChanged();
+    d->status("Output disabled");emit currentImageRequested();
 }
 
 void DisplayManager::togglePresentation() {
@@ -499,11 +528,12 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
             else d->followFolder=folder;
         }
         if(d->active&&(!d->routingPolicy.value("followSelection",true).toBool()||d->folderHeld)) {
-            d->currentGeneration=generation;d->pendingImage={};d->pendingPath.clear();return;
+            d->currentGeneration=generation;d->pendingGeneration=generation;d->pendingImage=image;d->pendingPath=path;d->pendingValid=true;
+            d->status(d->folderHeld?QStringLiteral("Output held after folder change; choose Follow to resume."):QStringLiteral("Output held; enable Follow controller selection to resume."));d->enforceBudget();return;
         }
         if(d->active&&d->routingPolicy.value("slideshowTiming")=="independent") {
-            d->currentGeneration=generation;d->pendingGeneration=generation;d->pendingPath=path;d->pendingImage=image;
-            d->enforceBudget();if(!d->cadence.isActive())d->cadence.start();return;
+            d->currentGeneration=generation;d->pendingGeneration=generation;d->pendingPath=path;d->pendingImage=image;d->pendingValid=true;
+            d->status("Latest image pending independent presentation timing; viewport linking waits for matching images.");d->enforceBudget();if(d->pendingValid&&!d->cadence.isActive())d->cadence.start();return;
         }
     }
 
@@ -515,6 +545,7 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
     d->currentPath = path;
     d->currentImage = image;
     d->currentGeneration = generation;
+    d->displayedGeneration=generation;
     d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
     d->enforceBudget();
 
@@ -522,14 +553,23 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
         d->applyImagesToWindow();
     }
     emit imageRouted(path, generation);
+    d->status(!d->active?QStringLiteral("Output disabled"):d->mode==PresentationMode::Pinned?QStringLiteral("Reference pinned"):d->routingPolicy.value("slideshowTiming")=="independent"?QStringLiteral("Timed output: latest image presented"):QStringLiteral("Following controller"));
 }
 
 void DisplayManager::setRoutingPolicy(const QVariantMap& policy) {
+    d->preferredId=policy.value("displayId").toString();
     const QVariantMap next{{"followSelection",policy.value("followSelection",true)},
         {"folderChange",policy.value("folderChange","follow")},{"slideshowTiming",policy.value("slideshowTiming","shared")}};
     if(next==d->routingPolicy)return;
-    d->routingPolicy=next;d->folderHeld=false;d->followFolder.clear();
-    d->cadence.stop();d->pendingImage={};d->pendingPath.clear();
+    const auto baseline=d->pendingValid?d->pendingPath:d->currentPath;
+    d->routingPolicy=next;d->folderHeld=false;d->followFolder=baseline.isEmpty()?QString{}:QFileInfo(baseline).absolutePath();
+    d->cadence.stop();
+    if(d->active&&next.value("followSelection").toBool()) {
+        if(d->pendingValid) {
+            if(next.value("slideshowTiming")=="independent")d->cadence.start();
+            else {const auto image=d->pendingImage;const auto path=d->pendingPath;const auto generation=d->pendingGeneration;d->pendingValid=false;d->pendingImage={};d->pendingPath.clear();d->publishingTimed=true;updateImage(path,image,generation);d->publishingTimed=false;}
+        }else emit currentImageRequested();
+    }
 }
 
 void DisplayManager::pinCurrentImage() {
@@ -619,6 +659,7 @@ qint64 DisplayManager::outputColorResourceBytes() const {
 qint64 DisplayManager::retainedImageBytes() const { return d->retainedBytes(); }
 
 void DisplayManager::releaseCachedImages() {
+    d->pendingImage=QImage();d->pendingPath.clear();d->pendingValid=false;d->cadence.stop();
     d->previousImage = QImage(); d->previousPath.clear();
     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
     d->applyImagesToWindow();

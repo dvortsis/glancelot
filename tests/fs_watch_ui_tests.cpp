@@ -1,3 +1,4 @@
+#include "glancelot/monitor_customization.hpp"
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QQmlApplicationEngine>
@@ -73,4 +74,3 @@ private slots:
 };
 QTEST_MAIN(FSWatchUiTests)
 #include "fs_watch_ui_tests.moc"
-#include "glancelot/monitor_customization.hpp"

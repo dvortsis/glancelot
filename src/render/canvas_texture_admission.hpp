@@ -6,7 +6,10 @@
 // while moving between windows. Both share this admission counter.
 class CanvasTextureAdmission final {
     std::atomic<std::int64_t> bytes_{};
+    std::atomic<bool> retry_{};
 public:
+    bool beginRetry(){return !retry_.exchange(true,std::memory_order_acq_rel);}
+    void endRetry(){retry_.store(false,std::memory_order_release);}
     bool reserve(std::int64_t bytes,std::int64_t limit) {
         if(bytes<0||bytes>limit)return false;
         auto live=bytes_.load(std::memory_order_relaxed);

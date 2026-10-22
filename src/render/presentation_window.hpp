@@ -51,6 +51,7 @@ public:
     QImage outputColorAtlas() const { return m_colorAtlas; }
     qint64 colorResourceBytes() const { return kPresentationColorReservation; }
     void applyCustomization(const QVariantMap& options);
+    void applyControllerViewport(const QVariantMap& state);
 
     ImageCanvas* primaryCanvas() const { return m_canvasA; }
     ImageCanvas* secondaryCanvas() const { return m_canvasB; }
@@ -60,6 +61,7 @@ signals:
     void closedByUser();
     void outputColorChanged();
     void primaryViewportChanged(const QVariantMap& state);
+    void customizationCommand(const QString& command);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

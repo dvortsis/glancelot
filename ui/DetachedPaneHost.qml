@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQml.Models
 import QtQuick.Window
+import Glancelot
 
 Window {
     id: window
@@ -12,6 +13,8 @@ Window {
     property var route: customization.paneRoutes[paneId]
     property alias paneContent: body
     property bool applyingGeometry: false
+    property bool movingGeometry: false
+    property string appliedGeometry: ""
     objectName: "detached-" + paneId
     title: "Glancelot — " + paneId
     minimumWidth: 360; minimumHeight: 280
@@ -19,7 +22,10 @@ Window {
     flags: Qt.Window | Qt.FramelessWindowHint
     function restoreGeometry() {
         const r = route.effectiveGeometry
-        if(!r) return
+        if(!r || movingGeometry) return
+        const signature=JSON.stringify(r)
+        if(signature === appliedGeometry)return
+        appliedGeometry=signature
         applyingGeometry = true
         x=r.x; y=r.y; width=r.width; height=r.height
         applyingGeometry = false
@@ -30,8 +36,9 @@ Window {
         if(active) appHost.focusRegion = paneId === "preview" ? "canvas" : paneId
         else appHost.chordCancel()
     }
-    onClosing: close => { close.accepted=false; customization.redockPane(paneId) }
+    onClosing: close => { close.accepted=false; appHost.invoke("pane-redock-"+paneId) }
     function commitUserGeometry() {
+        movingGeometry=false
         if(!customization.updatePaneGeometry(paneId,{x:window.x,y:window.y,width:window.width,height:window.height})) restoreGeometry()
     }
     ColumnLayout {
@@ -48,10 +55,10 @@ Window {
                         cursorShape: Qt.SizeAllCursor
                         property point origin
                         property point start
-                        onPressed: mouse => { origin=mapToGlobal(mouse.x,mouse.y); start=Qt.point(window.x,window.y) }
+                        onPressed: mouse => { window.movingGeometry=true; origin=mapToGlobal(mouse.x,mouse.y); start=Qt.point(window.x,window.y) }
                         onPositionChanged: mouse => { if(pressed){const point=mapToGlobal(mouse.x,mouse.y);window.x=start.x+point.x-origin.x;window.y=start.y+point.y-origin.y} }
                         onReleased: window.commitUserGeometry()
-                        onCanceled: window.restoreGeometry()
+                        onCanceled: { window.movingGeometry=false; window.restoreGeometry() }
                     }
                 }
                 UiButton { text: "Settings"; onClicked: appHost.invoke("monitor-settings") }
@@ -65,7 +72,7 @@ Window {
             }
         }
         FocusScope { id: body; Layout.fillWidth: true; Layout.fillHeight: true; clip: true }
-        Label { Layout.fillWidth: true; Layout.margins: Theme.gapSm; text: customization.feedback; visible: text.length > 0; color: Theme.muted; wrapMode: Text.Wrap }
+        Label { Layout.fillWidth: true; Layout.margins: Theme.gapSm; text: customization.feedback || appHost.splitMessage; visible: text.length > 0; color: Theme.muted; wrapMode: Text.Wrap }
     }
     MouseArea {
         anchors.right: parent.right; anchors.bottom: parent.bottom
@@ -75,10 +82,10 @@ Window {
         property point origin
         property size start
         Accessible.name: "Resize pane; exact width and height are also available in Settings"
-        onPressed: mouse => {origin=mapToGlobal(mouse.x,mouse.y);start=Qt.size(window.width,window.height)}
+        onPressed: mouse => {window.movingGeometry=true;origin=mapToGlobal(mouse.x,mouse.y);start=Qt.size(window.width,window.height)}
         onPositionChanged: mouse => {if(pressed){const point=mapToGlobal(mouse.x,mouse.y);window.width=Math.max(window.minimumWidth,start.width+point.x-origin.x);window.height=Math.max(window.minimumHeight,start.height+point.y-origin.y)}}
         onReleased: window.commitUserGeometry()
-        onCanceled: window.restoreGeometry()
+        onCanceled: { window.movingGeometry=false; window.restoreGeometry() }
     }
     Instantiator {
         model: Object.keys(appHost.keyTable.firsts)
@@ -101,5 +108,6 @@ Window {
             onActivated: appHost.pressKey(appHost.resolveKey(appHost.keyTable.seconds[modelData],appHost.chordFirst))
         }
     }
-    Shortcut { sequence: "Escape"; enabled: window.active && !appHost.modalOpen && !appHost.editingText; onActivated: { if(appHost.chordPending)appHost.chordCancel(); else customization.redockPane(paneId) } }
+    Shortcut { sequence: "Escape"; enabled: window.active && !appHost.modalOpen && !appHost.editingText; onActivated: appHost.escapeContent() }
+    Shortcut { sequence: "?"; enabled: window.active && appHost.keysLive; onActivated: { appHost.requestActivate(); appHost.openShortcutsHelp() } }
 }

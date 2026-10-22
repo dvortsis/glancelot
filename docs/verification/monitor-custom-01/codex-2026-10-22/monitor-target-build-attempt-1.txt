@@ -1,0 +1,85 @@
+-- The CXX compiler identification is MSVC 19.44.35229.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - not found
+-- Found Threads: TRUE
+-- Performing Test HAVE_STDATOMIC
+-- Performing Test HAVE_STDATOMIC - Success
+-- Found WrapAtomic: TRUE
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Found Python3: C:/Python315/python.exe (found version "3.15.0") found components: Interpreter
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (100.3s)
+-- Generating done (8.9s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+[1/214] Automatic MOC and UIC for target glancelot_recovery_common
+[2/214] Automatic MOC and UIC for target glancelot_platform
+[3/214] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[4/214] Building CXX object CMakeFiles\glancelot_core.dir\src\core\file_operations.cpp.obj
+[5/214] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[6/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\platform_integration.cpp.obj
+[7/214] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[8/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\io_scheduler.cpp.obj
+[9/214] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[10/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_model.cpp.obj
+[11/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_parser.cpp.obj
+[12/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\animation_controller.cpp.obj
+[13/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\mutation_service.cpp.obj
+[14/214] Building CXX object CMakeFiles\glancelot_recovery_common.dir\glancelot_recovery_common_autogen\mocs_compilation.cpp.obj
+[15/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\raw_preview.cpp.obj
+[16/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\copy_move_service.cpp.obj
+[17/214] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[18/214] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_recovery.cpp.obj
+[19/214] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj
+FAILED: [code=2] CMakeFiles/glancelot_recovery_common.dir/src/app/settings_policy.cpp.obj 
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe"  /nologo /TP -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IC:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\build-codex-monitor-custom-01\glancelot_recovery_common_autogen\include -IC:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\include -IC:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtCore -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\mkspecs\win32-msvc -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtGui -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD -Zc:__cplusplus -permissive- -utf-8 /showIncludes /FoCMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj /FdCMakeFiles\glancelot_recovery_common.dir\glancelot_recovery_common.pdb /FS -c C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\settings_policy.cpp
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(84): error C3538: in a declarator-list 'auto' must always deduce to the same type
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(84): note: could be 'QString'
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(84): note: or       'T'
+        with
+        [
+            T=QVariant
+        ]
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(101): error C2513: 'const auto': no variable declared before '='
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2059: syntax error: '.'
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C3536: 'it': cannot be used before it is initialized
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2059: syntax error: '.'
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2059: syntax error: ')'
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2062: type 'bool' unexpected
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2065: 'ok': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2737: 'id': const object must be initialized
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C2065: 'ok': undeclared identifier
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(102): error C3536: 'id': cannot be used before it is initialized
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(103): error C2059: syntax error: 'return'
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(105): error C2059: syntax error: '}'
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\src\app\monitor_customization_state.hpp(105): error C2143: syntax error: missing ';' before '}'
+C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\ucrt\assert.h(17): error C2143: syntax error: missing ';' before '{'
+C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\ucrt\assert.h(17): error C2447: '{': missing function header (old-style formal list?)
+[20/214] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_diff.cpp.obj
+[21/214] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_restore.cpp.obj
+[22/214] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_checkpoint.cpp.obj
+ninja: build stopped: subcommand failed.

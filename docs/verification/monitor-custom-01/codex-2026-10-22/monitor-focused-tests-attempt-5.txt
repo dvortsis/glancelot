@@ -1,0 +1,14 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-monitor-custom-01/build-codex-monitor-custom-01
+    Start 40: monitor_customization
+1/2 Test #40: monitor_customization ............***Failed    9.16 sec
+
+    Start 41: monitor_customization_ui
+2/2 Test #41: monitor_customization_ui .........   Passed   24.05 sec
+
+50% tests passed, 1 tests failed out of 2
+
+Total Test time (real) =  33.42 sec
+
+The following tests FAILED:
+	 40 - monitor_customization (Failed)
+Errors while running CTest

@@ -6,6 +6,12 @@
 #include <limits>
 
 namespace glancelot::monitor_topology {
+inline bool strongIdentity(const DisplayInfo& info,const QList<DisplayInfo>& displays) {
+    const auto serial=info.serialNumber.trimmed().toCaseFolded();
+    if(serial.isEmpty()||QStringList{"0","unknown","none","default","n/a"}.contains(serial))return false;
+    if(std::all_of(serial.begin(),serial.end(),[](QChar c){return c=='0'||c==' ';}))return false;
+    return std::count_if(displays.begin(),displays.end(),[&](const auto& other){return other.serialNumber.trimmed().toCaseFolded()==serial;})==1;
+}
 struct Placement {QString displayId;QRect geometry;bool recovered{};};
 inline QRect clamp(QRect preferred,QRect area,QSize minimum={360,280}) {
     const std::array<QRect,1> areas{area};

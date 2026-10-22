@@ -36,9 +36,10 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
     QImage colorLut;
     bool colorUpload{true};
     qint64 imageKey{};
-    qint64 textureBudget{defaultTextureBudget};
+    qint64 textureBudget{defaultTextureBudget},aggregateBudget{defaultTextureBudget};
     std::shared_ptr<CanvasTextureAdmission> admission;
     qint64 reservedBytes{};
+    int retryCount{};
     bool upload{}, vertexUpload{}, nearest{}, checker{};
     QColor background;
     QSizeF viewport;
@@ -67,9 +68,10 @@ public:
 protected:
     void synchronize(QQuickRhiItem* base) override {
         auto* item=static_cast<ImageCanvas*>(base);
-        admission=item->m_gpuAdmission;
+        if(admission && admission!=item->m_gpuAdmission)releaseTexture();
+        admission=item->m_gpuAdmission;aggregateBudget=item->m_aggregateTextureBudget;
         owner=item;
-        if (image.cacheKey()!=item->m_image.cacheKey()) { image=item->m_image; upload=true; }
+        if (image.cacheKey()!=item->m_image.cacheKey()) { image=item->m_image; upload=true; retryCount=0; }
         if (colorLut.cacheKey()!=item->m_outputColorLut.cacheKey()) {
             colorLut=item->m_outputColorLut; colorUpload=true;
             const QSize required=colorLut.isNull()?QSize(1,1):colorLut.size();
@@ -105,12 +107,19 @@ protected:
         if (drawable && (!texture || texture->pixelSize()!=image.size())) {
             pipeline.reset(); bindings.reset(); releaseTexture();
             // Admission precedes allocation; at most one 256 MiB texture and its upload staging.
-            if(!admission||!admission->reserve(image.sizeInBytes(),textureBudget)) {
+            if(!admission||!admission->reserve(image.sizeInBytes(),aggregateBudget)) {
                 drawable=false;
+                if(retryCount==10)fail(QStringLiteral("Waiting for the previous window to release image textures. Resize or recover the pane to retry."));
                 const auto target=owner;
-                if(target)QMetaObject::invokeMethod(target,[target]{if(target)QTimer::singleShot(16,target,[target]{if(target)target->update();});},Qt::QueuedConnection);
+                const auto token=admission;
+                if(target&&token&&retryCount++<10&&token->beginRetry())QMetaObject::invokeMethod(target,[target,token]{
+                    if(!target){token->endRetry();return;}
+                    // One bounded retry per admission owner. A blocked migration reports a recoverable
+                    // error instead of scheduling a permanent 60 Hz polling loop.
+                    QTimer::singleShot(100,target,[target,token]{token->endRetry();if(target)target->update();});
+                },Qt::QueuedConnection);
             } else {
-                reservedBytes=image.sizeInBytes();texture.reset(rhi()->newTexture(QRhiTexture::RGBA8,image.size()));
+                retryCount=0;reservedBytes=image.sizeInBytes();texture.reset(rhi()->newTexture(QRhiTexture::RGBA8,image.size()));
                 if (!texture->create()) { releaseTexture(); drawable=false; fail(QStringLiteral("GPU texture allocation failed.")); }
             }
             upload=true;
@@ -222,6 +231,12 @@ protected:
 ImageCanvas::~ImageCanvas() { unwatchHold(); }
 ImageCanvas::ImageCanvas(QQuickItem* parent):QQuickRhiItem(parent) {
     setAlphaBlending(false);
+    // Release an old hidden window's scene graph instead of waiting for it to render
+    // again after a pane migration. Admission remains shared until retirement.
+    connect(this,&QQuickItem::windowChanged,this,[this,previous=QPointer<QQuickWindow>{}](QQuickWindow* current) mutable {
+        if(previous&&previous!=current&&!previous->isExposed())previous->releaseResources();
+        previous=current;
+    });
     connect(this,&QQuickRhiItem::effectiveColorBufferSizeChanged,this,[this] { refreshFit(); });
 }
 QQuickRhiItemRenderer* ImageCanvas::createRenderer() { return new ImageRenderer; }

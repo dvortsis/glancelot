@@ -38,6 +38,9 @@ public:
     // so the aggregate stays bounded.
     qint64 textureBudget() const { return m_textureBudget; }
     void setTextureBudget(qint64 bytes);
+    // Internal presentation ownership: both canvases and all renderer incarnations share one cap.
+    void shareTextureAdmissionWith(ImageCanvas* owner){m_gpuAdmission=owner->m_gpuAdmission;}
+    void setAggregateTextureBudget(qint64 bytes){m_aggregateTextureBudget=bytes;update();}
     Q_INVOKABLE void fit(const QString& mode = QStringLiteral("shrink"));
     Q_INVOKABLE void actualSize();
     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
@@ -88,6 +91,7 @@ private:
     QPointF m_savedPan;
     QString m_savedFit;
     QString m_rendererError;
+    qint64 m_aggregateTextureBudget{256LL * 1024 * 1024};
     qint64 m_textureBudget{256LL * 1024 * 1024};
     std::shared_ptr<CanvasTextureAdmission> m_gpuAdmission=std::make_shared<CanvasTextureAdmission>();
 };
