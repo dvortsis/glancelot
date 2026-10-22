@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QMatrix4x4>
 #include <QPointer>
+#include <QTimer>
 #include <QtMath>
 #include <rhi/qshader.h>
 #include <rhi/qrhi.h>
@@ -36,6 +37,8 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
     bool colorUpload{true};
     qint64 imageKey{};
     qint64 textureBudget{defaultTextureBudget};
+    std::shared_ptr<CanvasTextureAdmission> admission;
+    qint64 reservedBytes{};
     bool upload{}, vertexUpload{}, nearest{}, checker{};
     QColor background;
     QSizeF viewport;
@@ -44,6 +47,9 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
     int rotation{};
     QPointer<ImageCanvas> owner;
     QString error;
+    void releaseTexture() {
+        texture.reset();if(admission&&reservedBytes)admission->release(reservedBytes);reservedBytes=0;
+    }
     void fail(const QString& message) {
         if (error == message) return;
         error = message;
@@ -53,12 +59,15 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
         }, Qt::QueuedConnection);
     }
     void reset() {
-        pipeline.reset(); bindings.reset(); texture.reset(); sampler.reset(); colorTexture.reset(); colorSampler.reset(); colorUpload=true;
+        pipeline.reset(); bindings.reset(); releaseTexture(); sampler.reset(); colorTexture.reset(); colorSampler.reset(); colorUpload=true;
         uniforms.reset(); vertices.reset(); imageKey=0; vertexUpload=true; upload=true;
     }
+public:
+    ~ImageRenderer() override {releaseTexture();}
 protected:
     void synchronize(QQuickRhiItem* base) override {
         auto* item=static_cast<ImageCanvas*>(base);
+        admission=item->m_gpuAdmission;
         owner=item;
         if (image.cacheKey()!=item->m_image.cacheKey()) { image=item->m_image; upload=true; }
         if (colorLut.cacheKey()!=item->m_outputColorLut.cacheKey()) {
@@ -91,13 +100,19 @@ protected:
         }
         if (!drawable) {
             // Do not retain a previous selection's VRAM when the selection is empty or rejected.
-            pipeline.reset(); bindings.reset(); texture.reset(); imageKey=0;
+            pipeline.reset(); bindings.reset(); releaseTexture(); imageKey=0;
         }
         if (drawable && (!texture || texture->pixelSize()!=image.size())) {
-            pipeline.reset(); bindings.reset(); texture.reset();
+            pipeline.reset(); bindings.reset(); releaseTexture();
             // Admission precedes allocation; at most one 256 MiB texture and its upload staging.
-            texture.reset(rhi()->newTexture(QRhiTexture::RGBA8,image.size()));
-            if (!texture->create()) { texture.reset(); drawable=false; fail(QStringLiteral("GPU texture allocation failed.")); }
+            if(!admission||!admission->reserve(image.sizeInBytes(),textureBudget)) {
+                drawable=false;
+                const auto target=owner;
+                if(target)QMetaObject::invokeMethod(target,[target]{if(target)QTimer::singleShot(16,target,[target]{if(target)target->update();});},Qt::QueuedConnection);
+            } else {
+                reservedBytes=image.sizeInBytes();texture.reset(rhi()->newTexture(QRhiTexture::RGBA8,image.size()));
+                if (!texture->create()) { releaseTexture(); drawable=false; fail(QStringLiteral("GPU texture allocation failed.")); }
+            }
             upload=true;
         }
         if (drawable && !vertices) {
@@ -282,9 +297,14 @@ void ImageCanvas::panBy(qreal dx,qreal dy) {
 }
 QVariantMap ImageCanvas::viewState() const {
     const auto center=imagePointAt(width()/2, height()/2);
-    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()},{"sourceWidth",m_image.width()},{"sourceHeight",m_image.height()}};
+    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()},{"sourceWidth",m_image.width()},{"sourceHeight",m_image.height()},{"rotation",m_rotation}};
 }
 void ImageCanvas::setViewState(const QVariantMap& state) {
+    if(state.contains("rotation")) {
+        bool ok=false;const auto rotation=state.value("rotation").toInt(&ok);
+        if(!ok||rotation<0||rotation>270||rotation%90)return;
+        m_rotation=rotation;
+    }
     const auto mode=state.value("fit").toString();
     if (mode=="actual") { actualSize(); return; }
     if (!mode.isEmpty()) { fit(mode); return; }

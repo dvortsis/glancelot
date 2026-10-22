@@ -1,3 +1,4 @@
+#include "glancelot/monitor_customization.hpp"
 // INPUT-02: scoped keys, chords, held keys, the wheel matrix and context menus, driven through the shipped Main.qml.
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"
@@ -71,6 +72,7 @@ struct Harness {
     FilmstripModel model;
     FolderTreeModel folders;
     PaneLayout layout;
+    glancelot::MonitorCustomization monitor{viewer.displayManager(), &layout};
     DirectoryEntryModel fileGrid;
     FileOperationService fileOperations;
     QQmlApplicationEngine engine;
@@ -82,6 +84,8 @@ struct Harness {
         engine.addImageProvider("thumb", new PreviewProvider);
         engine.rootContext()->setContextProperty("viewer", &viewer);
         engine.rootContext()->setContextProperty("paneLayout", &layout);
+        monitor.setSlot(1);
+        engine.rootContext()->setContextProperty("monitorCustomization", &monitor);
         engine.rootContext()->setContextProperty("theme", &theme);
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);

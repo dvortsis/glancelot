@@ -32,8 +32,10 @@ private slots:
     void workspaceRefreshAndTextModalPrecedence() {
         QTemporaryDir media;QVERIFY(media.isValid());
         ViewerController viewer;PaneLayout layout;ThemeManager theme;
+        glancelot::MonitorCustomization monitor(viewer.displayManager(),&layout);monitor.setSlot(1);
         FilmstripModel filmstrip;FolderTreeModel folders;DirectoryEntryModel grid;FileOperationService operations;
         QQmlApplicationEngine engine;
+        engine.rootContext()->setContextProperty("monitorCustomization",&monitor);
         auto imports=engine.importPathList();imports.removeAll(QCoreApplication::applicationDirPath());engine.setImportPathList(imports);
         for(const auto& item:QList<QPair<QString,QObject*>>{{"viewer",&viewer},{"paneLayout",&layout},{"theme",&theme},
                 {"filmstrip",&filmstrip},{"folderTree",&folders},{"fileGrid",&grid},{"fileOperations",&operations}})
@@ -71,3 +73,4 @@ private slots:
 };
 QTEST_MAIN(FSWatchUiTests)
 #include "fs_watch_ui_tests.moc"
+#include "glancelot/monitor_customization.hpp"

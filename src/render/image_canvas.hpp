@@ -1,4 +1,6 @@
 #pragma once
+#include "canvas_texture_admission.hpp"
+#include <memory>
 #include <QQuickRhiItem>
 #include <QImage>
 #include <QColor>
@@ -40,8 +42,8 @@ public:
     Q_INVOKABLE void actualSize();
     Q_INVOKABLE void zoomAt(qreal factor, qreal x, qreal y);
     Q_INVOKABLE void panBy(qreal dx, qreal dy);
-    QVariantMap viewState() const;
-    void setViewState(const QVariantMap& state);
+    Q_INVOKABLE QVariantMap viewState() const;
+    Q_INVOKABLE void setViewState(const QVariantMap& state);
     // Fixed 33-cube RGB atlas, shared by presentation canvases; null means identity.
     void setOutputColorLut(const QImage& atlas);
     // Continuous source coordinates, including points outside the image bounds.
@@ -87,6 +89,7 @@ private:
     QString m_savedFit;
     QString m_rendererError;
     qint64 m_textureBudget{256LL * 1024 * 1024};
+    std::shared_ptr<CanvasTextureAdmission> m_gpuAdmission=std::make_shared<CanvasTextureAdmission>();
 };
 
 

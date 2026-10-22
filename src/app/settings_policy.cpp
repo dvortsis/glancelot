@@ -2,6 +2,7 @@
 #include "glancelot/command_registry.hpp"
 #include "binding_validation.hpp"
 #include "layout_defaults.hpp"
+#include "monitor_customization_state.hpp"
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -53,7 +54,7 @@ QString revision() {
     const auto append=[&](const QByteArray& field){for(int shift=0;shift<64;shift+=8)bytes.append(char((quint64(field.size())>>shift)&255));bytes.append(field);};
     append(QJsonDocument(commands).toJson(QJsonDocument::Compact));append(themeCatalog());
     append(QJsonDocument(layout_detail::defaults()).toJson(QJsonDocument::Compact));
-    append(QByteArrayLiteral("known-fields-v3-scoped-input-wheel-modifiers"));
+    append(QByteArrayLiteral("known-fields-v4-monitor-customization"));
     return "policy1:"+QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
 }
 Result merge(const QJsonObject& current,const QJsonObject& source,Selection selection,Options options) {
@@ -94,6 +95,46 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
                 add(base+QStringList{"extent"},[](const QJsonValue& v){return number(v,32,4096);});
                 add(base+QStringList{"visible"},boolean);add(base+QStringList{"frozen"},boolean);
             }
+            for(const auto& root:{source,current}) {
+                const auto feature=root.value("monitorCustomization");
+                if(!feature.isUndefined()&&(!feature.isObject()||feature.toObject().value("version")!=QJsonValue(1)))
+                    return refuse(Code::Unsupported,{"monitorCustomization","version"});
+            }
+            add({"monitorCustomization","version"},[](const QJsonValue& v){return v==QJsonValue(1);});
+            const QStringList monitorBase{"monitorCustomization","slots",slot};
+            for(const auto& key:monitor_state::options().keys())add(monitorBase+QStringList{"output",key},[key](const QJsonValue& v){auto o=monitor_state::options();return monitor_state::patchOptions({{key,v.toVariant()}},o);});
+            for(const auto& pane:monitor_state::paneIds) {
+                const auto route=monitorBase+QStringList{"panes",pane};
+                add(route+QStringList{"detached"},boolean);add(route+QStringList{"frozen"},boolean);
+                add(route+QStringList{"displayId"},[](const QJsonValue& v){return monitor_state::text(v.toVariant());});
+                for(const auto* coordinate:{"x","y"})add(route+QStringList{"geometry",QLatin1String(coordinate)},[](const QJsonValue& v){return number(v,-10000000,10000000,true);});
+                add(route+QStringList{"geometry","width"},[](const QJsonValue& v){return number(v,160,16384,true);});
+                add(route+QStringList{"geometry","height"},[](const QJsonValue& v){return number(v,120,16384,true);});
+            }
+            add(monitorBase+QStringList{"presets"},[](const QJsonValue& v){return v.isArray()&&QJsonDocument(v.toArray()).toJson(QJsonDocument::Compact).size()<=256*1024&&monitor_state::presets(v.toArray().toVariantList());});
+            add(monitorBase+QStringList{"selectedPreset"},[](const QJsonValue& v){return monitor_state::text(v.toVariant());});
+            const auto dockBase=monitorBase+QStringList{"dock"};
+            for(const auto& root:{source,current}){const auto snapshot=valueAt(root,dockBase);if(snapshot.isObject()&&snapshot.toObject().contains("version")&&snapshot.toObject().value("version")!=QJsonValue(1))return refuse(Code::Unsupported,dockBase+QStringList{"version"});}
+            add(dockBase+QStringList{"version"},[](const QJsonValue& v){return v==QJsonValue(1);});
+            add(dockBase+QStringList{"locked"},boolean);
+            add(dockBase+QStringList{"center","orientation"},[](const QJsonValue& v){return choice(v,{"horizontal","vertical"});});
+            add(dockBase+QStringList{"center","ratio"},[](const QJsonValue& v){return number(v,.1,.9);});
+            add(dockBase+QStringList{"center","mode"},[](const QJsonValue& v){return choice(v,{"preview","grid","combined"});});
+            for(const auto& pane:layout_detail::defaults().keys()) {
+                const auto base=dockBase+QStringList{"panes",pane};
+                add(base+QStringList{"region"},[](const QJsonValue& v){return choice(v,{"left","right","top","bottom","center"});});
+                add(base+QStringList{"order"},[](const QJsonValue& v){return number(v,0,99,true);});add(base+QStringList{"extent"},[](const QJsonValue& v){return number(v,32,4096);});
+                add(base+QStringList{"visible"},boolean);add(base+QStringList{"frozen"},boolean);
+            }
+            const auto sourceRecords=valueAt(source,monitorBase+QStringList{"outputsByDisplay"});
+            const auto currentRecords=valueAt(current,monitorBase+QStringList{"outputsByDisplay"});
+            QSet<QString> displayIds;
+            for(const auto& records:{sourceRecords,currentRecords}) {
+                if(!records.isUndefined()&&(!records.isObject()||records.toObject().size()>64))return refuse(Code::Corrupt,monitorBase+QStringList{"outputsByDisplay"});
+                for(const auto& id:records.toObject().keys()){if(id.isEmpty()||id.size()>256)return refuse(Code::Corrupt,monitorBase+QStringList{"outputsByDisplay"});displayIds.insert(id);}
+            }
+            for(const auto& id:displayIds)for(const auto& key:monitor_state::options().keys())
+                add(monitorBase+QStringList{"outputsByDisplay",id,key},[key](const QJsonValue& v){auto o=monitor_state::options();return monitor_state::patchOptions({{key,v.toVariant()}},o);});
         }
     }else {
         switch(selection.global) {
@@ -151,6 +192,10 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
         }
         if(layout.isEmpty())layouts.remove(slot);else {layout["version"]=1;layouts[slot]=layout;}
         if(!layouts.isEmpty()||replacement.contains("layouts"))replacement["layouts"]=layouts;
+    }
+    if(selection.slotSection==SlotSection::Layout&&replacement.value("monitorCustomization").isObject()) {
+        auto feature=replacement.value("monitorCustomization").toObject();
+        if(!feature.isEmpty()){feature["version"]=1;replacement["monitorCustomization"]=feature;}
     }
     if(enabled(GlobalSection::Bindings)) {
         const auto resolved=resolveCommandBindings(replacement.value("bindings").toObject());

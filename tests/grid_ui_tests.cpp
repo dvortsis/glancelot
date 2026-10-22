@@ -1,3 +1,4 @@
+#include "glancelot/monitor_customization.hpp"
 #include "glancelot/pane_layout.hpp"
 #include "glancelot/filmstrip_model.hpp"
 #include "glancelot/folder_tree_model.hpp"
@@ -108,6 +109,7 @@ struct Harness {
     FilmstripModel model;
     FolderTreeModel folders;
     PaneLayout layout;
+    glancelot::MonitorCustomization monitor{viewer.displayManager(), &layout};
     DirectoryEntryModel fileGrid;
     QTemporaryDir trashBin;
     TestTrash* trash = new TestTrash(trashBin.path());
@@ -124,6 +126,8 @@ struct Harness {
         engine.addImageProvider("thumb", provider);
         engine.rootContext()->setContextProperty("viewer", &viewer);
         engine.rootContext()->setContextProperty("paneLayout", &layout);
+        monitor.setSlot(1);
+        engine.rootContext()->setContextProperty("monitorCustomization", &monitor);
         engine.rootContext()->setContextProperty("theme", &theme);
         engine.rootContext()->setContextProperty("filmstrip", &model);
         engine.rootContext()->setContextProperty("folderTree", &folders);

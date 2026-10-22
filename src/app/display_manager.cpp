@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <QHash>
 #include <QSet>
+#include <QTimer>
+#include <QFileInfo>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -83,6 +85,12 @@ struct DisplayManager::Private {
     QString currentPath;
     QImage currentImage;
     quint64 currentGeneration{0};
+    QVariantMap routingPolicy;
+    QTimer cadence;
+    QImage pendingImage;
+    QString pendingPath,followFolder;
+    quint64 pendingGeneration{};
+    bool folderHeld{},publishingTimed{};
 
     QString pinnedPath;
     QImage pinnedImage;
@@ -104,7 +112,14 @@ struct DisplayManager::Private {
     std::unique_ptr<IPresentationWindow> presentationWindow;
     QPointer<QScreen> presentationScreen;
 
-    explicit Private(DisplayManager* owner) : q(owner) {}
+    explicit Private(DisplayManager* owner) : q(owner) {
+        cadence.setInterval(3000);
+        QObject::connect(&cadence,&QTimer::timeout,q,[this]{
+            if(!active||pendingImage.isNull())return;
+            const auto image=pendingImage;const auto path=pendingPath;const auto generation=pendingGeneration;
+            pendingImage={};pendingPath.clear();publishingTimed=true;q->updateImage(path,image,generation);publishingTimed=false;
+        });
+    }
 
     DisplayInfo screenToInfo(const QScreen* screen, int index) const {
         if (!screen) return {};
@@ -152,7 +167,7 @@ struct DisplayManager::Private {
 
     qint64 retainedBytes() const {
         QSet<qint64> keys; qint64 total = 0;
-        for (const QImage* im : {&currentImage, &pinnedImage, &comparisonImage, &previousImage}) {
+        for (const QImage* im : {&currentImage, &pinnedImage, &comparisonImage, &previousImage, &pendingImage}) {
             if (im->isNull() || keys.contains(im->cacheKey())) continue;
             keys.insert(im->cacheKey()); total += im->sizeInBytes();
         }
@@ -161,6 +176,8 @@ struct DisplayManager::Private {
 
     // Shed in order: previous, comparison, pinned. The current image is never dropped.
     void enforceBudget() {
+        // A delayed frame is optional; never evict the displayed/pinned frame for it.
+        if(retainedBytes()>s_imageBudgetBytes&&!pendingImage.isNull()){pendingImage={};pendingPath.clear();}
         if (retainedBytes() <= s_imageBudgetBytes) return;
         previousImage = QImage(); previousPath.clear();
         if (retainedBytes() <= s_imageBudgetBytes) {
@@ -415,6 +432,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
 }
 
 void DisplayManager::closePresentation() {
+    d->cadence.stop();d->pendingImage={};d->pendingPath.clear();
     if (!d->active && !d->presentationWindow) return;
     if (d->presentationWindow && !d->activeId.isEmpty()) {
         if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
@@ -471,6 +489,24 @@ void DisplayManager::setMode(PresentationMode mode) {
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
     if (generation < d->currentGeneration) return;
 
+    if(d->active&&!d->publishingTimed) {
+        const auto folder=QFileInfo(path).absolutePath();
+        if(d->followFolder.isEmpty())d->followFolder=folder;
+        if(folder!=d->followFolder) {
+            const auto action=d->routingPolicy.value("folderChange","follow").toString();
+            if(action=="disable"){closePresentation();}
+            else if(action=="hold")d->folderHeld=true;
+            else d->followFolder=folder;
+        }
+        if(d->active&&(!d->routingPolicy.value("followSelection",true).toBool()||d->folderHeld)) {
+            d->currentGeneration=generation;d->pendingImage={};d->pendingPath.clear();return;
+        }
+        if(d->active&&d->routingPolicy.value("slideshowTiming")=="independent") {
+            d->currentGeneration=generation;d->pendingGeneration=generation;d->pendingPath=path;d->pendingImage=image;
+            d->enforceBudget();if(!d->cadence.isActive())d->cadence.start();return;
+        }
+    }
+
     if (!d->active) { d->previousImage={}; d->previousPath.clear(); }
     else if (path != d->currentPath && !d->currentImage.isNull()) {
         d->previousPath = d->currentPath;
@@ -486,6 +522,14 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
         d->applyImagesToWindow();
     }
     emit imageRouted(path, generation);
+}
+
+void DisplayManager::setRoutingPolicy(const QVariantMap& policy) {
+    const QVariantMap next{{"followSelection",policy.value("followSelection",true)},
+        {"folderChange",policy.value("folderChange","follow")},{"slideshowTiming",policy.value("slideshowTiming","shared")}};
+    if(next==d->routingPolicy)return;
+    d->routingPolicy=next;d->folderHeld=false;d->followFolder.clear();
+    d->cadence.stop();d->pendingImage={};d->pendingPath.clear();
 }
 
 void DisplayManager::pinCurrentImage() {
