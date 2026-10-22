@@ -3,6 +3,7 @@
 #include "settings_retry.hpp"
 #include <memory>
 #include "layout_defaults.hpp"
+#include "monitor_customization_state.hpp"
 #include <QJsonArray>
 #include <QDir>
 #include <QFileInfo>
@@ -36,8 +37,20 @@ QJsonObject PaneLayout::defaults() {
 PaneLayout::PaneLayout(QObject* parent):QObject(parent),panes_(defaults()) {}
 QVariantMap PaneLayout::panes() const{return panes_.toVariantMap();}
 QVariantMap PaneLayout::pane(const QString& id) const{return panes_.value(id).toObject().toVariantMap();}
+QVariantMap PaneLayout::snapshot() const {
+    auto center=center_;center["mode"]=mode_;
+    auto result=snapshotExtras_;result["version"]=1;result["locked"]=locked_;result["panes"]=panes_;result["center"]=center;return result.toVariantMap();
+}
+bool PaneLayout::restoreSnapshot(const QVariantMap& state) {
+    if(!glancelot::monitor_state::dock(state))return false;
+    auto next=QJsonObject::fromVariantMap(state);
+    snapshotExtras_=next;for(const auto* key:{"version","locked","panes","center"})snapshotExtras_.remove(key);
+    panes_=next.value("panes").toObject();center_=next.value("center").toObject();mode_=center_.value("mode").toString();
+    center_.remove("mode");locked_=next.value("locked").toBool();feedback_.clear();emit changed();return true;
+}
 void PaneLayout::setSlot(int slot) {if(slot<0||slot==slot_)return;slot_=slot;load();}
 void PaneLayout::load() {
+    snapshotExtras_={};
     panes_=defaults();center_={{"orientation","horizontal"},{"ratio",0.5}};mode_="preview";locked_=false;feedback_.clear();
     if(slot_>0) {
         QJsonObject settings;
@@ -52,6 +65,7 @@ void PaneLayout::load() {
             if(!saved.isEmpty()&&newerVersion(saved))feedback_="Unsupported layout version; defaults are active.";
             else if(!saved.isEmpty()&&!currentVersion(saved))feedback_="Layout settings are invalid; defaults are active.";
             else {
+                snapshotExtras_=saved;for(const auto* key:{"version","locked","panes","center"})snapshotExtras_.remove(key);
                 locked_=saved.value("locked").toBool(false);
                 const auto center=saved.value("center").toObject();
                 const auto orientation=center.value("orientation").toString();

@@ -1,0 +1,7 @@
+{
+  "source": "7f887ede4864926b46a61579d7003fecf0d2d450",
+  "phase": "full Windows gate",
+  "exit": 1,
+  "finished": "2026-10-22T08:41:49.1220276-06:00",
+  "error": "Tests failed."
+}

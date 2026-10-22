@@ -1,0 +1,25 @@
+********* Start testing of MonitorCustomizationUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorCustomizationUiTests::initTestCase()
+PASS   : MonitorCustomizationUiTests::everyRealPaneMigratesAndReturnsWithoutDuplication()
+PASS   : MonitorCustomizationUiTests::nativeHostCloseAndEscapePreserveController()
+PASS   : MonitorCustomizationUiTests::detachedCanvasPopupAndFrozenCloseHaveVisibleFeedback()
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() No QRhi found for window 0x23922c61e70, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration() No QRhi found for window 0x23922c61e70, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::selectionAndDecodedCanvasSurviveRepeatedMigration()
+SKIP   : MonitorCustomizationUiTests::nativeUiEvidence() Native screenshots are an explicit separate run.
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(92) : failure location
+QWARN  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() No QRhi found for window 0x239234880b0, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting() No QRhi found for window 0x239234880b0, QQuickRhiItem will not be functional
+PASS   : MonitorCustomizationUiTests::recoveryKeyPointerAndPaletteShareLockedRouting()
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x23925208c90, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x23925208c90, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x23925208c90, QQuickRhiItem will not be functional
+QWARN  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() No QRhi found for window 0x23925208c90, QQuickRhiItem will not be functional
+FAIL!  : MonitorCustomizationUiTests::realGridRetainsFocusScrollAndContentAcrossMigration() 'view->hasActiveFocus()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\codex-monitor-custom-01\tests\monitor_customization_ui_tests.cpp(127) : failure location
+PASS   : MonitorCustomizationUiTests::actualImportAndResetReloadCoordinatorPreferences()
+PASS   : MonitorCustomizationUiTests::registryRouteAndLockedPredicateRemainShared()
+PASS   : MonitorCustomizationUiTests::cleanupTestCase()
+Totals: 9 passed, 1 failed, 1 skipped, 0 blacklisted, 38291ms
+********* Finished testing of MonitorCustomizationUiTests *********

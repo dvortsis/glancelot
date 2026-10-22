@@ -17,4 +17,6 @@ bool saveWithRetry(QObject* owner,QString channel,std::function<void(QJsonObject
                    std::function<void(SettingsStatus)> completed = {});
 void overlayPendingSettings(QObject* owner,QJsonObject& settings);
 bool hasPendingSettings(QObject* owner,const QString& channelPrefix = {});
+// Explicit successful import/reset supersedes pending edits in its owned scope.
+void cancelPendingSettings(QObject* owner,const QString& channelPrefix = {});
 }

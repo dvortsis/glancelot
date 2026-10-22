@@ -1,0 +1,5 @@
+{
+  "ProcessId": 48220,
+  "CreationDate": "2026-10-22T00:03:16.648645-06:00",
+  "CommandLine": "\"C:\\src\\Github\\Glancelot\\.worktrees\\codex-monitor-custom-01\\build-codex-monitor-custom-01\\monitor_customization_ui_tests.exe\" nativeUiEvidence -o .cache/monitor-native-ui-attempt-1.txt,txt"
+}

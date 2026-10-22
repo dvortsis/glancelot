@@ -50,6 +50,9 @@ public:
     QString outputColorStatus() const { return m_colorStatus; }
     QImage outputColorAtlas() const { return m_colorAtlas; }
     qint64 colorResourceBytes() const { return kPresentationColorReservation; }
+    void applyCustomization(const QVariantMap& options);
+    void setWindowedGeometry(const QRect& geometry);
+    void applyControllerViewport(const QVariantMap& state);
 
     ImageCanvas* primaryCanvas() const { return m_canvasA; }
     ImageCanvas* secondaryCanvas() const { return m_canvasB; }
@@ -58,6 +61,8 @@ signals:
     void escapePressed();
     void closedByUser();
     void outputColorChanged();
+    void primaryViewportChanged(const QVariantMap& state);
+    void customizationCommand(const QString& command);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -96,6 +101,11 @@ private:
     quint64 m_colorRevision{};
     QFutureWatcher<output_color::Result> m_colorWatcher;
     QTimer m_colorRetry,m_colorRefresh;
+    QVariantMap m_customOptions;
+    QQuickItem* m_guides{};
+    QQuickItem* m_information{};
+    QTimer m_cursorTimer;
+    bool m_userViewport{};
 };
 
 void registerPresentationWindowFactory();

@@ -387,6 +387,9 @@ struct ViewerController::Private {
             emit q->presentationChanged();
         });
         displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
+        QObject::connect(&displayManager,&glancelot::DisplayManager::currentImageRequested,q,[this]{
+            if(imageReady&&!loading&&!directoryPending)displayManager.updateImage(path,image,generation);
+        });
         displayManager.setOutputBindingProvider([this](const QString& id) { return q->bindingFor(id); });
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
@@ -1767,6 +1770,7 @@ bool ViewerController::importSettings(const QString& sourceFilePath) {
     }
     d->load();
     d->status = QStringLiteral("Settings imported successfully.");
+    emit configurationReloaded();
     emit stateChanged();
     emit bindingsChanged();
     return true;
@@ -1780,6 +1784,7 @@ bool ViewerController::resetSection(const QString& sectionName) {
     }
     d->load();
     d->status = QStringLiteral("Section reset to defaults.");
+    emit configurationReloaded();
     emit stateChanged();
     emit bindingsChanged();
     return true;
@@ -1793,6 +1798,7 @@ bool ViewerController::resetAllSettings() {
     }
     d->load();
     d->status = QStringLiteral("All settings reset to defaults.");
+    emit configurationReloaded();
     emit stateChanged();
     emit bindingsChanged();
     return true;

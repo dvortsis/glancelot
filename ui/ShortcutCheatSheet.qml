@@ -317,6 +317,7 @@ UiDialog {
 
                                             // Key badge sequence
                                             RowLayout {
+                                                id: keyBadges
                                                 spacing: 4
                                                 Layout.alignment: Qt.AlignVCenter
 
@@ -324,7 +325,7 @@ UiDialog {
                                                 readonly property var keys: binding.length > 0 ? binding.split("+") : ["unbound"]
 
                                                 Repeater {
-                                                    model: keys
+                                                    model: keyBadges.keys
 
                                                     delegate: RowLayout {
                                                         required property var modelData
@@ -351,7 +352,7 @@ UiDialog {
                                                         }
 
                                                         Label {
-                                                            visible: index < keys.length - 1
+                                                            visible: index < keyBadges.keys.length - 1
                                                             text: "+"
                                                             color: Theme.muted
                                                             font.pixelSize: Theme.textCaption

@@ -3,6 +3,7 @@
 #include "settings_transaction.hpp"
 #include "settings_raw.hpp"
 #include "settings_retry.hpp"
+#include "monitor_customization_state.hpp"
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QCoreApplication>
@@ -10,6 +11,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QRandomGenerator>
@@ -270,6 +272,10 @@ public:
     bool contains(const QString& directory,const QString& prefix) const {
         return std::any_of(pending.begin(),pending.end(),[&](const auto& value){return value.directory==directory&&value.channel.startsWith(prefix);});
     }
+    void cancel(const QString& directory,const QString& prefix) {
+        std::erase_if(pending,[&](const auto& value){return value.directory==directory&&value.channel.startsWith(prefix);});
+        if(pending.empty())timer.stop();
+    }
     bool submit(Pending value) {
         // Distinct channels merge independently. Moving a superseding edit to
         // the end preserves its ordering relative to reset/other-field edits.
@@ -325,6 +331,11 @@ bool settings_detail::hasPendingSettings(QObject* owner,const QString& channelPr
     for(auto* child:owner->children())if(auto* retries=dynamic_cast<SettingsRetries*>(child))return retries->contains(directory,channelPrefix);
     return false;
 }
+void settings_detail::cancelPendingSettings(QObject* owner,const QString& channelPrefix) {
+    if(!owner||owner->thread()!=QThread::currentThread())return;
+    const auto directory=QDir::cleanPath(QFileInfo(settingsDirectory()).absoluteFilePath());
+    for(auto* child:owner->children())if(auto* retries=dynamic_cast<SettingsRetries*>(child)){retries->cancel(directory,channelPrefix);return;}
+}
 
 bool resetSettings(QString* movedTo) {
     const QString path = settingsFilePath();
@@ -361,6 +372,35 @@ bool exportSettings(const QString& targetFilePath, QString* error) {
     return true;
 }
 
+namespace {
+QJsonObject mergeMonitorPreferences(QJsonObject current,const QJsonObject& patch) {
+    for(auto it=patch.begin();it!=patch.end();++it) {
+        if(it.value().isObject())current[it.key()]=mergeMonitorPreferences(current.value(it.key()).toObject(),it.value().toObject());
+        else if(it.key()=="presets"&&it.value().isArray()) {
+            QJsonArray rows;const auto previous=current.value(it.key()).toArray();
+            for(const auto& value:it.value().toArray()){auto row=value.toObject();for(const auto& old:previous)if(old.toObject().value("id")==row.value("id")){row=mergeMonitorPreferences(old.toObject(),row);break;}rows.append(row);}current[it.key()]=rows;
+        }else current[it.key()]=it.value();
+    }return current;
+}
+void resetMonitorPreferences(QJsonObject& root,bool all) {
+    auto feature=root.value("monitorCustomization").toObject();
+    if(feature.value("version")!=QJsonValue(1))return;
+    auto rows=feature.value("slots").toObject();
+    for(auto row=rows.begin();row!=rows.end();++row) {
+        auto slot=row.value().toObject();
+        const auto clearFields=[](QJsonObject value,const QStringList& fields){for(const auto& key:fields)value.remove(key);return value;};
+        auto paneRoutes=slot.value("panes").toObject();
+        for(const auto& id:monitor_state::paneIds){auto p=paneRoutes.value(id).toObject();auto geometry=clearFields(p.value("geometry").toObject(),{"x","y","width","height"});p=clearFields(p,{"detached","displayId","geometry"});if(!geometry.isEmpty())p["geometry"]=geometry;if(p.isEmpty())paneRoutes.remove(id);else paneRoutes[id]=p;}
+        if(paneRoutes.isEmpty())slot.remove("panes");else slot["panes"]=paneRoutes;
+        if(all){
+            auto output=clearFields(slot.value("output").toObject(),monitor_state::options().keys());if(output.isEmpty())slot.remove("output");else slot["output"]=output;
+            auto displays=slot.value("outputsByDisplay").toObject();for(const auto& id:displays.keys()){const auto value=clearFields(displays.value(id).toObject(),monitor_state::options().keys());if(value.isEmpty())displays.remove(id);else displays[id]=value;}if(displays.isEmpty())slot.remove("outputsByDisplay");else slot["outputsByDisplay"]=displays;
+            slot.remove("presets");slot.remove("selectedPreset");
+        }
+        row.value()=slot;
+    }feature["slots"]=rows;root["monitorCustomization"]=feature;
+}
+}
 bool importSettings(const QString& sourceFilePath, QString* error) {
     QFile file(sourceFilePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -384,13 +424,27 @@ bool importSettings(const QString& sourceFilePath, QString* error) {
         if (error) *error = QStringLiteral("Import file has an unsupported newer schema.");
         return false;
     }
+    if(imported.contains("monitorCustomization")&&(!imported.value("monitorCustomization").isObject()
+        ||!monitor_state::feature(imported.value("monitorCustomization").toObject()))) {
+        if(error)*error="Imported monitor preferences are invalid or newer than supported.";return false;
+    }
 
+    bool monitorRejected=false;
     const auto status = updateSettings([&](QJsonObject& root) {
+        QJsonObject mergedMonitor;
+        if(imported.contains("monitorCustomization")) {
+            const auto old=root.value("monitorCustomization");
+            if(!old.isUndefined()&&(!old.isObject()||old.toObject().value("version")!=QJsonValue(1))){monitorRejected=true;return;}
+            mergedMonitor=mergeMonitorPreferences(old.toObject(),imported.value("monitorCustomization").toObject());
+            if(!monitor_state::feature(mergedMonitor)){monitorRejected=true;return;}
+        }
         for (auto it = imported.begin(); it != imported.end(); ++it) {
             if (it.key() == QStringLiteral("schema")) continue;
-            root[it.key()] = it.value();
+            root[it.key()] = it.key()=="monitorCustomization"?QJsonValue(mergedMonitor):it.value();
         }
     });
+
+    if(monitorRejected){if(error)*error="Monitor preferences could not be merged without losing newer data or exceeding their limits.";return false;}
 
     if (!status.ok()) {
         if (error) *error = QStringLiteral("Could not save imported settings.");
@@ -418,9 +472,11 @@ bool resetSection(const QString& sectionName, QString* error) {
             root.remove(QStringLiteral("sort"));
         } else if (sec == QStringLiteral("panes")) {
             root.remove(QStringLiteral("layouts"));
+            resetMonitorPreferences(root,false);
         } else if (sec == QStringLiteral("bindings")) {
             root.remove(QStringLiteral("bindings"));
         } else if (sec == QStringLiteral("all")) {
+            resetMonitorPreferences(root,true);
             root.remove(QStringLiteral("appearance"));
             root.remove(QStringLiteral("textScale"));
             root.remove(QStringLiteral("reducedMotion"));

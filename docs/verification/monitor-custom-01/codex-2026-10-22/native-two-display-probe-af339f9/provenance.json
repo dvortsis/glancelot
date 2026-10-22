@@ -1,0 +1,7 @@
+{
+  "source": "af339f93e0d0463962914296ade684edb98606eb",
+  "probeBinarySha256": "8823a787ee1b86a9a215a54e64a4d6ed38f8b461cdf631fac48f1555a2d0491d",
+  "linkedObjects": "assigned build monitor_customization_tests objects, excluding QtTest main, same approved source",
+  "actualNativeDisplays": 2,
+  "result": "all frame-fit/move/restore predicates passed"
+}

@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QMatrix4x4>
 #include <QPointer>
+#include <QTimer>
 #include <QtMath>
 #include <rhi/qshader.h>
 #include <rhi/qrhi.h>
@@ -35,7 +36,10 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
     QImage colorLut;
     bool colorUpload{true};
     qint64 imageKey{};
-    qint64 textureBudget{defaultTextureBudget};
+    qint64 textureBudget{defaultTextureBudget},aggregateBudget{defaultTextureBudget};
+    std::shared_ptr<CanvasTextureAdmission> admission;
+    qint64 reservedBytes{};
+    int retryCount{};
     bool upload{}, vertexUpload{}, nearest{}, checker{};
     QColor background;
     QSizeF viewport;
@@ -44,6 +48,9 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
     int rotation{};
     QPointer<ImageCanvas> owner;
     QString error;
+    void releaseTexture() {
+        texture.reset();if(admission&&reservedBytes)admission->release(reservedBytes);reservedBytes=0;
+    }
     void fail(const QString& message) {
         if (error == message) return;
         error = message;
@@ -53,14 +60,18 @@ class ImageRenderer final : public QQuickRhiItemRenderer {
         }, Qt::QueuedConnection);
     }
     void reset() {
-        pipeline.reset(); bindings.reset(); texture.reset(); sampler.reset(); colorTexture.reset(); colorSampler.reset(); colorUpload=true;
+        pipeline.reset(); bindings.reset(); releaseTexture(); sampler.reset(); colorTexture.reset(); colorSampler.reset(); colorUpload=true;
         uniforms.reset(); vertices.reset(); imageKey=0; vertexUpload=true; upload=true;
     }
+public:
+    ~ImageRenderer() override {releaseTexture();}
 protected:
     void synchronize(QQuickRhiItem* base) override {
         auto* item=static_cast<ImageCanvas*>(base);
+        if(admission && admission!=item->m_gpuAdmission)releaseTexture();
+        admission=item->m_gpuAdmission;aggregateBudget=item->m_aggregateTextureBudget;
         owner=item;
-        if (image.cacheKey()!=item->m_image.cacheKey()) { image=item->m_image; upload=true; }
+        if (image.cacheKey()!=item->m_image.cacheKey()) { image=item->m_image; upload=true; retryCount=0; }
         if (colorLut.cacheKey()!=item->m_outputColorLut.cacheKey()) {
             colorLut=item->m_outputColorLut; colorUpload=true;
             const QSize required=colorLut.isNull()?QSize(1,1):colorLut.size();
@@ -91,13 +102,26 @@ protected:
         }
         if (!drawable) {
             // Do not retain a previous selection's VRAM when the selection is empty or rejected.
-            pipeline.reset(); bindings.reset(); texture.reset(); imageKey=0;
+            pipeline.reset(); bindings.reset(); releaseTexture(); imageKey=0;
         }
         if (drawable && (!texture || texture->pixelSize()!=image.size())) {
-            pipeline.reset(); bindings.reset(); texture.reset();
+            pipeline.reset(); bindings.reset(); releaseTexture();
             // Admission precedes allocation; at most one 256 MiB texture and its upload staging.
-            texture.reset(rhi()->newTexture(QRhiTexture::RGBA8,image.size()));
-            if (!texture->create()) { texture.reset(); drawable=false; fail(QStringLiteral("GPU texture allocation failed.")); }
+            if(!admission||!admission->reserve(image.sizeInBytes(),aggregateBudget)) {
+                drawable=false;
+                if(retryCount==10)fail(QStringLiteral("Waiting for the previous window to release image textures. Resize or recover the pane to retry."));
+                const auto target=owner;
+                const auto token=admission;
+                if(target&&token&&retryCount++<10&&token->beginRetry())QMetaObject::invokeMethod(target,[target,token]{
+                    if(!target){token->endRetry();return;}
+                    // One bounded retry per admission owner. A blocked migration reports a recoverable
+                    // error instead of scheduling a permanent 60 Hz polling loop.
+                    QTimer::singleShot(100,target,[target,token]{token->endRetry();if(target)target->update();});
+                },Qt::QueuedConnection);
+            } else {
+                retryCount=0;reservedBytes=image.sizeInBytes();texture.reset(rhi()->newTexture(QRhiTexture::RGBA8,image.size()));
+                if (!texture->create()) { releaseTexture(); drawable=false; fail(QStringLiteral("GPU texture allocation failed.")); }
+            }
             upload=true;
         }
         if (drawable && !vertices) {
@@ -207,6 +231,12 @@ protected:
 ImageCanvas::~ImageCanvas() { unwatchHold(); }
 ImageCanvas::ImageCanvas(QQuickItem* parent):QQuickRhiItem(parent) {
     setAlphaBlending(false);
+    // Release an old hidden window's scene graph instead of waiting for it to render
+    // again after a pane migration. Admission remains shared until retirement.
+    connect(this,&QQuickItem::windowChanged,this,[this,previous=QPointer<QQuickWindow>{}](QQuickWindow* current) mutable {
+        if(previous&&previous!=current&&!previous->isExposed())previous->releaseResources();
+        previous=current;
+    });
     connect(this,&QQuickRhiItem::effectiveColorBufferSizeChanged,this,[this] { refreshFit(); });
 }
 QQuickRhiItemRenderer* ImageCanvas::createRenderer() { return new ImageRenderer; }
@@ -282,19 +312,26 @@ void ImageCanvas::panBy(qreal dx,qreal dy) {
 }
 QVariantMap ImageCanvas::viewState() const {
     const auto center=imagePointAt(width()/2, height()/2);
-    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()},{"sourceWidth",m_image.width()},{"sourceHeight",m_image.height()}};
+    return {{"fit",m_fitMode},{"zoom",m_zoom},{"centerX",center.x()},{"centerY",center.y()},{"sourceWidth",m_image.width()},{"sourceHeight",m_image.height()},{"rotation",m_rotation}};
 }
 void ImageCanvas::setViewState(const QVariantMap& state) {
+    if(state.contains("rotation")) {
+        bool ok=false;const auto rotation=state.value("rotation").toInt(&ok);
+        if(!ok||rotation<0||rotation>270||rotation%90)return;
+
+    }
+    const auto rotation=state.value("rotation",m_rotation).toInt();
     const auto mode=state.value("fit").toString();
-    if (mode=="actual") { actualSize(); return; }
-    if (!mode.isEmpty()) { fit(mode); return; }
+    if(!mode.isEmpty()&&!QStringList{"actual","shrink","fit","fill","width","height"}.contains(mode))return;
+    if (mode=="actual") { m_rotation=rotation;actualSize(); return; }
+    if (!mode.isEmpty()) { m_rotation=rotation;fit(mode); return; }
     bool okZ=false,okX=false,okY=false;
     const qreal z=state.value("zoom").toDouble(&okZ);
     qreal x=state.value("centerX").toDouble(&okX), y=state.value("centerY").toDouble(&okY);
     const int sourceWidth=state.value("sourceWidth").toInt(),sourceHeight=state.value("sourceHeight").toInt();
     if(sourceWidth>0 && sourceHeight>0 && !m_image.isNull()) { x*=qreal(m_image.width())/sourceWidth; y*=qreal(m_image.height())/sourceHeight; }
     if (!okZ || !okX || !okY || !std::isfinite(z) || z<.001 || z>64 || !std::isfinite(x) || !std::isfinite(y) || std::abs(x)>1e9 || std::abs(y)>1e9) return;
-    endLoupe(); m_zoom=z; m_fitMode.clear(); m_lastDpr=dpr();
+    m_rotation=rotation;endLoupe(); m_zoom=z; m_fitMode.clear(); m_lastDpr=dpr();
     const QPointF centered(x-m_image.width()/2.0,y-m_image.height()/2.0);
     const qreal radians=qDegreesToRadians(qreal(m_rotation));
     m_pan=-QPointF(std::cos(radians)*centered.x()-std::sin(radians)*centered.y(),std::sin(radians)*centered.x()+std::cos(radians)*centered.y())*(z/dpr());

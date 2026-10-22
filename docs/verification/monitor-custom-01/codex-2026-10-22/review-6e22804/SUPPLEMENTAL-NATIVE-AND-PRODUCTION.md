@@ -1,0 +1,5 @@
+Supplemental actual results generated AFTER this review was started, on unchanged source6e228045f28b5c73819c37fc20ccf961082a13c4. These are not in the immutable candidate archive yet.
+
+Complete native Windows/D3D11 UI rerun9 passed13/13 (85426ms); raw .cache/monitor-native-ui-attempt-9.txt and status;25 PNGs .cache/monitor-native-ui-attempt-9/. Prior attempt7 failed exposure remains retained; exact cause unproven. No source, assertion or timeout was changed for attempts7/8/9. Synthetic QPA cases never run on native Windows.
+
+Production without BUILD_TESTING passed72/72, source pin/status/config/build/wrapper copied .cache/monitor-production-proof-attempt-2/. Wrapper is main gate-lock -Branch codex/monitor-custom-01 -Run. Fresh isolated production runtime .cache/monitor-production-runtime-attempt-2/:exit0,26frames,pre_grab.window.exposed true,canvas.renderer_error empty,observed Intel Iris Xe RHI/software not detected,input SHA256 unchanged. Disposable generated image and isolated configuration. Full Windows/Docker integration gates still pending source approval. Physical hardware matrix remains unqualified.

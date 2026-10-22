@@ -1,0 +1,34 @@
+{
+  "reviewedSource": "a0b00ff5aa8c946b1b510355034aa3c6c07b4525",
+  "synchronizedGateSource": "3f570dc3f9319267ff21054e39e68fcd21abcdb9",
+  "productDiffExit": 0,
+  "paths": [
+    "app",
+    "include",
+    "src",
+    "ui",
+    "tests",
+    "CMakeLists.txt",
+    "cmake"
+  ],
+  "objects": {
+    "a0b00ff5aa8c946b1b510355034aa3c6c07b4525": {
+      "app": "8eae9e4f97a06080661e60de214cd7b6284523b8",
+      "include": "3ad1ca06802b3dcdb205d6232f91e1224b494ab8",
+      "src": "56d0d95f10d16bb162d072d9bb528bd150092e82",
+      "ui": "a0c1cbacb13de220362a458e58958981b4d63f45",
+      "tests": "a51a4f09660f28c67cea40e3e0f580d176ff6127",
+      "CMakeLists.txt": "db8bd839689811ae76aeb6169b4c6be6b0e3e7bb",
+      "cmake": "948ca68a6b3928ea0845d966280b0d53dcc9b1b8"
+    },
+    "3f570dc3f9319267ff21054e39e68fcd21abcdb9": {
+      "app": "8eae9e4f97a06080661e60de214cd7b6284523b8",
+      "include": "3ad1ca06802b3dcdb205d6232f91e1224b494ab8",
+      "src": "56d0d95f10d16bb162d072d9bb528bd150092e82",
+      "ui": "a0c1cbacb13de220362a458e58958981b4d63f45",
+      "tests": "a51a4f09660f28c67cea40e3e0f580d176ff6127",
+      "CMakeLists.txt": "db8bd839689811ae76aeb6169b4c6be6b0e3e7bb",
+      "cmake": "948ca68a6b3928ea0845d966280b0d53dcc9b1b8"
+    }
+  }
+}
