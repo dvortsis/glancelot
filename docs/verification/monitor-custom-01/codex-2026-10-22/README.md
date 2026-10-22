@@ -1,5 +1,7 @@
 # MONITOR-CUSTOM-01 Codex evidence, October22,2026
 
+Current source integration:008d026951428988e545c63c25ded0b6106e3882. Full Windows41/41 (627.53s), fresh Linux Docker41/41 (351.28s), integrated focused5/5 (88.40s), integrated native14/14 (55406ms), two-display geometry and isolated native rendering all pass. See the final handoff for exact pins, raw output and remaining physical qualification.
+
 The exact source commit is recorded in the parent handoff and final independent review. This archive retains actual raw command output and generated native screenshots. No hardware color/HDR/refresh or physical mixed-DPI qualification is claimed.
 
 Focused commands (own assigned worktree/build directory):
@@ -96,3 +98,7 @@ Actual Sonnet5.5 ata0b00ff APPROVE SOURCE / FULL GATES PENDING, session f6bcf65f
 ## Complete locked full-gate retry passed
 
 Synchronized source3f570dc3f9319267ff21054e39e68fcd21abcdb9 has identical app/include/src/ui/tests/CMakeLists.txt/cmake Git objects to revieweda0b00ff. The retained main gate-lock command block ran production OFF build, full Windows build.ps1 -Test and fresh-source Docker build serially. Production linked12/12; Windows41/41 passed627.53s (full grid199.96s); Linux Docker41/41 passed351.28s after all515 compile/link steps. Image exported glancelot-browser:main,linux/amd64,sha256:b27b2eae7d6cd52b9d285b5cee4ffd1c0b4576aac0a48cb551cd57c7747123e6. Wrapper exit0,phase complete. Complete raw output, Qt results, LastTest, source equality and image identity are in full-gates. The first failed gate is retained separately. No-ff integration and exact-merge native/targeted/runtime checks are still pending at this archive checkpoint.
+
+## Exact merge confirmation passed
+
+Feature merged --no-ff into main008d026951428988e545c63c25ded0b6106e3882. Entire tree equals accepted branche3495ae; non-documentation product equals gated3f570dc. Under main gate-lock, exact-merge focused input_ui/monitor_output/recovery_controller/monitor_customization/monitor_customization_ui pass5/5 in88.40s. Complete Windows/D3D11 native UI pass14/14 in55406ms with exact merge and binary hashes unchanged,28 screenshots. Rebuilt linked-object native two-display geometry probe passes initial negative-origin frame fit, appearance retaining maximized state and reachable restored frames after maximized/minimized moves. Isolated production runtime exits0,25 frames,exposedtrue,no renderer error,observed Intel Iris Xe RHI/software not detected;generated input and binary SHA256 unchanged. Full postmerge commands, output, JSON, source equality and screenshots are in integrated-proof. Physical mixed-DPI/refresh/color/HDR and compositor/browser qualification remain MONITOR-VERIFY. Queue completion follows these checks under the held lead integration lock.
