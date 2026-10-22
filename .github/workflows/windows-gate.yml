@@ -1,0 +1,84 @@
+# Full integration gate on the lead's Windows machine (self-hosted runner, interactive session).
+# Cloud sessions request a gate by pushing a branch named gate/<name>; results come back as this run's
+# status plus the uploaded logs. Never add pull_request triggers: the repository is public, and pull
+# request workflows would run untrusted code on this runner.
+name: windows-gate
+on:
+  push:
+    branches: ['gate/**']
+  workflow_dispatch:
+    inputs:
+      docker:
+        description: Also run the Linux docker build gate
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: windows-gate-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  gate:
+    runs-on: [self-hosted, windows, glancelot-gate]
+    timeout-minutes: 240
+    env:
+      MAIN_CHECKOUT: C:\src\Github\Glancelot
+      GATE_SHA: ${{ github.sha }}
+      GATE_REF: ${{ github.ref_name }}
+      RUN_DOCKER: ${{ github.event_name == 'push' || inputs.docker }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Prepare worktree of the main checkout at the pushed commit
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tree = Join-Path $env:MAIN_CHECKOUT ".worktrees\ci-gate-$env:GITHUB_RUN_ID"
+          git -C $env:MAIN_CHECKOUT fetch --quiet origin $env:GATE_SHA
+          if ($LASTEXITCODE) { throw 'fetch failed' }
+          git -C $env:MAIN_CHECKOUT merge-base --is-ancestor 334065e $env:GATE_SHA
+          if ($LASTEXITCODE) { throw 'Windows native fixture hold: the gated commit must contain merge 334065e' }
+          git -C $env:MAIN_CHECKOUT worktree add --detach $tree $env:GATE_SHA
+          if ($LASTEXITCODE) { throw 'worktree add failed' }
+          "GATE_TREE=$tree" >> $env:GITHUB_ENV
+      - name: Full gates under the machine gate lock
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $logs = Join-Path $env:RUNNER_TEMP 'gate-logs'; New-Item -ItemType Directory -Force $logs | Out-Null
+          "GATE_LOGS=$logs" >> $env:GITHUB_ENV
+          Set-Location $env:GATE_TREE
+          $result = @{}  # mutated inside the locked block (dynamic scope)
+          & (Join-Path $env:MAIN_CHECKOUT 'scripts\gate-lock.ps1') -Branch "ci/$env:GATE_REF" -Run {
+              $start = Get-Date
+              try { & ./scripts/build.ps1 -BuildDir build-ci -Test *>&1 | Tee-Object -FilePath (Join-Path $logs 'windows-gate.log'); $result.windows = $true }
+              catch { "$_" | Tee-Object -Append -FilePath (Join-Path $logs 'windows-gate.log'); $result.windows = $false }
+              $result.windowsSeconds = [int]((Get-Date) - $start).TotalSeconds
+              if ($result.windows -and $env:RUN_DOCKER -eq 'true') {
+                  $start = Get-Date
+                  docker build --progress=plain -t "glancelot-browser:ci-$env:GITHUB_RUN_ID" . *>&1 | Tee-Object -FilePath (Join-Path $logs 'docker-gate.log')
+                  $result.docker = ($LASTEXITCODE -eq 0)
+                  $result.dockerSeconds = [int]((Get-Date) - $start).TotalSeconds
+              }
+          }
+          Copy-Item -ErrorAction SilentlyContinue build-ci/Testing/Temporary/LastTest.log (Join-Path $logs 'windows-LastTest.log')
+          $summary = @("## Gate for ``$env:GATE_REF`` at ``$env:GATE_SHA``", '',
+              "- Windows ``scripts/build.ps1 -Test``: $(if ($result.windows) {'PASS'} else {'FAIL'}) ($($result.windowsSeconds)s)")
+          if ($env:RUN_DOCKER -eq 'true') { $summary += "- Docker build gate: $(if ($null -eq $result.docker) {'not run'} elseif ($result.docker) {'PASS'} else {'FAIL'}) ($($result.dockerSeconds)s)" }
+          $summary += '', '```'
+          $summary += Select-String -Path (Join-Path $logs 'windows-gate.log') -Pattern 'tests passed|tests failed|\*\*\*Failed|\*\*\*Timeout|Test +#\d+: .*(Failed|Timeout)' | ForEach-Object { $_.Line.Trim() }
+          $summary += '```'
+          $summary -join "`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          if (-not $result.windows) { throw 'Windows gate failed' }
+          if ($env:RUN_DOCKER -eq 'true' -and -not $result.docker) { throw 'Docker gate failed' }
+      - name: Upload gate logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-logs-${{ github.run_id }}
+          path: ${{ env.GATE_LOGS }}
+          if-no-files-found: ignore
+      - name: Remove worktree
+        if: always()
+        run: |
+          if ($env:GATE_TREE) { git -C $env:MAIN_CHECKOUT worktree remove --force $env:GATE_TREE }
+          git -C $env:MAIN_CHECKOUT worktree prune

@@ -65,7 +65,7 @@ The integration evidence is in `docs/verification/lead-integrate-all-2026-10-22/
   - Do not assume either is available; check.
 - **Gate lock.** `scripts/gate-lock.ps1` needs PowerShell. In Linux, serialize full gates yourself and still never overlap two.
 - **AgentMemory** (`192.168.86.49`) is a LAN address and unreachable from the cloud. Repo documents are the only memory, so record decisions in handoffs and the queue.
-- **Windows gate stance.** A packet integrated in the cloud has passed the full Linux gate only. Mark it `integration` with `windows_gate: pending`. It reaches `done` only after `scripts/build.ps1 -Test` passes on a Windows host on a commit that contains it. The native-fixture hold (merge 334065e) still applies. The user may relax this; record it if they do.
+- **Windows gate (user decision: option 3, self-hosted runner).** Before merging to `main`, push the exact candidate commit as `gate/<task>-<n>`. The `windows-gate` workflow then runs the full Windows gate and the Docker gate on the lead's Windows machine under the machine gate lock. Merge only after that run passes, and record its URL, summary and logs. The procedure is in [CI-GATE-RUNNER.md](../CI-GATE-RUNNER.md). If no runner is online, the gate is pending: merge nothing as done, leave packets in `integration` with `windows_gate: pending`, and keep working on other packets. The native-fixture hold (merge 334065e) still applies, and the workflow enforces it.
 - **Pushing.** The user authorized pushing for this cloud handoff only. Push branches the cloud session creates only when the user asks.
 
 ## 4. Waves
