@@ -1,37 +1,39 @@
-# MONITOR-CUSTOM-01 at af339f9: APPROVE SOURCE / FULL GATES PENDING
+I've finished reading the delta and its context. Next I'm writing up the verdict.
 
-I found no blocking delta bug. I read the delta patch and the source around it, and ran nothing. This is not an integration approval, and the Windows/Docker gates and the native run are unverified. The review is read-only and was not saved to a plan file.
+# MONITOR-CUSTOM-01 at 70a6903: APPROVE SOURCE / FULL GATES PENDING
+
+I found no blocking delta issue. I read the delta patch, `ui/SettingsDialog.qml`, the new test, the `folder_grid` CMake line, `Main.qml` command handling and the two prior reviews. I ran nothing and edited nothing. This is not an integration approval. The Windows and Docker gates and the native proof are unverified, and so is your claim that `paletteKeyboardCursorStaysInViewport` now passes 3/3 (I took it from your report).
 
 ## Delta assessment
 
-| Delta item | Verdict | Evidence |
+| Item | Verdict | Evidence |
 |---|---|---|
-| Windowed output keeps its maximized/minimized state | **Correct for option and color changes.** | `presentation_window.cpp:123` calls `showNormal()` only on a transition into windowed. A new window has an empty `previous`, so first show still works. `monitor_customization.cpp:124` rewrites geometry only when the call is initial or `visibility()==Windowed`. `initialWindowed` (`:103`) no longer fires on `visibility!=Windowed`, but still fires on a mode change or a frameless window. A fullscreen-to-windowed switch is initial and gets `showNormal` plus the 80% centred size. Theme changes go through `colorChanged` (`:213`) into the same path, so closing prior non-blocking item 3 is correct. |
-| Native frame-margin test | **Right test, right numbers.** | `monitor_customization_tests.cpp:268` uses margins 8/31/8/8 on the work area (-1920,-1200,1920,1080). Initial size is 1920·4/5−16 = 1520 wide and 1080·4/5−39 = 825 high, matching `QCOMPARE(…,QSize(1520,825))` against `windowedClient` (`monitor_customization_topology.hpp:29`). The oversized preferred rectangle is clamped inside the work area. A reachable rectangle is returned unchanged. This closes pre-integration requirement 2 from review-6e22804 at helper level. A native frame is still unproven (see below). |
-| `customization.saving` replaces feedback matching | **Correct.** | `pending=false` is set at `monitor_customization.cpp:181`, before `feedback.clear()` and `notify()` (`:186,189`). `finishEnable` therefore runs once the save finishes. During the save, `pending` is true and `notify()` at `:192` returns early. The `saving` property exists (`monitor_customization.hpp:22`). This closes the open `finishEnable` minor. |
-| Connection-type text | **Honest and consistent.** | `DisplayInfo` and `display_manager.cpp` have no connection field, so "Connection type unavailable · Color: …" is accurate. The old hard-coded "Connected" is gone. The label keeps `Layout.fillWidth`, `Text.Wrap` and `Theme.muted`, so typography, spacing and theme tokens are unchanged, and the longer string wraps instead of clipping. No new controls or framework changes, so no design-review concerns. Connection type stays an unmet plan §1 detail, now stated honestly. |
-| New maximized/minimized regression | **Catches the presentation-side regression.** | `monitor_customization_tests.cpp:234-237` maximizes, changes `guides`, and expects Maximized. It then minimizes, changes `imageInfo`, and expects Minimized. The old `visibility()!=Windowed → showNormal` would fail this. |
+| Compact scroll fix | **Correct, and the right kind of fix.** | The button was removed from the shared `sidebarCol` (`SettingsDialog.qml:164-166`). That column now holds only search and nav, so every section's content viewport gets its row back, not just Appearance. The legacy test is untouched and nothing was relaxed. Nothing in `tests/` depends on the old sidebar focus order (no `settingsSearch` or focus-chain references). |
+| New home | **Semantically right.** | The button sits under "Workspace layout" on the Browsing page (`:362-370`). It reuses the existing `dialog.close(); host.invoke("monitor-settings")` path, which `Main.qml:618` handles. The `monitor-settings` command in `command_registry.cpp:71` and the `DetachedPaneHost.qml:64` button are unchanged. |
+| Accessibility | **Fine.** | `UiButton` is `StrongFocus` with `Accessible.name: text` (`UiButton.qml:34,39`). It is the first focusable control on the Browsing page, so the tab order is logical. The "…" suffix signals a dialog. The label is visible text, not icon-only. |
+| New test | **Meaningful.** | It covers 540×360, 720×540 at 150% text, and 1180×780. It opens Settings to Browsing and requires the button to be visible. It then clicks the real scene point with `QTest::mouseClick` and requires the monitor dialog to open and Settings to close. The click is the strong part. A button clipped by the `ScrollView` (`clip: true`) would not receive it, and the monitor dialog would not open. It sits in the per-feature file as AGENTS.md requires, and the headers it needs (`QDir`, `setTextScale`) are present. |
+| Logger syntax | **Valid.** | `-o "<bindir>/folder_grid-results.txt,txt" -o -,txt` uses QtTest's repeatable `-o file,format`. Qt splits on the last comma, so the drive-letter colon is harmless. CMake quotes the path. The `TIMEOUT 400` and environment lines are unchanged. The stdout logger is kept, so existing console output is unchanged. |
 
-## Non-blocking concerns from this delta
+## Non-blocking observations
 
-1. **Moving the output while it is maximized or minimized is unproven natively.** The trigger is `moveOutput` (`:310`) or a `moved` display change, which reaches `openPresentation` (`display_manager.cpp:442-448`). That call runs `setScreen`, then `setGeometry(screen->geometry())`, then `show()` on the existing window.
-   - Before af339f9, a non-Windowed state made `initialWindowed` true, so the window was reset to a clamped 80% size with `showNormal`. Now neither the geometry rewrite nor `showNormal` runs.
-   - A maximized window may then stay maximized on the new display. A minimized window may later restore at the raw full-screen rectangle (frame included) instead of the work area.
-   - It is user-initiated, recoverable and loses no data. If it misbehaves in the native run, the fix is small: treat `moved` with a Maximized or Minimized window as initial.
-2. **The new test covers only the presentation half.** The offscreen QPA ignores `setGeometry` on a non-normal window, as far as I recall. I could not check Qt sources here. `:124` could therefore regress and the test would still pass. That coordinator condition is protected only by reading the code.
-3. **No window opens with real frame margins.** The helper test proves the arithmetic on supplied margins. The native run should still open one windowed output and confirm it fits.
+1. **Search no longer reaches the button.** The Browsing clause of `sectionMatches` (`:67-74`) does not list "Displays and workspaces". The old button was always visible, so this is a small new discoverability gap. Typing "display" or "monitor" in Settings search will not switch to Browsing. A one-line addition fixes it: `|| rowMatches("Displays and workspaces", "Monitors, second display, presentation output")`. The command is still reachable through Controls and the palette.
+2. **Inconsistent button width.** `Layout.fillWidth: true` (`:368`) makes this button full width, but the "Arrange panes" button below it is intrinsic width. Other action buttons on the Settings pages are also intrinsic. Dropping `fillWidth` would match the surrounding rhythm. Slate/Ice/Geist tokens, spacing and typography are otherwise untouched.
+3. **Weak assertion in the test.** The explicit assertion only checks that the point is inside the window (`QRectF(QPointF(), window->size())`). Clipping is caught only through the click outcome. Asserting that the point lies inside the Settings page or dialog bounds would make the failure message clearer.
+4. **No keyboard test.** There is no keyboard-activation test for the new entry. The control is a standard `UiButton`, so I'm not blocking on it.
+5. **Silent no-op without a monitor object.** If `app.monitor` is null (the `grid_ui_tests` harness), the button closes Settings and opens nothing. This is pre-existing behaviour, not a regression.
 
-## Carried forward, unchanged
+## Carried forward from the earlier reviews
 
-- The review-6e22804 notes still apply: emergency recovery does not survive a restart, and bounded retries are counter-only.
-- The unchanged minors remain: the `computeDisplayId` O(n²) enumeration, `qInfo` prints in `nativeUiEvidence`, repeated accessible names, and the 720 px / 150% text layout.
-- Hardware, mixed-DPI, colour and HDR behaviour, and a fullscreen controller swap on real multi-display hardware, remain unverified and belong to MONITOR-VERIFY.
+- The 6e22804 and af339f9 pre-integration items stand. These are one clean native run on the integrated commit, a windowed output frame-fit check, and the maximize-then-move case.
+- The unchanged minors also stand. Emergency recovery doesn't survive a restart. Bounded retries are counter-only. `computeDisplayId` is O(n²). The `qInfo` prints and the repeated accessible names remain.
 
 ## Before integration
 
-- Run the locked Windows and Docker gates on the exact integrated commit.
-- Make one clean native run with the planned binary hash and source equality.
-- In that run, include one windowed output frame fit and the maximize-then-move case from concern 1.
+- Get a complete `folder_grid` pass on this source. Your current rerun is the evidence I'm waiting for. I can't confirm the 258.70 s failure is gone from reading alone.
+- Run the locked Windows gate and `docker build` on the exact integrated commit.
+- Do one native run, as listed above.
+
+The correction is a small, well-scoped layout change with a test that exercises the real entry path. Source approved; gates pending.
 
 
-Lead provenance: actual Claude Code Sonnet5.5 session fcc1ab9f-4a81-4dbc-b2d9-18b72e945d4a;120526ms;exit0;is_errorfalse;no permission denials. Base approval at6e22804 retained in packet archive. Subsequent candidate native run13/13 and real two-display frame/move probe pass; raw source/binary hashes and outputs retained in packet archive. Full locked gates and integrated native proof remain pending. These lead notes do not alter the actual reviewer verdict above.
+Lead provenance: actual Claude Code Sonnet5.5 session f186607c-11f3-416f-9e40-dabb9e85789b;78272ms;exit0;is_errorfalse;no permission denials. Earlier source approvals6e22804/af339f9 and failed Windows40/41 gate remain in packet archive. Subsequent completefolder_grid pass213.49s, Qt result retained. Repeat locked full gates and integrated native proof pending. These notes do not alter the actual verdict above.
