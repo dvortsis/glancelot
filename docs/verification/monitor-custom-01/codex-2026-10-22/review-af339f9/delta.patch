@@ -1,0 +1,89 @@
+diff --git a/src/app/monitor_customization.cpp b/src/app/monitor_customization.cpp
+index 63bafcb..87b6ec4 100644
+--- a/src/app/monitor_customization.cpp
++++ b/src/app/monitor_customization.cpp
+@@ -100,7 +100,7 @@ struct MonitorCustomization::Private {
+         if(!displays->isPresentationActive())return;
+         auto* window=qobject_cast<PresentationWindow*>(displays->presentationWindow());if(!window)return;
+         const auto live=window->viewportState();const auto liveGeometry=window->geometry();
+-        const bool initialWindowed=opts.value("windowMode")=="windowed"&&(lastAppliedOptions.value("windowMode")!="windowed"||window->visibility()!=QWindow::Windowed||(window->flags()&Qt::FramelessWindowHint));
++        const bool initialWindowed=opts.value("windowMode")=="windowed"&&(lastAppliedOptions.value("windowMode")!="windowed"||(window->flags()&Qt::FramelessWindowHint));
+         const bool preserveViewport=!lastAppliedOptions.isEmpty()&&lastAppliedOptions.value("fitMode")==opts.value("fitMode");
+         auto* target=sessionScreen.data();
+         if(!target||!QGuiApplication::screens().contains(target))target=window->screen();
+@@ -121,7 +121,7 @@ struct MonitorCustomization::Private {
+             });
+         }
+         syncing=true;window->applyCustomization(opts);
+-        if(opts.value("windowMode")=="windowed"&&target)window->setWindowedGeometry(monitor_topology::windowedClient(liveGeometry,target->availableGeometry(),window->frameMargins(),initialWindowed));
++        if(opts.value("windowMode")=="windowed"&&target&&(initialWindowed||window->visibility()==QWindow::Windowed))window->setWindowedGeometry(monitor_topology::windowedClient(liveGeometry,target->availableGeometry(),window->frameMargins(),initialWindowed));
+         if(preserveViewport)window->restoreViewport(live);
+         lastAppliedOptions=opts;syncing=false;
+     }
+diff --git a/src/render/presentation_window.cpp b/src/render/presentation_window.cpp
+index d830bb1..dd7a268 100644
+--- a/src/render/presentation_window.cpp
++++ b/src/render/presentation_window.cpp
+@@ -120,7 +120,7 @@ void PresentationWindow::applyCustomization(const QVariantMap& options) {
+     const auto cursor=options.value("cursorPolicy").toString();m_cursorTimer.stop();
+     setCursor(cursor=="hidden"?Qt::BlankCursor:Qt::ArrowCursor);if(cursor=="auto")m_cursorTimer.start();
+     if(previous.value("windowMode")!=options.value("windowMode"))setFlags(options.value("windowMode")=="windowed"?Qt::WindowFlags(Qt::Window):Qt::WindowFlags(Qt::Window|Qt::FramelessWindowHint));
+-    if(options.value("windowMode")=="windowed"&&visibility()!=QWindow::Windowed)showNormal();
++    if(options.value("windowMode")=="windowed"&&previous.value("windowMode")!="windowed")showNormal();
+     else if(options.value("windowMode")=="fullscreen"&&visibility()!=QWindow::FullScreen)showFullScreen();
+     updateLayout();
+ }
+diff --git a/tests/monitor_customization_tests.cpp b/tests/monitor_customization_tests.cpp
+index edb46cb..440b113 100644
+--- a/tests/monitor_customization_tests.cpp
++++ b/tests/monitor_customization_tests.cpp
+@@ -231,6 +231,10 @@ private slots:
+         QTRY_COMPARE(window->primaryCanvas()->fitMode(),QString("actual"));QCOMPARE(window->primaryCanvas()->zoom(),qreal(1));QVERIFY(window->primaryCanvas()->checkerboard());
+         QVERIFY(window->primaryCanvas()->textureBudget()+window->secondaryCanvas()->textureBudget()<=glancelot::kPresentationTextureBudget-1024*1024);
+         QCOMPARE(window->cursor().shape(),Qt::BlankCursor);
++        window->showMaximized();QTRY_COMPARE(window->visibility(),QWindow::Maximized);
++        QVERIFY(h.customization.setOutputOptions({{"guides",false}}));QTRY_COMPARE(window->visibility(),QWindow::Maximized);
++        window->showMinimized();QTRY_COMPARE(window->visibility(),QWindow::Minimized);
++        QVERIFY(h.customization.setOutputOptions({{"imageInfo",false}}));QTRY_COMPARE(window->visibility(),QWindow::Minimized);window->showNormal();
+         QVERIFY(h.customization.setOutputOptions({{"viewportLink","linked"}}));
+         QVERIFY(!h.customization.syncControllerViewport({{"fit","actual"}},0));
+         QVERIFY(h.customization.syncControllerViewport({{"fit","fit"},{"rotation",90}},1));QCOMPARE(window->primaryCanvas()->rotation(),90);
+@@ -261,6 +265,16 @@ private slots:
+         QVERIFY(reused.recovered);QCOMPARE(reused.displayId,QString("display-0"));
+         const auto minimum=glancelot::monitor_topology::clamp(QRect(100,100,20,20),QRect(0,0,100,100));QCOMPARE(minimum.size(),QSize(360,280));
+     }
++    void windowedNativeFrameFitsNegativeOriginWorkArea() {
++        const QRect work(-1920,-1200,1920,1080);const QMargins frame(8,31,8,8);
++        for(bool initial:{false,true}) {
++            const auto client=glancelot::monitor_topology::windowedClient(QRect(5000,5000,5000,4000),work,frame,initial);
++            QVERIFY(work.contains(client.marginsAdded(frame)));QVERIFY(client.width()>=320);QVERIFY(client.height()>=240);
++            if(initial)QCOMPARE(client.size(),QSize(1520,825));
++        }
++        const QRect reachable(-1800,-1100,800,600);
++        QCOMPARE(glancelot::monitor_topology::windowedClient(reachable,work,frame,false),reachable);
++    }
+     void rendererIncarnationsShareAdmissionUntilOldTextureReleases() {
+         CanvasTextureAdmission shared;
+         QVERIFY(shared.reserve(200,256));QVERIFY(!shared.reserve(100,256));QCOMPARE(shared.bytes(),std::int64_t(200));
+diff --git a/ui/MonitorSettings.qml b/ui/MonitorSettings.qml
+index 9c1c6ee..a95c8b3 100644
+--- a/ui/MonitorSettings.qml
++++ b/ui/MonitorSettings.qml
+@@ -31,7 +31,7 @@ UiDialog {
+     }
+     function option(key, value) { const patch = ({}); patch[key] = value; customization.setOutputOptions(patch) }
+     function finishEnable() {
+-        if(!pendingEnableDisplay.length || customization.feedback.indexOf("Saving monitor") === 0) return
++        if(!pendingEnableDisplay.length || customization.saving) return
+         const target=pendingEnableDisplay; pendingEnableDisplay=""
+         if(customization.outputOptions.displayId === target && customization.feedback.length === 0) host.invoke("monitor-enable")
+     }
+@@ -76,7 +76,7 @@ UiDialog {
+                     Label {
+                         Layout.fillWidth: true; wrapMode: Text.Wrap; color: Theme.muted
+                         readonly property var info: dialog.manager.displays[displayChoice.currentIndex] || ({})
+-                        text: info.name ? info.width + " × " + info.height + " · " + info.devicePixelRatio + "× scale · " + Math.round(info.refreshRate) + " Hz\n" + (info.identityConfidence === "strong" ? "Strong serial identity: " + info.serialNumber : "Weak identity: reselect similar displays after reconnect") + "\nConnected · " + info.colorSpace : "No display is available."
++                        text: info.name ? info.width + " × " + info.height + " · " + info.devicePixelRatio + "× scale · " + Math.round(info.refreshRate) + " Hz\n" + (info.identityConfidence === "strong" ? "Strong serial identity: " + info.serialNumber : "Weak identity: reselect similar displays after reconnect") + "\nConnection type unavailable · Color: " + info.colorSpace : "No display is available."
+                     }
+                     Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: dialog.manager.presentationActive; text: "Output active on " + dialog.manager.activeDisplayName; color: Theme.text }
+                     Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: customization.outputOptions.displayId.length>0 && !dialog.manager.displays.some(display => display.id===customization.outputOptions.displayId); text: "The saved presentation display is unavailable. Choose a connected display to enable output."; color: Theme.muted }

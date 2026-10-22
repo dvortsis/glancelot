@@ -70,3 +70,7 @@ Total Test time (real) =  53.46 sec
 ```
 
 Qt totals:31 coordinator pass,12 UI pass,1 native-only skip. A narrow actual Sonnet follow-up and full locked gates remain pending for this last delta. Future native runs record the exact source and binary SHA256 before and after execution. Integration Docker command uses glancelot-browser:main under the same wrapper.
+
+## Final source approval ataf339f9
+
+Actual independent Sonnet5.5 narrow follow-up APPROVE SOURCE / FULL GATES PENDING, session fcc1ab9f-4a81-4dbc-b2d9-18b72e945d4a,120526ms,exit0,no permission denials. Complete result and patch in review-af339f9. Whole native candidate attempt10 passed13/13 in59381ms; before/after exact source and identical binary SHA256 are retained, with25 screenshots. Disposable native two-display probe, linked to the actual approved component objects, verifies initial windowed frame fit on the negative-origin display, appearance retaining maximized state, and reachable frame after maximizing/moving/restoring and minimizing/moving/restoring. All predicates passed. Build attempt1 failed solely for missing MSVC /Zc:__cplusplus flag; build2 and execution passed. Both raw outputs and complete probe source/build/run scripts are retained. This is actual native window behavior, not color/HDR/refresh/mixed-DPI qualification. Full locked integration gates and native confirmation on integrated commit remain pending.
