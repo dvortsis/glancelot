@@ -1,0 +1,7 @@
+[1/14] Automatic MOC and UIC for target glancelot_recovery_common
+[2/12] Automatic MOC and UIC for target glancelot_platform
+[3/10] Automatic MOC and UIC for target glancelot-decoder
+[4/8] Automatic MOC and UIC for target cache_tests
+[5/7] Building CXX object CMakeFiles\cache_tests.dir\src\app\window_slot.cpp.obj
+[6/7] Building CXX object CMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj
+[7/7] Linking CXX executable cache_tests.exe
