@@ -135,6 +135,17 @@ private slots:
         FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));host->setPosition(original.topLeft()+QPoint(12,16));QVERIFY(QMetaObject::invokeMethod(host,"commitUserGeometry"));QVERIFY(h.monitor.saving());QVERIFY(host->position()!=original.topLeft());
         QTRY_VERIFY_WITH_TIMEOUT(!h.monitor.saving(),5500);QTRY_COMPARE(host->geometry(),original);QCOMPARE(h.monitor.paneRoutes()["grid"].toMap()["geometry"],preference);lock.release();
     }
+    void settingsWorkspaceEntryOpensMonitorDialog() {
+        for(const auto size:QList<QSize>{{540,360},{720,540},{1180,780}}) {
+            Harness h;QVERIFY(h.window);h.window->resize(size);h.viewer.setTextScale(size.width()==720?1.5:1.0);h.window->show();
+            auto* settings=h.window->findChild<QObject*>("settingsDialog");QVERIFY(settings);
+            QVERIFY(QMetaObject::invokeMethod(settings,"openSection",Q_ARG(QVariant,QString("browsing")),Q_ARG(QVariant,false)));QTRY_VERIFY(settings->property("opened").toBool());
+            auto* action=h.window->findChild<QQuickItem*>("openMonitorSettings");QVERIFY(action);QTRY_VERIFY(action->isVisible());QTest::qWait(100);
+            const auto point=action->mapToScene(QPointF(action->width()/2,action->height()/2));QVERIFY(QRectF(QPointF(),h.window->size()).contains(point));
+            const auto destination=qEnvironmentVariable("GLANCELOT_MONITOR_UI_EVIDENCE");if(!destination.isEmpty())QVERIFY(h.window->grabWindow().save(QDir(destination).filePath(QString("workspace-entry-%1.png").arg(size.width()))));
+            QTest::mouseClick(h.window,Qt::LeftButton,Qt::NoModifier,point.toPoint());auto* monitor=h.window->findChild<QObject*>("monitorSettings");QVERIFY(monitor);QTRY_VERIFY(monitor->property("opened").toBool());QTRY_VERIFY(!settings->property("opened").toBool());
+        }
+    }
     void parameterizedDetachConfirmsTheDestinationBeforeMoving() {
         Harness h;QVERIFY(h.window);h.window->show();QVERIFY(QMetaObject::invokeMethod(h.window,"invoke",Q_ARG(QVariant,"pane-detach-metadata")));auto* dialog=h.window->findChild<QObject*>("monitorSettings");QVERIFY(dialog);QTRY_VERIFY(dialog->property("opened").toBool());
         auto* choice=h.window->findChild<QQuickItem*>("monitorPaneDestination");auto* label=h.window->findChild<QObject*>("monitorPaneDestinationLabel");QVERIFY(choice);QVERIFY(label);QVERIFY(label->property("text").toString().contains("metadata"));QTRY_VERIFY(choice->hasActiveFocus());QVERIFY(!h.monitor.paneRoutes()["metadata"].toMap()["detached"].toBool());

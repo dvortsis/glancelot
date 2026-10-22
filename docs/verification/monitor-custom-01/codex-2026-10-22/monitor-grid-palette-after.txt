@@ -1,0 +1,11 @@
+********* Start testing of GridUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : GridUiTests::initTestCase()
+QWARN  : GridUiTests::paletteKeyboardCursorStaysInViewport() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : GridUiTests::paletteKeyboardCursorStaysInViewport() No QRhi found for window 0x2a202be9330, QQuickRhiItem will not be functional
+QWARN  : GridUiTests::paletteKeyboardCursorStaysInViewport() No QRhi found for window 0x2a202be9330, QQuickRhiItem will not be functional
+PASS   : GridUiTests::paletteKeyboardCursorStaysInViewport()
+PASS   : GridUiTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2081ms
+********* Finished testing of GridUiTests *********

@@ -164,12 +164,6 @@ UiDialog {
             Layout.fillHeight: dialog.wide
             spacing: Theme.gapSm
 
-            UiButton {
-                text: "Displays and workspaces…"
-                Layout.fillWidth: true
-                onClicked: { dialog.close(); host.invoke("monitor-settings") }
-            }
-
             UiTextField {
                 id: settingsSearch
                 objectName: "settingsSearch"
@@ -368,6 +362,12 @@ UiDialog {
             Page {
                 heading: "Browsing"
                 SectionLabel { text: "Workspace layout" }
+                UiButton {
+                    objectName: "openMonitorSettings"
+                    text: "Displays and workspaces…"
+                    Layout.fillWidth: true
+                    onClicked: { dialog.close(); host.invoke("monitor-settings") }
+                }
                 UiButton {
                     text: "Arrange panes"
                     onClicked: { dialog.close();dialog.host.layoutEditing=true }

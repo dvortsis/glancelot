@@ -1,0 +1,14 @@
+[1/69] Copying glancelot qml sources into build dir
+[2/69] Automatic MOC and UIC for target glancelot_recovery_common
+[3/67] Automatic MOC and UIC for target glancelot_platform
+[4/65] Running qmlimportscanner for glancelot
+[5/65] Automatic MOC and UIC for target glancelot
+[6/64] Running AUTOMOC file extraction for target glancelot
+[7/64] Running rcc for resource glancelot_raw_qml_1
+[8/64] Running moc --collect-json for target glancelot
+[9/14] Generating .rcc/qmlcache/glancelot_ui/MonitorSettings_qml.cpp
+[10/14] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.qt\rcc\qrc_glancelot_raw_qml_1.cpp.obj
+[11/14] Building CXX object CMakeFiles\glancelot.dir\build-codex-monitor-custom-01\.rcc\qmlcache\glancelot_ui\MonitorSettings_qml.cpp.obj
+[12/14] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[13/14] Building CXX object CMakeFiles\glancelot.dir\src\app\monitor_customization.cpp.obj
+[14/14] Linking CXX executable glancelot.exe
