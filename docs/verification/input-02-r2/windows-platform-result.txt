@@ -1,0 +1,2 @@
+platform_awaited_exit=1
+platform_source_diff_from_base_exit=0

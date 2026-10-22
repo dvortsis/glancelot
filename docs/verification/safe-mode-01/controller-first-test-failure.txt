@@ -1,0 +1,21 @@
+********* Start testing of RecoveryControllerTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : RecoveryControllerTests::initTestCase()
+FAIL!  : RecoveryControllerTests::successfulEmptyDirectoryIsCheckpointedAndCleaned() Compared values are not the same
+   Actual   (folder(config.path())): "C:\\Users\\dvort\\AppData\\Local\\Temp\\recovery_controller_component-YBIkmI"
+   Expected (media.path())         : "C:/Users/dvort/AppData/Local/Temp/recovery_controller_component-YBIkmI"
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_controller_tests.cpp(32) : failure location
+PASS   : RecoveryControllerTests::failedExplicitVisitBeforeLateClaimPreventsResume()
+FAIL!  : RecoveryControllerTests::explicitVisitWinsWhileBeginWaitsAndUiKeepsResponding() Compared values are not the same
+   Actual   (viewer.directory()): "C:\\Users\\dvort\\AppData\\Local\\Temp\\recovery_controller_component-NqGaJK"
+   Expected (newMedia.path())   : "C:/Users/dvort/AppData/Local/Temp/recovery_controller_component-NqGaJK"
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_controller_tests.cpp(58) : failure location
+PASS   : RecoveryControllerTests::decodedSuccessPersistsAndFailedDecodeKeepsCheckpoint()
+FAIL!  : RecoveryControllerTests::reentrantExplicitVisitWinsWhenResumeAnnouncesStatus() Compared values are not the same
+   Actual   (viewer.directory()): "C:\\Users\\dvort\\AppData\\Local\\Temp\\recovery_controller_component-kQNICQ"
+   Expected (newMedia.path())   : "C:/Users/dvort/AppData/Local/Temp/recovery_controller_component-kQNICQ"
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\recovery_controller_tests.cpp(86) : failure location
+PASS   : RecoveryControllerTests::safeFeedbackUsesExistingStatusAndSuppressesResume()
+PASS   : RecoveryControllerTests::cleanupTestCase()
+Totals: 5 passed, 3 failed, 0 skipped, 0 blacklisted, 12328ms
+********* Finished testing of RecoveryControllerTests *********

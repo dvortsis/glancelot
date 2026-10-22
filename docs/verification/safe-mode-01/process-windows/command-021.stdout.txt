@@ -1,0 +1,1 @@
+{"code":"Corrupt","detail":"Selected backup member is absent or corrupt.","expected_current_revision":"","fingerprint":"","generation":"0","namespace_id":"","package_revision":"","policy_revision":"","rows":[],"schema":1,"truncated":false}

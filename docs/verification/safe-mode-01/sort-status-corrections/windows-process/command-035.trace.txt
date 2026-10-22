@@ -1,0 +1,9 @@
+controller:construct
+controller:settings-loaded
+open:begin
+navigation:submit
+decode:begin
+decode:started
+navigation:finished
+decode:message
+failure: Cannot read this file. Check that it exists and is accessible.

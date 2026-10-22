@@ -1,0 +1,53 @@
+Usage: C:\src\Github\Glancelot\.worktrees\codex-startup-window-01\build-codex-startup-window-01\glancelot.exe [options] [image]
+A local-first native photo viewer. JPEG/PNG alpha.
+
+Options:
+  -?, -h, --help                     Displays help on commandline options.
+  --help-all                         Displays help, including generic Qt
+                                     options.
+  -v, --version                      Displays version information.
+  --quit-after <milliseconds>        Exit after the given milliseconds (test
+                                     automation).
+  --screenshot <path>                Save a canvas/window screenshot before
+                                     timed exit.
+  --perf-report <path>               Write a bounded, redacted local
+                                     performance report on quit.
+  --report <path>                    Write local JSON startup/render evidence
+                                     before timed exit.
+  --theme <id>                       Select a built-in family (saved
+                                     preference).
+  --theme-mode <mode>                Select system, dark, or light (saved
+                                     preference).
+  --show-grid                        Open the folder grid at startup (test
+                                     automation).
+  --show-settings                    Open settings at startup (test
+                                     automation).
+  --show-themes                      Open the theme picker at startup (test
+                                     automation).
+  --frameless                        Start in the frameless window mode (test
+                                     automation).
+  --reset-settings                   Set damaged or incompatible settings aside
+                                     and start with defaults.
+  --no-resume                        Do not claim a slot or remember/restore
+                                     browsing position.
+  --window-size <size>               Initial logical window size, e.g. 540x360.
+  --safe-mode                        Use isolated temporary settings and
+                                     request a software RHI device.
+  --settings-backup <new-directory>  Capture exact settings bytes into a new
+                                     sealed directory.
+  --settings-diff <package>          Preview selected settings from a sealed
+                                     package.
+  --settings-restore <package>       Apply a previously previewed settings
+                                     package.
+  --settings-scope <scope>           Select
+                                     global/viewing/browsing/appearance/bindings
+                                     /performance/position/layout.
+  --settings-slot <slot>             Select an offline position/layout slot
+                                     (1..1000000).
+  --settings-source <member>         Select primary or last-good package
+                                     member.
+  --settings-preview <fingerprint>   Required sf1 fingerprint from
+                                     settings-diff before restore.
+
+Arguments:
+  image                              Image to open.

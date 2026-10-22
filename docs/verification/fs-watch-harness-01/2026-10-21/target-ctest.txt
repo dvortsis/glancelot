@@ -1,0 +1,7 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-fs-watch-harness-01/build-codex-fs-watch-harness-01
+    Start 22: fs_watch_budget
+1/1 Test #22: fs_watch_budget ..................   Passed  118.60 sec
+
+100% tests passed out of 1
+
+Total Test time (real) = 118.73 sec

@@ -1,0 +1,47 @@
+********* Start testing of FSWatchUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+PASS   : FSWatchUiTests::initTestCase()
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/ShortcutCheatSheet.qml:327: ReferenceError: keys is not defined
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() file:///src/ui/PhotoGrid.qml:298:25: Unable to assign [undefined] to int
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() No QRhi found for window 0x5c0b9e8f8bd0, QQuickRhiItem will not be functional
+QWARN  : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence() No QRhi found for window 0x5c0b9e8f8bd0, QQuickRhiItem will not be functional
+PASS   : FSWatchUiTests::workspaceRefreshAndTextModalPrecedence()
+PASS   : FSWatchUiTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 1503ms
+********* Finished testing of FSWatchUiTests *********

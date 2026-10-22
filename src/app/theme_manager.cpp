@@ -1,5 +1,7 @@
 #include "glancelot/theme_manager.hpp"
 #include "glancelot/settings_file.hpp"
+#include "settings_retry.hpp"
+#include <memory>
 #include <QGuiApplication>
 #include <QStyleHints>
 #include <QFile>
@@ -46,13 +48,20 @@ void ThemeManager::setMode(const QString& mode) {if(mode==m_mode||(mode!="system
 void ThemeManager::save(const char* key) {
     m_error.clear();
     // Only the appearance key is written, through the shared cross-process writer that preserves everything else.
-    const auto status=glancelot::updateSettings([&](QJsonObject& root){
+    const auto field=QString::fromLatin1(key);
+    const auto value=field=="family"?m_family:m_mode;
+    const auto deferred=std::make_shared<bool>(false);
+    glancelot::settings_detail::saveWithRetry(this,"appearance/"+field,[field,value](QJsonObject& root){
         auto appearance=root.value("appearance").toObject();
         // Only the changed key is written, so another window changing the other one is not reverted.
-        if(QLatin1String(key)=="family")appearance["family"]=m_family;else appearance["mode"]=m_mode;
+        appearance[field]=value;
         root["appearance"]=appearance;
+    },[this,deferred](glancelot::SettingsStatus status){
+        m_error.clear();
+        if(status.code==glancelot::SettingsStatus::Unreadable)m_error="Preferences could not be read; theme applies for this session.";
+        else if(status.code==glancelot::SettingsStatus::Corrupt||status.code==glancelot::SettingsStatus::Unsupported)m_error="Unsupported preferences; theme applies for this session.";
+        else if(!status.ok())m_error="Theme applies for this session; preferences could not be saved.";
+        if(*deferred)emit changed();
     });
-    if(status.code==glancelot::SettingsStatus::Unreadable)m_error="Preferences could not be read; theme applies for this session.";
-    else if(status.code==glancelot::SettingsStatus::Corrupt||status.code==glancelot::SettingsStatus::Unsupported)m_error="Unsupported preferences; theme applies for this session.";
-    else if(!status.ok())m_error="Theme applies for this session; preferences could not be saved.";
+    *deferred=true;
 }

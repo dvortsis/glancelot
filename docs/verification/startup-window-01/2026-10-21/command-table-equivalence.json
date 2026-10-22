@@ -1,0 +1,7 @@
+{
+  "reference": "main ecf4f41 command table",
+  "candidate": "ca907d1 central command_registry.cpp",
+  "exact_text_equal": true,
+  "reference_sha256": "e877ac0162591724e6d861c995fb3558691d261f0bc80959cb84e8a83ba7b406",
+  "candidate_sha256": "e877ac0162591724e6d861c995fb3558691d261f0bc80959cb84e8a83ba7b406"
+}

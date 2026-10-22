@@ -1,0 +1,39 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (5.0s)
+-- Generating done (0.9s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/build-codex-input-02-r3
+[1/89] Copying glancelot qml sources into build dir
+[2/89] Automatic MOC and UIC for target glancelot_platform
+[3/87] Automatic MOC and UIC for target glancelot-decoder
+[4/85] Automatic MOC and UIC for target pane_layout_tests
+[5/83] Automatic MOC and UIC for target theme_tests
+[6/81] Automatic MOC and UIC for target grid_ui_tests
+[7/79] Running qmlimportscanner for glancelot
+[8/79] Automatic MOC and UIC for target acceptance_tests
+[9/77] Automatic MOC and UIC for target thumbnail_tests
+[10/75] Automatic MOC and UIC for target glancelot
+[11/74] Running AUTOMOC file extraction for target glancelot
+[12/74] Automatic MOC and UIC for target folder_tree_tests
+[13/72] Running moc --collect-json for target glancelot
+[14/40] Automatic MOC and UIC for target window_slot_tests
+[15/38] Running rcc for resource glancelot_raw_qml_0
+[16/38] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+[17/38] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[18/38] Automatic MOC and UIC for target file_operation_service_tests
+[19/36] Automatic MOC and UIC for target input_ui_tests
+[20/34] Automatic MOC and UIC for target directory_model_tests
+[21/32] Automatic MOC and UIC for target canvas_tests
+[22/30] Automatic MOC and UIC for target platform_integration_tests
+[23/28] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[24/28] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[25/28] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\CommandMenuItem_qml.cpp.obj
+[26/28] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[27/28] Building CXX object CMakeFiles\glancelot.dir\build-codex-input-02-r3\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[28/28] Linking CXX executable glancelot.exe

@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "source_commit": "765a84efc0bae712006e767bf59a9f63a4196399",
+  "executables": [
+    {
+      "path": "glancelot.exe",
+      "a_sha256": "c08fbefdd9f46be704fb726187293832da7005d283837c96df015686dd42ddb8",
+      "b_sha256": "19d435305994fd81ed8df448d4ebb1f9945817fafa280c0ed60ba747173ba29d",
+      "differing_byte_offsets": [
+        288,
+        289,
+        5669060,
+        5669061
+      ],
+      "timestamp_field_offsets": [
+        288,
+        5669060
+      ],
+      "only_coff_and_debug_timestamps_differ": true
+    },
+    {
+      "path": "glancelot-decoder.exe",
+      "a_sha256": "59e5c895a28149023184528db6ca430abe086bb1a064aad3c341346a521f26e8",
+      "b_sha256": "9691f2b58f32ba6b1fe150c54804f63e7f898d1a2b212ffc5fc646348c96dd46",
+      "differing_byte_offsets": [
+        272,
+        273,
+        18212,
+        18213
+      ],
+      "timestamp_field_offsets": [
+        272,
+        18212
+      ],
+      "only_coff_and_debug_timestamps_differ": true
+    }
+  ]
+}

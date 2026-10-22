@@ -1,0 +1,142 @@
+{
+  "checks": [
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "package.integrity",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "package.qt-isolation",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "decode.generated-png",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "decode.generated-jpeg",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "render.source-colors",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "decoder.missing-sibling",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "package_smoke"
+      ],
+      "id": "source.no-write",
+      "status": "passed"
+    },
+    {
+      "id": "package.elf-closure",
+      "reason": "No independent ELF dependency report supplied.",
+      "status": "unverified"
+    },
+    {
+      "id": "reproducibility.independent-builds",
+      "reason": "Two independent compiled/package artifacts not supplied.",
+      "status": "unverified"
+    },
+    {
+      "id": "CANVAS-UI.physical-dpi",
+      "reason": "Operator must measure 100/125/150/200 percent and cross-monitor transitions on named displays.",
+      "status": "unverified"
+    },
+    {
+      "id": "CANVAS-UI.physical-refresh",
+      "reason": "Measure input/presentation traces on named 60/144 Hz displays; 240 Hz remains conditional.",
+      "status": "unverified"
+    },
+    {
+      "id": "COLOR-01.icc-hdr",
+      "reason": "Use a calibrated reference and named profiles/output modes; software RGB counts do not establish color accuracy.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R1",
+      "reason": "Measure versioned 12/24/45/60 MP fixtures on the actual 16 GiB/NVMe/iGPU reference configuration.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R2",
+      "reason": "Measure actual 8 GiB/HDD or explicitly throttled storage conditions.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R3",
+      "reason": "Measure named discrete GPU and mixed-DPI/display conditions.",
+      "status": "unverified"
+    },
+    {
+      "id": "DECODE-01.R4",
+      "reason": "Measure controlled SMB storage, including disconnect/recovery and source integrity.",
+      "status": "unverified"
+    },
+    {
+      "id": "PLATFORM.native-linux",
+      "reason": "Record native X11/Wayland compositor/driver evidence; a container software-GL run is insufficient.",
+      "status": "unverified"
+    },
+    {
+      "id": "PLATFORM.clean-windows",
+      "reason": "Run without development tools on an independently provisioned Windows machine and record runtime prerequisites.",
+      "status": "unverified"
+    }
+  ],
+  "declared_reference_case": "W-NATIVE",
+  "evidence": [
+    {
+      "name": "smoke.json",
+      "role": "package_smoke",
+      "sha256": "f9e6196fd5c425ceb6d15de86e861d1faca8bbd6f757b353b91257d175274f2b"
+    }
+  ],
+  "manifest_sha256": "23564538cec8306ea30df9f165f2d9ad2cbdcf63735f39894dd0638c07437342",
+  "observations": {
+    "device_pixel_ratio": 1,
+    "environment": {
+      "active_gpu_identity": "unverified",
+      "cpu_affinity_count": null,
+      "filesystem_cache_state": "uncontrolled",
+      "logical_cpu_count_visible": 20,
+      "machine": "AMD64",
+      "os": "Windows",
+      "power_thermal_state": "uncontrolled",
+      "python": "3.14.8",
+      "release": "11",
+      "version": "10.0.26200"
+    },
+    "first_image_frame_ms": 462,
+    "graphics_api": 4
+  },
+  "physical_gates_closed": false,
+  "schema": 1,
+  "source": {
+    "commit": "7c1e5a21ad008c3eaffd1b0b61aacbc28c82d397",
+    "dirty": false,
+    "origin": "git"
+  },
+  "target": "windows-x86_64"
+}

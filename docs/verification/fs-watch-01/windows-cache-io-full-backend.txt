@@ -1,0 +1,79 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::admissionIdentityCannotOverwriteAnotherJob() duplicate admitted false bytes 1024 jobs 1 foreground 1
+PASS   : FSWatchTests::admissionIdentityCannotOverwriteAnotherJob()
+PASS   : FSWatchTests::admissionRejectsInvalidEstimates()
+PASS   : FSWatchTests::admissionAvailabilityIsQueuedAndCoalesced()
+PASS   : FSWatchTests::controllerCannotReleaseForeignAdmissions()
+PASS   : FSWatchTests::revisionOnlyWorkerDistinguishesAtomicReplacement()
+PASS   : FSWatchTests::decodeRejectsSameTupleEditAfterAdmissionProbe()
+PASS   : FSWatchTests::unavailableNativeRegistrationFallsBack()
+PASS   : FSWatchTests::controllerPendingPrefersCompleteWorkerBaseline()
+PASS   : FSWatchTests::ancestorAliasNavigationResetsSelection()
+PASS   : FSWatchTests::hiddenSelectedRenameUsesUnfilteredIdentityBaseline()
+PASS   : FSWatchTests::watchedCurrentRenameRetainsFilter(temporary)
+PASS   : FSWatchTests::watchedCurrentRenameRetainsFilter(persistent)
+PASS   : FSWatchTests::renamedDirectorySelectionWithFormerPathReuse(missing-old-name)
+PASS   : FSWatchTests::renamedDirectorySelectionWithFormerPathReuse(different-object)
+PASS   : FSWatchTests::renamedDirectorySelectionWithFormerPathReuse(alias-to-renamed-object)
+PASS   : FSWatchTests::controllerCoalescedIncompleteStillInvalidates()
+PASS   : FSWatchTests::permanentlyIncompleteScopeStillRefreshesAutomatically()
+QINFO  : FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache() noncurrent replacement: source QColor(ARGB 1, 0, 0, 1) display QColor(ARGB 1, 0, 0, 1) cache hit false
+PASS   : FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache()
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 54680 ms; initial GUI gap 33 ms; sustained-writer/recovery GUI gap 153 ms; writes 270 invalidations 7
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 31 ms; GUI gap 84 ms; publication 72 ms; writes 69
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 21 identity 0 merge (includes disposal) 16 merge scan 4 reset 0 projection/raw mirror 4 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 136 identity 0 merge (includes disposal) 127 merge scan 82 reset 0 projection/raw mirror 8 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 152 identity 0 merge (includes disposal) 130 merge scan 81 reset 0 projection/raw mirror 22 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 143 identity 0 merge (includes disposal) 125 merge scan 80 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 147 identity 0 merge (includes disposal) 129 merge scan 82 reset 0 projection/raw mirror 17 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 140 identity 0 merge (includes disposal) 120 merge scan 76 reset 0 projection/raw mirror 19 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 132 identity 0 merge (includes disposal) 115 merge scan 74 reset 0 projection/raw mirror 16 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 136 identity 0 merge (includes disposal) 119 merge scan 77 reset 0 projection/raw mirror 17 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 72 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 72 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 58 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 58 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 52 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 52 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 15 maximum 152 ms; loading at exit false
+PASS   : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchTests::retargetDuringEnumerationRefusesCompleteMembership(A-B)
+PASS   : FSWatchTests::retargetDuringEnumerationRefusesCompleteMembership(A-B-A)
+PASS   : FSWatchTests::retargetRearmsNativeAliasWatch(directory)
+PASS   : FSWatchTests::retargetRearmsNativeAliasWatch(image)
+PASS   : FSWatchTests::retargetRearmsNativeAliasWatch(parent)
+PASS   : FSWatchTests::controllerLateCoalescedBaselineDecodesOnce(fresh-pixels)
+PASS   : FSWatchTests::controllerLateCoalescedBaselineDecodesOnce(newer-open-wins)
+PASS   : FSWatchTests::delayedOldScopeAndStormAreBounded()
+PASS   : FSWatchTests::firstUnacknowledgedBaselineRetainsRenameIdentity(image)
+PASS   : FSWatchTests::firstUnacknowledgedBaselineRetainsRenameIdentity(directory)
+PASS   : FSWatchTests::firstBaselineMarkerSurvivesPublicationCoalescing()
+PASS   : FSWatchTests::incompleteMonitorObservationRetainsCompleteBaseline(automatic-middle-partial)
+PASS   : FSWatchTests::incompleteMonitorObservationRetainsCompleteBaseline(manual-middle-partial)
+PASS   : FSWatchTests::incompleteMonitorObservationRetainsCompleteBaseline(automatic-first-partial)
+PASS   : FSWatchTests::incompleteMonitorObservationRetainsCompleteBaseline(manual-first-partial)
+PASS   : FSWatchTests::deferredBaselineRetainsOriginalRenameIdentity()
+PASS   : FSWatchTests::linkedScopeMonitorsTargetAndPreservesRenameSelection()
+PASS   : FSWatchTests::danglingDirectoryAliasNeverProvesCompleteMembership()
+PASS   : FSWatchTests::establishedWatchLossAndRearm()
+PASS   : FSWatchTests::continuousNativeChangesCannotStarvePublication()
+PASS   : FSWatchTests::blockedProbeDoesNotBlockClose()
+PASS   : FSWatchTests::rapidExplicitNavigationCannotRestoreOldPixels()
+PASS   : FSWatchTests::liveLargeDecodeCancellationKeepsExplicitOpen()
+PASS   : FSWatchTests::replacementAndUnrelatedChanges()
+PASS   : FSWatchTests::emptyFolderAndRenamedDirectoryRecover()
+PASS   : FSWatchTests::renamedDirectorySurvivesOldPathReuse()
+PASS   : FSWatchTests::selectedNoncurrentRenameAndCurrentRename()
+PASS   : FSWatchTests::renamedCurrentSurvivesOldPathReuse()
+PASS   : FSWatchTests::currentCaseOnlyRenameRetainsNavigation()
+PASS   : FSWatchTests::localDeleteDoesNotAdvanceTwiceAndRefreshCommand()
+PASS   : FSWatchTests::failedSourceAndRefreshPreserveWidenedRoot()
+PASS   : FSWatchTests::nativeEventsRefreshAndScopeIsolation()
+PASS   : FSWatchTests::identityRenameAndSourceIntegrity()
+PASS   : FSWatchTests::atomicReplacementHasNewIdentity()
+PASS   : FSWatchTests::sameSizeRestoredMtimeStillHasChangedRevision()
+PASS   : FSWatchTests::hardLinksRefuseInference()
+PASS   : FSWatchTests::boundedIncompleteAndCancelledSnapshots()
+PASS   : FSWatchTests::ambiguousIdentitiesAndPartialSnapshots()
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 59 passed, 0 failed, 0 skipped, 0 blacklisted, 142879ms
+********* Finished testing of FSWatchTests *********

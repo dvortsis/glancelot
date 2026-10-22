@@ -1,0 +1,18 @@
+Start testing: Oct 21 07:50 Mountain Daylight Time
+----------------------------------------------------------
+20/37 Testing: fs_watch_budget
+20/37 Test: fs_watch_budget
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs_watch_budget_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs-watch-budget-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"fs_watch_budget" start time: Oct 21 07:50 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  96.29 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_budget" end time: Oct 21 07:52 Mountain Daylight Time
+"fs_watch_budget" time elapsed: 00:01:36
+----------------------------------------------------------
+
+End testing: Oct 21 07:52 Mountain Daylight Time

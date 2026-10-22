@@ -1,0 +1,18 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+$d='docs/verification/safe-mode-01/lead-integration-2026-10-21'
+& C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Holder Codex-user-authorized-lead -Run {
+ if((git rev-parse HEAD) -ne '7e8897975d507c29907d6a026792e1ea42b7cedd'){throw 'Native diagnostic source pin changed'}
+ $env:PATH='C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/bin;C:/src/Github/Glancelot/.tools/python/Scripts;'+$env:PATH
+ & ctest --test-dir build-codex-safe-mode-01 --output-on-failure -R '^recovery_process$' *> "$d/windows-process-isolated.txt"
+ $code=$LASTEXITCODE
+ "isolated_process_ctest_exit=$code" | Set-Content "$d/windows-process-isolated-status.txt"
+ Copy-Item build-codex-safe-mode-01/Testing/Temporary/LastTest.log "$d/windows-isolated-LastTest.log"
+ $run=Get-ChildItem build-codex-safe-mode-01/recovery-process -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+ if(!$run){throw 'No isolated process proof'}
+ Copy-Item -LiteralPath $run.FullName -Destination "$d/windows-isolated-process" -Recurse
+ $r=Get-Content -Raw (Join-Path $run.FullName 'result.json') | ConvertFrom-Json
+ "source_run=$($run.Name) passed=$($r.passed) commands=$($r.steps.Count)" | Add-Content "$d/windows-process-isolated-status.txt"
+ if($code -ne 0){throw "Native isolated process proof failed exit=$code"}
+}
+"native_diagnostic_script_exit=0"

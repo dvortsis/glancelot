@@ -1,0 +1,51 @@
+{
+    "canvas": {
+        "height": 780,
+        "renderer_error": "",
+        "visible": true,
+        "width": 1180,
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+    },
+    "decoded_ms": 1290,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": 1307,
+    "folder_count": 2,
+    "frameless": false,
+    "frames": 22,
+    "graphics_api": 4,
+    "grid_live_cells": 0,
+    "grid_visible": false,
+    "height": 36,
+    "image_path": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/process/run-_zmim4j5/generated-media/-explicit-配置.png",
+    "loading": false,
+    "native_title_bar": {
+        "border_color": true,
+        "caption_color": true,
+        "dark_mode": true,
+        "text_color": true
+    },
+    "qt": "6.8.3",
+    "requested_backend": "",
+    "rhi": {
+        "backend": 3,
+        "device_name": "Intel(R) Iris(R) Xe Graphics",
+        "device_type": 0,
+        "observed": true,
+        "software_detection": "not-detected"
+    },
+    "safe_mode": false,
+    "settings_directory": "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/process/run-_zmim4j5/restart-config",
+    "status": "Untagged source assumed sRGB · display profile not yet managed",
+    "theme": "slate-ice",
+    "theme_mode": "system",
+    "thumbnail_active": 0,
+    "thumbnail_cache_bytes": 17280,
+    "thumbnail_pending": 0,
+    "version": "0.1.0-alpha.1",
+    "wheel_mode": "navigate",
+    "width": 60,
+    "window_active": true,
+    "window_slot": 1
+}

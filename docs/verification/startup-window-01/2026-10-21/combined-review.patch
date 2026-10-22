@@ -1,0 +1,807 @@
+diff --git a/app/main.cpp b/app/main.cpp
+index afcfc2a..11fe8fa 100644
+--- a/app/main.cpp
++++ b/app/main.cpp
+@@ -18,6 +18,7 @@
+ #include "thumbnail_provider.hpp"
+ #include "native_title_bar.hpp"
+ #include "startup_intent.hpp"
++#include "startup_window_geometry.hpp"
+ #include "startup_environment.hpp"
+ #include "settings_maintenance.hpp"
+ #include "presentation_window.hpp"
+@@ -35,6 +36,10 @@
+ #include <QSysInfo>
+ #include <QJsonDocument>
+ #include <QJsonObject>
++#include <QJsonArray>
++#include <array>
++#include <algorithm>
++#include <limits>
+ #include <QTimer>
+ #include <cstdio>
+ #include <QIcon>
+@@ -68,6 +73,72 @@ int startupError(const QString& code,const QString& detail,int exitCode) {
+     const QJsonObject result{{"schema",1},{"code",code},{"detail",detail.left(1024)},{"generation","0"}};
+     return writeOutput(QJsonDocument(result).toJson(QJsonDocument::Compact)+'\n')?exitCode:7;
+ }
++QJsonObject rectangleEvidence(const QRect& rect) {
++    return {{"x",rect.x()},{"y",rect.y()},{"width",rect.width()},{"height",rect.height()}};
++}
++QJsonObject windowSnapshot(QQuickWindow* window) {
++    if (!window) return {};
++    QJsonObject result{{"visible",window->isVisible()},{"exposed",window->isExposed()},
++        {"visibility",int(window->visibility())},{"state",int(window->windowState())},
++        {"x",window->x()},{"y",window->y()},{"width",window->width()},{"height",window->height()},
++        {"frame_geometry",rectangleEvidence(window->frameGeometry())}};
++    if (const auto* screen=window->screen()) {
++        auto info=rectangleEvidence(screen->geometry());
++        info["name"]=screen->name().left(256); info["available"]=rectangleEvidence(screen->availableGeometry());
++        info["device_pixel_ratio"]=screen->devicePixelRatio(); info["logical_dpi"]=screen->logicalDotsPerInch();
++        result["screen"]=info;
++    }
++    QJsonArray available;
++    const auto screens=QGuiApplication::screens();
++    for (qsizetype i=0;i<std::min(screens.size(),qsizetype(glancelot::startup::maximumStartupScreens));++i)
++        available.append(rectangleEvidence(screens[i]->availableGeometry()));
++    result["available_screens"]=available;
++    result["screen_count"]=double(screens.size());
++    result["screen_list_truncated"]=screens.size()>qsizetype(glancelot::startup::maximumStartupScreens);
++    return result;
++}
++QJsonObject recoverStartupPlacement(QQuickWindow* window) {
++    using namespace glancelot::startup;
++    if (!window) return {{"status","NoWindow"}};
++    window->create(); // Resolve the actual native frame and its margins before applying logical geometry.
++    const auto before=windowSnapshot(window);
++    // Fullscreen/maximized windows retain the platform's existing policy.
++    if (window->visibility()==QWindow::FullScreen || window->visibility()==QWindow::Maximized
++        || window->windowStates().testFlag(Qt::WindowFullScreen) || window->windowStates().testFlag(Qt::WindowMaximized))
++        return {{"status","PreservedWindowState"},{"before",before}};
++    const auto screens=QGuiApplication::screens();
++    std::array<QRect,maximumStartupScreens> available{};
++    std::size_t preferred=maximumStartupScreens;
++    const auto count=std::min(screens.size(),qsizetype(maximumStartupScreens));
++    for (qsizetype i=0;i<count;++i) {
++        available[size_t(i)]=screens[i]->availableGeometry();
++        if (screens[i]==window->screen()) preferred=size_t(i);
++    }
++    const auto margins=window->frameMargins();
++    const auto bounded=[](qint64 value){return int(std::clamp(value,qint64(std::numeric_limits<int>::min()),qint64(std::numeric_limits<int>::max())));};
++    const QSize minimum(bounded(qint64(std::max(1,window->minimumWidth()))+margins.left()+margins.right()),
++                        bounded(qint64(std::max(1,window->minimumHeight()))+margins.top()+margins.bottom()));
++    const auto placement=screens.size()>qsizetype(maximumStartupScreens)
++        ? StartupPlacement{window->frameGeometry(),StartupPlacementStatus::TooManyScreens}
++        : recoverStartupWindowGeometry(window->frameGeometry(),std::span<const QRect>(available.data(),size_t(count)),preferred,minimum);
++    const char* status="Unchanged";
++    switch (placement.status) {
++    case StartupPlacementStatus::Recovered: {
++        status="Recovered";
++        const auto outer=placement.geometry;
++        window->setGeometry(bounded(qint64(outer.x())+margins.left()),bounded(qint64(outer.y())+margins.top()),
++            std::max(window->minimumWidth(),bounded(qint64(outer.width())-margins.left()-margins.right())),
++            std::max(window->minimumHeight(),bounded(qint64(outer.height())-margins.top()-margins.bottom())));
++        break;
++    }
++    case StartupPlacementStatus::NoUsableScreen: status="NoUsableScreen"; break;
++    case StartupPlacementStatus::TooManyScreens: status="TooManyScreens"; break;
++    case StartupPlacementStatus::Unchanged: break;
++    }
++    return {{"status",status},{"before",before},{"after",windowSnapshot(window)},
++        {"chosen_frame",rectangleEvidence(placement.geometry)},
++        {"frame_margins",QJsonObject{{"left",margins.left()},{"top",margins.top()},{"right",margins.right()},{"bottom",margins.bottom()}}}};
++}
+ struct GraphicsEvidence {
+     std::atomic_bool observed{};
+     std::atomic<quint64> renderCallbacks{},invalidations{};
+@@ -240,74 +311,76 @@ int main(int argc,char** argv) {
+     qint64 firstImage=-1,firstFrame=-1; int frames=0;
+     QObject::connect(&viewer,&ViewerController::imageChanged,&app,[&]{if(firstImage<0&&!viewer.image().isNull())firstImage=elapsed.elapsed();});
+     if(window)QObject::connect(window,&QQuickWindow::frameSwapped,&app,[&]{++frames;if(firstFrame<0&&!viewer.image().isNull())firstFrame=elapsed.elapsed();});
+-    // An explicit file wins over resume and is remembered only once it decodes successfully.
+-    if(!parser.positionalArguments().isEmpty())QTimer::singleShot(0,&viewer,[&]{viewer.open(parser.positionalArguments().first());});
+-    else QTimer::singleShot(0,&viewer,[&]{viewer.restoreWindow();});
+-    if(parser.isSet("quit-after")) {
+-        bool valid=false;const int duration=parser.value("quit-after").toInt(&valid);
+-        if(!valid || duration<100 || duration>3600000)return 2;
+-        const auto quitTimerStartedMs=elapsed.elapsed();
+-        QTimer::singleShot(duration,&app,[&,quitTimerStartedMs,duration]{
+-            const auto quitCallbackMs=elapsed.elapsed();
+-            if(window&&parser.isSet("screenshot"))window->grabWindow().save(parser.value("screenshot"));
+-            if(parser.isSet("report")) {
+-                QJsonObject actualRhi;
+-                {
+-                    std::lock_guard lock(graphicsEvidence->mutex);
+-                    const bool cpu=graphicsEvidence->deviceType==int(QRhiDriverInfo::CpuDevice);
+-                    const auto name=graphicsEvidence->deviceName.toLower();
+-                    const bool softwareName=name.contains("llvmpipe")||name.contains("softpipe")||name.contains("swrast");
+-                    actualRhi={{"observed",graphicsEvidence->observed.load()},{"backend",graphicsEvidence->backend},
+-                        {"device_type",graphicsEvidence->deviceType},{"device_name",graphicsEvidence->deviceName},
+-                        {"render_callbacks",double(graphicsEvidence->renderCallbacks.load())},
+-                        {"scenegraph_invalidations",double(graphicsEvidence->invalidations.load())},
+-                        {"software_detection",cpu?"cpu-device-type":softwareName?"renderer-name":"not-detected"}};
+-                }
+-                QJsonObject windowEvidence;
+-                if(window) {
+-                    windowEvidence={{"visible",window->isVisible()},{"exposed",window->isExposed()},
+-                        {"visibility",int(window->visibility())},{"state",int(window->windowState())},
+-                        {"width",window->width()},{"height",window->height()}};
+-                    if(const auto* screen=window->screen()) {
+-                        const auto geometry=screen->geometry();
+-                        windowEvidence["screen"]=QJsonObject{{"name",screen->name().left(256)},
+-                            {"x",geometry.x()},{"y",geometry.y()},{"width",geometry.width()},{"height",geometry.height()},
+-                            {"device_pixel_ratio",screen->devicePixelRatio()},{"logical_dpi",screen->logicalDotsPerInch()}};
+-                    }
++    const auto captureRhi=[graphicsEvidence] {
++        QJsonObject actualRhi;
++        {
++            std::lock_guard lock(graphicsEvidence->mutex);
++            const bool cpu=graphicsEvidence->deviceType==int(QRhiDriverInfo::CpuDevice);
++            const auto name=graphicsEvidence->deviceName.toLower();
++            const bool softwareName=name.contains("llvmpipe")||name.contains("softpipe")||name.contains("swrast");
++            actualRhi={{"observed",graphicsEvidence->observed.load()},{"backend",graphicsEvidence->backend},
++                {"device_type",graphicsEvidence->deviceType},{"device_name",graphicsEvidence->deviceName},
++                {"render_callbacks",double(graphicsEvidence->renderCallbacks.load())},
++                {"scenegraph_invalidations",double(graphicsEvidence->invalidations.load())},
++                {"software_detection",cpu?"cpu-device-type":softwareName?"renderer-name":"not-detected"}};
++        }
++        return actualRhi;
++    };
++    QJsonObject startupPlacement;
++    // One startup turn consumes Qt's native creation/geometry notifications. It never waits for exposure.
++    const auto beginViewing=[&]() -> int {
++        startupPlacement=recoverStartupPlacement(window);
++        // An explicit file wins over resume and is remembered only once it decodes successfully.
++        if(!parser.positionalArguments().isEmpty())QTimer::singleShot(0,&viewer,[&]{viewer.open(parser.positionalArguments().first());});
++        else QTimer::singleShot(0,&viewer,[&]{viewer.restoreWindow();});
++        if(parser.isSet("quit-after")) {
++            bool valid=false;const int duration=parser.value("quit-after").toInt(&valid);
++            if(!valid || duration<100 || duration>3600000)return 2;
++            const auto quitTimerStartedMs=elapsed.elapsed();
++            QTimer::singleShot(duration,&app,[&,quitTimerStartedMs,duration]{
++                const auto quitCallbackMs=elapsed.elapsed();
++                const QJsonObject preGrab{{"window",windowSnapshot(window)},{"rhi",captureRhi()},
++                    {"frames",frames},{"first_image_frame_ms",firstFrame},{"snapshot_ms",elapsed.elapsed()}};
++                if(window&&parser.isSet("screenshot"))window->grabWindow().save(parser.value("screenshot"));
++                if(parser.isSet("report")) {
++                    const auto actualRhi=captureRhi();
++                    const auto windowEvidence=windowSnapshot(window);
++                    auto* canvas=engine.rootObjects().first()->findChild<ImageCanvas*>("canvas");
++                    const auto origin=canvas?canvas->mapToScene(QPointF{}):QPointF{};
++                    const QJsonObject canvasEvidence{{"x",origin.x()},{"y",origin.y()},
++                        {"width",canvas?canvas->width():0},{"height",canvas?canvas->height():0},
++                        {"zoom",canvas?canvas->zoom():0},{"visible",canvas&&canvas->isVisible()},
++                        {"renderer_error",canvas?canvas->rendererError():QStringLiteral("Canvas unavailable")}};
++                    QJsonObject report{{"version",QCoreApplication::applicationVersion()},{"qt",qVersion()},
++                        {"safe_mode",intent.safeMode},{"settings_directory",settingsNamespace},
++                        {"requested_backend",safeEnvironment.requestedBackend},{"rhi",actualRhi},{"canvas",canvasEvidence},
++                        {"window",windowEvidence},{"pre_grab",preGrab},{"startup_placement",startupPlacement},
++                        {"wheel_mode",viewer.wheelMode()},
++                        {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
++                        {"quit_timer_started_ms",quitTimerStartedMs},{"quit_after_ms",duration},{"quit_callback_ms",quitCallbackMs},{"report_ms",elapsed.elapsed()},
++                        {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
++                        {"loading",viewer.loading()},{"status",viewer.status()},
++                        {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},
++                        {"grid_visible",engine.rootObjects().first()->property("gridMode").toBool()},
++                        {"grid_live_cells",engine.rootObjects().first()->findChild<QObject*>("photoGrid") ? engine.rootObjects().first()->findChild<QObject*>("photoGrid")->property("liveDelegateCount").toInt() : 0},
++                        {"folder_count",filmstrip.count()},
++                        {"thumbnail_pending",thumbnails.pending()},{"thumbnail_active",thumbnails.active()},
++                        {"thumbnail_cache_bytes",double(thumbnails.cacheBytes())},
++                        {"theme",theme.family()},{"theme_mode",theme.mode()},
++                        {"frameless",window?window->property("frameless").toBool():false},{"window_active",window?window->isActive():false},
++                        {"native_title_bar",QJsonObject{{"dark_mode",titleBar&&titleBar->last().darkMode},{"caption_color",titleBar&&titleBar->last().caption},
++                            {"text_color",titleBar&&titleBar->last().text},{"border_color",titleBar&&titleBar->last().border}}},
++                        {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
++                        {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};
++                    QFile file(parser.value("report"));if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(report).toJson());
+                 }
+-                auto* canvas=engine.rootObjects().first()->findChild<ImageCanvas*>("canvas");
+-                const auto origin=canvas?canvas->mapToScene(QPointF{}):QPointF{};
+-                const QJsonObject canvasEvidence{{"x",origin.x()},{"y",origin.y()},
+-                    {"width",canvas?canvas->width():0},{"height",canvas?canvas->height():0},
+-                    {"zoom",canvas?canvas->zoom():0},{"visible",canvas&&canvas->isVisible()},
+-                    {"renderer_error",canvas?canvas->rendererError():QStringLiteral("Canvas unavailable")}};
+-                QJsonObject report{{"version",QCoreApplication::applicationVersion()},{"qt",qVersion()},
+-                    {"safe_mode",intent.safeMode},{"settings_directory",settingsNamespace},
+-                    {"requested_backend",safeEnvironment.requestedBackend},{"rhi",actualRhi},{"canvas",canvasEvidence},
+-                    {"window",windowEvidence},
+-                    {"wheel_mode",viewer.wheelMode()},
+-                    {"decoded_ms",firstImage},{"first_image_frame_ms",firstFrame},{"frames",frames},
+-                    {"quit_timer_started_ms",quitTimerStartedMs},{"quit_after_ms",duration},{"quit_callback_ms",quitCallbackMs},{"report_ms",elapsed.elapsed()},
+-                    {"width",viewer.imageWidth()},{"height",viewer.imageHeight()},
+-                    {"loading",viewer.loading()},{"status",viewer.status()},
+-                    {"window_slot",viewer.windowSlot()},{"image_path",viewer.filePath()},
+-                    {"grid_visible",engine.rootObjects().first()->property("gridMode").toBool()},
+-                    {"grid_live_cells",engine.rootObjects().first()->findChild<QObject*>("photoGrid") ? engine.rootObjects().first()->findChild<QObject*>("photoGrid")->property("liveDelegateCount").toInt() : 0},
+-                    {"folder_count",filmstrip.count()},
+-                    {"thumbnail_pending",thumbnails.pending()},{"thumbnail_active",thumbnails.active()},
+-                    {"thumbnail_cache_bytes",double(thumbnails.cacheBytes())},
+-                    {"theme",theme.family()},{"theme_mode",theme.mode()},
+-                    {"frameless",window?window->property("frameless").toBool():false},{"window_active",window?window->isActive():false},
+-                    {"native_title_bar",QJsonObject{{"dark_mode",titleBar&&titleBar->last().darkMode},{"caption_color",titleBar&&titleBar->last().caption},
+-                        {"text_color",titleBar&&titleBar->last().text},{"border_color",titleBar&&titleBar->last().border}}},
+-                    {"graphics_api",window?int(window->rendererInterface()->graphicsApi()):0},
+-                    {"device_pixel_ratio",window?window->devicePixelRatio():1.0}};
+-                QFile file(parser.value("report"));if(file.open(QIODevice::WriteOnly))file.write(QJsonDocument(report).toJson());
+-            }
+-            app.exit(viewer.loading()?3:0);
+-        });
+-    }
+-    if(!glancelot::perf::installReplay(app,viewer,fileGrid,thumbnails,engine.rootObjects().first(),parser.isSet("perf-report")&&parser.isSet("no-resume")))return 2;
++                app.exit(viewer.loading()?3:0);
++            });
++        }
++        if(!glancelot::perf::installReplay(app,viewer,fileGrid,thumbnails,engine.rootObjects().first(),parser.isSet("perf-report")&&parser.isSet("no-resume")))return 2;
++        return 0;
++    };
++    QTimer::singleShot(0,&app,[&] { if (const int code=beginViewing()) app.exit(code); });
+     const int result=app.exec();
+     return perfReportFailed ? 4 : result;
+ }
+diff --git a/cmake/StartupWindowGeometryTests.cmake b/cmake/StartupWindowGeometryTests.cmake
+index 2b48f43..bca56ce 100644
+--- a/cmake/StartupWindowGeometryTests.cmake
++++ b/cmake/StartupWindowGeometryTests.cmake
+@@ -1,15 +1,10 @@
+-# Lead-frozen STARTUP-WINDOW-01 production/pure-value test wiring.
+-# Contract-only main has no implementation yet. Once the packet's .cpp exists,
+-# production and its dedicated test are mandatory; a missing test fails configure.
+-# The integrator removes this implementation-presence guard when landing the packet.
+-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/app/startup_window_geometry.cpp")
+-  target_sources(glancelot PRIVATE src/app/startup_window_geometry.cpp src/app/startup_window_geometry.hpp)
+-  if(BUILD_TESTING)
+-    qt_add_executable(startup_window_geometry_tests
+-      tests/startup_window_geometry_tests.cpp src/app/startup_window_geometry.cpp)
+-    target_include_directories(startup_window_geometry_tests PRIVATE src/app)
+-    target_link_libraries(startup_window_geometry_tests PRIVATE Qt6::Core Qt6::Test)
+-    add_test(NAME startup_window_geometry COMMAND startup_window_geometry_tests -o -,txt)
+-    set_tests_properties(startup_window_geometry PROPERTIES TIMEOUT 60)
+-  endif()
++# STARTUP-WINDOW-01: production implementation and dedicated tests are mandatory.
++target_sources(glancelot PRIVATE src/app/startup_window_geometry.cpp src/app/startup_window_geometry.hpp)
++if(BUILD_TESTING)
++  qt_add_executable(startup_window_geometry_tests
++    tests/startup_window_geometry_tests.cpp src/app/startup_window_geometry.cpp)
++  target_include_directories(startup_window_geometry_tests PRIVATE src/app)
++  target_link_libraries(startup_window_geometry_tests PRIVATE Qt6::Core Qt6::Test)
++  add_test(NAME startup_window_geometry COMMAND startup_window_geometry_tests -o -,txt)
++  set_tests_properties(startup_window_geometry PROPERTIES TIMEOUT 60)
+ endif()
+diff --git a/src/app/binding_validation.hpp b/src/app/binding_validation.hpp
+index af0f0b2..5e37ed8 100644
+--- a/src/app/binding_validation.hpp
++++ b/src/app/binding_validation.hpp
+@@ -1,10 +1,12 @@
+ #pragma once
+-#include <QJsonObject>
++#include "glancelot/command_registry.hpp"
+ #include <QKeySequence>
+ #include <QList>
++#include <utility>
+ 
+ namespace glancelot::bindings {
+ inline bool usableShortcut(const QKeySequence& sequence) {
++    if (sequence.count()>2) return false;
+     for (int i=0; i<sequence.count(); ++i) {
+         const auto key=sequence[i];
+         if (key.key()==Qt::Key_unknown || key==QKeyCombination(Qt::NoModifier,Qt::Key_Escape)) return false;
+@@ -15,14 +17,33 @@ inline bool shortcutOverlap(const QKeySequence& left,const QKeySequence& right)
+     return !left.isEmpty() && !right.isEmpty()
+         && (left.matches(right)!=QKeySequence::NoMatch || right.matches(left)!=QKeySequence::NoMatch);
+ }
++inline const Command* findCommand(const QString& id) {
++    for (const auto& command:glancelot::commandRegistry()) if (QString::fromStdString(command.id)==id) return &command;
++    return nullptr;
++}
++inline QString scopeOf(const QString& id) {
++    const auto* command=findCommand(id);
++    return command?QString::fromStdString(command->scope):QStringLiteral("global");
++}
++// "global" overlaps every scope and "workspace" overlaps the two content panes; other scopes only themselves.
++inline bool scopesOverlap(const QString& left,const QString& right) {
++    if (left==right || left=="global" || right=="global") return true;
++    auto content=[](const QString& scope){ return scope=="canvas" || scope=="grid"; };
++    return (left=="workspace" && content(right)) || (right=="workspace" && content(left));
++}
++inline bool bindingsCollide(const QString& leftId,const QKeySequence& left,const QString& rightId,const QKeySequence& right) {
++    return scopesOverlap(scopeOf(leftId),scopeOf(rightId)) && shortcutOverlap(left,right);
++}
+ inline bool usableBindings(const QJsonObject& bindings) {
+-    QList<QKeySequence> seen;
+-    for (const auto& value:bindings) {
+-        const auto text=value.toString();
++    QList<std::pair<QString,QKeySequence>> seen;
++    for (auto it=bindings.begin();it!=bindings.end();++it) {
++        const auto text=it.value().toString();
+         const auto sequence=QKeySequence::fromString(text,QKeySequence::PortableText);
+         if ((!text.trimmed().isEmpty() && sequence.isEmpty()) || !usableShortcut(sequence)) return false;
+-        for (const auto& other:seen) if (shortcutOverlap(sequence,other)) return false;
+-        seen.append(sequence);
++        const auto* command=findCommand(it.key());
++        if (command && command->hold && sequence.count()>1) return false; // a hold needs one key to release
++        for (const auto& other:seen) if (bindingsCollide(it.key(),sequence,other.first,other.second)) return false;
++        seen.append({it.key(),sequence});
+     }
+     return true;
+ }
+diff --git a/src/app/command_registry.cpp b/src/app/command_registry.cpp
+index 78ff94d..267e9b9 100644
+--- a/src/app/command_registry.cpp
++++ b/src/app/command_registry.cpp
+@@ -8,13 +8,13 @@ std::span<const Command> commandRegistry() {
+ // The controller may call before main from another translation unit. A local
+ // static is initialized on that first use, rather than exposing an empty span.
+ static const std::vector<Command> registry {
+-    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true}, {"previous","Previous image","Left",true},
+-    {"next-folder","Next folder","PgDown"}, {"previous-folder","Previous folder","PgUp"},
++    {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true,"canvas"}, {"previous","Previous image","Left",true,"canvas"},
++    {"next-folder","Next folder","PgDown",false,"canvas"}, {"previous-folder","Previous folder","PgUp",false,"canvas"},
+     {"palette","Find a command","Ctrl+Shift+P"}, {"settings","Settings","Ctrl+,"},
+-    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F"},
+-    {"actual","Actual size (physical 1:1)","1"}, {"zoom-in","Zoom in","+",true}, {"zoom-out","Zoom out","-",true},
+-    {"rotate","Rotate view clockwise","R"}, {"background","Cycle canvas background","B"},
+-    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
++    {"fullscreen","Toggle fullscreen","F11"}, {"fit","Fit image (shrink only)","F",false,"canvas"},
++    {"actual","Actual size (physical 1:1)","1",false,"canvas"}, {"zoom-in","Zoom in","+",true,"canvas"}, {"zoom-out","Zoom out","-",true,"canvas"},
++    {"rotate","Rotate view clockwise","R",false,"canvas"}, {"background","Cycle canvas background","B",false,"canvas"},
++    {"grid","Toggle folder grid","G"}, {"frameless","Toggle window frame","Ctrl+F11"}, {"filmstrip","Toggle filmstrip","T",false,"canvas"}, {"tree","Toggle folder tree","Ctrl+B"}, {"sort","Cycle file sort (name, modified, size, shuffle)","S"}, {"sort-reverse","Reverse file sort direction","Shift+S"},
+     // Layout commands start unbound so existing users' shortcuts never collide.
+     {"arrange-panes","Arrange panes",""}, {"layout-lock","Lock or unlock workspace layout",""}, {"layout-reset","Reset workspace layout",""},
+     // Content modes (GRID-PREVIEW-01). Ctrl+Shift+G was free; saved maps that already use it keep their choice.
+@@ -25,12 +25,12 @@ static const std::vector<Command> registry {
+     {"copy-path", "Copy file path", "Ctrl+C"},
+     {"copy-file", "Copy file", "Ctrl+Shift+C"},
+     {"copy-image", "Copy image", "Ctrl+Alt+C"},
+-    {"select-all", "Select all items in grid", ""},
+-    {"clear-selection", "Clear grid selection", "Ctrl+D"},
+-    {"invert-selection", "Invert grid selection", "Ctrl+I"},
+-    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+="},
+-    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-"},
+-    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0"},
++    {"select-all", "Select all items in grid", "", false, "workspace"},
++    {"clear-selection", "Clear grid selection", "Ctrl+D", false, "workspace"},
++    {"invert-selection", "Invert grid selection", "Ctrl+I", false, "workspace"},
++    {"grid-zoom-in", "Zoom in thumbnails", "Ctrl+=", false, "workspace"},
++    {"grid-zoom-out", "Zoom out thumbnails", "Ctrl+-", false, "workspace"},
++    {"grid-zoom-reset", "Reset thumbnail size", "Ctrl+0", false, "workspace"},
+     // FS-WATCH-01: workspace command; generic routing preserves text/modal precedence.
+     {"refresh", "Refresh", "F5"},
+     // FAVORITES-01 (F003)
+@@ -50,14 +50,14 @@ static const std::vector<Command> registry {
+     {"clear-filter", "Clear active filter", ""},
+     {"toggle-filter-persistence", "Toggle filter persistence", ""},
+     // META-HUD-01 (META-01 / UX-04)
+-    {"toggle-metadata", "Toggle metadata inspector", "I"},
++    {"toggle-metadata", "Toggle metadata inspector", "I", false, "workspace"},
+     // ANIM-01 (ADV-06 / FMT-03 / F036)
+-    {"animation-toggle-play-pause", "Play or pause animation", "Space"},
+-    {"animation-next-frame", "Step to next frame / page", "."},
+-    {"animation-previous-frame", "Step to previous frame / page", ","},
+-    {"animation-speed-up", "Increase animation speed", "]"},
+-    {"animation-speed-down", "Decrease animation speed", "["},
+-    {"animation-toggle-loop", "Toggle animation loop", ""},
++    {"animation-toggle-play-pause", "Play or pause animation", "Space", false, "canvas"},
++    {"animation-next-frame", "Step to next frame / page", ".", true, "canvas"},
++    {"animation-previous-frame", "Step to previous frame / page", ",", true, "canvas"},
++    {"animation-speed-up", "Increase animation speed", "]", true, "canvas"},
++    {"animation-speed-down", "Decrease animation speed", "[", true, "canvas"},
++    {"animation-toggle-loop", "Toggle animation loop", "", false, "canvas"},
+     // RENAME-01 (F018)
+     {"rename", "Rename current file or folder", "F2"},
+     {"new-folder", "Create new folder", "Ctrl+Shift+N"},
+@@ -71,6 +71,17 @@ static const std::vector<Command> registry {
+     {"presentation-pin", "Presentation: Pin current photo", ""},
+     {"presentation-compare", "Presentation: Comparison mode", ""},
+     {"presentation-close", "Close presentation display", ""},
++    {"presentation-fit", "Presentation: Cycle fit mode for this display", "Ctrl+Alt+F"},
++    // MONITOR-OUTPUT-01 core correction: output viewport; never modifies the controller canvas.
++    {"presentation-view-actual", "Presentation: Actual physical pixel size", ""},
++    {"presentation-view-zoom-in", "Presentation: Zoom in", ""},
++    {"presentation-view-zoom-out", "Presentation: Zoom out", ""},
++    {"presentation-view-pan-left", "Presentation: Pan left", ""},
++    {"presentation-view-pan-right", "Presentation: Pan right", ""},
++    {"presentation-view-pan-up", "Presentation: Pan up", ""},
++    {"presentation-view-pan-down", "Presentation: Pan down", ""},
++    {"presentation-view-linked", "Presentation: Toggle linked comparison viewports", ""},
++    {"presentation-view-reference", "Presentation: Switch active comparison viewport", ""},
+ #ifdef Q_OS_WIN
+     {"delete-selection","Move selected items to the Recycle Bin","Delete"},
+     {"delete-current-file","Move current photo to the Recycle Bin","Ctrl+Delete"},
+@@ -80,13 +91,21 @@ static const std::vector<Command> registry {
+     {"delete-current-file","Move current photo to the Trash","Ctrl+Delete"},
+     {"delete-current-folder","Move current folder to the Trash","Ctrl+Shift+Delete"},
+ #endif
++    // INPUT-02: hold lifecycle, per-pane commands and context-menu routes. Keys the grid and tree handle themselves
++    // (Enter, Backspace, Ctrl+A) stay unbound here; the menus show those fixed keys.
++    {"hold-actual","Show actual size while held","Z",false,"canvas",true},
++    {"grid-open","Open the selected item","",false,"grid"}, {"grid-up","Up one folder","",false,"grid"},
++    {"grid-select-all","Select all items","",false,"grid"},
++    {"tree-open-folder","Open the focused folder","",false,"tree"},
++    {"focus-path","Edit the folder path","",false,"global"}, {"copy-folder-path","Copy the folder path","",false,"global"},
++    {"paste-path","Go to the folder path on the clipboard","",false,"global"},
+     {"quit","Quit","Ctrl+Q"}
+ };
+     return {registry.data(),registry.size()};
+ }
+ 
+ BindingResolution resolveCommandBindings(const QJsonObject& stored) {
+-    using bindings::shortcutOverlap;
++    using bindings::bindingsCollide;
+     const auto registry=commandRegistry();
+     QJsonObject defaultBindings;
+     for (const auto& command: registry) defaultBindings[QString::fromStdString(command.id)] = QString::fromStdString(command.defaultBinding);
+@@ -99,7 +118,7 @@ BindingResolution resolveCommandBindings(const QJsonObject& stored) {
+     for (auto it=candidate.begin();it!=candidate.end();++it) {
+         if (stored.contains(it.key()) || it.value().toString().isEmpty()) continue;
+         for (auto other=stored.begin();other!=stored.end();++other) {
+-            if (other.key()!=it.key() && candidate.contains(other.key()) && shortcutOverlap(QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
++            if (other.key()!=it.key() && candidate.contains(other.key()) && bindingsCollide(other.key(),QKeySequence::fromString(candidate.value(other.key()).toString(),QKeySequence::PortableText),it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))) { it.value()=QString(); break; }
+         }
+     }
+     BindingResolution result;
+diff --git a/src/app/settings_policy.cpp b/src/app/settings_policy.cpp
+index 3a82688..77d7f8f 100644
+--- a/src/app/settings_policy.cpp
++++ b/src/app/settings_policy.cpp
+@@ -53,7 +53,7 @@ QString revision() {
+     const auto append=[&](const QByteArray& field){for(int shift=0;shift<64;shift+=8)bytes.append(char((quint64(field.size())>>shift)&255));bytes.append(field);};
+     append(QJsonDocument(commands).toJson(QJsonDocument::Compact));append(themeCatalog());
+     append(QJsonDocument(layout_detail::defaults()).toJson(QJsonDocument::Compact));
+-    append(QByteArrayLiteral("known-fields-v2-layout-absence-retains-supported-unknowns"));
++    append(QByteArrayLiteral("known-fields-v3-scoped-input-wheel-modifiers"));
+     return "policy1:"+QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
+ }
+ Result merge(const QJsonObject& current,const QJsonObject& source,Selection selection,Options options) {
+@@ -104,6 +104,8 @@ Result merge(const QJsonObject& current,const QJsonObject& source,Selection sele
+     if(enabled(GlobalSection::Viewing)) {
+         add({"boundary"},[](const QJsonValue& v){return choice(v,{"continue","stop","loop"});});
+         add({"wheel"},[](const QJsonValue& v){return choice(v,{"navigate","zoom","pan"});});
++        for(const auto* modifier:{"ctrl","shift","alt"})
++            add({"wheelModifiers",QLatin1String(modifier)},[](const QJsonValue& v){return choice(v,{"navigate","zoom","pan","pan-horizontal"});});
+     }
+     if(enabled(GlobalSection::Browsing)) {
+         for(const auto* key:{"filmstrip","tree","treePinned"})add({QLatin1String(key)},boolean);
+diff --git a/src/app/viewer_controller.cpp b/src/app/viewer_controller.cpp
+index f1d9b17..6b12765 100644
+--- a/src/app/viewer_controller.cpp
++++ b/src/app/viewer_controller.cpp
+@@ -56,7 +56,8 @@
+ using namespace glancelot;
+ namespace {
+ using glancelot::bindings::usableShortcut;
+-using glancelot::bindings::shortcutOverlap;
++using glancelot::bindings::bindingsCollide;
++using glancelot::bindings::findCommand;
+ using glancelot::bindings::usableBindings;
+ void trace(const char* event) {
+     const auto path=qEnvironmentVariable("GLANCELOT_TRACE_FILE");
+@@ -101,6 +102,9 @@ QString sortKeyName(glancelot::SortKey key) {
+     default: return "name";
+     }
+ }
++bool validWheelAction(const QString& action) {
++    return action=="navigate" || action=="zoom" || action=="pan" || action=="pan-horizontal";
++}
+ BoundaryMode boundaryValue(const QString& value) {
+     return value == "stop" ? BoundaryMode::Stop : value == "loop" ? BoundaryMode::LoopFolder : BoundaryMode::ContinueTree;
+ }
+@@ -120,6 +124,8 @@ struct ViewerController::Private {
+     glancelot::FilterSpec filter;
+     QJsonObject bindings;
+     QJsonObject confirmedBindings;
++    // INPUT-02: explicit modifier -> action entries. "none" lives in `wheel`; an unset "alt" follows it.
++    QJsonObject wheelModifiers{{"ctrl","zoom"},{"shift","pan-horizontal"}};
+     QProcess* worker{};
+     std::shared_ptr<glancelot::detail::IoJobLease> decodeLease,prefetchLease;
+     quint64 workerGeneration{};
+@@ -380,6 +386,8 @@ struct ViewerController::Private {
+         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationActiveChanged, q, [this](bool) {
+             emit q->presentationChanged();
+         });
++        displayManager.setToggleBindingProvider([this] { return q->bindingFor(QStringLiteral("presentation-toggle")); });
++        displayManager.setOutputBindingProvider([this](const QString& id) { return q->bindingFor(id); });
+         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
+             emit q->presentationChanged();
+         });
+@@ -466,6 +474,13 @@ struct ViewerController::Private {
+         const auto savedWheel=object.value("wheel").toString();
+         if (savedWheel=="navigate" || savedWheel=="zoom" || savedWheel=="pan") wheel=savedWheel;
+         else wheel="navigate";
++        // Each modifier falls back on its own: one invalid entry never discards the others.
++        wheelModifiers=QJsonObject{{"ctrl","zoom"},{"shift","pan-horizontal"}};
++        const auto savedModifiers=object.value("wheelModifiers").toObject();
++        for (const char* modifier:{"ctrl","shift","alt"}) {
++            const auto action=savedModifiers.value(QLatin1String(modifier)).toString();
++            if (validWheelAction(action)) wheelModifiers[QLatin1String(modifier)]=action;
++        }
+         if (object.value("filmstrip").isBool()) filmstrip=object.value("filmstrip").toBool();
+         else filmstrip=true;
+         const auto savedSort=object.value("sort").toObject();
+@@ -1384,9 +1399,61 @@ int ViewerController::currentIndex() const{const auto& s=d->nav.snapshot(); cons
+ int ViewerController::fileCount() const{return int(d->nav.snapshot().files.size());}
+ int ViewerController::imageWidth() const{return d->image.width();}
+ int ViewerController::imageHeight() const{return d->image.height();}
+-QVariantList ViewerController::commands() const{QVariantList rows;for(const auto& cmd:registry){const QString id=QString::fromStdString(cmd.id);rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",d->bindings.value(id).toString()}});}return rows;}
++QVariantList ViewerController::commands() const{
++    QVariantList rows;
++    for(const auto& cmd:registry){
++        const QString id=QString::fromStdString(cmd.id),binding=d->bindings.value(id).toString();
++        // `steps` are the portable key texts of the binding, one per press, so the UI can resolve chords itself.
++        QStringList steps;
++        const auto parsed=QKeySequence::fromString(binding,QKeySequence::PortableText);
++        for(int i=0;i<parsed.count();++i)steps.append(QKeySequence(parsed[i]).toString(QKeySequence::PortableText));
++        rows.append(QVariantMap{{"id",id},{"label",QString::fromStdString(cmd.label)},{"binding",binding},
++            {"scope",QString::fromStdString(cmd.scope)},{"hold",cmd.hold},{"repeat",cmd.repeat},{"steps",steps}});
++    }
++    return rows;
++}
+ QString ViewerController::boundaryMode() const{return d->boundary;}
+ QString ViewerController::wheelMode() const{return d->wheel;}
++QVariantMap ViewerController::wheelModifiers() const{
++    QVariantMap map{{"none",d->wheel},{"ctrl",d->wheelModifiers.value("ctrl").toString()},{"shift",d->wheelModifiers.value("shift").toString()}};
++    const auto alt=d->wheelModifiers.value("alt").toString();
++    map.insert("alt",validWheelAction(alt)?alt:d->wheel); // unset: Alt keeps behaving like the plain wheel
++    return map;
++}
++bool ViewerController::setWheelModifier(const QString& modifier,const QString& action){
++    if(!validWheelAction(action))return false;
++    if(modifier=="none"){ // the plain wheel keeps its three-value setting
++        if(action=="pan-horizontal")return false;
++        setWheelMode(action);return true;
++    }
++    if(modifier!="ctrl"&&modifier!="shift"&&modifier!="alt")return false;
++    d->wheelModifiers[modifier]=action;
++    // Only this modifier is merged into the stored object, so another window's other modifiers and unknown keys survive.
++    const QPointer<ViewerController> alive(this);
++    const bool saved=settings_detail::saveWithRetry(this,"wheelModifiers/"+modifier,[modifier,action](QJsonObject& object){
++        auto stored=object.value("wheelModifiers").toObject();
++        stored[modifier]=action;object["wheelModifiers"]=stored;
++    },[this,modifier,action](SettingsStatus result){
++        if(!result.ok()&&d->wheelModifiers.value(modifier)==QJsonValue(action)) {
++            d->status="Wheel behavior changed for this session; settings could not be saved.";
++            emit stateChanged();
++        }
++    });
++    if(!alive)return true;
++    if(!saved)d->status="Wheel behavior changed for this session; settings could not be saved.";
++    emit stateChanged();return true;
++}
++QString ViewerController::keyStep(int key,int modifiers) const{
++    return QKeySequence(QKeyCombination(Qt::KeyboardModifiers(modifiers)&~Qt::KeypadModifier,Qt::Key(key))).toString(QKeySequence::PortableText);
++}
++QString ViewerController::bindingConflict(const QString& id,const QString& sequence) const{
++    if(!d->bindings.contains(id))return {};
++    const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
++    if(parsed.isEmpty())return {};
++    for(auto it=d->bindings.begin();it!=d->bindings.end();++it)
++        if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText)))return it.key();
++    return {};
++}
+ void ViewerController::open(const QString& value){
+     trace("open:begin");
+     // Consume the caller's intent once: decode may wait for registration, while
+@@ -1452,7 +1519,9 @@ void ViewerController::trigger(const QString& id){
+     else if(id=="presentation-toggle") { togglePresentation(); emit viewCommand(id); }
+     else if(id=="presentation-mirror") { d->displayManager.setPresentationMode("mirror"); emit viewCommand(id); }
+     else if(id=="presentation-pin") { pinPresentationImage(); emit viewCommand(id); }
+-    else if(id=="presentation-compare") { d->displayManager.setPresentationMode("comparison"); emit viewCommand(id); }
++    else if(id=="presentation-compare") { d->displayManager.compareWithPinnedOrPrevious(); emit viewCommand(id); }
++    else if(id=="presentation-fit") { cyclePresentationFit(); emit viewCommand(id); }
++    else if(id.startsWith("presentation-view-")) { d->displayManager.outputViewportCommand(id.mid(18)); emit viewCommand(id); }
+     else if(id=="presentation-close") { closePresentation(); emit viewCommand(id); }
+     else if(d->bindings.contains(id))emit viewCommand(id);
+ }
+@@ -1462,7 +1531,8 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
+     const auto parsed=QKeySequence::fromString(sequence,QKeySequence::PortableText);
+     const QString normalized=parsed.toString(QKeySequence::PortableText);
+     if((!sequence.trimmed().isEmpty()&&normalized.isEmpty())||!usableShortcut(parsed)){d->status="That shortcut is invalid or uses Escape, which is reserved for closing views and dialogs.";emit stateChanged();return false;}
+-    for(auto it=d->bindings.begin();it!=d->bindings.end();++it){if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){d->status="Shortcut conflicts with "+it.key()+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}}
++    if(const auto* command=findCommand(id);command&&command->hold&&parsed.count()>1){d->status="A hold shortcut is a single key: it is released to restore the view.";emit stateChanged();return false;}
++    if(const auto other=bindingConflict(id,normalized);!other.isEmpty()){d->status="Shortcut conflicts with "+other+" (including chord prefixes). Clear it first.";emit stateChanged();return false;}
+     struct BindingSave {QJsonObject merged;QJsonValue rollback;QString conflict;std::optional<SettingsStatus> result;bool deferred{};};
+     const auto pending=std::make_shared<BindingSave>();const auto before=d->bindings;
+     pending->rollback=d->confirmedBindings.value(id);
+@@ -1477,7 +1547,7 @@ bool ViewerController::setBinding(const QString& id,const QString& sequence){
+         for(auto it=stored.begin();it!=stored.end();++it)
+             if(it.key()!=id&&merged.contains(it.key())&&it.value().isString())merged[it.key()]=it.value();
+         for(auto it=merged.begin();it!=merged.end();++it)
+-            if(it.key()!=id&&shortcutOverlap(parsed,QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
++            if(it.key()!=id&&bindingsCollide(id,parsed,it.key(),QKeySequence::fromString(it.value().toString(),QKeySequence::PortableText))){conflict=it.key();return;}
+         if(!usableBindings(merged)){conflict="invalid saved shortcut map; reset default shortcuts";return;}
+         stored[id]=normalized;object["bindings"]=stored;
+     },[this,pending,before,id,normalized](SettingsStatus result){
+@@ -1874,6 +1944,16 @@ void ViewerController::openPresentation(const QString& displayId, const QString&
+     d->displayManager.openPresentation(displayId, m);
+ }
+ 
++void ViewerController::setPresentationFitMode(const QString& mode) {
++    d->displayManager.setOutputFitMode(mode);
++}
++
++void ViewerController::cyclePresentationFit() {
++    static const QStringList order{QStringLiteral("shrink"), QStringLiteral("fit"), QStringLiteral("fill")};
++    const int i = order.indexOf(d->displayManager.outputFitMode());
++    d->displayManager.setOutputFitMode(order[(i + 1) % order.size()]);
++}
++
+ void ViewerController::closePresentation() {
+     d->displayManager.closePresentation();
+ }
+diff --git a/tests/recovery_controller_tests.cpp b/tests/recovery_controller_tests.cpp
+index 2f44c4c..ff36061 100644
+--- a/tests/recovery_controller_tests.cpp
++++ b/tests/recovery_controller_tests.cpp
+@@ -53,12 +53,16 @@ private slots:
+         QTRY_VERIFY_WITH_TIMEOUT(gate->entered.load(),3000);
+         const bool tree=!viewer.treeVisible();QElapsedTimer elapsed;elapsed.start();
+         viewer.setTreeVisible(tree);viewer.setWheelMode("pan");viewer.setWheelMode("zoom");
++        QVERIFY(viewer.setWheelModifier("ctrl","zoom")); QVERIFY(viewer.setWheelModifier("ctrl","pan-horizontal"));
++        QVERIFY(viewer.setWheelModifier("shift","pan"));
+         theme.setMode("light");QVERIFY(layout.resize("tree",400));QVERIFY(favorites.addFavorite(media.path(),"generated"));
+         viewer.setSortKey("size");viewer.setSortDescending(true);QVERIFY(viewer.setBinding("fullscreen","Ctrl+Alt+F11"));
+         QVERIFY(elapsed.elapsed()<250);QVERIFY(!viewer.status().contains("could not be saved"));
+         {std::lock_guard lock(gate->mutex);gate->released=true;gate->changed.notify_all();}
+         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("tree"),QJsonValue(tree),3000);
+         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheel"),QJsonValue("zoom"),3000);
++        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheelModifiers").toObject().value("ctrl"),QJsonValue("pan-horizontal"),3000);
++        QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("wheelModifiers").toObject().value("shift"),QJsonValue("pan"),3000);
+         QTRY_COMPARE_WITH_TIMEOUT(folder(config.path()),media.path(),3000);
+         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("appearance").toObject().value("mode"),QJsonValue("light"),3000);
+         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("layouts").toObject().value("1").toObject().value("panes").toObject().value("tree").toObject().value("extent"),QJsonValue(400),3000);
+@@ -68,6 +72,23 @@ private slots:
+         QTRY_COMPARE_WITH_TIMEOUT(settings(config.path()).value("bindings").toObject().value("fullscreen"),QJsonValue("Ctrl+Alt+F11"),3000);
+         QTRY_VERIFY_WITH_TIMEOUT(layout.feedback().isEmpty(),3000);
+     }
++    void restoredModifierAbsenceRestoresDefaultsInTheLiveController() {
++        using namespace glancelot::recovery;
++        QTemporaryDir config,source,packages; QVERIFY(config.isValid()&&source.isValid()&&packages.isValid());
++        qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
++        const auto write=[](const QString& path,const QJsonObject& root){QFile file(path);return file.open(QIODevice::WriteOnly)&&file.write(QJsonDocument(root).toJson())>0;};
++        QVERIFY(write(config.filePath("settings.json"),{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","pan"},{"shift","zoom"},{"alt","pan-horizontal"}}}}));
++        QVERIFY(write(source.filePath("settings.json"),{{"schema",1}}));
++        ViewerController viewer; QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(),QString("pan"));
++        const auto captured=captureBackup({source.path()},packages.filePath("source")); QCOMPARE(captured.status.code,Code::Ok);
++        const auto proposed=preview({config.path()},captured.destination,GlobalScope{GlobalSection::Viewing});
++        QVERIFY(proposed.plan.applicable()); QCOMPARE(apply(proposed.plan).status.code,Code::Committed);
++        // The ordinary import path reloads the live controller; schema-only import itself merges no preferences.
++        QVERIFY(viewer.importSettings(source.filePath("settings.json")));
++        QCOMPARE(viewer.wheelModifiers().value("ctrl").toString(),QString("zoom"));
++        QCOMPARE(viewer.wheelModifiers().value("shift").toString(),QString("pan-horizontal"));
++        QCOMPARE(viewer.wheelModifiers().value("alt").toString(),viewer.wheelMode());
++    }
+     void missingSourceLayoutKeepsUnknownsThroughActualLayoutEdit() {
+         using namespace glancelot::recovery;
+         QTemporaryDir config,source,packages;QVERIFY(config.isValid()&&source.isValid()&&packages.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+diff --git a/tests/recovery_tests.cpp b/tests/recovery_tests.cpp
+index b95fbef..54ae9ad 100644
+--- a/tests/recovery_tests.cpp
++++ b/tests/recovery_tests.cpp
+@@ -6,6 +6,7 @@
+ #include "settings_transaction.hpp"
+ #include "settings_package.hpp"
+ #include "settings_policy.hpp"
++#include "glancelot/command_registry.hpp"
+ #include "settings_diff.hpp"
+ #include "window_claim_guard.hpp"
+ #include "glancelot/window_slot.hpp"
+@@ -436,6 +437,39 @@ private slots:
+         QCOMPARE(result.replacement->value("wheel"),current.value("wheel"));QCOMPARE(result.replacement->value("textScale"),current.value("textScale"));
+         QVERIFY(!result.replacement->value("sort").toObject().contains("key"));QVERIFY(result.replacement->value("sort").toObject().value("future").toBool());
+     }
++    void scopedInputBindingsUseTheSharedRecoveryPolicy() {
++        const QJsonObject current{{"schema",1},{"bindings",QJsonObject{{"future-command",true}}}};
++        policy::Selection selected; selected.global=GlobalSection::Bindings;
++        const auto merge=[&](const QJsonObject& bindings){return policy::merge(current,{{"schema",1},{"bindings",bindings}},selected);};
++        auto accepted=merge({{"next","Ctrl+K"},{"grid-open","Ctrl+K, Ctrl+L"}});
++        QVERIFY(accepted.replacement); QCOMPARE(accepted.status.code,Code::Ok);
++        const auto bindings=accepted.replacement->value("bindings").toObject();
++        QVERIFY(bindings.value("future-command").toBool());
++        QVERIFY(glancelot::resolveCommandBindings(bindings).valid);
++        const auto overlap=merge({{"next","Ctrl+K"},{"previous","Ctrl+K, Ctrl+L"}});
++        QCOMPARE(overlap.status.code,Code::Corrupt); QVERIFY(!overlap.replacement);
++        const auto heldChord=merge({{"hold-actual","Ctrl+K, Ctrl+L"}});
++        QCOMPARE(heldChord.status.code,Code::Corrupt); QVERIFY(!heldChord.replacement);
++        const auto longChord=merge({{"next","Ctrl+K, Ctrl+L, Ctrl+M"}});
++        QCOMPARE(longChord.status.code,Code::Corrupt); QVERIFY(!longChord.replacement);
++        // A user's binding predates the new global presentation-fit default.
++        const auto retained=glancelot::resolveCommandBindings({{"next","Ctrl+Alt+F"}});
++        QVERIFY(retained.valid); QCOMPARE(retained.effective.value("next"),QJsonValue("Ctrl+Alt+F"));
++        QCOMPARE(retained.effective.value("presentation-fit"),QJsonValue(""));
++    }
++    void viewingModifierMergePreservesUnknownsAndRemovesAbsentKnownValues() {
++        const QJsonObject current{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","pan"},{"shift","zoom"},{"future",true}}}};
++        const QJsonObject source{{"schema",1},{"wheelModifiers",QJsonObject{{"alt","pan-horizontal"},{"future",false}}}};
++        policy::Selection selected; selected.global=GlobalSection::Viewing;
++        const auto result=policy::merge(current,source,selected); QVERIFY(result.replacement);
++        const auto modifiers=result.replacement->value("wheelModifiers").toObject();
++        QVERIFY(!modifiers.contains("ctrl")); QVERIFY(!modifiers.contains("shift"));
++        QCOMPARE(modifiers.value("alt"),QJsonValue("pan-horizontal")); QVERIFY(modifiers.value("future").toBool());
++        const auto invalid=policy::merge(current,{{"schema",1},{"wheelModifiers",QJsonObject{{"ctrl","spin"}}}},selected);
++        QCOMPARE(invalid.status.code,Code::Corrupt); QVERIFY(!invalid.replacement);
++        const auto malformed=policy::merge(current,{{"schema",1},{"wheelModifiers",false}},selected);
++        QCOMPARE(malformed.status.code,Code::Corrupt); QVERIFY(!malformed.replacement);
++    }
+     void selectedInvalidValuesRejectWholeMerge_data() {
+         QTest::addColumn<QJsonObject>("source");
+         QTest::newRow("bad-boundary")<<QJsonObject{{"schema",1},{"boundary","surprise"}};
+diff --git a/tests/startup_window_geometry_tests.cpp b/tests/startup_window_geometry_tests.cpp
+new file mode 100644
+index 0000000..a87da3e
+--- /dev/null
++++ b/tests/startup_window_geometry_tests.cpp
+@@ -0,0 +1,75 @@
++#include "startup_window_geometry.hpp"
++#include <QtTest>
++#include <array>
++#include <limits>
++using namespace glancelot::startup;
++
++namespace {
++bool positiveIntersection(const QRect& a,const QRect& b) {
++    return std::max(qint64(a.left()),qint64(b.left())) < std::min(qint64(a.right())+1,qint64(b.right())+1)
++        && std::max(qint64(a.top()),qint64(b.top())) < std::min(qint64(a.bottom())+1,qint64(b.bottom())+1);
++}
++}
++class StartupWindowGeometryTests : public QObject {
++    Q_OBJECT
++private slots:
++    void placement_data() {
++        QTest::addColumn<QRect>("current"); QTest::addColumn<QRect>("screen");
++        QTest::addColumn<QSize>("minimum"); QTest::addColumn<QRect>("expected");
++        QTest::addColumn<bool>("recovered");
++        QTest::newRow("real-failure-zero-margin") << QRect(0,1600,2360,1560) << QRect(0,0,2560,1440) << QSize(540,360) << QRect(100,0,2360,1440) << true;
++        QTest::newRow("real-failure-decorated") << QRect(-8,1569,2376,1599) << QRect(0,0,2560,1440) << QSize(556,399) << QRect(92,0,2376,1440) << true;
++        QTest::newRow("partially-visible") << QRect(-90,-90,100,100) << QRect(0,0,1000,800) << QSize(540,360) << QRect(-90,-90,100,100) << false;
++        QTest::newRow("one-pixel-visible") << QRect(-99,50,100,100) << QRect(0,0,1000,800) << QSize(540,360) << QRect(-99,50,100,100) << false;
++        QTest::newRow("touch-left") << QRect(-100,50,100,100) << QRect(0,0,1000,800) << QSize(540,360) << QRect(230,220,540,360) << true;
++        QTest::newRow("touch-bottom") << QRect(0,800,600,400) << QRect(0,0,1000,800) << QSize(540,360) << QRect(200,200,600,400) << true;
++        QTest::newRow("negative-origin") << QRect(5000,5000,600,400) << QRect(-1600,-900,1600,900) << QSize(540,360) << QRect(-1100,-650,600,400) << true;
++        QTest::newRow("small-work-area") << QRect(5000,5000,1000,900) << QRect(-200,100,200,100) << QSize(540,360) << QRect(-200,100,540,360) << true;
++        QTest::newRow("minimum-sized") << QRect(5000,5000,100,100) << QRect(0,0,1000,800) << QSize(540,360) << QRect(230,220,540,360) << true;
++        QTest::newRow("invalid-current") << QRect(20,30,0,500) << QRect(0,0,1000,800) << QSize(540,360) << QRect(230,220,540,360) << true;
++        QTest::newRow("invalid-minimum") << QRect() << QRect(0,0,1000,800) << QSize(-1,0) << QRect(499,399,1,1) << true;
++        const auto hi = std::numeric_limits<int>::max(), lo = std::numeric_limits<int>::min();
++        QTest::newRow("integer-upper-edge") << QRect(0,0,600,400) << QRect(QPoint(hi-999,hi-799),QPoint(hi,hi)) << QSize(540,360) << QRect(hi-799,hi-599,600,400) << true;
++        QTest::newRow("integer-lower-edge") << QRect(0,0,600,400) << QRect(lo,lo,1000,800) << QSize(540,360) << QRect(lo+200,lo+200,600,400) << true;
++        QTest::newRow("integer-minimum-larger-than-area") << QRect() << QRect(QPoint(hi-9,hi-9),QPoint(hi,hi)) << QSize(hi,hi) << QRect(QPoint(1,1),QPoint(hi,hi)) << true;
++    }
++    void placement() {
++        QFETCH(QRect,current); QFETCH(QRect,screen); QFETCH(QSize,minimum); QFETCH(QRect,expected); QFETCH(bool,recovered);
++        const std::array screens{screen}; const auto result = recoverStartupWindowGeometry(current,screens,0,minimum);
++        QCOMPARE(result.geometry,expected);
++        QCOMPARE(result.status,recovered ? StartupPlacementStatus::Recovered : StartupPlacementStatus::Unchanged);
++        QVERIFY(positiveIntersection(result.geometry,screen));
++        if (recovered) { QVERIFY(result.geometry.width() >= std::max(1,minimum.width())); QVERIFY(result.geometry.height() >= std::max(1,minimum.height())); }
++    }
++    void topologyAndPreference() {
++        const std::array screens{QRect(0,0,2560,1440),QRect(0,-1600,2560,1600)};
++        const auto result = recoverStartupWindowGeometry(QRect(0,1600,2360,1560),screens,1,QSize(540,360));
++        QCOMPARE(result.status,StartupPlacementStatus::Recovered); QCOMPARE(result.geometry,QRect(100,-1580,2360,1560));
++        const auto second = recoverStartupWindowGeometry(QRect(50,-1500,640,480),screens,0,QSize(540,360));
++        QCOMPARE(second.status,StartupPlacementStatus::Unchanged); QCOMPARE(second.geometry,QRect(50,-1500,640,480));
++        const std::array gaps{QRect(-2000,0,1000,800),QRect(1000,0,1000,800)};
++        const QRect between(-100,100,200,400);
++        QCOMPARE(recoverStartupWindowGeometry(between,gaps,1,QSize(540,360)).geometry,QRect(1230,200,540,400));
++        QCOMPARE(recoverStartupWindowGeometry(between,gaps,99,QSize(540,360)).geometry,QRect(-1770,200,540,400));
++        const std::array invalidPreferred{QRect(),gaps[1],gaps[0]};
++        QCOMPARE(recoverStartupWindowGeometry(between,invalidPreferred,0,QSize(540,360)).geometry,QRect(1230,200,540,400));
++    }
++    void unavailableOrExcessiveScreens() {
++        const QRect current(9999,9999,640,480); const QSize minimum(540,360);
++        const std::array invalid{QRect(),QRect(0,0,-10,20),QRect(0,0,20,0)};
++        for (auto screens : {std::span<const QRect>{},std::span<const QRect>{invalid}}) {
++            const auto result = recoverStartupWindowGeometry(current,screens,0,minimum);
++            QCOMPARE(result.status,StartupPlacementStatus::NoUsableScreen); QCOMPARE(result.geometry,current);
++        }
++        std::array<QRect,maximumStartupScreens+1> tooMany{};
++        tooMany[0]=QRect(0,0,20000,20000);
++        const auto result = recoverStartupWindowGeometry(current,tooMany,0,minimum);
++        QCOMPARE(result.status,StartupPlacementStatus::TooManyScreens); QCOMPARE(result.geometry,current);
++        const auto invalidCurrent = recoverStartupWindowGeometry(QRect{},tooMany,0,QSize{});
++        QCOMPARE(invalidCurrent.status,StartupPlacementStatus::TooManyScreens); QCOMPARE(invalidCurrent.geometry,QRect{});
++        const std::span<const QRect> atLimit(tooMany.data(),maximumStartupScreens);
++        QCOMPARE(recoverStartupWindowGeometry(current,atLimit,0,minimum).status,StartupPlacementStatus::Unchanged);
++    }
++};
++QTEST_GUILESS_MAIN(StartupWindowGeometryTests)
++#include "startup_window_geometry_tests.moc"

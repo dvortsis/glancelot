@@ -1,0 +1,145 @@
+{
+  "environment": {
+    "active_gpu_identity": "unverified",
+    "cpu_affinity_count": null,
+    "filesystem_cache_state": "uncontrolled",
+    "logical_cpu_count_visible": 20,
+    "machine": "AMD64",
+    "os": "Windows",
+    "power_thermal_state": "uncontrolled",
+    "python": "3.14.8",
+    "release": "11",
+    "version": "10.0.26200"
+  },
+  "executable_hashes": {
+    "bin/glancelot-decoder.exe": "1f88419eb2cf09cf93381f27cea95a5c05f9e6c97805faa79c3ae4ce4324f5cc",
+    "bin/glancelot.exe": "77b9bdd471df08920f018986b0f852c954a6ce2839173c755dfdb74e1c87255c"
+  },
+  "generated_jpeg_sha256_unchanged": "801532c946d6e60c7490c96ec8adb258506e854e98c14bf48966322dd597cf3b",
+  "jpeg": {
+    "decoded_dimensions": [
+      64,
+      48
+    ],
+    "development_qt_removed_from_path": true,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": 435,
+    "frames": 16,
+    "graphics_api": 4,
+    "qt": "6.8.3",
+    "qt_modules": [
+      "Qt6Core.dll",
+      "Qt6Gui.dll",
+      "Qt6Network.dll",
+      "Qt6OpenGL.dll",
+      "Qt6Qml.dll",
+      "Qt6QmlMeta.dll",
+      "Qt6QmlModels.dll",
+      "Qt6QmlWorkerScript.dll",
+      "Qt6Quick.dll",
+      "Qt6QuickControls2.dll",
+      "Qt6QuickControls2Basic.dll",
+      "Qt6QuickControls2BasicStyleImpl.dll",
+      "Qt6QuickControls2Impl.dll",
+      "Qt6QuickDialogs2.dll",
+      "Qt6QuickDialogs2QuickImpl.dll",
+      "Qt6QuickDialogs2Utils.dll",
+      "Qt6QuickLayouts.dll",
+      "Qt6QuickShapes.dll",
+      "Qt6QuickTemplates2.dll",
+      "qwindows.dll"
+    ],
+    "qt_modules_from_package": true,
+    "version": "0.1.0-alpha.1"
+  },
+  "manifest_sha256": "63ab545260cc5a7d7b99940f65fbd40d727ccf4990b2ae90d439b5eb185bf3b9",
+  "negative": {
+    "development_qt_removed_from_path": true,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": -1,
+    "frames": 3,
+    "graphics_api": 4,
+    "missing_decoder_diagnosed": true,
+    "qt": "6.8.3",
+    "qt_modules": [
+      "Qt6Core.dll",
+      "Qt6Gui.dll",
+      "Qt6Network.dll",
+      "Qt6OpenGL.dll",
+      "Qt6Qml.dll",
+      "Qt6QmlMeta.dll",
+      "Qt6QmlModels.dll",
+      "Qt6QmlWorkerScript.dll",
+      "Qt6Quick.dll",
+      "Qt6QuickControls2.dll",
+      "Qt6QuickControls2Basic.dll",
+      "Qt6QuickControls2BasicStyleImpl.dll",
+      "Qt6QuickControls2Impl.dll",
+      "Qt6QuickDialogs2.dll",
+      "Qt6QuickDialogs2QuickImpl.dll",
+      "Qt6QuickDialogs2Utils.dll",
+      "Qt6QuickLayouts.dll",
+      "Qt6QuickShapes.dll",
+      "Qt6QuickTemplates2.dll",
+      "qwindows.dll"
+    ],
+    "qt_modules_from_package": true,
+    "version": "0.1.0-alpha.1"
+  },
+  "package_inventory_unchanged": true,
+  "passed": true,
+  "physical_color_dpi_refresh_qualification": "unverified",
+  "positive": {
+    "decoded_dimensions": [
+      1024,
+      768
+    ],
+    "development_qt_removed_from_path": true,
+    "device_pixel_ratio": 1,
+    "first_image_frame_ms": 601,
+    "frames": 13,
+    "graphics_api": 4,
+    "qt": "6.8.3",
+    "qt_modules": [
+      "Qt6Core.dll",
+      "Qt6Gui.dll",
+      "Qt6Network.dll",
+      "Qt6OpenGL.dll",
+      "Qt6Qml.dll",
+      "Qt6QmlMeta.dll",
+      "Qt6QmlModels.dll",
+      "Qt6QmlWorkerScript.dll",
+      "Qt6Quick.dll",
+      "Qt6QuickControls2.dll",
+      "Qt6QuickControls2Basic.dll",
+      "Qt6QuickControls2BasicStyleImpl.dll",
+      "Qt6QuickControls2Impl.dll",
+      "Qt6QuickDialogs2.dll",
+      "Qt6QuickDialogs2QuickImpl.dll",
+      "Qt6QuickDialogs2Utils.dll",
+      "Qt6QuickLayouts.dll",
+      "Qt6QuickShapes.dll",
+      "Qt6QuickTemplates2.dll",
+      "qwindows.dll"
+    ],
+    "qt_modules_from_package": true,
+    "screenshot": {
+      "height": 741,
+      "source_color_pixels": {
+        "blue": 182780,
+        "green": 182780,
+        "red": 182780
+      },
+      "width": 1164
+    },
+    "version": "0.1.0-alpha.1"
+  },
+  "schema": 1,
+  "source": {
+    "commit": "9698ff01f2b384e0aa4a062f96bc660e3f7af1af",
+    "dirty": false,
+    "origin": "git"
+  },
+  "source_media_sha256_unchanged": "e1d871f879453d0161641d06505f857b5a4ea0d43cc92091f31d0cb24bd1b209",
+  "target": "windows-x86_64"
+}

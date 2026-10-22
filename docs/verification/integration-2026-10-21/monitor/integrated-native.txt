@@ -1,0 +1,12 @@
+********* Start testing of MonitorOutputTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MonitorOutputTests::initTestCase()
+QINFO  : MonitorOutputTests::testNativeGpuColorPatch() native output shader patch QColor(ARGB 1, 0.670588, 0.482353, 0.309804) Qt reference QColor(ARGB 1, 0.670588, 0.482353, 0.309804) DPR 1
+PASS   : MonitorOutputTests::testNativeGpuColorPatch()
+QINFO  : MonitorOutputTests::testNativeDisplayIdentityStateRestore() native display0 DPR 1 saved QMap(("centerX", QVariant(double, 352))("centerY", QVariant(double, 240))("fit", QVariant(QString, ""))("sourceHeight", QVariant(int, 480))("sourceWidth", QVariant(int, 640))("zoom", QVariant(double, 1.25))) restored QMap(("centerX", QVariant(double, 352))("centerY", QVariant(double, 240))("fit", QVariant(QString, ""))("sourceHeight", QVariant(int, 480))("sourceWidth", QVariant(int, 640))("zoom", QVariant(double, 1.25)))
+QINFO  : MonitorOutputTests::testNativeDisplayIdentityStateRestore() native display1 DPR 2 saved QMap(("centerX", QVariant(double, 320))("centerY", QVariant(double, 140))("fit", QVariant(QString, ""))("sourceHeight", QVariant(int, 480))("sourceWidth", QVariant(int, 640))("zoom", QVariant(double, 0.8))) restored QMap(("centerX", QVariant(double, 320))("centerY", QVariant(double, 140))("fit", QVariant(QString, ""))("sourceHeight", QVariant(int, 480))("sourceWidth", QVariant(int, 640))("zoom", QVariant(double, 0.8)))
+QINFO  : MonitorOutputTests::testNativeDisplayIdentityStateRestore() native output profile status "SDR output profile: P27h-20"
+PASS   : MonitorOutputTests::testNativeDisplayIdentityStateRestore()
+PASS   : MonitorOutputTests::cleanupTestCase()
+Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 892ms
+********* Finished testing of MonitorOutputTests *********

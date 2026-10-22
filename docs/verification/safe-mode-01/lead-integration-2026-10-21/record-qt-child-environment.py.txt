@@ -1,0 +1,16 @@
+import json,os,runpy,subprocess,sys
+from pathlib import Path
+original_run=subprocess.run
+names=("QT_SCALE_FACTOR","QT_SCREEN_SCALE_FACTORS","QT_ENABLE_HIGHDPI_SCALING","QT_SCALE_FACTOR_ROUNDING_POLICY","QT_AUTO_SCREEN_SCALE_FACTOR","QT_FONT_DPI","QT_QPA_PLATFORM","QT_LOGGING_RULES","QT_MESSAGE_PATTERN","QT_QUICK_BACKEND","QMLSCENE_DEVICE","QSG_RHI_BACKEND","QSG_RENDER_LOOP","QT_D3D_ADAPTER_INDEX")
+def recorded_run(*args,**kwargs):
+    env=kwargs.get("env") or os.environ
+    trace=env.get("GLANCELOT_TRACE_FILE")
+    if trace:
+        p=Path(trace)
+        expected=Path("build-codex-safe-mode-01/recovery-process").resolve()
+        if not p.resolve().is_relative_to(expected):
+            raise RuntimeError("Unexpected diagnostic trace root")
+        p.with_suffix(".qt-env.json").write_text(json.dumps({k:env.get(k) for k in names},indent=2)+"\n",encoding="utf-8")
+    return original_run(*args,**kwargs)
+subprocess.run=recorded_run
+runpy.run_path("scripts/verify-recovery.py",run_name="__main__")
