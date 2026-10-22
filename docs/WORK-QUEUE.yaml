@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: null
+integration_lock: codex-lead-monitor-custom-01
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -455,14 +455,14 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: review
+    state: integration
     branch: codex/monitor-custom-01
     worktree: .worktrees/codex-monitor-custom-01
     build: build-codex-monitor-custom-01
     plan: docs/MONITOR-CUSTOM-01-PLAN.md
-    candidate_commit: 6e228045f28b5c73819c37fc20ccf961082a13c4
+    candidate_commit: af339f93e0d0463962914296ade684edb98606eb
     candidate_evidence: docs/verification/monitor-custom-01/codex-2026-10-22/README.md
-    review_status: Actual read-only Sonnet5.5 follow-up running at6e22804; prior2f73 findings corrected; focused30 coordinator and12 UI pass plus1 native-only skip; native exposure failure retained and isolated rendering proof passed; full gates pending
+    review_status: Actual Sonnet5.5 source approval ataf339f9 (fcc1ab9f-4a81-4dbc-b2d9-18b72e945d4a); full locked integration gates pending; native candidate13/13 plus real two-display windowed frame/move probe pass
     contract_commit: 5387bbde328861fa667b129d8fb2414526909a21
     contract: include/glancelot/monitor_customization.hpp; PaneLayout snapshot extension; cmake/MonitorCustomization.cmake
     reviewer_lane: claude
