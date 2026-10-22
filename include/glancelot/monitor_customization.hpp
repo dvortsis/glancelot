@@ -25,6 +25,7 @@ public:
     explicit MonitorCustomization(DisplayManager* displays, PaneLayout* panes, QObject* parent = nullptr);
     ~MonitorCustomization() override;
     void setSlot(int slot);
+    Q_INVOKABLE void reloadPreferences();
     void setControllerWindow(QQuickWindow* window);
     QVariantMap outputOptions() const;
     QVariantMap paneRoutes() const;
