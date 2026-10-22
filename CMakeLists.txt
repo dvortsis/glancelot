@@ -279,6 +279,11 @@ if(GLANCELOT_BUILD_VIEWER)
     set_tests_properties(monitor_output PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     include(cmake/RecoveryTests.cmake)
   endif()
+  # MONITOR-CUSTOM-01 lead freeze: activate complete production/test wiring once
+  # Claude supplies the packet. Lead removes this guard before final integration.
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/app/monitor_customization.cpp")
+    include(cmake/MonitorCustomization.cmake)
+  endif()
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)

@@ -456,6 +456,15 @@ tasks:
     owner: lead
     owner_lane: claude
     state: ready
+    branch: claude/monitor-custom-01
+    worktree: .worktrees/claude-monitor-custom-01
+    build: build-claude-monitor-custom-01
+    plan: docs/MONITOR-CUSTOM-01-PLAN.md
+    contract: include/glancelot/monitor_customization.hpp; PaneLayout snapshot extension; cmake/MonitorCustomization.cmake
+    reviewer_lane: codex
+    memory_action: act_mvizztm4_b96f100d13ec
+    blocked_by: null
+    start_gate: Lead contract frozen; dependencies integrated; Claude may start as its sole active implementation. Owns ui/Main.qml for this wave. No queue/root CMake/public-header edits; request lead amendment if needed.
     depends: [MONITOR-OUTPUT-01, UI-SETTINGS-01]
     outcome: Display picker, named presentation presets and independent output customization
     acceptance: Identify/swap/move/disable output and recovery commands; detach/re-dock tree, grid, preview and metadata panes across displays with per-pane freeze, global layout lock and named workspace presets; fullscreen/windowed, fit/actual size, linked or independent viewports, background, overlays and cursor policy; persist per slot; missing displays recover controls onscreen

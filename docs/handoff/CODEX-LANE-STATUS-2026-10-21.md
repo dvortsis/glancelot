@@ -1,5 +1,7 @@
 # Current closeout, October 21, 2026
 
+MONITOR-CUSTOM-01 is now lead-frozen and assigned to Claude: branch claude/monitor-custom-01, worktree .worktrees/claude-monitor-custom-01, build build-claude-monitor-custom-01. [Start packet](MONITOR-CUSTOM-01-CLAUDE-START.md). The lead-owned contract blocker is removed; serialize against Claude's current stack implementation. This is a ready packet, not a delivered feature. Codex independently reviews it after implementation; MONITOR-VERIFY still depends on completion.
+
 EXPORT-CSV-01 exact Gemini7ded057 was independently reviewed: **CHANGES REQUIRED**, review commit b925b26 / main publication1226d33. Targeted candidate test passes; generated review probes reproduce cancellation replacing destinations, mixed-identity duplicates and Windows Unicode destination failure; Linux also reproduces overwrite=false publication loss and lexical-relative mismatch. [Review and raw output](../verification/EXPORT-CSV-01-CODEX-REVIEW.md). Gemini owns corrections; no rejected implementation is merged. MONITOR-VERIFY still waits for Claude's MONITOR-CUSTOM-01. No promoted Codex implementation packet is currently startable.
 
 Watcher phase observability is integrated at `067244d`: independent Sonnet acceptance, full Windows39/39 and Docker39/39, identical merge tree and integrated targeted watcher pass. [Watcher integration handoff](FS-WATCH-HARNESS-01-INTEGRATION-2026-10-21.md) contains the actual output. Historical timeout risk remains open; the packet changes diagnostics only.
