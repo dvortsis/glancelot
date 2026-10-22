@@ -1,0 +1,201 @@
+{
+  "passed": true,
+  "raw_files": 39,
+  "files": [
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/CLAUDE-ACCEPT.md",
+      "sha256": "a01952d4d198bc1ee29553f59a6890015d5504416806aabd68e42febc2145338",
+      "bytes": 4239
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/audit-phase-logs.py",
+      "sha256": "27a3b10e1ca867509c994278161c0c8d421a33e39b62397e45e432899f2f1964",
+      "bytes": 1315
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/base.txt",
+      "sha256": "d1ceec25d2dba452ef604c54a0c7adc993dfaff5c3bcc5a892b73c7b904edf03",
+      "bytes": 41
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/claude-status.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/claude-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/claude.json",
+      "sha256": "6ecd4badd0b34673d575ffc166782d7364024fe673085fa297ad1b9fa691632c",
+      "bytes": 6122
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/docker-full-status.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/docker-full.txt",
+      "sha256": "499dbbfec52b1af859230bde6b8dcd02df0d84a92bcb0908567df513f5ccbaa0",
+      "bytes": 79856
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/export-linux.ps1",
+      "sha256": "9dddb74f7c667558e5f6e84b30cb2061412a191b3233c2fb97ba6875b2105711",
+      "bytes": 979
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/full-gate-source.txt",
+      "sha256": "a8c19f18aa6225b1c94114697de16a4d1621f2ba59d2793c8058205e197e67e5",
+      "bytes": 41
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/full-gates.ps1",
+      "sha256": "ab96c7264cbfb83b25dd8631f22be422ca7e0c6202f95a2b940528705b31e2ac",
+      "bytes": 710
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/integrated-budget-results.txt",
+      "sha256": "18d5153aa55eb6016fdeede30ae2421b1a3829ea9c9c7b91110ad5e4f54fd5fb",
+      "bytes": 5595
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/integrated-commit.txt",
+      "sha256": "537ffe29c0974e9a3381aa6c721483d33ca82209ba0b5cf0b693b1996d1c8e0a",
+      "bytes": 41
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/integrated-ctest-status.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/integrated-ctest.txt",
+      "sha256": "e4a57da3d3c2c0adeb22ad6028ee46d5fb48c767924fe1182c4868c05d0cd7ff",
+      "bytes": 278
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/integrated-phase-audit.json",
+      "sha256": "c76cc9e59edff49b8a933f61eaf91b46ff161571b3f09c2a2df32fc7febaa6b2",
+      "bytes": 3173
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/integrated-tree-equivalence.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-copy-Testing.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-copy-fs-watch-budget-results.txt.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-export-build-status.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-export-build.txt",
+      "sha256": "a11a4d3ed1795831def9ef2355da229a72d82c5d2ac29b42a4b12195e2767a09",
+      "bytes": 3985
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-export-container-remove.txt",
+      "sha256": "d05d00fe4aa7e4e5bea796abf305e5706e970496e7762161415262ec6f5bbdf0",
+      "bytes": 66
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-phase-audit.json",
+      "sha256": "41398f53d783c6af53e11233a5e29708ee1e0b99de8acf9e369fac335f78e2fe",
+      "bytes": 3172
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-raw/Testing/Temporary/CTestCostData.txt",
+      "sha256": "8f78eab7da6c7a01d28d18401df920a4e22cbda6138fbadd403fae76663b5d66",
+      "bytes": 932
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-raw/Testing/Temporary/LastTest.log",
+      "sha256": "b9b7e2284ffef87ed37f64e337a66ea1456bd0e210e2f9fddba2bdc5b1aef42f",
+      "bytes": 548614
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/linux-raw/fs-watch-budget-results.txt",
+      "sha256": "52491b146daf42e50f8fb80a40d1c62e8c6b18e41ab3174df53d8cb4e54a98d4",
+      "bytes": 4197
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/review-prompt.txt",
+      "sha256": "69e39971841dc82c4cc4db2292972bb95bfdca4dbdecc9b2e65d8a61d6a2adb5",
+      "bytes": 1393
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/review.patch",
+      "sha256": "c5e8e115cb45be7af505af46b8718b8c89e9b551a59daf8cc6360ea3b7676b25",
+      "bytes": 6304
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/source-equivalence.json",
+      "sha256": "287025d7b824d9571d17c5ed7928c43c8489dc1ab87940c97645594fcc943f5c",
+      "bytes": 673
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/target-build.txt",
+      "sha256": "a4d49314e39b3c528860023a2999faf02bde87c53e10807e6a27d4be222a20a4",
+      "bytes": 6570
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/target-ctest-status.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/target-ctest.txt",
+      "sha256": "43b40302bad1778ab6d947f6fd7753b3e6e0aa57fdef75efce8f9d83ad8435bf",
+      "bytes": 278
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/target-log-audit.json",
+      "sha256": "6d5cc48416f92cdf0a4c4e1b853b18467e08e799168a6dbb4831f7198db4471e",
+      "bytes": 3155
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/target-results.txt",
+      "sha256": "d9a1099fdbdcbe5349c972f9d2392b513454a1eef02ab9c1e421fa594258f871",
+      "bytes": 4760
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/verify-source-equivalence.py",
+      "sha256": "eee8db1087bbdeb4526cfb9b5eb52fbe08e4d3753c204a1d864e0b47cdbab1f4",
+      "bytes": 1801
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/windows-full-budget-results.txt",
+      "sha256": "2d5c782d2e9378f67e287aa9060d93c116b0e44293756a4278b8e0f57bf79b98",
+      "bytes": 5589
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/windows-full-status.txt",
+      "sha256": "2095d5302e465922147e220c0389f7a923ea0c1509a23097f04b3c220798aef8",
+      "bytes": 8
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/windows-full.txt",
+      "sha256": "8a00990b36f87b42eaf44b3871eaededcecdbc7b3a333f17e90090b0b064d090",
+      "bytes": 43751
+    },
+    {
+      "path": "docs/verification/fs-watch-harness-01/2026-10-21/windows-phase-audit.json",
+      "sha256": "a8c51c2d611dd42dfdc5ab101c7e63ac8d70d00a9f9487e3dff5eee0bdf42c1e",
+      "bytes": 6295
+    }
+  ]
+}

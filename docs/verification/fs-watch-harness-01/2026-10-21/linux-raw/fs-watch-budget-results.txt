@@ -1,0 +1,30 @@
+********* Start testing of FSWatchBudgetTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+PASS   : FSWatchBudgetTests::initTestCase()
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE baseline total_ms 0
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-generation total_ms 114
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 25000 total_ms 1160
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 50000 total_ms 2671
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 75000 total_ms 4441
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE initial-publication total_ms 6422
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE ordinary-measurement-complete total_ms 16730
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 6307 ms; initial GUI gap 31 ms; sustained-writer/recovery GUI gap 29 ms; writes 274 invalidations 14
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-writer total_ms 16730
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-measurement-complete total_ms 19937
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 22 ms; GUI gap 65 ms; publication 49 ms; writes 65
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE clear-filter total_ms 19937
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-removal total_ms 19945
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 25000 total_ms 20556
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 50000 total_ms 21143
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 75000 total_ms 21715
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE rename-complete-baseline total_ms 22260
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-destruction total_ms 22312
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 21 identity 0 merge (includes disposal) 15 merge scan 3 reset 0 projection/raw mirror 6 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 19 identity 0 merge (includes disposal) 11 merge scan 2 reset 0 projection/raw mirror 7 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 49 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 49 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 23 maximum 49 ms; loading at exit false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_LIFETIME last_phase fixture-destruction total_ms 22320
+PASS   : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchBudgetTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 22321ms
+********* Finished testing of FSWatchBudgetTests *********

@@ -1,5 +1,7 @@
 # Current closeout, October 21, 2026
 
+Watcher phase observability is integrated at `067244d`: independent Sonnet acceptance, full Windows39/39 and Docker39/39, identical merge tree and integrated targeted watcher pass. [Watcher integration handoff](FS-WATCH-HARNESS-01-INTEGRATION-2026-10-21.md) contains the actual output. Historical timeout risk remains open; the packet changes diagnostics only.
+
 INPUT and monitor integrations are complete, followed by SAFE and startup correction integration at `e39eee2`. Both final SAFE/startup full gates pass39/39; independent actual Sonnet accepted source and compatibility; exact integrated focused5/5 plus35-command native proof passes. See [current SAFE/startup handoff](SAFE-STARTUP-INTEGRATION-2026-10-21.md) and [INPUT/monitor handoff](INPUT-MONITOR-INTEGRATION-2026-10-21.md) for source pins, actual output and limits. Integration lock is released in closeout. The older status below is historical and does not supersede these final records.
 
 ---
