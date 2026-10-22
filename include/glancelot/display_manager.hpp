@@ -129,6 +129,8 @@ public:
     // MONITOR-CUSTOM-01: validated coordinator policy. One bounded latest-frame
     // slot for independent presentation cadence; no independent decode/scan.
     void setRoutingPolicy(const QVariantMap& policy);
+    // GUI-thread bookkeeping for a real presentation-window screenChanged event.
+    void synchronizePresentationScreen(QScreen* screen);
     quint64 outputGeneration() const;
     QString routingStatus() const;
     Q_INVOKABLE void pinCurrentImage();
