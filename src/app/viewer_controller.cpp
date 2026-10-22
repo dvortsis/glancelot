@@ -1216,12 +1216,13 @@ void ViewerController::flushWindowPosition(){d->writePosition();}
 void ViewerController::restoreWindow(){
     if(d->safeMode||d->explicitPositionIntent||d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
     QString folder,image;
+    QJsonObject entry; // the saved settings entry (F015 tabs); a recovery session only carries folder and image
     if(d->recoverySession) {
         if(!d->recoveryResumeReady){d->restorePending=true;d->recoveryPoll.start();return;}
         folder=d->recoveryResume.folder;image=d->recoveryResume.image;
     }else {
         QJsonObject settings;if(!readSettings(settings).ok())return;
-        const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
+        entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
         folder=entry.value("folder").toString();image=entry.value("image").toString();
     }
     d->restorePending=false;
