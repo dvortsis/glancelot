@@ -194,7 +194,7 @@ tasks:
     commit: db64e0f
     evidence: docs/verification/GRID-DENSITY-01.md; independent review approved; Windows build.ps1 -Test 16/16 (184.23s); Linux Docker Qt 16/16 (108.64s)
     outcome: Thumbnail size zoom buckets, Ctrl+Wheel zoom, and selection commands with summary badge (F010/F011)
-    acceptance: Thumbnail size presets/buckets (96px, 128px, 160px default, 220px, 320px); zoom in (Ctrl++ / Ctrl+=), zoom out (Ctrl+-), and reset zoom (Ctrl+0); Ctrl+Wheel over grid zooms between buckets; zoom changes do not lose scroll position or selected item; select all (Ctrl+A); clear selection (Escape / Ctrl+D) when multiple items selected; invert selection (Ctrl+I); status bar / footer selection badge showing 'Selected: N items (X MB)' when selection count > 0; text editing retains shortcut precedence
+    acceptance: "Thumbnail size presets/buckets (96px, 128px, 160px default, 220px, 320px); zoom in (Ctrl++ / Ctrl+=), zoom out (Ctrl+-), and reset zoom (Ctrl+0); Ctrl+Wheel over grid zooms between buckets; zoom changes do not lose scroll position or selected item; select all (Ctrl+A); clear selection (Escape / Ctrl+D) when multiple items selected; invert selection (Ctrl+I); status bar / footer selection badge showing 'Selected: N items (X MB)' when selection count > 0; text editing retains shortcut precedence"
     verification: Bucket boundary clamping, wheel step direction, zoom reset, select-all count, invert selection parity, clear selection keeps cursor, byte size calculation formatted with KB/MB/GB, empty folder, text field precedence
   - id: UI-SETTINGS-01
     requirements: [UX-17, IN-06, UX-06, UX-07, UX-11, SYS-03]
@@ -248,23 +248,29 @@ tasks:
     owner: lead
     owner_lane: codex
     reviewer_lane: claude
-    state: integration
+    state: "integration"
     branch: codex/grid-resize-test-01
     worktree: .worktrees/codex-grid-resize-test-01
     build: build-codex-grid-resize-test-01
     outcome: Wait for asynchronous GridView resize cleanup before the existing stable delegate assertion
     acceptance: Preserve delegate limit and geometry assertions; bounded wait only; source/test independent review; actual repeated targeted output and complete integration gates
+    candidate_commit: "498d92279a356d064595c2781f84bad89c3624c3"
+    review_evidence: "docs/verification/grid-resize-test-01/claude-review/REVIEW.md"
+    evidence: "docs/verification/grid-resize-test-01/README.md; docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md"
   - id: CACHE-BASELINE-TEST-01
     requirements: [SYS-05, SYS-02]
     owner: lead
     owner_lane: codex
     reviewer_lane: claude
-    state: implementing
+    state: "integration"
     branch: codex/cache-baseline-test-01
     worktree: .worktrees/codex-cache-baseline-test-01
     build: build-codex-cache-baseline-test-01
     outcome: Exercise verified cache reuse independently from the separately tested late-baseline fallback
     acceptance: Existing private test-only baseline hook; production100ms unchanged; no assertion removal; actual repeated native logs; independent review and full integration gates
+    candidate_commit: "d63cd9d5f36f0134a4b42bcddeaa4b62ddad198f"
+    review_evidence: "docs/verification/cache-baseline-test-01/review/REVIEW.md"
+    evidence: "docs/verification/cache-baseline-test-01/README.md; docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md"
   - id: CANVAS-UI
     requirements: [PERF-01, UX-01, VIEW-01, VIEW-03, VIEW-04, IN-04]
     owner: canvas
@@ -508,6 +514,8 @@ tasks:
     outcome: Independent Windows and Linux second-monitor qualification matrix
     acceptance: Exact platform and hardware evidence for mixed DPI/refresh, per-monitor color, focus, hotplug, restore, customization and bounded resources; unsupported compositor or browser capabilities clearly identified
     verification: SECOND-MONITOR-PLAN.md matrix, generated fixtures, actual command output and integrated build tests; no headless-to-physical inference
+    reviewer_lane: "claude"
+    qualification_status: "Dependency-unblocked; physical mixed-DPI, refresh, per-monitor ICC/HDR and native Linux Wayland/X11 matrix remains unverified; see docs/handoff/LEAD-WRAPUP-2026-10-22.md"
   - id: CACHE-01
     requirements: [PERF-04, NAV-07, SYS-02]
     milestone: M3
@@ -721,20 +729,28 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: ready
+    state: "review"
     depends: [PATH-BAR-01]
     outcome: Breadcrumbs plus cancellable path completion (F002)
     acceptance: Jump to ancestors and siblings; completion only for the typed scope, cancellable off the GUI thread; clipboard, UNC, Unicode, keyboard and long paths keep exact text semantics
+    branch: "claude/f002"
+    candidate_commit: "e05614f"
+    blocked_by: "Current-main stack synchronization, frozen corrections and per-packet Gemini confirmation; docs/handoff/LEAD-WRAPUP-2026-10-22.md"
+    evidence: "docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md; original Gemini approvals predate integrated monitor customization"
   - id: VIEW-POLISH-01
     requirements: [VIEW-02, VIEW-03, VIEW-04]
     milestone: M3
     priority: 6
     owner: lead
     owner_lane: claude
-    state: ready
+    state: "review"
     depends: [CANVAS-UI]
     outcome: Quick loupe, zoom presets, navigator overview and zoom-lock polish (F037)
     acceptance: Predictable zoom anchor; focus-loss and hold cancellation; physical 1:1 under fractional DPI is unverified without hardware
+    branch: "claude/f037"
+    candidate_commit: "2891250"
+    blocked_by: "Current-main stack synchronization, frozen corrections and per-packet Gemini confirmation; docs/handoff/LEAD-WRAPUP-2026-10-22.md"
+    evidence: "docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md; original Gemini approvals predate integrated monitor customization"
   - id: FS-WATCH-01
     requirements: [META-04, NAV-08, SYS-02]
     milestone: M3
@@ -843,25 +859,6 @@ tasks:
     depends: [IO-01]
     outcome: Qualified common raster additions and RAW embedded-preview-first adapters
     acceptance: License/provenance and actual still/sequence/preview capability fixtures; no extension-only support claims
-next_milestone: M3
-priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02, MONITOR-OUTPUT-01]
-priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Planning only; all new tasks remain ready and unverified.
-priority_amendment:
-  date: '2026-10-17'
-  memory_action: act_mvdeiww0_6c757fbdc70c
-  scope: Path bar, configurable panes, simultaneous grid/preview, mixed file/folder grid, explicit deletion and shortcuts, advanced settings and themed top bar
-  implementation_gate: Assign isolated branch/worktree/build directory and freeze shared contracts before coding; use relevant ui-design-skills adapted to Qt/QML; independent review and integrated scripts/build.ps1 -Test with actual evidence required before done
-unverified:
-  - Physical Linux windowing, display profiles, HDR and high-refresh presentation
-  - Full Linux GUI build (core tests verified in Ubuntu 24.04 WSL/GCC)
-theme_task:
-  id: THEME-01
-  state: done
-  memory_action: act_mvct93q3_63da8c255b4b
-  outcome: Supplied Slate and Ice branding plus 40 families and 80 built-in variants
-  acceptance: Exact supplied tokens, persisted settings, contrast, live search, compact layout, portable smoke
-remaining_waves: [browsing, culling, format_completion, hardening, expansions]
-
   - id: PLATFORM-FIXTURE-SECURITY-01
     requirements: [SYS-04, SYS-05]
     owner: lead
@@ -873,6 +870,8 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     plan: docs/PLATFORM-FIXTURE-SECURITY-01-PLAN.md
     memory_action: act_mvgrfsa8_be3125ae52b0
     evidence: docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
+    acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
+    outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged
 
   - id: EXPORT-CSV-01
     requirements: [SYS-06, SYS-02]
@@ -882,18 +881,42 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     owner: lead
     owner_lane: gemini
     reviewer_lane: codex or claude (first free reviewer slot; never gemini)
-    state: review
-    review_verdict: CHANGES REQUIRED at d3df4ed1a368fcd4a1668ffd005524dc6e319b0c (second review); independent Claude review bf3d4c1a750b0f3ef29f29fc13c8eee4cf499326 on claude/review-export-csv-01-r2. Earlier CHANGES REQUIRED at 7ded057bdc706c0040d8ed7b321ee53985753d08 by Codex b925b26, published main1226d33
-    review_evidence: docs/verification/EXPORT-CSV-01-CODEX-REVIEW.md; docs/verification/EXPORT-CSV-01-CLAUDE-REVIEW.md and docs/verification/export-csv-01/review-d3df4ed-claude/ (on claude/review-export-csv-01-r2 at bf3d4c1, not yet on main)
-    blocked_by: Gemini correction commit for four required corrections from the d3df4ed review. (1) Remove the destination-filename branch at src/core/selection_export.cpp:361 (production code keyed on test name cancel-1), call progress unconditionally, rework cancel tests with ordinary destination names (cancel at done==0 and on the last item's callback; drop cancel at done==total), assert Cancelled, destination unchanged, no temp left. (2) Unicode destination and directory test with a progress callback supplied; assert Written and no leftover .glancelot_export_*.tmp; exception-safe (RAII) temp cleanup. (3) Real symlink/junction regression for the lexical relative-root policy, shown to fail against the fs::relative form. (4) Replace O(n^2) per-pair filesystem dedup with hash sets (known identities plus lexically normalised, Windows case-folded path key for unknown) and add a bounded-time test (about 5000 unknown-identity items in seconds); SYS-02. New pinned commit and actual test output required before re-review. Linux/Docker still unverified.
+    state: "integration"
+    review_verdict: "APPROVED at25146f6450fcac5b7f6a8c6b71f47fe470665698; independent Claude Sonnet5.5 review0a38bd9c18c1fb72e7b564038f612ae7adbc9014"
+    review_evidence: "docs/verification/EXPORT-CSV-01-CLAUDE-REVIEW-R2.md"
+    blocked_by: null
     depends: [DELETE-01]
     branch: agent/export-csv
     worktree: .worktrees/export-csv
     build: build-export-csv
     plan: docs/EXPORT-CSV-01-PLAN.md
-    contract: include/glancelot/selection_export.hpp; cmake/ExportTests.cmake (included when src/core/selection_export.cpp exists)
+    contract: "include/glancelot/selection_export.hpp; cmake/ExportTests.cmake required unconditionally"
     outcome: Selection CSV and path-list export engine for downstream tools (engine only; UI is a later Claude packet; JSON manifest stays with F030)
     acceptance: RFC 4180 quoting; formula-injection neutralization; Unicode round-trip; relative-root policy with outside-root skip; revalidated snapshot; never overwrites an exported item; atomic temp-and-rename; cancellation leaves nothing behind; bounded items; generation echoed
     verification: tests/selection_export_tests.cpp per plan section 4; actual ctest output; full Windows and Docker gates under gate_lock
-    acceptance: Retire flagged fixture; no executable impersonation/self-copy/PATH override/suspended-thread startup; preserve real Unicode argv/CWD and COM/PIDL/fallback validation; independent PLATFORM review before execution, complete gates and integrated checks before releasing hold
-    outcome: Reviewed by Claude752758c/e7afce5 and merged334065e; integrated Windows29/29 364.45s and fresh Linux29/29 305.76s; platform26/26 zero skips; replacement qualified, retired fixture permanently blocked; production unchanged
+    candidate_commit: "25146f6450fcac5b7f6a8c6b71f47fe470665698"
+    integration_branch: "codex/integrate-export-csv-01"
+    integration_worktree: ".worktrees/codex-integrate-export-csv-01"
+    integration_build: "build-codex-integrate-export-csv-01"
+    gated_commit: "845509f1930bd62cb24194a3182d94267c67dafc"
+    integration_evidence: "docs/handoff/EXPORT-CSV-01-INTEGRATION-2026-10-22.md"
+    follow_up: "Approved nonblocking O1 invalid native Unicode item path can throw with RAII cleanup; future Qt service must contain worker exceptions. O2 link-test skip visibility and O3 filesystems without hard links remain recorded in independent review. Engine only; no export dialog claimed."
+next_milestone: M3
+priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02, MONITOR-OUTPUT-01]
+priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Original planning note; current per-task states and pinned evidence are authoritative.
+priority_amendment:
+  date: '2026-10-17'
+  memory_action: act_mvdeiww0_6c757fbdc70c
+  scope: Path bar, configurable panes, simultaneous grid/preview, mixed file/folder grid, explicit deletion and shortcuts, advanced settings and themed top bar
+  implementation_gate: Assign isolated branch/worktree/build directory and freeze shared contracts before coding; use relevant ui-design-skills adapted to Qt/QML; independent review and integrated scripts/build.ps1 -Test with actual evidence required before done
+unverified:
+  - Physical Linux windowing, display profiles, HDR and high-refresh presentation
+  - Native Linux Wayland/X11 physical GUI qualification (full Docker GUI builds and offscreen tests do not qualify physical outputs)
+theme_task:
+  id: THEME-01
+  state: done
+  memory_action: act_mvct93q3_63da8c255b4b
+  outcome: Supplied Slate and Ice branding plus 40 families and 80 built-in variants
+  acceptance: Exact supplied tokens, persisted settings, contrast, live search, compact layout, portable smoke
+remaining_waves: [browsing, culling, format_completion, hardening, expansions]
+

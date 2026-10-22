@@ -1,0 +1,25 @@
+UpdateCTestConfiguration  from :C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01/build-codex-cache-baseline-test-01/DartConfiguration.tcl
+Parse Config file:C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01/build-codex-cache-baseline-test-01/DartConfiguration.tcl
+Test project C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01/build-codex-cache-baseline-test-01
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 29
+    Start 29: cache
+
+29: Test command: C:\src\Github\Glancelot\.worktrees\codex-cache-baseline-test-01\build-codex-cache-baseline-test-01\cache_tests.exe "-o" "C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01/build-codex-cache-baseline-test-01/cache-results.txt,txt" "-o" "-,txt"
+29: Working Directory: C:/src/Github/Glancelot/.worktrees/codex-cache-baseline-test-01/build-codex-cache-baseline-test-01
+29: Environment variables: 
+29:  QT_QPA_PLATFORM=offscreen
+29: Test timeout computed to be: 180
+1/1 Test #29: cache ............................   Passed    5.32 sec
+
+The following tests passed:
+	cache
+
+100% tests passed out of 1
+
+Total Test time (real) =   5.33 sec

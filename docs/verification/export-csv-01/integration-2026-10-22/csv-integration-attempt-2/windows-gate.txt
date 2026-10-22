@@ -1,0 +1,159 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (14.6s)
+-- Generating done (1.1s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01
+[1/181] Automatic MOC and UIC for target glancelot_recovery_common
+[2/179] Automatic MOC and UIC for target glancelot_test_argv_capture
+[3/177] Automatic MOC and UIC for target glancelot_platform
+[4/175] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/173] Automatic MOC and UIC for target startup_window_geometry_tests
+[6/171] Automatic MOC and UIC for target pane_layout_tests
+[7/169] Automatic MOC and UIC for target glancelot
+[8/168] Automatic MOC and UIC for target glancelot-decoder
+[9/166] Running AUTOMOC file extraction for target glancelot
+[10/166] Running moc --collect-json for target glancelot
+[11/113] Automatic MOC and UIC for target theme_tests
+[12/111] Automatic MOC and UIC for target recovery_startup_tests
+[13/109] Automatic MOC and UIC for target input_ui_tests
+[14/107] Automatic MOC and UIC for target fs_watch_ui_tests
+[15/105] Automatic MOC and UIC for target monitor_output_tests
+[16/103] Automatic MOC and UIC for target recovery_tests
+[17/101] Automatic MOC and UIC for target recovery_controller_tests
+[18/99] Automatic MOC and UIC for target monitor_customization_tests
+[19/97] Automatic MOC and UIC for target monitor_customization_ui_tests
+[20/95] Automatic MOC and UIC for target acceptance_tests
+[21/93] Automatic MOC and UIC for target thumbnail_tests
+[22/91] Automatic MOC and UIC for target folder_tree_tests
+[23/89] Automatic MOC and UIC for target window_slot_tests
+[24/87] Automatic MOC and UIC for target file_operation_service_tests
+[25/85] Automatic MOC and UIC for target directory_model_tests
+[26/83] Automatic MOC and UIC for target canvas_tests
+[27/81] Automatic MOC and UIC for target platform_integration_tests
+[28/79] Automatic MOC and UIC for target grid_search_tests
+[29/77] Automatic MOC and UIC for target grid_density_tests
+[30/75] Automatic MOC and UIC for target ui_settings_tests
+[31/73] Automatic MOC and UIC for target grid_ui_tests
+[32/72] Automatic MOC and UIC for target fs_watch_tests
+[33/70] Automatic MOC and UIC for target fs_watch_budget_tests
+[34/68] Automatic MOC and UIC for target favorites_tests
+[35/66] Automatic MOC and UIC for target folder_history_tests
+[36/64] Automatic MOC and UIC for target shortcuts_help_tests
+[37/62] Automatic MOC and UIC for target filter_tests
+[38/60] Automatic MOC and UIC for target io_scheduler_tests
+[39/58] Automatic MOC and UIC for target metadata_tests
+[40/56] Automatic MOC and UIC for target animation_tests
+[41/54] Automatic MOC and UIC for target mutation_tests
+[42/52] Automatic MOC and UIC for target copy_move_tests
+[43/50] Automatic MOC and UIC for target format_tests
+[44/48] Automatic MOC and UIC for target cache_tests
+[45/46] Building CXX object CMakeFiles\grid_ui_tests.dir\tests\grid_ui_tests.cpp.obj
+[46/46] Linking CXX executable grid_ui_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-integrate-export-csv-01/build-codex-integrate-export-csv-01
+      Start  1: selection_export
+ 1/42 Test  #1: selection_export .................   Passed    0.23 sec
+      Start  2: perf_trace
+ 2/42 Test  #2: perf_trace .......................   Passed    0.03 sec
+      Start  3: navigation
+ 3/42 Test  #3: navigation .......................   Passed    2.03 sec
+      Start  4: directory_listing
+ 4/42 Test  #4: directory_listing ................   Passed   11.36 sec
+      Start  5: file_operations
+ 5/42 Test  #5: file_operations ..................   Passed    0.13 sec
+      Start  6: startup_window_geometry
+ 6/42 Test  #6: startup_window_geometry ..........   Passed    0.04 sec
+      Start  7: viewer_acceptance
+ 7/42 Test  #7: viewer_acceptance ................   Passed    8.99 sec
+      Start  8: thumbnails
+ 8/42 Test  #8: thumbnails .......................   Passed    6.04 sec
+      Start  9: folder_tree
+ 9/42 Test  #9: folder_tree ......................   Passed    8.67 sec
+      Start 10: pane_layout
+10/42 Test #10: pane_layout ......................   Passed    0.43 sec
+      Start 11: window_slots
+11/42 Test #11: window_slots .....................   Passed   25.25 sec
+      Start 12: folder_grid
+12/42 Test #12: folder_grid ......................   Passed  183.62 sec
+      Start 13: input_ui
+13/42 Test #13: input_ui .........................   Passed   38.37 sec
+      Start 14: file_operation_service
+14/42 Test #14: file_operation_service ...........   Passed    1.55 sec
+      Start 15: directory_model
+15/42 Test #15: directory_model ..................   Passed   21.02 sec
+      Start 16: viewport
+16/42 Test #16: viewport .........................   Passed    0.06 sec
+      Start 17: themes
+17/42 Test #17: themes ...........................   Passed    0.44 sec
+      Start 18: platform_integration
+18/42 Test #18: platform_integration .............   Passed    1.16 sec
+      Start 19: grid_search
+19/42 Test #19: grid_search ......................   Passed    0.28 sec
+      Start 20: grid_density
+20/42 Test #20: grid_density .....................   Passed    0.20 sec
+      Start 21: ui_settings
+21/42 Test #21: ui_settings ......................   Passed    0.98 sec
+      Start 22: fs_watch
+22/42 Test #22: fs_watch .........................   Passed   83.85 sec
+      Start 23: fs_watch_budget
+23/42 Test #23: fs_watch_budget ..................   Passed   83.58 sec
+      Start 24: fs_watch_ui
+24/42 Test #24: fs_watch_ui ......................   Passed    2.43 sec
+      Start 25: favorites
+25/42 Test #25: favorites ........................   Passed    0.37 sec
+      Start 26: folder_history
+26/42 Test #26: folder_history ...................   Passed    0.04 sec
+      Start 27: shortcuts_help
+27/42 Test #27: shortcuts_help ...................   Passed    0.39 sec
+      Start 28: filter
+28/42 Test #28: filter ...........................   Passed    2.54 sec
+      Start 29: cache
+29/42 Test #29: cache ............................***Failed    5.32 sec
+
+      Start 30: io_scheduler
+30/42 Test #30: io_scheduler .....................   Passed    0.15 sec
+      Start 31: metadata
+31/42 Test #31: metadata .........................   Passed    0.10 sec
+      Start 32: animation
+32/42 Test #32: animation ........................   Passed    0.42 sec
+      Start 33: mutation
+33/42 Test #33: mutation .........................   Passed    0.11 sec
+      Start 34: copy_move
+34/42 Test #34: copy_move ........................   Passed    0.15 sec
+      Start 35: format
+35/42 Test #35: format ...........................   Passed    0.09 sec
+      Start 36: monitor_output
+36/42 Test #36: monitor_output ...................   Passed    2.28 sec
+      Start 37: recovery
+37/42 Test #37: recovery .........................   Passed   13.82 sec
+      Start 38: recovery_startup
+38/42 Test #38: recovery_startup .................   Passed    0.35 sec
+      Start 39: recovery_controller
+39/42 Test #39: recovery_controller ..............   Passed   14.00 sec
+      Start 40: recovery_process
+40/42 Test #40: recovery_process .................   Passed   30.58 sec
+      Start 41: monitor_customization
+41/42 Test #41: monitor_customization ............   Passed    8.85 sec
+      Start 42: monitor_customization_ui
+42/42 Test #42: monitor_customization_ui .........   Passed   22.62 sec
+
+98% tests passed, 1 tests failed out of 42
+
+Total Test time (real) = 583.07 sec
+
+The following tests FAILED:
+	 29 - cache (Failed)
+Errors while running CTest

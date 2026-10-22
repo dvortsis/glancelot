@@ -1,0 +1,29 @@
+P1 unicode-dest+progress THREW: No mapping for the Unicode character exists in the target multi-byte code page. leftover-temp-files=1
+P1b unicode-dest no-progress status=0
+P2 dest=plain.csv status=0 (1=Cancelled) calls=1 lastDone=0 dest-preserved=0
+P2 dest=cancel-1.csv status=1 (1=Cancelled) calls=1 lastDone=1 dest-preserved=1
+P2b last-item-start cancel status=1 calls=2 dest-preserved=1 temp=1
+P3 junction rc=0 status=0 written=1 skipped=0 csv=[﻿path
+
+alias/image.png
+
+]
+P4 variant=0 root=[C:\Users\dvort\AppData\Local\Temp\glx_probe_r2\rr2\] written=1 skipped=0 csv=[﻿path,folder
+
+a.png,.
+
+]
+P4 variant=1 root=[C:\Users\dvort\AppData\Local\Temp\glx_probe_r2\rr2] written=1 skipped=0 csv=[﻿path,folder
+
+a.png,.
+
+]
+P4 variant=2 root=[C:\Users\dvort\AppData\Local\Temp\glx_probe_r2\rr2\.] written=1 skipped=0 csv=[﻿path,folder
+
+a.png,.
+
+]
+P5 race status=2 (5? DestinationExists=2) content=late temp=1
+P6 unknown-identity n=2000 written=2000 ms=91069.8
+P6 unknown-identity n=6000 written=6000 ms=229298
+P7 known-identity n=3000 written=3000 ms=129.924

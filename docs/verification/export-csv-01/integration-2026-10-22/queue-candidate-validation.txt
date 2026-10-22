@@ -1,0 +1,6 @@
+EXPORT-CSV-01: integration
+GRID-RESIZE-TEST-01: integration
+CACHE-BASELINE-TEST-01: integration
+PLATFORM-FIXTURE-SECURITY-01: done
+VALID: 56 unique tasks; strict duplicate-key parse; correct acceptance ownership
+integration_lock: {'holder': 'codex-lead-wrapup-2026-10-22', 'task': 'EXPORT-CSV-01', 'branch': 'codex/integrate-export-csv-01'}
