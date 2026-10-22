@@ -126,6 +126,9 @@ public:
     // Image routing. Every producer uses the controller's monotonic selection-generation
     // space (including pin/comparison requests), never an independent per-producer counter.
     void updateImage(const QString& path, const QImage& image, quint64 generation);
+    // MONITOR-CUSTOM-01: validated coordinator policy. One bounded latest-frame
+    // slot for independent presentation cadence; no independent decode/scan.
+    void setRoutingPolicy(const QVariantMap& policy);
     Q_INVOKABLE void pinCurrentImage();
     Q_INVOKABLE void pinImage(const QString& path, const QImage& image, quint64 generation);
     Q_INVOKABLE void unpin();
