@@ -21,6 +21,7 @@ class MonitorCustomization final : public QObject {
     Q_PROPERTY(QVariantList presets READ presets NOTIFY changed)
     Q_PROPERTY(bool layoutLocked READ layoutLocked WRITE setLayoutLocked NOTIFY changed)
     Q_PROPERTY(QString feedback READ feedback NOTIFY changed)
+    Q_PROPERTY(QString outputRoutingStatus READ outputRoutingStatus NOTIFY changed)
 public:
     explicit MonitorCustomization(DisplayManager* displays, PaneLayout* panes, QObject* parent = nullptr);
     ~MonitorCustomization() override;
@@ -32,6 +33,7 @@ public:
     QVariantList presets() const;
     bool layoutLocked() const;
     QString feedback() const;
+    QString outputRoutingStatus() const;
     void setLayoutLocked(bool locked);
     Q_INVOKABLE bool setOutputOptions(const QVariantMap& patch);
     Q_INVOKABLE bool syncControllerViewport(const QVariantMap& state, quint64 generation);
@@ -51,6 +53,7 @@ public:
 signals:
     void changed();
     void controllerViewportRequested(const QVariantMap& state, quint64 generation);
+    void commandRequested(const QString& command);
 private:
     struct Private;
     std::unique_ptr<Private> d;
