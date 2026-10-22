@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: Codex lead, branch: codex/review-export-csv-01, purpose: publish independent review evidence}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -845,7 +845,10 @@ remaining_waves: [browsing, culling, format_completion, hardening, expansions]
     owner: lead
     owner_lane: gemini
     reviewer_lane: codex or claude (first free reviewer slot; never gemini)
-    state: ready
+    state: review
+    review_verdict: CHANGES REQUIRED at 7ded057bdc706c0040d8ed7b321ee53985753d08; independent Codex review b925b26, published main1226d33
+    review_evidence: docs/verification/EXPORT-CSV-01-CODEX-REVIEW.md
+    blocked_by: Gemini correction commit for no-replace publication, final-item cancellation/progress bound, Unicode destination, mixed identity duplicates and lexical relative-root policy; new pinned commit and actual tests required before re-review
     depends: [DELETE-01]
     branch: agent/export-csv
     worktree: .worktrees/export-csv
