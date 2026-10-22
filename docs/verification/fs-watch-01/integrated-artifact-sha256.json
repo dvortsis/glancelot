@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "1bd44616d801f09b61f1191724d918f7decd8992",
+  "normalization": "UTF-8 text, CRLF and CR normalized to LF",
+  "artifacts": [
+    {
+      "file": "integrated-linux-backend.txt",
+      "sha256": "7A6AE7A3100C6140E7C50BC855B16279A00959678468EECEB03DA7372E0D5B9B"
+    },
+    {
+      "file": "integrated-linux-budget.txt",
+      "sha256": "1BAB460879C318C5BC7293054F134FB84D01E5BA875E9EFBE46AED2B516F5A95"
+    },
+    {
+      "file": "integrated-linux-cases.txt",
+      "sha256": "9AA34B8DD60BB6D37DC8381D7B5E1768D77C663526C0DB71265E3BC2C6D2DB39"
+    },
+    {
+      "file": "integrated-linux-docker.txt",
+      "sha256": "0F1246417F0D7C757CDB50DB868990989D4DA6629C535EF1DB88190E69C92FC6"
+    },
+    {
+      "file": "integrated-linux-fresh-full.txt",
+      "sha256": "E42431487ED01820101898C82646DAA05AB90739366C2058782120685C2E7BFA"
+    },
+    {
+      "file": "integrated-linux-fresh-result.json",
+      "sha256": "69AB0674AE8FF06C1C9283C1B549C36425B39EF87CF9C07DF5CF41E32F6CA70F"
+    },
+    {
+      "file": "integrated-linux-stage.txt",
+      "sha256": "0B1ED4A8C59088DFD5C6E03C3DB16B07644E7522292BA5507AD70797729BEFDF"
+    },
+    {
+      "file": "integrated-linux-ui.txt",
+      "sha256": "07B15DF6DCBA5F34396CFC6927D5C89A295FF5658051FE50F30E93165EDABD3F"
+    },
+    {
+      "file": "integrated-runner.ps1",
+      "sha256": "0DECA3AD33F8CEB665C2FB7EBF6EB8D4B1D97590D350ED4E4796ABE7B54BF5F9"
+    },
+    {
+      "file": "integrated-source-proof.json",
+      "sha256": "C8684B669D754011AA016FA4FC673FD74077DDF1DA720FDC0E60DEC0BF1C8E5A"
+    },
+    {
+      "file": "integrated-windows-backend.txt",
+      "sha256": "0B68AFA83254B4B8ADC700AE8B56750A198D64F40824777E7057F8B5936D1031"
+    },
+    {
+      "file": "integrated-windows-budget.txt",
+      "sha256": "ED1E5525E472F644CDCCA4DBBCE73CAD20CD19A06A5059BA32793F4616B18F76"
+    },
+    {
+      "file": "integrated-windows-cases.txt",
+      "sha256": "13B3253FF75F6B5DF7E3889DE80040125D7D24CCCC7E61BDF4149ADDFE1D74D0"
+    },
+    {
+      "file": "integrated-windows-full.txt",
+      "sha256": "E60AE09748D106FEB9DB775631B54DD8273CAE26FC7AA9A077C2DAAB3892FC1A"
+    },
+    {
+      "file": "integrated-windows-platform.txt",
+      "sha256": "C676BB4888E15C3D08ECCF75D6B97DD2E4C51B4B615390D8AE92F6CAEE288424"
+    },
+    {
+      "file": "integrated-windows-ui.txt",
+      "sha256": "5BF70D6723D4BC9EA55AB13B44A656554E1FDBF8234682E124D6DAD18DC4EB18"
+    }
+  ]
+}

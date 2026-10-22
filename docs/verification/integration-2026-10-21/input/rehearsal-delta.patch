@@ -1,0 +1,448 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a78ff0e..751c866 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -61,9 +61,10 @@ if(GLANCELOT_BUILD_VIEWER)
+     src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp)
+   target_include_directories(glancelot PRIVATE include src/render src/app)
+   target_link_libraries(glancelot PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Concurrent)
++  include(cmake/StartupWindowGeometryTests.cmake)
+   set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+   qt_add_qml_module(glancelot URI Glancelot VERSION 1.0 QML_FILES ui/Main.qml ui/Theme.qml ui/ThemePicker.qml ui/Filmstrip.qml ui/FolderTree.qml ui/PhotoGrid.qml
+-    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/CommandMenuItem.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml)
++    ui/PaneArrangement.qml ui/SettingsDialog.qml ui/SettingRow.qml ui/UiButton.qml ui/UiComboBox.qml ui/UiDialog.qml ui/UiIcon.qml ui/UiScrollBar.qml ui/UiSwitch.qml ui/UiTextField.qml ui/DeleteFlow.qml ui/ShortcutCheatSheet.qml ui/MetadataHud.qml ui/AnimationBar.qml ui/RenameFlow.qml ui/TransferHud.qml ui/CommandMenuItem.qml)
+   # Interface typefaces (SIL OFL 1.1, assets/fonts/geist/OFL.txt), registered at startup.
+   set(ui_fonts assets/fonts/geist/Geist-Light.ttf assets/fonts/geist/Geist-Regular.ttf assets/fonts/geist/Geist-Medium.ttf assets/fonts/geist/Geist-SemiBold.ttf assets/fonts/geist/GeistMono-Regular.ttf)
+   qt_add_resources(glancelot ui_fonts PREFIX "/" BASE assets FILES ${ui_fonts})
+diff --git a/src/app/startup_window_geometry.hpp b/src/app/startup_window_geometry.hpp
+new file mode 100644
+index 0000000..9b0096f
+--- /dev/null
++++ b/src/app/startup_window_geometry.hpp
+@@ -0,0 +1,22 @@
++#pragma once
++// Lead-frozen STARTUP-WINDOW-01 private value contract. Implemented only by its Codex packet.
++#include <QRect>
++#include <QSize>
++#include <cstddef>
++#include <span>
++
++namespace glancelot::startup {
++inline constexpr std::size_t maximumStartupScreens = 64;
++enum class StartupPlacementStatus { Unchanged, Recovered, NoUsableScreen, TooManyScreens };
++struct StartupPlacement {
++    QRect geometry;
++    StartupPlacementStatus status = StartupPlacementStatus::Unchanged;
++};
++// current/result are OUTER FRAME rectangles in Qt logical desktop coordinates.
++// minimumSize is the outer-frame minimum (client minimum plus actual frame margins).
++// No native-pixel/DPR conversion,
++// screen enumeration, window mutation, persistent state or allocation occurs here.
++[[nodiscard]] StartupPlacement recoverStartupWindowGeometry(
++    const QRect& current, std::span<const QRect> availableScreens,
++    std::size_t preferredScreen, const QSize& minimumSize);
++}
+diff --git a/src/app/viewer_controller.cpp b/src/app/viewer_controller.cpp
+index 6016e6e..8bfaac6 100644
+--- a/src/app/viewer_controller.cpp
++++ b/src/app/viewer_controller.cpp
+@@ -84,7 +84,6 @@ QString displayPath(const std::filesystem::path& path) {
+ // Scopes (INPUT-02): "global" works wherever keys are not claimed; "canvas" needs the photo pane (it is off while the grid owns
+ // keys); "grid" and "tree" need that pane focused; "workspace" is either content pane. Photo-stepping and view commands are
+ // "canvas" because the grid keeps its own arrow/Page keys; everything else the grid ever allowed stays "global".
+-// Lead decision (2026-10-21): grid selection/thumbnail-zoom and the metadata inspector are "workspace" (either content pane, never the tree or address bar); loop toggle is "canvas"; file operations, clipboard, rename, history, filter, presentation and help stay "global" like a file manager.
+ const std::vector<Command> registry {
+     {"open","Open image","Ctrl+O"}, {"next","Next image","Right",true,"canvas"}, {"previous","Previous image","Left",true,"canvas"},
+     {"next-folder","Next folder","PgDown",false,"canvas"}, {"previous-folder","Previous folder","PgUp",false,"canvas"},
+diff --git a/tests/grid_ui_tests.cpp b/tests/grid_ui_tests.cpp
+index 298e60d..0577df4 100644
+--- a/tests/grid_ui_tests.cpp
++++ b/tests/grid_ui_tests.cpp
+@@ -1150,7 +1150,7 @@ private slots:
+         QCOMPARE(dialog->property("section").toString(), QString("controls"));
+         auto* search = h.window->findChild<QQuickItem*>("commandSearch"); QVERIFY(search);
+         QTRY_VERIFY(search->hasActiveFocus());
+-        for (const char c : std::string("rotat")) QTest::keyClick(h.window, c);
++        for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
+         QTest::keyClick(h.window, Qt::Key_Return);
+         QTRY_VERIFY(!h.window->property("modalOpen").toBool());
+         QVERIFY(commands.contains(QVariantList{QString("rotate")}));
+@@ -1164,7 +1164,6 @@ private slots:
+         h.fill(20); h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus());
+         commands.clear();
+         h.viewer.trigger("palette"); QTRY_VERIFY(search->hasActiveFocus());
+-        // The full label: a short query also subsequence-matches later runnable commands (Open Terminal, presentation modes).
+         for (const char c : std::string("rotate view clockwise")) QTest::keyClick(h.window, c);
+         QTest::keyClick(h.window, Qt::Key_Return);
+         QTest::qWait(50);
+@@ -2438,7 +2437,7 @@ private slots:
+         QTRY_VERIFY(list->hasActiveFocus());
+         QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
+         QTRY_VERIFY(menu->property("visible").toBool());
+-        QObject* item = h.window->findChild<QObject*>("folderMoveToTrash"); QVERIFY(item);
++        QObject* item = menu->findChild<QObject*>("menuItem-delete-selection"); QVERIFY(item);
+         QVERIFY(!item->property("enabled").toBool());
+         QVERIFY(item->property("text").toString().startsWith("Drives can't"));
+         QTest::keyClick(h.window, Qt::Key_Escape);
+diff --git a/tests/input_ui_tests.cpp b/tests/input_ui_tests.cpp
+index 4894261..7c2def9 100644
+--- a/tests/input_ui_tests.cpp
++++ b/tests/input_ui_tests.cpp
+@@ -6,6 +6,7 @@
+ #include "../src/app/file_grid_wiring.hpp"
+ #include "../src/app/file_operation_wiring.hpp"
+ #include "glancelot/file_operation_service.hpp"
++#include "glancelot/file_operations.hpp"
+ #include "glancelot/theme_manager.hpp"
+ #include "glancelot/viewer_controller.hpp"
+ #include "image_canvas.hpp"
+@@ -23,12 +24,22 @@
+ #include <QQmlApplicationEngine>
+ #include <QQmlContext>
+ #include <QRegularExpression>
++#include <QSemaphore>
++#include <QScopeGuard>
+ #include <QTemporaryDir>
+ #include <QWheelEvent>
+ #include <QWindow>
+ #include <QtTest>
+ 
+ namespace {
++struct HeldTrash final : glancelot::TrashBackend {
++    std::shared_ptr<QSemaphore> release;
++    explicit HeldTrash(std::shared_ptr<QSemaphore> gate) : release(std::move(gate)) {}
++    glancelot::DeleteResult moveToTrash(const glancelot::MutationTarget& target) override {
++        release->acquire();
++        return {target.path, glancelot::DeleteOutcome::Cancelled, {}}; // never mutate even disposable media
++    }
++};
+ class PreviewProvider final : public QQuickImageProvider {
+ public:
+     PreviewProvider() : QQuickImageProvider(Image) {}
+@@ -64,7 +75,7 @@ struct Harness {
+     FileOperationService fileOperations;
+     QQmlApplicationEngine engine;
+     QQuickWindow* window{};
+-    Harness() {
++    explicit Harness(std::unique_ptr<glancelot::TrashBackend> backend = {}) : fileOperations(std::move(backend)) {
+         QStringList imports = engine.importPathList();
+         imports.removeAll(QCoreApplication::applicationDirPath()); // load the UI from source, not a build-tree module
+         engine.setImportPathList(imports);
+@@ -342,8 +353,7 @@ private slots:
+     void escapeCancelsAChordBeforeTheGridOrTreeActOnIt() {
+         Media media(3); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+         QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+-        // Pane-scoped commands: the grid's type-to-search claims plain letters, so only registered pane keys reach the window.
+-        QVERIFY(h.viewer.setBinding("grid-up", "K, S"));
++        QVERIFY(h.viewer.setBinding("sort-reverse", "K, S"));
+         WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "S");
+         auto pending = [&] { return flag(h, "chordPending"); };
+         h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
+@@ -352,8 +362,6 @@ private slots:
+         QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!pending());
+         QVERIFY(flag(h, "gridMode")); // the grid did not also leave to the photo
+         QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!flag(h, "gridMode")); // with nothing pending, Escape is the grid's again
+-        QVERIFY(h.viewer.setBinding("grid-up", "")); QVERIFY(h.viewer.setBinding("tree-open-folder", "K, T"));
+-        WAIT_FIRST_KEY(h, "K"); WAIT_SECOND_KEY(h, "T");
+         h.viewer.setTreeVisible(true);
+         auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
+         QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
+@@ -430,13 +438,105 @@ private slots:
+         list->setProperty("currentIndex", 0); // a drive root
+         auto* rowMenu = h.object("folderRowMenu");
+         QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
+-        QVERIFY(!rowMenu->findChild<QQuickItem*>("folderMoveToTrash")->isEnabled()); // the menu refuses a root...
++        auto* rootTrash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(rootTrash && rootTrash->isVisible());
++        QVERIFY(!rootTrash->isEnabled()); QVERIFY(!allowed(h, "delete-selection")); // the menu refuses a root...
++        QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
+         closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
+         QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
+         QTest::keyClick(h.window, Qt::Key_Delete); QTest::qWait(300);
+         QVERIFY(!h.window->findChild<QObject*>("deleteConfirmation") || !h.window->findChild<QObject*>("deleteConfirmation")->property("visible").toBool()); // ...and so does the key
+     }
+ 
++    // The tree's Move-to-Trash row is the registered "delete-selection" command: choosing it on a folder opens the same
++    // confirmation for the same folder as the Delete key does. Only the confirmation is opened; nothing is trashed.
++    void treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() {
++        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
++        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
++        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
++        auto* list = named(h.window, "folderList"); QVERIFY(list);
++        auto* rowMenu = h.object("folderRowMenu"); QVERIFY(rowMenu);
++        auto* flow = h.object("deleteFlow"); QVERIFY(flow);
++        const QString expected = "Move this folder to the " + trashName() + "?";
++        auto confirmationOpen = [&] { auto* c = h.object("deleteConfirmation"); return c && c->property("visible").toBool(); };
++        auto cancelConfirmation = [&] { QTest::keyClick(h.window, Qt::Key_Escape); QTRY_VERIFY(!confirmationOpen()); };
++        // The key, as the reference.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTRY_COMPARE(h.window->property("focusRegion").toString(), QString("tree"));
++        list->setProperty("currentIndex", h.folders.currentRow());
++        QTest::keyClick(h.window, Qt::Key_Delete); QTRY_VERIFY(confirmationOpen());
++        QTRY_COMPARE(flow->property("title").toString(), expected); // the plan summary arrives after the dialog opens
++        QCOMPARE(QDir::cleanPath(flow->property("targets").toList().first().toMap()["path"].toString()), QDir::cleanPath(media.dir.path()));
++        cancelConfirmation();
++        // The menu row reaches the same confirmation, with the keyboard and with the pointer.
++        for (int how = 0; how < 2; ++how) {
++            QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++            list->setProperty("currentIndex", h.folders.currentRow());
++            QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
++            auto* trash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash && trash->isEnabled());
++            QVERIFY(allowed(h, "delete-selection"));
++            QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
++            if (how == 0) {
++                for (int i = 0; i < 4 && !trash->property("highlighted").toBool(); ++i) QTest::keyClick(h.window, Qt::Key_Down);
++                QVERIFY(trash->property("highlighted").toBool());
++                QTest::keyClick(h.window, Qt::Key_Return);
++            }
++            else QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(trash));
++            QTRY_VERIFY(confirmationOpen());
++            QTRY_COMPARE(flow->property("title").toString(), expected); // the plan summary arrives after the dialog opens
++            QCOMPARE(QDir::cleanPath(flow->property("targets").toList().first().toMap()["path"].toString()), QDir::cleanPath(media.dir.path()));
++            QTRY_VERIFY(!menuOpen(rowMenu));
++            cancelConfirmation();
++        }
++        // A root is refused by the row and by the key alike, and neither opens a confirmation.
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
++        QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(rowMenu));
++        auto* rootTrash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(rootTrash);
++        QVERIFY(!rootTrash->isEnabled()); QVERIFY(!allowed(h, "delete-selection"));
++        QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rootTrash)); QTest::qWait(200);
++        QVERIFY(!confirmationOpen());
++        closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList")); list->setProperty("currentIndex", 0);
++        QTest::keyClick(h.window, Qt::Key_Delete); QTest::qWait(300);
++        QVERIFY(!confirmationOpen());
++    }
++
++    void treeTrashAndDeleteKeyShareBusyEligibility() {
++        Media media(2, QSize(64, 48));
++        auto gate = std::make_shared<QSemaphore>();
++        Harness h(std::make_unique<HeldTrash>(gate));
++        const auto releaseOnFailure = qScopeGuard([&] { gate->release(); });
++        QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
++        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
++        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
++        QTRY_VERIFY_WITH_TIMEOUT(h.folders.currentRow() >= 0, 15000);
++        auto* tree = named(h.window, "folderTree"); QVERIFY(tree);
++        auto* list = named(h.window, "folderList"); QVERIFY(list);
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        list->setProperty("currentIndex", h.folders.currentRow());
++        QSignalSpy ready(&h.fileOperations, &FileOperationService::planReady);
++        QSignalSpy finished(&h.fileOperations, &FileOperationService::finished);
++        const auto id = h.fileOperations.plan({media.path(0)}, "command");
++        QVERIFY(id); QTRY_COMPARE(ready.count(), 1);
++        QVERIFY(h.fileOperations.confirm(id)); QVERIFY(h.fileOperations.busy());
++        QTest::keyClick(h.window, Qt::Key_Menu);
++        auto* menu = h.object("folderRowMenu"); QTRY_VERIFY(menuOpen(menu));
++        auto* trash = menu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash);
++        QVERIFY(!allowed(h, "delete-selection")); QVERIFY(!trash->isEnabled());
++        QVERIFY2(menuProblems(h, menu).isEmpty(), qPrintable(menuProblems(h, menu).join("; ")));
++        closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
++        QVERIFY(QMetaObject::invokeMethod(tree, "focusList"));
++        QTest::keyClick(h.window, Qt::Key_Delete);
++        QVERIFY(!h.object("deleteConfirmation") || !h.object("deleteConfirmation")->property("visible").toBool());
++        QCOMPARE(ready.count(), 1);
++        gate->release(); QTRY_COMPARE(finished.count(), 1); QTRY_VERIFY(!h.fileOperations.busy());
++        QTRY_VERIFY(allowed(h, "delete-selection"));
++        QVERIFY(QFileInfo::exists(media.path(0))); // injected backend never touches originals
++    }
++
+     void compactMenusScrollToTheCurrentRow() {
+         Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(540, 360);
+         QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+@@ -649,10 +749,10 @@ private slots:
+         auto* rotate = menu->findChild<QQuickItem*>("menuItem-rotate"); QVERIFY(rotate);
+         QCOMPARE(rotate->property("keys").toString(), QString("R"));
+         closeMenu(menu); QTRY_VERIFY(!menuOpen(menu));
+-        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+Y"));
++        QVERIFY(h.viewer.setBinding("rotate", "Ctrl+Alt+R"));
+         focusCanvas(h); QTest::keyClick(h.window, Qt::Key_Menu); QTRY_VERIFY(menuOpen(menu));
+         rotate = menu->findChild<QQuickItem*>("menuItem-rotate");
+-        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+Y"));
++        QTRY_COMPARE(rotate->property("keys").toString(), QString("Ctrl+Alt+R"));
+         // Choosing a row runs the same command the key would.
+         QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(rotate));
+         QTRY_COMPARE(canvas->rotation(), 90);
+@@ -739,7 +839,7 @@ private slots:
+             if (how == 0) QTest::keyClick(h.window, Qt::Key_Menu); else QTest::keyClick(h.window, Qt::Key_F10, Qt::ShiftModifier);
+             QTRY_VERIFY(menuOpen(rowMenu));
+             QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
+-            auto* trash = rowMenu->findChild<QQuickItem*>("folderMoveToTrash"); QVERIFY(trash);
++            auto* trash = rowMenu->findChild<QQuickItem*>("menuItem-delete-selection"); QVERIFY(trash);
+             if (how == 0) { // the destructive row names its folder
+                 const QString text = trash->property("text").toString();
+                 QVERIFY2(text.contains(QFileInfo(media.dir.path()).fileName()) && text.contains(trashName()), qPrintable(text));
+diff --git a/ui/FolderTree.qml b/ui/FolderTree.qml
+index c4710b0..0155c5c 100644
+--- a/ui/FolderTree.qml
++++ b/ui/FolderTree.qml
+@@ -23,14 +23,13 @@ Rectangle {
+     signal resizeCommitted(real extent)
+     property int maximumWidth: 480
+     signal dismissed()
+-    // DELETE-01: a row's context menu (right-click, Menu key, Shift+F10) asks the host to confirm a move to the trash.
+-    signal deleteRequested(string path)
+     // INPUT-02: the window, for the command-menu rows (scope predicate, live bindings, command routing).
+     property var host: null
+     readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
+     function openRowMenu(row, x, y) {
+         const info = folderTree.rowInfo(row)
+         if (!info.path) return
++        list.currentIndex = row // commands from the menu act on the cursor row
+         rowMenu.path = info.path; rowMenu.depth = info.depth
+         rowMenu.popup(panel, x, y)
+     }
+@@ -73,7 +72,8 @@ Rectangle {
+         viewer.navigateDirectory(address.text)
+     }
+     function currentSelectedFolder() {
+-        if (!list.activeFocus || list.currentIndex < 0 || !folderTree) return ""
++        // The row menu opens on the cursor row and holds focus while a command from it runs.
++        if (!(list.activeFocus || rowMenu.visible) || list.currentIndex < 0 || !folderTree) return ""
+         const info = folderTree.rowInfo(list.currentIndex)
+         return (info && info.depth > 0 && info.path) ? info.path : ""
+     }
+@@ -702,7 +702,6 @@ Rectangle {
+                     border.width: Theme.borderWidth
+                     border.color: Theme.border
+                 }
+-                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
+                 MenuItem {
+                     id: favoriteItem
+                     objectName: "folderFavoriteToggle"
+@@ -729,34 +728,22 @@ Rectangle {
+                     }
+                     background: Rectangle { radius: Theme.radiusSmall; color: favoriteItem.highlighted ? Theme.hover : "transparent" }
+                 }
+-                MenuItem {
++                CommandMenuItem { host: panel.host; commandId: "tree-open-folder"; available: rowMenu.path.length > 0 }
++                // The registered "delete-selection" command, like the Delete key: the host picks the target from the cursor
++                // row (this menu opens on it), so the menu and the key cannot disagree. Drives and other roots are never
++                // moved and a running operation blocks a second one; the row stays visible and explains itself.
++                CommandMenuItem {
+                     id: trashItem
+-                    objectName: "folderMoveToTrash"
+-                    // Drives and other roots are never moved; the item stays visible and explains itself.
+-                    text: rowMenu.depth === 0 ? "Drives can't be moved to the " + panel.trashName : "Move “" + rowMenu.name + "” to the " + panel.trashName
+-                    enabled: rowMenu.depth > 0 && !fileOperations.busy
+-                    implicitHeight: Theme.controlHeight
+-                    leftPadding: Theme.gapSm; rightPadding: Theme.gapSm
+-                    onTriggered: { rowMenu.handedOff = true; panel.deleteRequested(rowMenu.path) }
+-                    contentItem: RowLayout {
+-                        spacing: Theme.gapSm
+-                        opacity: trashItem.enabled ? 1 : Theme.disabledOpacity
+-                        UiIcon { name: "trash"; color: trashItem.enabled ? Theme.danger : Theme.muted }
+-                        Label {
+-                            text: trashItem.text
+-                            color: trashItem.enabled ? Theme.danger : Theme.muted
+-                            font.pixelSize: Theme.textBody
+-                            Layout.fillWidth: true
+-                        }
+-                        Label { // the live binding of the command this row stands for
+-                            visible: trashItem.enabled && text.length > 0
+-                            text: panel.host ? panel.host.keyHint("delete-selection") : ""
+-                            color: Theme.muted
+-                            font.family: Theme.monoFamily
+-                            font.pixelSize: Theme.textSmall
+-                        }
+-                    }
+-                    background: Rectangle { radius: Theme.radiusSmall; color: trashItem.highlighted ? Theme.hover : "transparent" }
++                    host: panel.host
++                    commandId: "delete-selection"
++                    iconName: "trash"; danger: true
++                    label: panel.host && panel.host.commandBlockedReason(commandId).length
++                           ? panel.host.commandBlockedReason(commandId)
++                           : "Move “" + rowMenu.name + "” to the " + panel.trashName
++                }
++                Connections { // the confirmation dialog owns focus after a choice
++                    target: trashItem
++                    function onTriggered() { rowMenu.handedOff = true }
+                 }
+             }
+             Label {
+diff --git a/ui/Main.qml b/ui/Main.qml
+index 4b30fc4..c8c98b4 100644
+--- a/ui/Main.qml
++++ b/ui/Main.qml
+@@ -336,8 +336,15 @@ ApplicationWindow {
+     property string focusRegion: "canvas"
+     readonly property var scopeRank: ({ tree: 0, grid: 1, canvas: 2, workspace: 3, global: 4 })
+     function scopeOf(id) { return commandInfo[id] ? commandInfo[id].scope : "global" }
++    function commandBlockedReason(id) {
++        if (id !== "delete-selection") return ""
++        if (fileOperations.busy) return "Wait for the current move to the " + deleteFlow.trashName + " to finish."
++        if (focusRegion === "tree" && treePanel.cursorIsRoot()) return "Drives can't be moved to the " + deleteFlow.trashName + "."
++        return ""
++    }
+     // Whether the focused pane lets a command's key act. This one predicate gates shortcuts and context-menu rows.
+     function scopeAllows(id) {
++        if (commandBlockedReason(id).length) return false
+         const scope = scopeOf(id)
+         // A pane's commands act only while that pane owns keys: a tree that has focus keeps the canvas and grid keys quiet.
+         if (scope === "canvas") return !gridScope && focusRegion !== "tree"
+@@ -348,6 +355,7 @@ ApplicationWindow {
+     // Explicit routes (toolbar, command search, menus) are looser than keys only in the combined view, where a canvas
+     // command runs whichever pane has focus.
+     function routeAllows(id) {
++        if (commandBlockedReason(id).length) return false
+         const scope = scopeOf(id)
+         if (scope === "canvas") return !gridMode
+         if (scope === "grid") return workspace._gridShown
+@@ -356,6 +364,8 @@ ApplicationWindow {
+     }
+     // Visible text for a command that cannot run from an explicit route right now.
+     function routeBlockedReason(id) {
++        const blocked = commandBlockedReason(id)
++        if (blocked.length) return blocked
+         const scope = scopeOf(id)
+         return scope === "canvas" ? "Not in grid view" : scope === "grid" ? "Needs the folder grid" : scope === "tree" ? "Needs the folder tree" : ""
+     }
+@@ -489,9 +499,8 @@ ApplicationWindow {
+         else if (id === "animation-toggle-loop") { if (viewer.animationController) viewer.animationController.setLoop(!viewer.animationController.loop) }
+         else if (id === "combined-orientation") toggleOrientation()
+         else if (id === "delete-selection") {
+-            if (focusRegion === "tree" && treePanel.cursorIsRoot()) { // the menu row is disabled here, so the key explains instead of retargeting
+-                deleteFlow.showNotice("Drives can't be moved to the " + deleteFlow.trashName + "."); return
+-            }
++            const blocked = commandBlockedReason(id)
++            if (blocked.length) { deleteFlow.showNotice(blocked); return }
+             const treeFolder = treePanel.currentSelectedFolder()
+             if (treeFolder.length > 0) {
+                 deleteFlow.request([treeFolder], "tree", "")
+@@ -774,8 +783,8 @@ ApplicationWindow {
+         }
+         // Combined view: F6 returns to the grid; Tab continues to the split handle (its keyboard resize), then the grid.
+         Keys.onPressed: event => {
+-            if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true }
+-            else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { app.openCanvasMenu(app.pointerX, app.pointerY); event.accepted = true }
++            if (app.combinedMode && event.key === Qt.Key_F6) { app.focusPane("grid"); event.accepted = true; return }
++            else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) { app.openCanvasMenu(app.pointerX, app.pointerY); event.accepted = true; return }
+             if (viewer.animationController && viewer.animationController.active) {
+                 if (event.key === Qt.Key_Space && viewer.animationController.isAnimated) {
+                     viewer.animationController.togglePlayPause()
+@@ -1538,7 +1547,6 @@ ApplicationWindow {
+         onDismissed: { if(app.layoutEditing)app.layoutEditing=false;app.focusContent() }
+         // Hiding a focused panel must not strand keyboard input on an invisible item.
+         onVisibleChanged: if (!visible && !app.modalOpen) app.focusContent()
+-        onDeleteRequested: path => deleteFlow.request([path], "tree", "")
+     }
+     MetadataHud {
+         id: metadataPanel
+diff --git a/ui/PhotoGrid.qml b/ui/PhotoGrid.qml
+index 2ddc029..31f70ec 100644
+--- a/ui/PhotoGrid.qml
++++ b/ui/PhotoGrid.qml
+@@ -510,8 +510,7 @@ Rectangle {
+             }
+             if (event.key === Qt.Key_F3) { event.accepted = true; return }
+             const mods = event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)
+-            // Keyboard operation first (application-interface-design): a key bound to a command (INPUT-02) reaches the
+-            // window's shortcut; only unbound printable keys feed type-to-search. Same yields() test as line 198.
++            // Registered pane commands must reach the window before printable type-to-search.
+             if (event.key >= 0x20 && event.key <= 0x7e && !mods && !(yields && yields(event))) {
+                 event.accepted = true
+                 return

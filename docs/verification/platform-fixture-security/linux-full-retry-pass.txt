@@ -1,0 +1,184 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.23kB 0.0s done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 0.4s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/library/ubuntu:24.04
+#4 DONE 0.3s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 136B done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 DONE 0.0s
+
+#7 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#7 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#7 DONE 0.1s
+
+#6 [internal] load build context
+#6 transferring context: 66.82kB 0.0s done
+#6 DONE 0.1s
+
+#8 [build  8/11] COPY ui ui
+#8 CACHED
+
+#9 [build  7/11] COPY src src
+#9 CACHED
+
+#10 [build  9/11] COPY tests tests
+#10 CACHED
+
+#11 [build  2/11] COPY CMakeLists.txt ./
+#11 CACHED
+
+#12 [qt 5/5] RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [build  3/11] COPY cmake cmake
+#13 CACHED
+
+#14 [build  5/11] COPY assets assets
+#14 CACHED
+
+#15 [build  6/11] COPY include include
+#15 CACHED
+
+#16 [qt 4/5] RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
+#16 CACHED
+
+#17 [build  1/11] WORKDIR /src
+#17 CACHED
+
+#18 [qt 3/5] RUN python3 -m venv /opt/aqt && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==3.3.0 && /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+#18 CACHED
+
+#19 [qt 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-venv build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libxkbcommon-x11-0 libegl1 && rm -rf /var/lib/apt/lists/*
+#19 CACHED
+
+#20 [build  4/11] COPY app app
+#20 CACHED
+
+#21 [build 10/11] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+#21 CACHED
+
+#22 [build 11/11] RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+#22 0.319 Internal ctest changing into directory: /build
+#22 0.321 Test project /build
+#22 0.326       Start  1: perf_trace
+#22 0.376  1/29 Test  #1: perf_trace .......................   Passed    0.05 sec
+#22 0.376       Start  2: navigation
+#22 0.758  2/29 Test  #2: navigation .......................   Passed    0.38 sec
+#22 0.758       Start  3: directory_listing
+#22 2.878  3/29 Test  #3: directory_listing ................   Passed    2.12 sec
+#22 2.878       Start  4: file_operations
+#22 2.889  4/29 Test  #4: file_operations ..................   Passed    0.01 sec
+#22 2.889       Start  5: viewer_acceptance
+#22 6.621  5/29 Test  #5: viewer_acceptance ................   Passed    3.73 sec
+#22 6.622       Start  6: thumbnails
+#22 11.19  6/29 Test  #6: thumbnails .......................   Passed    4.57 sec
+#22 11.19       Start  7: folder_tree
+#22 16.30  7/29 Test  #7: folder_tree ......................   Passed    5.10 sec
+#22 16.30       Start  8: pane_layout
+#22 16.61  8/29 Test  #8: pane_layout ......................   Passed    0.32 sec
+#22 16.62       Start  9: window_slots
+#22 33.15  9/29 Test  #9: window_slots .....................   Passed   16.53 sec
+#22 33.15       Start 10: folder_grid
+#22 148.5 10/29 Test #10: folder_grid ......................   Passed  115.33 sec
+#22 148.5       Start 11: file_operation_service
+#22 149.5 11/29 Test #11: file_operation_service ...........   Passed    0.98 sec
+#22 149.5       Start 12: directory_model
+#22 155.0 12/29 Test #12: directory_model ..................   Passed    5.51 sec
+#22 155.0       Start 13: viewport
+#22 155.0 13/29 Test #13: viewport .........................   Passed    0.03 sec
+#22 155.0       Start 14: themes
+#22 155.1 14/29 Test #14: themes ...........................   Passed    0.11 sec
+#22 155.1       Start 15: platform_integration
+#22 155.6 15/29 Test #15: platform_integration .............   Passed    0.47 sec
+#22 155.6       Start 16: grid_search
+#22 155.7 16/29 Test #16: grid_search ......................   Passed    0.11 sec
+#22 155.7       Start 17: grid_density
+#22 155.8 17/29 Test #17: grid_density .....................   Passed    0.07 sec
+#22 155.8       Start 18: ui_settings
+#22 155.9 18/29 Test #18: ui_settings ......................   Passed    0.14 sec
+#22 155.9       Start 19: favorites
+#22 156.1 19/29 Test #19: favorites ........................   Passed    0.22 sec
+#22 156.1       Start 20: folder_history
+#22 156.1 20/29 Test #20: folder_history ...................   Passed    0.02 sec
+#22 156.1       Start 21: shortcuts_help
+#22 156.2 21/29 Test #21: shortcuts_help ...................   Passed    0.04 sec
+#22 156.2       Start 22: filter
+#22 157.0 22/29 Test #22: filter ...........................   Passed    0.79 sec
+#22 157.0       Start 23: cache
+#22 158.2 23/29 Test #23: cache ............................   Passed    1.19 sec
+#22 158.2       Start 24: io_scheduler
+#22 158.2 24/29 Test #24: io_scheduler .....................   Passed    0.05 sec
+#22 158.2       Start 25: metadata
+#22 158.2 25/29 Test #25: metadata .........................   Passed    0.02 sec
+#22 158.2       Start 26: animation
+#22 158.6 26/29 Test #26: animation ........................   Passed    0.32 sec
+#22 158.6       Start 27: mutation
+#22 158.6 27/29 Test #27: mutation .........................   Passed    0.02 sec
+#22 158.6       Start 28: copy_move
+#22 158.6 28/29 Test #28: copy_move ........................   Passed    0.03 sec
+#22 158.6       Start 29: format
+#22 158.6 29/29 Test #29: format ...........................   Passed    0.02 sec
+#22 158.6 
+#22 158.6 100% tests passed, 0 tests failed out of 29
+#22 158.6 
+#22 158.6 Total Test time (real) = 158.32 sec
+#22 DONE 158.7s
+
+#23 [runtime  2/11] RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates novnc websockify tigervnc-standalone-server tigervnc-tools openbox wmctrl tini fonts-noto-core libgl1-mesa-dri libegl1 libgl1 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libasound2t64 && rm -rf /var/lib/apt/lists/* && userdel -r ubuntu && useradd --create-home --uid 1000 viewer && mkdir -p /config /photos && chown viewer:viewer /config
+#23 CACHED
+
+#24 [runtime  3/11] RUN apt-get update && apt-get install -y --no-install-recommends libopengl0 && rm -rf /var/lib/apt/lists/*
+#24 CACHED
+
+#25 [runtime  4/11] COPY --from=qt /opt/Qt/6.8.3/gcc_64 /opt/Qt
+#25 CACHED
+
+#26 [runtime  5/11] COPY --from=build /build/glancelot /build/glancelot-decoder /opt/glancelot/
+#26 DONE 0.1s
+
+#27 [runtime  6/11] COPY docker/start.py /opt/glancelot/start.py
+#27 DONE 0.1s
+
+#28 [runtime  7/11] COPY LICENSE THIRD_PARTY_NOTICES.md README.md /opt/glancelot/
+#28 DONE 0.1s
+
+#29 [runtime  8/11] COPY assets/fonts/geist/OFL.txt /opt/glancelot/Geist-OFL.txt
+#29 DONE 0.1s
+
+#30 [runtime  9/11] RUN printf '[Paths]\nPrefix=/opt/Qt\n' > /opt/glancelot/qt.conf && cp /usr/share/novnc/vnc.html /usr/share/novnc/index.html
+#30 DONE 0.3s
+
+#31 [runtime 10/11] RUN ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot-decoder | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/Qt/plugins/platforms/libqxcb.so | grep -q "not found"
+#31 DONE 0.5s
+
+#32 [runtime 11/11] WORKDIR /photos
+#32 DONE 0.1s
+
+#33 exporting to image
+#33 exporting layers
+#33 exporting layers 0.7s done
+#33 exporting manifest sha256:86b36f36a2ffcdad2f8887ec5d5ea794d2f3fe8d1231d549b159d402b533b31a 0.0s done
+#33 exporting config sha256:79164f42d113119a79983ca33feb6466581dc428fdfc227c8436da1753e3dd1c 0.0s done
+#33 exporting attestation manifest sha256:375a7a7e39f6410ba676db25e4a36f5e161be4788eece338a38cec86aac43dfa 0.0s done
+#33 exporting manifest list sha256:1fb6a4f97f2c55a59f379bc0737bcd83908c57467c4a4f86f42a11eb6d105db0
+#33 exporting manifest list sha256:1fb6a4f97f2c55a59f379bc0737bcd83908c57467c4a4f86f42a11eb6d105db0 0.0s done
+#33 naming to docker.io/library/glancelot-browser:main done
+#33 unpacking to docker.io/library/glancelot-browser:main
+#33 unpacking to docker.io/library/glancelot-browser:main 0.3s done
+#33 DONE 1.2s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/xn28gy8mz2g4gop4yyodn8h4h

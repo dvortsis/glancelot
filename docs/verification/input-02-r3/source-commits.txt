@@ -1,0 +1,3 @@
+330d050881f2330f80755f2c30c7d37f4aef3436 test(input): await both asynchronous trash result delegates
+953adf9fe7bca980a87d02fe6a79d9ff487aa17f fix(input): share destructive command eligibility across input routes
+0cc2a38990a9bac03c2f623701fc287ba74011f8 INPUT-02: route the tree's Move to Trash row through the delete-selection command

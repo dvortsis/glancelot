@@ -1,0 +1,12 @@
+$ErrorActionPreference='Stop'
+Set-Location -LiteralPath (Split-Path $PSScriptRoot -Parent)
+try {
+ & C:/src/Github/Glancelot/scripts/gate-lock.ps1 -Branch codex/safe-mode-01 -Run {
+  if((git rev-parse HEAD) -ne '03bd32687b0e47cc71306d7667927eeb896785e3'){throw 'Docker pin changed'}
+  docker build -t glancelot-browser:main .
+  if($LASTEXITCODE -ne 0){throw "Docker exit $LASTEXITCODE"}
+ }
+ $code=0
+} catch { Write-Output $_; $code=1 }
+"docker_gate_exit=$code"
+exit $code

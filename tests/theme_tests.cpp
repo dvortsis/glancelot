@@ -117,10 +117,10 @@ void ThemeTests::themeAndControlsPreserveEachOther() {
     QCOMPARE(saved.value("bindings").toObject().value("open").toString(),QString("Ctrl+Alt+O"));
     QVERIFY(saved.value("futurePreference").toObject().value("retained").toBool());
     QCOMPARE(saved.value("appearance").toObject().value("futureColorSetting").toString(),QString("retained"));
-    QVERIFY(controls.setBinding("next","Alt+Right")); controls.setWheelMode("zoom");
+    QVERIFY(controls.setBinding("next","Alt+Shift+Right")); controls.setWheelMode("zoom");
     theme.setMode("dark");
     ViewerController reloadedControls; ThemeManager reloadedTheme;
-    QCOMPARE(reloadedControls.bindingFor("next"),QString("Alt+Right"));
+    QCOMPARE(reloadedControls.bindingFor("next"),QString("Alt+Shift+Right"));
     QCOMPARE(reloadedControls.wheelMode(),QString("zoom")); QCOMPARE(reloadedControls.boundaryMode(),QString("loop"));
     QCOMPARE(reloadedTheme.family(),QString("graphite")); QCOMPARE(reloadedTheme.mode(),QString("dark"));
     QVERIFY(QJsonDocument::fromJson(read(path)).object().value("futurePreference").toObject().value("retained").toBool());
@@ -135,7 +135,7 @@ void ThemeTests::futureSchemaRemainsByteIdentical() {
     ThemeManager theme; QCOMPARE(theme.family(),QString("slate-ice"));
     theme.setFamily("graphite"); theme.setMode("light");
     QCOMPARE(theme.family(),QString("graphite")); QVERIFY(!theme.error().isEmpty()); QCOMPARE(read(path),bytes);
-    ViewerController controls; QVERIFY(controls.setBinding("next","Alt+Right")); QCOMPARE(read(path),bytes);
+    ViewerController controls; QVERIFY(controls.setBinding("next","Alt+Shift+Right")); QCOMPARE(read(path),bytes);
 }
 
 void ThemeTests::corruptPreferencesRemainByteIdentical() {

@@ -1,0 +1,93 @@
+[
+  {
+    "file": "confirmed-binding-corrections/fs-watch-budget-results.txt",
+    "source_pin": "61e4752",
+    "scope": "windows-full",
+    "generated_setup_ms": 124245,
+    "qtest_total_ms": 173969,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "observed_publication_max_ms": 127,
+    "total_less_generation_ms": 49724,
+    "headroom_to_180000_ms": 6031
+  },
+  {
+    "file": "sort-status-corrections/full-fs-watch-budget-results.txt",
+    "source_pin": "03bd326",
+    "scope": "windows-full",
+    "generated_setup_ms": 121743,
+    "qtest_total_ms": 164714,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "observed_publication_max_ms": 93,
+    "total_less_generation_ms": 42971,
+    "headroom_to_180000_ms": 15286
+  },
+  {
+    "file": "sort-status-corrections/retry-full-fs-watch-budget-results.txt",
+    "source_pin": "03bd326",
+    "scope": "windows-full-timeout",
+    "generated_setup_ms": 135884,
+    "qtest_total_ms": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "observed_publication_max_ms": 117,
+    "ctest_timeout_ms_approx": 179990,
+    "limit_less_generation_ms_approx": 44106
+  },
+  {
+    "file": "sort-status-corrections/quiet-fs-watch-budget-results.txt",
+    "source_pin": "03bd326",
+    "scope": "windows-targeted",
+    "generated_setup_ms": 100740,
+    "qtest_total_ms": 145464,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "observed_publication_max_ms": 101,
+    "total_less_generation_ms": 44724,
+    "headroom_to_180000_ms": 34536
+  },
+  {
+    "file": "sort-status-corrections/linux-raw/fs-watch-budget-results.txt",
+    "source_pin": "03bd326",
+    "scope": "linux-full",
+    "generated_setup_ms": 6024,
+    "qtest_total_ms": 23163,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "observed_publication_max_ms": 50,
+    "total_less_generation_ms": 17139,
+    "headroom_to_180000_ms": 156837
+  },
+  {
+    "file": "cache-fixture-correction/windows-full-fs-watch-budget-results.txt",
+    "source_pin": "796ab411",
+    "scope": "windows-full",
+    "generated_setup_ms": 72694,
+    "qtest_total_ms": 108347,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "observed_publication_max_ms": 100,
+    "total_less_generation_ms": 35653,
+    "headroom_to_180000_ms": 71653
+  },
+  {
+    "file": "cache-fixture-correction/linux-raw/fs-watch-budget-results.txt",
+    "source_pin": "796ab411",
+    "scope": "linux-full",
+    "generated_setup_ms": 5002,
+    "qtest_total_ms": 21620,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "observed_publication_max_ms": 52,
+    "total_less_generation_ms": 16618,
+    "headroom_to_180000_ms": 158380
+  }
+]

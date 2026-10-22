@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "5085b749-8399-4cca-b98d-0352803d391a",
+                "claimNonce": "7c980b7d-d684-4202-a029-c07638eb17c1",
+                "origin": "navigation",
+                "pid": 1618,
+                "sequence": "0",
+                "start": "14030610",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-l7h39jyf/generated-media",
+            "image": "/build/recovery-process/run-l7h39jyf/generated-media/-explicit-配置.png",
+            "saved": 1792559520
+        }
+    }
+}

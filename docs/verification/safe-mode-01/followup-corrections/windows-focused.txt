@@ -1,0 +1,11 @@
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+    Start 34: recovery
+1/3 Test #34: recovery .........................   Passed   16.09 sec
+    Start 35: recovery_startup
+2/3 Test #35: recovery_startup .................   Passed    0.32 sec
+    Start 36: recovery_controller
+3/3 Test #36: recovery_controller ..............   Passed    9.41 sec
+
+100% tests passed out of 3
+
+Total Test time (real) =  26.13 sec

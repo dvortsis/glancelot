@@ -1,0 +1,1 @@
+claude_contract_review_exit=0

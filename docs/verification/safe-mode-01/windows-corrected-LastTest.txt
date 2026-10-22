@@ -1,0 +1,588 @@
+Start testing: Oct 20 15:12 Mountain Daylight Time
+----------------------------------------------------------
+1/37 Testing: perf_trace
+1/37 Test: perf_trace
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/perf_trace_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"perf_trace" start time: Oct 20 15:12 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+PASS ring_bound multithread_drops drain_order flags percentiles redaction monotonic_clock
+disabled_ns_per_span=5.805 enabled_ns_per_span=166.419 disabled_bound_ns=1000
+<end of output>
+Test time =   0.62 sec
+----------------------------------------------------------
+Test Passed.
+"perf_trace" end time: Oct 20 15:12 Mountain Daylight Time
+"perf_trace" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/37 Testing: navigation
+2/37 Test: navigation
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/navigation_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"navigation" start time: Oct 20 15:12 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+in-progress cancellation observed=1
+link creation: directory=0 cycle=0 file=0
+navigation: all generated fixture tests passed
+<end of output>
+Test time =  12.56 sec
+----------------------------------------------------------
+Test Passed.
+"navigation" end time: Oct 20 15:12 Mountain Daylight Time
+"navigation" time elapsed: 00:00:12
+----------------------------------------------------------
+
+3/37 Testing: directory_listing
+3/37 Test: directory_listing
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/directory_listing_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"directory_listing" start time: Oct 20 15:12 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+ordering and types ok
+empty/missing ok
+hidden ok
+windows junction ok
+UNVERIFIED: directory symlink not creatable here (A required privilege is not held by the client.)
+UNVERIFIED: file symlink not creatable here (A required privilege is not held by the client.)
+permission denied ok
+cancellation ok (5/5 racing runs cancelled); 20000 entries listed in 625 ms
+truncation ok
+sort keys ok
+delete burst ok (38 listings, 0 inaccessible)
+churn ok (2140 listings, 0 inaccessible)
+directory listing tests passed
+<end of output>
+Test time =  73.84 sec
+----------------------------------------------------------
+Test Passed.
+"directory_listing" end time: Oct 20 15:13 Mountain Daylight Time
+"directory_listing" time elapsed: 00:01:13
+----------------------------------------------------------
+
+4/37 Testing: file_operations
+4/37 Test: file_operations
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/file_operations_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"file_operations" start time: Oct 20 15:13 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+dedupe ok
+rejections ok
+UNVERIFIED: read-only volume rejection (set GLANCELOT_READONLY_FILE to a file on a read-only mount)
+UNVERIFIED: file symlink (needs Developer Mode or privilege on Windows): A required privilege is not held by the client.
+links ok
+bounded count ok
+revalidation ok
+cancellation ok
+backend failures ok
+snapshot ok
+file_operations: all checks passed
+<end of output>
+Test time =   0.55 sec
+----------------------------------------------------------
+Test Passed.
+"file_operations" end time: Oct 20 15:13 Mountain Daylight Time
+"file_operations" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/37 Testing: viewer_acceptance
+5/37 Test: viewer_acceptance
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/acceptance_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"viewer_acceptance" start time: Oct 20 15:13 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  16.65 sec
+----------------------------------------------------------
+Test Passed.
+"viewer_acceptance" end time: Oct 20 15:14 Mountain Daylight Time
+"viewer_acceptance" time elapsed: 00:00:16
+----------------------------------------------------------
+
+6/37 Testing: thumbnails
+6/37 Test: thumbnails
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/thumbnail_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"thumbnails" start time: Oct 20 15:14 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  11.75 sec
+----------------------------------------------------------
+Test Passed.
+"thumbnails" end time: Oct 20 15:14 Mountain Daylight Time
+"thumbnails" time elapsed: 00:00:11
+----------------------------------------------------------
+
+7/37 Testing: folder_tree
+7/37 Test: folder_tree
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/folder_tree_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"folder_tree" start time: Oct 20 15:14 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  13.39 sec
+----------------------------------------------------------
+Test Passed.
+"folder_tree" end time: Oct 20 15:14 Mountain Daylight Time
+"folder_tree" time elapsed: 00:00:13
+----------------------------------------------------------
+
+8/37 Testing: pane_layout
+8/37 Test: pane_layout
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/pane_layout_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"pane_layout" start time: Oct 20 15:14 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.39 sec
+----------------------------------------------------------
+Test Passed.
+"pane_layout" end time: Oct 20 15:14 Mountain Daylight Time
+"pane_layout" time elapsed: 00:00:01
+----------------------------------------------------------
+
+9/37 Testing: window_slots
+9/37 Test: window_slots
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/window_slot_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"window_slots" start time: Oct 20 15:14 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  40.12 sec
+----------------------------------------------------------
+Test Passed.
+"window_slots" end time: Oct 20 15:15 Mountain Daylight Time
+"window_slots" time elapsed: 00:00:40
+----------------------------------------------------------
+
+10/37 Testing: folder_grid
+10/37 Test: folder_grid
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/grid_ui_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"folder_grid" start time: Oct 20 15:15 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 399.93 sec
+----------------------------------------------------------
+Test Failed.
+"folder_grid" end time: Oct 20 15:21 Mountain Daylight Time
+"folder_grid" time elapsed: 00:06:39
+----------------------------------------------------------
+
+11/37 Testing: file_operation_service
+11/37 Test: file_operation_service
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/file_operation_service_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"file_operation_service" start time: Oct 20 15:21 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.97 sec
+----------------------------------------------------------
+Test Passed.
+"file_operation_service" end time: Oct 20 15:21 Mountain Daylight Time
+"file_operation_service" time elapsed: 00:00:01
+----------------------------------------------------------
+
+12/37 Testing: directory_model
+12/37 Test: directory_model
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/directory_model_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"directory_model" start time: Oct 20 15:21 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  48.27 sec
+----------------------------------------------------------
+Test Passed.
+"directory_model" end time: Oct 20 15:22 Mountain Daylight Time
+"directory_model" time elapsed: 00:00:48
+----------------------------------------------------------
+
+13/37 Testing: viewport
+13/37 Test: viewport
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/canvas_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"viewport" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"viewport" end time: Oct 20 15:22 Mountain Daylight Time
+"viewport" time elapsed: 00:00:00
+----------------------------------------------------------
+
+14/37 Testing: themes
+14/37 Test: themes
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/theme_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"themes" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"themes" end time: Oct 20 15:22 Mountain Daylight Time
+"themes" time elapsed: 00:00:00
+----------------------------------------------------------
+
+15/37 Testing: platform_integration
+15/37 Test: platform_integration
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/platform_integration_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/platform-integration-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"platform_integration" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.62 sec
+----------------------------------------------------------
+Test Passed.
+"platform_integration" end time: Oct 20 15:22 Mountain Daylight Time
+"platform_integration" time elapsed: 00:00:00
+----------------------------------------------------------
+
+16/37 Testing: grid_search
+16/37 Test: grid_search
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/grid_search_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"grid_search" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.33 sec
+----------------------------------------------------------
+Test Passed.
+"grid_search" end time: Oct 20 15:22 Mountain Daylight Time
+"grid_search" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/37 Testing: grid_density
+17/37 Test: grid_density
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/grid_density_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"grid_density" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"grid_density" end time: Oct 20 15:22 Mountain Daylight Time
+"grid_density" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/37 Testing: ui_settings
+18/37 Test: ui_settings
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/ui_settings_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"ui_settings" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"ui_settings" end time: Oct 20 15:22 Mountain Daylight Time
+"ui_settings" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/37 Testing: fs_watch
+19/37 Test: fs_watch
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs_watch_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs-watch-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"fs_watch" start time: Oct 20 15:22 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  82.63 sec
+----------------------------------------------------------
+Test Failed.
+"fs_watch" end time: Oct 20 15:24 Mountain Daylight Time
+"fs_watch" time elapsed: 00:01:22
+----------------------------------------------------------
+
+20/37 Testing: fs_watch_budget
+20/37 Test: fs_watch_budget
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs_watch_budget_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs-watch-budget-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"fs_watch_budget" start time: Oct 20 15:24 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 154.50 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_budget" end time: Oct 20 15:26 Mountain Daylight Time
+"fs_watch_budget" time elapsed: 00:02:34
+----------------------------------------------------------
+
+21/37 Testing: fs_watch_ui
+21/37 Test: fs_watch_ui
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs_watch_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/fs-watch-ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"fs_watch_ui" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.69 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_ui" end time: Oct 20 15:26 Mountain Daylight Time
+"fs_watch_ui" time elapsed: 00:00:03
+----------------------------------------------------------
+
+22/37 Testing: favorites
+22/37 Test: favorites
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/favorites_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"favorites" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.49 sec
+----------------------------------------------------------
+Test Passed.
+"favorites" end time: Oct 20 15:26 Mountain Daylight Time
+"favorites" time elapsed: 00:00:00
+----------------------------------------------------------
+
+23/37 Testing: folder_history
+23/37 Test: folder_history
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/folder_history_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"folder_history" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.19 sec
+----------------------------------------------------------
+Test Passed.
+"folder_history" end time: Oct 20 15:26 Mountain Daylight Time
+"folder_history" time elapsed: 00:00:00
+----------------------------------------------------------
+
+24/37 Testing: shortcuts_help
+24/37 Test: shortcuts_help
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/shortcuts_help_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"shortcuts_help" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.16 sec
+----------------------------------------------------------
+Test Passed.
+"shortcuts_help" end time: Oct 20 15:26 Mountain Daylight Time
+"shortcuts_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+25/37 Testing: filter
+25/37 Test: filter
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/filter_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"filter" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.76 sec
+----------------------------------------------------------
+Test Passed.
+"filter" end time: Oct 20 15:26 Mountain Daylight Time
+"filter" time elapsed: 00:00:02
+----------------------------------------------------------
+
+26/37 Testing: cache
+26/37 Test: cache
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/cache_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"cache" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   4.99 sec
+----------------------------------------------------------
+Test Passed.
+"cache" end time: Oct 20 15:26 Mountain Daylight Time
+"cache" time elapsed: 00:00:04
+----------------------------------------------------------
+
+27/37 Testing: io_scheduler
+27/37 Test: io_scheduler
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/io_scheduler_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"io_scheduler" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.16 sec
+----------------------------------------------------------
+Test Passed.
+"io_scheduler" end time: Oct 20 15:26 Mountain Daylight Time
+"io_scheduler" time elapsed: 00:00:00
+----------------------------------------------------------
+
+28/37 Testing: metadata
+28/37 Test: metadata
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/metadata_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"metadata" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.17 sec
+----------------------------------------------------------
+Test Passed.
+"metadata" end time: Oct 20 15:26 Mountain Daylight Time
+"metadata" time elapsed: 00:00:00
+----------------------------------------------------------
+
+29/37 Testing: animation
+29/37 Test: animation
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/animation_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"animation" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.49 sec
+----------------------------------------------------------
+Test Passed.
+"animation" end time: Oct 20 15:26 Mountain Daylight Time
+"animation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+30/37 Testing: mutation
+30/37 Test: mutation
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/mutation_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"mutation" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.13 sec
+----------------------------------------------------------
+Test Passed.
+"mutation" end time: Oct 20 15:26 Mountain Daylight Time
+"mutation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+31/37 Testing: copy_move
+31/37 Test: copy_move
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/copy_move_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"copy_move" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.22 sec
+----------------------------------------------------------
+Test Passed.
+"copy_move" end time: Oct 20 15:26 Mountain Daylight Time
+"copy_move" time elapsed: 00:00:00
+----------------------------------------------------------
+
+32/37 Testing: format
+32/37 Test: format
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/format_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"format" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.17 sec
+----------------------------------------------------------
+Test Passed.
+"format" end time: Oct 20 15:26 Mountain Daylight Time
+"format" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/37 Testing: monitor_output
+33/37 Test: monitor_output
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/monitor_output_tests.exe" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"monitor_output" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.14 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_output" end time: Oct 20 15:26 Mountain Daylight Time
+"monitor_output" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/37 Testing: recovery
+34/37 Test: recovery
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"recovery" start time: Oct 20 15:26 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  13.59 sec
+----------------------------------------------------------
+Test Passed.
+"recovery" end time: Oct 20 15:27 Mountain Daylight Time
+"recovery" time elapsed: 00:00:13
+----------------------------------------------------------
+
+35/37 Testing: recovery_startup
+35/37 Test: recovery_startup
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery_startup_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-startup-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"recovery_startup" start time: Oct 20 15:27 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.22 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_startup" end time: Oct 20 15:27 Mountain Daylight Time
+"recovery_startup" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/37 Testing: recovery_controller
+36/37 Test: recovery_controller
+Command: "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery_controller_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-controller-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"recovery_controller" start time: Oct 20 15:27 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.60 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_controller" end time: Oct 20 15:27 Mountain Daylight Time
+"recovery_controller" time elapsed: 00:00:01
+----------------------------------------------------------
+
+37/37 Testing: recovery_process
+37/37 Test: recovery_process
+Command: "C:/Python315/python.exe" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/scripts/verify-recovery.py" "--executable" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/glancelot.exe" "--work-dir" "C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01/recovery-process"
+Directory: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+"recovery_process" start time: Oct 20 15:27 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Recovery process verification passed (33 completed commands); evidence: C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\build-codex-safe-mode-01\recovery-process\run-1k6x8tks
+<end of output>
+Test time =  28.06 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_process" end time: Oct 20 15:27 Mountain Daylight Time
+"recovery_process" time elapsed: 00:00:28
+----------------------------------------------------------
+
+End testing: Oct 20 15:27 Mountain Daylight Time

@@ -1,0 +1,31 @@
+import json,re
+from pathlib import Path
+base=Path("docs/verification/safe-mode-01")
+specs=[
+("confirmed-binding-corrections/fs-watch-budget-results.txt","61e4752","windows-full"),
+("sort-status-corrections/full-fs-watch-budget-results.txt","03bd326","windows-full"),
+("sort-status-corrections/retry-full-fs-watch-budget-results.txt","03bd326","windows-full-timeout"),
+("sort-status-corrections/quiet-fs-watch-budget-results.txt","03bd326","windows-targeted"),
+("sort-status-corrections/linux-raw/fs-watch-budget-results.txt","03bd326","linux-full"),
+("cache-fixture-correction/windows-full-fs-watch-budget-results.txt","796ab411","windows-full"),
+("cache-fixture-correction/linux-raw/fs-watch-budget-results.txt","796ab411","linux-full")]
+rows=[]
+for rel,pin,scope in specs:
+    text=(base/rel).read_text(encoding="utf-8-sig")
+    setup=re.search(r"generated setup (\d+) ms",text)
+    total=re.search(r"Totals: (\d+) passed, (\d+) failed, (\d+) skipped,.*?, (\d+)ms",text)
+    publication=[int(x) for x in re.findall(r"(?:publication|maximum) (\d+) ms",text)]
+    row={"file":rel,"source_pin":pin,"scope":scope,"generated_setup_ms":int(setup[1]) if setup else None,
+         "qtest_total_ms":int(total[4]) if total else None,"passed":int(total[1]) if total else None,
+         "failed":int(total[2]) if total else None,"skipped":int(total[3]) if total else None,
+         "observed_publication_max_ms":max(publication,default=None)}
+    if row["qtest_total_ms"] is not None and row["generated_setup_ms"] is not None:
+        row["total_less_generation_ms"]=row["qtest_total_ms"]-row["generated_setup_ms"]
+        row["headroom_to_180000_ms"]=180000-row["qtest_total_ms"]
+    if scope.endswith("timeout"):
+        row["ctest_timeout_ms_approx"]=179990
+        row["limit_less_generation_ms_approx"]=179990-row["generated_setup_ms"]
+    rows.append(row)
+out=base/"budget-phase-diagnostic"/"historical-timing-summary.json"
+out.write_text(json.dumps(rows,indent=2)+"\n",encoding="utf-8")
+print(json.dumps(rows,indent=2))

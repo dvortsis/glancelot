@@ -45,19 +45,23 @@ QtObject {
     readonly property int barHeight: 48
     readonly property int iconSize: 16
 
+    // Typography & Accessibility (UI-SETTINGS-01 / UX-11)
+    property real textScale: (typeof viewer !== "undefined" && viewer && viewer.textScale) ? viewer.textScale : 1.0
+    property bool reducedMotion: (typeof viewer !== "undefined" && viewer && viewer.reducedMotion) ? viewer.reducedMotion : false
+
     // Type: one sans family for UI, one mono family for shortcuts; five sizes plus a display size
     readonly property string fontFamily: pick(["Geist", "SF Pro Display", "Helvetica Neue", "Switzer", "Segoe UI Variable Text", "Segoe UI", "Noto Sans"])
     readonly property string monoFamily: pick(["Geist Mono", "SF Mono", "JetBrains Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", "Noto Sans Mono"])
-    readonly property int textCaption: 11
-    readonly property int textSmall: 12
-    readonly property int textBody: 13
-    readonly property int textTitle: 15
-    readonly property int textHeading: 20
-    readonly property int textDisplay: 36
+    readonly property int textCaption: Math.round(11 * textScale)
+    readonly property int textSmall: Math.round(12 * textScale)
+    readonly property int textBody: Math.round(13 * textScale)
+    readonly property int textTitle: Math.round(15 * textScale)
+    readonly property int textHeading: Math.round(20 * textScale)
+    readonly property int textDisplay: Math.round(36 * textScale)
 
-    // Motion: routine state changes only; nothing waits on an animation
-    readonly property int durationFast: 150
-    readonly property int durationNormal: 200
+    // Motion: routine state changes only; reducedMotion zeroes animations
+    readonly property int durationFast: reducedMotion ? 0 : 150
+    readonly property int durationNormal: reducedMotion ? 0 : 200
 
     function pick(candidates) {
         const installed = Qt.fontFamilies()

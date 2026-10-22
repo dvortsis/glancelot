@@ -1,0 +1,1 @@
+{"code":"ArgumentError","detail":"Safe mode cannot reset original settings.","generation":"0","schema":1}

@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "reports": [
+    {
+      "file": ".cache/watcher-harness/linux-raw/fs-watch-budget-results.txt",
+      "markers": 17,
+      "monotonic_elapsed": true,
+      "phase_order": [
+        "baseline",
+        "fixture-generation",
+        "initial-publication",
+        "ordinary-measurement-complete",
+        "filtered-writer",
+        "filtered-measurement-complete",
+        "clear-filter",
+        "fixture-removal",
+        "rename-complete-baseline",
+        "fixture-destruction"
+      ],
+      "lifetime_ms": 22320,
+      "QtTest": "3 passed 0 failed 0 skipped",
+      "lines": [
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE baseline total_ms 0",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-generation total_ms 114",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 25000 total_ms 1160",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 50000 total_ms 2671",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 75000 total_ms 4441",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE initial-publication total_ms 6422",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE ordinary-measurement-complete total_ms 16730",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-writer total_ms 16730",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-measurement-complete total_ms 19937",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE clear-filter total_ms 19937",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-removal total_ms 19945",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 25000 total_ms 20556",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 50000 total_ms 21143",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 75000 total_ms 21715",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE rename-complete-baseline total_ms 22260",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-destruction total_ms 22312",
+        "QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_LIFETIME last_phase fixture-destruction total_ms 22320"
+      ]
+    }
+  ]
+}

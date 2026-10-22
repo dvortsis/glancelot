@@ -1,0 +1,25 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (21.7s)
+-- Generating done (2.7s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+[1/16] Automatic MOC and UIC for target glancelot_recovery_common
+[2/14] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[3/12] Automatic MOC and UIC for target glancelot_platform
+[4/10] Automatic MOC and UIC for target glancelot-decoder
+[5/8] Automatic MOC and UIC for target fs_watch_tests
+[6/7] Building CXX object CMakeFiles\fs_watch_tests.dir\tests\fs_watch_tests.cpp.obj
+FAILED: [code=2] CMakeFiles/fs_watch_tests.dir/tests/fs_watch_tests.cpp.obj 
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe"  /nologo /TP -DGLANCELOT_FS_WATCH_TESTING -DQT_CONCURRENT_LIB -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_TESTCASE_BUILDDIR=\"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01\" -DQT_TESTCASE_SOURCEDIR=\"C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01\" -DQT_TESTLIB_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -IC:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\build-codex-safe-mode-01\fs_watch_tests_autogen\include -IC:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\include -IC:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\src\app -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtCore -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\mkspecs\win32-msvc -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtGui -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtConcurrent -external:IC:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\include\QtTest -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD -Zc:__cplusplus -permissive- -utf-8 /showIncludes /FoCMakeFiles\fs_watch_tests.dir\tests\fs_watch_tests.cpp.obj /FdCMakeFiles\fs_watch_tests.dir\ /FS -c C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\fs_watch_tests.cpp
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\fs_watch_tests.cpp(118): error C3538: in a declarator-list 'auto' must always deduce to the same type
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\fs_watch_tests.cpp(118): note: could be 'QString'
+C:\src\Github\Glancelot\.worktrees\codex-safe-mode-01\tests\fs_watch_tests.cpp(118): note: or       'QByteArray'
+ninja: build stopped: subcommand failed.

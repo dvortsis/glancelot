@@ -1,0 +1,443 @@
+2026/10/21 13:08:37 http2: server: error reading preface from client //./pipe/dockerDesktopLinuxEngine: file has already been closed
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.37kB 0.1s done
+#1 DONE 0.1s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.4s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 0.7s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 136B 0.0s done
+#7 DONE 0.1s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#9 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#9 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 1.57MB 2.9s done
+#8 DONE 2.9s
+
+#10 [qt 4/5] RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
+#10 CACHED
+
+#11 [qt 5/5] RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [build  1/13] RUN apt-get update && apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [qt 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-venv build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libxkbcommon-x11-0 libegl1 && rm -rf /var/lib/apt/lists/*
+#13 CACHED
+
+#14 [qt 3/5] RUN python3 -m venv /opt/aqt && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==3.3.0 && /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+#14 CACHED
+
+#15 [build  2/13] WORKDIR /src
+#15 CACHED
+
+#16 [build  3/13] COPY CMakeLists.txt ./
+#16 DONE 0.1s
+
+#17 [build  4/13] COPY cmake cmake
+#17 DONE 0.1s
+
+#18 [build  5/13] COPY app app
+#18 DONE 0.1s
+
+#19 [build  6/13] COPY assets assets
+#19 DONE 0.2s
+
+#20 [build  7/13] COPY include include
+#20 DONE 0.1s
+
+#21 [build  8/13] COPY src src
+#21 DONE 0.1s
+
+#22 [build  9/13] COPY ui ui
+#22 DONE 0.1s
+
+#23 [build 10/13] COPY tests tests
+#23 DONE 0.1s
+
+#24 [build 11/13] COPY scripts scripts
+#24 DONE 0.1s
+
+#25 [build 12/13] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+#25 0.337 -- The CXX compiler identification is GNU 13.3.0
+#25 0.358 -- Detecting CXX compiler ABI info
+#25 0.432 -- Detecting CXX compiler ABI info - done
+#25 0.440 -- Check for working CXX compiler: /usr/bin/c++ - skipped
+#25 0.441 -- Detecting CXX compile features
+#25 0.442 -- Detecting CXX compile features - done
+#25 0.451 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+#25 0.522 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+#25 0.523 -- Found Threads: TRUE  
+#25 0.551 -- Performing Test HAVE_STDATOMIC
+#25 0.680 -- Performing Test HAVE_STDATOMIC - Success
+#25 0.681 -- Found WrapAtomic: TRUE  
+#25 0.704 -- Found OpenGL: /usr/lib/x86_64-linux-gnu/libOpenGL.so   
+#25 0.705 -- Found WrapOpenGL: TRUE  
+#25 0.710 -- Found XKB: /usr/lib/x86_64-linux-gnu/libxkbcommon.so (Required is at least version "0.5.0") 
+#25 0.714 -- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+#25 0.872 -- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+#25 0.973 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 0.973 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 0.980 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 0.980 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 0.986 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 0.986 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 0.995 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 0.995 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.001 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.001 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.030 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.030 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.030 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.030 for more information.
+#25 1.133 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.133 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.133 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.133 for more information.
+#25 1.211 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.211 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.211 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.211 for more information.
+#25 1.297 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.297 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.297 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.297 for more information.
+#25 1.391 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.391 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.391 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.391 for more information.
+#25 1.492 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.492 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.492 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.492 for more information.
+#25 1.596 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.596 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.596 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.596 for more information.
+#25 1.678 -- Configuring done (1.4s)
+#25 1.946 -- Generating done (0.2s)
+#25 1.953 -- Build files have been written to: /build
+#25 4.582 [1/358] Building CXX object CMakeFiles/glancelot_core.dir/src/core/perf_trace.cpp.o
+#25 4.976 [2/358] Building CXX object CMakeFiles/glancelot_core.dir/src/core/file_operations.cpp.o
+#25 6.108 [3/358] Building CXX object CMakeFiles/glancelot_core.dir/src/core/directory_listing.cpp.o
+#25 6.514 [4/358] Building CXX object CMakeFiles/perf_trace_tests.dir/tests/perf_trace_tests.cpp.o
+#25 7.387 [5/358] Building CXX object CMakeFiles/glancelot_core.dir/src/core/navigation.cpp.o
+#25 7.412 [6/358] Linking CXX static library libglancelot_core.a
+#25 7.498 [7/358] Linking CXX executable perf_trace_tests
+#25 8.465 [8/358] Automatic MOC and UIC for target glancelot_platform
+#25 8.479 [9/358] Copying glancelot qml sources into build dir
+#25 8.493 [10/358] Copying glancelot qml resources into build dir
+#25 9.579 [11/358] Automatic MOC and UIC for target pane_layout_tests
+#25 9.624 [12/358] Automatic MOC and UIC for target fs_watch_decoder_fixture
+#25 9.747 [13/358] Running qmlimportscanner for thumbnail_tests
+#25 9.747 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 9.747 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 9.747 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 9.747 for more information.
+#25 9.856 [14/358] Running qmlimportscanner for grid_ui_tests
+#25 9.856 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 9.856 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 9.856 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 9.856 for more information.
+#25 9.980 [15/358] Running qmlimportscanner for input_ui_tests
+#25 9.980 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 9.980 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 9.980 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 9.980 for more information.
+#25 10.10 [16/358] Running qmlimportscanner for canvas_tests
+#25 10.10 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 10.10 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 10.10 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 10.10 for more information.
+#25 10.22 [17/358] Running qmlimportscanner for fs_watch_ui_tests
+#25 10.22 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 10.22 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 10.22 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 10.22 for more information.
+#25 10.32 [18/358] Running qmlimportscanner for monitor_output_tests
+#25 10.32 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 10.32 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 10.32 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 10.32 for more information.
+#25 10.44 [19/358] Running qmlimportscanner for glancelot
+#25 10.44 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 10.44 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 10.44 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 10.44 for more information.
+#25 10.56 [20/358] Building CXX object CMakeFiles/directory_listing_tests.dir/tests/directory_listing_tests.cpp.o
+#25 10.66 [21/358] Linking CXX executable directory_listing_tests
+#25 11.15 [22/358] Building CXX object CMakeFiles/navigation_tests.dir/tests/navigation_tests.cpp.o
+#25 11.24 [23/358] Linking CXX executable navigation_tests
+#25 11.49 [24/358] Building CXX object CMakeFiles/file_operations_tests.dir/tests/file_operations_tests.cpp.o
+#25 11.58 [25/358] Linking CXX executable file_operations_tests
+#25 13.73 [26/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/platform_integration.cpp.o
+#25 14.80 [27/358] Building CXX object CMakeFiles/glancelot_platform.dir/glancelot_platform_autogen/mocs_compilation.cpp.o
+#25 15.13 [28/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/io_scheduler.cpp.o
+#25 18.06 [29/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/metadata_parser.cpp.o
+#25 18.91 [30/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/metadata_model.cpp.o
+#25 19.07 [31/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/mutation_service.cpp.o
+#25 19.67 [32/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/animation_controller.cpp.o
+#25 22.34 [33/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/raw_preview.cpp.o
+#25 22.86 [34/358] Building CXX object CMakeFiles/pane_layout_tests.dir/pane_layout_tests_autogen/mocs_compilation.cpp.o
+#25 23.10 [35/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/copy_move_service.cpp.o
+#25 24.11 [36/358] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/display_manager.cpp.o
+#25 24.14 [37/358] Linking CXX static library libglancelot_platform.a
+#25 24.23 [38/358] Generating .qsb/src/render/image.vert.qsb
+#25 24.23 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 24.23 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 24.23 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 24.23 for more information.
+#25 24.32 [39/358] Generating .qsb/src/render/image.frag.qsb
+#25 24.32 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 24.32 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 24.32 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 24.32 for more information.
+#25 26.43 [40/358] Automatic MOC and UIC for target glancelot
+#25 26.43 [41/358] Running rcc for resource qmake_Glancelot
+#25 26.43 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 26.43 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 26.43 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 26.43 for more information.
+#25 26.45 [42/358] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+#25 26.45 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 26.45 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 26.45 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 26.45 for more information.
+#25 26.66 [43/358] Running rcc for resource glancelot_raw_qml_0
+#25 26.66 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 26.66 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 26.66 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 26.66 for more information.
+#25 26.67 [44/358] Running rcc for resource glancelot_raw_qml_0_extra_qmldirs
+#25 26.67 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 26.67 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 26.67 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 26.67 for more information.
+#25 26.96 [45/358] Running rcc for resource ui_fonts
+#25 26.96 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 26.96 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 26.96 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 26.96 for more information.
+#25 26.99 [46/358] Running rcc for resource brand_assets
+#25 26.99 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 26.99 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 26.99 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 26.99 for more information.
+#25 27.66 [47/358] Running rcc for resource brand_images
+#25 27.66 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 27.66 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 27.66 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 27.66 for more information.
+#25 27.67 [48/358] Running rcc for resource canvas_shaders
+#25 27.67 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 27.67 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 27.67 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 27.67 for more information.
+#25 27.67 [49/358] Running AUTOMOC file extraction for target glancelot
+#25 27.69 [50/358] Running moc --collect-json for target glancelot
+#25 27.76 [51/358] Automatic QML type registration for target glancelot
+#25 27.76 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 27.76 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 27.76 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 27.76 for more information.
+#25 28.01 [52/358] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/settings_file.cpp.o
+#25 28.09 [53/358] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+#25 28.09 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.09 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.09 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.09 for more information.
+#25 28.22 [54/358] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+#25 28.22 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.22 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.22 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.22 for more information.
+#25 28.26 [55/358] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/pane_layout.cpp.o
+#25 28.33 [56/358] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+#25 28.33 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.33 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.33 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.33 for more information.
+#25 28.52 [57/358] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+#25 28.52 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.52 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.52 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.52 for more information.
+#25 28.58 [58/358] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+#25 28.58 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.58 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.58 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.58 for more information.
+#25 28.64 [59/358] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+#25 28.64 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.64 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.64 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.64 for more information.
+#25 28.68 [60/358] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+#25 28.68 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.68 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.68 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.68 for more information.
+#25 28.73 [61/358] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+#25 28.73 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.73 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.73 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.73 for more information.
+#25 28.77 [62/358] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+#25 28.77 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.77 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.77 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.77 for more information.
+#25 28.80 [63/358] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+#25 28.80 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.80 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.80 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.80 for more information.
+#25 28.82 [64/358] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+#25 28.82 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.82 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.82 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.82 for more information.
+#25 28.86 [65/358] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+#25 28.86 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.86 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.86 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.86 for more information.
+#25 28.88 [66/358] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+#25 28.88 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.88 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.88 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.88 for more information.
+#25 28.89 [67/358] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+#25 28.89 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.89 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.89 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.89 for more information.
+#25 28.94 [68/358] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+#25 28.94 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.94 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.94 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.94 for more information.
+#25 28.97 [69/358] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+#25 28.97 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 28.97 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 28.97 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 28.97 for more information.
+#25 29.05 [70/358] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+#25 29.05 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.05 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.05 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.05 for more information.
+#25 29.08 [71/358] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+#25 29.08 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.08 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.08 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.08 for more information.
+#25 29.12 [72/358] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+#25 29.12 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.12 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.12 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.12 for more information.
+#25 29.19 [73/358] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+#25 29.19 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.19 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.19 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.19 for more information.
+#25 29.20 [74/358] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+#25 29.20 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.20 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.20 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.20 for more information.
+#25 29.23 [75/358] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+#25 29.23 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.23 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.23 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.23 for more information.
+#25 29.25 [76/358] Automatic MOC and UIC for target glancelot-decoder
+#25 29.26 [77/358] Building CXX object CMakeFiles/glancelot-decoder.dir/glancelot-decoder_autogen/mocs_compilation.cpp.o
+#25 29.28 [78/358] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+#25 29.28 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 29.28 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 29.28 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 29.28 for more information.
+#25 30.27 [79/358] Automatic MOC and UIC for target file_operation_service_tests
+#25 30.52 [80/358] Building CXX object CMakeFiles/pane_layout_tests.dir/tests/pane_layout_tests.cpp.o
+#25 34.14 [81/358] Building CXX object CMakeFiles/glancelot-decoder.dir/src/worker/main.cpp.o
+#25 35.32 [82/358] Building CXX object CMakeFiles/glancelot.dir/glancelot_autogen/mocs_compilation.cpp.o
+#25 37.94 [83/358] Building CXX object CMakeFiles/glancelot.dir/app/main.cpp.o
+#25 38.01 [84/358] Building CXX object CMakeFiles/glancelot.dir/src/app/theme_manager.cpp.o
+#25 39.69 [85/358] Building CXX object CMakeFiles/glancelot.dir/src/render/presentation_window.cpp.o
+#25 43.73 [86/358] Building CXX object CMakeFiles/glancelot.dir/src/render/image_canvas.cpp.o
+#25 44.01 [87/358] Building CXX object CMakeFiles/glancelot.dir/src/app/filmstrip_model.cpp.o
+#25 45.53 [88/358] Building CXX object CMakeFiles/glancelot.dir/src/app/thumbnail_service.cpp.o
+#25 48.19 [89/358] Building CXX object CMakeFiles/glancelot.dir/src/app/thumbnail_provider.cpp.o
+#25 48.58 [90/358] Building CXX object CMakeFiles/glancelot.dir/src/app/viewer_controller.cpp.o
+#25 50.59 [91/358] Building CXX object CMakeFiles/glancelot.dir/src/app/pane_layout.cpp.o
+#25 51.30 [92/358] Building CXX object CMakeFiles/glancelot.dir/src/app/folder_tree_model.cpp.o
+#25 52.64 [93/358] Building CXX object CMakeFiles/glancelot.dir/src/app/settings_file.cpp.o
+#25 54.52 [94/358] Building CXX object CMakeFiles/glancelot.dir/src/app/window_slot.cpp.o
+#25 55.97 [95/358] Building CXX object CMakeFiles/glancelot.dir/src/app/directory_entry_model.cpp.o
+#25 55.99 [96/358] Building CXX object CMakeFiles/glancelot.dir/src/app/favorites_model.cpp.o
+#25 56.03 [97/358] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_qmake_Glancelot.cpp.o
+#25 56.39 [98/358] Building CXX object CMakeFiles/glancelot.dir/src/app/folder_history.cpp.o
+#25 59.15 [99/358] Building CXX object CMakeFiles/glancelot.dir/glancelot_qmltyperegistrations.cpp.o
+#25 59.65 [100/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_qmlcache_loader.cpp.o
+#25 61.00 [101/358] Building CXX object CMakeFiles/glancelot.dir/src/app/file_operation_service.cpp.o
+#25 62.12 [102/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/Theme_qml.cpp.o
+#25 62.88 [103/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.o
+#25 64.67 [104/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.o
+#25 65.12 [105/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/Main_qml.cpp.o
+#25 69.30 [106/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.o
+#25 69.70 [107/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.o
+#25 70.39 [108/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.o
+#25 70.40 [109/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.o
+#25 72.30 [110/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.o
+#25 72.71 [111/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.o
+#25 73.07 [112/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.o
+#25 73.13 [113/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.o
+#25 75.63 [114/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.o
+#25 76.07 [115/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.o
+#25 76.13 [116/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.o
+#25 76.35 [117/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.o
+#25 79.04 [118/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.o
+#25 80.42 [119/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.o
+#25 81.23 [120/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.o
+#25 82.19 [121/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.o
+#25 82.40 [122/358] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_glancelot_raw_qml_0.cpp.o
+#25 82.42 [123/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.o
+#25 82.43 [124/358] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_glancelot_raw_qml_0_extra_qmldirs.cpp.o
+#25 82.46 [125/358] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_brand_assets.cpp.o
+#25 83.54 [126/358] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_ui_fonts.cpp.o
+#25 83.58 [127/358] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_canvas_shaders.cpp.o
+#25 83.91 [128/358] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.o
+#25 83.94 [129/358] Linking CXX executable glancelot-decoder
+#25 84.13 [130/358] Linking CXX executable pane_layout_tests

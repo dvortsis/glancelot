@@ -1,0 +1,119 @@
+{
+    "bytes_per_file": 1,
+    "cache_state": "uncontrolled, freshly generated files; alternating order; no cache flush",
+    "filesystem_scope": "generated local temporary folder; no network-share qualification",
+    "generated_regular_files": 39999,
+    "parent_entries": 20000,
+    "rounds": 3,
+    "samples": [
+        {
+            "complete": true,
+            "method": "bare_listing",
+            "round": 0,
+            "rows": 20000,
+            "wall_ms": 172.6852
+        },
+        {
+            "complete": true,
+            "method": "bare_pair",
+            "round": 0,
+            "rows": 40000,
+            "wall_ms": 260.1063
+        },
+        {
+            "complete": true,
+            "method": "model_listing",
+            "round": 0,
+            "rows": 20000,
+            "wall_ms": 803.4398
+        },
+        {
+            "complete": true,
+            "method": "watch_snapshot",
+            "round": 0,
+            "rows": 20000,
+            "wall_ms": 685.4901
+        },
+        {
+            "complete": true,
+            "method": "watch_pair",
+            "round": 0,
+            "rows": 40000,
+            "wall_ms": 1612.9186
+        },
+        {
+            "complete": true,
+            "method": "watch_pair",
+            "round": 1,
+            "rows": 40000,
+            "wall_ms": 1288.6632
+        },
+        {
+            "complete": true,
+            "method": "watch_snapshot",
+            "round": 1,
+            "rows": 20000,
+            "wall_ms": 559.6152
+        },
+        {
+            "complete": true,
+            "method": "model_listing",
+            "round": 1,
+            "rows": 20000,
+            "wall_ms": 651.5241
+        },
+        {
+            "complete": true,
+            "method": "bare_pair",
+            "round": 1,
+            "rows": 40000,
+            "wall_ms": 217.6804
+        },
+        {
+            "complete": true,
+            "method": "bare_listing",
+            "round": 1,
+            "rows": 20000,
+            "wall_ms": 131.984
+        },
+        {
+            "complete": true,
+            "method": "bare_listing",
+            "round": 2,
+            "rows": 20000,
+            "wall_ms": 138.1403
+        },
+        {
+            "complete": true,
+            "method": "bare_pair",
+            "round": 2,
+            "rows": 40000,
+            "wall_ms": 217.8992
+        },
+        {
+            "complete": true,
+            "method": "model_listing",
+            "round": 2,
+            "rows": 20000,
+            "wall_ms": 702.0427
+        },
+        {
+            "complete": true,
+            "method": "watch_snapshot",
+            "round": 2,
+            "rows": 20000,
+            "wall_ms": 574.6938
+        },
+        {
+            "complete": true,
+            "method": "watch_pair",
+            "round": 2,
+            "rows": 40000,
+            "wall_ms": 1126.0107
+        }
+    ],
+    "schema": 2,
+    "scope_entries": 20000,
+    "setup_ms": 16347,
+    "timing_scope": "worker construction and destruction; no GUI publication or decoder"
+}

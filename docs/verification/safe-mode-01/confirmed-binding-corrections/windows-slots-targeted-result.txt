@@ -1,0 +1,1 @@
+window_slots_targeted_exit=1

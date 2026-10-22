@@ -1,5 +1,7 @@
 #include "glancelot/directory_listing.hpp"
 #include "link_policy.hpp"
+#include "glancelot/perf_trace.hpp"
+#include <optional>
 #include <algorithm>
 
 // Mixed folder listing for the file-manager grid. One directory level, one pass, worker thread only.
@@ -15,6 +17,8 @@ bool dotName(const fs::path& name) { const auto& n = name.native(); return !n.em
 #endif
 // Folders first in natural order, files in the viewer's order. Cancellable during the sort itself.
 bool finish(std::vector<DirectoryEntry>& entries, const SortSpec& sort, std::stop_token cancel) {
+    perf::ScopedSpan timing(perf::Stage::Sort);
+    timing.setBytes(entries.size());
     const auto split = std::stable_partition(entries.begin(), entries.end(), [](const DirectoryEntry& e) { return e.kind == EntryKind::Folder; });
     try {
         std::sort(entries.begin(), split, [&](const DirectoryEntry& a, const DirectoryEntry& b) {
@@ -25,19 +29,21 @@ bool finish(std::vector<DirectoryEntry>& entries, const SortSpec& sort, std::sto
             if (cancel.stop_requested()) throw Cancelled{};
             return fileSortBefore(sort, a.path, a.meta, b.path, b.meta);
         });
-    } catch (const Cancelled&) { return false; }
+    } catch (const Cancelled&) { timing.setFlags(perf::Cancelled); return false; }
+    if (cancel.stop_requested()) timing.setFlags(perf::Cancelled);
     return !cancel.stop_requested();
 }
 }
 
 DirectoryListing listDirectory(const fs::path& directory, const SortSpec& sort, bool includeHidden, std::stop_token cancel, std::size_t limit) {
+    std::optional<perf::ScopedSpan> timing(std::in_place, perf::Stage::Enumerate);
     DirectoryListing result;
-    const auto cancelled = [&] { result = DirectoryListing{}; result.cancelled = true; return result; };
+    const auto cancelled = [&] { if (timing) timing->setFlags(perf::Cancelled); result = DirectoryListing{}; result.cancelled = true; return result; };
     if (cancel.stop_requested()) return cancelled();
     // Same policy as the tree and traversal: a folder reached through a link is not listed.
     if (directory.empty() || !detail::safePath(directory, cancel)) {
         if (cancel.stop_requested()) return cancelled();
-        result.accessible = false; return result;
+        result.accessible = false; if (timing) timing->setFlags(perf::Failed); return result;
     }
     std::vector<DirectoryEntry>& entries = result.entries;
     const auto admit = [&](DirectoryEntry&& entry) {
@@ -53,7 +59,7 @@ DirectoryListing listDirectory(const fs::path& directory, const SortSpec& sort, 
     HANDLE find = FindFirstFileExW(pattern.c_str(), FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     if (find == INVALID_HANDLE_VALUE) {
         // A drive root may legitimately contain nothing at all; everything else is "cannot list".
-        if (GetLastError() != ERROR_FILE_NOT_FOUND) result.accessible = false;
+        if (GetLastError() != ERROR_FILE_NOT_FOUND) { result.accessible = false; timing->setFlags(perf::Failed); }
         return result;
     }
     do {
@@ -78,13 +84,13 @@ DirectoryListing listDirectory(const fs::path& directory, const SortSpec& sort, 
     // A disconnect or read failure after some entries is not a complete folder listing.
     // The intentional limit is the only early exit that may publish a partial result.
     if (!result.truncated && enumerationError != ERROR_NO_MORE_FILES) {
-        result.entries.clear(); result.accessible = false; return result;
+        result.entries.clear(); result.accessible = false; if (timing) timing->setFlags(perf::Failed); return result;
     }
 #else
     std::error_code ec;
     // No skip_permission_denied: an inaccessible folder must not look empty.
     fs::directory_iterator it(directory, ec), end;
-    if (ec) { result.accessible = false; return result; }
+    if (ec) { result.accessible = false; if (timing) timing->setFlags(perf::Failed); return result; }
     while (it != end) {
         if (cancel.stop_requested()) return cancelled();
         DirectoryEntry entry;
@@ -109,9 +115,10 @@ DirectoryListing listDirectory(const fs::path& directory, const SortSpec& sort, 
             if (!admit(std::move(entry))) break;
         }
         it.increment(ec);
-        if (ec) { result.entries.clear(); result.accessible = false; return result; }
+        if (ec) { result.entries.clear(); result.accessible = false; if (timing) timing->setFlags(perf::Failed); return result; }
     }
 #endif
+    timing->setBytes(entries.size()); timing.reset();
     if (!finish(entries, sort, cancel)) return cancelled();
     return result;
 }

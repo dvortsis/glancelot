@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/themes">
+    <file alias="themes/catalog.json">C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/assets/themes/catalog.json</file>
+  </qresource>
+</RCC>
+

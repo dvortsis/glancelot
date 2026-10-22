@@ -1,0 +1,25 @@
+{
+    "recovery": {
+        "version": 1,
+        "windows": {
+            "1": {
+                "checkpointRevision": "e0b6b508-dad6-488d-837a-0a73e50192c8",
+                "claimNonce": "19f5778b-9fa6-42a8-89f5-d3f3d0d82e17",
+                "origin": "navigation",
+                "pid": 1831,
+                "sequence": "0",
+                "start": "21081609",
+                "state": "dirty",
+                "version": 1
+            }
+        }
+    },
+    "schema": 1,
+    "windows": {
+        "1": {
+            "folder": "/build/recovery-process/run-smv7l0fv/generated-media",
+            "image": "/build/recovery-process/run-smv7l0fv/generated-media/-explicit-配置.png",
+            "saved": 1792630026
+        }
+    }
+}

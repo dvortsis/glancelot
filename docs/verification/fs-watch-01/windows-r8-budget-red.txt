@@ -1,0 +1,12 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 82535 ms; initial GUI gap 13 ms; sustained-writer/recovery GUI gap 191 ms; writes 260 invalidations 11
+FAIL!  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 'admittedWithoutPrefix' returned FALSE. (100k rows must publish without a partial identity prefix and retain the one-entry complete baseline)
+C:\src\Github\Glancelot\.worktrees\codex-fs-watch-01\tests\fs_watch_tests.cpp(248) : failure location
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 44 identity 0 merge (includes disposal) 35 merge scan 8 reset 0 projection/raw mirror 9 selection 0 observed/accepted identities 35544 1
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 179 identity 0 merge (includes disposal) 164 merge scan 95 reset 0 projection/raw mirror 15 selection 0 observed/accepted identities 35544 1
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 16 maximum 179 ms; loading at exit false
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 132510ms
+********* Finished testing of FSWatchTests *********

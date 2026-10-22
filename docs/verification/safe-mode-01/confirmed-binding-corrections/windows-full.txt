@@ -1,0 +1,208 @@
+Waiting for gate lock held by dvort on agent/export-csv since 10/20/2026 20:56:51
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 21:00:00
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 21:00:00
+Waiting for gate lock held by dvort on codex/safe-mode-01 since 10/20/2026 21:00:00
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (12.4s)
+-- Generating done (2.5s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+[1/208] Automatic MOC and UIC for target glancelot_recovery_common
+[2/206] Automatic MOC and UIC for target glancelot_platform
+[3/204] Automatic MOC and UIC for target glancelot_test_argv_capture
+[4/202] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/200] Automatic MOC and UIC for target pane_layout_tests
+[6/199] Automatic MOC and UIC for target glancelot-decoder
+[7/197] Automatic MOC and UIC for target glancelot
+[8/196] Automatic MOC and UIC for target theme_tests
+[9/195] Running AUTOMOC file extraction for target glancelot
+[10/195] Automatic MOC and UIC for target recovery_startup_tests
+[11/193] Automatic MOC and UIC for target grid_ui_tests
+[12/192] Automatic MOC and UIC for target fs_watch_ui_tests
+[13/191] Running moc --collect-json for target glancelot
+[14/145] Automatic MOC and UIC for target monitor_output_tests
+[15/144] Automatic MOC and UIC for target recovery_tests
+[16/142] Automatic MOC and UIC for target recovery_controller_tests
+[17/140] Automatic MOC and UIC for target acceptance_tests
+[18/139] Automatic MOC and UIC for target thumbnail_tests
+[19/137] Automatic MOC and UIC for target folder_tree_tests
+[20/136] Automatic MOC and UIC for target window_slot_tests
+[21/135] Automatic MOC and UIC for target file_operation_service_tests
+[22/133] Automatic MOC and UIC for target directory_model_tests
+[23/131] Automatic MOC and UIC for target canvas_tests
+[24/129] Automatic MOC and UIC for target platform_integration_tests
+[25/127] Automatic MOC and UIC for target grid_search_tests
+[26/125] Automatic MOC and UIC for target grid_density_tests
+[27/123] Automatic MOC and UIC for target ui_settings_tests
+[28/122] Automatic MOC and UIC for target fs_watch_tests
+[29/121] Automatic MOC and UIC for target fs_watch_budget_tests
+[30/120] Automatic MOC and UIC for target favorites_tests
+[31/119] Automatic MOC and UIC for target folder_history_tests
+[32/117] Automatic MOC and UIC for target shortcuts_help_tests
+[33/116] Automatic MOC and UIC for target filter_tests
+[34/115] Automatic MOC and UIC for target cache_tests
+[35/114] Automatic MOC and UIC for target io_scheduler_tests
+[36/113] Automatic MOC and UIC for target metadata_tests
+[37/111] Automatic MOC and UIC for target animation_tests
+[38/109] Automatic MOC and UIC for target mutation_tests
+[39/108] Automatic MOC and UIC for target copy_move_tests
+[40/107] Automatic MOC and UIC for target format_tests
+[41/105] Building CXX object CMakeFiles\glancelot.dir\src\app\theme_manager.cpp.obj
+[42/105] Building CXX object CMakeFiles\glancelot.dir\src\app\pane_layout.cpp.obj
+[43/105] Building CXX object CMakeFiles\glancelot.dir\src\app\settings_file.cpp.obj
+[44/105] Building CXX object CMakeFiles\glancelot.dir\src\app\favorites_model.cpp.obj
+[45/105] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[46/105] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\pane_layout.cpp.obj
+[47/105] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\settings_file.cpp.obj
+[48/105] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[49/105] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\theme_manager.cpp.obj
+[50/105] Building CXX object CMakeFiles\theme_tests.dir\src\app\theme_manager.cpp.obj
+[51/105] Building CXX object CMakeFiles\theme_tests.dir\src\app\settings_file.cpp.obj
+[52/105] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\settings_file.cpp.obj
+[53/105] Building CXX object CMakeFiles\theme_tests.dir\src\app\viewer_controller.cpp.obj
+[54/105] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\theme_manager.cpp.obj
+[55/105] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\pane_layout.cpp.obj
+[56/105] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[57/105] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\settings_file.cpp.obj
+[58/105] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\settings_file.cpp.obj
+[59/105] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\viewer_controller.cpp.obj
+[60/105] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\viewer_controller.cpp.obj
+[61/105] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\settings_file.cpp.obj
+[62/105] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\pane_layout.cpp.obj
+[63/105] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\viewer_controller.cpp.obj
+[64/105] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\settings_file.cpp.obj
+[65/105] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\settings_file.cpp.obj
+[66/105] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\viewer_controller.cpp.obj
+[67/105] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\settings_file.cpp.obj
+[68/105] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\viewer_controller.cpp.obj
+[69/105] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\settings_file.cpp.obj
+[70/105] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\viewer_controller.cpp.obj
+[71/105] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\settings_file.cpp.obj
+[72/105] Building CXX object CMakeFiles\favorites_tests.dir\src\app\favorites_model.cpp.obj
+[73/105] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\viewer_controller.cpp.obj
+[74/105] Building CXX object CMakeFiles\favorites_tests.dir\src\app\settings_file.cpp.obj
+[75/105] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\settings_file.cpp.obj
+[76/105] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\viewer_controller.cpp.obj
+[77/105] Building CXX object CMakeFiles\filter_tests.dir\src\app\settings_file.cpp.obj
+[78/105] Building CXX object CMakeFiles\filter_tests.dir\src\app\viewer_controller.cpp.obj
+[79/105] Building CXX object CMakeFiles\cache_tests.dir\src\app\settings_file.cpp.obj
+[80/105] Building CXX object CMakeFiles\cache_tests.dir\src\app\viewer_controller.cpp.obj
+[81/105] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\settings_file.cpp.obj
+[82/105] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\viewer_controller.cpp.obj
+[83/105] Building CXX object CMakeFiles\mutation_tests.dir\src\app\settings_file.cpp.obj
+[84/105] Linking CXX executable glancelot.exe
+[85/105] Linking CXX executable acceptance_tests.exe
+[86/105] Linking CXX executable folder_tree_tests.exe
+[87/105] Linking CXX executable pane_layout_tests.exe
+[88/105] Linking CXX executable window_slot_tests.exe
+[89/105] Linking CXX executable grid_ui_tests.exe
+[90/105] Linking CXX executable theme_tests.exe
+[91/105] Linking CXX executable ui_settings_tests.exe
+[92/105] Linking CXX executable fs_watch_tests.exe
+[93/105] Linking CXX executable fs_watch_budget_tests.exe
+[94/105] Linking CXX executable fs_watch_ui_tests.exe
+[95/105] Linking CXX executable favorites_tests.exe
+[96/105] Linking CXX executable shortcuts_help_tests.exe
+[97/105] Building CXX object CMakeFiles\mutation_tests.dir\src\app\viewer_controller.cpp.obj
+[98/105] Linking CXX executable filter_tests.exe
+[99/105] Linking CXX executable cache_tests.exe
+[100/105] Linking CXX executable io_scheduler_tests.exe
+[101/105] Linking CXX executable mutation_tests.exe
+[102/105] Linking CXX executable monitor_output_tests.exe
+[103/105] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\settings_file.cpp.obj
+[104/105] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\viewer_controller.cpp.obj
+[105/105] Linking CXX executable copy_move_tests.exe
+Test project C:/src/Github/Glancelot/.worktrees/codex-safe-mode-01/build-codex-safe-mode-01
+      Start  1: perf_trace
+ 1/37 Test  #1: perf_trace .......................   Passed    0.09 sec
+      Start  2: navigation
+ 2/37 Test  #2: navigation .......................   Passed    2.83 sec
+      Start  3: directory_listing
+ 3/37 Test  #3: directory_listing ................   Passed   28.74 sec
+      Start  4: file_operations
+ 4/37 Test  #4: file_operations ..................   Passed    0.22 sec
+      Start  5: viewer_acceptance
+ 5/37 Test  #5: viewer_acceptance ................   Passed    8.63 sec
+      Start  6: thumbnails
+ 6/37 Test  #6: thumbnails .......................   Passed    7.28 sec
+      Start  7: folder_tree
+ 7/37 Test  #7: folder_tree ......................   Passed    9.62 sec
+      Start  8: pane_layout
+ 8/37 Test  #8: pane_layout ......................   Passed    0.76 sec
+      Start  9: window_slots
+ 9/37 Test  #9: window_slots .....................***Failed   30.81 sec
+
+      Start 10: folder_grid
+10/37 Test #10: folder_grid ......................   Passed  318.82 sec
+      Start 11: file_operation_service
+11/37 Test #11: file_operation_service ...........   Passed    1.23 sec
+      Start 12: directory_model
+12/37 Test #12: directory_model ..................   Passed   59.95 sec
+      Start 13: viewport
+13/37 Test #13: viewport .........................   Passed    0.11 sec
+      Start 14: themes
+14/37 Test #14: themes ...........................   Passed    0.28 sec
+      Start 15: platform_integration
+15/37 Test #15: platform_integration .............   Passed    0.91 sec
+      Start 16: grid_search
+16/37 Test #16: grid_search ......................   Passed    0.46 sec
+      Start 17: grid_density
+17/37 Test #17: grid_density .....................   Passed    0.25 sec
+      Start 18: ui_settings
+18/37 Test #18: ui_settings ......................   Passed    0.46 sec
+      Start 19: fs_watch
+19/37 Test #19: fs_watch .........................***Failed   83.78 sec
+
+      Start 20: fs_watch_budget
+20/37 Test #20: fs_watch_budget ..................   Passed  174.08 sec
+      Start 21: fs_watch_ui
+21/37 Test #21: fs_watch_ui ......................   Passed    2.97 sec
+      Start 22: favorites
+22/37 Test #22: favorites ........................   Passed    0.53 sec
+      Start 23: folder_history
+23/37 Test #23: folder_history ...................   Passed    0.11 sec
+      Start 24: shortcuts_help
+24/37 Test #24: shortcuts_help ...................   Passed    0.19 sec
+      Start 25: filter
+25/37 Test #25: filter ...........................   Passed    2.77 sec
+      Start 26: cache
+26/37 Test #26: cache ............................   Passed    4.61 sec
+      Start 27: io_scheduler
+27/37 Test #27: io_scheduler .....................   Passed    0.23 sec
+      Start 28: metadata
+28/37 Test #28: metadata .........................   Passed    0.18 sec
+      Start 29: animation
+29/37 Test #29: animation ........................   Passed    0.51 sec
+      Start 30: mutation
+30/37 Test #30: mutation .........................   Passed    0.13 sec
+      Start 31: copy_move
+31/37 Test #31: copy_move ........................   Passed    0.20 sec
+      Start 32: format
+32/37 Test #32: format ...........................   Passed    0.16 sec
+      Start 33: monitor_output
+33/37 Test #33: monitor_output ...................   Passed    0.14 sec
+      Start 34: recovery
+34/37 Test #34: recovery .........................   Passed   14.42 sec
+      Start 35: recovery_startup
+35/37 Test #35: recovery_startup .................   Passed    0.27 sec
+      Start 36: recovery_controller
+36/37 Test #36: recovery_controller ..............   Passed   12.65 sec
+      Start 37: recovery_process
+37/37 Test #37: recovery_process .................   Passed   30.34 sec
+
+95% tests passed, 2 tests failed out of 37
+
+Total Test time (real) = 802.08 sec
+
+The following tests FAILED:
+	  9 - window_slots (Failed)
+	 19 - fs_watch (Failed)
+Errors while running CTest

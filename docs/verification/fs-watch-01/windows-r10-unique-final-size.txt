@@ -1,0 +1,21 @@
+********* Start testing of FSWatchTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchTests::initTestCase()
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 55831 ms; initial GUI gap 22 ms; sustained-writer/recovery GUI gap 161 ms; writes 275 invalidations 7
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 33 ms; GUI gap 86 ms; publication 85 ms; writes 68
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 21 identity 0 merge (includes disposal) 16 merge scan 5 reset 0 projection/raw mirror 4 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 20 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 0 selection 0 observed/accepted identities 0 1 applied/filtered false false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 123 identity 0 merge (includes disposal) 114 merge scan 72 reset 0 projection/raw mirror 8 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 141 identity 0 merge (includes disposal) 124 merge scan 80 reset 0 projection/raw mirror 17 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 158 identity 0 merge (includes disposal) 140 merge scan 93 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 160 identity 0 merge (includes disposal) 139 merge scan 87 reset 0 projection/raw mirror 20 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 149 identity 0 merge (includes disposal) 131 merge scan 82 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 143 identity 0 merge (includes disposal) 125 merge scan 81 reset 0 projection/raw mirror 17 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 85 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 85 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 70 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 70 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 62 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 62 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 15 maximum 160 ms; loading at exit false
+PASS   : FSWatchTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 84285ms
+********* Finished testing of FSWatchTests *********

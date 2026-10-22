@@ -1,0 +1,17 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (16.4s)
+-- Generating done (1.2s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/codex-input-02-r3/build-codex-input-02-r3
+[1/13] Automatic MOC and UIC for target glancelot_platform
+[2/11] Automatic MOC and UIC for target glancelot-decoder
+[3/9] Automatic MOC and UIC for target input_ui_tests
+[4/7] Automatic MOC and UIC for target grid_ui_tests
+[5/6] Building CXX object CMakeFiles\grid_ui_tests.dir\tests\grid_ui_tests.cpp.obj
+[6/6] Linking CXX executable grid_ui_tests.exe
