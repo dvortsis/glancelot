@@ -11,6 +11,9 @@ review_routing_2026_10_20: Codex reviews INPUT-02 87b063d first, then claude/mon
 memory_action: act_mvcridmt_bdf1947ea9e7
 lead_takeover_2026_10_22: "User decision: Claude Code Opus 5.5 lead owns all lanes' remaining work via Opus subagents; fresh-context Claude reviewers replace cross-lane review; scope is stack correction then v1 M3-M6, conditional items feasibility-first. Supersedes lane_tools/review_routing above. Plan: docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
 lead_plan_2026_10_22: "User-approved execution plan: enablement phase EN-01..EN-10, frozen Wave A stack correction, then six concurrent subsystem tracks A-F with cross-track contracts; CI lead-windows-gate is the only gate that decides done; physical qualification via RUNBOOK packets. Replaces takeover waves B-G. Plan: docs/handoff/LEAD-PLAN-2026-10-22.md"
+operating_model: "AGENTS.md (October 22, 2026): lead plus track and fresh-context review sessions; CI lead-windows-gate decides done. Lanes retired."
+phase0_memory_action: act_mvk70jg4_e555f0e2e57c
+current_cycle: docs/handoff/PHASE0-CYCLE1-2026-10-22.md
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
   performance_strategy: docs/PERFORMANCE-STRATEGY.md
@@ -926,6 +929,127 @@ tasks:
     outcome: Frozen corrections to the merged stack and fresh-context confirmation on integrated main
     acceptance: F015 tabs through recovery checkpoint (header diff reviewed); F040 and pinned output share admission with parity tests; F049 presets obey canonical lock/freeze, preserve unknown data, distinct from monitor workspace presets; F054 covers main's newer strings and detached windows with pseudo-locale/RTL evidence; ShortcutCheatSheet ReferenceError fixed
     verification: Per-packet fresh reviewer; full Linux gate; Windows scripts/build.ps1 -Test before done
+    split_into: [STACK-F040-PINNED, STACK-F015-RECOVERY, STACK-F049-PRESETS, STACK-F054-COVERAGE, STACK-CONFIRM]
+  # Phase 0 cycle 1 (docs/handoff/PHASE0-CYCLE1-2026-10-22.md). Scope and acceptance: docs/handoff/LEAD-PLAN-2026-10-22.md sections 3-4.
+  - id: EN-01
+    title: CI hardening
+    owner: lead
+    state: implementing
+    outcome: Authoritative and advisory Windows gate jobs that keep failure evidence, run once per gate push and match Docker's Qt modules
+    acceptance: One recorded hosted-windows run; one recorded lead-windows-gate run on main with duration; gate/* pushes start only the gate workflow; QTest results files uploaded; ci images pruned
+    progress: "First hosted-windows run 39870526245 (c4e0829) PASS 43/43 672.09s; authoritative job on the same commit FAIL 40/43 (folder_tree, folder_grid, fs_watch) with no code diff from green ec05e42 and no QTest detail kept; f033070 adds per-test results files and uploads them; triage run 39874250713 (Docker skipped, triage only)"
+  - id: EN-02
+    title: Linux bootstrap and qtimageformats parity
+    owner: lead
+    session: S2
+    state: ready
+    branch: claude/en-02-linux-bootstrap
+    outcome: scripts/linux-bootstrap.sh, qtimageformats in Docker, rewritten BUILDING.md Linux section
+    acceptance: Script proven in a fresh cloud session with actual output; Docker gate passes with testMultipageTiffNavigation un-skipped; Docker gate time delta recorded
+  - id: EN-03
+    title: CTest labels and resource locks
+    owner: lead
+    session: S1
+    state: ready
+    depends: [EN-05]
+    branch: claude/en-03-ctest-labels
+    granted_files: [CMakeLists.txt, cmake/*.cmake, docs/TESTING.md]
+    outcome: Labels fast/ui/budget/process/native/clipboard; RESOURCE_LOCK clipboard and budget
+    acceptance: ctest -L fast under about 3 min offscreen; full suite count unchanged
+  - id: EN-04
+    title: Shared test harness wiring
+    owner: lead
+    session: S2
+    state: ready
+    branch: claude/en-04-harness-wiring
+    outcome: One QML context wiring helper used by app/main.cpp and all four UI harnesses
+    acceptance: All UI suites pass unchanged; one wiring site; favoritesModel and folderHistory injected
+  - id: EN-05
+    title: Viewer source list and decode-cache extraction
+    owner: lead
+    session: S1
+    state: ready
+    branch: claude/en-05-viewer-sources
+    granted_files: [CMakeLists.txt, cmake/*.cmake, src/app/viewer_controller.cpp (decode-cache block)]
+    outcome: cmake/ViewerSources.cmake list used by every target; src/app/decode_cache.{hpp,cpp} with unchanged semantics
+    acceptance: cache, viewer_acceptance and fs_watch pass; no diff in include/glancelot/viewer_controller.hpp
+  - id: EN-06
+    title: Command routing correctness
+    owner: lead
+    session: S3
+    state: ready
+    branch: claude/en-06-routing
+    outcome: toggle-metadata and animation-* run once; storage-profile-* handled or not emitted; merge leftovers repaired; no ShortcutCheatSheet ReferenceError
+    acceptance: New routed-once test; input_ui, folder_grid, animation and metadata pass
+  - id: EN-07
+    title: Per-component command handling
+    owner: lead
+    state: ready
+    depends: [EN-06, STACK-F054-COVERAGE]
+    outcome: Feature components handle their own viewCommand ids; Main.qml keeps invoke, scope routing and canvas/window ids
+    acceptance: Every UI suite passes unchanged; AGENTS.md rule that new commands are handled in the owning component
+  - id: EN-08
+    title: Docs and queue hygiene
+    owner: lead
+    state: implementing
+    outcome: Per-platform capability page, stale README/TESTING/DOCKER claims fixed, queue rows for the merged stack features, AGENTS.md operating model
+    acceptance: Strict-duplicate YAML parse passes; capability page reviewed by a fresh reviewer against the queue
+    progress: AGENTS.md operating model and this cycle's rows landed with the cycle 1 contract commit
+  - id: EN-09
+    title: Feasibility and dependency decisions
+    owner: lead
+    session: S4
+    state: ready
+    branch: claude/en-09-feasibility
+    outcome: docs/<ID>-FEASIBILITY.md for F024, F039, F048, F071, F074, F076, F077, F078 and docs/DEP-DECISIONS.md
+    acceptance: Each doc has dependencies and licences, platform capability, security model, test strategy and a go/no-go; lead records go/no-go here
+  - id: EN-10
+    title: Housekeeping
+    owner: lead
+    state: ready
+    outcome: Only live worktrees and branches remain; no stale gate lock
+    acceptance: git worktree list shows only live work; merged remote branches deleted; never unmerged or unpushed work
+  - id: STACK-F040-PINNED
+    parent: STACK-CORRECTION-01
+    owner: lead
+    session: S5
+    state: ready
+    branch: claude/stack-f040-pinned
+    outcome: Reference window and pinned monitor output stay distinct commands sharing pixel/texture admission and release accounting
+    acceptance: Parity tests for close, pin replacement and recovery while both active; no duplicate decode; selected image unchanged
+  - id: STACK-F015-RECOVERY
+    parent: STACK-CORRECTION-01
+    owner: lead
+    session: S5
+    state: ready
+    depends: [STACK-F040-PINNED]
+    branch: claude/stack-f015-recovery
+    outcome: Tabs persist through the production recovery checkpoint
+    acceptance: Restart, old entry, malformed/oversized, stale sequence, busy/failure/retry, other-slot preservation and SAFE/reset tests; exact header diff submitted for lead review
+  - id: STACK-F049-PRESETS
+    parent: STACK-CORRECTION-01
+    owner: lead
+    session: S6
+    state: ready
+    branch: claude/stack-f049-presets
+    outcome: Layout presets obey canonical lock/freeze, keep unknown data and stay distinct from monitor workspace presets
+    acceptance: Per-slot placement isolation; snapshotExtras_ and newer data survive persistWhole(); navigator follows paneAvailable("preview") when detached
+  - id: STACK-F054-COVERAGE
+    parent: STACK-CORRECTION-01
+    owner: lead
+    session: S6
+    state: ready
+    depends: [EN-06]
+    branch: claude/stack-f054-coverage
+    outcome: Localization coverage for main's newer strings and detached windows
+    acceptance: Interpolation and accessibility names preserved; RTL for detached windows; pseudo-locale, clipping and RTL screenshots from the Linux build; regenerated translations/glancelot_en_XA.ts
+  - id: STACK-CONFIRM
+    parent: STACK-CORRECTION-01
+    owner: lead
+    state: ready
+    depends: [STACK-F040-PINNED, STACK-F015-RECOVERY, STACK-F049-PRESETS, STACK-F054-COVERAGE]
+    outcome: Fresh whole-stack confirmation on integrated main including the 3b2b0db resolutions and the nine confirm-only items
+    acceptance: docs/verification/STACK-CONFIRM-REVIEW.md APPROVED
 next_milestone: M3
 priority_order: [PATH-BAR-01, PANES-01, GRID-PREVIEW-01, FILE-GRID-01, DELETE-01, DELETE-KEYS-01, GRID-SEARCH-01, GRID-DENSITY-01, UI-SETTINGS-01, TOPBAR-THEME-01, PLATFORM-01, CACHE-01, IO-01, FAVORITES-01, FILTER-01, META-HUD-01, ANIM-01, RENAME-01, COPY-MOVE-01, INPUT-02, FORMAT-02, MONITOR-OUTPUT-01]
 priority_note: User-requested October 17 2026 workspace and file-manager features lead the queue; honor dependencies and preserve existing platform, performance and safety gates. Original planning note; current per-task states and pinned evidence are authoritative.
