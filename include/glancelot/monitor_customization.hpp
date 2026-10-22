@@ -13,7 +13,7 @@ class DisplayManager;
 
 // Lead-frozen MONITOR-CUSTOM-01 contract. See docs/MONITOR-CUSTOM-01-PLAN.md
 // for validation, persistence, command parity, ownership and recovery semantics.
-// Declaration only until the Claude packet supplies the implementation.
+// Implementation belongs to the user-reassigned Codex packet.
 class MonitorCustomization final : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantMap outputOptions READ outputOptions NOTIFY changed)
