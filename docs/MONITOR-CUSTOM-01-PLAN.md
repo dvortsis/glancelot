@@ -81,3 +81,11 @@ Handoff provides a new exact commit, source/base diff, actual targeted command o
 ```
 
 The main integrator later synchronizes main into the accepted branch under the queue lock, performs required independent confirmation and complete locked Windows/Docker gates, merges no-ff and checks the integrated commit. Codex never merges main on behalf of the lead or marks the task done. A passing software test is not hardware qualification.
+
+## Lead correction amendment after independent review2f73c84 (October22,2026)
+
+PaneLayout/layouts[slot] is the sole live authority for pane freeze and global layout lock. paneRoutes.frozen is derived from that authority. Old monitor-slot route frozen fields are preserved as inactive legacy data, excluded from owned live writes and SAFE ownership; workspace preset snapshots capture the current canonical dock state. Existing Settings, arrangement and layout-reset paths therefore cannot leave a second live freeze flag behind. Layout-only lock/freeze transactions may succeed while monitor preferences are invalid/newer without rewriting the monitor subtree. Ordinary moves/appearance/presets remain blocked until that state is explicitly repaired. Saving exposes a read-only saving property so the UI can disable another layout move while a transaction is pending.
+
+An explicit user drag/geometry commit whose center enters a connected display updates the preferred display binding and geometry atomically. Topology recovery never rewrites that preference. Default clean-output background remains solid black, preserving the previous output letterbox; selecting controller theme is explicit. The fullscreen option is real borderless Qt fullscreen; windowed output receives a reachable client geometry whose native frame fits the target work area. Folder hold is sticky until explicit policy resume, mode change or close, even if navigation returns to the held folder.
+
+Use test-only Qt6.8 QPA synthetic screens under the offscreen backend to exercise the real coordinator with one/two/three displays, positive move/swap, strong/weak reconnect and removal, mixed logical origins/DPR and windowed geometry. They do not change system monitor configuration. Native runs must skip synthetic-screen cases and retain their separate real-window proof. No production topology test backdoor or external ABI is introduced.

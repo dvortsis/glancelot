@@ -455,14 +455,14 @@ tasks:
     priority: 7
     owner: lead
     owner_lane: codex
-    state: review
+    state: implementing
     branch: codex/monitor-custom-01
     worktree: .worktrees/codex-monitor-custom-01
     build: build-codex-monitor-custom-01
     plan: docs/MONITOR-CUSTOM-01-PLAN.md
-    candidate_commit: ab31d7ec28642e45f855df899d1150fa33bf7db3
+    candidate_commit: 2f73c84861e67bab4f9c33f393fa8d0bf6dc8297
     candidate_evidence: docs/verification/monitor-custom-01/codex-2026-10-22/README.md
-    review_status: Final independent Claude review pending; focused and native proof pass; full Windows/Docker gates pending
+    review_status: Claude changes required at2f73c84; correcting canonical freeze ownership, switch layout and positive multi-display coverage before full gates
     contract_commit: 5387bbde328861fa667b129d8fb2414526909a21
     contract: include/glancelot/monitor_customization.hpp; PaneLayout snapshot extension; cmake/MonitorCustomization.cmake
     reviewer_lane: claude

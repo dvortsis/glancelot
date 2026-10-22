@@ -19,6 +19,7 @@ class MonitorCustomization final : public QObject {
     Q_PROPERTY(QVariantMap outputOptions READ outputOptions NOTIFY changed)
     Q_PROPERTY(QVariantMap paneRoutes READ paneRoutes NOTIFY changed)
     Q_PROPERTY(QVariantList presets READ presets NOTIFY changed)
+    Q_PROPERTY(bool saving READ saving NOTIFY changed)
     Q_PROPERTY(bool layoutLocked READ layoutLocked WRITE setLayoutLocked NOTIFY changed)
     Q_PROPERTY(QString feedback READ feedback NOTIFY changed)
     Q_PROPERTY(QString outputRoutingStatus READ outputRoutingStatus NOTIFY changed)
@@ -31,6 +32,7 @@ public:
     QVariantMap outputOptions() const;
     QVariantMap paneRoutes() const;
     QVariantList presets() const;
+    bool saving() const;
     bool layoutLocked() const;
     QString feedback() const;
     QString outputRoutingStatus() const;
