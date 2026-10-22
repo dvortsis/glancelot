@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: Codex lead, branch: main, purpose: user-authorized MONITOR-CUSTOM-01 reassignment}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -454,18 +454,18 @@ tasks:
     milestone: M5
     priority: 7
     owner: lead
-    owner_lane: claude
-    state: ready
-    branch: claude/monitor-custom-01
-    worktree: .worktrees/claude-monitor-custom-01
-    build: build-claude-monitor-custom-01
+    owner_lane: codex
+    state: implementing
+    branch: codex/monitor-custom-01
+    worktree: .worktrees/codex-monitor-custom-01
+    build: build-codex-monitor-custom-01
     plan: docs/MONITOR-CUSTOM-01-PLAN.md
     contract_commit: 5387bbde328861fa667b129d8fb2414526909a21
     contract: include/glancelot/monitor_customization.hpp; PaneLayout snapshot extension; cmake/MonitorCustomization.cmake
-    reviewer_lane: codex
-    memory_action: act_mvizztm4_b96f100d13ec
+    reviewer_lane: claude
+    memory_action: act_mvj0ufi8_1e5b78abb94e
     blocked_by: null
-    start_gate: Lead contract frozen; dependencies integrated; Claude may start as its sole active implementation. Owns ui/Main.qml for this wave. No queue/root CMake/public-header edits; request lead amendment if needed.
+    start_gate: Lead contract frozen; dependencies integrated; User explicitly reassigned to Codex; sole active Codex implementation. Owns ui/Main.qml for this wave. No queue/root CMake/public-header edits; request lead amendment if needed.
     depends: [MONITOR-OUTPUT-01, UI-SETTINGS-01]
     outcome: Display picker, named presentation presets and independent output customization
     acceptance: Identify/swap/move/disable output and recovery commands; detach/re-dock tree, grid, preview and metadata panes across displays with per-pane freeze, global layout lock and named workspace presets; fullscreen/windowed, fit/actual size, linked or independent viewports, background, overlays and cursor policy; persist per slot; missing displays recover controls onscreen

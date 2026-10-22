@@ -1,13 +1,14 @@
-# MONITOR-CUSTOM-01: frozen Claude implementation packet
+<!-- User explicitly reassigned this complete packet from Claude to Codex on October 21, 2026. Original acceptance is unchanged. -->
+# MONITOR-CUSTOM-01: frozen Codex implementation packet
 
 Lead freeze: October 21, 2026, based on integrated INPUT, MONITOR-OUTPUT, SAFE/startup and watcher main `5424cef`. This packet preserves UX-10/UX-17, IN-01 and SYS-03 and the complete customization acceptance in SECOND-MONITOR-PLAN.md. It is implementation authorization, not delivery or hardware qualification.
 
 ## Assignment and ownership
 
-- Implementer: Claude Code Sonnet 5.5, Claude lane. Branch `claude/monitor-custom-01`; worktree `.worktrees/claude-monitor-custom-01`; build directory `build-claude-monitor-custom-01` inside that worktree.
-- Independent reviewer: Codex. Gemini must not approve changes to its original monitor implementation. Lead/integrator: this Codex session, as explicitly assigned by the user.
-- Dependencies MONITOR-OUTPUT-01 and UI-SETTINGS-01 are integrated. This freeze removes the contract/worktree blocker. State remains ready until Claude starts. Only one active Claude implementation at a time: pause other implementation or finish its current correction before starting this packet; read-only stack reviews may continue independently. No blanket requirement to finish the entire F002–F051 stack first.
-- This packet owns `ui/Main.qml` for its implementation wave. Other lanes must not edit that file concurrently. Claude does not edit the queue, root CMake, requirement acceptance or frozen public headers. Request a precise lead amendment if a frozen interface is insufficient.
+- Implementer: Codex 6.1 Sol, Codex lane. Branch `codex/monitor-custom-01`; worktree `.worktrees/codex-monitor-custom-01`; build directory `build-codex-monitor-custom-01` inside that worktree.
+- Independent reviewer: Claude Code Sonnet 5.5. Gemini must not approve changes to its original monitor implementation. Lead/integrator: this Codex session, as explicitly assigned by the user.
+- Dependencies MONITOR-OUTPUT-01 and UI-SETTINGS-01 are integrated. This freeze removes the contract/worktree blocker. State is implementing under the explicit user reassignment. Only one active Codex implementation at a time: pause other implementation or finish its current correction before starting this packet; read-only stack reviews may continue independently. No blanket requirement to finish the entire F002–F051 stack first.
+- This packet owns `ui/Main.qml` for its implementation wave. Other lanes must not edit that file concurrently. Codex does not edit the queue, root CMake, requirement acceptance or frozen public headers. Request a precise lead amendment if a frozen interface is insufficient.
 
 ## Required result
 
@@ -20,7 +21,7 @@ Lead freeze: October 21, 2026, based on integrated INPUT, MONITOR-OUTPUT, SAFE/s
 
 ## Frozen API and integration points
 
-`include/glancelot/monitor_customization.hpp` is the lead-owned public coordinator declaration. Claude implements it in `src/app/monitor_customization.cpp`, with optional private helpers under `src/app/monitor_customization_*.hpp/.cpp` only after a source-list amendment if a new compiled source is needed. Borrowed DisplayManager, PaneLayout and controller window must outlive the coordinator; observe windows using QPointer, disconnect callbacks on destruction, and bound pending writes. All calls and property notifications occur on the GUI thread; filesystem work uses existing bounded settings facilities.
+`include/glancelot/monitor_customization.hpp` is the lead-owned public coordinator declaration. Codex implements it in `src/app/monitor_customization.cpp`, with optional private helpers under `src/app/monitor_customization_*.hpp/.cpp` only after a source-list amendment if a new compiled source is needed. Borrowed DisplayManager, PaneLayout and controller window must outlive the coordinator; observe windows using QPointer, disconnect callbacks on destruction, and bound pending writes. All calls and property notifications occur on the GUI thread; filesystem work uses existing bounded settings facilities.
 
 Expose a `monitorCustomization` QML context property in app/main.cpp, initialized with the current viewer DisplayManager and PaneLayout, setSlot(viewer.windowSlot()), and attach the controller root window after QML creation. Follow slot changes. Do not reimplement input dispatch in a detached window: route commands through the existing registry and scope/enablement predicate, preserving text fields, dialogs, chords and held keys. Private controller/render headers may be extended within this packet; existing public DisplayManager, PaneLayout and ViewerController header changes require a lead amendment before editing. Prefer the frozen coordinator signals and existing APIs rather than dynamic property backdoors.
 
@@ -48,11 +49,11 @@ Presentation keeps its integrated256MiB aggregate texture admission and16MiB col
 
 ## Authorized file boundary and lead-owned build registration
 
-Claude owns new implementation files `src/app/monitor_customization.cpp`, optional private headers, `ui/MonitorSettings.qml`, `ui/DetachedPaneHost.qml`, `tests/monitor_customization_tests.cpp`, `tests/monitor_customization_ui_tests.cpp` and packet handoff/evidence. Necessary edits are authorized in app/main.cpp, ui/Main.qml, ui/SettingsDialog.qml, ui/PaneArrangement.qml, src/app/command_registry.cpp, src/app/viewer_controller.cpp, src/app/pane_layout.cpp, src/app/settings_policy.cpp and associated private settings package/policy helpers, src/render/presentation_window.cpp/.hpp and existing regression tests/mocks affected by those extensions. Existing display_manager.cpp may be adapted for policy notifications without removing core behavior. Shared public-header API changes beyond the frozen new coordinator and PaneLayout declarations below return to lead; root CMake/cmake fragment changes also return to lead. No edits to another worktree.
+Codex owns new implementation files `src/app/monitor_customization.cpp`, optional private headers, `ui/MonitorSettings.qml`, `ui/DetachedPaneHost.qml`, `tests/monitor_customization_tests.cpp`, `tests/monitor_customization_ui_tests.cpp` and packet handoff/evidence. Necessary edits are authorized in app/main.cpp, ui/Main.qml, ui/SettingsDialog.qml, ui/PaneArrangement.qml, src/app/command_registry.cpp, src/app/viewer_controller.cpp, src/app/pane_layout.cpp, src/app/settings_policy.cpp and associated private settings package/policy helpers, src/render/presentation_window.cpp/.hpp and existing regression tests/mocks affected by those extensions. Existing display_manager.cpp may be adapted for policy notifications without removing core behavior. Shared public-header API changes beyond the frozen new coordinator and PaneLayout declarations below return to lead; root CMake/cmake fragment changes also return to lead. No edits to another worktree.
 
-Lead adds the unused C++ declarations `PaneLayout::snapshot() const` and `PaneLayout::restoreSnapshot(const QVariantMap&)`. Claude supplies their definitions: snapshot returns version1 dock state including panes/center/mode/locked; restore validates and atomically applies a complete snapshot, preserves unknown layout fields, rejects malformed/newer data and has no hidden persistence side effect. The coordinator owns explicit validation of user lock permissions, transactional persistence and rollback around this method. Existing PaneLayout commands retain their current behavior.
+Lead adds the unused C++ declarations `PaneLayout::snapshot() const` and `PaneLayout::restoreSnapshot(const QVariantMap&)`. Codex supplies their definitions: snapshot returns version1 dock state including panes/center/mode/locked; restore validates and atomically applies a complete snapshot, preserves unknown layout fields, rejects malformed/newer data and has no hidden persistence side effect. The coordinator owns explicit validation of user lock permissions, transactional persistence and rollback around this method. Existing PaneLayout commands retain their current behavior.
 
-`cmake/MonitorCustomization.cmake` is lead-owned. While implementation is absent, its source-presence guard is intentional. Once source exists it attaches the coordinator to production independently of BUILD_TESTING, registers both new QML files, and requires both dedicated tests. Before final integration the lead removes the source-presence guard so the feature is mandatory. Claude does not silently conditionalize required production/test sources. New UI tests belong to their new feature file, not grid_ui_tests.cpp.
+`cmake/MonitorCustomization.cmake` is lead-owned. While implementation is absent, its source-presence guard is intentional. Once source exists it attaches the coordinator to production independently of BUILD_TESTING, registers both new QML files, and requires both dedicated tests. Before final integration the lead removes the source-presence guard so the feature is mandatory. Codex does not silently conditionalize required production/test sources. New UI tests belong to their new feature file, not grid_ui_tests.cpp.
 
 ## UI and verification handoff
 
@@ -63,12 +64,12 @@ Dedicated tests must cover all coordinator methods and required routes, includin
 Handoff provides a new exact commit, source/base diff, actual targeted command output, full Windows and fresh Linux Docker output, native UI screenshots/evidence at compact/wide and dark/light/large text, limitations and resource accounting. Run every full gate through the main checkout's wrapper, serially:
 
 ```powershell
-& C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch claude/monitor-custom-01 -Run {
-    & ./scripts/build.ps1 -BuildDir build-claude-monitor-custom-01 -Test
+& C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch codex/monitor-custom-01 -Run {
+    & ./scripts/build.ps1 -BuildDir build-codex-monitor-custom-01 -Test
     if ($LASTEXITCODE -ne 0) { throw 'Windows gate failed' }
     docker build --progress=plain -t glancelot-browser:monitor-custom-01 .
     if ($LASTEXITCODE -ne 0) { throw 'Docker gate failed' }
 }
 ```
 
-The main integrator later synchronizes main into the accepted branch under the queue lock, performs required independent confirmation and complete locked Windows/Docker gates, merges no-ff and checks the integrated commit. Claude never merges main on behalf of the lead or marks the task done. A passing software test is not hardware qualification.
+The main integrator later synchronizes main into the accepted branch under the queue lock, performs required independent confirmation and complete locked Windows/Docker gates, merges no-ff and checks the integrated commit. Codex never merges main on behalf of the lead or marks the task done. A passing software test is not hardware qualification.
