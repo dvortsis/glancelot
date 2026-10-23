@@ -109,9 +109,8 @@ void MetadataModel::setCategoryFilter(const QString& category) {
 }
 
 QString MetadataModel::cameraSummary() const {
-    if (d->record.cameraMake.isEmpty() && d->record.cameraModel.isEmpty()) {
-        return QStringLiteral("Unknown Camera");
-    }
+    // No camera is an empty summary, not display text: the HUD hides the line without comparing translated strings.
+    if (d->record.cameraMake.isEmpty() && d->record.cameraModel.isEmpty()) return {};
     if (d->record.cameraMake.isEmpty()) return d->record.cameraModel;
     if (d->record.cameraModel.isEmpty()) return d->record.cameraMake;
     if (d->record.cameraModel.startsWith(d->record.cameraMake, Qt::CaseInsensitive)) {
@@ -193,7 +192,7 @@ QString MetadataModel::copySummary() const {
     const QString dims = dimensionsSummary();
     if (!dims.isEmpty()) lines << (QStringLiteral("Dimensions: ") + dims);
     const QString cam = cameraSummary();
-    if (!cam.isEmpty() && cam != QStringLiteral("Unknown Camera")) lines << (QStringLiteral("Camera: ") + cam);
+    if (!cam.isEmpty()) lines << (QStringLiteral("Camera: ") + cam);
     if (!d->record.lensModel.isEmpty()) lines << (QStringLiteral("Lens: ") + d->record.lensModel);
     const QString exp = exposureSummary();
     if (!exp.isEmpty()) lines << (QStringLiteral("Exposure: ") + exp);

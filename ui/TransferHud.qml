@@ -21,10 +21,10 @@ Rectangle {
     border.width: Theme.borderWidth
 
     function formatBytes(bytes) {
-        if (bytes < 1024) return bytes + " B"
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
-        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB"
-        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB"
+        if (bytes < 1024) return qsTr("%1 B").arg(bytes)
+        if (bytes < 1024 * 1024) return qsTr("%1 KB").arg((bytes / 1024).toFixed(1))
+        if (bytes < 1024 * 1024 * 1024) return qsTr("%1 MB").arg((bytes / (1024 * 1024)).toFixed(1))
+        return qsTr("%1 GB").arg((bytes / (1024 * 1024 * 1024)).toFixed(2))
     }
 
     ColumnLayout {
@@ -50,10 +50,10 @@ Rectangle {
 
             // Pause / Resume Button
             UiButton {
-                text: root.service && root.service.paused ? "Resume" : "Pause"
+                text: root.service && root.service.paused ? qsTr("Resume") : qsTr("Pause")
                 iconName: root.service && root.service.paused ? "play" : "pause"
                 iconOnly: true
-                tip: root.service && root.service.paused ? "Resume transfer" : "Pause transfer"
+                tip: root.service && root.service.paused ? qsTr("Resume transfer") : qsTr("Pause transfer")
                 variant: "quiet"
                 onClicked: {
                     if (!root.service) return
@@ -64,10 +64,10 @@ Rectangle {
 
             // Cancel Button
             UiButton {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 iconName: "close"
                 iconOnly: true
-                tip: "Cancel transfer"
+                tip: qsTr("Cancel transfer")
                 variant: "quiet"
                 onClicked: {
                     if (root.service) root.service.cancel()
@@ -99,9 +99,8 @@ Rectangle {
             text: {
                 if (!root.service) return ""
                 const s = root.service
-                return s.completedItems + " of " + s.totalItems + " items (" +
-                       root.formatBytes(s.transferredBytes) + " / " + root.formatBytes(s.totalBytes) + ") — " +
-                       Math.round(s.progress * 100) + "%"
+                return qsTr("%1 of %2 items (%3 / %4) — %5%").arg(s.completedItems).arg(s.totalItems)
+                       .arg(root.formatBytes(s.transferredBytes)).arg(root.formatBytes(s.totalBytes)).arg(Math.round(s.progress * 100))
             }
             color: Theme.muted
             font.family: Theme.fontFamily
