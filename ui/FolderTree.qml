@@ -195,6 +195,8 @@ Rectangle {
             id: favoritesSection
             visible: typeof favoritesModel !== "undefined"
             Layout.fillWidth: true
+            // Size to content: a nested layout fills by default and would share the spare height with the folder list.
+            Layout.fillHeight: false
             spacing: 0
 
             RowLayout {
@@ -268,7 +270,10 @@ Rectangle {
                 id: favoritesList
                 objectName: "favoritesList"
                 Layout.fillWidth: true
-                Layout.preferredHeight: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0) ? Math.min(favoritesModel.count * Theme.rowHeight, 144) : 0
+                // Whole rows, at most 5 and at most a fifth of the panel (one row minimum); a longer list scrolls in place
+                // so the folder tree below keeps most of the height, including at the minimum window size.
+                readonly property int maxRows: Math.max(1, Math.min(5, Math.floor(panel.height / (5 * Theme.rowHeight))))
+                Layout.preferredHeight: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0) ? Math.min(favoritesModel.count, maxRows) * Theme.rowHeight : 0
                 visible: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0)
                 leftMargin: Theme.gapSm
                 rightMargin: Theme.gapSm

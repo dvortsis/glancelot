@@ -1166,6 +1166,75 @@ private slots:
         QTRY_COMPARE(QGuiApplication::clipboard()->text(), h.viewer.directory());
     }
 
+    // EN-04 review round 1 (FAVORITES-01 layout): the Favorites section sizes to its content, a long favorites list
+    // scrolls inside its own capped section, and the folder list gets the remaining panel height. Before the fix the
+    // section stretched to share the spare height and left the folder list 4 px tall at 1180x780.
+    void favoritesSectionLeavesFolderListTheHeight() {
+        Media media(1); Harness h; QVERIFY(h.window);
+        QVERIFY(openFolder(h, media));
+        h.viewer.setTreeVisible(true); h.viewer.setTreePinned(true);
+        h.folders.browseComputer(); h.folders.sync(h.viewer.snapshot());
+        auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());
+        auto* list = named(h.window, "folderList"); QVERIFY(list);
+        auto* favoritesList = named(h.window, "favoritesList"); QVERIFY(favoritesList);
+        auto* section = favoritesList->parentItem(); QVERIFY(section); QTRY_VERIFY(section->isVisible());
+        QTRY_VERIFY(!namedAll(h.window, "folderRow").isEmpty());
+        const qreal rowHeight = namedAll(h.window, "folderRow").first()->height(); QVERIFY(rowHeight > 0);
+        QTemporaryDir places; QVERIFY(places.isValid());
+        auto fill = [&](int count) {
+            while (h.favorites.count() > count) h.favorites.removeAt(h.favorites.count() - 1);
+            while (h.favorites.count() < count) {
+                const QString path = places.filePath(QString("favorite%1").arg(h.favorites.count()));
+                QDir().mkpath(path); h.favorites.addFavorite(path);
+            }
+            return h.favorites.count() == count;
+        };
+        auto settle = [&](QSize size, int count) {
+            h.window->resize(size);
+            const bool ok = QTest::qWaitFor([&] { return h.window->size() == size && favoritesList->isVisible() == (count > 0); }, 5000);
+            QTest::qWait(50); // let the layouts settle after the resize
+            return ok;
+        };
+        auto measure = [&](QSize size, int count) {
+            return QString("%1 favorites at %2x%3: panel %4, favorites section %5 (content %6), favorites list %7 (content %8), folder list %9")
+                .arg(count).arg(size.width()).arg(size.height()).arg(tree->height()).arg(section->height()).arg(section->implicitHeight())
+                .arg(favoritesList->height()).arg(favoritesList->property("contentHeight").toReal()).arg(list->height());
+        };
+        if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) { // review evidence: the tree panel in both themes, before any check
+            const QDir out(qEnvironmentVariable("GLANCELOT_REVIEW_CAPTURE")); QVERIFY(out.mkpath("."));
+            for (int count : {0, 2}) {
+                QVERIFY(fill(count));
+                for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) {
+                    QVERIFY(settle(size, count));
+                    qWarning().noquote() << "measured:" << measure(size, count);
+                    for (const QString mode : {"dark", "light"}) {
+                        h.theme.setMode(mode); QTest::qWait(150);
+                        const QRect panel = tree->mapRectToScene(tree->boundingRect()).toAlignedRect();
+                        QVERIFY(h.window->grabWindow().copy(panel).save(out.filePath(QString("tree-%1fav-%2-%3x%4.png").arg(count).arg(mode).arg(size.width()).arg(size.height()))));
+                    }
+                }
+            }
+        }
+        for (int count : {0, 2, 12}) {
+            QVERIFY(fill(count));
+            for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) {
+                QVERIFY(settle(size, count));
+                const QString at = measure(size, count);
+                // The section is exactly as tall as its content, never stretched by spare panel height.
+                QVERIFY2(qAbs(section->height() - section->implicitHeight()) < 1, qPrintable(at));
+                if (count > 0) {
+                    // Its list shows at most its rows, is capped, and a long list scrolls in place instead of growing.
+                    QVERIFY2(favoritesList->height() <= count * rowHeight + 0.5, qPrintable(at));
+                    QVERIFY2(favoritesList->height() >= rowHeight - 0.5, qPrintable(at));
+                    if (count == 12) QVERIFY2(favoritesList->property("contentHeight").toReal() > favoritesList->height() + 0.5, qPrintable(at));
+                }
+                // The folder list keeps most of the panel at the default size and at least one whole row at the minimum.
+                if (size.height() >= 780) QVERIFY2(list->height() >= 0.5 * tree->height(), qPrintable(at));
+                else QVERIFY2(list->height() >= rowHeight, qPrintable(at));
+            }
+        }
+    }
+
     // Menus stay inside a compact window; the tallest one scrolls instead of running off the edge.
     void menusStayReachableInCompactWindows() {
         Media media(3); Harness h; QVERIFY(h.window); h.window->resize(540, 360);
