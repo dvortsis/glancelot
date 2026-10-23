@@ -316,7 +316,7 @@ if(GLANCELOT_BUILD_VIEWER)
   # MONITOR-CUSTOM-01 production wiring is required independently of BUILD_TESTING.
   include(cmake/MonitorCustomization.cmake)
   if(BUILD_TESTING)
-    include(cmake/CommandRoutingTests.cmake) # EN-06 provisional; needs the monitor-customization helper above
+    include(cmake/CommandRoutingTests.cmake) # EN-06; needs the monitor-customization helper above
   endif()
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
