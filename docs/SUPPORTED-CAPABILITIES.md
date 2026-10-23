@@ -22,20 +22,20 @@ Decoding happens in a separate `glancelot-decoder` process. It sniffs the file c
 Each format needs a Qt image plugin:
 
 - **Windows.** Local Windows builds and the `build.yml` Windows job install Qt's `qtimageformats` module (`BUILDING.md`, `.github/workflows/build.yml`). The portable package copies the installed plugins through Qt's deploy script (`CMakeLists.txt`, `qt_generate_deploy_qml_app_script`). The authoritative self-hosted gate job uses the main checkout's local Qt, which includes these plugins.
-- **Hosted advisory Windows job.** The hosted job in `windows-gate.yml` installs only `qtbase`, `qtdeclarative` and `qtshadertools`, so WebP, TIFF and TGA are missing there.
-- **Docker.** The image installs only `qtbase`, `qtdeclarative`, `qtshadertools` and ICU (`Dockerfile`, `qt` stage). WebP, TIFF and TGA are therefore expected to be missing there; this is read from the Dockerfile and was not observed in a container run.
+- **Hosted advisory Windows job.** The hosted job in `windows-gate.yml` installs `qtimageformats` too (EN-01, with EN-02's integration).
+- **Docker.** Since EN-02 the image installs `qtimageformats` with `qtbase`, `qtdeclarative`, `qtshadertools` and ICU (`Dockerfile`, `qt` stage), and the runtime stage checks that the WebP, TIFF and TGA plugins and their libraries are present. `AnimationTests::testMultipageTiffNavigation` passes in the Docker build stage (`docs/verification/EN-02-REVIEW.md` on `claude/review-en-02`).
 
-Packet EN-02 adds `qtimageformats` to Docker. The lead adds it to the hosted advisory job under EN-01 once EN-02 is integrated. Until it lands, the Windows and Docker columns below differ.
+The Windows and Docker columns below therefore match for formats.
 
 | Format | Extensions | Windows | Docker browser desktop | Evidence and limits |
 | --- | --- | --- | --- | --- |
 | JPEG, PNG | `.jpg` `.jpeg` `.png` | Yes | Yes | EXIF orientation applied; embedded ICC profile converted to sRGB. Decoder acceptance (DECODE-01, state `integration`); Linux package smoke used PNG and JPEG. |
 | BMP | `.bmp` | Yes | Yes | `FormatTests::testBmpDecode` (`tests/format_tests.cpp`). |
 | GIF, still and animated | `.gif` | Yes | Yes | Playback with per-frame delays, speed 0.1x to 4x, loop and frame stepping: `AnimationTests::testAnimatedGifPlayback` (`tests/animation_tests.cpp`). |
-| WebP, still and animated | `.webp` | Expected (plugin present); **no decode test** | **No** (plugin missing) | The extension is listed and the decoder allows it. No WebP fixture is decoded in any test. Animated WebP playback goes through the same code path as GIF but is **unverified**. |
+| WebP, still and animated | `.webp` | Expected (plugin present); **no decode test** | Expected (plugin present); **no decode test** | The extension is listed and the decoder allows it. No WebP fixture is decoded in any test. Animated WebP playback goes through the same code path as GIF but is **unverified**. |
 | APNG | `.apng` | **Unverified** | **Unverified** | The extension is listed. Qt's PNG reader decodes it, but no test shows that more than the first frame plays. |
-| TIFF, including multipage | `.tif` `.tiff` | Yes, from Qt's plugin | **No** (plugin missing) | Multipage TIFF opens as pages with no invented timing: `AnimationTests::testMultipageTiffNavigation`. This test skips itself when the plugin is absent, so it does not run in Docker. |
-| TGA | `.tga` | Expected (plugin present); **no decode test** | **No** (plugin missing) | Extension and allowlist only. |
+| TIFF, including multipage | `.tif` `.tiff` | Yes, from Qt's plugin | Yes, from Qt's plugin | Multipage TIFF opens as pages with no invented timing: `AnimationTests::testMultipageTiffNavigation`, which runs on Windows and in the Docker build. |
+| TGA | `.tga` | Expected (plugin present); **no decode test** | Expected (plugin present); **no decode test** | Extension and allowlist only. |
 | RAW camera files (embedded preview only) | `.dng` `.cr2` `.cr3` `.nef` `.nrw` `.arw` `.sr2` `.raf` `.orf` `.rw2` `.pef` `.iiq` | Yes, preview only | Yes, preview only | Glancelot shows the largest embedded JPEG preview, not the developed RAW data (`src/app/raw_preview.cpp`). Tests use synthetic TIFF-structured and scanned fixtures, plus missing-preview and malformed inputs (`tests/format_tests.cpp`; `docs/verification/FORMAT-02.md`). No real camera files are tested; the per-camera matrix in FMT-06 is open. |
 | ICO, WBMP | `.ico` `.wbmp` | **No** | **No** | The decoder accepts the content, but the extensions are not on the navigation allowlist, so these files do not appear in folders, the grid or the filmstrip. Opening one directly is untested. |
 | HEIC, AVIF, JPEG XL, QOI, EXR, PSD, archives, video | — | No | No | Not implemented (FMT-04, FMT-05 and later rows in REQUIREMENTS.md). |
@@ -43,7 +43,7 @@ Packet EN-02 adds `qtimageformats` to Docker. The lead adds it to the hosted adv
 Known format limits, from the UX audit of `6cc87ee` (`docs/verification/AUDIT-UX-6cc87ee.md`):
 
 - **Large images:** an image over the 256 MiB limit is refused with a message. There is no reduced-size fallback yet.
-- **Damaged files:** a damaged or non-image file is reported with the "This alpha supports JPEG, PNG, GIF, WebP, TIFF, BMP, and TGA images" message rather than as damaged. In Docker, a WebP, TIFF or TGA file should get that same message, even though the list names it (inferred from the code, not observed).
+- **Damaged files:** a damaged or non-image file is reported with the "This alpha supports JPEG, PNG, GIF, WebP, TIFF, BMP, and TGA images" message rather than as damaged.
 - **Animation decoding:** animation frames are decoded in the viewer process rather than the decoder process, with no byte cap on the 64 pre-decoded frames. Large animations can use a lot of memory.
 
 ## Viewing
@@ -134,7 +134,7 @@ See [DOCKER.md](DOCKER.md) for setup.
 - **Settings.** Settings and each window's last folder and photo live in the `glancelot-config` volume. Resume after recreating the container is unverified.
 - **One shared desktop.** All browser clients share one desktop and one viewer session. Browser file upload and drag-in are not implemented.
 - **Fixed desktop size.** The remote desktop has a fixed size (`GLANCELOT_DESKTOP_SIZE`, 560x400 to 3840x2160) and renders with Mesa software OpenGL. Physical-pixel zoom, colour accuracy and refresh rate are not meaningful through this route.
-- **WebP, TIFF and TGA.** These are expected not to decode (inferred from the Dockerfile) until EN-02 adds Qt's `qtimageformats` module. See [Image formats](#image-formats).
+- **WebP, TIFF and TGA.** The image includes Qt's `qtimageformats` module (EN-02); multipage TIFF is tested in the Docker build, WebP and TGA have no decode test on any platform. See [Image formats](#image-formats).
 - **Authentication.** Only classic VNC password authentication is offered. It does not encrypt traffic. Use a trusted LAN or VPN, or a reverse proxy with authenticated HTTPS.
 - **Unverified container behaviour.** Not verified: pixel-level browser clicks, `docker compose` itself, resume after container recreation, Unraid, ARM and GPU acceleration (DOCKER-BROWSER-01 in the work queue; `docs/verification/DOCKER-BROWSER.md`).
 
