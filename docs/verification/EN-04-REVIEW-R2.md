@@ -18,7 +18,7 @@ The three round 1 regressions are fixed without weakening what the tests prove. 
    - Before: two Down presses, which assumed "Open folder" was the first enabled row.
    - Now: the test finds `menuItem-delete-selection` by identity and checks it is enabled. It presses Down until that row is highlighted (at most 4 presses), checks the highlight, then presses Return. The rest is unchanged: the confirmation, the scope text and the nearest-ancestor navigation.
    - The test still drives the delete through the keyboard path from the tree row menu.
-   - **Low:** the old comment said the destructive row "stays last". The old code never asserted that, and the new code does not either. No other test pins the row order. If the lead wants that INPUT-02 rule enforced, add one check that no enabled menu item comes after `menuItem-delete-selection`. Optional.
+   - **Low:** the old comment said the destructive row "stays last". The old code never asserted that, and the new code does not either. `menuProblems` (`input_ui_tests.cpp:50`) checks registration, enabled state and shortcuts, but not order. I found no other order assertion in `input_ui_tests.cpp` or `grid_ui_tests.cpp`. If the lead wants that INPUT-02 rule enforced, add one check that no enabled menu item comes after `menuItem-delete-selection`. Optional.
 2. **`InputUiTests::treeRowAndPathBarMenusOpenAndMatch` (stricter).**
    - Before: it right-clicked `namedAll("folderRow").first()`, which could be any cached delegate.
    - Now: it picks row 0 by `index` and asserts that row 0 is not the cursor row. It scrolls the row into the clipped viewport with `positionViewAtIndex(..., ListView.Contain)` and waits until the row centre is inside the list.
@@ -75,7 +75,9 @@ The screenshots are panel crops of the shipped QML in the `input_ui` harness, wi
 **Important (follow-up, not blocking):**
 - **What:** at the minimum size (540x360) the Favorites list shows one whole row of two, and nothing shows that a second row exists. `UiScrollBar` stays at opacity 0 unless it is `active` (scrolling or hovered), and whole-row capping removed the half-row peek the old 144 px cap gave by accident. The only cue is the "(2)" count in the header. The handoff says "the visible scroll bar shows that more rows exist", but that is not true at rest.
 - **Why:** responsive-layout says nothing essential may be unreachable or depend on hover. The rows can be reached with the wheel and the keyboard, so this is discoverability, not access.
-- **Fix:** make the cap fractional when `count > maxRows`, for example `(maxRows - 1) * rowHeight + rowHeight / 2` with at least half a row, so a partial row shows that the list scrolls. Then check that the minimum-size folder list still keeps at least one row. Another option is to show `UiScrollBar` with `policy: ScrollBar.AlwaysOn` while the list overflows, which changes the scroll bar rather than sizing. Both are small, but the second goes beyond the current grant.
+- **Fix:** add a half-row peek only when the list overflows: `Math.min(count, maxRows) * Theme.rowHeight + (count > maxRows ? Theme.rowHeight / 2 : 0)`. This adds to the whole rows and never removes one, so the test's bounds still hold.
+  - Arithmetic for the current test: at 540x360 with 2 favorites, the folder list goes from 43 to about 29 px against a 28 px row. That passes, but the minimum-size budget is almost spent. At 1180x780 with 12 favorites it goes from 379 to about 365, above the 342 px floor.
+  - The test's `favoritesList->height() <= count * rowHeight` bound would still hold, because the peek applies only when `count > maxRows`. Another option is to show `UiScrollBar` with `policy: ScrollBar.AlwaysOn` while the list overflows, which changes the scroll bar rather than sizing. Both are small, but the second goes beyond the current grant.
 
 **Polish:**
 - At 540x360 the panel is 264 px and is mostly chrome: the Folders header, Favorites, All locations, the address field and the back/forward/Copy row. That leaves 1 to 1.5 folder rows. The test's floor of one row keeps the panel usable. A later compact mode could collapse Favorites by default, or merge the two address rows, when the panel is under about 300 px. Outside this grant.
@@ -127,17 +129,19 @@ PASS   : InputUiTests::favoritesSectionLeavesFolderListTheHeight()
 - The full offscreen suite. The authoritative gate decides.
 - The packaged app binary.
 - The detached-tree size, which is reasoned above, not run.
+- The merged tree (EN-04 on current main). I did not build it. The `command_routing_tests` link break in section 6 is predicted from the sources.
 
 ## 6. Integration notes for the lead
 
-1. **`origin/main` (EN-05 merged).** `git merge-tree --write-tree --name-only origin/main origin/claude/en-04-harness-wiring` gives `b4eeb72` with no conflicts.
-   - `settings_file.cpp`, which `favorites_model.cpp` needs, is now in `GLANCELOT_VIEWER_SOURCES`. All five targets compile that list. `monitor_customization_ui` does so through `cmake/MonitorCustomization.cmake`.
-   - The provisional loop therefore still links. CMake drops duplicate sources within a target.
-2. **`origin/lead/integrate-cycle1-b` (EN-02, EN-03, EN-06, EN-08) conflicts.** The conflict is in `CMakeLists.txt`, in the `BUILD_TESTING` block after `include(cmake/MonitorCustomization.cmake)`: EN-06's `include(cmake/CommandRoutingTests.cmake)` against EN-04's loop. Keep both statements.
+1. **Against `origin/main` as of this review (`c903e6f`), with EN-05 and cycle1-b (EN-02, EN-03, EN-06, EN-08) merged, there is one conflict.**
+   - `git merge-tree --write-tree --name-only origin/main origin/claude/en-04-harness-wiring` reports `CONFLICT (content): Merge conflict in CMakeLists.txt`.
+   - The conflict is in the `BUILD_TESTING` block after `include(cmake/MonitorCustomization.cmake)`: main's `include(cmake/CommandRoutingTests.cmake)` against EN-04's provisional loop. Keep both statements.
+   - Earlier in this review, against `b62161b` (EN-05 only), the merge was clean (`b4eeb72`). The conflict comes from EN-06.
+2. **`settings_file.cpp`, which `favorites_model.cpp` needs, is in `GLANCELOT_VIEWER_SOURCES` on main.** All five targets compile that list. `monitor_customization_ui` does so through `cmake/MonitorCustomization.cmake`. The provisional loop therefore still links those five, and CMake drops duplicate sources within a target.
 3. **`command_routing_tests` would fail to link (must fix at integration).**
    - EN-06's `tests/command_routing_tests.cpp` includes `ui_test_support.hpp`. After EN-04 its `Harness` has a `FavoritesModel` member.
    - `cmake/CommandRoutingTests.cmake` compiles `folder_history.cpp` but not `favorites_model.cpp`, and the provisional loop names only five targets.
-   - Expect an unresolved `FavoritesModel` link error unless command_routing gets the source too.
+   - Expect an unresolved `FavoritesModel` link error unless command_routing gets the source too. This is predicted from the sources on main. I did not build the merged tree.
 4. **Recommended adaptation**, per the lead decision for a separate list and not `GLANCELOT_VIEWER_SOURCES`:
    - In `cmake/ViewerSources.cmake`, define a shipped-QML context list, for example `GLANCELOT_VIEWER_CONTEXT_SOURCES`. It holds `src/app/favorites_model.cpp`, `include/glancelot/favorites_model.hpp`, `src/app/folder_history.cpp` and `include/glancelot/folder_history.hpp`, with the headers for AUTOMOC.
    - Add the list to all six shipped-QML targets:
