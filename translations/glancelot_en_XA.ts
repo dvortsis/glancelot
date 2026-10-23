@@ -2,6 +2,61 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_XA" sourcelanguage="en">
 <context>
+    <name>AnimationBar</name>
+    <message>
+        <source>Frame %1 / %2</source>
+        <translation>[Fràmé %1 / %2]</translation>
+    </message>
+    <message>
+        <source>Page %1 / %2</source>
+        <translation>[Pàgé %1 / %2]</translation>
+    </message>
+    <message>
+        <source>%1x</source>
+        <translation>[%1x]</translation>
+    </message>
+    <message>
+        <source>Pause animation</source>
+        <translation>[Pàûsé àñîmàtîõñ]</translation>
+    </message>
+    <message>
+        <source>Play animation</source>
+        <translation>[Plàý àñîmàtîõñ]</translation>
+    </message>
+    <message>
+        <source>Previous frame</source>
+        <translation>[Prévîõûs fràmé]</translation>
+    </message>
+    <message>
+        <source>Previous page</source>
+        <translation>[Prévîõûs pàgé]</translation>
+    </message>
+    <message>
+        <source>Next frame</source>
+        <translation>[Ñéxt fràmé]</translation>
+    </message>
+    <message>
+        <source>Next page</source>
+        <translation>[Ñéxt pàgé]</translation>
+    </message>
+    <message>
+        <source>Frame</source>
+        <translation>[Fràmé]</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>[Pàgé]</translation>
+    </message>
+    <message>
+        <source>Playback speed %1; change speed</source>
+        <translation>[Plàýbàçk spééd %1; çhàñgé spééd]</translation>
+    </message>
+    <message>
+        <source>Loop animation</source>
+        <translation>[Lõõp àñîmàtîõñ]</translation>
+    </message>
+</context>
+<context>
     <name>Delete</name>
     <message>
         <source>the shell file operation is unavailable on this thread</source>
@@ -85,6 +140,61 @@
     <message>
         <source>Close</source>
         <translation>[Çlõsé]</translation>
+    </message>
+</context>
+<context>
+    <name>DetachedPaneHost</name>
+    <message>
+        <source>Tree</source>
+        <translation>[Tréé]</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation>[Grîd]</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>[Prévîéw]</translation>
+    </message>
+    <message>
+        <source>Metadata</source>
+        <translation>[Métàdàtà]</translation>
+    </message>
+    <message>
+        <source>Glancelot — %1</source>
+        <translation>[Glàñçélõt — %1]</translation>
+    </message>
+    <message>
+        <source>%1 pane; move with the title or choose a display in Settings</source>
+        <translation>[%1 pàñé; mõvé wîth thé tîtlé õr çhõõsé à dîsplàý îñ Séttîñgs]</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>[Séttîñgs]</translation>
+    </message>
+    <message>
+        <source>Unfreeze</source>
+        <translation>[Ûñfréézé]</translation>
+    </message>
+    <message>
+        <source>Freeze</source>
+        <translation>[Fréézé]</translation>
+    </message>
+    <message>
+        <source>Move to display…</source>
+        <translation>[Mõvé tõ dîsplàý…]</translation>
+    </message>
+    <message>
+        <source>Re-dock</source>
+        <translation>[Ré-dõçk]</translation>
+    </message>
+    <message>
+        <source>Recover all</source>
+        <translation>[Réçõvér àll]</translation>
+    </message>
+    <message>
+        <source>Resize pane; exact width and height are also available in Settings</source>
+        <translation>[Résîzé pàñé; éxàçt wîdth àñd héîght àré àlsõ àvàîlàblé îñ Séttîñgs]</translation>
     </message>
 </context>
 <context>
@@ -198,6 +308,10 @@
     <message>
         <source>That preset could not be read.</source>
         <translation>[Thàt prését çõûld ñõt bé réàd.]</translation>
+    </message>
+    <message>
+        <source>Saving layout preferences…</source>
+        <translation>[Sàvîñg làýõût préféréñçés…]</translation>
     </message>
 </context>
 <context>
@@ -350,6 +464,508 @@
         <source>No photo open</source>
         <translation>[Ñõ phõtõ õpéñ]</translation>
     </message>
+    <message>
+        <source>Info</source>
+        <translation>[Îñfõ]</translation>
+    </message>
+</context>
+<context>
+    <name>MetadataHud</name>
+    <message>
+        <source>Metadata</source>
+        <translation>[Métàdàtà]</translation>
+    </message>
+    <message>
+        <source>Copy Summary</source>
+        <translation>[Çõpý Sûmmàrý]</translation>
+    </message>
+    <message>
+        <source>Copy summary of camera, exposure, and image details</source>
+        <translation>[Çõpý sûmmàrý õf çàmérà, éxpõsûré, àñd îmàgé détàîls]</translation>
+    </message>
+    <message>
+        <source>Copied!</source>
+        <translation>[Çõpîéd!]</translation>
+    </message>
+    <message>
+        <source>Close metadata inspector (I)</source>
+        <translation>[Çlõsé métàdàtà îñspéçtõr (Î)]</translation>
+    </message>
+    <message>
+        <source>Close metadata inspector</source>
+        <translation>[Çlõsé métàdàtà îñspéçtõr]</translation>
+    </message>
+    <message>
+        <source>Copy GPS</source>
+        <translation>[Çõpý GPS]</translation>
+    </message>
+    <message>
+        <source>Copy latitude and longitude coordinates</source>
+        <translation>[Çõpý làtîtûdé àñd lõñgîtûdé çõõrdîñàtés]</translation>
+    </message>
+    <message>
+        <source>GPS Copied!</source>
+        <translation>[GPS Çõpîéd!]</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>[Àll]</translation>
+    </message>
+    <message>
+        <source>Camera</source>
+        <translation>[Çàmérà]</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>[Îmàgé]</translation>
+    </message>
+    <message>
+        <source>GPS</source>
+        <translation>[GPS]</translation>
+    </message>
+    <message>
+        <source>IPTC</source>
+        <translation>[ÎPTÇ]</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>[Sûmmàrý]</translation>
+    </message>
+    <message>
+        <source>Show %1 tags</source>
+        <translation>[Shõw %1 tàgs]</translation>
+    </message>
+    <message>
+        <source>Search tags (e.g. ISO, Lens, GPS)...</source>
+        <translation>[Séàrçh tàgs (é.g. ÎSÕ, Léñs, GPS)...]</translation>
+    </message>
+    <message>
+        <source>Search metadata tags</source>
+        <translation>[Séàrçh métàdàtà tàgs]</translation>
+    </message>
+    <message>
+        <source>%1 tags</source>
+        <translation>[%1 tàgs]</translation>
+    </message>
+    <message>
+        <source>filtered</source>
+        <translation>[fîltéréd]</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>[Çõpý]</translation>
+    </message>
+    <message>
+        <source>Copy tag value to clipboard</source>
+        <translation>[Çõpý tàg vàlûé tõ çlîpbõàrd]</translation>
+    </message>
+    <message>
+        <source>Copied %1</source>
+        <translation>[Çõpîéd %1]</translation>
+    </message>
+    <message>
+        <source>No tags match filter</source>
+        <translation>[Ñõ tàgs màtçh fîltér]</translation>
+    </message>
+    <message>
+        <source>No metadata available</source>
+        <translation>[Ñõ métàdàtà àvàîlàblé]</translation>
+    </message>
+    <message>
+        <source>Clear filter</source>
+        <translation>[Çléàr fîltér]</translation>
+    </message>
+    <message>
+        <source>Reading metadata...</source>
+        <translation>[Réàdîñg métàdàtà...]</translation>
+    </message>
+</context>
+<context>
+    <name>MonitorSettings</name>
+    <message>
+        <source>Displays and workspaces</source>
+        <translation>[Dîsplàýs àñd wõrkspàçés]</translation>
+    </message>
+    <message>
+        <source>Windowed</source>
+        <translation>[Wîñdõwéd]</translation>
+    </message>
+    <message>
+        <source>Full screen</source>
+        <translation>[Fûll sçrééñ]</translation>
+    </message>
+    <message>
+        <source>Shrink to fit</source>
+        <translation>[Shrîñk tõ fît]</translation>
+    </message>
+    <message>
+        <source>Fit image</source>
+        <translation>[Fît îmàgé]</translation>
+    </message>
+    <message>
+        <source>Fill display</source>
+        <translation>[Fîll dîsplàý]</translation>
+    </message>
+    <message>
+        <source>Actual size (1:1)</source>
+        <translation>[Àçtûàl sîzé (1:1)]</translation>
+    </message>
+    <message>
+        <source>Linked to controller</source>
+        <translation>[Lîñkéd tõ çõñtrõllér]</translation>
+    </message>
+    <message>
+        <source>Independent</source>
+        <translation>[Îñdépéñdéñt]</translation>
+    </message>
+    <message>
+        <source>Match controller theme</source>
+        <translation>[Màtçh çõñtrõllér thémé]</translation>
+    </message>
+    <message>
+        <source>Solid color</source>
+        <translation>[Sõlîd çõlõr]</translation>
+    </message>
+    <message>
+        <source>Checkerboard</source>
+        <translation>[Çhéçkérbõàrd]</translation>
+    </message>
+    <message>
+        <source>Hide when idle</source>
+        <translation>[Hîdé whéñ îdlé]</translation>
+    </message>
+    <message>
+        <source>Always visible</source>
+        <translation>[Àlwàýs vîsîblé]</translation>
+    </message>
+    <message>
+        <source>Hidden</source>
+        <translation>[Hîddéñ]</translation>
+    </message>
+    <message>
+        <source>Follow folder changes</source>
+        <translation>[Fõllõw fõldér çhàñgés]</translation>
+    </message>
+    <message>
+        <source>Hold displayed image</source>
+        <translation>[Hõld dîsplàýéd îmàgé]</translation>
+    </message>
+    <message>
+        <source>Disable output</source>
+        <translation>[Dîsàblé õûtpût]</translation>
+    </message>
+    <message>
+        <source>Follow controller timing</source>
+        <translation>[Fõllõw çõñtrõllér tîmîñg]</translation>
+    </message>
+    <message>
+        <source>Latest selection every 3 seconds</source>
+        <translation>[Làtést séléçtîõñ évérý 3 séçõñds]</translation>
+    </message>
+    <message>
+        <source>Tree</source>
+        <translation>[Tréé]</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation>[Grîd]</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>[Prévîéw]</translation>
+    </message>
+    <message>
+        <source>Metadata</source>
+        <translation>[Métàdàtà]</translation>
+    </message>
+    <message>
+        <source>Destination for tree pane</source>
+        <translation>[Déstîñàtîõñ fõr tréé pàñé]</translation>
+    </message>
+    <message>
+        <source>Destination for grid pane</source>
+        <translation>[Déstîñàtîõñ fõr grîd pàñé]</translation>
+    </message>
+    <message>
+        <source>Destination for preview pane</source>
+        <translation>[Déstîñàtîõñ fõr prévîéw pàñé]</translation>
+    </message>
+    <message>
+        <source>Destination for metadata pane</source>
+        <translation>[Déstîñàtîõñ fõr métàdàtà pàñé]</translation>
+    </message>
+    <message>
+        <source>Displays</source>
+        <translation>[Dîsplàýs]</translation>
+    </message>
+    <message>
+        <source>Presentation</source>
+        <translation>[Préséñtàtîõñ]</translation>
+    </message>
+    <message>
+        <source>Panes</source>
+        <translation>[Pàñés]</translation>
+    </message>
+    <message>
+        <source>Presets</source>
+        <translation>[Préséts]</translation>
+    </message>
+    <message>
+        <source>Presentation display</source>
+        <translation>[Préséñtàtîõñ dîsplàý]</translation>
+    </message>
+    <message>
+        <source>%1 × %2 · %3× scale · %4 Hz</source>
+        <translation>[%1 × %2 · %3× sçàlé · %4 Hz]</translation>
+    </message>
+    <message>
+        <source>Strong serial identity: %1</source>
+        <translation>[Strõñg sérîàl îdéñtîtý: %1]</translation>
+    </message>
+    <message>
+        <source>Weak identity: reselect similar displays after reconnect</source>
+        <translation>[Wéàk îdéñtîtý: réséléçt sîmîlàr dîsplàýs àftér réçõññéçt]</translation>
+    </message>
+    <message>
+        <source>Connection type unavailable · Color: %1</source>
+        <translation>[Çõññéçtîõñ týpé ûñàvàîlàblé · Çõlõr: %1]</translation>
+    </message>
+    <message>
+        <source>No display is available.</source>
+        <translation>[Ñõ dîsplàý îs àvàîlàblé.]</translation>
+    </message>
+    <message>
+        <source>Output active on %1</source>
+        <translation>[Õûtpût àçtîvé õñ %1]</translation>
+    </message>
+    <message>
+        <source>The saved presentation display is unavailable. Choose a connected display to enable output.</source>
+        <translation>[Thé sàvéd préséñtàtîõñ dîsplàý îs ûñàvàîlàblé. Çhõõsé à çõññéçtéd dîsplàý tõ éñàblé õûtpût.]</translation>
+    </message>
+    <message>
+        <source>This compositor chooses window positions. Use your window manager to move windows; choosing a destination display here is unavailable.</source>
+        <translation>[Thîs çõmpõsîtõr çhõõsés wîñdõw põsîtîõñs. Ûsé ýõûr wîñdõw màñàgér tõ mõvé wîñdõws; çhõõsîñg à déstîñàtîõñ dîsplàý héré îs ûñàvàîlàblé.]</translation>
+    </message>
+    <message>
+        <source>Identify</source>
+        <translation>[Îdéñtîfý]</translation>
+    </message>
+    <message>
+        <source>Enable output</source>
+        <translation>[Éñàblé õûtpût]</translation>
+    </message>
+    <message>
+        <source>Move output</source>
+        <translation>[Mõvé õûtpût]</translation>
+    </message>
+    <message>
+        <source>Swap with controller</source>
+        <translation>[Swàp wîth çõñtrõllér]</translation>
+    </message>
+    <message>
+        <source>Reconnecting a display never enables presentation automatically. Physical color, HDR and refresh accuracy require separate qualification.</source>
+        <translation>[Réçõññéçtîñg à dîsplàý ñévér éñàblés préséñtàtîõñ àûtõmàtîçàllý. Phýsîçàl çõlõr, HDR àñd réfrésh àççûràçý réqûîré sépàràté qûàlîfîçàtîõñ.]</translation>
+    </message>
+    <message>
+        <source>Window mode</source>
+        <translation>[Wîñdõw mõdé]</translation>
+    </message>
+    <message>
+        <source>Image scale</source>
+        <translation>[Îmàgé sçàlé]</translation>
+    </message>
+    <message>
+        <source>Controller viewport</source>
+        <translation>[Çõñtrõllér vîéwpõrt]</translation>
+    </message>
+    <message>
+        <source>Background</source>
+        <translation>[Bàçkgrõûñd]</translation>
+    </message>
+    <message>
+        <source>Cursor</source>
+        <translation>[Çûrsõr]</translation>
+    </message>
+    <message>
+        <source>On folder change</source>
+        <translation>[Õñ fõldér çhàñgé]</translation>
+    </message>
+    <message>
+        <source>Presentation timing</source>
+        <translation>[Préséñtàtîõñ tîmîñg]</translation>
+    </message>
+    <message>
+        <source>Rotate output</source>
+        <translation>[Rõtàté õûtpût]</translation>
+    </message>
+    <message>
+        <source>Zoom in</source>
+        <translation>[Zõõm îñ]</translation>
+    </message>
+    <message>
+        <source>Zoom out</source>
+        <translation>[Zõõm õût]</translation>
+    </message>
+    <message>
+        <source>Solid/checker background color (#RRGGBB)</source>
+        <translation>[Sõlîd/çhéçkér bàçkgrõûñd çõlõr (#RRGGBB)]</translation>
+    </message>
+    <message>
+        <source>Background color</source>
+        <translation>[Bàçkgrõûñd çõlõr]</translation>
+    </message>
+    <message>
+        <source>Show composition guides</source>
+        <translation>[Shõw çõmpõsîtîõñ gûîdés]</translation>
+    </message>
+    <message>
+        <source>Show image information</source>
+        <translation>[Shõw îmàgé îñfõrmàtîõñ]</translation>
+    </message>
+    <message>
+        <source>Follow controller selection</source>
+        <translation>[Fõllõw çõñtrõllér séléçtîõñ]</translation>
+    </message>
+    <message>
+        <source>Pinned output keeps its reference image. Follow, folder-change and timing controls apply after leaving pinned mode.</source>
+        <translation>[Pîññéd õûtpût kééps îts référéñçé îmàgé. Fõllõw, fõldér-çhàñgé àñd tîmîñg çõñtrõls àpplý àftér léàvîñg pîññéd mõdé.]</translation>
+    </message>
+    <message>
+        <source>Linked views require both windows to show the same photo and follow selection. Pinned output keeps its reference. Some compositors prevent window positioning. Actual size shows one image pixel per display pixel. Independent timing presents the latest selection every 3 seconds.</source>
+        <translation>[Lîñkéd vîéws réqûîré bõth wîñdõws tõ shõw thé sàmé phõtõ àñd fõllõw séléçtîõñ. Pîññéd õûtpût kééps îts référéñçé. Sõmé çõmpõsîtõrs prévéñt wîñdõw põsîtîõñîñg. Àçtûàl sîzé shõws õñé îmàgé pîxél pér dîsplàý pîxél. Îñdépéñdéñt tîmîñg préséñts thé làtést séléçtîõñ évérý 3 séçõñds.]</translation>
+    </message>
+    <message>
+        <source>Lock workspace layout</source>
+        <translation>[Lõçk wõrkspàçé làýõût]</translation>
+    </message>
+    <message>
+        <source>Choose a destination on this page, then detach a pane. Frozen panes remain interactive. Recovery is always available.</source>
+        <translation>[Çhõõsé à déstîñàtîõñ õñ thîs pàgé, théñ détàçh à pàñé. Frõzéñ pàñés rémàîñ îñtéràçtîvé. Réçõvérý îs àlwàýs àvàîlàblé.]</translation>
+    </message>
+    <message>
+        <source>Pane destination</source>
+        <translation>[Pàñé déstîñàtîõñ]</translation>
+    </message>
+    <message>
+        <source>Pane destination display</source>
+        <translation>[Pàñé déstîñàtîõñ dîsplàý]</translation>
+    </message>
+    <message>
+        <source>%1 — detached</source>
+        <translation>[%1 — détàçhéd]</translation>
+    </message>
+    <message>
+        <source>%1 — controller</source>
+        <translation>[%1 — çõñtrõllér]</translation>
+    </message>
+    <message>
+        <source>Detach to selected display</source>
+        <translation>[Détàçh tõ séléçtéd dîsplàý]</translation>
+    </message>
+    <message>
+        <source>Re-dock</source>
+        <translation>[Ré-dõçk]</translation>
+    </message>
+    <message>
+        <source>Unfreeze</source>
+        <translation>[Ûñfréézé]</translation>
+    </message>
+    <message>
+        <source>Freeze</source>
+        <translation>[Fréézé]</translation>
+    </message>
+    <message>
+        <source>Preferred display unavailable; controls recovered onscreen.</source>
+        <translation>[Préférréd dîsplàý ûñàvàîlàblé; çõñtrõls réçõvéréd õñsçrééñ.]</translation>
+    </message>
+    <message>
+        <source>Width</source>
+        <translation>[Wîdth]</translation>
+    </message>
+    <message>
+        <source>%1 pane width</source>
+        <translation>[%1 pàñé wîdth]</translation>
+    </message>
+    <message>
+        <source>Height</source>
+        <translation>[Héîght]</translation>
+    </message>
+    <message>
+        <source>%1 pane height</source>
+        <translation>[%1 pàñé héîght]</translation>
+    </message>
+    <message>
+        <source>Display workspace presets for this window</source>
+        <translation>[Dîsplàý wõrkspàçé préséts fõr thîs wîñdõw]</translation>
+    </message>
+    <message>
+        <source>Saved preset</source>
+        <translation>[Sàvéd prését]</translation>
+    </message>
+    <message>
+        <source>No saved presets</source>
+        <translation>[Ñõ sàvéd préséts]</translation>
+    </message>
+    <message>
+        <source>Preset name</source>
+        <translation>[Prését ñàmé]</translation>
+    </message>
+    <message>
+        <source>Preset type</source>
+        <translation>[Prését týpé]</translation>
+    </message>
+    <message>
+        <source>Workspace</source>
+        <translation>[Wõrkspàçé]</translation>
+    </message>
+    <message>
+        <source>Create preset</source>
+        <translation>[Çréàté prését]</translation>
+    </message>
+    <message>
+        <source>Update snapshot</source>
+        <translation>[Ûpdàté sñàpshõt]</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Réñàmé]</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>[Àpplý]</translation>
+    </message>
+    <message>
+        <source>Delete preset</source>
+        <translation>[Délété prését]</translation>
+    </message>
+    <message>
+        <source>Workspace presets include pane placement and lock state; they belong to this window. Pane layout presets in Settings are shared by all windows. Images are never stored in presets. Applying a preset does not automatically enable output.</source>
+        <translation>[Wõrkspàçé préséts îñçlûdé pàñé plàçéméñt àñd lõçk stàté; théý bélõñg tõ thîs wîñdõw. Pàñé làýõût préséts îñ Séttîñgs àré shàréd bý àll wîñdõws. Îmàgés àré ñévér stõréd îñ préséts. Àpplýîñg à prését dõés ñõt àûtõmàtîçàllý éñàblé õûtpût.]</translation>
+    </message>
+    <message>
+        <source>Reset monitor preferences…</source>
+        <translation>[Rését mõñîtõr préféréñçés…]</translation>
+    </message>
+    <message>
+        <source>Recover all panes to controller</source>
+        <translation>[Réçõvér àll pàñés tõ çõñtrõllér]</translation>
+    </message>
+    <message>
+        <source>Reset monitor preferences?</source>
+        <translation>[Rését mõñîtõr préféréñçés?]</translation>
+    </message>
+    <message>
+        <source>This removes this slot’s monitor presets, re-docks panes and clears their layout locks. Original images and other slots are unchanged.</source>
+        <translation>[Thîs rémõvés thîs slõt’s mõñîtõr préséts, ré-dõçks pàñés àñd çléàrs théîr làýõût lõçks. Õrîgîñàl îmàgés àñd õthér slõts àré ûñçhàñgéd.]</translation>
+    </message>
+    <message>
+        <source>Reset preferences</source>
+        <translation>[Rését préféréñçés]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çàñçél]</translation>
+    </message>
 </context>
 <context>
     <name>PaneArrangement</name>
@@ -451,6 +1067,65 @@
     <message>
         <source>Try again</source>
         <translation>[Trý àgàîñ]</translation>
+    </message>
+</context>
+<context>
+    <name>RenameFlow</name>
+    <message>
+        <source>Failed to rename item.</source>
+        <translation>[Fàîléd tõ réñàmé îtém.]</translation>
+    </message>
+    <message>
+        <source>Failed to create folder.</source>
+        <translation>[Fàîléd tõ çréàté fõldér.]</translation>
+    </message>
+    <message>
+        <source>Rename Folder</source>
+        <translation>[Réñàmé Fõldér]</translation>
+    </message>
+    <message>
+        <source>Rename File</source>
+        <translation>[Réñàmé Fîlé]</translation>
+    </message>
+    <message>
+        <source>Enter a new name for this folder:</source>
+        <translation>[Éñtér à ñéw ñàmé fõr thîs fõldér:]</translation>
+    </message>
+    <message>
+        <source>Enter a new name for this file:</source>
+        <translation>[Éñtér à ñéw ñàmé fõr thîs fîlé:]</translation>
+    </message>
+    <message>
+        <source>New folder name</source>
+        <translation>[Ñéw fõldér ñàmé]</translation>
+    </message>
+    <message>
+        <source>New file name</source>
+        <translation>[Ñéw fîlé ñàmé]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çàñçél]</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>[Réñàmé]</translation>
+    </message>
+    <message>
+        <source>Create New Folder</source>
+        <translation>[Çréàté Ñéw Fõldér]</translation>
+    </message>
+    <message>
+        <source>Enter a name for the new folder:</source>
+        <translation>[Éñtér à ñàmé fõr thé ñéw fõldér:]</translation>
+    </message>
+    <message>
+        <source>Name for the new folder</source>
+        <translation>[Ñàmé fõr thé ñéw fõldér]</translation>
+    </message>
+    <message>
+        <source>Create</source>
+        <translation>[Çréàté]</translation>
     </message>
 </context>
 <context>
@@ -771,6 +1446,301 @@
         <source>Reset everything</source>
         <translation>[Rését évérýthîñg]</translation>
     </message>
+    <message>
+        <source>Search settings</source>
+        <translation>[Séàrçh séttîñgs]</translation>
+    </message>
+    <message>
+        <source>Settings sections</source>
+        <translation>[Séttîñgs séçtîõñs]</translation>
+    </message>
+    <message>
+        <source>Follow system</source>
+        <translation>[Fõllõw sýstém]</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>[Dàrk]</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>[Lîght]</translation>
+    </message>
+    <message>
+        <source>100% text scale</source>
+        <translation>[100% téxt sçàlé]</translation>
+    </message>
+    <message>
+        <source>125% text scale</source>
+        <translation>[125% téxt sçàlé]</translation>
+    </message>
+    <message>
+        <source>150% text scale</source>
+        <translation>[150% téxt sçàlé]</translation>
+    </message>
+    <message>
+        <source>Changes apply immediately and are saved. Palettes colour the interface only; photo pixels and the canvas backdrop are unchanged.</source>
+        <translation>[Çhàñgés àpplý îmmédîàtélý àñd àré sàvéd. Pàléttés çõlõûr thé îñtérfàçé õñlý; phõtõ pîxéls àñd thé çàñvàs bàçkdrõp àré ûñçhàñgéd.]</translation>
+    </message>
+    <message>
+        <source>Appearance reset to defaults.</source>
+        <translation>[Àppéàràñçé rését tõ défàûlts.]</translation>
+    </message>
+    <message>
+        <source>Each newly opened photo starts at Shrink only.</source>
+        <translation>[Éàçh ñéwlý õpéñéd phõtõ stàrts àt Shrîñk õñlý.]</translation>
+    </message>
+    <message>
+        <source>Open a photo to change how it fits.</source>
+        <translation>[Õpéñ à phõtõ tõ çhàñgé hõw ît fîts.]</translation>
+    </message>
+    <message>
+        <source>Shrink only</source>
+        <translation>[Shrîñk õñlý]</translation>
+    </message>
+    <message>
+        <source>Fit</source>
+        <translation>[Fît]</translation>
+    </message>
+    <message>
+        <source>Fill</source>
+        <translation>[Fîll]</translation>
+    </message>
+    <message>
+        <source>Fit width</source>
+        <translation>[Fît wîdth]</translation>
+    </message>
+    <message>
+        <source>Fit height</source>
+        <translation>[Fît héîght]</translation>
+    </message>
+    <message>
+        <source>Actual size</source>
+        <translation>[Àçtûàl sîzé]</translation>
+    </message>
+    <message>
+        <source>Custom zoom</source>
+        <translation>[Çûstõm zõõm]</translation>
+    </message>
+    <message>
+        <source>Next / previous photo</source>
+        <translation>[Ñéxt / prévîõûs phõtõ]</translation>
+    </message>
+    <message>
+        <source>Zoom</source>
+        <translation>[Zõõm]</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <translation>[Pàñ]</translation>
+    </message>
+    <message>
+        <source>Switch to photo view to change the canvas backdrop.</source>
+        <translation>[Swîtçh tõ phõtõ vîéw tõ çhàñgé thé çàñvàs bàçkdrõp.]</translation>
+    </message>
+    <message>
+        <source>Steps through the backdrop colours behind the photo (%1).</source>
+        <translation>[Stéps thrõûgh thé bàçkdrõp çõlõûrs béhîñd thé phõtõ (%1).]</translation>
+    </message>
+    <message>
+        <source>Steps through the backdrop colours behind the photo.</source>
+        <translation>[Stéps thrõûgh thé bàçkdrõp çõlõûrs béhîñd thé phõtõ.]</translation>
+    </message>
+    <message>
+        <source>Viewing settings reset to defaults.</source>
+        <translation>[Vîéwîñg séttîñgs rését tõ défàûlts.]</translation>
+    </message>
+    <message>
+        <source>Displays and workspaces…</source>
+        <translation>[Dîsplàýs àñd wõrkspàçés…]</translation>
+    </message>
+    <message>
+        <source>Folder tree</source>
+        <translation>[Fõldér tréé]</translation>
+    </message>
+    <message>
+        <source>Image preview</source>
+        <translation>[Îmàgé prévîéw]</translation>
+    </message>
+    <message>
+        <source>File grid</source>
+        <translation>[Fîlé grîd]</translation>
+    </message>
+    <message>
+        <source>Filmstrip</source>
+        <translation>[Fîlmstrîp]</translation>
+    </message>
+    <message>
+        <source>Top toolbar</source>
+        <translation>[Tõp tõõlbàr]</translation>
+    </message>
+    <message>
+        <source>Status toolbar</source>
+        <translation>[Stàtûs tõõlbàr]</translation>
+    </message>
+    <message>
+        <source>Pane to customize</source>
+        <translation>[Pàñé tõ çûstõmîzé]</translation>
+    </message>
+    <message>
+        <source>Left</source>
+        <translation>[Léft]</translation>
+    </message>
+    <message>
+        <source>Right</source>
+        <translation>[Rîght]</translation>
+    </message>
+    <message>
+        <source>Top</source>
+        <translation>[Tõp]</translation>
+    </message>
+    <message>
+        <source>Bottom</source>
+        <translation>[Bõttõm]</translation>
+    </message>
+    <message>
+        <source>Center</source>
+        <translation>[Çéñtér]</translation>
+    </message>
+    <message>
+        <source>Pane position</source>
+        <translation>[Pàñé põsîtîõñ]</translation>
+    </message>
+    <message>
+        <source>Preferred pane size in logical pixels</source>
+        <translation>[Préférréd pàñé sîzé îñ lõgîçàl pîxéls]</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>[Ñàmé]</translation>
+    </message>
+    <message>
+        <source>Date modified</source>
+        <translation>[Dàté mõdîfîéd]</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>[Sîzé]</translation>
+    </message>
+    <message>
+        <source>Shuffle</source>
+        <translation>[Shûfflé]</translation>
+    </message>
+    <message>
+        <source>Stop</source>
+        <translation>[Stõp]</translation>
+    </message>
+    <message>
+        <source>Loop this folder</source>
+        <translation>[Lõõp thîs fõldér]</translation>
+    </message>
+    <message>
+        <source>Continue through tree</source>
+        <translation>[Çõñtîñûé thrõûgh tréé]</translation>
+    </message>
+    <message>
+        <source>Window %1 remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file.</source>
+        <translation>[Wîñdõw %1 rémémbérs îts õwñ làst fõldér àñd phõtõ, àñd réõpéñs thém thé ñéxt tîmé ýõû stàrt Glàñçélõt wîthõût çhõõsîñg à fîlé.]</translation>
+    </message>
+    <message>
+        <source>Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch.</source>
+        <translation>[Põsîtîõñ mémõrý îs õff fõr thîs wîñdõw: thé séttîñgs fõldér îs bûsý õr ûñàvàîlàblé, õr ît wàs tûrñéd õff àt làûñçh.]</translation>
+    </message>
+    <message>
+        <source>Browsing settings reset to defaults.</source>
+        <translation>[Brõwsîñg séttîñgs rését tõ défàûlts.]</translation>
+    </message>
+    <message>
+        <source>Run %1</source>
+        <translation>[Rûñ %1]</translation>
+    </message>
+    <message>
+        <source>Shortcut for “%1” is now %2.</source>
+        <translation>[Shõrtçût fõr “%1” îs ñõw %2.]</translation>
+    </message>
+    <message>
+        <source>Shortcut for “%1” cleared.</source>
+        <translation>[Shõrtçût fõr “%1” çléàréd.]</translation>
+    </message>
+    <message>
+        <source>No command matches “%1”.</source>
+        <translation>[Ñõ çõmmàñd màtçhés “%1”.]</translation>
+    </message>
+    <message>
+        <source>Default shortcuts restored.</source>
+        <translation>[Défàûlt shõrtçûts réstõréd.]</translation>
+    </message>
+    <message>
+        <source>Glancelot %1</source>
+        <translation>[Glàñçélõt %1]</translation>
+    </message>
+    <message>
+        <source>JSON settings files (*.json)</source>
+        <translation>[JSÕÑ séttîñgs fîlés (*.jsõñ)]</translation>
+    </message>
+    <message>
+        <source>All files (*)</source>
+        <translation>[Àll fîlés (*)]</translation>
+    </message>
+    <message>
+        <source>Settings exported successfully to %1</source>
+        <translation>[Séttîñgs éxpõrtéd sûççéssfûllý tõ %1]</translation>
+    </message>
+    <message>
+        <source>Could not export settings.</source>
+        <translation>[Çõûld ñõt éxpõrt séttîñgs.]</translation>
+    </message>
+    <message>
+        <source>Settings imported successfully from %1</source>
+        <translation>[Séttîñgs împõrtéd sûççéssfûllý frõm %1]</translation>
+    </message>
+    <message>
+        <source>Could not import settings.</source>
+        <translation>[Çõûld ñõt împõrt séttîñgs.]</translation>
+    </message>
+    <message>
+        <source>All settings have been reset to defaults.</source>
+        <translation>[Àll séttîñgs hàvé bééñ rését tõ défàûlts.]</translation>
+    </message>
+    <message>
+        <source>Could not reset settings.</source>
+        <translation>[Çõûld ñõt rését séttîñgs.]</translation>
+    </message>
+    <message>
+        <source>Open now</source>
+        <translation>[Õpéñ ñõw]</translation>
+    </message>
+</context>
+<context>
+    <name>ShortcutRecorder</name>
+    <message>
+        <source>%1, …</source>
+        <translation>[%1, …]</translation>
+    </message>
+    <message>
+        <source>Press a shortcut…</source>
+        <translation>[Préss à shõrtçût…]</translation>
+    </message>
+    <message>
+        <source>Unassigned</source>
+        <translation>[Ûñàssîgñéd]</translation>
+    </message>
+    <message>
+        <source>Shortcut for %1: %2</source>
+        <translation>[Shõrtçût fõr %1: %2]</translation>
+    </message>
+    <message>
+        <source>Shortcut for %1: unassigned</source>
+        <translation>[Shõrtçût fõr %1: ûñàssîgñéd]</translation>
+    </message>
+    <message>
+        <source>Press the new shortcut. Escape cancels, Backspace clears, Enter accepts.</source>
+        <translation>[Préss thé ñéw shõrtçût. Ésçàpé çàñçéls, Bàçkspàçé çléàrs, Éñtér àççépts.]</translation>
+    </message>
+    <message>
+        <source>Activate to record a new shortcut.</source>
+        <translation>[Àçtîvàté tõ réçõrd à ñéw shõrtçût.]</translation>
+    </message>
 </context>
 <context>
     <name>Status</name>
@@ -785,10 +1755,6 @@
     <message>
         <source>Settings were damaged; your last saved copy was restored.</source>
         <translation>[Séttîñgs wéré dàmàgéd; ýõûr làst sàvéd çõpý wàs réstõréd.]</translation>
-    </message>
-    <message>
-        <source>Saved shortcuts conflict or use reserved Escape; default shortcuts are active. Reset shortcuts in Settings to repair them.</source>
-        <translation>[Sàvéd shõrtçûts çõñflîçt õr ûsé résérvéd Ésçàpé; défàûlt shõrtçûts àré àçtîvé. Rését shõrtçûts îñ Séttîñgs tõ répàîr thém.]</translation>
     </message>
     <message>
         <source>Sorting by %1%2…</source>
@@ -886,6 +1852,10 @@
         <source>Boundary mode changed; settings could not be saved.</source>
         <translation>[Bõûñdàrý mõdé çhàñgéd; séttîñgs çõûld ñõt bé sàvéd.]</translation>
     </message>
+    <message>
+        <source>Wheel behavior changed for this session; settings could not be saved.</source>
+        <translation>[Whéél béhàvîõr çhàñgéd fõr thîs séssîõñ; séttîñgs çõûld ñõt bé sàvéd.]</translation>
+    </message>
 </context>
 <context>
     <name>Theme</name>
@@ -900,6 +1870,53 @@
     <message>
         <source>Theme applies for this session; preferences could not be saved.</source>
         <translation>[Thémé àpplîés fõr thîs séssîõñ; préféréñçés çõûld ñõt bé sàvéd.]</translation>
+    </message>
+</context>
+<context>
+    <name>TransferHud</name>
+    <message>
+        <source>%1 B</source>
+        <translation>[%1 B]</translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation>[%1 KB]</translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation>[%1 MB]</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>[%1 GB]</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>[Résûmé]</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>[Pàûsé]</translation>
+    </message>
+    <message>
+        <source>Resume transfer</source>
+        <translation>[Résûmé tràñsfér]</translation>
+    </message>
+    <message>
+        <source>Pause transfer</source>
+        <translation>[Pàûsé tràñsfér]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çàñçél]</translation>
+    </message>
+    <message>
+        <source>Cancel transfer</source>
+        <translation>[Çàñçél tràñsfér]</translation>
+    </message>
+    <message>
+        <source>%1 of %2 items (%3 / %4) — %5%</source>
+        <translation>[%1 õf %2 îtéms (%3 / %4) — %5%]</translation>
     </message>
 </context>
 <context>
