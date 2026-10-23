@@ -7,7 +7,7 @@ Contract: docs/handoff/LEAD-WRAPUP-2026-10-22.md (first frozen resolution) and L
 | --- | --- |
 | Branch | `claude/stack-f049-presets` |
 | Base SHA | `afeac1a5d5b1da088d7b35447a933a2f64400f49` (`origin/main`, "chore(lead): freeze Phase 0 cycle 1 contracts") |
-| Tip SHA | the commit that adds this handoff; the code tip it describes is `bfb2885` (review diff: `git diff afeac1a <tip>`) |
+| Tip SHA | the commit that updates this handoff; code tip: the preceding test-fix commit (review diff: `git diff afeac1a <tip>`) |
 | Review | fresh session, `docs/verification/STACK-F049-PRESETS-REVIEW.md` on `claude/review-stack-f049-presets` |
 
 ## What changed, by contract clause
@@ -50,7 +50,7 @@ No shared header changed (`git diff afeac1a -- include/` is empty).
   - `presetStoreMalformedNewerAndNameScopes`: newer record preserved and not applied; unknown fields kept on replace; non-object store preserved; name collision with a display workspace preset.
 - `monitor_customization_tests`:
   - `layoutPresetsObeyCanonicalLockAndFreeze`: coordinator lock and freeze block presets; derived `paneRoutes.frozen`; the workspace snapshot captures the canonical result; distinct names in both directions; another slot untouched.
-  - `layoutPresetDuringPendingTransactionStaysCoherent`: a preset applied while a busy coordinator freeze transaction is pending. Afterwards runtime equals disk and the outcome has explicit feedback. In 3 local runs the coordinator landed first ("replaced" path).
+  - `layoutPresetDuringPendingTransactionStaysCoherent`: a preset and a busy coordinator freeze transaction pending together, in both orders. Afterwards the runtime equals what `layouts[slot]` reloads as, and the outcome is one of three explicit results: the transaction superseded the preset (with "replaced" feedback), the preset landed first and the transaction was refused, or both applied in order. Locally, order 0 gives "superseded" and order 1 gives "refused".
 - `layout_presets_ui_tests` (shipped `Main.qml`):
   - `navigatorFollowsDetachedPreview`: navigator in the detached host window, inside the canvas bounds, back on re-dock.
   - `settingsPresetRowObeysCanonicalLockAndFreeze`: Apply disabled with a reason under a coordinator lock, a freeze, and a pending transaction.
@@ -66,6 +66,14 @@ FAIL!  : PaneLayoutTests::presetsObeyLockAndFreezeAuthority() '!pane.toObject().
 FAIL!  : PaneLayoutTests::presetStoreMalformedNewerAndNameScopes() 'model.feedback().contains("newer")' returned FALSE. ()
 Totals: 13 passed, 4 failed, 0 skipped, 0 blacklisted, 85ms
 ```
+
+## Hosted Windows feedback (`Build and test`, `viewer` job, MSVC on windows-2022)
+
+- The run on `2419653` (https://github.com/dvortsis/glancelot/actions/runs/39879139768) passed the MSVC build. Tests were 43/44: everything passed, including `folder_grid`, `input_ui`, `directory_model`, `pane_layout` and `layout_presets_ui`, except `monitor_customization`.
+- The hosted log carries no QTest output, so the failing assertion is not visible. `monitor_customization` passes on the hosted job for `main` and the other cycle branches, so the failure was in this packet's new coordinator test.
+- Likely cause: the first version of `layoutPresetDuringPendingTransactionStaysCoherent` compared raw `layouts[slot]` JSON with runtime pane fields. When the preset write lands first (the "refused" order), the stored panes have no `frozen` key. That comparison failed, whereas the same fields reloaded through `PaneLayout` match.
+- The test now compares reloaded state and forces both orders (a second loop starts with the preset). Locally the forced order takes exactly the refused path, and it passes.
+- The follow-up commit's hosted run is the check; I could not run Windows here.
 
 ## Build and test environment (cloud, unverified against the gate)
 
