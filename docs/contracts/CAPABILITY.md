@@ -190,7 +190,7 @@ New `tests/capability_tests.cpp` (model, no display) and `tests/capability_ui_te
 2. **Delete the unused structs.** Delete `DisplayCapabilities` and `DecoderCapability` now (proposed), or keep them until D2 lands?
 3. **Generated capability page.** Should `exportText()` (or a CLI flag) generate `docs/SUPPORTED-CAPABILITIES.md` rows per platform (FMT section: "generated capability page")? Or does EN-08 keep that page hand-written?
 4. **Ownership split.** D2 owns all four populators (proposed), or does F2 own the Source populator, given that F075 is its feature?
-5. **Per-process scope.** Window slots run as separate processes, each with its own model and probes. Is a duplicate decoder probe per window acceptable (about 5 ms each, deferred)?
+5. **Per-process scope.** Window slots are independent viewer processes (`window_slot.hpp`), each with its own model and probes. Is a duplicate decoder probe per window acceptable (one short worker run each, deferred)?
 
 ## 10. Deliberately not covered
 

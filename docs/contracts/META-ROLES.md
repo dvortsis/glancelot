@@ -154,7 +154,7 @@ Role names: `captureTime` (QDateTime, `Qt::LocalTime` built from the wall-clock 
 - `Captured`: `capturedKnown` first in both directions, then `captured`, then natural name.
 - `Dimensions`: `dimensionsKnown` first in both directions, then `pixelWidth*pixelHeight` (64-bit), then `pixelWidth`, then natural name.
 - An empty or failing reader makes every key missing, so the result equals natural order. Shuffle, Name, Modified and Size are unchanged byte for byte.
-- `needMeta` in `sortedImageFiles` stays `Modified || Size` for stat data. `Captured || Dimensions` call the reader once over the stat-ordered list before sorting.
+- `needMeta` in `sortedImageFiles` becomes `Modified || Size || Captured || Dimensions`, so the reader receives each file's stat data (size and modified), which it needs as the cache revision. The reader is then called once over the listed files before sorting. Name and Shuffle still skip stat.
 
 ## 6. Migration without behaviour change
 

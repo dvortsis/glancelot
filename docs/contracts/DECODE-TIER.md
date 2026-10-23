@@ -80,9 +80,13 @@ Tile                               (region of the Full raster; separate channel,
 ### 4.2 `include/glancelot/display_manager.hpp` (diff): close the equal-generation gap
 
 ```diff
++#include "contracts.hpp"
+@@
 -    void updateImage(const QString& path, const QImage& image, quint64 generation);
-+    // Same generation: accepted only when tierRank(tier) > tierRank(current tier) (a refinement).
-+    // A newer generation always resets the tier floor. The default keeps today's callers unchanged.
++    // Same generation: rejected only when tierRank(tier) < tierRank(current tier) (a late lower tier).
++    // An equal tier is accepted: idempotent re-publishes stay valid (currentImageRequested handler at
++    // viewer_controller.cpp:401-402, timed publishing at display_manager.cpp:125/571, the clear at :1019).
++    // A newer generation always resets the tier floor. The defaults keep today's callers unchanged.
 +    void updateImage(const QString& path, const QImage& image, quint64 generation,
 +                     DecodeTier tier = DecodeTier::Full, QSize sourceSize = {});
 ```
@@ -93,7 +97,8 @@ Tile                               (region of the Full raster; separate channel,
 
 ```diff
 +    // "preview" | "fit" | "full"; "" when no image. imageWidth/imageHeight keep meaning source size (equal to the
-+    // buffer for Full, so unchanged today). imageFinal is false while a refinement is pending.
++    // buffer for Full, so unchanged today); when the source size is unknown (sourceWidth == 0, e.g. a RAW Preview)
++    // they and all viewport geometry fall back to the buffer size. imageFinal is false while a refinement is pending.
 +    Q_PROPERTY(QString imageTier READ imageTier NOTIFY imageChanged)
 +    Q_PROPERTY(bool imageFinal READ imageFinal NOTIFY imageChanged)
 ```
@@ -143,12 +148,12 @@ Tile                               (region of the Full raster; separate channel,
 
 - **GUI thread:** `ViewerController` owns the ladder, `DecodeCache` and the shown tier. Decoding happens only in the worker process. No tier is decoded or scaled on the GUI or render thread. Scaling for Fit happens in the worker.
 - **Sequential ladder:** at most **one** in-flight decode per selection generation. Full starts after Fit is applied or fails, never concurrently (PERFORMANCE-STRATEGY: no doubled memory). Full admission keeps counting the shown Fit image (`image.sizeInBytes()` is already in the allowance) until E1 replaces it.
-- **Apply rule (the core fence):** apply result R only when all of the following hold:
+- **Apply rule (the core fence):** the controller applies decode result R only when all of the following hold:
   - `R.generation == generation`;
-  - R's token is non-empty or nothing is shown;
+  - tokens agree when **both** are non-empty. An empty token, meaning the revision probe was not `known` on a weak or network filesystem, may still refine the display; it is only not cached;
   - `tierRank(R.tier) > tierRank(shownTier)`, or nothing is shown for this generation.
   
-  Equal or lower tiers are dropped, with the perf flag `Stale`. A source revision change already starts a new generation (`viewer_controller.cpp:351`), so it is the only way to reset the floor. The same rule is enforced again in `DisplayManager::updateImage`.
+  Equal or lower decode results are dropped, with the perf flag `Stale`. A source revision change already starts a new generation (`viewer_controller.cpp:351`), so it is the only way to reset the floor. `DisplayManager::updateImage` adds defence in depth: it rejects only a strictly lower tier at equal generation and accepts equal-tier re-publishes.
 - **Failure:**
   - if Full fails or is refused after Fit is shown, Fit stays and the status says so ("Scaled preview: <reason>"), with `imageFinal = true` and tier `fit`;
   - if Fit fails, the ladder falls through to Full;
@@ -183,7 +188,8 @@ Extend `tests/cache_tests.cpp` through the lead's cmake; add `tests/decode_tier_
 - **Fencing:**
   - Full applied, then a late Fit for the same generation, is dropped (controller and `DisplayManager`);
   - Fit for generation N arriving after navigation to N+1 is dropped;
-  - equal tier twice keeps the first;
+  - an equal-tier decode result arriving twice is dropped by the controller, while `DisplayManager` accepts an equal-tier re-publish (opening a presentation after Full still shows the image);
+  - Full with an empty token after Fit still refines the display and is not cached;
   - a revision change (new generation) shows a new Fit even though Full of the old revision was shown.
 - **Cancellation:**
   - navigate away during Fit, and again during Full: no worker survives, nothing applied, admission released once;
