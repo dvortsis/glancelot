@@ -2,7 +2,7 @@
 # machine-local, in the git common dir of the current directory's repository, so every worktree sees them:
 #   glancelot-gate-lock\owner.json      the full-gate lock (the directory is kept for older gate-lock.ps1 copies)
 #   glancelot-build-slot-<n>.json       one file per held build slot
-#   glancelot-gate-pending-<pid>.json   a gate request waiting to start; new build slots wait while one exists
+#   glancelot-gate-pending-<ticket>.json  a gate request waiting to start (FIFO ticket); new build slots wait while one exists
 # Every claim is an exclusive file create (FileMode.CreateNew) whose handle the holder keeps open until release, so
 # exactly one process wins and, on Windows, a live holder's file cannot be deleted. A record on this host is stale
 # only when its PID is dead or now belongs to a later process; -StaleHours applies only to records from another
@@ -23,17 +23,30 @@ function Read-LockJson([string]$path) {
         if ($text.Trim()) { $text | ConvertFrom-Json } else { $null }
     } catch { $null }
 }
+function Test-Unheld([string]$path) {
+    # True when no process has the file open: an exclusive open succeeds only without any other handle. A claim
+    # holder keeps its handle for the whole claim, so an unheld claim file is a leftover. Fails safe (held) on error.
+    try { $fs = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None); $fs.Dispose(); $true } catch { $false }
+}
 function Test-LockStale($owner, [string]$path, [double]$staleHours) {
-    # No record yet: held for two minutes after the last write (the holder may still be writing it). LastWriteTime,
-    # not CreationTime, because Windows tunnels the creation time of a file re-created under the same name.
+    # A missing file is gone. A claim file without a record yet is stale only when nobody holds it open; an older
+    # gate-lock.ps1 directory without owner.json is held for two minutes after its last write (LastWriteTime, not
+    # CreationTime, because Windows tunnels the creation time of a re-created name). A record on this host is stale
+    # when its PID is dead or now belongs to a later process, or, for handle claims (claim = 'handle'), when no
+    # process holds the file open any more. Records from another host go stale after -StaleHours.
+    $item = Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $true }
+    $isFile = -not $item.PSIsContainer
     if (-not $owner) {
-        $item = Get-Item -LiteralPath $path -ErrorAction SilentlyContinue
-        return (-not $item) -or ((Get-Date) - $item.LastWriteTime).TotalMinutes -gt 2
+        if ($isFile) { return Test-Unheld $path }
+        return ((Get-Date) - $item.LastWriteTime).TotalMinutes -gt 2
     }
     if ($owner.host -ne $machine) { return ((Get-Date) - [datetime]$owner.started).TotalHours -gt $staleHours }
     $proc = Get-Process -Id $owner.pid -ErrorAction SilentlyContinue
     if (-not $proc) { return $true }
-    try { return $proc.StartTime -gt ([datetime]$owner.started).AddSeconds(2) } catch { return $false }
+    try { if ($proc.StartTime -gt ([datetime]$owner.started).AddSeconds(2)) { return $true } } catch { }
+    if ($isFile -and $owner.claim -eq 'handle') { return Test-Unheld $path }
+    $false
 }
 function Get-AncestorIds {
     # This process and its ancestors. Locks they hold belong to the caller's own process tree.
@@ -43,7 +56,7 @@ function Get-AncestorIds {
     , $ids
 }
 function New-LockRecord([hashtable]$extra) {
-    $r = [ordered]@{ holder = $env:USERNAME; started = (Get-Date).ToString('o'); pid = $PID; host = $machine; cwd = (Get-Location).Path }
+    $r = [ordered]@{ holder = $env:USERNAME; started = (Get-Date).ToString('o'); pid = $PID; host = $machine; cwd = (Get-Location).Path; claim = 'handle' }
     foreach ($k in $extra.Keys) { $r[$k] = $extra[$k] }
     $r
 }
@@ -59,11 +72,20 @@ function Open-LockFile([string]$path, $record) {
     $stream
 }
 function Close-LockFile($stream, [string]$path) {
-    # Release our own claim only: close the handle, then delete the file if it still carries our PID.
-    if ($stream) { $stream.Dispose() }
+    # Release our own claim: empty the file through the held handle, close it, then delete it (retrying while a
+    # reader that does not share Delete has it open). A leftover is empty and unheld, so it is stale at once.
+    if ($stream) {
+        try { $stream.SetLength(0); $stream.Flush() } catch { }
+        $stream.Dispose()
+    }
     if (-not $path) { return }
-    $owner = Read-LockJson $path
-    if ($owner -and $owner.pid -eq $PID -and $owner.host -eq $machine) { Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue }
+    for ($i = 0; $i -lt 20; $i++) {
+        if (-not (Test-Path -LiteralPath $path)) { return }
+        $owner = Read-LockJson $path
+        if ($owner -and -not ($owner.pid -eq $PID -and $owner.host -eq $machine)) { return }  # someone else's claim now
+        if (-not $owner -and -not $stream) { return }  # not ours to judge
+        try { [IO.File]::Delete($path); return } catch { Start-Sleep -Milliseconds 50 }
+    }
 }
 function Remove-StaleLockFile([string]$path, $judged) {
     # Re-read just before deleting and delete only the record judged stale, so a racing fresh claim survives.
@@ -116,12 +138,33 @@ function Show-LockStatus([double]$staleHours, [int]$slots) {
     $rows = foreach ($prefix in $pendingPrefix, $slotPrefix) {
         foreach ($f in Get-ChildItem -LiteralPath $commonDir -Filter "$prefix*.json" -File -ErrorAction SilentlyContinue | Sort-Object Name) {
             $o = Read-LockJson $f.FullName
-            [pscustomobject]@{ kind = $(if ($prefix -eq $slotPrefix) { "slot $($f.BaseName.Substring($prefix.Length))" } else { 'gate pending' })
+            [pscustomobject]@{ kind = $(if ($prefix -eq $slotPrefix) { "slot $($f.BaseName.Substring($prefix.Length))" } else { "gate ticket $(Get-TicketNumber $f.Name)" })
                 state = $(if (Test-LockStale $o $f.FullName $staleHours) { 'stale' } else { 'live' })
                 pid = $o.pid; branch = $o.branch; started = $o.started; cwd = $o.cwd }
         }
     }
     $held = @($rows | Where-Object { $_.kind -like 'slot*' }).Count
-    "build slots: $held held of $slots; gate requests pending: $(@($rows | Where-Object kind -eq 'gate pending').Count) (files in $commonDir)"
+    "build slots: $held held of $slots; gate requests pending: $(@($rows | Where-Object { $_.kind -like 'gate ticket*' }).Count) (files in $commonDir)"
     if ($rows) { $rows | Format-Table -AutoSize | Out-String -Width 200 }
+}
+
+function Get-TicketNumber([string]$name) {
+    $n = 0L
+    if ($name -match "^$([regex]::Escape($pendingPrefix))(\d+)\.json$" -and [long]::TryParse($Matches[1], [ref]$n)) { $n } else { $null }
+}
+function New-GateTicket($record) {
+    # FIFO ticket: one past the highest pending ticket file present, claimed with CreateNew (a collision moves on to
+    # the next number), so a new request always queues behind every request already waiting.
+    for ($try = 0; $try -lt 200; $try++) {
+        $max = 0L
+        foreach ($f in Get-ChildItem -LiteralPath $commonDir -Filter "$pendingPrefix*.json" -File -ErrorAction SilentlyContinue) {
+            $n = Get-TicketNumber $f.Name; if ($null -ne $n -and $n -gt $max) { $max = $n }
+        }
+        $ticket = $max + 1 + $try
+        $path = Join-Path $commonDir ('{0}{1:D8}.json' -f $pendingPrefix, $ticket)
+        $record['ticket'] = $ticket
+        $stream = Open-LockFile $path $record
+        if ($stream) { return [pscustomobject]@{ ticket = $ticket; path = $path; stream = $stream } }
+    }
+    throw "Cannot take a gate ticket in $commonDir"
 }

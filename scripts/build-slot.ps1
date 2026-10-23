@@ -21,15 +21,20 @@ if ($heldBy -and ($heldBy -eq "$PID" -or (Get-AncestorIds).Contains([int]$heldBy
 if (-not $Branch) { $Branch = git branch --show-current 2>$null }
 $ancestors = Get-AncestorIds
 
+function Test-OwnGate($gate) {
+    # The gate belongs to this process tree: same process, an ancestor, or GLANCELOT_GATE_LOCK_HELD inherited from it.
+    $gate -and $gate.pid -and (($gate.host -eq $machine -and $ancestors.Contains([int]$gate.pid)) -or
+        ($env:GLANCELOT_GATE_LOCK_HELD -and $env:GLANCELOT_GATE_LOCK_HELD -eq "$($gate.pid)"))
+}
+# A build started inside the gate holder's own tree is part of that gate, which is already exclusive: it runs at
+# once without a slot, so it never waits on itself or on slots held by requesters queued behind this gate.
+if (Test-OwnGate (Get-GateOwner $StaleHours)) { & $Run; return }
+
 function Get-ForeignGate {
-    # A gate held or requested by another process tree. A build started inside the gate holder's own tree (same
-    # process, an ancestor, or a child that inherited GLANCELOT_GATE_LOCK_HELD) is part of that gate and never waits,
-    # not even for other pending gate requests, which are waiting on that gate.
+    # A gate held or requested (a live ticket) by another process tree.
     $gate = Get-GateOwner $StaleHours
     if ($gate) {
-        $ours = ($gate.host -eq $machine -and $ancestors.Contains([int]$gate.pid)) -or
-                ($env:GLANCELOT_GATE_LOCK_HELD -and $env:GLANCELOT_GATE_LOCK_HELD -eq "$($gate.pid)")
-        if ($ours) { return $null }
+        if (Test-OwnGate $gate) { return $null }
         return "full gate held by $($gate.holder) on $($gate.branch) since $($gate.started)"
     }
     $pending = @(Get-LiveLocks $pendingPrefix $StaleHours $ancestors)
