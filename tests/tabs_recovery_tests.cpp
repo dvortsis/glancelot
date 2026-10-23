@@ -133,6 +133,14 @@ class TabsRecoveryTests final : public QObject {
     static QStringList pick(const QStringList& files, const QList<int>& indexes) {
         QStringList result; for (const int i : indexes) result.append(files.at(i)); return result;
     }
+    // Round 3: the active tab's folder is unavailable. Its row says so and nothing of the previous tab is shown.
+    static QString unavailableDiffers(const ViewerController& viewer) {
+        const auto row = viewer.tabs().value(viewer.activeTab()).toMap();
+        if (!row.value("unavailable").toBool()) return "the active tab is not marked unavailable";
+        if (viewer.imageReady() || viewer.loading() || !viewer.filePath().isEmpty() || !viewer.directory().isEmpty())
+            return QString("previous content still shown: file \"%1\", folder \"%2\", ready %3").arg(viewer.filePath(), viewer.directory()).arg(viewer.imageReady());
+        return {};
+    }
     // A first run with a claimed slot and three tabs (active: beta), closed normally.
     static bool firstRun(const QString& config, const Media& media) {
         WindowSlot slot(config, 0); if (slot.number() != 1) return false;
@@ -554,7 +562,9 @@ private slots:
             viewer.open(files[0]); QVERIFY(viewer.loading());   // tab 2 moves to alpha; its decode is in flight
             QVERIFY(close ? viewer.closeTab(2) : viewer.activateTab(1));   // beta's image is gone: the folder route
             QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
-            QVERIFY2(shows(viewer, files[0]), qPrintable(viewer.status()));   // the stale decode really landed
+            // Round 3 (lead decision b): the failed folder route retires the stale decode and shows the tab as unavailable
+            // instead of the previous tab's photo (round 2 asserted that photo was on screen).
+            const auto state = unavailableDiffers(viewer); QVERIFY2(state.isEmpty(), qPrintable(state));
             const auto live = liveTabsDiffer(viewer, pick(files, expected), active); QVERIFY2(live.isEmpty(), qPrintable(live));
         }
         const auto differ = storedTabsDiffer(config.path(), pick(files, expected), active); QVERIFY2(differ.isEmpty(), qPrintable(differ));
@@ -591,7 +601,8 @@ private slots:
             else QVERIFY(viewer.closeTab(0));
             const auto early = liveTabsDiffer(viewer, pick(files, expected), active); QVERIFY2(early.isEmpty(), qPrintable(early));
             QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
-            if (stale || action == "switch") QVERIFY2(shows(viewer, files[0]), qPrintable(viewer.status()));
+            if (action == "switch") QVERIFY2(shows(viewer, files[0]), qPrintable(viewer.status()));
+            else { const auto state = unavailableDiffers(viewer); QVERIFY2(state.isEmpty(), qPrintable(state)); }   // round 3 (b)
             const auto live = liveTabsDiffer(viewer, pick(files, expected), active); QVERIFY2(live.isEmpty(), qPrintable(live));
         }
         const auto differ = storedTabsDiffer(config.path(), pick(files, expected), active); QVERIFY2(differ.isEmpty(), qPrintable(differ));
@@ -616,6 +627,141 @@ private slots:
             const auto live = liveTabsDiffer(viewer, files, 0); QVERIFY2(live.isEmpty(), qPrintable(live));
         }
         const auto differ = storedTabsDiffer(config.path(), files, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Review round 3 (B2): after a switch whose folder is unavailable, nothing that reopens, refreshes or reconciles the
+    // previous tab's content may settle the target tab. Lead decision: a tab's location changes only from an open in its
+    // own folder (or explicit navigation in that tab); while the folder is unavailable the view shows that state, not the
+    // previous tab's photo, and F5 / Retry retries the target.
+    void reopenAfterAFailedFolderSwitchKeepsTheTarget_data() {
+        QTest::addColumn<QString>("trigger");
+        QTest::addColumn<bool>("stale");
+        QTest::newRow("F5 refresh") << "refresh" << false;
+        QTest::newRow("external edit") << "edit" << false;
+        QTest::newRow("external delete") << "delete" << false;
+        QTest::newRow("F5 after stale decode") << "refresh" << true;
+    }
+    void reopenAfterAFailedFolderSwitchKeepsTheTarget() {
+        QFETCH(QString, trigger); QFETCH(bool, stale);
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        const auto expected = pick(files, stale ? QList<int>{0, 1, 0} : QList<int>{0, 1, 2});
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(QDir(media.dir.filePath("beta")).removeRecursively());
+            if (stale) { viewer.open(files[0]); QVERIFY(viewer.loading()); }
+            QVERIFY(viewer.activateTab(1));   // folder route; beta's folder is gone
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            // Precondition: the switch failed and every tab still holds its own location, live and stored.
+            const auto before = liveTabsDiffer(viewer, expected, 1); QVERIFY2(before.isEmpty(), qPrintable(before));
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), expected, 1).isEmpty(), 5000);
+            if (trigger == "edit") {
+                QImage changed(48, 32, QImage::Format_RGB32); changed.fill(Qt::darkRed); QVERIFY(changed.save(files[2]));
+                QCOMPARE(QImage(files[2]).width(), 48);   // gamma's image really changed on disk
+            } else if (trigger == "delete") {
+                QVERIFY(QFile::remove(files[2])); QVERIFY(!QFileInfo::exists(files[2]));
+            } else viewer.trigger("refresh");
+            QTest::qWait(4000);   // the folder watcher's settle time, as the reviewer's probe waited
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto live = liveTabsDiffer(viewer, expected, 1); QVERIFY2(live.isEmpty(), qPrintable(live));
+            const auto state = unavailableDiffers(viewer); QVERIFY2(state.isEmpty(), qPrintable(state));
+        }
+        const auto differ = storedTabsDiffer(config.path(), expected, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // An automatic move while the switch's folder route is still pending (following a rename of the previous tab's photo,
+    // or its removal by the delete flow) replaces that route. It never settles the target, and the route runs again, so
+    // the tab still ends unavailable rather than showing the previous tab's content.
+    void automaticMoveDuringAPendingSwitchNeverSettlesIt_data() {
+        QTest::addColumn<QString>("move");
+        QTest::newRow("rename followed") << "rename";
+        QTest::newRow("removal followed") << "remove";
+    }
+    void automaticMoveDuringAPendingSwitchNeverSettlesIt() {
+        QFETCH(QString, move);
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(QDir(media.dir.filePath("beta")).removeRecursively());
+            QVERIFY(viewer.activateTab(1)); QVERIFY(viewer.directoryPending());   // folder route still pending
+            if (move == "rename") {
+                const QString renamed = media.file("gamma/c2.png");
+                QVERIFY(QFile::rename(files[2], renamed));
+                viewer.reconcileRenamedPath(files[2], renamed);
+            } else {
+                QVERIFY(QFile::remove(files[2]));
+                viewer.reconcileRemovedPaths({files[2]});
+            }
+            QTest::qWait(1000);
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto live = liveTabsDiffer(viewer, files, 1); QVERIFY2(live.isEmpty(), qPrintable(live));
+            const auto state = unavailableDiffers(viewer); QVERIFY2(state.isEmpty(), qPrintable(state));
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Retry (F5, or the placeholder's Retry button, which runs the same command) reopens the target once its folder is back.
+    void retryReopensTheTargetWhenItsFolderReturns() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            const QString away = media.dir.filePath("beta-offline");
+            QVERIFY(QDir(media.dir.path()).rename("beta", "beta-offline"));   // the share goes offline
+            QVERIFY(viewer.activateTab(1));
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto before = liveTabsDiffer(viewer, files, 1); QVERIFY2(before.isEmpty(), qPrintable(before));
+            QVERIFY(QDir(media.dir.path()).rename("beta-offline", "beta"));   // and comes back
+            QVERIFY(!QFileInfo::exists(away) && QFileInfo::exists(files[1]));
+            viewer.trigger("refresh");   // Retry
+            QTRY_VERIFY2_WITH_TIMEOUT(shows(viewer, files[1]), qPrintable(viewer.status() + " showing " + viewer.filePath()), 10000);
+            const auto live = liveTabsDiffer(viewer, files, 1); QVERIFY2(live.isEmpty(), qPrintable(live));
+            QVERIFY(!viewer.tabs().value(1).toMap().value("unavailable").toBool());
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), files, 1).isEmpty(), 5000);
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Retry while the folder is still unavailable keeps the unavailable state and every location. The window starts
+    // unclaimed, so the busy-claim retry at app/main.cpp:211 (setWindowClaim, then restoreWindow) runs while the tab is
+    // unavailable: it must neither restore the stored set over the live one nor save the previous tab's location.
+    void retryWhileStillUnavailableKeepsEveryTabsLocation() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            std::optional<WindowSlot> slot;   // outlives the viewer, as in app/main.cpp
+            ViewerController viewer;
+            QVERIFY(showThreeTabs(viewer, media, 2));
+            QVERIFY(QDir(media.dir.filePath("beta")).removeRecursively());
+            QVERIFY(viewer.activateTab(1));
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            slot.emplace(config.path(), 0); QCOMPARE(slot->number(), 1);
+            viewer.setWindowClaim(slot->claimIdentity()); viewer.restoreWindow();   // the retry at app/main.cpp:211
+            for (int attempt = 0; attempt < 2; ++attempt) {
+                viewer.trigger("refresh");   // Retry, folder still gone
+                QTest::qWait(300);
+                QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+                const auto live = liveTabsDiffer(viewer, files, 1); QVERIFY2(live.isEmpty(), qPrintable(live));
+                const auto state = unavailableDiffers(viewer); QVERIFY2(state.isEmpty(), qPrintable(state));
+            }
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), files, 1).isEmpty(), 5000);
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
         QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
     }
 

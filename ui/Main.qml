@@ -1225,14 +1225,59 @@ ApplicationWindow {
         }
         ColumnLayout { // empty state: one message, one action
             id: emptyState
+            objectName: "emptyState"
             readonly property bool compactContent: app.paneRect("preview").width < 280 || app.paneRect("preview").height < 320
+            // F015 round 3: the active tab's folder is unavailable. The previous tab's photo is gone from the view, so this
+            // state names the tab's folder and offers Retry (the same command as F5) instead of the welcome content.
+            readonly property var unavailableTab: {
+                const rows = viewer.tabs
+                const row = rows.length > 1 ? rows[viewer.activeTab] : undefined
+                return row && row.unavailable ? row : null
+            }
+            readonly property bool unavailable: unavailableTab !== null
             x: app.paneRect("preview").x+(app.paneRect("preview").width-width)/2
             y: app.paneRect("preview").y+(app.paneRect("preview").height-height)/2
             spacing: Theme.gapSm
             visible: !app.gridMode && !app.combinedMode && viewer.fileCount === 0 && !viewer.loading
             width: Math.max(0,Math.min(440,app.paneRect("preview").width-2*Theme.gapMd))
+            UiIcon {
+                objectName: "tabUnavailableIcon"
+                visible: emptyState.unavailable && !emptyState.compactContent
+                Layout.alignment: Qt.AlignHCenter
+                name: "folder"
+                size: 2 * Theme.gapXl
+                lineWidth: 1.25
+                color: Theme.muted
+                Accessible.ignored: true
+            }
+            Label {
+                objectName: "tabUnavailableTitle"
+                visible: emptyState.unavailable
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: emptyState.unavailable ? qsTr("%1 is unavailable").arg(emptyState.unavailableTab.title) : ""
+                color: Theme.text
+                font.pixelSize: Theme.textHeading
+                font.weight: Font.Medium
+                wrapMode: Text.Wrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+                Accessible.role: Accessible.AlertMessage
+                Accessible.name: text
+            }
+            Label {
+                objectName: "tabUnavailableFolder"
+                visible: emptyState.unavailable && !emptyState.compactContent
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: emptyState.unavailable ? emptyState.unavailableTab.folder.replace(/\//g, Qt.platform.os === "windows" ? "\\" : "/") : ""
+                color: Theme.muted
+                font.pixelSize: Theme.textSmall
+                elide: Text.ElideMiddle
+                Accessible.name: text
+            }
             Image {
-                visible: !emptyState.compactContent
+                visible: !emptyState.compactContent && !emptyState.unavailable
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: app.height < 480 ? 96 : 144
                 Layout.preferredHeight: Layout.preferredWidth
@@ -1242,7 +1287,7 @@ ApplicationWindow {
                 Accessible.ignored: true
             }
             Label {
-                visible: !emptyState.compactContent
+                visible: !emptyState.compactContent && !emptyState.unavailable
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Theme.gapSm
                 text: qsTr("Glancelot")
@@ -1256,7 +1301,7 @@ ApplicationWindow {
             Label {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
-                visible: !emptyState.compactContent
+                visible: !emptyState.compactContent && !emptyState.unavailable
                 text: qsTr("Your photographs, front and center.")
                 color: Theme.muted
                 font.pixelSize: Theme.textTitle
@@ -1267,18 +1312,20 @@ ApplicationWindow {
                 Layout.topMargin: emptyState.compactContent ? 0 : Theme.gapLg
                 Layout.maximumWidth: emptyState.width
                 Layout.minimumWidth: 0
+                objectName: "emptyStateAction"
                 variant: "primary"
-                text: emptyState.compactContent ? qsTr("Open") : qsTr("Open a photo")
-                Accessible.name: "Open a photo"
-                tip: "Open a photo" + app.shortcutHint("open")
-                onClicked: app.invoke("open")
+                text: emptyState.unavailable ? qsTr("Retry") : emptyState.compactContent ? qsTr("Open") : qsTr("Open a photo")
+                Accessible.name: emptyState.unavailable ? qsTr("Retry this tab's folder") : "Open a photo"
+                tip: emptyState.unavailable ? qsTr("Retry this tab's folder") + app.shortcutHint("refresh") : "Open a photo" + app.shortcutHint("open")
+                onClicked: app.invoke(emptyState.unavailable ? "refresh" : "open")
             }
             Label {
                 Layout.fillWidth: true
                 Layout.topMargin: Theme.gapSm
                 horizontalAlignment: Text.AlignHCenter
                 visible: !emptyState.compactContent
-                text: qsTr("or drop a JPEG or PNG here. Arrow keys browse the folder.")
+                text: emptyState.unavailable ? qsTr("Reconnect the drive or network share, then retry. Your other tabs keep their places.")
+                                             : qsTr("or drop a JPEG or PNG here. Arrow keys browse the folder.")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 wrapMode: Text.Wrap

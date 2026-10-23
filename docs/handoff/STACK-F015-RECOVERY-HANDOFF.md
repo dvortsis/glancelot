@@ -1,6 +1,6 @@
 # STACK-F015-RECOVERY handoff
 
-Track session S5 (stack viewer), Phase 0 cycle 1. Review round 1 and round 2 fixes are in the sections of those names at the end; where they and the earlier sections disagree, the latest is current. Contract: LEAD-WRAPUP-2026-10-22.md (F015 bullet), LEAD-TAKEOVER-2026-10-22.md section 4 and LEAD-PLAN-2026-10-22.md section 5. Not self-approved; a fresh reviewer decides.
+Track session S5 (stack viewer), Phase 0 cycle 1. Review round 1, 2 and 3 fixes are in the sections of those names at the end; where they and the earlier sections disagree, the latest is current. Contract: LEAD-WRAPUP-2026-10-22.md (F015 bullet), LEAD-TAKEOVER-2026-10-22.md section 4 and LEAD-PLAN-2026-10-22.md section 5. Not self-approved; a fresh reviewer decides.
 
 | | |
 | --- | --- |
@@ -558,3 +558,211 @@ No shared header, CMake, queue or UI file changed in round 2. The public header 
 - Failure and cancellation cases: folder unavailable during a switch and a close; a stale decode landing after the switch; a second tab action before settling; a claim retry mid-switch; no-claim writes; plus round 1's decode failure, write failure, busy writer and stale sequence cases.
 - Unverified: the transient B1 form (target folder lists; destructor before its navigation result), reasoned only. Physical, multi-window and GPU paths not exercised; `reference_pin` skips its native-RHI cases offscreen. No UI files changed, so the ui-design-skills did not apply.
 - Lead-owned files: none touched in round 2. N2 (the provisional `CMakeLists.txt` include and `cmake/TabsRecoveryTests.cmake`) is still the lead's call.
+
+## Review round 3 fixes
+
+Fix session S9 again (Claude Code, Opus 5.5, on the lead's Windows PC). Not self-approved; a new fresh reviewer decides. Review: `origin/claude/review-stack-f015-r2` `237b070`, `docs/verification/STACK-F015-RECOVERY-REVIEW-R2.md` (CHANGES REQUIRED: B2; B1 closed).
+
+| | |
+| --- | --- |
+| Round 2 tip | `9c8d952` |
+| Integration merge | `97fb2ff`: `git merge --no-edit origin/main` (main `b9dc0ec`). One conflict, `CMakeLists.txt`: F040's `include(cmake/ReferencePinTests.cmake)` and EN-06's `CommandRoutingTests` block at the same spot; both kept. `src/app/viewer_controller.cpp` and `ui/Main.qml` auto-merged. |
+| CMake (lead's one-time grant) | `f91a9db`, plus one more line in the round 3 commit (below) |
+| Round 3 fix commit | the commit that adds this section (round 3 only: `git diff f91a9db <tip>`) |
+
+### CMake under the lead's one-time grant
+
+- `cmake/TabsRecoveryTests.cmake`: the hand-listed `viewer_controller.cpp` replaced by `${GLANCELOT_VIEWER_SOURCES}` (EN-05; fixes the `DecodeCache` link error the reviewer saw on the merged tree). `glancelot_test_labels(tabs_recovery LABELS process)`.
+- `cmake/ReferencePinTests.cmake`: the hand-listed `viewer_controller.cpp` and `settings_file.cpp` replaced by `${GLANCELOT_VIEWER_SOURCES}`. `glancelot_test_labels(reference_pin LABELS ui process)` (one declaration; F040 does not add another on this branch).
+- **One addition beyond the brief, same file:** `reference_pin` also needs `${GLANCELOT_VIEWER_CONTEXT_SOURCES}`. Since EN-04, `tests/ui_test_support.hpp`'s `Harness` installs `FavoritesModel` and `FolderHistory`, so with the viewer list alone the merged tree failed to link:
+
+  ```
+  reference_pin_tests.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl FavoritesModel::FavoritesModel(class QObject *)" ...
+  reference_pin_tests.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl FolderHistory::FolderHistory(class QObject *)" ...
+  reference_pin_tests.exe : fatal error LNK1120: 4 unresolved externals
+  ```
+
+  `cmake/ViewerSources.cmake` documents exactly this list for targets that load `ui/Main.qml` through that helper.
+
+### B2 (High): a reopen of the previous tab's content settled a failed folder-route switch
+
+**Cause** (reviewer's analysis, confirmed). After a folder-route switch to an unavailable folder, `path`, the canvas and the folder watch stayed on the previous tab's image. F5, a folder-watcher change (`reconcileObservation`), `reconcileRenamedPath`, or an external delete (a folder visit through the no-images branch) reopened or cleared that content. Round 2's fence counted every `open()`, and the no-images branch settled unconditionally, so the target took the previous tab's location and the destructor saved it `clean`.
+
+**Fix, following the lead decision** (`src/app/viewer_controller.cpp`):
+
+(a) *A tab's location changes only from its own folder or the user's explicit navigation.*
+
+- `settleOn()` now also records `settleFolder` (the target's folder) and clears `settleAny`, `tabUnavailable` and `settleNavigation`.
+- `notePosition()` settles only when the image was opened after the switch (round 2's `openSerial` fence) **and** `settlesIn(folder)`: the image's folder equals `settleFolder` by `fs_watch::key` (clean path, case-folded on Windows), or `settleAny` is set.
+- The folder-visit branch with no images settles only if `settlesIn(visited)`. A reconcile's visit of the previous tab's folder never settles.
+- `settleAny` is the user taking the tab over: `noteUserMove()` sets it from every navigation entry point the user drives (`open()` when not from a navigation result, `navigateDirectory()`, `next()`, `previous()`, `nextFolder()`, `previousFolder()`), but only when no automatic move is running.
+- Automatic moves never count as the user's: an `AutomaticMove` scope wraps `reconcileObservation()` (all of its `open`/`navigateDirectory` calls), `reconcileRenamedPath()`, and the tab code's own route (`goToTarget()`, used by `activateTab()`, `closeTab()` and Retry).
+
+(b) *While the target folder is unavailable, the tab keeps its location and the view says so.*
+
+- `goToTarget()` records the navigation sequence its folder route submits (`settleNavigation`). When that exact navigation fails (`switchFailed`), or the user cancels it (`cancelDirectoryNavigation()`, Esc in the path field; an offline share may hang rather than fail), `showUnavailable()` runs.
+- `showUnavailable()` retires the previous tab's content: `++generation; cancel()` (the stale decode and the decode deadline go with it), clears `path`, the image, metadata and `lastDecodedPath`, clears the presentation image, empties `nav` and re-scopes the folder watch to nothing (the monitor ignores an empty scope). Nothing of the previous tab remains to reopen, so F5, watcher events, renames and deletes in that folder have nothing to act on.
+- The pending position stays the target's stored location, so every checkpoint (and the destructor's clean close) records the right tab set.
+- `tabs()` adds `unavailable: true` to the active row. Status and `directoryError`: "This tab's folder is unavailable: <folder>. Retry when it is back, or open another photo."
+- **Retry:** F5 (`trigger("refresh")`) runs `retryTarget()` while the tab is unavailable: `settleOn` the stored location again and run the tab route. Success settles normally; failure returns to the unavailable state. The placeholder's Retry button calls `app.invoke("refresh")`, the same command, so the key and the button cannot drift apart.
+- **Superseded route:** an automatic navigation that replaces the switch's pending folder route (following a rename, or the delete flow's step, in the moment before the route's result) drops that route's result. When the replacing result lands, the tab route runs again (`switchSuperseded` → `retryTarget()`), so the tab still ends settled or unavailable, never on the previous tab's content.
+- `restoreWindow()` stays guarded while unavailable even though `path` is now empty: every route into the state sets `explicitPositionIntent` (the tab route's `open`/`navigateDirectory`). Tested with the claim retry below.
+
+**Edits outside the tab regions** (declared):
+
+- `open()`: `noteUserMove()` beside the existing `explicitPositionIntent` line (round 2's `++openSerial` stays).
+- `next()`, `previous()`, `nextFolder()`, `previousFolder()`, `navigateDirectory()`: `noteUserMove()`.
+- `reconcileObservation()`, `reconcileRenamedPath()`: one `AutomaticMove` scope line each.
+- `cancelDirectoryNavigation()`: the switch-cancel branch.
+- `trigger()`: `"refresh"` retries an unavailable tab.
+- The navigation-result handler: `switchFailed` / `switchSuperseded`, the guarded no-images settle, `showUnavailable()` in place of the stale-path rescan, and the retry after a superseded route.
+
+### The unavailable view (`ui/Main.qml`)
+
+The ui-design-skills were read (`~/.agents/skills/ui-design-skills`: application-interface-design, layout-spacing, typography-ui, iconography-ui, component-geometry, responsive-layout, motion-ui) and the design-review checklist applied.
+
+- It is a variant of the existing preview empty state (`emptyState`), not a new component. A new `.qml` file would need the root `qt_add_qml_module` list, which is outside the grant, and the empty state is already the canonical "nothing to show here" primitive.
+- When the active tab row is `unavailable`:
+  - the mascot, the brand heading and the tagline hide;
+  - the existing `UiIcon` `folder` glyph shows, 48 px, `Theme.muted`, decorative (`Accessible.ignored`);
+  - the title is "<folder name> is unavailable" in `Theme.textHeading`, medium weight, wrapping to two lines, `Accessible.role: AlertMessage`;
+  - the full folder path, in native separators, sits below in `Theme.textSmall`/`Theme.muted`, middle-elided, with the full path as its accessible name;
+  - one `primary` `UiButton` is labelled "Retry" (tooltip "Retry this tab's folder (F5)" from `app.shortcutHint("refresh")`);
+  - the hint line says "Reconnect the drive or network share, then retry. Your other tabs keep their places."
+- Theme tokens only (`Theme.gap*`, `Theme.text*`, `Theme.muted`, `Theme.text`); no new colours, radii or motion.
+- Compact panes (under 280×320) keep the title and the Retry button, and hide the icon, path and hint, as the welcome variant does.
+- Keyboard: the Retry button is in the Tab order (`UiButton`), and F5 is the shortcut. Focus is not taken automatically, because the canvas owns the window's shortcuts.
+- **Limits:**
+  - `emptyState` is hidden in grid and combined modes. There the grid shows an empty folder, and the status line carries the unavailable message; F5 still retries.
+  - When closing the active tab leaves one tab whose folder is unavailable, `tabs()` is empty by contract (`window_slots` and earlier tests rely on that), so the welcome variant shows. The content is still retired, the status names the folder, and F5 retries. This is the same experience as a restore whose folder is unavailable. **For the lead:** a dedicated controller property would let the placeholder cover this case, but it needs a shared-header change (`include/glancelot/viewer_controller.hpp`); it was not made.
+  - The new strings are not yet in `translations/glancelot_en_XA.ts`. `translation_coverage_ui` walks the default surfaces, where these elements are hidden, so it is unaffected; the catalog owner should regenerate it.
+  - The placeholder was not rendered or screenshot in this round. `qmlcachegen` compiled it with the app target, and the UI suites that load `Main.qml` ran (below).
+
+### Tests
+
+New (`tests/tabs_recovery_tests.cpp`):
+
+| Test | Covers |
+| --- | --- |
+| `reopenAfterAFailedFolderSwitchKeepsTheTarget` (rows: F5 refresh, external edit, external delete, F5 after stale decode) | The reviewer's four probe rows. The precondition asserts that the switch failed and live and stored both hold beta for tab 1. The edit row asserts that gamma's file really changed, and the delete row that it is gone. Each row waits 4 s for the watcher. Then it asserts live tabs, the unavailable state (active row flagged; no file, folder, image or loading), stored tabs, the active index and position, and the record `clean`. |
+| `automaticMoveDuringAPendingSwitchNeverSettlesIt` (rows: rename followed, removal followed) | `reconcileRenamedPath` or `reconcileRemovedPaths` on the previous tab's photo while the switch's folder route is pending. The tab never settles on it, the route runs again, and the tab ends unavailable with every location kept. |
+| `retryReopensTheTargetWhenItsFolderReturns` | beta's folder is renamed away (the share goes offline), the switch fails, the folder comes back, and F5/Retry reopens beta's own image. Live, stored, active index and `clean` are all asserted. |
+| `retryWhileStillUnavailableKeepsEveryTabsLocation` | The window starts unclaimed. After the switch fails, `setWindowClaim` + `restoreWindow` run (the `app/main.cpp:211` retry); the restore must not replace the live set. Then F5/Retry twice with the folder still gone: still unavailable, every location kept, stored and `clean`. |
+
+Changed on purpose (decision b): `staleDecodeCannotSettleADirectorySwitch` and the folder-route rows of `secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation` asserted that the stale photo was on screen after the failed route. They now assert the unavailable state instead. Their location assertions are unchanged.
+
+### Fail before, pass after
+
+Fail before: the new tests built on the merged tree (`f91a9db`) with the round 2 controller, Windows, offscreen. Temporary paths are shortened.
+
+```
+FAIL!  : TabsRecoveryTests::reopenAfterAFailedFolderSwitchKeepsTheTarget(F5 refresh) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, gamma/c.png, gamma/c.png] active 1)
+FAIL!  : TabsRecoveryTests::reopenAfterAFailedFolderSwitchKeepsTheTarget(external edit) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, gamma/c.png, gamma/c.png] active 1)
+FAIL!  : TabsRecoveryTests::reopenAfterAFailedFolderSwitchKeepsTheTarget(external delete) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, , gamma/c.png] active 1)
+FAIL!  : TabsRecoveryTests::reopenAfterAFailedFolderSwitchKeepsTheTarget(F5 after stale decode) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, alpha/a.png, alpha/a.png] active 1)
+FAIL!  : TabsRecoveryTests::retryReopensTheTargetWhenItsFolderReturns() 'shows(viewer, files[1])' returned FALSE. (Untagged source assumed sRGB · display profile not yet managed showing gamma/c.png)
+FAIL!  : TabsRecoveryTests::retryWhileStillUnavailableKeepsEveryTabsLocation() 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, gamma/c.png, gamma/c.png] active 1)
+Totals: 2 passed, 6 failed, 0 skipped, 0 blacklisted, 63138ms
+```
+
+The automatic-move test was written after the fix, so it was run against the round 2 controller as a mutation (M5 below).
+
+Pass after (whole executable, final source):
+
+```
+Totals: 67 passed, 0 failed, 0 skipped, 0 blacklisted, 67735ms
+```
+
+67 = initTestCase, cleanupTestCase, 29 functions, and the data rows: 14 malformed, 14 legacy, 3 close-active, 2 stale-decode, 4 second-action, 4 reopen, 2 automatic-move. Each new location assertion reports the stored record or the live strip on failure.
+
+### Mutation checks
+
+Each check made one edit to `src/app/viewer_controller.cpp`, rebuilt `tabs_recovery_tests` only, ran the named tests, and reverted the source by script. The final build came after the revert.
+
+| Mutation | Result |
+| --- | --- |
+| M5: the round 2 controller (`git show HEAD:…`, before this round) | `automaticMoveDuringAPendingSwitchNeverSettlesIt`: both rows fail (`[alpha, gamma/c2.png, gamma]` and `[alpha, "", gamma]`). |
+| M6: the folder rule removed (`settlesIn()` always true) | `automaticMoveDuringAPendingSwitchNeverSettlesIt(removal followed)` fails: the delete flow's visit of gamma settled tab 1 (`[alpha, "", gamma]`). The other 9 selected rows pass, because the unavailable state alone removes what the reopen rows act on. So (a) is what protects the pending window. |
+| M7: no rerun after a superseded route | Both automatic-move rows fail with "the active tab is not marked unavailable". The locations stay correct (the folder rule), but the previous tab's content would stay on screen. |
+| M8: no unavailable state (`if(false)showUnavailable()`) | All four reopen rows and `retryWhileStillUnavailable…` fail with "the active tab is not marked unavailable". Every location assertion before that passes, so (a) alone keeps the data and (b) is what removes the previous tab's photo. |
+
+```
+M5: FAIL!  : …automaticMoveDuringAPendingSwitchNeverSettlesIt(rename followed) … live tabs [alpha/a.png, gamma/c2.png, gamma/c.png] active 1
+    FAIL!  : …automaticMoveDuringAPendingSwitchNeverSettlesIt(removal followed) … live tabs [alpha/a.png, , gamma/c.png] active 1
+    Totals: 2 passed, 2 failed
+M6: FAIL!  : …automaticMoveDuringAPendingSwitchNeverSettlesIt(removal followed) … live tabs [alpha/a.png, , gamma/c.png] active 1
+    Totals: 9 passed, 1 failed
+M7: FAIL!  : …automaticMoveDuringAPendingSwitchNeverSettlesIt(rename followed) 'state.isEmpty()' … (the active tab is not marked unavailable)
+    FAIL!  : …automaticMoveDuringAPendingSwitchNeverSettlesIt(removal followed) 'state.isEmpty()' … (the active tab is not marked unavailable)
+    Totals: 2 passed, 2 failed
+M8: FAIL!  : …reopenAfterAFailedFolderSwitchKeepsTheTarget(F5 refresh|external edit|external delete|F5 after stale decode) 'state.isEmpty()' … (the active tab is not marked unavailable)
+    FAIL!  : …retryWhileStillUnavailableKeepsEveryTabsLocation() 'state.isEmpty()' … (the active tab is not marked unavailable)
+    Totals: 2 passed, 5 failed
+```
+
+(The first M8 attempt did not compile: the script's replacement left a dangling `else`. It was corrected and rerun; the source was restored both times.)
+
+### Build and targeted ctest
+
+- **Build:** `build-slot.ps1 -Run { … scripts\build.ps1 -BuildDir build-claude-f015 }` on the final source, exit 0.
+- **Targeted ctest:** `gate-lock.ps1 -Branch claude/f015-fix -Run { … }`, twice, with PATH prefixed by `.tools\python\Scripts` and the Qt `bin`. The regex is the brief's targeted suites, plus `folder_tree|viewer_acceptance|input_ui` and `translation_coverage_ui` (because `Main.qml` changed):
+
+```
+=== run 1
+ 1/11 Test  #7: viewer_acceptance ................   Passed   10.51 sec
+ 2/11 Test  #9: folder_tree ......................   Passed   10.05 sec
+ 3/11 Test #11: window_slots .....................   Passed   28.50 sec
+ 4/11 Test #13: input_ui .........................   Passed   80.29 sec
+ 5/11 Test #38: recovery .........................   Passed   13.94 sec
+ 6/11 Test #39: recovery_startup .................   Passed    0.48 sec
+ 7/11 Test #40: recovery_controller ..............   Passed   14.49 sec
+ 8/11 Test #41: recovery_process .................   Passed   28.47 sec
+ 9/11 Test #42: tabs_recovery ....................   Passed   56.33 sec
+10/11 Test #45: translation_coverage_ui ..........   Passed   17.97 sec
+11/11 Test #46: reference_pin ....................   Passed   17.87 sec
+100% tests passed out of 11
+Total Test time (real) = 279.45 sec
+exit 0
+=== run 2
+ 1/11 Test  #7: viewer_acceptance ................   Passed   11.96 sec
+ 2/11 Test  #9: folder_tree ......................   Passed   11.18 sec
+ 3/11 Test #11: window_slots .....................   Passed   30.16 sec
+ 4/11 Test #13: input_ui .........................   Passed   92.48 sec
+ 5/11 Test #38: recovery .........................   Passed   14.13 sec
+ 6/11 Test #39: recovery_startup .................   Passed    1.20 sec
+ 7/11 Test #40: recovery_controller ..............   Passed   17.68 sec
+ 8/11 Test #41: recovery_process .................   Passed   30.47 sec
+ 9/11 Test #42: tabs_recovery ....................   Passed   56.21 sec
+10/11 Test #45: translation_coverage_ui ..........   Passed   17.30 sec
+11/11 Test #46: reference_pin ....................   Passed   25.51 sec
+100% tests passed out of 11
+Total Test time (real) = 308.30 sec
+exit 0
+```
+
+### Files changed in round 3
+
+| File | Change |
+| --- | --- |
+| `CMakeLists.txt` | Merge conflict resolved (both blocks kept) |
+| `cmake/TabsRecoveryTests.cmake`, `cmake/ReferencePinTests.cmake` | Viewer source lists and labels (grant) |
+| `src/app/viewer_controller.cpp` | As above |
+| `ui/Main.qml` | The `emptyState` unavailable variant (objectNames `emptyState`, `emptyStateAction`, `tabUnavailableTitle`, `tabUnavailableFolder`, `tabUnavailableIcon`) |
+| `tests/tabs_recovery_tests.cpp` | Helpers `unavailableDiffers`; the tests above; two round 2 preconditions |
+| `docs/handoff/STACK-F015-RECOVERY-HANDOFF.md` | This section |
+
+No shared header or queue file changed.
+
+### Pre-handoff checklist (AGENTS.md)
+
+- Branch `claude/stack-f015-recovery`; tip SHA in the commit and the report; pushed fast-forward.
+- Files changed: above. Lead-owned files: `CMakeLists.txt` (conflict only) and the two provisional cmake files, under the lead's one-time grant.
+- Actual `ctest` output: above. The full offscreen suite was not run; the authoritative gate decides on the integrated commit.
+- Failure and cancellation cases: folder unavailable on switch and close; F5, watcher edit, watcher delete, rename and delete-flow reconciles; a stale decode; a cancelled or superseded folder route; Retry success and repeated failure; the claim retry while unavailable.
+- Unverified:
+  - the placeholder's rendering (not screenshot);
+  - Esc cancelling a hanging folder route (code path only; no hanging share here);
+  - the transient B1 form (reasoned);
+  - the grid/combined-mode and single-location presentation limits above;
+  - physical, multi-window and GPU paths.
+- UI: the ui-design-skills were read and applied; see "The unavailable view".

@@ -2,7 +2,7 @@
 # Viewer sources come from the EN-05 list (cmake/ViewerSources.cmake).
 if(BUILD_TESTING)
   qt_add_executable(reference_pin_tests tests/reference_pin_tests.cpp
-    ${GLANCELOT_VIEWER_SOURCES}
+    ${GLANCELOT_VIEWER_SOURCES} ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
     src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
     src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
