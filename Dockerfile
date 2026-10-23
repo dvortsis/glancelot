@@ -17,6 +17,7 @@ COPY include include
 COPY src src
 COPY ui ui
 COPY tests tests
+COPY translations translations
 COPY scripts scripts
 RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
 RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
