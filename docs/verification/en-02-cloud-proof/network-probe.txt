@@ -1,0 +1,132 @@
+curl: (56) CONNECT tunnel failed, response 403
+download.qt.io: 000
+curl: (56) CONNECT tunnel failed, response 403
+master.qt.io: 000
+curl: (56) CONNECT tunnel failed, response 403
+mirrors.dotsrc.org: 000
+
+{
+ "selective": false,
+ "recentRelayFailures": [
+  {
+   "ts": "2026-10-23T03:02:53.530Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:54.000Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:54.574Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:55.612Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:57.474Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:57.744Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:58.032Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:58.473Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:02:59.189Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:00.126Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:02.000Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:02.259Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "ftp.jaist.ac.jp:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:02.547Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "ftp.jaist.ac.jp:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:03.002Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "ftp.jaist.ac.jp:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:03.633Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "ftp.jaist.ac.jp:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:04.707Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "ftp.jaist.ac.jp:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:06.549Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "ftp.jaist.ac.jp:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:13.197Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "download.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:13.428Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "master.qt.io:443"
+  },
+  {
+   "ts": "2026-10-23T03:03:13.689Z",
+   "kind": "connect_rejected",
+   "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+   "host": "mirrors.dotsrc.org:443"
+  }
+ ]
+}

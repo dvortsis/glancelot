@@ -1,0 +1,22 @@
+
+==> Docker probe
+docker: client present, daemon unreachable
+gate path: offscreen CTest here only; the Docker build runs in lead-windows-gate (authoritative). See docs/CI-GATE-RUNNER.md.
+
+==> System packages (Ubuntu 24.04)
+all 22 packages already installed
+
+==> Qt 6.8.3 linux_gcc_64 -> /home/user/glancelot/qt-rel/6.8.3/gcc_64
+INFO    : aqtinstall(aqt) v3.3.0 on Python 3.13.16 [CPython GCC 13.3.0]
+WARNING : Failed to download checksum for the file 'online/qtsdkrepository/linux_x64/desktop/qt6_683/qt6_683/Updates.xml'. This may happen on unofficial mirrors.
+WARNING : Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://ftp.jaist.ac.jp/pub/qtproject/'.
+WARNING : Failed to download checksum for the file 'online/qtsdkrepository/linux_x64/desktop/qt6_683/qt6_683/Updates.xml'. This may happen on unofficial mirrors.
+ERROR   : Failure to connect to https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/linux_x64/desktop/qt6_683/qt6_683/Updates.xml: ProxyError
+Qt download failed (log: /home/user/glancelot/qt-rel/aqtinstall.log). aqt needs HTTPS access to download.qt.io or a mirror
+given with --qt-base. A Claude Code cloud environment whose network policy denies download.qt.io needs it
+under the environment's Allowed domains; a session started after that change can rerun this script.
+
+real	0m54.314s
+user	0m0.783s
+sys	0m0.187s
+exit=1
