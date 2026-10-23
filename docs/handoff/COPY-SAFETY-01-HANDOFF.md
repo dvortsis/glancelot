@@ -229,3 +229,174 @@ None of this could be run on Linux. In a `build-review-copy-safety-01` build on 
 ## Requests for the lead
 
 - None for shared files. If the lead prefers the helper in its own translation unit (`src/app/copy_safety.cpp`), that needs a one-line `glancelot_platform` source addition in the root `CMakeLists.txt`. The declarations are already split out in `src/app/copy_safety.hpp`.
+
+## Review round 1 fixes
+
+Fixes for `docs/verification/COPY-SAFETY-01-REVIEW.md` (`origin/claude/review-copy-safety-01`, 17279aa), which asked for CHANGES. The fix implementer was a local Windows subagent of the lead, because the original cloud implementer was not available. It did not review this packet. Windows 11 Pro 10.0.26200, MSVC 14.44, Qt 6.8.3 msvc2022_64. Drives: C: NTFS, F: exFAT.
+
+### Branch and SHAs
+
+- Branch: `claude/copy-safety-01`. Worktree `.worktrees/claude-copy-safety`, build directory `build-claude-copy-safety`.
+- Exact base: the round-0 tip `95b0a09`, merged with `origin/main` `b4b76f1` at `c5e184c` (no conflicts).
+- Round-1 commits: `6e5b427` (code and tests), `f8abff2` and `0fedecd` (test refinements), `0e92bfa` (POSIX unused-function guard). The handoff commit follows `0e92bfa`.
+- Review with `git diff c5e184c <tip>`.
+
+### What changed
+
+| Finding | Fix |
+| --- | --- |
+| **B1** (blocking): same file through two paths | `copy_safety::compareFileIdentity` compares true file identity. **Windows:** volume serial number plus file ID from `GetFileInformationByHandleEx(FileIdInfo)` (128-bit, so ReFS works), falling back to `GetFileInformationByHandle`; handles are opened with `FILE_READ_ATTRIBUTES` and backup semantics. **POSIX:** `st_dev` plus `st_ino`. Links and junctions are followed, and a hard link counts as the same file.<br>It returns Different as soon as the volumes differ. It returns Unknown only when a file cannot be opened, or when both files are on one volume and the volume reports file index 0.<br>The check is used in three places:<br>(1) `overwriteRefusal` refuses Same with "Source and destination are the same file." and Unknown with "Could not confirm that source and destination are different files."<br>(2) Immediately before the Move tail deletes the source: Same fails the item ("… Source kept."), Unknown keeps the source with a message, and only Different deletes it.<br>(3) The folder branch refuses to merge a folder into itself through an alias ("Source and destination are the same folder."). Without this, the empty subfolders of the source were `rmdir`'d, which also happened on the junction path. |
+| **Lead decision: replace keeps the target's metadata** (review N3) | `replaceFileAtomically` now uses `ReplaceFileW(target, replacement, backup)` for both the temp replace and the same-volume Move. The replaced file keeps the original target's hidden, system and not-indexed attributes, DACL (including a protected DACL), alternate data streams, creation time and short name. A probe confirmed this on NTFS and exFAT.<br>The backup name `.~gb<8 hex>.tmp` makes partial failures recoverable:<br>- 1175 and 1176 leave both files where they were.<br>- 1177 leaves the original under the backup name, and the code moves it back.<br>- If that move back also fails, the item reports the backup's full path. Nothing is then written at the target's name, and the Move fast path does not fall through to the copy path.<br>After success the backup (the old content the user asked to replace) is deleted. `DeleteFileW` uses POSIX delete semantics and succeeded in a probe even while the old target was memory-mapped.<br>**Fallback:** `MoveFileExW(REPLACE_EXISTING \| WRITE_THROUGH)` runs only when ReplaceFileW reports `ERROR_INVALID_FUNCTION`, `ERROR_NOT_SUPPORTED`, `ERROR_INVALID_PARAMETER` or `ERROR_CALL_NOT_IMPLEMENTED` and the target is still in place. It copies H, S and I onto the replacement first. It **refuses** a target with a protected DACL or any explicit ACE ("the destination has its own permissions, which this volume cannot carry over"), so it never loosens a restrictive ACL silently. The fallback loses alternate data streams, creation time, the short name and the object ID. On FAT and exFAT, ReplaceFileW itself works (probe), so the fallback is expected only on unusual redirectors.<br>**POSIX:** the replacement takes the target's `rwx` bits (masked to 0777, so no set-id or sticky bit) before `rename`; they are restored if the rename fails. Owner, group, xattrs and POSIX ACLs are not carried over, as before. |
+| **N1**: long paths | Every Win32 call in the helper gets a `\\?\` path (`\\?\UNC\…` for shares). Qt already handles long paths for `QFile`/`QFileInfo`. A probe confirmed ReplaceFileW on a 435-character `\\?\` path, and with the replacement in a different folder. |
+| **N2**: long file names | The temp is `.~gl<8 hex>.tmp`, 16 characters whatever the target's name; the sweep regex is `^\.~gl[0-9a-f]{8}\.tmp$`. Backups (`.~gb…`) are never swept, because after an unrecoverable 1177 a backup may hold the only copy of the original. |
+| **N4**: in-flight set | Keyed by the clean absolute path, case-folded on Windows. |
+
+### Tests (actual output)
+
+`tests/copy_safety_tests.cpp` is a new `copy_safety` ctest. It is declared in `cmake/CopySafetyTests.cmake` with `glancelot_test_labels(copy_safety LABELS native process)`, because it runs `cmd mklink /J` and `subst`. It uses only the public service API, the old `Read` fault point and shared helpers in `tests/copy_safety_test_support.hpp`, so it also builds against the round-0 service.
+
+Every data-safety test asserts:
+- the original target is byte-identical (SHA-256);
+- the exact folder listing (hidden and system entries included), so a leaked temp or backup of any name fails the test.
+
+`subst` letters are picked at run time and removed by an RAII guard; `subst` printed nothing afterwards.
+
+| Test | Case |
+| --- | --- |
+| `aliasFolderSameFileIsRefused` | Copy and Move through a junction (POSIX: a symlinked folder) |
+| `substDriveSameFileIsRefused` | The reviewer's B1: Move, then Copy, of `X:/file.bin` into its real folder |
+| `substDriveFolderMoveIntoItselfKeepsEverything` | Overwrite Move of `X:/album` (a file plus an empty subfolder) into its own parent |
+| `aliasFolderMoveIntoItselfKeepsEmptySubfolder` | The same through a junction or symlink |
+| `hardLinkIsTheSameFile` | Copy and Move between two hard links: refused, and still one file afterwards |
+| `fileSymlinkToTargetIsRefused` | The source is a file symlink to the target. **Skipped here**: the account cannot create symlinks without Developer Mode. It runs on POSIX |
+| `replaceKeepsAttributesPermissionsAndStreams` | Copy and Move: H+S+I, an explicit `LOCAL SERVICE:R` ACE and `Zone.Identifier` all survive. POSIX: 0640 is kept against a 0644 source |
+| `replaceKeepsRestrictivePermissions` | Copy and Move: a protected, owner-only DACL stays protected with no inherited ACEs. POSIX: 0600 is kept |
+| `overwriteLongPath` | A target path of more than 300 characters: Copy and Move succeed; an injected read failure keeps the target |
+| `overwriteLongFileName` | A 240-character file name, Copy and Move |
+
+New in `tests/copy_move_tests.cpp`. These are Windows-only fault points and skip elsewhere:
+
+| Test | Case |
+| --- | --- |
+| `testOverwriteFallbackKeepsAttributes` | Fault point `ReplaceUnsupported`: H, S and I are kept, Copy and Move |
+| `testOverwriteFallbackRefusesExplicitPermissions` | Same fault point with an explicit ACE: refused, "Original kept", target and ACE intact |
+| `testOverwritePartialReplaceRestoresOriginal` | `ReplacePartial` (the code renames the target to the backup and reports 1177): the original is moved back |
+| `testOverwritePartialReplaceUnrecoverableKeepsBackup` | Plus `RestoreBackup`: the message names the backup, the backup holds the original's hash, nothing is at the target name, the source is kept |
+| `testOverwriteSweepSkipsInFlightTemporaryInAnyCase` | A sweep of the target folder spelled in upper case, run in the window after the temp is closed and before the replace |
+
+`testOverwriteTemporaryNaming` and the two crash-leftover tests were updated for the new names. `temporariesIn` now matches both `.~gl` and `.~gb` by prefix.
+
+#### Fail-before A: the round-0 service
+
+`git show 95b0a09:` of `copy_move_service.cpp` and `copy_safety.hpp` was swapped in, `copy_safety_tests` was rebuilt and run, and the files were restored with `git checkout`. Output, paths shortened:
+
+```
+FAIL!  : CopySafetyTests::aliasFolderSameFileIsRefused() Compared values are not the same
+   Actual   (outcome.failed): 0
+FAIL!  : CopySafetyTests::substDriveSameFileIsRefused() Compared values are not the same
+   Actual   (sha256Of(file)): "<missing>"
+   Expected (hash)          : "fe101370f3076d898d1c41fa01fed3e0f72dc52727d0fc0e98abfa44947c5912"
+FAIL!  : CopySafetyTests::substDriveFolderMoveIntoItselfKeepsEverything() Compared values are not the same
+   Actual   (sha256Of(photo)): "<missing>"
+FAIL!  : CopySafetyTests::aliasFolderMoveIntoItselfKeepsEmptySubfolder() Compared lists have different sizes.
+   Actual   (entries) size: 1
+FAIL!  : CopySafetyTests::hardLinkIsTheSameFile() Compared values are not the same
+   Actual   (outcome.failed): 0
+SKIP   : CopySafetyTests::fileSymlinkToTargetIsRefused() This account cannot create symbolic links (Windows without Developer Mode).
+FAIL!  : CopySafetyTests::replaceKeepsAttributesPermissionsAndStreams() Compared values are not the same
+   Actual   (attributes & kept): 0
+   Expected (kept)             : 8198
+FAIL!  : CopySafetyTests::replaceKeepsRestrictivePermissions() 'after.protectedDacl' returned FALSE. ()
+FAIL!  : CopySafetyTests::overwriteLongPath() 'outcome.succeeded == 1' returned FALSE. (Could not replace the destination file (Windows error 3). Original kept.)
+FAIL!  : CopySafetyTests::overwriteLongFileName() 'outcome.succeeded == 1' returned FALSE. (Cannot open destination file for writing.)
+Totals: 2 passed, 9 failed, 1 skipped, 0 blacklisted, 736ms
+```
+
+The subst leg reproduces B1 exactly: the file is gone (`<missing>`). The attribute and protected-DACL assertions fail first in their tests.
+
+#### Fail-before B: mutations of the fix
+
+The new fault-point tests cannot build against round 0, because they need the new fault points. Instead, five one-line mutations were applied to the fixed service together and `copy_move_tests` was rebuilt and run:
+- M1: no restore of the backup;
+- M2: the fallback drops attributes;
+- M3: the fallback ignores explicit permissions;
+- M4: a case-sensitive in-flight key;
+- M5: a displaced original is not reported.
+
+The file was then restored with `git checkout`.
+
+```
+FAIL!  : CopyMoveTests::testOverwriteFallbackKeepsAttributes() Compared values are not the same
+   Actual   (attributes & kept): 0
+FAIL!  : CopyMoveTests::testOverwriteFallbackRefusesExplicitPermissions() Compared values are not the same
+   Actual   (outcome.failed): 0
+FAIL!  : CopyMoveTests::testOverwritePartialReplaceRestoresOriginal() Compared values are not the same
+   Actual   (sha256Of(fx.target)): "<missing>"
+FAIL!  : CopyMoveTests::testOverwritePartialReplaceUnrecoverableKeepsBackup() '!outcome.lastError.contains(QStringLiteral("Original kept"))' returned FALSE. (Could not replace the destination file (Windows error 1177; the original file is kept as …\.~gbd1c4c779.tmp). Original kept.)
+FAIL!  : CopyMoveTests::testOverwriteSweepSkipsInFlightTemporaryInAnyCase() Compared values are not the same
+   Actual   (removed.load()): 1
+Totals: 23 passed, 5 failed, 0 skipped, 0 blacklisted, 2327ms
+```
+
+#### Targeted ctest at `0e92bfa`
+
+Run twice inside `gate-lock.ps1 -Branch claude/copy-safety-fix`, with PATH prefixed by the project's Python and Qt and with `GLANCELOT_CROSS_VOLUME_DIR=F:\` (exFAT). `testOverwriteMoveCrossVolume` ran and was not skipped.
+
+```
+== run 1 at 0e92bfa
+1/4 Test #15: file_operation_service ...........   Passed    1.26 sec
+2/4 Test #34: mutation .........................   Passed    0.21 sec
+3/4 Test #35: copy_move ........................   Passed    2.59 sec
+4/4 Test #36: copy_safety ......................   Passed    0.97 sec
+100% tests passed out of 4
+== run 2
+1/4 Test #15: file_operation_service ...........   Passed    1.20 sec
+2/4 Test #34: mutation .........................   Passed    0.12 sec
+3/4 Test #35: copy_move ........................   Passed    2.39 sec
+4/4 Test #36: copy_safety ......................   Passed    0.83 sec
+100% tests passed out of 4
+```
+
+Results files:
+- `copy_move`: `Totals: 28 passed, 0 failed, 0 skipped`.
+- `copy_safety`: `Totals: 11 passed, 0 failed, 1 skipped` (the symlink leg).
+
+A clean recompile of `copy_move_service.cpp`, `copy_move_tests.cpp` and `copy_safety_tests.cpp` gave no MSVC warnings.
+
+### Pre-handoff checklist
+
+1. **Fail-before:** A and B above. Every new assertion fails on the round-0 service or under a mutation, except the symlink leg. It cannot run on this account and passes on POSIX through the canonical-path check that both versions have.
+2. **Grant check** (`git diff --name-only c5e184c..0e92bfa`):
+   - `src/app/copy_move_service.cpp`, `src/app/copy_safety.hpp`, `tests/copy_move_tests.cpp`: the packet's files.
+   - `tests/copy_safety_tests.cpp`, `tests/copy_safety_test_support.hpp`, `cmake/CopySafetyTests.cmake`: new, for the `copy_safety` test the brief names.
+   - `CMakeLists.txt`: one line, `include(cmake/CopySafetyTests.cmake)`, inside the viewer `BUILD_TESTING` block after `copy_move`. This is a lead-owned file. The line follows the brief's "its own cmake file" instruction for a new test; nothing else changed there.
+3. **Exact base:** see Branch and SHAs above.
+4. **ctest:** targeted, twice, as above. The full offscreen suite and `scripts/build.ps1 -Test` were **not** run in this round, because the brief asked for the targeted set only; the authoritative gate runs everything. The Linux build and tests (the POSIX `stat`/`chmod` code, and the symlink, hard-link and mode tests) were not compiled or run here. They are left to `build.yml` and the gate.
+5. **Decisions taken** and **Open questions** are below.
+
+### Decisions taken
+
+- **Unknown identity is refused.** An Overwrite whose source and target identity cannot be compared fails safely. The Move tail keeps a source of unknown identity and reports it. The other choice, trusting path text, is what caused B1.
+- **ReplaceFileW for the same-volume Move fast path too**, so a moved file also takes the target's DACL and attributes. Otherwise a restrictive target could be loosened by moving a looser file onto it.
+- **A backup name on every ReplaceFileW call.** Without one, error 1176 deletes the original and leaves the replacement under the temp name.
+- **The fallback refuses rather than copies a DACL.** Writing ACLs (inheritance recomputation, `\\?\` handling in `SetNamedSecurityInfo`) is riskier than refusing. The fallback is expected only on unusual volumes.
+- **A separate test target.** It can be built against the round-0 service for fail-before, and it carries the `native` label for `subst`/`mklink` without changing `copy_move`'s labels in `cmake/TestLabels.cmake`.
+
+### Behaviour changes to note
+
+- **Held target.** A target held open without delete sharing now fails with Windows error 32 (ReplaceFileW) instead of 5 (MoveFileExW). The message still ends "Original kept", the target is intact and no temp remains (probe). A holder that allows delete sharing, or a memory-mapped target (the reviewer's 4b), now succeeds, and the backup is deleted even while the mapping is held.
+- **Hard links.** Overwriting a hard link of the source is now refused. Previously Copy split the links and a same-volume Move removed one name.
+- **Non-Overwrite cross-volume Moves.** The tail's identity check also runs here. It changes nothing unless both paths report the same volume and file index 0. In that case, some network redirectors behind two drive letters, the source is now kept.
+- **Leftover backup.** If deleting the backup fails after a successful replace, a `.~gb*.tmp` file holding the old content stays beside the target. It is not swept.
+
+### Not covered or unverified
+
+- Linux and macOS: not compiled or run in this round (see checklist item 4). Bind mounts need root and are covered by analysis only: `stat` follows to the same `st_dev`/`st_ino`.
+- A folder-mounted volume and a mapped drive to a local share: not tested. They use the same identity check as `subst`.
+- SMB targets, and a real `ERROR_NOT_SUPPORTED` or 1177 from Windows: simulated through the new fault points only.
+- File symlink leg on Windows: skipped (no symlink privilege on this account).
+- The full offscreen suite and Docker: not run in this round.
+
+### Open questions for the lead
+
+- None blocking. If the lead prefers the round-1 test helpers folded into `copy_move_tests`, `cmake/CopySafetyTests.cmake` and its `CMakeLists.txt` line can be dropped. The `subst`/`mklink` legs would then make `copy_move` a `native` test in `cmake/TestLabels.cmake`.
