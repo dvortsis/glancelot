@@ -159,24 +159,35 @@ private slots:
 
     // The baseline lands while the fallback decode is still running: nothing was
     // shown yet, so the decode restarts once and reports normally.
+    // Each launch gets its own fixture config through hooks.decoderArguments, which
+    // decode() reads at every launch. workerStarted fires on QProcess::started, before
+    // the fixture has read --fixture-config, so rewriting the first launch's file here
+    // raced the fixture's read (EN-11 review B1: decode 1 often read the restart config).
     void lateBaselineDuringDecodeRestartsOnce() {
         QTemporaryDir media,control;QVERIFY(media.isValid()&&control.isValid());
-        const auto start=media.filePath("p1.png"),worker=control.filePath("worker.json");
+        const auto start=media.filePath("p1.png"),slow=control.filePath("first.json"),fresh=control.filePath("restart.json");
         QVERIFY(png(start,Qt::red));
-        QVERIFY(write(worker,R"({"color":"red","decodeDelayMs":60000})"));
+        QVERIFY(write(slow,R"({"color":"red","decodeDelayMs":60000})"));
+        QVERIFY(write(fresh,R"({"color":"blue"})"));
         auto scan=std::make_shared<Gate>();
         fs_watch::ControllerTestHooks hooks;holdFirstScan(hooks,scan,media.path());
-        hooks.decoderProgram=executable("fs_watch_decoder_fixture");hooks.decoderArguments={"--fixture-config",worker};
-        QPointer<QProcess> first;int decodes=0;
-        hooks.workerStarted=[&](QProcess* process,const QString& purpose,const QString&){if(purpose=="decode"&&++decodes==1)first=process;};
+        hooks.decoderProgram=executable("fs_watch_decoder_fixture");hooks.decoderArguments={"--fixture-config",slow};
+        QPointer<QProcess> first;int decodes=0;QStringList configs;
+        hooks.workerStarted=[&](QProcess* process,const QString& purpose,const QString&){
+            if(purpose!="decode")return;
+            configs<<process->arguments().value(1);
+            if(++decodes==1)first=process;
+        };
         HookScope override(hooks);ViewerController viewer;
         const auto unblock=qScopeGuard([scan]{scan->release.store(true);});
         viewer.setBoundaryMode("stop");viewer.open(start);
         QTRY_COMPARE_WITH_TIMEOUT(decodes,1,15000);QVERIFY(viewer.loading());QVERIFY(!viewer.imageReady());
-        QVERIFY(write(worker,R"({"color":"blue"})"));
+        // The baseline is still held, so no further decode can launch before this.
+        hooks.decoderArguments={"--fixture-config",fresh};
         scan->release.store(true);
         QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),15000);
-        QCOMPARE(decodes,2);QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+        QCOMPARE(decodes,2);QCOMPARE(configs,QStringList({slow,fresh}));
+        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
         QVERIFY2(viewer.status().contains("display profile"),qPrintable(viewer.status()));
         QTRY_VERIFY_WITH_TIMEOUT(!first||first->state()==QProcess::NotRunning,5000);
     }
