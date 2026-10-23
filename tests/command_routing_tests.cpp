@@ -79,6 +79,11 @@ QList<RoutedCase> routedCases(Harness& h) {
         {"animation-toggle-loop", 0, anim, SIGNAL(loopChanged()), [a] { return !a->isLoop(); }, baseline},
     };
 }
+// Empty when the case ran exactly once and left its one-execution state.
+QString executionProblem(const RoutedCase& c, qsizetype executions) {
+    if (executions != 1) return QString("%1 executed %2 times").arg(c.id).arg(executions);
+    return c.applied() ? QString() : QString("%1 did not apply").arg(c.id);
+}
 } // namespace
 
 class CommandRoutingTests final : public QObject {
@@ -101,20 +106,23 @@ private slots:
     void explicitRouteExecutesOnce() {
         AnimatedMedia media; Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openPausedAnimation(h, media));
+        QStringList problems;
         for (const auto& c : routedCases(h)) {
             QSignalSpy executions(c.sender(), c.signal);
             QVERIFY2(invoke(h, c.id), qPrintable(c.id));
             QCoreApplication::processEvents();
-            QVERIFY2(executions.size() == 1, qPrintable(QString("%1 executed %2 times").arg(c.id).arg(executions.size())));
-            QVERIFY2(c.applied(), qPrintable(c.id));
+            problems << executionProblem(c, executions.size());
             c.reset();
         }
+        problems.removeAll(QString());
+        QVERIFY2(problems.isEmpty(), qPrintable(problems.join("; ")));
     }
     // The default keys reach the same commands through the window Shortcuts.
     void defaultKeysExecuteOnce() {
         AnimatedMedia media; Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openPausedAnimation(h, media)); QVERIFY(activate(h));
         focusCanvas(h); QTRY_VERIFY(h.canvas()->hasActiveFocus());
+        QStringList problems;
         for (const auto& c : routedCases(h)) {
             if (!c.key) continue;
             WAIT_FIRST_KEY(h, h.viewer.bindingFor(c.id));
@@ -122,10 +130,11 @@ private slots:
             QTest::keyClick(h.window, Qt::Key(c.key));
             QTRY_VERIFY2(executions.size() >= 1, qPrintable(c.id));
             QTest::qWait(50);
-            QVERIFY2(executions.size() == 1, qPrintable(QString("%1 executed %2 times").arg(c.id).arg(executions.size())));
-            QVERIFY2(c.applied(), qPrintable(c.id));
+            problems << executionProblem(c, executions.size());
             c.reset();
         }
+        problems.removeAll(QString());
+        QVERIFY2(problems.isEmpty(), qPrintable(problems.join("; ")));
     }
     // Storage profiles are controller state: the command applies once and is not re-broadcast to the view, which
     // has nothing to do for it.
