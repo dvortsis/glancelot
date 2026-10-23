@@ -46,16 +46,19 @@ UiDialog {
     // F049 follow-up R2: why the last Save or Apply was refused, shown right under the control that was used.
     property string presetSaveRefusal: ""
     property string presetApplyRefusal: ""
+    // The layout feedback last shown inline as a refusal: the general layout note never repeats it, even after the
+    // inline note was cleared by editing (the layout keeps that feedback until its next change).
+    property string presetRefusalShown: ""
     title: qsTr("Settings")
 
     function savePanePreset() {
         if (paneLayout.savePreset(presetName.text.trim())) { presetName.text = ""; presetSaveRefusal = ""; return }
-        presetSaveRefusal = paneLayout.feedback
+        presetSaveRefusal = presetRefusalShown = paneLayout.feedback
         Qt.callLater(revealItem, saveRefusalNote)
     }
     function applyPanePreset() {
         if (paneLayout.applyPreset(presetChoice.currentText)) { presetApplyRefusal = ""; return }
-        presetApplyRefusal = paneLayout.feedback
+        presetApplyRefusal = presetRefusalShown = paneLayout.feedback
         Qt.callLater(revealItem, applyRefusalNote)
     }
     // Scrolls the page just enough to show item (a note that appeared under the control in use).
@@ -603,8 +606,7 @@ UiDialog {
                 Note {
                     objectName: "layoutFeedback"
                     // A preset refusal already shows beside the control that caused it.
-                    visible: paneLayout.feedback.length > 0 && paneLayout.feedback !== dialog.presetSaveRefusal
-                             && paneLayout.feedback !== dialog.presetApplyRefusal
+                    visible: paneLayout.feedback.length > 0 && paneLayout.feedback !== dialog.presetRefusalShown
                     text: paneLayout.feedback
                 }
 

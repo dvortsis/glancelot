@@ -261,12 +261,11 @@ private slots:
         {
             Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
             h.viewer.trigger("layout-preset-next");h.viewer.trigger("layout-preset-next"); // Default, then Review
-            QTRY_VERIFY(!h.layout.pane("topbar")["visible"].toBool());
-            QTRY_VERIFY2(h.window->property("splitMessage").toString().startsWith("Layout: Review")&&h.window->property("splitMessage").toString().contains("newer saved layout was preserved"),
-                         qPrintable(h.window->property("splitMessage").toString()));
+            QTRY_VERIFY(!h.layout.pane("topbar")["visible"].toBool());QTRY_VERIFY(h.window->property("splitMessage").toString().startsWith("Layout: Review"));
             QVERIFY(!h.layout.move("tree","center",0));QVERIFY(h.layout.feedback().contains("center is reserved")); // unrelated, later
             QTest::qWait(100);
             QVERIFY2(!h.window->property("splitMessage").toString().contains("center is reserved"),qPrintable(h.window->property("splitMessage").toString()));
+            QVERIFY2(h.window->property("splitMessage").toString().contains("newer saved layout was preserved"),qPrintable(h.window->property("splitMessage").toString()));
         }
         cleanup();init();
         // Waiting: an unrelated refusal while the write waits is not shown, and the write's lost outcome never appears late.
