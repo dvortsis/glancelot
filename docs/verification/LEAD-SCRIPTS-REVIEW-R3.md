@@ -29,14 +29,14 @@ Verdict: CHANGES REQUIRED. One line is left to fix. With that fix applied, this 
   - I added one guard line after `$commonDir` is resolved, in the scratch `lock-common.ps1` and the scratch old `gate-lock.ps1`: `if ($commonDir -notlike '*scratchpad*') { throw "guard: $commonDir" }`. This version's stale checks open claim files exclusively (`Test-Unheld`) and can delete them, so a test started from the wrong directory must not touch the real lock. A deliberate `-Status` call from the real checkout tripped the guard.
   - The old copy's 30-second poll was shortened to 1 second.
   - For the B1 fix check only, the scratch `gate-lock.ps1` was patched as shown under B1.
-- **Real lock untouched.** No file under the real repository's git dir was created, opened, changed or deleted.
+- **Real lock untouched.** No lock, ticket or slot file under the real repository's git dir was created, opened, changed or deleted. The only writes to the real git dir were this review's `git worktree add` and its commits.
 - **Load.** A real full gate was running on this PC during the review. It may be the `scratchpad\gate-c1b.ps1` process, PID 29176, started 22:49; I did not touch it. To keep the extra load low:
   - tests ran one at a time;
   - polls were 1 to 5 s and holds 0.3 to 10 s;
   - there were no busy-wait loops, and the race workers slept until a shared start time;
   - the only tight loop was a 14 s `Get-Content` reader in test 6c.
 
-  Tests ran from 22:56 to 23:11. If that gate failed a timing-budget test in that window, treat the failure as possibly caused by this review and rerun the gate. No scratch processes were left running.
+  Tests ran from 22:56 to 23:15. If that gate failed a timing-budget test in that window, treat the failure as possibly caused by this review and rerun the gate. No scratch processes were left running.
 
 ## Blocking finding
 
@@ -83,6 +83,8 @@ function Remove-StaleGate {
 - **Fix verified on a scratch copy:**
   - 9a with the fix: step 3 left O2's lock (`state = held`), and in step 4 N was refused.
   - The compatibility tests 3a to 3e, which include both kill-and-take-over cases, passed again with the fix.
+  - 6a to 6c passed again with the fix (23:14). In 6a the leftover `owner.json` was empty, so the `$null` path ran: Q started 1.2 s after the reader closed the file. In 6b and 6c the next gate and build started at once, with no leftovers.
+  - 8 passed again: the next gate removed a killed new holder's `owner.json` with a warning, and `-Status` then showed `free`.
 - **Other cleanup paths are correct.** `Get-LiveLocks` and the `build-slot.ps1` claim loop already pass the record they judged.
 
 ## Round-2 items
