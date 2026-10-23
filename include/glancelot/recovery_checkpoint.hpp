@@ -1,6 +1,5 @@
 #pragma once
 #include "settings_recovery.hpp"
-#include <QJsonObject>
 #include <QList>
 
 namespace glancelot::recovery {
@@ -45,6 +44,4 @@ CheckpointResult checkpoint(const WindowClaim&, const CheckpointInput&, Options 
 // Caller serializes one active/one latest pending operation with value ownership.
 Status finishWindow(const WindowClaim&, const QString& expectedCheckpointRevision,
                     quint64 expectedSequence, Options = {});
-// Reads a slot's stored tabs into `state` (whose folder/image are already set); invalid tab state leaves one location.
-void readTabs(const QJsonObject& windowRow, ResumeState& state);
 }

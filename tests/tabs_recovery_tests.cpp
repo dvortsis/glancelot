@@ -7,6 +7,7 @@
 #include "glancelot/window_slot.hpp"
 #include "file_lock.hpp"
 #include "recovery_session.hpp"
+#include "recovery_tabs.hpp"
 #include "settings_transaction.hpp"
 #include <QDir>
 #include <QFile>
@@ -61,6 +62,26 @@ struct Hooks {
     ~Hooks() { glancelot::settings_detail::transactionHooks = old; }
 };
 bool same(const QString& a, const QString& b) { return QDir::cleanPath(a).compare(QDir::cleanPath(b), Qt::CaseInsensitive) == 0; }
+// Empty when slot 1's stored entry holds exactly these tab images (each in its own folder) with `active` as the active
+// tab and as the slot's folder/image; one image means one location without tabs. Otherwise a description of the mismatch.
+QString storedTabsDiffer(const QString& config, const QStringList& images, int active) {
+    const auto entry = position(config);
+    const auto where = [](const QJsonValue& row) { return row.toObject().value("image").toString() + " in " + row.toObject().value("folder").toString(); };
+    const auto actual = [&] {
+        QStringList text; for (const auto& row : entry.value("tabs").toArray()) text.append(where(row));
+        return QString("stored tabs [%1] active %2, position %3").arg(text.join(", ")).arg(entry.value("activeTab").toVariant().toString(), where(entry));
+    };
+    if (!same(entry.value("image").toString(), images.value(active)) || !same(entry.value("folder").toString(), QFileInfo(images.value(active)).absolutePath()))
+        return "wrong position: " + actual();
+    if (images.size() < 2) return entry.contains("tabs") || entry.contains("activeTab") ? "unexpected tabs: " + actual() : QString{};
+    const auto stored = entry.value("tabs").toArray();
+    if (stored.size() != images.size() || entry.value("activeTab") != QJsonValue(active)) return "wrong tab set: " + actual();
+    for (int i = 0; i < images.size(); ++i)
+        if (!same(stored.at(i).toObject().value("image").toString(), images.at(i)) ||
+            !same(stored.at(i).toObject().value("folder").toString(), QFileInfo(images.at(i)).absolutePath()))
+            return QString("tab %1 holds the wrong location: ").arg(i) + actual();
+    return {};
+}
 } // namespace
 
 class TabsRecoveryTests final : public QObject {
@@ -76,21 +97,26 @@ class TabsRecoveryTests final : public QObject {
         }
         QString file(const char* name) const { return dir.filePath(name); }
     };
+    static QStringList images(const Media& media) { return {media.file("alpha/a.png"), media.file("beta/b.png"), media.file("gamma/c.png")}; }
+    static bool shows(const ViewerController& viewer, const QString& image) { return viewer.imageReady() && same(viewer.filePath(), image); }
+    // Opens alpha, beta and gamma in three tabs of a claimed viewer, settles on `active` and waits until that is saved.
+    static bool openThreeTabs(const QString& config, ViewerController& viewer, const Media& media, int active) {
+        const auto files = images(media);
+        viewer.open(files[0]);
+        if (!QTest::qWaitFor([&] { return shows(viewer, files[0]); }, 10000)) return false;
+        for (int i = 1; i < 3; ++i) {
+            if (!viewer.newTab()) return false;
+            viewer.open(files[i]);
+            if (!QTest::qWaitFor([&] { return shows(viewer, files[i]); }, 10000)) return false;
+        }
+        if (active != 2 && (!viewer.activateTab(active) || !QTest::qWaitFor([&] { return shows(viewer, files[active]); }, 10000))) return false;
+        return QTest::qWaitFor([&] { return storedTabsDiffer(config, files, active).isEmpty(); }, 5000);
+    }
     // A first run with a claimed slot and three tabs (active: beta), closed normally.
     static bool firstRun(const QString& config, const Media& media) {
         WindowSlot slot(config, 0); if (slot.number() != 1) return false;
         ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
-        viewer.open(media.file("alpha/a.png"));
-        if (!QTest::qWaitFor([&] { return viewer.imageReady(); }, 10000)) return false;
-        if (!viewer.newTab()) return false;
-        viewer.open(media.file("beta/b.png"));
-        if (!QTest::qWaitFor([&] { return viewer.imageReady() && same(viewer.filePath(), media.file("beta/b.png")); }, 10000)) return false;
-        if (!viewer.newTab()) return false;
-        viewer.open(media.file("gamma/c.png"));
-        if (!QTest::qWaitFor([&] { return viewer.imageReady() && same(viewer.filePath(), media.file("gamma/c.png")); }, 10000)) return false;
-        if (!viewer.activateTab(1)) return false;
-        if (!QTest::qWaitFor([&] { return viewer.imageReady() && same(viewer.filePath(), media.file("beta/b.png")); }, 10000)) return false;
-        return QTest::qWaitFor([&] { return position(config).value("tabs").toArray().size() == 3 && position(config).value("activeTab") == QJsonValue(1); }, 5000);
+        return openThreeTabs(config, viewer, media, 1);
     }
 
 private slots:
@@ -232,6 +258,49 @@ private slots:
         QCOMPARE(position(dir.path()).value("tabs"), QJsonValue(rows(tabs)));
     }
 
+    // Tab state, folder/image and the recovery record's revision and sequence are one replace of settings.json: a failure
+    // before the replace changes none of them, and the replace that lands carries all of them.
+    void tabsAndPositionLandInOneTransaction() {
+        using glancelot::settings_detail::Stage;
+        QTemporaryDir dir; QVERIFY(dir.isValid()); WindowSlot slot(dir.path(), 0);
+        QCOMPARE(beginWindow(slot.claimIdentity()).status.code, Code::Committed);
+        const QList<TabLocation> first{tab("a", "a.png"), tab("b")}, second{tab("c"), tab("d", "d.png"), tab("e", "e.png")};
+        const auto earlier = checkpoint(slot.claimIdentity(), withTabs(first, 0, 1)); QCOMPARE(earlier.status.code, Code::Committed);
+        const auto before = readBytes(dir.path());
+        {
+            glancelot::settings_detail::TransactionHooks hooks;
+            hooks.fail = [](Stage stage) { return stage == Stage::BeforeReplace; };
+            Hooks installed(hooks);
+            QCOMPARE(checkpoint(slot.claimIdentity(), withTabs(second, 2, 2)).status.code, Code::WriteFailed);
+        }
+        QCOMPARE(readBytes(dir.path()), before);   // no torn state: tabs, position and revision all unchanged
+        int replaces = 0; QJsonObject beforeReplace, afterReplace;
+        glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe = [&](Stage stage) {
+            if (stage == Stage::BeforeReplace) beforeReplace = readRoot(dir.path());
+            if (stage == Stage::AfterReplace) { ++replaces; afterReplace = readRoot(dir.path()); }
+        };
+        CheckpointResult saved;
+        { Hooks installed(hooks); saved = checkpoint(slot.claimIdentity(), withTabs(second, 2, 2)); }
+        QCOMPARE(saved.status.code, Code::Committed); QCOMPARE(replaces, 1);
+        const auto slotOf = [](const QJsonObject& root) { return root.value("windows").toObject().value("1").toObject(); };
+        const auto recordOf = [](const QJsonObject& root) { return root.value("recovery").toObject().value("windows").toObject().value("1").toObject(); };
+        // Just before the one replace: still entirely the earlier checkpoint.
+        QCOMPARE(slotOf(beforeReplace).value("tabs"), QJsonValue(rows(first)));
+        QCOMPARE(slotOf(beforeReplace).value("activeTab"), QJsonValue(0));
+        QCOMPARE(slotOf(beforeReplace).value("image"), QJsonValue(first[0].image));
+        QCOMPARE(recordOf(beforeReplace).value("checkpointRevision"), QJsonValue(earlier.checkpointRevision));
+        QCOMPARE(recordOf(beforeReplace).value("sequence"), QJsonValue("1"));
+        // Right after it: entirely the new one, with the revision the checkpoint returned.
+        QCOMPARE(slotOf(afterReplace).value("tabs"), QJsonValue(rows(second)));
+        QCOMPARE(slotOf(afterReplace).value("activeTab"), QJsonValue(2));
+        QCOMPARE(slotOf(afterReplace).value("folder"), QJsonValue(second[2].folder));
+        QCOMPARE(slotOf(afterReplace).value("image"), QJsonValue(second[2].image));
+        QCOMPARE(recordOf(afterReplace).value("checkpointRevision"), QJsonValue(saved.checkpointRevision));
+        QCOMPARE(recordOf(afterReplace).value("sequence"), QJsonValue("2"));
+        QCOMPARE(readRoot(dir.path()), afterReplace);
+    }
+
     void failedTabCheckpointNeverCleansAndRetrySucceeds() {
         const auto failing = std::make_shared<std::atomic_bool>(false);
         glancelot::settings_detail::TransactionHooks hooks;
@@ -260,18 +329,31 @@ private slots:
 
     void busyWriterIsRetriedAndLatestPendingTabsWin() {
         QTemporaryDir dir; QVERIFY(dir.isValid()); WindowSlot slot(dir.path(), 0);
+        // Every settings replace the session's worker makes, as the recovery sequence it left on disk.
+        struct Written { std::mutex mutex; QStringList sequences; };
+        const auto written = std::make_shared<Written>();
+        glancelot::settings_detail::TransactionHooks hooks;
+        hooks.observe = [written, path = dir.path()](glancelot::settings_detail::Stage stage) {
+            if (stage != glancelot::settings_detail::Stage::AfterReplace) return;
+            const auto sequence = record(path).value("sequence").toString();
+            std::lock_guard lock(written->mutex); written->sequences.append(sequence.isEmpty() ? "none" : sequence);
+        };
+        Hooks installed(hooks);   // copied into the session's worker at construction
         Session session(slot.claimIdentity()); QVERIFY(session.waitForIdle(3000)); QVERIFY(session.snapshot().begun);
         std::mutex mutex; std::condition_variable changed; bool ready = false; std::atomic_bool acquired = false;
         std::jthread contender([&] {
             FileLock held(dir.filePath("settings.json.lock")); acquired = held.acquire(0);
             { std::lock_guard lock(mutex); ready = true; changed.notify_all(); }
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
         });
         { std::unique_lock lock(mutex); QVERIFY(changed.wait_for(lock, std::chrono::seconds(3), [&] { return ready; })); }
         QVERIFY(acquired.load());
-        // While the writer is busy, newer tab snapshots replace the pending one; only the latest is written.
+        // While the writer is busy, newer tab snapshots replace the pending one; only the latest is written. The pauses let
+        // the worker start retrying a snapshot before the next one supersedes it, well inside the 250 ms the lock is held.
         QVERIFY(session.accept(withTabs({tab("a"), tab("b")}, 0, 1)));
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
         QVERIFY(session.accept(withTabs({tab("a"), tab("b"), tab("c")}, 2, 2)));
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
         const QList<TabLocation> latest{tab("a"), tab("b"), tab("c"), tab("d", "d.png")};
         QVERIFY(session.accept(withTabs(latest, 3, 3)));
         QVERIFY(!session.accept(withTabs({tab("z"), tab("y")}, 0, 3)));   // stale sequence refused at the session
@@ -281,6 +363,10 @@ private slots:
         QCOMPARE(position(dir.path()).value("tabs"), QJsonValue(rows(latest)));
         QCOMPARE(position(dir.path()).value("activeTab"), QJsonValue(3));
         QCOMPARE(record(dir.path()).value("state"), QJsonValue("clean"));
+        // The two intermediate snapshots were superseded while the writer was busy and never reached disk.
+        std::lock_guard lock(written->mutex);
+        QVERIFY2(!written->sequences.contains("1") && !written->sequences.contains("2"), qPrintable(written->sequences.join(", ")));
+        QVERIFY2(written->sequences.contains("3"), qPrintable(written->sequences.join(", ")));
     }
 
     void failedBeginOffersReadOnlyTabsWithoutWriting() {
@@ -297,7 +383,12 @@ private slots:
         QVERIFY(state.beginFinished); QVERIFY(!state.begun); QCOMPARE(state.beginning.status.code, Code::WriteFailed);
         QVERIFY(state.readOnlyResume.has_value());
         QCOMPARE(state.readOnlyResume->tabs, tabs); QCOMPARE(state.readOnlyResume->activeTab, 1);
-        QVERIFY(!session.accept(withTabs(tabs, 1, 1)) || !session.snapshot().begun);   // never authorizes writes
+        // A checkpoint offered after the failed begin never authorizes a write: the worker only retries the begin.
+        session.accept(withTabs(tabs, 1, 1)); QVERIFY(session.waitForIdle(5000));
+        const auto after = session.snapshot();
+        QVERIFY(!after.begun); QCOMPARE(after.persistedSequence, quint64(0));
+        QVERIFY(after.lastAttempt.status.code != Code::Committed); QVERIFY(after.lastAttempt.checkpointRevision.isEmpty());
+        QCOMPARE(readBytes(dir.path()), before);
         QVERIFY(!session.close(3000));
         QCOMPARE(readBytes(dir.path()), before);
     }
@@ -336,6 +427,112 @@ private slots:
         QCOMPARE(position(config.path()).value("activeTab"), QJsonValue(1));
     }
 
+    // Review round 1 (High): a checkpoint taken while a tab switch is still decoding records every tab's own location and
+    // the selected tab, so the final close never marks a wrong record clean.
+    void closingDuringATabSwitchKeepsEveryTabsLocation() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(viewer.activateTab(0));
+            QVERIFY(!viewer.imageReady());   // destroyed below while alpha is still decoding
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    void closingTheActiveTabBeforeItsNeighbourDecodesKeepsEveryTabsLocation_data() {
+        QTest::addColumn<int>("active");
+        QTest::addColumn<QList<int>>("remaining");   // indexes into alpha, beta, gamma
+        QTest::addColumn<int>("selected");
+        QTest::newRow("middle of three") << 1 << QList<int>{0, 2} << 1;
+        QTest::newRow("last of three") << 2 << QList<int>{0, 1} << 1;
+        QTest::newRow("first of three") << 0 << QList<int>{1, 2} << 0;
+    }
+    void closingTheActiveTabBeforeItsNeighbourDecodesKeepsEveryTabsLocation() {
+        QFETCH(int, active); QFETCH(QList<int>, remaining); QFETCH(int, selected);
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, active));
+            QVERIFY(viewer.closeTab(active)); QCOMPARE(viewer.activeTab(), selected);
+            QVERIFY(!viewer.imageReady());
+        }
+        QStringList expected; for (const int i : remaining) expected.append(files[i]);
+        const auto differ = storedTabsDiffer(config.path(), expected, selected); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Closing the active one of two tabs leaves one location: the remaining tab's, never the closed one's.
+    void closingTheActiveOfTwoTabsBeforeTheOtherDecodesKeepsTheOtherLocation() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(viewer.closeTab(0));   // inactive: no switch
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), {files[1], files[2]}, 1).isEmpty(), 5000);
+            QVERIFY(viewer.closeTab(1)); QVERIFY(viewer.tabs().isEmpty());
+            QVERIFY(!viewer.imageReady());
+        }
+        const auto differ = storedTabsDiffer(config.path(), {files[1]}, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // The target tab's image cannot be decoded: the switch never settles, and the close still saves each tab's location.
+    void switchingToAnUndecodableTabKeepsEveryTabsLocation() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const QString broken = media.file("broken/x.png");
+        QVERIFY(QDir(media.dir.path()).mkpath("broken"));
+        { QFile file(broken); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("generated: not a PNG"); }
+        const QStringList files{media.file("alpha/a.png"), broken, media.file("gamma/c.png")};
+        {
+            WindowSlot slot(config.path(), 0); ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            viewer.open(files[0]); QTRY_VERIFY_WITH_TIMEOUT(shows(viewer, files[0]), 10000);
+            QVERIFY(viewer.newTab()); viewer.open(broken);
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && same(viewer.filePath(), broken), 10000); QVERIFY(!viewer.imageReady());
+            QVERIFY(viewer.newTab()); viewer.open(files[2]); QTRY_VERIFY_WITH_TIMEOUT(shows(viewer, files[2]), 10000);
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), files, 2).isEmpty(), 5000);
+            QVERIFY(viewer.activateTab(1));
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && same(viewer.filePath(), broken), 10000);
+            QVERIFY(!viewer.imageReady());   // decode failed: notePosition never ran for the target
+            QCOMPARE(viewer.activeTab(), 1);
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Lead decision: the legacy no-claim restore stays for legacy reads, but validates exactly as the claimed path does.
+    void legacyNoClaimRestoreValidatesTabsLikeTheClaimedPath_data() { malformedOrOversizedStoredTabsReadAsOneLocation_data(); }
+    void legacyNoClaimRestoreValidatesTabsLikeTheClaimedPath() {
+        QFETCH(QJsonValue, tabs); QFETCH(QJsonValue, active);
+        QTemporaryDir config; QVERIFY(config.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        QJsonObject entry{{"folder", at("b")}, {"image", at("b/b.png")}, {"saved", 1}, {"tabs", tabs}};
+        if (!active.isUndefined()) entry["activeTab"] = active;
+        QVERIFY(writeRoot(config.path(), {{"schema", 1}, {"windows", QJsonObject{{"1", entry}}}}));
+        ViewerController viewer; viewer.setWindowSlot(1); viewer.restoreWindow();
+        QVERIFY(viewer.tabs().isEmpty()); QCOMPARE(viewer.activeTab(), 0);   // one location, as the claimed path reads it
+    }
+    void legacyNoClaimRestoreKeepsValidTabs() {
+        QTemporaryDir config; QVERIFY(config.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const QList<TabLocation> stored{tab("a"), tab("b", "b.png"), tab("c")};
+        QVERIFY(writeRoot(config.path(), {{"schema", 1}, {"windows", QJsonObject{{"1", QJsonObject{{"folder", at("b")}, {"image", at("b/b.png")},
+            {"saved", 1}, {"tabs", rows(stored)}, {"activeTab", 1}}}}}}));
+        ViewerController viewer; viewer.setWindowSlot(1); viewer.restoreWindow();
+        QCOMPARE(viewer.tabs().size(), 3); QCOMPARE(viewer.activeTab(), 1);
+        QCOMPARE(viewer.tabs().at(0).toMap().value("folder").toString(), at("a"));
+        QCOMPARE(viewer.tabs().at(2).toMap().value("folder").toString(), at("c"));
+    }
+
     void safeModeDoesNotRestoreTabs() {
         QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
@@ -355,11 +552,21 @@ private slots:
         QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
         qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
         QVERIFY(firstRun(config.path(), media));
+        // Tabs are stored, so a reset that kept them, or a restore that ignored the reset, would bring them back.
+        QCOMPARE(position(config.path()).value("tabs").toArray().size(), qsizetype(3));
         QString moved; QVERIFY(glancelot::resetSettings(&moved)); QVERIFY(!moved.isEmpty());
-        WindowSlot slot(config.path(), 0); ViewerController viewer;
+        {
+            QFile aside(moved); QVERIFY(aside.open(QIODevice::ReadOnly));   // set aside with the tabs, never deleted
+            const auto old = QJsonDocument::fromJson(aside.readAll()).object().value("windows").toObject().value("1").toObject();
+            QCOMPARE(old.value("tabs").toArray().size(), qsizetype(3));
+        }
+        WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1); ViewerController viewer;
         viewer.setWindowClaim(slot.claimIdentity()); viewer.restoreWindow();
+        // Wait for the claim's begin (its dirty marker) so the restore has really run before checking it restored nothing.
+        QTRY_COMPARE_WITH_TIMEOUT(record(config.path()).value("state"), QJsonValue("dirty"), 5000);
         QTest::qWait(300);
         QVERIFY(viewer.tabs().isEmpty()); QVERIFY(viewer.filePath().isEmpty());
+        QVERIFY(!position(config.path()).contains("tabs"));
     }
 
     void explicitFileWinsOverSavedTabs() {

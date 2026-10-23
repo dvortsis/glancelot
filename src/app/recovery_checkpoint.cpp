@@ -1,4 +1,5 @@
 #include "glancelot/recovery_checkpoint.hpp"
+#include "recovery_tabs.hpp"
 #include "settings_transaction.hpp"
 #include "settings_policy.hpp"
 #include "window_claim_guard.hpp"

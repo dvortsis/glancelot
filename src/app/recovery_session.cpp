@@ -1,4 +1,5 @@
 #include "recovery_session.hpp"
+#include "recovery_tabs.hpp"
 #include "settings_transaction.hpp"
 #include "settings_raw.hpp"
 #include "settings_policy.hpp"
