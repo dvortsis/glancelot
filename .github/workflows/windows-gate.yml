@@ -114,6 +114,8 @@ jobs:
                   docker build --progress=plain -t "glancelot-browser:ci-$env:GITHUB_RUN_ID" . *>&1 | Tee-Object -FilePath (Join-Path $logs 'docker-gate.log')
                   $result.docker = ($LASTEXITCODE -eq 0)
                   $result.dockerSeconds = [int]((Get-Date) - $start).TotalSeconds
+                  # The image is only gate evidence; keep the runner's disk from filling with one image per run.
+                  docker image rm --force "glancelot-browser:ci-$env:GITHUB_RUN_ID" *>&1 | Out-Null
               }
           }
           Copy-Item -ErrorAction SilentlyContinue build-ci/Testing/Temporary/LastTest.log (Join-Path $logs 'windows-LastTest.log')
