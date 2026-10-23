@@ -1024,6 +1024,16 @@ tasks:
     evidence_of_problem: "Runner gates 39870526245 (c4e0829) and 39874250713 (f033070) both failed folder_tree :427, folder_grid auditReadyCurrentPhotoDoesNotReopen :947 and auditFailedCurrentPhotoCanBeRetriedFromGrid :958, fs_watch :298 and :1023 (generated PNG atomic commit failed: Access is denied). Local full gate on afeac1a outside the runner: 42/43 760.36s, only folder_tree failed (at :430), and it passed 29/29 alone. Hosted windows-2022 43/43."
     suspected_causes: "Late first file-watcher scan bumps the controller generation (viewer_controller.cpp around :331-351) after the 100 ms wait, and the navigation finish handler (:1011) silently drops the in-flight folder-open result, so no status is set; QSaveFile rename over a PNG another reader holds without delete sharing (in-process QImageReader/QFile readers or Defender)."
     acceptance: Root cause shown by a deterministic test that fails before the fix; the late-scan race no longer drops a newer user request; three consecutive full gates pass under the runner with these suites; no timeout or oracle weakened
+  - id: COPY-SAFETY-01
+    title: Copy/move Overwrite never destroys the existing target
+    requirements: [META-07, SYS-06, SYS-02]
+    owner: lead
+    state: ready
+    priority: 1
+    outcome: An Overwrite copy or move writes to a temporary file beside the target and replaces the target atomically only after a complete, verified copy; a failed or cancelled copy leaves the original target byte-identical
+    evidence_of_problem: "Found while drafting OPERATION-JOURNAL (claude/contracts-draft-b b1c835d): src/app/copy_move_service.cpp:437 opens the destination with QIODevice::Truncate, so the user's existing file is destroyed before the copy starts, and :481 calls QFile::remove(destPath) after a failed copy, deleting it outright."
+    acceptance: Tests for Overwrite with a failing source read, a full or read-only target volume (simulated), cancellation mid-copy and a crash after the temp write; each leaves the original target byte-identical and no temp file behind after cleanup; same-volume and cross-volume move; Windows replace semantics (ReplaceFileW/MoveFileEx) and Linux rename verified; no change to the non-Overwrite policies
+    note: "Ships before B2. B2 (OPERATION-JOURNAL) later adds journaling and 'move the old target to trash' on top."
   - id: STACK-F040-PINNED
     parent: STACK-CORRECTION-01
     owner: lead
