@@ -11,6 +11,7 @@
 #include <QSet>
 #include <QTimer>
 #include <QFileInfo>
+#include <QScopedValueRollback>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -21,8 +22,8 @@
 namespace glancelot {
 
 static PresentationWindowFactory s_presentationWindowFactory = nullptr;
-// 256 MiB of retained decoded pixels across current/pinned/comparison/previous; GPU textures are
-// budgeted separately per canvas (see PresentationWindow).
+// 256 MiB of retained decoded pixels across current/pinned/comparison/previous/pending and the F040 reference;
+// GPU textures are budgeted separately per canvas (see PresentationWindow).
 static qint64 s_imageBudgetBytes = 256LL * 1024 * 1024;
 
 void DisplayManager::setImageBudgetBytes(qint64 bytes) { s_imageBudgetBytes = std::max<qint64>(0, bytes); }
@@ -109,6 +110,12 @@ struct DisplayManager::Private {
     QString previousPath;
     QImage previousImage;
 
+    // F040 reference window. Its generation high-water rejects stale pins even after a clear.
+    QString referencePath;
+    QImage referenceImage;
+    quint64 referenceGenerationHighWater{0};
+    bool referenceProtected{false};   // while admitting an output pin: one explicit pin never evicts the other
+
     QHash<QString, QString> fitModes;           // per display id
     QHash<QString, QVariantMap> viewports;      // bounded session state by display identity
     std::function<QString(const QString&)> outputBindingProvider;
@@ -177,14 +184,16 @@ struct DisplayManager::Private {
 
     qint64 retainedBytes() const {
         QSet<qint64> keys; qint64 total = 0;
-        for (const QImage* im : {&currentImage, &pinnedImage, &comparisonImage, &previousImage, &pendingImage}) {
+        for (const QImage* im : {&currentImage, &pinnedImage, &comparisonImage, &previousImage, &pendingImage, &referenceImage}) {
             if (im->isNull() || keys.contains(im->cacheKey())) continue;
             keys.insert(im->cacheKey()); total += im->sizeInBytes();
         }
         return total;
     }
 
-    // Shed in order: previous, comparison, pinned. The current image is never dropped.
+    // Shed in order: previous, pending, comparison, reference, pinned. The current image is never dropped. The
+    // reference goes before the pinned output: losing it closes a local window with a notice, while losing the pin
+    // silently switches what an audience display shows.
     void enforceBudget() {
         if (retainedBytes() <= s_imageBudgetBytes) return;
         previousImage = QImage(); previousPath.clear();
@@ -200,6 +209,13 @@ struct DisplayManager::Private {
         if (retainedBytes() <= s_imageBudgetBytes) {
             applyImagesToWindow();
             return;
+        }
+        if (!referenceImage.isNull() && !referenceProtected) {
+            const auto shed=referencePath;
+            referenceImage = QImage(); referencePath.clear();
+            emit q->referenceShed(shed);
+            emit q->referenceChanged();
+            if (retainedBytes() <= s_imageBudgetBytes) { applyImagesToWindow(); return; }
         }
         if (!pinnedImage.isNull()) {
             pinnedImage = QImage(); pinnedPath.clear(); pinnedGeneration = 0;
@@ -593,7 +609,10 @@ void DisplayManager::pinImage(const QString& path, const QImage& image, quint64 
     d->pinnedPath = path;
     d->pinnedImage = image;
     d->pinnedGeneration = generation;
-    d->enforceBudget();
+    {
+        QScopedValueRollback<bool> keepReference(d->referenceProtected, true);
+        d->enforceBudget();
+    }
     if (!image.isNull() && d->pinnedImage.isNull()) return;   // shed by budget
     if (d->mode == PresentationMode::Pinned) d->applyImagesToWindow();
     setMode(PresentationMode::Pinned);
@@ -625,6 +644,40 @@ void DisplayManager::compareWithPinnedOrPrevious() {
     setMode(PresentationMode::Comparison);
     d->applyImagesToWindow();
 }
+
+bool DisplayManager::setReferenceImage(const QString& path, const QImage& image, quint64 generation) {
+    if (image.isNull() || generation < d->referenceGenerationHighWater) return false;   // nothing to pin, or stale
+    if (image.cacheKey() == d->referenceImage.cacheKey() && path == d->referencePath) {
+        d->referenceGenerationHighWater = generation;
+        return true;
+    }
+    // Admission: the current and pinned-output frames are kept; only optional history may make room. The previous
+    // reference is being replaced, so it does not count against the new one.
+    QSet<qint64> keys; qint64 essential = 0;
+    for (const QImage* im : std::initializer_list<const QImage*>{&d->currentImage, &d->pinnedImage, &image}) {
+        if (im->isNull() || keys.contains(im->cacheKey())) continue;
+        keys.insert(im->cacheKey()); essential += im->sizeInBytes();
+    }
+    if (essential > s_imageBudgetBytes) return false;
+    d->referenceGenerationHighWater = generation;
+    d->referencePath = path;
+    d->referenceImage = image;
+    {
+        QScopedValueRollback<bool> keepReference(d->referenceProtected, true);
+        d->enforceBudget();
+    }
+    emit referenceChanged();
+    return true;
+}
+
+void DisplayManager::clearReferenceImage() {
+    if (d->referenceImage.isNull() && d->referencePath.isEmpty()) return;
+    d->referenceImage = QImage(); d->referencePath.clear();
+    emit referenceChanged();
+}
+
+QImage DisplayManager::referenceImage() const { return d->referenceImage; }
+QString DisplayManager::referencePath() const { return d->referencePath; }
 
 static bool isValidFitMode(const QString& mode) {
     return (mode == QLatin1String("shrink") || mode == QLatin1String("fit") ||

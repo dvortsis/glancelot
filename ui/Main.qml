@@ -2039,6 +2039,34 @@ ApplicationWindow {
                 else if (event.key === Qt.Key_1) { actualSize(); event.accepted = true }
             }
         }
+        // A refused GPU texture admission is reported here instead of leaving a blank view; the main window is unaffected.
+        Rectangle {
+            objectName: "referenceStatus"
+            visible: referenceCanvas.rendererError.length > 0
+            z: 1
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: Theme.gapLg
+            width: Math.max(0, Math.min(parent.width - 2 * Theme.gapMd, referenceStatusText.implicitWidth + 2 * Theme.gapLg))
+            height: referenceStatusText.implicitHeight + 2 * Theme.gapSm + Theme.gapXxs
+            radius: Theme.radiusCard
+            color: Theme.surface
+            border.width: Theme.borderWidth
+            border.color: Theme.danger
+            Label {
+                id: referenceStatusText
+                anchors.centerIn: parent
+                width: Math.min(implicitWidth, parent.width - 2 * Theme.gapLg)
+                text: referenceCanvas.rendererError
+                color: Theme.danger
+                wrapMode: Text.Wrap
+                font.pixelSize: Theme.textSmall
+                Accessible.role: Accessible.AlertMessage
+            }
+        }
+        // Hiding keeps a window's scene graph by default; release it so closing frees the reference texture and its
+        // admission reservation now rather than at the next pin.
+        onVisibleChanged: if (!visible) releaseResources()
         MouseArea {
             anchors.fill: parent
             property real lastX: 0

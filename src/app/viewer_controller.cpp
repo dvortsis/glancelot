@@ -113,8 +113,7 @@ BoundaryMode boundaryValue(const QString& value) {
 
 struct ViewerController::Private {
     ViewerController* q;
-    QImage image, reference;
-    QString referenceLabel;
+    QImage image;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
     QString directoryError,monitorError;
     bool directoryPending{};
@@ -405,6 +404,12 @@ struct ViewerController::Private {
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
+        // F040: the reference lives in the display manager's retained-image budget; a newer current frame may release it.
+        QObject::connect(&displayManager,&glancelot::DisplayManager::referenceShed,q,[this](const QString& shed){
+            status=QCoreApplication::translate("Status","The reference window for %1 closed to keep image memory within its budget.").arg(QFileInfo(shed).fileName());
+            emit q->stateChanged();
+        });
+        QObject::connect(&displayManager,&glancelot::DisplayManager::referenceChanged,q,&ViewerController::referenceChanged);
         QObject::connect(q,&ViewerController::stateChanged,q,[this]{ if(tabList.size()>1) emit q->tabsChanged(); });
     }
     ~Private() {
@@ -1267,18 +1272,16 @@ void ViewerController::restoreWindow(){
     },""});
 }
 QImage ViewerController::image() const{return d->image;}
-QImage ViewerController::referenceImage() const{return d->reference;}
-QString ViewerController::referenceName() const{return d->referenceLabel;}
+// F040: the reference window and the MONITOR-OUTPUT pinned output are distinct pins held by the display manager under
+// one retained-image budget. Pinning hands over the frame the canvas already shows (no decode) and never changes the
+// selection or the output.
+QImage ViewerController::referenceImage() const{return d->displayManager.referenceImage();}
+QString ViewerController::referenceName() const{const auto path=d->displayManager.referencePath();return path.isEmpty()?QString{}:QFileInfo(path).fileName();}
 bool ViewerController::pinReference(){
     if(!d->imageReady||d->image.isNull())return false;
-    d->reference=d->image; // implicitly shared: no pixel copy
-    d->referenceLabel=QFileInfo(d->path).fileName();
-    emit referenceChanged();return true;
+    return d->displayManager.setReferenceImage(d->path,d->image,d->generation);
 }
-void ViewerController::clearReference(){
-    if(d->reference.isNull())return;
-    d->reference=QImage{};d->referenceLabel.clear();emit referenceChanged();
-}
+void ViewerController::clearReference(){d->displayManager.clearReferenceImage();}
 QString ViewerController::filePath() const{return d->path;}
 QString ViewerController::fileName() const{return QFileInfo(d->path).fileName();}
 QString ViewerController::directory() const{return d->path.isEmpty()?displayPath(d->nav.snapshot().directory):QFileInfo(d->path).absolutePath();}
