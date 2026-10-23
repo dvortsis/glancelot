@@ -187,9 +187,20 @@ struct ViewerController::Private {
     QList<TabRecord> tabList;
     int activeTabIndex{0};
     bool tabSettling{};
+    // Review round 2: open() counts the images it opens and settleOn() records the count. A decode settles the switch only
+    // if its image was opened after the switch began. The folder route neither bumps the generation nor cancels a decode
+    // of the previous tab still in flight, and a late baseline re-decodes the previous tab's path under a new generation;
+    // neither may settle the target on the previous tab's image.
+    quint64 openSerial{},settleSerial{};
     TabRecord liveLocation() const { return {path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path}; }
     TabRecord activeLocation() const { return tabSettling?TabRecord{pendingFolder,pendingImage}:liveLocation(); }
-    void settleOn(const TabRecord& target) { pendingFolder=target.folder;pendingImage=target.image;tabSettling=true; }
+    void settleOn(const TabRecord& target) { pendingFolder=target.folder;pendingImage=target.image;tabSettling=true;settleSerial=openSerial; }
+    // A slot or claim change replays the position (app/main.cpp:211 retries a busy startup claim on a live window). Mid
+    // switch the position is the target's stored location, never the last decoded image, which may be the previous tab's.
+    void replayPosition() {
+        if(!tabSettling){if(!lastDecodedPath.isEmpty())notePosition(lastDecodedPath);return;}
+        if(slot>0){positionRetries=0;positionDirty=true;positionTimer.start();}
+    }
     // The production recovery checkpoint carries the tab set with the slot's position: the active tab is that saved
     // position itself. Mid-switch it is the target's stored location, so every tab keeps its own location.
     recovery::CheckpointInput checkpointInput(quint64 sequence) const {
@@ -433,7 +444,9 @@ struct ViewerController::Private {
         if(navigationPool->waitForDone(1000))delete navigationPool;
     }
     void notePosition(const QString& file) {
-        lastDecodedPath=file;tabSettling=false;
+        lastDecodedPath=file;
+        if(tabSettling&&openSerial==settleSerial)return; // opened before the switch: the target keeps its stored location
+        tabSettling=false;
         if (slot<=0) return;
         positionRetries=0;
         pendingImage=file; pendingFolder=QFileInfo(file).absolutePath(); positionDirty=true;
@@ -457,15 +470,13 @@ struct ViewerController::Private {
         if (!positionDirty || slot<=0) return true;
         const QString folder=pendingFolder,image=pendingImage;
         const int target=slot;
-        const auto snapshot=checkpointInput(1); // the same coherent tab set the recovery checkpoint saves
-        QJsonArray tabRows;
-        for(const auto& record:snapshot.tabs)tabRows.append(QJsonObject{{"folder",record.folder},{"image",record.image}});
+        // Lead decision (round 2): production always claims a slot, so tab state is written only by the recovery
+        // checkpoint. This no-claim position writer saves folder/image alone; replacing the entry drops stale tabs.
         const auto result=updateSettings([&](QJsonObject& object) {
             // Re-read under the lock: only this slot's entry changes; other windows' slots, bindings, themes
             // and unknown keys stay as they are on disk.
             auto windows=object.value("windows").toObject();
             QJsonObject saved{{"folder",folder},{"image",image},{"saved",QDateTime::currentSecsSinceEpoch()}};
-            if(!tabRows.isEmpty()){saved["tabs"]=tabRows;saved["activeTab"]=snapshot.activeTab;}
             windows[QString::number(target)]=saved;
             object["windows"]=windows;
         },final);
@@ -1200,7 +1211,7 @@ void ViewerController::setWindowSlot(int slot){
     if(d->recoverySession&&d->recoverySession->snapshot().busy) {
         d->recoveryRetiring=true;d->pendingRecoveryClaim.reset();d->recoveryClaim={};
         d->slot=slot;d->positionDirty=false;d->positionTimer.stop();d->recoveryPoll.start();
-        if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+        if(slot>0)d->replayPosition();
         emit stateChanged();return;
     }
     d->recoverySession.reset();d->recoveryClaim={};d->recoveryPoll.stop();
@@ -1208,7 +1219,7 @@ void ViewerController::setWindowSlot(int slot){
     d->recoveryResumeReady=false;d->recoveryFinalized=false;d->checkpointSequence=0;
     d->positionTimer.stop(); d->positionDirty=false;
     d->slot=slot;
-    if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    if(slot>0)d->replayPosition();
     emit stateChanged();
 }
 void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
@@ -1227,7 +1238,7 @@ void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
     d->positionDirty=false;d->recoveryResumeReady=false;d->recoveryFinalized=false;d->restoreRequested=false;
     d->beginFailureReported=false;d->reportedCheckpointFailure=0;
     d->recoverySession=std::make_unique<recovery::Session>(identity);d->recoveryPoll.start();
-    if(!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    if(d->tabSettling||!d->lastDecodedPath.isEmpty())d->replayPosition();
     else if(d->navigationReady&&!d->directoryPending&&!d->nav.snapshot().directory.empty()) {
         d->pendingImage.clear();d->pendingFolder=displayPath(d->nav.snapshot().directory);
         d->positionDirty=true;d->positionTimer.start();
@@ -1603,7 +1614,7 @@ void ViewerController::open(const QString& value){
         }
     }
     d->removedPaths.clear();
-    ++d->generation; d->cancel();
+    ++d->generation; d->cancel(); ++d->openSerial; // F015: a tab switch settles only on an image opened after it began
     d->cacheReuseAllowed=fromNavigation;
     d->path=path;d->loading=true;d->imageReady=false;d->status=QCoreApplication::translate("Status","Opening %1…").arg(QFileInfo(path).fileName());
     d->observe(true);d->pendingObservation.reset();

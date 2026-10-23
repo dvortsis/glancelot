@@ -20,6 +20,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace glancelot::recovery;
@@ -99,8 +100,8 @@ class TabsRecoveryTests final : public QObject {
     };
     static QStringList images(const Media& media) { return {media.file("alpha/a.png"), media.file("beta/b.png"), media.file("gamma/c.png")}; }
     static bool shows(const ViewerController& viewer, const QString& image) { return viewer.imageReady() && same(viewer.filePath(), image); }
-    // Opens alpha, beta and gamma in three tabs of a claimed viewer, settles on `active` and waits until that is saved.
-    static bool openThreeTabs(const QString& config, ViewerController& viewer, const Media& media, int active) {
+    // Opens alpha, beta and gamma in three tabs and settles on `active` (claimed or not; nothing waits for storage).
+    static bool showThreeTabs(ViewerController& viewer, const Media& media, int active) {
         const auto files = images(media);
         viewer.open(files[0]);
         if (!QTest::qWaitFor([&] { return shows(viewer, files[0]); }, 10000)) return false;
@@ -109,8 +110,28 @@ class TabsRecoveryTests final : public QObject {
             viewer.open(files[i]);
             if (!QTest::qWaitFor([&] { return shows(viewer, files[i]); }, 10000)) return false;
         }
-        if (active != 2 && (!viewer.activateTab(active) || !QTest::qWaitFor([&] { return shows(viewer, files[active]); }, 10000))) return false;
-        return QTest::qWaitFor([&] { return storedTabsDiffer(config, files, active).isEmpty(); }, 5000);
+        return active == 2 || (viewer.activateTab(active) && QTest::qWaitFor([&] { return shows(viewer, files[active]); }, 10000));
+    }
+    // Opens alpha, beta and gamma in three tabs of a claimed viewer, settles on `active` and waits until that is saved.
+    static bool openThreeTabs(const QString& config, ViewerController& viewer, const Media& media, int active) {
+        return showThreeTabs(viewer, media, active) &&
+               QTest::qWaitFor([&] { return storedTabsDiffer(config, images(media), active).isEmpty(); }, 5000);
+    }
+    // Empty when the live tab strip holds exactly these images (each in its own folder) with `active` selected.
+    static QString liveTabsDiffer(const ViewerController& viewer, const QStringList& images, int active) {
+        const auto rows = viewer.tabs();
+        QStringList text; for (const auto& row : rows) text.append(row.toMap().value("image").toString());
+        const auto actual = QString("live tabs [%1] active %2").arg(text.join(", ")).arg(viewer.activeTab());
+        if (images.size() < 2) return rows.isEmpty() ? QString{} : "unexpected live tabs: " + actual;
+        if (rows.size() != images.size() || viewer.activeTab() != active) return "wrong live tab set: " + actual;
+        for (int i = 0; i < images.size(); ++i)
+            if (!same(rows.at(i).toMap().value("image").toString(), images.at(i)) ||
+                !same(rows.at(i).toMap().value("folder").toString(), QFileInfo(images.at(i)).absolutePath()))
+                return QString("live tab %1 holds the wrong location: ").arg(i) + actual;
+        return {};
+    }
+    static QStringList pick(const QStringList& files, const QList<int>& indexes) {
+        QStringList result; for (const int i : indexes) result.append(files.at(i)); return result;
     }
     // A first run with a claimed slot and three tabs (active: beta), closed normally.
     static bool firstRun(const QString& config, const Media& media) {
@@ -507,6 +528,119 @@ private slots:
         }
         const auto differ = storedTabsDiffer(config.path(), files, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
         QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Review round 2 (B1): a decode of the previous tab's image, still in flight when a switch or close falls back to the
+    // target's folder (its image is gone), lands after the switch. It must not settle the switch: the target tab keeps its
+    // own location in memory and on disk, and the record marked clean is the correct one. The target folder is gone too,
+    // so nothing later corrects a wrong settle.
+    void staleDecodeCannotSettleADirectorySwitch_data() {
+        QTest::addColumn<bool>("close");
+        QTest::addColumn<QList<int>>("expected");   // indexes into alpha, beta, gamma
+        QTest::addColumn<int>("active");
+        QTest::newRow("switch") << false << QList<int>{0, 1, 0} << 1;
+        QTest::newRow("close the active tab") << true << QList<int>{0, 1} << 1;
+    }
+    void staleDecodeCannotSettleADirectorySwitch() {
+        QFETCH(bool, close); QFETCH(QList<int>, expected); QFETCH(int, active);
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(QDir(media.dir.filePath("beta")).removeRecursively());
+            viewer.open(files[0]); QVERIFY(viewer.loading());   // tab 2 moves to alpha; its decode is in flight
+            QVERIFY(close ? viewer.closeTab(2) : viewer.activateTab(1));   // beta's image is gone: the folder route
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            QVERIFY2(shows(viewer, files[0]), qPrintable(viewer.status()));   // the stale decode really landed
+            const auto live = liveTabsDiffer(viewer, pick(files, expected), active); QVERIFY2(live.isEmpty(), qPrintable(live));
+        }
+        const auto differ = storedTabsDiffer(config.path(), pick(files, expected), active); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Review round 2: a second tab action before the target settles uses the target's stored location for the active
+    // tab, not live state that may still be the previous tab's (the folder route keeps the old image until it lands).
+    void secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation_data() {
+        QTest::addColumn<bool>("stale");     // tab 2 moves to alpha and is still decoding when the switch starts
+        QTest::addColumn<QString>("action");
+        QTest::addColumn<QList<int>>("expected");   // indexes into alpha, beta, gamma
+        QTest::addColumn<int>("active");
+        QTest::newRow("new tab") << false << "new" << QList<int>{0, 1, 1, 2} << 2;
+        QTest::newRow("switch again") << false << "switch" << QList<int>{0, 1, 2} << 0;
+        QTest::newRow("close another tab") << false << "close" << QList<int>{1, 2} << 0;
+        QTest::newRow("stale decode, new tab") << true << "new" << QList<int>{0, 1, 1, 0} << 2;
+    }
+    void secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation() {
+        QFETCH(bool, stale); QFETCH(QString, action); QFETCH(QList<int>, expected); QFETCH(int, active);
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(QDir(media.dir.filePath("beta")).removeRecursively());
+            if (stale) { viewer.open(files[0]); QVERIFY(viewer.loading()); }
+            QVERIFY(viewer.activateTab(1));   // folder route; the second action follows before anything lands
+            QVERIFY(viewer.directoryPending());
+            if (action == "new") QVERIFY(viewer.newTab());
+            else if (action == "switch") QVERIFY(viewer.activateTab(0));
+            else QVERIFY(viewer.closeTab(0));
+            const auto early = liveTabsDiffer(viewer, pick(files, expected), active); QVERIFY2(early.isEmpty(), qPrintable(early));
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            if (stale || action == "switch") QVERIFY2(shows(viewer, files[0]), qPrintable(viewer.status()));
+            const auto live = liveTabsDiffer(viewer, pick(files, expected), active); QVERIFY2(live.isEmpty(), qPrintable(live));
+        }
+        const auto differ = storedTabsDiffer(config.path(), pick(files, expected), active); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Review round 2 (N1): app/main.cpp retries a busy startup claim every 4 s and then calls setWindowClaim() and
+    // restoreWindow() on a window that may already have tabs. That claim replays the last decoded image as the position;
+    // in the middle of a switch it must keep the target's stored location instead.
+    void claimRetryDuringATabSwitchKeepsEveryTabsLocation() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            std::optional<WindowSlot> slot;   // outlives the viewer, as in app/main.cpp
+            ViewerController viewer;          // unclaimed: the startup claim was busy
+            QVERIFY(showThreeTabs(viewer, media, 2));
+            QVERIFY(viewer.activateTab(0)); QVERIFY(!viewer.imageReady());   // alpha opened, not decoded yet
+            slot.emplace(config.path(), 0); QCOMPARE(slot->number(), 1);
+            viewer.setWindowClaim(slot->claimIdentity()); viewer.restoreWindow();   // the retry at app/main.cpp:211
+            QVERIFY(!viewer.imageReady());
+            const auto live = liveTabsDiffer(viewer, files, 0); QVERIFY2(live.isEmpty(), qPrintable(live));
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
+    // Lead decision (round 2, N3): production always claims a slot, so tab state is written only by the recovery
+    // checkpoint. The no-claim position writer (setWindowSlot without a claim, kept for window_slots) writes no tabs and
+    // drops a stale stored set rather than leaving it next to a position it did not write.
+    void noClaimWriterNeverWritesTabs() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const QList<TabLocation> old{tab("a"), tab("b", "b.png")};
+        QVERIFY(writeRoot(config.path(), {{"schema", 1}, {"windows", QJsonObject{{"1", QJsonObject{{"folder", at("b")}, {"image", at("b/b.png")},
+            {"saved", 1}, {"tabs", rows(old)}, {"activeTab", 1}}}}}}));
+        const auto files = images(media);
+        {
+            ViewerController viewer; viewer.setWindowSlot(1);
+            viewer.open(files[0]); QTRY_VERIFY_WITH_TIMEOUT(shows(viewer, files[0]), 10000);
+            QVERIFY(viewer.newTab()); viewer.open(files[1]); QTRY_VERIFY_WITH_TIMEOUT(shows(viewer, files[1]), 10000);
+            QCOMPARE(viewer.tabs().size(), 2);
+            viewer.flushWindowPosition();
+            QVERIFY(same(position(config.path()).value("image").toString(), files[1]));   // the position itself is saved
+            QVERIFY2(!position(config.path()).contains("tabs") && !position(config.path()).contains("activeTab"),
+                     qPrintable(QJsonDocument(position(config.path())).toJson(QJsonDocument::Compact)));
+        }
+        QVERIFY(!position(config.path()).contains("tabs")); QVERIFY(!position(config.path()).contains("activeTab"));
+        QVERIFY(!readRoot(config.path()).contains("recovery"));   // and no recovery record without a claim
     }
 
     // Lead decision: the legacy no-claim restore stays for legacy reads, but validates exactly as the claimed path does.

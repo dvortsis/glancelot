@@ -1,6 +1,6 @@
 # STACK-F015-RECOVERY handoff
 
-Track session S5 (stack viewer), Phase 0 cycle 1. Review round 1 fixes by fix session S8 are in the section of that name at the end; where it and the earlier sections disagree, it is current. Contract: LEAD-WRAPUP-2026-10-22.md (F015 bullet), LEAD-TAKEOVER-2026-10-22.md section 4 and LEAD-PLAN-2026-10-22.md section 5. Not self-approved; a fresh reviewer decides.
+Track session S5 (stack viewer), Phase 0 cycle 1. Review round 1 and round 2 fixes are in the sections of those names at the end; where they and the earlier sections disagree, the latest is current. Contract: LEAD-WRAPUP-2026-10-22.md (F015 bullet), LEAD-TAKEOVER-2026-10-22.md section 4 and LEAD-PLAN-2026-10-22.md section 5. Not self-approved; a fresh reviewer decides.
 
 | | |
 | --- | --- |
@@ -29,7 +29,7 @@ Tabs now persist through the production recovery session (`recovery::Session` �
 
 ### Not changed, deliberately
 
-The no-claim path (`setWindowSlot(n)` without a recovery session, used by `window_slot_tests`) still writes `tabs` / `activeTab` through its existing `updateSettings` position writer. In that mode it is the only writer, so it is not a second writer next to the session. `window_slots` passes unchanged. Removing it would break `tests/window_slot_tests.cpp`, which is outside this packet's files. **Lead decision:** keep it, or retire the no-claim position writer in a later packet.
+The no-claim path (`setWindowSlot(n)` without a recovery session, used by `window_slot_tests`) still writes `tabs` / `activeTab` through its existing `updateSettings` position writer. In that mode it is the only writer, so it is not a second writer next to the session. `window_slots` passes unchanged. Removing it would break `tests/window_slot_tests.cpp`, which is outside this packet's files. **Lead decision:** keep it, or retire the no-claim position writer in a later packet. *(Superseded in review round 2: the lead retired the no-claim tab write. See the end of this file.)*
 
 ### Files
 
@@ -393,5 +393,168 @@ No CMake, queue, UI or other shared files changed.
 ### Unverified / notes (round 1)
 
 - Not run on Windows here. The `build.yml` `viewer` job on this push is the early MSVC signal.
-- A slot or claim change in the middle of a tab switch (`setWindowSlot` / `setWindowClaim` replay `notePosition(lastDecodedPath)`) would settle the switch on the previous tab's last decoded image. Those functions are outside this packet's regions, and claims are set when the window is created, before tabs exist. No production path reaches this. It is not covered by a test.
+- *(Corrected in review round 2: this note was wrong.)* A slot or claim change in the middle of a tab switch (`setWindowSlot` / `setWindowClaim` replay `notePosition(lastDecodedPath)`) would settle the switch on the previous tab's last decoded image. A production path does reach it: `app/main.cpp:211` retries a busy startup claim every 4 s, up to 8 times, and each retry calls `setWindowClaim` then `restoreWindow` on a live window that may already have tabs. Round 2 fixes the replay and tests it.
 - A decode that fails after a switch leaves the target settling, so the saved position stays the target's stored location. That is the image that failed. A restart retries it and reports the same decode error, as the live window does.
+
+## Review round 2 fixes
+
+Fix session S9 (Claude Code, Opus 5.5, on the lead's Windows PC). Earlier implementers were unavailable. Not self-approved; a new fresh reviewer decides. Review: `origin/claude/review-stack-f015` `6d882b2`, `docs/verification/STACK-F015-RECOVERY-REVIEW.md` (CHANGES REQUIRED: B1; N1, N3).
+
+| | |
+| --- | --- |
+| Round 1 tip | `8afe4cd` |
+| F040 merge | `5396de7`: `git merge --no-edit origin/claude/stack-f040-pinned` (F040's approved tip `b610348`). Clean `ort` merge, no conflicts; the two branches change no file in common. F015 now stacks on F040's tip, not on its implementation commit `b13f6c1`. |
+| Round 2 fix commit | the commit that adds this section (round 2 only: `git diff 5396de7 <tip>`; the whole packet on F040's tip: `git diff b610348 <tip>`) |
+
+### B1 (High): a stale decode from the previous tab settled a folder-route switch
+
+**Cause.** `activateTab()` and `closeTab()` of the active tab fall back to `navigateDirectory(target.folder)` when the target's image is gone. That route neither bumps `generation` nor cancels a decode of the previous tab still in flight. The decode landed, `notePosition(path)` cleared `tabSettling` and wrote the previous tab's image into `pendingFolder`/`pendingImage` while `activeTabIndex` was already the target. With the target folder unavailable nothing corrected it, and the destructor marked the wrong record `clean`.
+
+**Fix (option B, generation-style fencing)**, `src/app/viewer_controller.cpp`:
+
+- `Private::openSerial` / `settleSerial` (about line 190). `ViewerController::open()` increments `openSerial` next to its `++generation; cancel()` (about line 1617; one token outside the tab regions, declared here). `settleOn()` records `settleSerial=openSerial`.
+- `notePosition()` (about line 447) clears `tabSettling` and moves the position only if `openSerial!=settleSerial`, that is, only for an image opened after the switch began. A decode issued before the switch still updates `lastDecodedPath` (the canvas shows it) but leaves the target's stored location as the position and the active tab's location.
+- Why a separate counter and not `generation`: a late fs-watch baseline (`decodeStartedWithoutBaseline`, about line 375) runs `++generation` and re-decodes the *previous* tab's `path` during a folder-route switch, so a generation fence would let that re-decode settle the target. Only `open()` bumps `openSerial`, and every `open()` also bumps `generation` and cancels the older decode.
+- The in-flight decode is not retired on switch (option A). With `++generation; cancel()` the failed-folder branch never clears `loading`, so the window would sit on "Opening…" until the 15 s deadline reported a false decoder timeout. The fence alone keeps the tab strip and the checkpoint correct.
+- Transient form (the target folder lists images; the destructor runs before its navigation result): the stale decode is fenced the same way, so the destructor saves the target's stored location. This is reasoned from the same code path, not tested: the navigation worker and the decoder process cannot be ordered deterministically here.
+
+### N1: the claim-retry replay (`app/main.cpp:211`)
+
+The round 1 note said no production path reaches the replay mid-switch; it does (corrected above). `setWindowSlot()` (two sites) and `setWindowClaim()` now call `Private::replayPosition()` (about line 203) instead of `notePosition(lastDecodedPath)`. Outside a switch it is the old replay. During a switch it keeps the target's stored location as the position and marks it dirty (`positionDirty=slot>0`, timer started), so the new claim's session checkpoints the correct tab set and the destructor never cleans a record it did not write. The fence alone does not cover this: on the image route `open(target)` has already advanced `openSerial`, so the old replay would settle on the previous tab's last decoded image. `restoreWindow()` after the retry returns early as before (a path is open or a tab action set `explicitPositionIntent`).
+
+### N3 (lead decision): no-claim tab write retired
+
+Production always claims a slot (`app/main.cpp:206` calls `setWindowClaim`; the retry at line 211 too), so tab state is written only by the recovery checkpoint. The no-claim branch of `writePosition()` (about line 470) no longer builds tab rows: it writes `folder`/`image`/`saved` only, and replacing the slot entry drops any stale stored tabs. Reading is unchanged: the legacy no-claim restore still validates through `recovery::readTabs`, the same function as the claimed path (`legacyNoClaimRestoreValidatesTabsLikeTheClaimedPath`, 14 rows; `legacyNoClaimRestoreKeepsValidTabs`).
+
+Scope as implemented: the folder/image no-claim position writer itself stays. `tests/window_slot_tests.cpp` (the required `window_slots` target, 60+ uses) and `tests/folder_tree_tests.cpp:685` depend on it, and both are outside this packet's files. If the lead wants the whole no-claim writer retired, that is a follow-up packet that also owns those tests.
+
+**One edit outside this packet's test file.** Retiring the tab write made `window_slots` fail deterministically (not budget flake) in `WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow`, which asserted the no-claim tab round trip:
+
+```
+FAIL!  : WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow() Compared values are not the same
+   Actual   (w.tabs().size()): 0
+C:\src\Github\Glancelot\.worktrees\claude-f015\tests\window_slot_tests.cpp(1002) : failure location
+Totals: 37 passed, 1 failed, 0 skipped, 0 blacklisted, 31135ms
+```
+
+That function is F015's own (`2566014` "F015: tabs as saved locations (shape A) …"), and the lead decision makes its persistence half obsolete. It was ported, not weakened: each of its two windows now claims a slot with `WindowSlot(config, 0)` declared before the controller (so the claim outlives the final checkpoint) and calls `setWindowClaim()` instead of `setWindowSlot(6)`. Every assertion is unchanged (implicit single tab, titles, switching, the eight-tab cap, closing down to two, the restored set and active tab, closing down to one). After the port: `window_slot_tests.exe` `Totals: 38 passed, 0 failed, 0 skipped, 0 blacklisted, 52071ms`. No other test in `tests/` persists tabs without a claim (`input_ui_tests.cpp:785` uses `tab-new` for the UI strip only). If `tests/window_slot_tests.cpp` belongs to another track, the lead may reassign this edit.
+
+### Tests added (`tests/tabs_recovery_tests.cpp`)
+
+Each asserts the live tab strip (`viewer.tabs()`, `activeTab()`) before the window closes, then every tab's stored location, the active index and the slot position, and that the record marked `clean` is that correct record. A precondition in each makes it unable to pass vacuously (the stale decode really landed, the folder navigation really was pending, the target really had not decoded).
+
+| Test | Covers |
+| --- | --- |
+| `staleDecodeCannotSettleADirectorySwitch` (rows: switch, close the active tab) | The reviewer's scenario. Three tabs settled on gamma; beta's folder removed; `open(alpha)` in tab 2, still loading; then `activateTab(1)` or `closeTab(2)`. Waits until the folder route failed and the stale decode landed (`shows(alpha)`). Expects `[alpha, beta, alpha]` active 1, or `[alpha, beta]` active 1. |
+| `secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation` (rows: new tab, switch again, close another tab, stale decode + new tab) | A second tab action while the folder-route switch is still pending (`directoryPending()` asserted). Covers the settling branch of `activeLocation()` (the reviewer's M3 gap). Expects `[alpha, beta, beta, gamma]` active 2; `[alpha, beta, gamma]` active 0; `[beta, gamma]` active 0; `[alpha, beta, beta, alpha]` active 2. |
+| `claimRetryDuringATabSwitchKeepsEveryTabsLocation` | N1. An unclaimed window (the busy startup case) with three tabs; `activateTab(0)` (image route, not decoded); then `WindowSlot` + `setWindowClaim()` + `restoreWindow()` as `app/main.cpp:211` does; destroy. Expects `[alpha, beta, gamma]` active 0, record `clean`. |
+| `noClaimWriterNeverWritesTabs` | N3. A stored valid tab set; an unclaimed `setWindowSlot(1)` window with two live tabs; `flushWindowPosition()` and close. The position is saved; the entry has no `tabs` and no `activeTab`; no recovery record exists. |
+
+### Fail before, pass after
+
+Fail before: the tests above built against the round 1 controller as merged (`5396de7`, controller unmodified). `tabs_recovery_tests.exe` with the four new functions, Windows, offscreen. Temporary paths are shortened to the media-relative part.
+
+```
+FAIL!  : TabsRecoveryTests::staleDecodeCannotSettleADirectorySwitch(switch) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, alpha/a.png, alpha/a.png] active 1)
+FAIL!  : TabsRecoveryTests::staleDecodeCannotSettleADirectorySwitch(close the active tab) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, alpha/a.png] active 1)
+PASS   : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(new tab)
+PASS   : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(switch again)
+PASS   : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(close another tab)
+FAIL!  : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(stale decode, new tab) 'live.isEmpty()' returned FALSE. (live tab 2 holds the wrong location: live tabs [alpha/a.png, beta/b.png, alpha/a.png, alpha/a.png] active 2)
+FAIL!  : TabsRecoveryTests::claimRetryDuringATabSwitchKeepsEveryTabsLocation() 'differ.isEmpty()' returned FALSE. (wrong position: stored tabs [gamma/c.png in gamma, beta/b.png in beta, gamma/c.png in gamma] active 0, position gamma/c.png in gamma)
+FAIL!  : TabsRecoveryTests::noClaimWriterNeverWritesTabs() '!position(config.path()).contains("tabs") && !position(config.path()).contains("activeTab")' returned FALSE. ({"activeTab":1,"folder":".../beta","image":".../beta/b.png","saved":1792744115,"tabs":[{"folder":".../alpha","image":".../alpha/a.png"},{"folder":".../beta","image":".../beta/b.png"}]})
+Totals: 5 passed, 5 failed, 0 skipped, 0 blacklisted, 7978ms
+```
+
+The B1 rows fail on the live tab strip first: all tabs read `alpha`, so beta's location is gone in memory as well as on disk (the reviewer's run showed the same on disk, `[alpha, alpha, alpha]`). The three non-stale rows of the second-action test pass on round 1 by design: they cover round 1's settling branch of `activeLocation()`, and their ability to fail is shown by M3 below.
+
+Pass after (fix applied, whole executable):
+
+```
+Totals: 59 passed, 0 failed, 0 skipped, 0 blacklisted, 38154ms
+```
+
+59 = initTestCase, cleanupTestCase, 25 functions, and the data rows (14 malformed, 14 legacy, 3 close-active, 2 stale-decode, 4 second-action).
+
+### Mutation checks (each one edit, rebuilt `tabs_recovery_tests` only, then reverted)
+
+| Mutation | Result |
+| --- | --- |
+| M3 (the reviewer could not run it): `activeLocation()` always returns `liveLocation()`, removing the "where am I" fallback during a switch | 53 passed, 6 failed: both `staleDecodeCannotSettleADirectorySwitch` rows and all four `secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation` rows. Output below. |
+| M4: `setWindowClaim()` goes back to the old replay (`tabSettling=false; notePosition(lastDecodedPath)`), with the B1 fence kept | `claimRetryDuringATabSwitchKeepsEveryTabsLocation` fails: stored `[gamma, beta, gamma]` active 0, position gamma. Shows the replay guard is needed on top of the fence. |
+
+```
+M3:
+FAIL!  : TabsRecoveryTests::staleDecodeCannotSettleADirectorySwitch(switch) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, alpha/a.png, alpha/a.png] active 1)
+FAIL!  : TabsRecoveryTests::staleDecodeCannotSettleADirectorySwitch(close the active tab) 'live.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, alpha/a.png] active 1)
+FAIL!  : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(new tab) 'early.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, gamma/c.png, gamma/c.png, gamma/c.png] active 2)
+FAIL!  : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(switch again) 'early.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, gamma/c.png, gamma/c.png] active 0)
+FAIL!  : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(close another tab) 'early.isEmpty()' returned FALSE. (live tab 0 holds the wrong location: live tabs [gamma/c.png, gamma/c.png] active 0)
+FAIL!  : TabsRecoveryTests::secondTabActionBeforeTheTargetSettlesKeepsEveryTabsLocation(stale decode, new tab) 'early.isEmpty()' returned FALSE. (live tab 1 holds the wrong location: live tabs [alpha/a.png, alpha/a.png, alpha/a.png, alpha/a.png] active 2)
+Totals: 53 passed, 6 failed, 0 skipped, 0 blacklisted, 33387ms
+
+M4:
+FAIL!  : TabsRecoveryTests::claimRetryDuringATabSwitchKeepsEveryTabsLocation() 'differ.isEmpty()' returned FALSE. (wrong position: stored tabs [gamma/c.png in gamma, beta/b.png in beta, gamma/c.png in gamma] active 0, position gamma/c.png in gamma)
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 865ms
+```
+
+### Build and targeted ctest
+
+Environment: Windows 11, MSVC 2022, Qt 6.8.3 (`.tools`), Ninja Release, offscreen. Build directory `build-claude-f015`.
+
+Build, after the mutations were reverted: `build-slot.ps1 -Run { … scripts\build.ps1 -BuildDir build-claude-f015 }`, 554/554 targets, exit 0. `window_slot_tests` was then rebuilt alone for the port described under N3.
+
+First gated run, before the `window_slots` port (both runs the same, deterministic): `window_slots` failed, the other six passed. The failure is the one quoted under N3.
+
+```
+1/7 Test #11: window_slots .....................***Failed   29.01 sec
+...
+86% tests passed, 1 tests failed out of 7
+```
+
+Final: `gate-lock.ps1 -Branch claude/f015-fix -Run { … ctest -R '^(tabs_recovery|recovery|recovery_controller|recovery_startup|recovery_process|window_slots|reference_pin)$' --output-on-failure }`, twice, with PATH prefixed by `.tools\python\Scripts` and the Qt `bin`:
+
+```
+=== run 1
+1/7 Test #11: window_slots .....................   Passed   28.63 sec
+2/7 Test #38: recovery .........................   Passed   14.21 sec
+3/7 Test #39: recovery_startup .................   Passed    0.48 sec
+4/7 Test #40: recovery_controller ..............   Passed   14.46 sec
+5/7 Test #41: recovery_process .................   Passed   28.90 sec
+6/7 Test #42: tabs_recovery ....................   Passed   27.81 sec
+7/7 Test #45: reference_pin ....................   Passed   16.42 sec
+100% tests passed out of 7
+Total Test time (real) = 130.96 sec
+exit 0
+=== run 2
+1/7 Test #11: window_slots .....................   Passed   27.23 sec
+2/7 Test #38: recovery .........................   Passed   13.73 sec
+3/7 Test #39: recovery_startup .................   Passed    0.50 sec
+4/7 Test #40: recovery_controller ..............   Passed   14.33 sec
+5/7 Test #41: recovery_process .................   Passed   28.25 sec
+6/7 Test #42: tabs_recovery ....................   Passed   27.51 sec
+7/7 Test #45: reference_pin ....................   Passed   16.28 sec
+100% tests passed out of 7
+Total Test time (real) = 127.84 sec
+exit 0
+```
+
+### Files changed in round 2
+
+| File | Change |
+| --- | --- |
+| `src/app/viewer_controller.cpp` | Tab-persistence regions: `openSerial`/`settleSerial`, `settleOn()`, `replayPosition()`, the fence in `notePosition()`, the no-claim writer without tabs. Outside them, declared: one `++d->openSerial` in `open()`, and the replay call in `setWindowSlot()` (two sites) and `setWindowClaim()`. |
+| `tests/tabs_recovery_tests.cpp` | `showThreeTabs`, `liveTabsDiffer`, `pick` helpers and the four tests above |
+| `tests/window_slot_tests.cpp` | `tabsKeepLocationsAndRestoreWithTheWindow` only (F015's own test, `2566014`): both windows claim a slot instead of `setWindowSlot(6)`; assertions unchanged (see N3) |
+| `docs/handoff/STACK-F015-RECOVERY-HANDOFF.md` | This section; the round 1 replay note and the round 0 no-claim note marked corrected/superseded |
+
+No shared header, CMake, queue or UI file changed in round 2. The public header diff is unchanged from round 1.
+
+### Pre-handoff checklist (AGENTS.md)
+
+- Branch `claude/stack-f015-recovery`; tip SHA in the table above and in the commit; pushed fast-forward.
+- Files changed: listed above.
+- Actual `ctest` output: targeted `ctest -R` twice above. The full offscreen suite was not run in round 2; the authoritative `lead-windows-gate` decides on the integrated commit.
+- Failure and cancellation cases: folder unavailable during a switch and a close; a stale decode landing after the switch; a second tab action before settling; a claim retry mid-switch; no-claim writes; plus round 1's decode failure, write failure, busy writer and stale sequence cases.
+- Unverified: the transient B1 form (target folder lists; destructor before its navigation result), reasoned only. Physical, multi-window and GPU paths not exercised; `reference_pin` skips its native-RHI cases offscreen. No UI files changed, so the ui-design-skills did not apply.
+- Lead-owned files: none touched in round 2. N2 (the provisional `CMakeLists.txt` include and `cmake/TabsRecoveryTests.cmake`) is still the lead's call.

@@ -983,8 +983,11 @@ void WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow() {
     const QString a = QDir(media.path()).filePath("alpha/a.png"), b = QDir(media.path()).filePath("beta/b.png");
     QVERIFY(image.save(a) && image.save(b));
     auto same = [](const QString& x, const QString& y) { return QDir::cleanPath(x).compare(QDir::cleanPath(y), Qt::CaseInsensitive) == 0; };
+    // STACK-F015-RECOVERY round 2 (lead decision): tabs persist only through a claimed slot's recovery checkpoint, as in
+    // production; the no-claim position writer saves no tabs. Each window claims a slot that outlives its controller.
     {
-        ViewerController v; v.setWindowSlot(6);
+        WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+        ViewerController v; v.setWindowClaim(slot.claimIdentity());
         QVERIFY(v.tabs().isEmpty()); QVERIFY(!v.closeTab(0)); QVERIFY(!v.activateTab(1)); // one implicit tab
         v.open(a); QTRY_VERIFY(v.imageReady());
         QVERIFY(v.newTab()); QCOMPARE(v.tabs().size(), 2); QCOMPARE(v.activeTab(), 1);
@@ -997,7 +1000,8 @@ void WindowSlotTests::tabsKeepLocationsAndRestoreWithTheWindow() {
         while (v.tabs().size() > 2) QVERIFY(v.closeTab(v.tabs().size() - 1));
         v.flushWindowPosition();
     }
-    {   ViewerController w; w.setWindowSlot(6); w.restoreWindow();
+    {   WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+        ViewerController w; w.setWindowClaim(slot.claimIdentity()); w.restoreWindow();
         QTRY_VERIFY(w.imageReady());
         QCOMPARE(w.tabs().size(), 2);
         QVERIFY(same(w.tabs().at(0).toMap().value("folder").toString(), QDir(media.path()).filePath("alpha")));
