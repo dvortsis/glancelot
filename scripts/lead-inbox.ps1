@@ -6,6 +6,7 @@
 # Review branches (origin/claude/review-<task>[-*]) appear under their packet; ones that match no packet get a row.
 param([switch]$Json, [switch]$NoFetch, [string]$Remote = 'origin', [string]$Main = 'main', [int]$Width = 240)
 $ErrorActionPreference = 'Stop'
+function Write-Warning([string]$Message) { [Console]::Error.WriteLine("WARNING: $Message") }
 if (-not $NoFetch) { git fetch --prune --quiet $Remote 2>$null; if ($LASTEXITCODE -ne 0) { Write-Warning "git fetch --prune $Remote failed; using cached refs" } }
 $mainRef = "$Remote/$Main"
 
@@ -35,8 +36,15 @@ function Get-TaskKey([string]$name) {
     if ($name -match '^(?:stack-)?([a-z]+-?\d+)') { $Matches[1].ToUpperInvariant() } else { $null }
 }
 
-$refs = git for-each-ref --format='%(refname:short)|%(objectname:short)|%(committerdate:short)' "refs/remotes/$Remote/claude/"
-$branches = foreach ($r in $refs) { $p = $r -split '\|'; [pscustomobject]@{ ref = $p[0]; name = $p[0].Substring("$Remote/claude/".Length); sha = $p[1]; date = $p[2] } }
+# Ref names and SHAs only (they never need the object), then each date separately: a ref whose object is missing
+# gets a blank date instead of breaking the whole listing.
+$refs = git for-each-ref --format='%(refname:short)|%(objectname:short)' "refs/remotes/$Remote/claude/" 2>$null
+$branches = foreach ($r in $refs) {
+    $p = $r -split '\|'
+    if ($p.Count -lt 2 -or $p[0].Length -le "$Remote/claude/".Length) { continue }
+    $date = git log -1 --format=%cs $p[1] 2>$null; if ($LASTEXITCODE -ne 0) { $date = $null }
+    [pscustomobject]@{ ref = $p[0]; name = $p[0].Substring("$Remote/claude/".Length); sha = $p[1]; date = $date }
+}
 $reviewRefs = @($branches | Where-Object { $_.name -like 'review-*' })
 $matchedReviews = [Collections.Generic.HashSet[string]]::new()
 
@@ -52,12 +60,20 @@ function Get-ReviewVerdict($rb) {
     }
     if (-not $file) { return [pscustomobject]@{ branch = "claude/$($rb.name)"; sha = $rb.sha; file = $null; verdict = 'no review file' } }
     $top = git show "$($rb.ref):$file" 2>$null | Select-Object -First 15
-    $verdict = ($top | Select-String -Pattern 'Verdict:?\s*\**\s*(APPROVED|CHANGES REQUIRED)' | Select-Object -First 1).Matches.Groups[1].Value
-    if (-not $verdict) { $verdict = ($top | Select-String -Pattern '\b(APPROVED|CHANGES REQUIRED)\b' | Select-Object -First 1).Matches.Groups[1].Value }
+    # A file without a verdict line (or an unreadable one) gives no match, never an error.
+    $verdict = $null
+    foreach ($pattern in 'Verdict:?\s*\**\s*(APPROVED|CHANGES REQUIRED)', '\b(APPROVED|CHANGES REQUIRED)\b') {
+        $hit = @($top) | Where-Object { "$_" -match $pattern } | Select-Object -First 1
+        if ($hit -and "$hit" -match $pattern) { $verdict = $Matches[1].ToUpperInvariant(); break }
+    }
     [pscustomobject]@{ branch = "claude/$($rb.name)"; sha = $rb.sha; file = (Split-Path $file -Leaf); verdict = $(if ($verdict) { $verdict } else { 'no verdict line' }) }
 }
 
-$rows = foreach ($b in $branches | Where-Object { $_.name -notlike 'review-*' }) {
+function Get-ReviewVerdictSafe($rb) {
+    # Any branch shape (deleted after --prune, no files, odd names) degrades to a blank verdict instead of failing.
+    try { Get-ReviewVerdict $rb } catch { [pscustomobject]@{ branch = "claude/$($rb.name)"; sha = $rb.sha; file = $null; verdict = '' } }
+}
+$rows = foreach ($b in $branches | Where-Object { $_.name -notlike 'review-*' }) { try {
     # Queue row by its branch: field; rows without one are matched by the id parsed from the branch name.
     $q = $queue["claude/$($b.name)"]; $queueMatch = if ($q) { 'branch' } else { $null }
     $taskId = if ($q) { $q.id } else { Get-TaskKey $b.name }
@@ -73,16 +89,21 @@ $rows = foreach ($b in $branches | Where-Object { $_.name -notlike 'review-*' })
     $reviews = @()
     if ($taskId) {
         $key = "review-$($taskId.ToLowerInvariant())"
-        $reviews = @($reviewRefs | Where-Object { $_.name -eq $key -or $_.name -like "$key-*" } | Sort-Object name | ForEach-Object { [void]$matchedReviews.Add($_.name); Get-ReviewVerdict $_ })
+        $reviews = @($reviewRefs | Where-Object { $_.name -eq $key -or $_.name -like "$key-*" } | Sort-Object name | ForEach-Object { [void]$matchedReviews.Add($_.name); Get-ReviewVerdictSafe $_ })
     }
     git merge-base --is-ancestor $b.ref $mainRef 2>$null; $merged = $LASTEXITCODE -eq 0
     [pscustomobject]@{ branch = "claude/$($b.name)"; tip = $b.sha; date = $b.date; task = $taskId; queue = $(if ($q) { $q.state } else { $null }); queueMatch = $queueMatch
         merged = $merged; handoff = $(if ($handoff) { Split-Path $handoff -Leaf } else { $null }); reviewRound = $round; reviews = $reviews }
-}
+} catch {
+    # Any branch shape that still fails degrades to blank cells, with the reason on the warning stream.
+    Write-Warning "claude/$($b.name): $($_.Exception.Message)"
+    [pscustomobject]@{ branch = "claude/$($b.name)"; tip = $b.sha; date = $b.date; task = $null; queue = $null; queueMatch = $null
+        merged = $null; handoff = $null; reviewRound = $null; reviews = @() }
+} }
 $orphans = foreach ($rb in $reviewRefs | Where-Object { -not $matchedReviews.Contains($_.name) }) {
     git merge-base --is-ancestor $rb.ref $mainRef 2>$null; $merged = $LASTEXITCODE -eq 0
     [pscustomobject]@{ branch = "claude/$($rb.name)"; tip = $rb.sha; date = $rb.date; task = $null; queue = $null; queueMatch = $null; merged = $merged
-        handoff = $null; reviewRound = '(review branch, no matching packet)'; reviews = @(Get-ReviewVerdict $rb) }
+        handoff = $null; reviewRound = '(review branch, no matching packet)'; reviews = @(Get-ReviewVerdictSafe $rb) }
 }
 $all = @($rows) + @($orphans)
 
