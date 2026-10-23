@@ -35,7 +35,7 @@ Session: S1 build (cloud), Phase 0 cycle 1. Scope and acceptance: docs/handoff/L
 | `ui` | 5 | `folder_grid`, `input_ui`, `pathbar_ui`, `fs_watch_ui`, `monitor_customization_ui` | loads the shipped `ui/Main.qml` in a `QQuickWindow` |
 | `budget` | 7 | `fs_watch_budget`, `fs_watch`, `folder_grid`, `cache`, `window_slots`, `recovery_controller`, `input_ui` | the seven tests the plan names (also AGENTS.md); `RESOURCE_LOCK budget` |
 | `native` | 9 | `platform_integration`, `file_operation_service`, `recovery_process`, `folder_grid`, `window_slots`, `fs_watch`, `file_operations`, `directory_listing`, `selection_export` | real OS desktop shell, trash, `subst`, `cmd` `mklink`, or a window on the real platform plugin (not forced offscreen). Details in "Review round 1 fixes" |
-| `process` | 22 (round 2) | see "Review round 2" | any child process, directly or through product code (decoder, helper, app, Python, `cmd`, `subst`). Can overlap `fast`. Round 1 had 8 tests, under a narrower rule |
+| `process` | 23 (round 3) | see "Review round 2" and "Review round 3" | any child process, directly or through product code (decoder, helper, app, Python, `cmd`, `subst`). Can overlap `fast`. Round 1 had 8 tests, under a narrower rule |
 | `clipboard` | 3 | `folder_grid`, `input_ui`, `metadata` | reaches `QGuiApplication::clipboard()` directly or through product code. `RESOURCE_LOCK clipboard` |
 
 ## Build environment
@@ -499,7 +499,7 @@ This round answers `docs/verification/EN-03-REVIEW.md` at `origin/claude/review-
   - applies the declared `LABELS` and `RESOURCE_LOCK`;
   - appends `fast` to every registered test without `ui`, `budget` or `native`.
 
-  It also walks `SUBDIRECTORIES` and fails if one registers tests. Today there are none, and labels are applied only in the root directory.
+  It also walks `SUBDIRECTORIES` and fails if one registers tests. Today there are none, and labels are applied only in the root directory. (Changed in round 3: subdirectory tests are now collected and labelled.)
 
 **What was removed:** the hand-kept `fast` list, both `fast`-mismatch errors, the "no CTest label" error and the core-name list.
 
@@ -525,7 +525,7 @@ I audited all 43 tests statically. The reviewer's process poller saw `acceptance
 **Kept** (8): `thumbnails`, `io_scheduler`, `fs_watch`, `window_slots`, `recovery`, `recovery_startup`, `platform_integration`, `recovery_process`.
 
 **Not `process`**, because no child is started:
-- `pathbar_ui`: only folders and `.txt` files, and its `Harness` uses the fake `PreviewProvider` for thumbnails.
+- ~~`pathbar_ui`~~: this was wrong, and round 3 corrects it. `pathbar_ui` builds `Media` (`p1.png`, `p2.png`), and `openFolder(h, media)` calls `viewer.open` (`tests/ui_test_support.hpp:126`), which starts the decoder.
 - `fs_watch_ui`: navigates an empty folder.
 - `monitor_output`: images reach the presentation window through `updateImage`; the viewer is never asked to open a file.
 - `monitor_customization`: in-memory images, no `ViewerController`.
@@ -613,6 +613,42 @@ configure exit: 1
 ```
 
 In N1 and N3, the first line, `CMake Error at cmake/TestLabels.cmake:<line> (message):`, was cut off by the helper script's last-8-lines filter. The scratch build directories were deleted afterwards.
+
+## Review round 3
+
+This round answers `docs/verification/EN-03-REVIEW-R3.md` at `origin/claude/review-en-03-r3` (`91d27ba`). The checks were configure-only, on the same Windows PC.
+
+1. **R3-1: `pathbar_ui` is now `ui process`.** Its tests write `p1.png` and `p2.png` through `Media`, and `openFolder(h, media)` runs `h.viewer.open` (`tests/ui_test_support.hpp:126`), which starts `glancelot-decoder`. The reviewer's poller saw it start the decoder. My static grep had matched only `viewer.open`, not the `openFolder(h, ...)` helper. The only other user of that helper is `input_ui`, which is already `process`.
+   - `process` now has 23 tests.
+   - `fast` is unchanged, because `pathbar_ui` is `ui`.
+2. **N1: subdirectory tests are collected.** `glancelot_finalize_test_labels()` no longer fails when a subdirectory registers tests. It walks `SUBDIRECTORIES` recursively and gathers each directory's `TESTS`. A declaration is valid if the test exists in any of those directories. Labels, locks and `fast` are applied with `set_property(TEST <name> DIRECTORY <dir> ...)`. On CMake older than 3.28, which lacks that form, configure fails only when a subdirectory actually has tests; the project minimum is 3.24.
+
+Output:
+
+```
+> configure (viewer on)            configure exit: 0
+> ctest -N                         Total Tests: 43
+> -N -L ^fast$     (27) unchanged
+> -N -L ^ui$       (5)  folder_grid input_ui pathbar_ui fs_watch_ui monitor_customization_ui
+> -N -L ^native$   (9)  unchanged
+> -N -L ^process$  (23) selection_export directory_listing file_operations viewer_acceptance thumbnails folder_tree window_slots folder_grid input_ui pathbar_ui file_operation_service platform_integration fs_watch fs_watch_budget filter cache io_scheduler copy_move recovery recovery_startup recovery_controller recovery_process monitor_customization_ui
+> -N -L ^clipboard$ (3) folder_grid input_ui metadata
+
+# Scratch, not committed: add_subdirectory(zzsub) before the finalize call, viewer off.
+# zzsub/CMakeLists.txt registers zz_sub_plain (undeclared) and
+# zz_sub_native (glancelot_test_labels(zz_sub_native LABELS native process LOCKS clipboard)).
+configure exit: 0
+Total Tests: 7
+selection_export: LABELS=native,process LOCK=
+perf_trace: LABELS=fast LOCK=
+navigation: LABELS=fast LOCK=
+directory_listing: LABELS=native,process LOCK=
+file_operations: LABELS=native,process LOCK=
+zz_sub_plain: LABELS=fast LOCK=
+zz_sub_native: LABELS=native,process LOCK=clipboard
+```
+
+The scratch subdirectory, the `CMakeLists.txt` edit and both build directories were removed. `git status` afterwards showed only the intended files.
 
 ## Unverified
 
