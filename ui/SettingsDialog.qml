@@ -25,6 +25,18 @@ UiDialog {
         { id: "about", label: "About", icon: "info" }
     ]
     readonly property int sectionIndex: Math.max(0, sections.findIndex(item => item.id === section))
+    // STACK-F049: pane layout presets obey the one canonical lock/freeze state (paneLayout, shared with the monitor
+    // coordinator) and wait while a display transaction is saving it.
+    readonly property var monitor: typeof monitorCustomization !== "undefined" ? monitorCustomization : null
+    readonly property bool layoutSaving: monitor !== null && monitor.saving
+    readonly property bool anyPaneFrozen: {
+        const panes = paneLayout.panes
+        for (const id in panes) if (panes[id].frozen) return true
+        return false
+    }
+    readonly property string presetBlockedReason: paneLayout.locked ? qsTr("Unlock the workspace layout to apply a pane layout preset.")
+        : anyPaneFrozen ? qsTr("Unfreeze every pane to apply a pane layout preset.")
+        : layoutSaving ? qsTr("Display preferences are saving. Apply the preset when they finish.") : ""
     title: qsTr("Settings")
 
     function cleanPath(url) {
@@ -66,6 +78,7 @@ UiDialog {
         }
         if (secId === "browsing") {
             return rowMatches("Workspace layout", "Arrange panes lock")
+                || rowMatches("Pane layout presets", "Review Browse Default saved pane layouts")
                 || rowMatches("File order", "Order of photos inside a folder")
                 || rowMatches("Reverse file order", "")
                 || rowMatches("At the end of a folder", "What Next and Previous do")
@@ -378,24 +391,28 @@ UiDialog {
                     text: qsTr("Lock workspace layout")
                     description: qsTr("Keep pane positions and sizes fixed while using their contents.")
                     checked: paneLayout.locked
+                    enabled: !dialog.layoutSaving
                     onToggled: paneLayout.locked = checked
                 }
-                // F049 presets: apply a saved arrangement in one step; save the current one under a name.
+                // F049 presets: apply a saved arrangement in one step; save the current one under a name. Named and scoped
+                // apart from the per-window display workspace presets behind "Displays and workspaces…".
+                SectionLabel { objectName: "layoutPresetHeading"; text: qsTr("Pane layout presets") }
                 SettingRow {
-                    label: qsTr("Layout preset")
-                    description: qsTr("Review, Browse and Default are built in; your own saved layouts follow.")
+                    label: qsTr("Pane layout")
+                    description: qsTr("Docked panes, shared by all windows. Never changes lock, freeze or displays.")
                     RowLayout {
                         spacing: Theme.gapSm
                         UiComboBox {
                             id: presetChoice
                             objectName: "layoutPresetChoice"
                             model: paneLayout.presetNames
-                            Accessible.name: "Layout preset"
+                            Accessible.name: "Pane layout preset"
                         }
                         UiButton {
                             objectName: "layoutPresetApply"
                             text: qsTr("Apply")
-                            enabled: !paneLayout.locked && presetChoice.currentIndex >= 0
+                            enabled: dialog.presetBlockedReason.length === 0 && presetChoice.currentIndex >= 0
+                            Accessible.description: dialog.presetBlockedReason
                             onClicked: paneLayout.applyPreset(presetChoice.currentText)
                         }
                         UiButton {
@@ -407,17 +424,22 @@ UiDialog {
                         }
                     }
                 }
+                Note {
+                    objectName: "layoutPresetBlocked"
+                    visible: dialog.presetBlockedReason.length > 0
+                    text: dialog.presetBlockedReason
+                }
                 SettingRow {
-                    label: qsTr("Save current layout as")
+                    label: qsTr("Save pane layout as")
                     RowLayout {
                         spacing: Theme.gapSm
                         UiTextField {
                             id: presetName
                             objectName: "layoutPresetName"
                             implicitWidth: 180
-                            placeholderText: qsTr("Preset name")
+                            placeholderText: qsTr("Pane layout name")
                             maximumLength: 40
-                            Accessible.name: "Name for the new layout preset"
+                            Accessible.name: "Name for the new pane layout preset"
                             onAccepted: if (paneLayout.savePreset(text.trim())) text = ""
                         }
                         UiButton {
@@ -428,6 +450,7 @@ UiDialog {
                         }
                     }
                 }
+                SectionLabel { text: qsTr("Pane placement") }
                 SettingRow {
                     label: qsTr("Pane")
                     UiComboBox {
@@ -474,7 +497,7 @@ UiDialog {
                     text: qsTr("Freeze this pane")
                     description: qsTr("Lock its placement and size and keep it visible.")
                     checked: paneLayout.panes[paneId].frozen
-                    enabled: !paneLayout.locked
+                    enabled: !paneLayout.locked && !dialog.layoutSaving
                     onToggled: paneLayout.freeze(paneId,checked)
                 }
                 RowLayout {
