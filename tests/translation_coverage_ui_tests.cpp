@@ -186,7 +186,12 @@ class TranslationCoverageUiTests:public QObject {
             }
             // Everything else in the window (tree, path bar, grid, filmstrip components): reported for follow-up only.
             QList<Finding> rest,clipped;inspect(h.window->contentItem(),QString("main-%1").arg(view),rest,clipped,here);
-            for(const auto& f:rest)reportedSeen<<QString("main-%1: \"%2\" at %3").arg(view,f.text,f.where); // bar text is asserted above
+            // Bar text is asserted above. The generated media folder is data: masked so the report is stable and local paths stay out.
+            const auto folder=QDir::fromNativeSeparators(h.viewer.property("directory").toString());
+            for(const auto& f:rest) {
+                auto text=f.text;if(!folder.isEmpty()){text.replace(folder,"<folder>");text.replace(QFileInfo(folder).fileName(),"<folder>");}
+                if(text!="<folder>")reportedSeen<<QString("main-%1: \"%2\" at %3").arg(view,text,f.where);
+            }
             capture(h.window,QString("main-%1-%2").arg(view,tag));
         }
         h.window->setProperty("gridMode",false);QTRY_VERIFY(!h.window->property("gridMode").toBool());
