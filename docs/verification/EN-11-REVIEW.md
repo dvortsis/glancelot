@@ -167,3 +167,42 @@ Not run by this review: three consecutive full gates under the runner (`lead-win
 3. Optionally apply the `DecodeCache` adaptation and the `late_baseline` label on a merge of main, so the lead does not have to.
 
 A new fresh reviewer re-reviews the fix. Everything else in this document stands.
+
+## Round 1 follow-up (392c711)
+
+**Verdict: APPROVED.** B1 is fixed deterministically. Everything else from round 1 still stands. Acceptance still requires the three runner gates, which only the lead can run.
+
+Reviewed: `git diff ada9e42 392c711` on `claude/en-11-gate-stability`. The branch merges main `b4b76f1` in `718669e`. Its new commits are `f06a1eb` (DecodeCache adaptation and the `late_baseline` label), `d2ecd1b` (an attempt the next commit supersedes), `de7ba60` (the B1 fix) and handoff/TESTING docs. The lead keeps `119dbe6`.
+
+### B1 fix (de7ba60): deterministic
+
+- The test now waits for decode 1's probe frame (`QTRY_VERIFY(traceCount(trace,"decode:message")>=1)`) before it rewrites `worker.json`. The fixture's order is fixed in `tests/fs_watch_decoder_fixture.cpp`:
+  1. Lines 28-38 read and parse `--fixture-config` once into `config`.
+  2. Line 46 sends `probe`.
+  3. Line 49's `pause()` only sleeps on the value it already read, and nothing re-reads the file.
+- So a probe frame proves decode 1 has its 60 s config, and no race is left.
+- The controller writes `decode:message` unconditionally on every frame that reaches the decode worker's `readyReadStandardOutput`. No other process exists at that point: the baseline is still held, and the prefetch path does not write this trace. The test also asserts `decodes==1` and that the first process is still running before the rewrite.
+- The test uses no sleeps for synchronization, only QTRY polling of the trace file and the gate.
+- My round 1 suggestion, swapping `hooks.decoderArguments`, was wrong. `ViewerController::Private` copies the hooks at construction (`std::optional<ControllerTestHooks> testHooks{*fs_watch::controllerTestHooks}`, viewer_controller.cpp:153), so a later change does not reach it. The fixer is right about this.
+
+### f06a1eb
+
+- It is the DecodeCache change I applied in my scratch copy. `background=shown` is equivalent to the old expression.
+- `glancelot_test_labels(late_baseline LABELS process)` sits in `cmake/FSWatchTests.cmake`. `ctest -N -V` shows `Labels: fast process`.
+
+### Windows results
+
+Setup:
+- Scratch: `392c711` merged locally with the current `origin/main` `b9dc0ec` (merge commit `7d03cdd`, clean, not pushed). The scratch has no other edits.
+- Build: `build-slot.ps1 -Run { scripts/build.ps1 -BuildDir build-review-en-11 }`, exit 0, so the merge with current main compiles.
+- Tests: run inside `gate-lock.ps1 -Branch review/en-11`.
+
+| Run | Result |
+| --- | --- |
+| `ctest -R "^late_baseline$" --repeat until-fail:30 -V` | exit 0. **30 of 30 passed**, 0 `late_baseline: FAILED` lines |
+| `ctest -R "^(late_baseline\|folder_tree\|folder_grid\|fs_watch\|fs_watch_ui\|viewer_acceptance\|cache)$" --output-on-failure` | 7/7 passed: viewer_acceptance 10.1 s, folder_tree 9.7 s, folder_grid 213.8 s, fs_watch 86.0 s (82/82, 0 retry lines), late_baseline 1.7 s, fs_watch_ui 2.8 s, cache 4.9 s |
+| `ctest -R "^(fs_watch_budget\|metadata\|animation)$"` | 3/3 passed |
+| Product fix reverted (late-baseline branch only, `late_baseline_tests` rebuilt), 3 runs | Each run: `lateBaselineKeepsInFlightFolderOpen` and `lateBaselineRefreshKeepsNewerMessage` **FAIL** (`status` not "No supported images"). The other 4 pass, including `lateBaselineDuringDecodeRestartsOnce`, which is now a stable regression guard. `Totals: 4 passed, 2 failed` each time. |
+| Fix restored (rebuilt, `git status` clean) | `Totals: 6 passed, 0 failed` |
+
+Not run in round 1: the load comparison (round 1 already recorded it, and the product code has not changed since apart from the DecodeCache adaptation), the runner gates, Docker, and a manual GUI check.
