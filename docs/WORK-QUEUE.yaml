@@ -1232,7 +1232,9 @@ tasks:
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
     owner: lead
-    state: ready
+    state: review
+    branch: claude/copy-safety-01
+    review: "APPROVED round 2 at 4005869 (claude/review-copy-safety-01-r2 2f6ac32); N2 backup-name reuse fix before integration; N1 non-atomic ReplaceFileW backup recovery proposed for B2 (docs/handoff/LEAD-PAUSE-2026-10-23.md)"
     priority: 1
     outcome: An Overwrite copy or move writes to a temporary file beside the target and replaces the target atomically only after a complete, verified copy; a failed or cancelled copy leaves the original target byte-identical
     evidence_of_problem: "Found while drafting OPERATION-JOURNAL (claude/contracts-draft-b b1c835d): src/app/copy_move_service.cpp:437 opens the destination with QIODevice::Truncate, so the user's existing file is destroyed before the copy starts, and :481 calls QFile::remove(destPath) after a failed copy, deleting it outright."
