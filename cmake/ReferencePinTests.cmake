@@ -1,9 +1,8 @@
 # STACK-F040-PINNED provisional target (S5): parity of the F040 reference window and the MONITOR-OUTPUT pinned output.
-# The lead may replace this with the EN-05 viewer source list.
+# Viewer sources come from the EN-05 list (cmake/ViewerSources.cmake).
 if(BUILD_TESTING)
   qt_add_executable(reference_pin_tests tests/reference_pin_tests.cpp
-    src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-    src/app/settings_file.cpp include/glancelot/settings_file.hpp
+    ${GLANCELOT_VIEWER_SOURCES}
     src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
     src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -23,4 +22,5 @@ if(BUILD_TESTING)
   add_dependencies(reference_pin_tests glancelot-decoder)
   add_test(NAME reference_pin COMMAND reference_pin_tests -o "${CMAKE_CURRENT_BINARY_DIR}/reference_pin-results.txt,txt" -o -,txt)
   set_tests_properties(reference_pin PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
+  glancelot_test_labels(reference_pin LABELS ui process) # EN-03: loads the shipped Main.qml; starts glancelot-decoder
 endif()
