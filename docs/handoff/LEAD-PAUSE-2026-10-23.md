@@ -2,9 +2,9 @@
 
 Written for: the lead (or a new lead session) resuming the work, and the user. This is the resume point named by `pause_now` in docs/WORK-QUEUE.yaml.
 
-The user asked to pause once the running tasks finished. They have: nothing is running, no session is linked, `integration_lock` is null and the gate lock is free. Phase 1 is not complete. The plan is still docs/handoff/LEAD-PLAN-2026-10-22.md; `pause_after_phase1` still applies after the resume (finish Phase 1, then pause again before any Phase 2 contract freeze or EN-07).
+The user asked to pause once the running tasks finished. They have. At the pause, `gate-lock.ps1 -Status` showed the gate lock free, with 0 of 3 build slots and no gate requests; no ctest, cmake, ninja or docker process was running; no session is linked; `integration_lock` is null. Phase 1 is not complete. The plan is still docs/handoff/LEAD-PLAN-2026-10-22.md; `pause_after_phase1` still applies after the resume (finish Phase 1, then pause again before any Phase 2 contract freeze or EN-07).
 
-## 1. On `main` (7711988)
+## 1. On `main` (code as of 72d5de5; this document follows it)
 
 | Packet | Integrated in | Evidence |
 | --- | --- | --- |
@@ -51,16 +51,25 @@ Round 3 handoffs are on each branch (`docs/handoff/<TASK>-HANDOFF.md`; F049 foll
 
 ## 3. Open issue to check first: "next" left queued
 
-The F040 fixer saw `ViewerController::next()`, pressed twice, leave a navigation intent queued with nothing running ("step(2) timed out: index 1 ready 1 loading 0"), after merging main b9dc0ec. `navigationIntents` drains only when a navigation finishes. b9dc0ec predates EN-11, so EN-11 is not the cause; EN-06 command routing, or F040's change interacting with it, is the likely area.
+The F040 fixer saw `ViewerController::next()`, pressed twice, leave a navigation intent queued with nothing running ("step(2) timed out: index 1 ready 1 loading 0"), after merging main b9dc0ec. `navigationIntents` drains only when a navigation finishes.
 
-If this reproduces on `main`, Next can silently do nothing for the user. On resume, before the next integration: reproduce on `main` with a deterministic test (two quick `next()` calls in the reference_pin harness, or the acceptance harness), then fix it as its own packet or fold it into F040 if F040 causes it.
+b9dc0ec does not contain EN-11, and EN-11 probably fixes this. Before EN-11, a late first watcher scan ran `++generation` (`viewer_controller.cpp`, late-baseline branch), and the navigation finish handler then dropped the in-flight result as stale, so the navigation never finished and the queue never drained. EN-11 (`git diff b9dc0ec 5908284 -- src/app/viewer_controller.cpp`) keeps the generation on a late baseline and never touches navigation. F015 also merged b9dc0ec, so its tests ran without EN-11 too.
+
+On resume, first:
+
+1. Merge current `main` into `claude/stack-f040-pinned` and restore `step()` to press "next".
+2. Run `reference_pin` repeatedly (10 runs).
+3. No stall: keep `next()` in the tests and record that EN-11 fixed it. Stall: write a deterministic test on `main` and fix navigation as its own packet before any integration.
+
+Tell the F040 reviewer that the direct-open `step()` hides this question; it must not merge permanently while the stall is unexplained.
 
 ## 4. Remaining Phase 1 steps, in order
 
-1. Check the "next" stall (section 3).
+1. Check the "next" stall against current `main` (section 3).
 2. COPY-SAFETY-01 N2 fix, then lead decision on N1.
 3. Fresh reviews: F040 round 3, F015 round 3, F049 follow-ups + F054 part 2 (one review). Local reviewers, at most three local builds at once.
 4. Integration batches through the local tester (full Windows plus Docker gate on the exact commit). Suggested: COPY-SAFETY-01 with F049+F054 part 2 first (no shared files), then F040 with F015 (shared CMake file). Each passing gate also counts toward EN-11's three.
+   - F054 part 2 rewrites `ui/Main.qml` strings (44 to 149 `qsTr` calls) and regenerates `translations/glancelot_en_XA.ts`. F040 edits Main.qml's reference-window block, and F015 adds a placeholder with new uncatalogued strings. Land F054 part 2 first; F040 and F015 then merge `main`, wrap any new strings in `qsTr` and rerun lupdate before their gate, or `translation_coverage_ui` fails it (as it failed F049 in cycle1-c).
 5. STACK-CONFIRM, then the Phase 1 closeout record. Then pause again (`pause_after_phase1`).
 
 ## 5. Housekeeping (EN-10) and lead tails
