@@ -2,7 +2,7 @@
 
 Verdict: CHANGES REQUIRED
 
-- Branch reviewed: `origin/claude/lead-scripts` at `43367a6`, diffed against `origin/main` (`4f29124`).
+- Branch reviewed: `origin/claude/lead-scripts` at `43367a6`, diffed against `origin/main` (`git diff origin/main...`; merge base `f325ef6`, `origin/main` at `4f29124`).
 - Reviewer: a fresh-context Claude Code reviewer (Opus) that did not write this branch, on the Windows lead PC, using PowerShell 7.6.6.
 - Date: October 22, 2026.
 - Scope: `scripts/gate-lock.ps1`, `scripts/lock-common.ps1`, `scripts/build-slot.ps1`, `scripts/lead-inbox.ps1` and the new section in `docs/CI-GATE-RUNNER.md`.
@@ -20,7 +20,8 @@ The gate lock is still claimed with `New-Item -ItemType Directory -Path $lock -E
 - End-to-end (T1): two `gate-lock.ps1 -Run` gates started at the same instant. Both printed `GATE START` 3 ms apart and ran together for the whole 6 seconds.
   - Both then wrote `owner.json` with `Set-Content`, so the file held two concatenated JSON objects and could not be parsed.
   - Neither `finally` block recognized itself as the owner, so the lock directory was left behind. It was cleared only by the 2-minute no-owner stale rule.
-- The flaw already existed on `origin/main`, but this branch rewrites the claim loop, and the doc and the header still call the claim atomic. Gates that wait for slots now also tend to become ready together, as soon as the last slot is released.
+- How often it happens: with the new script, 1 of 6 simultaneous-start runs overlapped (T1, plus 0 of 5 in a repeat loop). With `main`'s script, 0 of 5 overlapped. The 18 of 40 figure comes from a spin loop synchronized to the millisecond, which is harsher than real use.
+- The flaw is inferred to exist on `origin/main` too, because `main` claims the lock with the same `New-Item` call. It was not reproduced there. It stays blocking because this branch rewrites the claim loop, the doc and the header still call the claim atomic, and the review brief asked about exclusive creation.
 - Fix: keep the directory for older checkouts, but decide ownership with an exclusive file claim. Create the directory with `-Force`, then call `[IO.File]::Open($ownerFile, [IO.FileMode]::CreateNew, ...)` and write the record through that handle. The loser treats the lock as held.
   - Holding the handle open for the gate's lifetime, as the slot files already do, also stops a waiter from deleting a live gate's lock.
   - Remove the lock with the same re-read guard that `Remove-StaleLockFile` uses. That also closes note N5.
@@ -30,7 +31,7 @@ The gate lock is still claimed with `New-Item -ItemType Directory -Path $lock -E
 Each gate ignores only the slots held by its own process tree. When A and B each hold a slot and then call `gate-lock.ps1` (or `build.ps1 -Test`), A waits for B's slot and B waits for A's.
 
 - While they wait, both pending markers block every new build on the machine.
-- T5 used `-WaitMinutes 1`. Both gates failed after one minute with `No gate after 1 minutes. Waiting: 1 build slots held (<the other>)`. An unrelated build, C, started at 21:24:30 and waited until both gates had failed at 21:25:26.
+- T5 used `-WaitMinutes 1`. Both gates failed after one minute with `No gate after 1 minutes. Waiting: 1 build slots held (<the other>)`. An unrelated build, C, was launched at 21:24:30 but did not start until 21:25:26, after both gates had failed.
 - With the defaults this is 180 minutes of a stalled machine, and then two failed gates.
 - The new doc section recommends exactly this pattern: "a reviewer that holds a slot can call `gate-lock.ps1`". `build-slot -Run { build.ps1 -Test }` is the natural way for an agent to use the new script.
 - Fix, one of:
@@ -87,7 +88,7 @@ Each gate ignores only the slots held by its own process tree. When A and B each
   | Older than `-StaleHours` | stale |
   | Other host | live |
 
-- **Gate and slot ordering.** The claim-then-recheck order is sound. A slot writes its file, then reads the gate and pending files. A gate writes its pending marker, then reads the slots, claims the lock, and reads the slots again. A file that is claimed but still empty counts as live for 2 minutes.
+- **Gate and slot ordering (checked by reading the code, not tested).** T2 and T3 tested the waits one after another, not the race between a claim and the re-check. The claim-then-recheck order is sound. A slot writes its file, then reads the gate and pending files. A gate writes its pending marker, then reads the slots, claims the lock, and reads the slots again. A file that is claimed but still empty counts as live for 2 minutes.
 - **Gate waits for a slot (T2).** The gate waited (`Waiting: 1 build slots held (s1 pid ...)`) and started 1 s after the slot ended.
 - **Pending gate blocks a new slot (T3).** S2 printed `Waiting: 1 gate request(s) pending`, then `Waiting: full gate held`, and started only after the gate ended.
 - **Self-held slot (T4).** A gate called in the same process, a gate called from a child `pwsh`, a nested `build-slot` inside the gate, and nested `build-slot` re-entry all ran without waiting. No files were left over.
