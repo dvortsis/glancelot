@@ -50,13 +50,14 @@ if(GLANCELOT_BUILD_VIEWER)
   if(WIN32)
     target_link_libraries(glancelot_platform PUBLIC shell32 ole32)
   endif()
-  qt_add_executable(glancelot app/main.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp src/render/presentation_window.cpp src/render/presentation_window.hpp src/render/image_canvas.cpp src/render/image_canvas.hpp
+  include(cmake/ViewerSources.cmake)
+  qt_add_executable(glancelot app/main.cpp ${GLANCELOT_VIEWER_SOURCES} src/app/theme_manager.cpp include/glancelot/theme_manager.hpp src/render/presentation_window.cpp src/render/presentation_window.hpp src/render/image_canvas.cpp src/render/image_canvas.hpp
     src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
     src/app/thumbnail_provider.cpp src/app/thumbnail_provider.hpp src/app/thumbnail_id.hpp
     src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
     src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
-    src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/window_slot.cpp include/glancelot/window_slot.hpp
+    src/app/window_slot.cpp include/glancelot/window_slot.hpp
     src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
     src/app/folder_history.cpp include/glancelot/folder_history.hpp
     src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp src/app/platform_trash.hpp src/app/file_operation_wiring.hpp)
@@ -98,7 +99,7 @@ if(GLANCELOT_BUILD_VIEWER)
   target_link_libraries(glancelot-decoder PRIVATE glancelot_platform Qt6::Core Qt6::Gui)
   include(cmake/RecoverySources.cmake)
   if(BUILD_TESTING)
-    qt_add_executable(acceptance_tests tests/acceptance_tests.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(acceptance_tests tests/acceptance_tests.cpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(acceptance_tests PRIVATE include)
     target_link_libraries(acceptance_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(acceptance_tests glancelot-decoder)
@@ -111,7 +112,7 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(thumbnail_tests glancelot-decoder)
     add_test(NAME thumbnails COMMAND thumbnail_tests -o "${CMAKE_CURRENT_BINARY_DIR}/thumbnails-results.txt,txt" -o -,txt)
     set_tests_properties(thumbnails PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
-    qt_add_executable(folder_tree_tests tests/folder_tree_tests.cpp src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(folder_tree_tests tests/folder_tree_tests.cpp src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(folder_tree_tests PRIVATE include)
     target_link_libraries(folder_tree_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(folder_tree_tests glancelot-decoder)
@@ -121,15 +122,14 @@ if(GLANCELOT_BUILD_VIEWER)
     target_include_directories(pane_layout_tests PRIVATE include src/app)
     target_link_libraries(pane_layout_tests PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME pane_layout COMMAND pane_layout_tests -o "${CMAKE_CURRENT_BINARY_DIR}/pane_layout-results.txt,txt" -o -,txt)
-    qt_add_executable(window_slot_tests tests/window_slot_tests.cpp src/app/window_slot.cpp include/glancelot/window_slot.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(window_slot_tests tests/window_slot_tests.cpp src/app/window_slot.cpp include/glancelot/window_slot.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(window_slot_tests PRIVATE include)
     target_link_libraries(window_slot_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(window_slot_tests glancelot-decoder)
     add_test(NAME window_slots COMMAND window_slot_tests -o "${CMAKE_CURRENT_BINARY_DIR}/window_slots-results.txt,txt" -o -,txt)
     set_tests_properties(window_slots PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 240)
     qt_add_executable(grid_ui_tests tests/grid_ui_tests.cpp
-      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      ${GLANCELOT_VIEWER_SOURCES}
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -150,8 +150,7 @@ if(GLANCELOT_BUILD_VIEWER)
     set_tests_properties(folder_grid PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 400)
     # INPUT-02: scoped keys, chords, holds, wheel matrix and context menus (its own file; grid_ui_tests stays untouched).
     qt_add_executable(input_ui_tests tests/input_ui_tests.cpp
-      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      ${GLANCELOT_VIEWER_SOURCES}
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -172,8 +171,7 @@ if(GLANCELOT_BUILD_VIEWER)
     set_tests_properties(input_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
     # F002: breadcrumbs and path completion (its own file; grid_ui_tests stays untouched).
     qt_add_executable(pathbar_ui_tests tests/pathbar_ui_tests.cpp
-      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      ${GLANCELOT_VIEWER_SOURCES}
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -207,7 +205,7 @@ if(GLANCELOT_BUILD_VIEWER)
     target_link_libraries(canvas_tests PRIVATE glancelot_core Qt6::Quick Qt6::GuiPrivate Qt6::Test)
     add_test(NAME viewport COMMAND canvas_tests -o "${CMAKE_CURRENT_BINARY_DIR}/viewport-results.txt,txt" -o -,txt)
     set_tests_properties(viewport PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
-    qt_add_executable(theme_tests tests/theme_tests.cpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(theme_tests tests/theme_tests.cpp src/app/theme_manager.cpp include/glancelot/theme_manager.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(theme_tests PRIVATE include)
     target_compile_definitions(theme_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(theme_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
@@ -230,7 +228,7 @@ if(GLANCELOT_BUILD_VIEWER)
     target_link_libraries(grid_density_tests PRIVATE glancelot_core Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_test(NAME grid_density COMMAND grid_density_tests -o "${CMAKE_CURRENT_BINARY_DIR}/grid_density-results.txt,txt" -o -,txt)
     set_tests_properties(grid_density PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
-    qt_add_executable(ui_settings_tests tests/ui_settings_tests.cpp src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp)
+    qt_add_executable(ui_settings_tests tests/ui_settings_tests.cpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(ui_settings_tests PRIVATE include src/app)
     target_link_libraries(ui_settings_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(ui_settings_tests glancelot-decoder)
@@ -248,26 +246,26 @@ if(GLANCELOT_BUILD_VIEWER)
     target_link_libraries(folder_history_tests PRIVATE glancelot_core Qt6::Gui Qt6::Test)
     add_test(NAME folder_history COMMAND folder_history_tests -o "${CMAKE_CURRENT_BINARY_DIR}/folder_history-results.txt,txt" -o -,txt)
     set_tests_properties(folder_history PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
-    qt_add_executable(shortcuts_help_tests tests/shortcuts_help_tests.cpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(shortcuts_help_tests tests/shortcuts_help_tests.cpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(shortcuts_help_tests PRIVATE include src/app)
     target_link_libraries(shortcuts_help_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(shortcuts_help_tests glancelot-decoder)
     add_test(NAME shortcuts_help COMMAND shortcuts_help_tests -o "${CMAKE_CURRENT_BINARY_DIR}/shortcuts_help-results.txt,txt" -o -,txt)
     set_tests_properties(shortcuts_help PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
-    qt_add_executable(filter_tests tests/filter_tests.cpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(filter_tests tests/filter_tests.cpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(filter_tests PRIVATE include src/app)
     target_link_libraries(filter_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(filter_tests glancelot-decoder)
     add_test(NAME filter COMMAND filter_tests -o "${CMAKE_CURRENT_BINARY_DIR}/filter-results.txt,txt" -o -,txt)
     set_tests_properties(filter PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
-    qt_add_executable(cache_tests tests/cache_tests.cpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(cache_tests tests/cache_tests.cpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(cache_tests PRIVATE include src/app)
     target_link_libraries(cache_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(cache_tests glancelot-decoder)
     target_compile_definitions(cache_tests PRIVATE GLANCELOT_FS_WATCH_TESTING)
     add_test(NAME cache COMMAND cache_tests -o "${CMAKE_CURRENT_BINARY_DIR}/cache-results.txt,txt" -o -,txt)
     set_tests_properties(cache PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
-    qt_add_executable(io_scheduler_tests tests/io_scheduler_tests.cpp src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp)
+    qt_add_executable(io_scheduler_tests tests/io_scheduler_tests.cpp src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp ${GLANCELOT_VIEWER_SOURCES} src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp)
     target_include_directories(io_scheduler_tests PRIVATE include src/app)
     target_compile_definitions(io_scheduler_tests PRIVATE GLANCELOT_DECODER_PATH="$<TARGET_FILE:glancelot-decoder>")
     target_link_libraries(io_scheduler_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
@@ -284,13 +282,13 @@ if(GLANCELOT_BUILD_VIEWER)
     target_link_libraries(animation_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_test(NAME animation COMMAND animation_tests -o "${CMAKE_CURRENT_BINARY_DIR}/animation-results.txt,txt" -o -,txt)
     set_tests_properties(animation PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
-    qt_add_executable(mutation_tests tests/mutation_tests.cpp src/app/folder_history.cpp include/glancelot/folder_history.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(mutation_tests tests/mutation_tests.cpp src/app/folder_history.cpp include/glancelot/folder_history.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(mutation_tests PRIVATE include src/app)
     target_link_libraries(mutation_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(mutation_tests glancelot-decoder)
     add_test(NAME mutation COMMAND mutation_tests -o "${CMAKE_CURRENT_BINARY_DIR}/mutation-results.txt,txt" -o -,txt)
     set_tests_properties(mutation PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
-    qt_add_executable(copy_move_tests tests/copy_move_tests.cpp src/app/folder_history.cpp include/glancelot/folder_history.hpp src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+    qt_add_executable(copy_move_tests tests/copy_move_tests.cpp src/app/folder_history.cpp include/glancelot/folder_history.hpp ${GLANCELOT_VIEWER_SOURCES})
     target_include_directories(copy_move_tests PRIVATE include src/app)
     target_link_libraries(copy_move_tests PRIVATE glancelot_core glancelot_platform Qt6::Gui Qt6::Test Qt6::Concurrent)
     add_dependencies(copy_move_tests glancelot-decoder)
@@ -304,8 +302,7 @@ if(GLANCELOT_BUILD_VIEWER)
     add_test(NAME format COMMAND format_tests -o "${CMAKE_CURRENT_BINARY_DIR}/format-results.txt,txt" -o -,txt)
     set_tests_properties(format PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     qt_add_executable(monitor_output_tests tests/monitor_output_tests.cpp
-      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-      src/app/settings_file.cpp include/glancelot/settings_file.hpp
+      ${GLANCELOT_VIEWER_SOURCES}
       src/render/presentation_window.cpp src/render/presentation_window.hpp
       src/render/image_canvas.cpp src/render/image_canvas.hpp)
     target_include_directories(monitor_output_tests PRIVATE include src/app src/render)

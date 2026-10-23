@@ -1,11 +1,9 @@
-# Lead-frozen FS-WATCH-01 test target. Included by the lead on the feature
-# branch once tests/fs_watch_tests.cpp exists; required before candidate review.
+# FS-WATCH-01 backend, budget and real-QML routing test targets.
 qt_add_executable(fs_watch_decoder_fixture tests/fs_watch_decoder_fixture.cpp)
 target_link_libraries(fs_watch_decoder_fixture PRIVATE Qt6::Gui)
 set(fs_watch_backend_sources
   src/app/thumbnail_service.cpp include/glancelot/thumbnail_service.hpp
-  src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-  src/app/settings_file.cpp include/glancelot/settings_file.hpp
+  ${GLANCELOT_VIEWER_SOURCES}
   src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
   src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
   src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp)
@@ -27,8 +25,7 @@ set_tests_properties(fs_watch fs_watch_budget PROPERTIES
 
 # Lead-frozen real-QML routing regression. Required alongside backend coverage.
 qt_add_executable(fs_watch_ui_tests tests/fs_watch_ui_tests.cpp
-  src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
-  src/app/settings_file.cpp include/glancelot/settings_file.hpp
+  ${GLANCELOT_VIEWER_SOURCES}
   src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
   src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
   src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
