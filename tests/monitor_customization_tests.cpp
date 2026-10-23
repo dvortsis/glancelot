@@ -89,22 +89,30 @@ private slots:
     // A layout preset applied while a coordinator transaction is still saving never leaves a second live state: the
     // runtime layout matches layouts[slot] afterwards, and a superseded edit is reported rather than dropped silently.
     void layoutPresetDuringPendingTransactionStaysCoherent() {
-        Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
-        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
-        QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
-        QVERIFY(h.panes.applyPreset("Review"));
-        lock.release();
-        QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
-        QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
-        QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());
-        const auto disk=root["layouts"].toObject()["1"].toObject()["panes"].toObject();
-        for(const auto& id:QStringList{"tree","topbar","filmstrip","grid"})
-            for(const auto* key:{"visible","frozen","region","extent"})
-                QCOMPARE(QJsonValue::fromVariant(h.panes.pane(id).value(key)),disk[id].toObject().value(key));
-        // Whichever write lands first decides; both outcomes are explicit and coherent.
-        if(h.panes.pane("topbar")["visible"].toBool()){QVERIFY(h.customization.feedback().contains("replaced"));QVERIFY(h.panes.pane("tree")["frozen"].toBool());}
-        else {QVERIFY(h.customization.feedback().contains("changed while saving"));QVERIFY(!h.panes.pane("tree")["frozen"].toBool());}
-        PaneLayout reread;reread.setSlot(1);QCOMPARE(reread.snapshot()["panes"].toMap()["tree"],h.panes.snapshot()["panes"].toMap()["tree"]);
+        for(int order=0;order<2;++order) { // 0: freeze transaction first, then the preset; 1: preset first, then the freeze
+            init();Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+            FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+            if(order==1)QVERIFY(h.panes.applyPreset("Review"));
+            QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
+            if(order==0)QVERIFY(h.panes.applyPreset("Review"));
+            lock.release();
+            QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
+            QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
+            // Compare what layouts[slot] loads as, not raw JSON: a preset that lands first writes no "frozen" key.
+            PaneLayout disk;disk.setSlot(1);QVERIFY(disk.feedback().isEmpty());QCOMPARE(disk.locked(),h.panes.locked());
+            for(const auto& id:QStringList{"tree","topbar","filmstrip","grid"})
+                for(const auto* key:{"visible","frozen","region","extent","order"})
+                    QCOMPARE(disk.pane(id).value(key),h.panes.pane(id).value(key));
+            // Whichever write lands first decides; every outcome is explicit and coherent.
+            const auto feedback=h.customization.feedback();const bool frozen=h.panes.pane("tree")["frozen"].toBool(),preset=!h.panes.pane("topbar")["visible"].toBool();
+            const bool superseded=feedback.contains("replaced")&&frozen&&!preset&&order==0;
+            const bool refused=feedback.contains("changed while saving")&&!frozen&&preset;
+            const bool both=feedback.isEmpty()&&frozen&&preset&&order==1;
+            qInfo("order %d: %s",order,superseded?"transaction superseded the preset":refused?"preset landed first; transaction refused":"both applied in order");
+            QVERIFY2(superseded||refused||both,qPrintable(QString("order %1 feedback \"%2\" frozen %3 preset %4").arg(order).arg(feedback).arg(frozen).arg(preset)));
+            cleanup();
+        }
+        init(); // the harness's own cleanup() runs after this function
     }
     void freezeLockAndEmergencyRecovery() {
         Harness h;QVERIFY(!h.manager.displays().isEmpty());const auto display=h.manager.displays().first().id;
