@@ -81,7 +81,7 @@ Two read-mostly helpers for the lead on this PC, both run from the main checkout
 ```
 
 - Each slot is a file `glancelot-build-slot-<n>.json` in the shared git dir (`git rev-parse --git-common-dir`). It records pid, host, branch, cwd and start time.
-- `-Run` waits for a free slot, up to `-TimeoutMinutes` (default 120). A slot whose holder process is dead, whose PID was reused, or that is older than `-StaleHours` (default 6) counts as free. It is removed only if it still holds the record judged stale. On Windows the holder keeps its slot file open, so a live holder's slot cannot be deleted. The script never kills processes.
+- `-Run` waits for a free slot, up to `-TimeoutMinutes` (default 120). A slot whose holder process is dead, whose PID was reused, or that is older than `-StaleHours` (default 6) counts as free. It is removed only if it still holds the record judged stale. On Windows the holder keeps its slot file open, so a live holder's slot cannot be deleted: a build that runs longer than `-StaleHours` keeps its slot, and only an exited holder's slot is ever freed. The script never kills processes.
 - While another process holds the gate lock (`scripts/gate-lock.ps1`), `-Run` waits. A build started inside the gate holder's own `-Run` block (same process, or a child that inherits `GLANCELOT_GATE_LOCK_HELD`) does not wait. The gate lock itself is never removed here.
 - Nested calls in the same process reuse the slot (`GLANCELOT_BUILD_SLOT_HELD`).
 - Use one slot count for every caller: `-Slots` (default 3) or `$env:GLANCELOT_BUILD_SLOTS`. A caller only looks at slots 1 to N.
