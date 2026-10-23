@@ -236,8 +236,35 @@ ImageCanvas::ImageCanvas(QQuickItem* parent):QQuickRhiItem(parent) {
     connect(this,&QQuickItem::windowChanged,this,[this,previous=QPointer<QQuickWindow>{}](QQuickWindow* current) mutable {
         if(previous&&previous!=current&&!previous->isExposed())previous->releaseResources();
         previous=current;
+        watchVisibility(current);
     });
     connect(this,&QQuickRhiItem::effectiveColorBufferSizeChanged,this,[this] { refreshFit(); });
+}
+void ImageCanvas::setReleaseWhenHidden(bool value) {
+    if (m_releaseWhenHidden==value) return;
+    m_releaseWhenHidden=value;
+    // QML may assign the property before or after the item joins its window.
+    watchVisibility(window());
+    emit releaseWhenHiddenChanged();
+}
+// A persistent scene graph (Qt's default) survives hide() and releaseResources(): the threaded render loop logs
+// "persistent SG, avoiding cleanup" and the renderer keeps its QImage copy, texture and admission reservation. With a
+// non-persistent scene graph, hiding wipes it; the renderer is destroyed on the render thread and releaseTexture() runs.
+// The graphics device stays persistent, so showing the window again only rebuilds the scene graph.
+void ImageCanvas::watchVisibility(QQuickWindow* current) {
+    if (m_visibilityWindow && (m_visibilityWindow!=current || !m_releaseWhenHidden)) {
+        disconnect(m_visibilityConnection);
+        m_visibilityWindow->setPersistentSceneGraph(true);
+        m_visibilityWindow=nullptr;
+    }
+    if (!m_releaseWhenHidden || !current || m_visibilityWindow==current) return;
+    m_visibilityWindow=current;
+    current->setPersistentSceneGraph(false);
+    m_visibilityConnection=connect(current,&QWindow::visibleChanged,this,[window=QPointer<QQuickWindow>(current)](bool visible) {
+        // hide() already requests the release on the threaded loop; repeating it is harmless and covers other loops'
+        // cached resources.
+        if (!visible && window) window->releaseResources();
+    });
 }
 QQuickRhiItemRenderer* ImageCanvas::createRenderer() { return new ImageRenderer; }
 qreal ImageCanvas::dpr() const { return window()?window()->effectiveDevicePixelRatio():1; }

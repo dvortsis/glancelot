@@ -71,12 +71,13 @@ public:
     explicit ViewerController(QObject* parent=nullptr);
     ~ViewerController() override;
     QImage image() const;
-    // F040 reference window: a pinned copy of the current photo (shares its pixels, so it costs no decode or memory beyond
-    // the one image) that stays put while the main window browses on. Empty until pinned.
+    // F040 reference window: the current photo pinned in its own window, which stays put while the main window browses on.
+    // It shares the decoded frame (no second decode) and is held in the display manager's retained-image budget, which
+    // may refuse it or release it for a newer frame. Empty until pinned.
     Q_PROPERTY(QImage referenceImage READ referenceImage NOTIFY referenceChanged)
     Q_PROPERTY(QString referenceName READ referenceName NOTIFY referenceChanged)
     QImage referenceImage() const; QString referenceName() const;
-    Q_INVOKABLE bool pinReference();   // false when no photo has decoded
+    Q_INVOKABLE bool pinReference();   // false when no photo has decoded or the image budget refuses it
     Q_INVOKABLE void clearReference();
     QString filePath() const; QString fileName() const; QString directory() const; QString status() const;
     // True only when the currently requested file decoded successfully; a retained old image is not a success.

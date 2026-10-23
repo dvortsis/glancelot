@@ -651,21 +651,31 @@ bool DisplayManager::setReferenceImage(const QString& path, const QImage& image,
         d->referenceGenerationHighWater = generation;
         return true;
     }
-    // Admission: the current and pinned-output frames are kept; only optional history may make room. The previous
-    // reference is being replaced, so it does not count against the new one.
+    // Admission never changes what the output holds or shows, or its status. Everything it holds or may show next is
+    // kept: the current and pinned frames, a held (pending) latest frame, the comparison frame while comparing, and the
+    // previous frame while it is the visible comparison side. Only history the output is not showing may make room;
+    // otherwise the reference is refused and nothing changes. The old reference is being replaced, so it does not count.
+    const bool comparing = d->mode == PresentationMode::Comparison;
+    const bool previousShown = comparing && d->comparisonImage.isNull() && d->pinnedImage.isNull();
     QSet<qint64> keys; qint64 essential = 0;
-    for (const QImage* im : std::initializer_list<const QImage*>{&d->currentImage, &d->pinnedImage, &image}) {
-        if (im->isNull() || keys.contains(im->cacheKey())) continue;
-        keys.insert(im->cacheKey()); essential += im->sizeInBytes();
-    }
+    const auto keep = [&](const QImage& im) {
+        if (im.isNull() || keys.contains(im.cacheKey())) return;
+        keys.insert(im.cacheKey()); essential += im.sizeInBytes();
+    };
+    keep(d->currentImage); keep(d->pinnedImage); keep(image);
+    if (d->pendingValid) keep(d->pendingImage);
+    if (comparing) keep(d->comparisonImage);
+    if (previousShown) keep(d->previousImage);
     if (essential > s_imageBudgetBytes) return false;
     d->referenceGenerationHighWater = generation;
     d->referencePath = path;
     d->referenceImage = image;
-    {
-        QScopedValueRollback<bool> keepReference(d->referenceProtected, true);
-        d->enforceBudget();
+    if (d->retainedBytes() > s_imageBudgetBytes && !previousShown) { d->previousImage = QImage(); d->previousPath.clear(); }
+    if (d->retainedBytes() > s_imageBudgetBytes && !comparing) {
+        d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
     }
+    if (d->retainedBytes() > s_imageBudgetBytes && !d->pendingValid) { d->pendingImage = QImage(); d->pendingPath.clear(); }
+    Q_ASSERT(d->retainedBytes() <= s_imageBudgetBytes);
     emit referenceChanged();
     return true;
 }
