@@ -34,10 +34,12 @@ $deadline = (Get-Date).AddMinutes($WaitMinutes)
 $record = New-LockRecord @{ holder = $Holder; branch = $Branch; ancestors = @($ancestors) }
 $ticket = $null; $gate = $null; $lastMessage = ''
 function Write-Wait([string]$msg) { if ($msg -ne $script:lastMessage) { Write-Host $msg; $script:lastMessage = $msg } }
-function Remove-StaleGate {
-    # Delete a dead or released holder's owner.json (re-read guarded; a live holder's open handle also blocks it),
-    # then the directory only if it is empty.
-    if (Test-Path -LiteralPath $gateOwnerFile) { [void](Remove-StaleLockFile $gateOwnerFile (Read-LockJson $gateOwnerFile)) }
+function Remove-StaleGate($judged) {
+    # Delete owner.json only if it still holds the record judged stale ($judged from Get-GateState): a waiter that
+    # claimed the lock in the meantime (an older gate-lock.ps1 copy has no open handle to protect it) keeps its claim.
+    # Then remove the directory, only if it is empty.
+    if ($env:GLANCELOT_LOCK_TEST_STALE_PAUSE_MS) { Start-Sleep -Milliseconds ([int]$env:GLANCELOT_LOCK_TEST_STALE_PAUSE_MS) }  # test hook
+    if ($judged.fromFile) { [void](Remove-StaleLockFile $gateOwnerFile $judged.owner) }
     try { [IO.Directory]::Delete($gateLock, $false) } catch { }
 }
 function Close-Gate {
@@ -46,7 +48,7 @@ function Close-Gate {
 }
 try {
     # Take a ticket first: from now on no new build slot and no later gate request can start ahead of this one.
-    $ticket = New-GateTicket $record
+    $ticket = New-GateTicket $record $StaleHours
     while ($true) {
         if ((Get-Date) -gt $deadline) { throw "No gate after $WaitMinutes minutes. $lastMessage" }
         $ahead = @(Get-LiveLocks $pendingPrefix $StaleHours $null | Where-Object { $n = Get-TicketNumber $_.file; $null -ne $n -and $n -lt $ticket.ticket })
@@ -64,7 +66,7 @@ try {
         if (-not $gate) {
             $g = Get-GateState $StaleHours
             if ($g.state -eq 'free') { continue }  # directory removed by a releasing holder; retry
-            if ($g.state -eq 'stale') { Remove-StaleGate; Start-Sleep -Milliseconds 200; continue }
+            if ($g.state -eq 'stale') { Remove-StaleGate $g; Start-Sleep -Milliseconds 200; continue }
             Write-Wait "Waiting for gate lock held by $($g.owner.holder) on $($g.owner.branch) since $($g.owner.started)"
             Start-Sleep -Seconds $PollSeconds; continue
         }

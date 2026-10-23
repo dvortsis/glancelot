@@ -87,6 +87,7 @@ Two read-mostly helpers for the lead on this PC, both run from the main checkout
   - `-Run` waits while another process tree holds the gate lock or has a gate request pending.
   - `gate-lock.ps1 -Run` first takes a ticket, `glancelot-gate-pending-<ticket>.json`, so no new slot starts while it waits. Requests are served first come, first served: only the lowest live ticket may claim the gate (a crashed requester's ticket is skipped), so a waiting gate is not starved by later requests. The head of the queue then waits ("Waiting: N build slots held", within `-WaitMinutes`, polling every `-PollSeconds`, default 5) until no other process tree holds a slot, takes the lock, and removes its ticket.
   - An older `gate-lock.ps1` without tickets still competes for a free lock, but never overlaps a gate.
+  - A live but stalled request at the head of the queue holds everything behind it until its process exits; `-Status` shows its ticket, PID and branch. The scripts never kill processes.
   - The gate is claimed by creating `glancelot-gate-lock\owner.json` exclusively. The directory is kept, so an older `gate-lock.ps1` that claims the directory still sees the lock, and a lock held by an older copy is honoured.
   - Pending markers are stale-safe like slots: a crashed gate request does not block builds.
 - Nothing deadlocks on itself:
@@ -96,7 +97,7 @@ Two read-mostly helpers for the lead on this PC, both run from the main checkout
   - The gate lock itself is never removed by `build-slot.ps1`.
 - Nested calls in the same process, or in a child of the slot holder, reuse the slot (`GLANCELOT_BUILD_SLOT_HELD`).
 - Use one slot count for every caller: `-Slots` (default 3) or `$env:GLANCELOT_BUILD_SLOTS`. A caller only looks at slots 1 to N.
-- `gate-lock.ps1 -Status` and `build-slot.ps1 -Status` both show the gate lock, queued gate tickets and every slot (live or stale). The shared lock code is `scripts/lock-common.ps1`.
+- `gate-lock.ps1 -Status` and `build-slot.ps1 -Status` both show the gate lock, queued gate tickets and every slot; stale files are listed but not counted. The shared lock code is `scripts/lock-common.ps1`.
 - A gate run through an older checkout's `gate-lock.ps1` does not know about slots. Run gates through the main checkout's script.
 
 **Inbox.** `scripts/lead-inbox.ps1` fetches with `--prune` and prints one row per `origin/claude/*` packet branch. It is read-only.

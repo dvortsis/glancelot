@@ -37,6 +37,9 @@ function Test-LockStale($owner, [string]$path, [double]$staleHours) {
     $item = Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
     if (-not $item) { return $true }
     $isFile = -not $item.PSIsContainer
+    # A malformed record (no pid, no parsable start time) is judged like a missing one.
+    $started = [datetime]::MinValue
+    if ($owner -and (-not $owner.pid -or -not [datetime]::TryParse("$($owner.started)", [ref]$started))) { $owner = $null }
     if (-not $owner) {
         if ($isFile) { return Test-Unheld $path }
         return ((Get-Date) - $item.LastWriteTime).TotalMinutes -gt 2
@@ -116,7 +119,7 @@ function Get-GateState([double]$staleHours) {
     $owner = if ($hasFile) { Read-LockJson $gateOwnerFile } else { $null }
     $stale = Test-LockStale $owner $(if ($hasFile) { $gateOwnerFile } else { $gateLock }) $staleHours
     if (-not $owner -and -not $stale) { $owner = [pscustomobject]@{ holder = '?'; branch = '?'; started = '?'; pid = 0; host = $machine } }
-    [pscustomobject]@{ state = $(if ($stale) { 'stale' } else { 'held' }); owner = $owner }
+    [pscustomobject]@{ state = $(if ($stale) { 'stale' } else { 'held' }); owner = $owner; fromFile = $hasFile }
 }
 function Get-GateOwner([double]$staleHours) {
     # The live gate owner (or a placeholder while it is being written); $null when free or stale. Never removes it.
@@ -143,23 +146,29 @@ function Show-LockStatus([double]$staleHours, [int]$slots) {
                 pid = $o.pid; branch = $o.branch; started = $o.started; cwd = $o.cwd }
         }
     }
-    $held = @($rows | Where-Object { $_.kind -like 'slot*' }).Count
-    "build slots: $held held of $slots; gate requests pending: $(@($rows | Where-Object { $_.kind -like 'gate ticket*' }).Count) (files in $commonDir)"
+    $live = @($rows | Where-Object state -eq 'live')
+    $held = @($live | Where-Object { $_.kind -like 'slot*' }).Count
+    $queued = @($live | Where-Object { $_.kind -like 'gate ticket*' }).Count
+    $stale = @($rows).Count - $live.Count
+    "build slots: $held held of $slots; gate requests queued: $queued; stale files: $stale (the next request removes them) (files in $commonDir)"
     if ($rows) { $rows | Format-Table -AutoSize | Out-String -Width 200 }
 }
 
 function Get-TicketNumber([string]$name) {
     $n = 0L
-    if ($name -match "^$([regex]::Escape($pendingPrefix))(\d+)\.json$" -and [long]::TryParse($Matches[1], [ref]$n)) { $n } else { $null }
+    # Tickets are 1 to 99999999 (eight digits); anything else, such as a planted huge number, is not a ticket.
+    if ($name -match "^$([regex]::Escape($pendingPrefix))(\d{1,8})\.json$" -and [long]::TryParse($Matches[1], [ref]$n) -and $n -ge 1) { $n } else { $null }
 }
-function New-GateTicket($record) {
-    # FIFO ticket: one past the highest pending ticket file present, claimed with CreateNew (a collision moves on to
-    # the next number), so a new request always queues behind every request already waiting.
+function New-GateTicket($record, [double]$staleHours) {
+    # FIFO ticket: one past the highest live ticket (stale ticket files are removed first, and numbering restarts at 1
+    # when none is live), claimed with CreateNew (a collision moves on to the next number), so a new request always
+    # queues behind every request already waiting.
     for ($try = 0; $try -lt 200; $try++) {
         $max = 0L
-        foreach ($f in Get-ChildItem -LiteralPath $commonDir -Filter "$pendingPrefix*.json" -File -ErrorAction SilentlyContinue) {
-            $n = Get-TicketNumber $f.Name; if ($null -ne $n -and $n -gt $max) { $max = $n }
+        foreach ($r in Get-LiveLocks $pendingPrefix $staleHours $null) {
+            $n = Get-TicketNumber $r.file; if ($null -ne $n -and $n -gt $max) { $max = $n }
         }
+        if ($max + 1 + $try -gt 99999999) { throw "Gate ticket numbers exhausted in $commonDir; remove stale gate-pending files" }
         $ticket = $max + 1 + $try
         $path = Join-Path $commonDir ('{0}{1:D8}.json' -f $pendingPrefix, $ticket)
         $record['ticket'] = $ticket
