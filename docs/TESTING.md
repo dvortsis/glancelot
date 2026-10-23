@@ -22,3 +22,31 @@ Each checkout/worktree builds and packages its own current branch under `build-m
 For portable sharing, extract `dist/Glancelot.zip` and run `bin/glancelot.exe`; keep all bundled files together. The test-build record is local and is created after packaging, so it is not included in this ZIP. For the Linux browser desktop, use the [Docker instructions](DOCKER.md); this launcher does not rebuild or update a running Docker deployment.
 
 Useful manual checks: open a generated/disposable photo folder, navigate with arrows, toggle folders (Ctrl+B) and the filmstrip (T), exercise grid/preview and pane layouts, switch themes, then close and reopen to check window resume. Hardware-dependent display/color behavior still requires native testing on the target hardware.
+
+## Run part of the automated suite
+
+Every CTest test carries one or more labels. They are defined in `cmake/TestLabels.cmake`, and configure fails if a test has none. Run these commands from a configured build directory; on Linux, set `QT_QPA_PLATFORM=offscreen` first.
+
+| Label | Meaning | Tests |
+| --- | --- | --- |
+| `fast` | The quick loop: every test that is not `ui` or `budget`, except `recovery_process` | 32 tests |
+| `ui` | Loads the shipped QML (`ui/Main.qml`) in a real window | `folder_grid`, `input_ui`, `pathbar_ui`, `fs_watch_ui`, `monitor_customization_ui` |
+| `budget` | Asserts wall-clock budgets and can fail under machine load | `fs_watch_budget`, `fs_watch`, `folder_grid`, `cache`, `window_slots`, `recovery_controller`, `input_ui` |
+| `process` | The test itself starts a child process (decoder, helper, the app or Python) | `thumbnails`, `io_scheduler`, `fs_watch`, `window_slots`, `recovery`, `recovery_startup`, `platform_integration`, `recovery_process` |
+| `native` | Depends on the platform shell, trash, screens or a real app window | `platform_integration`, `file_operation_service`, `monitor_output`, `monitor_customization`, `monitor_customization_ui`, `recovery_process` |
+| `clipboard` | Reads or writes the system clipboard | `folder_grid`, `input_ui` |
+
+Common commands:
+
+```sh
+ctest -L fast --output-on-failure        # quick loop while you work (about 45 s on a 4-vCPU Linux VM)
+ctest -LE budget --output-on-failure     # everything except the timing-budget tests (36 tests)
+ctest -L ui --output-on-failure          # the real-QML tests only
+ctest -N -L budget                       # list the tests a label selects, without running them
+```
+
+`-L` and `-LE` take a regular expression; use `-L '^ui$'` if a future label could contain `ui`.
+
+- **Tests with labels can run in parallel.** Budget tests hold `RESOURCE_LOCK budget` and clipboard tests hold `RESOURCE_LOCK clipboard`, so `ctest -j N` never runs two of either kind at once. Budget tests still compete with everything else running on the machine, so run them serially, or with nothing heavy alongside, when timing matters.
+- **These subsets do not replace the full suite.** Before a handoff, run the full suite (`ctest` with no label), then `scripts/build.ps1 -Test` on Windows. The authoritative gate always runs everything.
+- **When you add a test,** add its name to at least one list in `cmake/TestLabels.cmake`. Put it in the `budget` list if it asserts timing, and in the `clipboard` list if it touches the system clipboard.
