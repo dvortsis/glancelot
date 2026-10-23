@@ -1,0 +1,15 @@
+********* Start testing of AnimationTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : AnimationTests::initTestCase()
+PASS   : AnimationTests::testInitialState()
+PASS   : AnimationTests::testStillImageNonAnimation()
+PASS   : AnimationTests::testAnimatedGifPlayback()
+PASS   : AnimationTests::testSpeedControlAndClamping()
+PASS   : AnimationTests::testLoopToggle()
+PASS   : AnimationTests::testMultipageTiffNavigation()
+PASS   : AnimationTests::testGenerationValidation()
+PASS   : AnimationTests::testSeekAndClamp()
+PASS   : AnimationTests::testClearLifecycle()
+PASS   : AnimationTests::cleanupTestCase()
+Totals: 11 passed, 0 failed, 0 skipped, 0 blacklisted, 395ms
+********* Finished testing of AnimationTests *********

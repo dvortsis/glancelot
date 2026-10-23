@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: docs/AGENT-LANES-PLAN.md
-integration_lock: {holder: lead, branch: lead/integrate-cycle1-a, commit: 49fb635, packets: [EN-05, EN-09], since: '2026-10-22'}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -969,7 +969,9 @@ tasks:
     title: Viewer source list and decode-cache extraction
     owner: lead
     session: S1
-    state: integration
+    state: done
+    integrated_commit: b26d454b08e9c72736a4e3d2ac901e6b411dce89
+    integrated_evidence: "docs/verification/integrate-cycle1-a-2026-10-22/README.md; gated 49fb635 locally: Windows 43/43 775.10s, Docker 43/43 390.41s, no reruns"
     branch: claude/en-05-viewer-sources
     granted_files: [CMakeLists.txt, cmake/*.cmake, src/app/viewer_controller.cpp (decode-cache block)]
     outcome: cmake/ViewerSources.cmake list used by every target; src/app/decode_cache.{hpp,cpp} with unchanged semantics
@@ -1000,7 +1002,9 @@ tasks:
     title: Feasibility and dependency decisions
     owner: lead
     session: S4
-    state: integration
+    state: done
+    integrated_commit: b26d454b08e9c72736a4e3d2ac901e6b411dce89
+    integrated_evidence: "docs/verification/integrate-cycle1-a-2026-10-22/README.md; gated 49fb635 locally: Windows 43/43 775.10s, Docker 43/43 390.41s, no reruns"
     branch: claude/en-09-feasibility
     outcome: docs/<ID>-FEASIBILITY.md for F024, F039, F048, F071, F074, F076, F077, F078 and docs/DEP-DECISIONS.md
     acceptance: Each doc has dependencies and licences, platform capability, security model, test strategy and a go/no-go; lead records go/no-go here
