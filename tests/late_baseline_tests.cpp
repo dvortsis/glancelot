@@ -159,35 +159,39 @@ private slots:
 
     // The baseline lands while the fallback decode is still running: nothing was
     // shown yet, so the decode restarts once and reports normally.
-    // Each launch gets its own fixture config through hooks.decoderArguments, which
-    // decode() reads at every launch. workerStarted fires on QProcess::started, before
-    // the fixture has read --fixture-config, so rewriting the first launch's file here
-    // raced the fixture's read (EN-11 review B1: decode 1 often read the restart config).
+    // workerStarted fires on QProcess::started, before the fixture has read
+    // --fixture-config, so rewriting the config there raced the fixture's read (EN-11
+    // review B1: on Windows decode 1 often read the restart config and finished alone).
+    // The fixture sends its probe frame only after it has read and parsed its config,
+    // and the controller traces every frame it receives ("decode:message"), so the
+    // config is rewritten only after that frame. The controller copies its test hooks
+    // at construction, so switching hooks.decoderArguments later would not reach it.
     void lateBaselineDuringDecodeRestartsOnce() {
         QTemporaryDir media,control;QVERIFY(media.isValid()&&control.isValid());
-        const auto start=media.filePath("p1.png"),slow=control.filePath("first.json"),fresh=control.filePath("restart.json");
+        const auto start=media.filePath("p1.png"),worker=control.filePath("worker.json"),traceFile=control.filePath("trace.txt");
         QVERIFY(png(start,Qt::red));
-        QVERIFY(write(slow,R"({"color":"red","decodeDelayMs":60000})"));
-        QVERIFY(write(fresh,R"({"color":"blue"})"));
+        QVERIFY(write(worker,R"({"color":"red","decodeDelayMs":60000})"));
+        const bool hadTrace=qEnvironmentVariableIsSet("GLANCELOT_TRACE_FILE");const auto oldTrace=qgetenv("GLANCELOT_TRACE_FILE");
+        qputenv("GLANCELOT_TRACE_FILE",traceFile.toUtf8());
+        const auto restoreTrace=qScopeGuard([&]{if(hadTrace)qputenv("GLANCELOT_TRACE_FILE",oldTrace);else qunsetenv("GLANCELOT_TRACE_FILE");});
         auto scan=std::make_shared<Gate>();
         fs_watch::ControllerTestHooks hooks;holdFirstScan(hooks,scan,media.path());
-        hooks.decoderProgram=executable("fs_watch_decoder_fixture");hooks.decoderArguments={"--fixture-config",slow};
-        QPointer<QProcess> first;int decodes=0;QStringList configs;
-        hooks.workerStarted=[&](QProcess* process,const QString& purpose,const QString&){
-            if(purpose!="decode")return;
-            configs<<process->arguments().value(1);
-            if(++decodes==1)first=process;
-        };
+        hooks.decoderProgram=executable("fs_watch_decoder_fixture");hooks.decoderArguments={"--fixture-config",worker};
+        QPointer<QProcess> first;int decodes=0;
+        hooks.workerStarted=[&](QProcess* process,const QString& purpose,const QString&){if(purpose=="decode"&&++decodes==1)first=process;};
         HookScope override(hooks);ViewerController viewer;
         const auto unblock=qScopeGuard([scan]{scan->release.store(true);});
         viewer.setBoundaryMode("stop");viewer.open(start);
-        QTRY_COMPARE_WITH_TIMEOUT(decodes,1,15000);QVERIFY(viewer.loading());QVERIFY(!viewer.imageReady());
-        // The baseline is still held, so no further decode can launch before this.
-        hooks.decoderArguments={"--fixture-config",fresh};
+        QTRY_COMPARE_WITH_TIMEOUT(decodes,1,15000);
+        // Decode 1's probe frame: its fixture has read the 60 s config. The baseline is
+        // still held, so no second decode can launch before the rewrite below.
+        QTRY_VERIFY_WITH_TIMEOUT(traceCount(traceFile,"decode:message")>=1,15000);
+        QCOMPARE(decodes,1);QVERIFY(first&&first->state()==QProcess::Running);
+        QVERIFY(viewer.loading());QVERIFY(!viewer.imageReady());
+        QVERIFY(write(worker,R"({"color":"blue"})"));
         scan->release.store(true);
         QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&!viewer.loading(),15000);
-        QCOMPARE(decodes,2);QCOMPARE(configs,QStringList({slow,fresh}));
-        QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
+        QCOMPARE(decodes,2);QCOMPARE(viewer.image().pixelColor(0,0),QColor(Qt::blue));
         QVERIFY2(viewer.status().contains("display profile"),qPrintable(viewer.status()));
         QTRY_VERIFY_WITH_TIMEOUT(!first||first->state()==QProcess::NotRunning,5000);
     }
