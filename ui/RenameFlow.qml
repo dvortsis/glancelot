@@ -87,7 +87,7 @@ Item {
         if (res && res.success) {
             renameDialog.close()
         } else {
-            renameValidation = { valid: false, error: res && res.error ? res.error : "Failed to rename item." }
+            renameValidation = { valid: false, error: res && res.error ? res.error : qsTr("Failed to rename item.") }
         }
     }
 
@@ -97,14 +97,14 @@ Item {
         if (res && res.success) {
             newFolderDialog.close()
         } else {
-            newFolderValidation = { valid: false, error: res && res.error ? res.error : "Failed to create folder." }
+            newFolderValidation = { valid: false, error: res && res.error ? res.error : qsTr("Failed to create folder.") }
         }
     }
 
     // 1. Rename Dialog
     UiDialog {
         id: renameDialog
-        title: root.renameIsFolder ? "Rename Folder" : "Rename File"
+        title: root.renameIsFolder ? qsTr("Rename Folder") : qsTr("Rename File")
         width: Math.min(480, host ? host.width - Theme.gapXl * 2 : 480)
         anchors.centerIn: parent
 
@@ -118,7 +118,7 @@ Item {
             width: parent.width
 
             Label {
-                text: root.renameIsFolder ? "Enter a new name for this folder:" : "Enter a new name for this file:"
+                text: root.renameIsFolder ? qsTr("Enter a new name for this folder:") : qsTr("Enter a new name for this file:")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.family: Theme.fontFamily
@@ -128,6 +128,7 @@ Item {
             UiTextField {
                 id: renameField
                 Layout.fillWidth: true
+                Accessible.name: root.renameIsFolder ? qsTr("New folder name") : qsTr("New file name")
                 onTextChanged: {
                     if (root.mutationService && root.renameParentDir.length > 0) {
                         root.renameValidation = root.mutationService.validateTargetName(root.renameParentDir, text, root.renameTargetPath)
@@ -164,13 +165,13 @@ Item {
                 Layout.topMargin: Theme.gapSm
 
                 UiButton {
-                    text: "Cancel"
+                    text: qsTr("Cancel")
                     variant: "quiet"
                     onClicked: renameDialog.close()
                 }
 
                 UiButton {
-                    text: "Rename"
+                    text: qsTr("Rename")
                     variant: "primary"
                     enabled: root.renameValidation.valid && renameField.text !== root.renameInitialName
                     onClicked: root.executeRename()
@@ -182,7 +183,7 @@ Item {
     // 2. New Folder Dialog
     UiDialog {
         id: newFolderDialog
-        title: "Create New Folder"
+        title: qsTr("Create New Folder")
         width: Math.min(480, host ? host.width - Theme.gapXl * 2 : 480)
         anchors.centerIn: parent
 
@@ -196,7 +197,7 @@ Item {
             width: parent.width
 
             Label {
-                text: "Enter a name for the new folder:"
+                text: qsTr("Enter a name for the new folder:")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.family: Theme.fontFamily
@@ -206,6 +207,7 @@ Item {
             UiTextField {
                 id: newFolderField
                 Layout.fillWidth: true
+                Accessible.name: qsTr("Name for the new folder")
                 onTextChanged: {
                     if (root.mutationService && root.newFolderParentDir.length > 0) {
                         root.newFolderValidation = root.mutationService.validateTargetName(root.newFolderParentDir, text)
@@ -242,13 +244,13 @@ Item {
                 Layout.topMargin: Theme.gapSm
 
                 UiButton {
-                    text: "Cancel"
+                    text: qsTr("Cancel")
                     variant: "quiet"
                     onClicked: newFolderDialog.close()
                 }
 
                 UiButton {
-                    text: "Create"
+                    text: qsTr("Create")
                     variant: "primary"
                     enabled: root.newFolderValidation.valid
                     onClicked: root.executeCreateFolder()

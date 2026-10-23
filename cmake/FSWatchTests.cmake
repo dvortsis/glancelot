@@ -26,6 +26,7 @@ set_tests_properties(fs_watch fs_watch_budget PROPERTIES
 # Lead-frozen real-QML routing regression. Required alongside backend coverage.
 qt_add_executable(fs_watch_ui_tests tests/fs_watch_ui_tests.cpp
   ${GLANCELOT_VIEWER_SOURCES}
+  ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
   src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
   src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
   src/app/theme_manager.cpp include/glancelot/theme_manager.hpp

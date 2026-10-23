@@ -13,7 +13,13 @@ Rectangle {
     readonly property int frameCount: controller ? controller.frameCount : 0
     readonly property real speed: controller ? controller.speed : 1.0
     readonly property bool isLoop: controller ? controller.loop : true
-    readonly property string label: controller ? controller.frameLabel : ""
+    // STACK-F054: the frame/page counter is built here so it can be translated; it matches the controller's frameLabel.
+    readonly property string label: !hasAnimation || frameCount <= 0 ? ""
+        : (isAnimated ? qsTr("Frame %1 / %2") : qsTr("Page %1 / %2")).arg(currentFrame + 1).arg(frameCount)
+    readonly property string speedText: qsTr("%1x").arg(speed.toFixed(speed === Math.floor(speed) ? 1 : 2))
+    // Playback and frame-stepping controls keep their left-to-right order in right-to-left languages, as media controls do.
+    LayoutMirroring.enabled: false
+    LayoutMirroring.childrenInherit: true
 
     visible: hasAnimation
     implicitWidth: Math.min(layout.implicitWidth + Theme.gapMd * 2, parent ? parent.width - Theme.gapMd * 2 : 500)
@@ -34,6 +40,8 @@ Rectangle {
         Rectangle {
             id: playPauseBtn
             visible: root.isAnimated
+            Accessible.role: Accessible.Button
+            Accessible.name: root.isPlaying ? qsTr("Pause animation") : qsTr("Play animation")
             implicitWidth: Theme.controlHeight - Theme.gapXs
             implicitHeight: Theme.controlHeight - Theme.gapXs
             radius: Theme.radiusSmall
@@ -75,6 +83,8 @@ Rectangle {
         // Previous Frame / Page Button
         Rectangle {
             id: prevBtn
+            Accessible.role: Accessible.Button
+            Accessible.name: root.isAnimated ? qsTr("Previous frame") : qsTr("Previous page")
             implicitWidth: Theme.controlHeight - Theme.gapXs
             implicitHeight: Theme.controlHeight - Theme.gapXs
             radius: Theme.radiusSmall
@@ -97,6 +107,8 @@ Rectangle {
         // Next Frame / Page Button
         Rectangle {
             id: nextBtn
+            Accessible.role: Accessible.Button
+            Accessible.name: root.isAnimated ? qsTr("Next frame") : qsTr("Next page")
             implicitWidth: Theme.controlHeight - Theme.gapXs
             implicitHeight: Theme.controlHeight - Theme.gapXs
             radius: Theme.radiusSmall
@@ -132,6 +144,7 @@ Rectangle {
         Slider {
             id: scrubber
             Layout.fillWidth: true
+            Accessible.name: root.isAnimated ? qsTr("Frame") : qsTr("Page")
             from: 0
             to: Math.max(0, root.frameCount - 1)
             stepSize: 1
@@ -178,6 +191,8 @@ Rectangle {
         Rectangle {
             id: speedBtn
             visible: root.isAnimated
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("Playback speed %1; change speed").arg(root.speedText)
             implicitWidth: 48
             implicitHeight: Theme.controlHeight - Theme.gapXs
             radius: Theme.radiusSmall
@@ -185,7 +200,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: root.speed.toFixed(root.speed === Math.floor(root.speed) ? 1 : 2) + "x"
+                text: root.speedText
                 color: Theme.text
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textCaption
@@ -214,6 +229,10 @@ Rectangle {
         Rectangle {
             id: loopBtn
             visible: root.isAnimated
+            Accessible.role: Accessible.CheckBox
+            Accessible.name: qsTr("Loop animation")
+            Accessible.checkable: true
+            Accessible.checked: root.isLoop
             implicitWidth: 36
             implicitHeight: Theme.controlHeight - Theme.gapXs
             radius: Theme.radiusSmall
