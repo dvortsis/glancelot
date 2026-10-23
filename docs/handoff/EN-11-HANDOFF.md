@@ -229,3 +229,128 @@ From a read-only checkout at the branch tip, in `.worktrees/review-en-11`, with 
 - [Run 39891265117](https://github.com/dvortsis/glancelot/actions/runs/39891265117) (`9af0092`): build OK, 43/44. `folder_tree`, `folder_grid`, `fs_watch`, `fs_watch_budget`, `directory_model` and `input_ui` passed; only `late_baseline` failed, with no detail in the log.
 - [Run 39894499556](https://github.com/dvortsis/glancelot/actions/runs/39894499556) (`b7a0e3f`, stderr diagnostics): build OK, 43/44. The failure was `sharedReaderAllowsAtomicReplace`, a wrong assumption about Windows replace semantics (quoted above). The late-baseline tests passed on Windows with `provable 1 decodes 1 imageChanged 0`. The test was then corrected to `sharedReaderAllowsRenameAndDelete`; its Windows run result is recorded below.
 - [Run 39898609425](https://github.com/dvortsis/glancelot/actions/runs/39898609425) (`a37e03b`, the corrected test): **all three jobs green**. The `viewer` job (MSVC, full suite, windows-2022) passed 44/44, including `late_baseline`, `folder_tree`, `folder_grid` and `fs_watch`. A passing test prints nothing under `--output-on-failure`, so this run does not show the retry count; the reviewer's step 3 does.
+
+## Review round 1 fixes
+
+Written for: the lead and the fresh re-reviewer. Fix session: a local Claude subagent on the lead's Windows PC that did not write the original packet. Review: `docs/verification/EN-11-REVIEW.md` on `claude/review-en-11` (`99dbe9f`), verdict CHANGES REQUIRED, one blocker (B1).
+
+| | |
+| --- | --- |
+| Branch | `claude/en-11-gate-stability` (fast-forward push) |
+| Previous tip | `ada9e42` |
+| Merge with main | `718669e` merges `origin/main` `b4b76f1`. It merges cleanly as text but does not compile on its own (EN-05 `DecodeCache` has no `object()`); `f06a1eb` is the adaptation |
+| Exact base for re-review | `b4b76f1` (`origin/main` at the merge). Re-review with `git diff b4b76f1 <tip>`; the round-1 delta alone is `git diff 718669e <tip>` |
+| Build / tests | `build-claude-en-11`, MSVC 2022, Qt 6.8.3 msvc2022_64, Windows 11 Pro 26200 |
+| ui-design-skills | not used; no UI changed |
+
+### Commits
+
+1. `718669e` merge `origin/main` (`b4b76f1`).
+2. `f06a1eb` fix: the late-baseline proof uses EN-05's cache, exactly as the merge note above says, with the same semantics. It also adds `glancelot_test_labels(late_baseline LABELS process)` next to the target in `cmake/FSWatchTests.cmake`.
+   ```
+   const bool shown=!loading&&imageReady;
+   const bool proven=!registered.isEmpty()&&!cache.reuse(cacheKey(path),registered).isNull();
+   if(!(shown&&proven)) {
+       const bool background=shown;
+   ```
+   `DecodeCache::reuse` returns pixels only for a non-empty token equal to the stored worker-verified token, which is the old `shown->sourceToken==registered` test.
+3. `d2ecd1b` test: first attempt at B1, switching `hooks.decoderArguments` after launch. **It does not work and is superseded by `de7ba60`** (history not rewritten). `ViewerController` copies `*fs_watch::controllerTestHooks` into an `std::optional` at construction (viewer_controller.cpp:153), so a later change to the test's `hooks` never reaches `decode()`. The restart ran with the 60 s config and timed out (`failure: Decoder timed out` in the trace).
+4. `de7ba60` test: the B1 fix (below).
+
+### B1 fix: `lateBaselineDuringDecodeRestartsOnce` is deterministic
+
+The test now uses a marker the fixture already sends. `fs_watch_decoder_fixture` sends its `probe` frame only after it has opened, read and parsed `--fixture-config` (fs_watch_decoder_fixture.cpp:27-46). The controller writes `decode:message` to `GLANCELOT_TRACE_FILE` for every frame it receives. The test:
+
+1. waits for `decodes==1`;
+2. waits for `traceCount(trace,"decode:message")>=1`, which means decode 1 has read the 60 s config;
+3. asserts `decodes==1`, that the first worker is still `Running`, and that the viewer is loading with no image;
+4. rewrites `worker.json` to blue, then releases the held baseline.
+
+The second launch cannot start before step 4, because only the held baseline restarts it. The test uses no sleeps; it waits only on QTRY conditions. All its original assertions are unchanged: 2 decodes, blue pixels, normal decoder status, and the first worker retired.
+
+### Pre-handoff checklist
+
+**1. Fail-before (scratch revert of the late-baseline branch to the base one-liner `decodeStartedWithoutBaseline=false;++generation;cancel();cacheReuseAllowed=false;scan(path,generation);decode(path,generation);`, `quietDecode` plumbing kept, only `late_baseline_tests` rebuilt; run 3 times inside the gate lock, then restored with `git checkout` and rebuilt):**
+
+```
+--- reverted run 1 exit 2
+PASS   : LateBaselineTests::initTestCase()
+FAIL!  : LateBaselineTests::lateBaselineKeepsInFlightFolderOpen() 'viewer.status().contains("No supported images")' returned FALSE. (Untagged source assumed sRGB · display profile not yet managed)
+C:\src\Github\Glancelot\.worktrees\claude-en-11\tests\late_baseline_tests.cpp(112) : failure location
+FAIL!  : LateBaselineTests::lateBaselineRefreshKeepsNewerMessage() 'viewer.status().contains("No supported images")' returned FALSE. (sRGB fixture · display profile not yet managed)
+C:\src\Github\Glancelot\.worktrees\claude-en-11\tests\late_baseline_tests.cpp(156) : failure location
+PASS   : LateBaselineTests::lateBaselineDuringDecodeRestartsOnce()
+PASS   : LateBaselineTests::sharedReaderAllowsRenameAndDelete()
+PASS   : LateBaselineTests::cleanupTestCase()
+Totals: 4 passed, 2 failed, 0 skipped, 0 blacklisted, 57226ms
+```
+
+Runs 2 and 3 were identical (57114 ms, 57256 ms). Both new late-baseline tests fail every time with the fix reverted. `lateBaselineDuringDecodeRestartsOnce` now passes with the fix reverted, as this handoff always intended ("regression guard; passes before and after"). Its earlier failure with the fix reverted was the B1 race. `git diff --stat` after the restore was empty.
+
+**2. Grant check.** `git diff --name-only b4b76f1 HEAD` (EN-11 against the merged main):
+
+```
+cmake/FSWatchTests.cmake
+docs/handoff/EN-11-HANDOFF.md
+src/app/animation_controller.cpp
+src/app/metadata_parser.cpp
+src/app/shared_file_read.hpp
+src/app/viewer_controller.cpp
+tests/fs_watch_tests.cpp
+tests/grid_ui_tests.cpp
+tests/late_baseline_tests.cpp
+```
+
+Round 1 alone (`git diff --name-only 718669e HEAD`): `cmake/FSWatchTests.cmake`, `docs/handoff/EN-11-HANDOFF.md`, `src/app/viewer_controller.cpp`, `tests/late_baseline_tests.cpp`.
+- `cmake/FSWatchTests.cmake` is lead-owned. The fix brief grants the label line; the provisional target is from round 0, as flagged above.
+- `viewer_controller.cpp`: the only change is the proof line inside the watcher/first-scan region, which is the merge adaptation.
+- `tests/fs_watch_decoder_fixture.cpp` is not changed.
+- The round-0 files outside the named regions (`metadata_parser.cpp`, `animation_controller.cpp`, `shared_file_read.hpp`) are unchanged in round 1. The reviewer's region table still applies.
+
+**3. Exact base:** `b4b76f1` (`origin/main`), merged in `718669e`. The packet is not stacked.
+
+**4. Windows tests** (one `scripts/gate-lock.ps1 -Branch claude/en-11-fix` block, PATH prefixed with `.tools\python\Scripts` and `.tools\Qt\6.8.3\msvc2022_64\bin`; build through `scripts/build-slot.ps1`).
+
+`ctest --test-dir build-claude-en-11 -R "^late_baseline$" --repeat until-fail:30 -V`: exit 0, **30 of 30 passed** (1.51 to 1.90 s each). The log has 30 `late_baseline: in-flight open` lines and 0 `late_baseline: FAILED` lines:
+
+```
+1/1 Test #25: late_baseline ....................   Passed    1.90 sec
+100% tests passed out of 1
+Total Test time (real) =  48.56 sec
+25: late_baseline: in-flight open: provable 1 decodes 1 imageChanged 0 status "No supported images in that folder or its subfolders."
+```
+
+Before the gate block, 5 direct idle runs of `late_baseline_tests.exe` gave `Totals: 6 passed, 0 failed` each.
+
+`ctest --test-dir build-claude-en-11 -R "^(late_baseline|folder_tree|folder_grid|fs_watch|fs_watch_ui|viewer_acceptance|cache)$" --output-on-failure`, exit 0:
+
+```
+1/7 Test  #7: viewer_acceptance ................   Passed    9.99 sec
+2/7 Test  #9: folder_tree ......................   Passed    9.53 sec
+3/7 Test #12: folder_grid ......................   Passed  202.44 sec
+4/7 Test #23: fs_watch .........................   Passed   85.83 sec
+5/7 Test #25: late_baseline ....................   Passed    1.64 sec
+6/7 Test #26: fs_watch_ui ......................   Passed    3.28 sec
+7/7 Test #31: cache ............................   Passed    5.19 sec
+100% tests passed out of 7
+Total Test time (real) = 318.25 sec
+fs-watch-results.txt: Totals: 82 passed, 0 failed, 0 skipped, 0 blacklisted, 85724ms
+late-baseline-results.txt: Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 1574ms
+```
+
+There were 0 `atomic commit refused` retry lines in `fs-watch-results.txt` in this idle run.
+
+Label: `ctest -N -V` lists `late_baseline` with `Labels: fast process`.
+
+**Not run in round 1:** the full offscreen suite (`scripts/build.ps1 -Test`), Docker, and the three consecutive runner gates. The full gate belongs to the local tester or the runner on the integrated commit. Only the targets for the seven suites above were rebuilt after the restore; the other test executables in `build-claude-en-11` are from the pre-revert full build of the same sources.
+
+**5. Decisions taken**
+- **B1: used the fixture's probe frame, seen through the controller trace, as the marker.** The reviewer's first option, switching `hooks.decoderArguments`, cannot work, because the controller copies its hooks at construction (`d2ecd1b`, above). The reviewer's second option, a dedicated marker file, would need a new config key in `tests/fs_watch_decoder_fixture.cpp`, which FS-WATCH tests share. The probe frame is already sent strictly after the config read, so no fixture change is needed.
+  - Alternative not taken: make the controller read hooks live. That would change a production-side seam for a test.
+- **`DecodeCache` adaptation:** applied the handoff's own merge note verbatim.
+- **Label:** `process` only. The test starts `glancelot-decoder` and the fixture, and it has no wall-clock assertion; its 15 s values are QTRY ceilings. It is not `budget`.
+
+**Open questions for the lead**
+- Keep or revert `119dbe6` (shared-delete readers), as asked in round 0. The reviewer recommends keeping it.
+- Keep `late_baseline` in `cmake/FSWatchTests.cmake` or move it to its own cmake file.
+- Acceptance still needs three consecutive full gates under the runner.
