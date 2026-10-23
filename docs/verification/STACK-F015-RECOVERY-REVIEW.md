@@ -68,7 +68,7 @@ Totals: 2 passed, 1 failed ... (run 1)   Totals: 2 passed, 1 failed ... (runs 2 
 QINFO  : ... probe a record state "clean"
 ```
 
-The `clean` line comes from the mutation runs below, where `activateTab` was unmodified. The live tab strip shows the same thing: all three tabs report `alpha`. Beta's location is gone in memory as well as on disk.
+The `clean` line was observed in the M2 mutation run below. M2 changed only `closeTab`, and the probe never calls `closeTab`, so the probe's path is unmodified there. The three runs on unmodified source predate that log line, so they did not print the record state. The live tab strip shows the same thing: all three tabs report `alpha`. Beta's location is gone in memory as well as on disk.
 
 **Control.** The same switch with no decode in flight passes. That test removes beta, settles on gamma, runs `activateTab(1)` and waits for "Cannot open that folder". `navigateDirectory`'s failure path calls `scan()`, which is listing only and never reaches `notePosition`. The `settleOn` fix itself is therefore sound. The gap is the stale decode alone.
 
@@ -77,7 +77,7 @@ The `clean` line comes from the mutation runs below, where `activateTab` was unm
 - **Option A.** Make a tab switch retire the previous tab's decode before the directory fallback, as `open()` does with `++generation; cancel()`.
 - **Option B.** Let `notePosition` clear `tabSettling` only for results issued after `settleOn`, using a settle token or generation recorded in `settleOn`.
 
-Either way, add this case as a test. The scratch test above fails today and should pass after the fix. Also cover the transient case, where the folder lists and the destructor runs before its navigation result.
+Either way, add this case as a test. The scratch test above fails today and should pass after the fix. Also cover the transient case, where the folder lists and the destructor runs before its navigation result. Add a test where a second tab action (`activateTab`, `newTab` or `closeTab`) happens before the target decodes, so the settling branch of `activeLocation()` is covered (see M3 below).
 
 ## Non-blocking
 
@@ -135,7 +135,7 @@ Each mutation was one edit to `src/app/viewer_controller.cpp` in a scratch copy 
 | --- | --- |
 | M1: remove `settleOn(target)` in `activateTab` | 49 passed, 4 failed: `closingDuringATabSwitchKeepsEveryTabsLocation`, `switchingToAnUndecodableTabKeepsEveryTabsLocation`, the probe for the unavailable folder (no in-flight decode), and the B1 probe |
 | M2: remove `settleOn(target)` in `closeTab` | 48 passed, 5 failed: `closingTheActiveTabBeforeItsNeighbourDecodesKeepsEveryTabsLocation` (all three rows), `closingTheActiveOfTwoTabsBeforeTheOtherDecodesKeepsTheOtherLocation`, and the B1 probe (unrelated to the mutation) |
-| M3: `activeLocation()` always returns `liveLocation()` | Not run. The build-slot queue was held behind three queued gate runs. The tests that would cover it are the second action before a decode (`newTab`, `tabs()` or `closeTab` mid-switch), and none of the listed tests targets that directly. |
+| M3: `activeLocation()` always returns `liveLocation()` | Not run: the build-slot queue was held behind three queued gate runs. Reading the tests shows a coverage gap. Every High test reaches `activateTab`/`closeTab` from a settled state, so the settling branch of `activeLocation()` appears untested. That branch serves a second tab action before the target decodes. |
 
 The High-finding tests fail without their fix and pass with it. The legacy-validation fail-before evidence is the implementer's (handoff, 14 rows); this review did not re-run it.
 
