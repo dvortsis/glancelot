@@ -240,7 +240,13 @@ Fixes for `docs/verification/COPY-SAFETY-01-REVIEW.md` (`origin/claude/review-co
 
 - Branch: `claude/copy-safety-01`. Worktree `.worktrees/claude-copy-safety`, build directory `build-claude-copy-safety`.
 - Exact base: the round-0 tip `95b0a09`, merged with `origin/main` `b4b76f1` at `c5e184c` (no conflicts).
-- Round-1 commits: `6e5b427` (code and tests), `f8abff2` and `0fedecd` (test refinements), `0e92bfa` (POSIX unused-function guard). The handoff commit follows `0e92bfa`.
+- Round-1 commits:
+  - `6e5b427`: code and tests;
+  - `f8abff2` and `0fedecd`: test refinements;
+  - `0e92bfa`: POSIX unused-function guard;
+  - `5e072ef`: handoff;
+  - `b021a40`: one metadata summary assertion and zero-initialised POSIX `stat` structs.
+- The final handoff commit follows `b021a40`; code and tests are final at `b021a40`.
 - Review with `git diff c5e184c <tip>`.
 
 ### What changed
@@ -306,15 +312,20 @@ FAIL!  : CopySafetyTests::hardLinkIsTheSameFile() Compared values are not the sa
    Actual   (outcome.failed): 0
 SKIP   : CopySafetyTests::fileSymlinkToTargetIsRefused() This account cannot create symbolic links (Windows without Developer Mode).
 FAIL!  : CopySafetyTests::replaceKeepsAttributesPermissionsAndStreams() Compared values are not the same
-   Actual   (attributes & kept): 0
-   Expected (kept)             : 8198
+   Actual   (summary(...)): "attributes H+S+I:lost explicit ACE:lost Zone.Identifier:lost"
+   Expected (summary(true, true, true)): "attributes H+S+I:kept explicit ACE:kept Zone.Identifier:kept"
 FAIL!  : CopySafetyTests::replaceKeepsRestrictivePermissions() 'after.protectedDacl' returned FALSE. ()
 FAIL!  : CopySafetyTests::overwriteLongPath() 'outcome.succeeded == 1' returned FALSE. (Could not replace the destination file (Windows error 3). Original kept.)
 FAIL!  : CopySafetyTests::overwriteLongFileName() 'outcome.succeeded == 1' returned FALSE. (Cannot open destination file for writing.)
-Totals: 2 passed, 9 failed, 1 skipped, 0 blacklisted, 736ms
+Totals: 2 passed, 9 failed, 1 skipped, 0 blacklisted, 630ms
+subst after A: []
 ```
 
-The subst leg reproduces B1 exactly: the file is gone (`<missing>`). The attribute and protected-DACL assertions fail first in their tests.
+(This is the run at `b021a40`'s tests. The earlier run at `0fedecd` failed the same nine tests.)
+
+- The subst leg reproduces B1 exactly: the file is gone (`<missing>`).
+- The metadata test reports all three pieces of metadata lost.
+- The restrictive-DACL test shows the protected DACL dropped.
 
 #### Fail-before B: mutations of the fix
 
@@ -340,23 +351,24 @@ FAIL!  : CopyMoveTests::testOverwriteSweepSkipsInFlightTemporaryInAnyCase() Comp
 Totals: 23 passed, 5 failed, 0 skipped, 0 blacklisted, 2327ms
 ```
 
-#### Targeted ctest at `0e92bfa`
+#### Targeted ctest at `b021a40`
 
-Run twice inside `gate-lock.ps1 -Branch claude/copy-safety-fix`, with PATH prefixed by the project's Python and Qt and with `GLANCELOT_CROSS_VOLUME_DIR=F:\` (exFAT). `testOverwriteMoveCrossVolume` ran and was not skipped.
+Run twice inside `gate-lock.ps1 -Branch claude/copy-safety-fix`, after an incremental full `build.ps1`, with PATH prefixed by the project's Python and Qt and with `GLANCELOT_CROSS_VOLUME_DIR=F:\` (exFAT). `testOverwriteMoveCrossVolume` ran and was not skipped. The same two runs at `0e92bfa` also passed 4/4.
 
 ```
-== run 1 at 0e92bfa
-1/4 Test #15: file_operation_service ...........   Passed    1.26 sec
-2/4 Test #34: mutation .........................   Passed    0.21 sec
-3/4 Test #35: copy_move ........................   Passed    2.59 sec
-4/4 Test #36: copy_safety ......................   Passed    0.97 sec
+== run 1 at b021a40
+1/4 Test #15: file_operation_service ...........   Passed    1.23 sec
+2/4 Test #34: mutation .........................   Passed    0.18 sec
+3/4 Test #35: copy_move ........................   Passed    2.46 sec
+4/4 Test #36: copy_safety ......................   Passed    0.81 sec
 100% tests passed out of 4
 == run 2
-1/4 Test #15: file_operation_service ...........   Passed    1.20 sec
-2/4 Test #34: mutation .........................   Passed    0.12 sec
-3/4 Test #35: copy_move ........................   Passed    2.39 sec
-4/4 Test #36: copy_safety ......................   Passed    0.83 sec
+1/4 Test #15: file_operation_service ...........   Passed    1.25 sec
+2/4 Test #34: mutation .........................   Passed    0.18 sec
+3/4 Test #35: copy_move ........................   Passed    2.41 sec
+4/4 Test #36: copy_safety ......................   Passed    0.78 sec
 100% tests passed out of 4
+subst: []
 ```
 
 Results files:
@@ -367,13 +379,19 @@ A clean recompile of `copy_move_service.cpp`, `copy_move_tests.cpp` and `copy_sa
 
 ### Pre-handoff checklist
 
-1. **Fail-before:** A and B above. Every new assertion fails on the round-0 service or under a mutation, except the symlink leg. It cannot run on this account and passes on POSIX through the canonical-path check that both versions have.
-2. **Grant check** (`git diff --name-only c5e184c..0e92bfa`):
+1. **Fail-before:** A and B above.
+   - Each new Windows test fails on the round-0 service (A) or under a mutation of the fix (B). QTest stops at the first failing comparison, so A shows each test's first failure; the metadata test folds its three checks into one comparison so all three show.
+   - Not shown failing on Windows: the POSIX `#else` legs (mode bits), which did not run here, and the symlink leg, which cannot run on this account. Round 0 already refused the symlink case on POSIX through its canonical-path check.
+2. **Grant check** (`git diff --name-only c5e184c..b021a40`, plus this handoff file):
    - `src/app/copy_move_service.cpp`, `src/app/copy_safety.hpp`, `tests/copy_move_tests.cpp`: the packet's files.
    - `tests/copy_safety_tests.cpp`, `tests/copy_safety_test_support.hpp`, `cmake/CopySafetyTests.cmake`: new, for the `copy_safety` test the brief names.
    - `CMakeLists.txt`: one line, `include(cmake/CopySafetyTests.cmake)`, inside the viewer `BUILD_TESTING` block after `copy_move`. This is a lead-owned file. The line follows the brief's "its own cmake file" instruction for a new test; nothing else changed there.
 3. **Exact base:** see Branch and SHAs above.
-4. **ctest:** targeted, twice, as above. The full offscreen suite and `scripts/build.ps1 -Test` were **not** run in this round, because the brief asked for the targeted set only; the authoritative gate runs everything. The Linux build and tests (the POSIX `stat`/`chmod` code, and the symlink, hard-link and mode tests) were not compiled or run here. They are left to `build.yml` and the gate.
+4. **ctest:** targeted, twice, as above.
+   - The full offscreen suite and `scripts/build.ps1 -Test` were **not** run in this round; the brief asked for the targeted set only, and the authoritative gate runs everything.
+   - The Linux build and tests were not compiled or run here: the POSIX `stat`/`chmod` code and the symlink, hard-link and mode tests.
+   - `build.yml`'s Linux job builds `core` only (`GLANCELOT_BUILD_VIEWER=OFF`), so `copy_move_service.cpp` and both test targets are first compiled on Linux by the gate's `docker build`.
+   - No `-Werror` is set in CMake. The POSIX `stat` structs are zero-initialised to avoid maybe-uninitialised warnings.
 5. **Decisions taken** and **Open questions** are below.
 
 ### Decisions taken
@@ -401,4 +419,6 @@ A clean recompile of `copy_move_service.cpp`, `copy_move_tests.cpp` and `copy_sa
 
 ### Open questions for the lead
 
-- None blocking. If the lead prefers the round-1 test helpers folded into `copy_move_tests`, `cmake/CopySafetyTests.cmake` and its `CMakeLists.txt` line can be dropped. The `subst`/`mklink` legs would then make `copy_move` a `native` test in `cmake/TestLabels.cmake`.
+- None blocking.
+- Docs follow-up: the label table in `docs/TESTING.md` counts and names the tests per label. The new `copy_safety` test (`native`, `process`) is not in it. No script checks that table, and the file is not this packet's, so it is left to the lead.
+- If the lead prefers the round-1 test helpers folded into `copy_move_tests`, `cmake/CopySafetyTests.cmake` and its `CMakeLists.txt` line can be dropped. The `subst`/`mklink` legs would then make `copy_move` a `native` test in `cmake/TestLabels.cmake`.
