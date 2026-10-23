@@ -313,6 +313,22 @@
         <source>Saving layout preferences…</source>
         <translation>[Sàvîñg làýõût préféréñçés…]</translation>
     </message>
+    <message>
+        <source>A newer version of Glancelot saved a preset with that name. Choose another name.</source>
+        <translation>[À ñéwér vérsîõñ õf Glàñçélõt sàvéd à prését wîth thàt ñàmé. Çhõõsé àñõthér ñàmé.]</translation>
+    </message>
+    <message>
+        <source>Saved layout presets are unreadable and were preserved; reset settings to save new presets.</source>
+        <translation>[Sàvéd làýõût préséts àré ûñréàdàblé àñd wéré présérvéd; rését séttîñgs tõ sàvé ñéw préséts.]</translation>
+    </message>
+    <message>
+        <source>A display workspace preset already uses that name. Choose another name.</source>
+        <translation>[À dîsplàý wõrkspàçé prését àlréàdý ûsés thàt ñàmé. Çhõõsé àñõthér ñàmé.]</translation>
+    </message>
+    <message>
+        <source>A newer version of Glancelot saved that preset; it was preserved and not applied.</source>
+        <translation>[À ñéwér vérsîõñ õf Glàñçélõt sàvéd thàt prését; ît wàs présérvéd àñd ñõt àpplîéd.]</translation>
+    </message>
 </context>
 <context>
     <name>Main</name>
@@ -467,6 +483,382 @@
     <message>
         <source>Info</source>
         <translation>[Îñfõ]</translation>
+    </message>
+    <message>
+        <source>%1 — Glancelot</source>
+        <translation>[%1 — Glàñçélõt]</translation>
+    </message>
+    <message>
+        <source>Grid and photo will be stacked in the Both view.</source>
+        <translation>[Grîd àñd phõtõ wîll bé stàçkéd îñ thé Bõth vîéw.]</translation>
+    </message>
+    <message>
+        <source>Grid and photo will sit side by side in the Both view.</source>
+        <translation>[Grîd àñd phõtõ wîll sît sîdé bý sîdé îñ thé Bõth vîéw.]</translation>
+    </message>
+    <message>
+        <source>Unlock the layout before changing panes.</source>
+        <translation>[Ûñlõçk thé làýõût béfõré çhàñgîñg pàñés.]</translation>
+    </message>
+    <message>
+        <source>Unfreeze the pane before moving it.</source>
+        <translation>[Ûñfréézé thé pàñé béfõré mõvîñg ît.]</translation>
+    </message>
+    <message>
+        <source>Wait for the current move to the %1 to finish.</source>
+        <translation>[Wàît fõr thé çûrréñt mõvé tõ thé %1 tõ fîñîsh.]</translation>
+    </message>
+    <message>
+        <source>Drives can&apos;t be moved to the %1.</source>
+        <translation>[Drîvés çàñ&apos;t bé mõvéd tõ thé %1.]</translation>
+    </message>
+    <message>
+        <source>Not in grid view</source>
+        <translation>[Ñõt îñ grîd vîéw]</translation>
+    </message>
+    <message>
+        <source>Needs the folder grid</source>
+        <translation>[Ñééds thé fõldér grîd]</translation>
+    </message>
+    <message>
+        <source>Needs the folder tree</source>
+        <translation>[Ñééds thé fõldér tréé]</translation>
+    </message>
+    <message>
+        <source>%1 (%2)</source>
+        <translation>[%1 (%2)]</translation>
+    </message>
+    <message>
+        <source>Select items in the grid to move them to the %1.</source>
+        <translation>[Séléçt îtéms îñ thé grîd tõ mõvé thém tõ thé %1.]</translation>
+    </message>
+    <message>
+        <source>No photo is currently open to move to the %1.</source>
+        <translation>[Ñõ phõtõ îs çûrréñtlý õpéñ tõ mõvé tõ thé %1.]</translation>
+    </message>
+    <message>
+        <source>No folder is currently open to move to the %1.</source>
+        <translation>[Ñõ fõldér îs çûrréñtlý õpéñ tõ mõvé tõ thé %1.]</translation>
+    </message>
+    <message>
+        <source>Open a photo first to pin it as a reference.</source>
+        <translation>[Õpéñ à phõtõ fîrst tõ pîñ ît às à référéñçé.]</translation>
+    </message>
+    <message>
+        <source>Display preferences are saving. Apply the preset when they finish.</source>
+        <translation>[Dîsplàý préféréñçés àré sàvîñg. Àpplý thé prését whéñ théý fîñîsh.]</translation>
+    </message>
+    <message>
+        <source>Layout: %1. %2</source>
+        <translation>[Làýõût: %1. %2]</translation>
+    </message>
+    <message>
+        <source>Layout: %1</source>
+        <translation>[Làýõût: %1]</translation>
+    </message>
+    <message>
+        <source>Photo canvas</source>
+        <translation>[Phõtõ çàñvàs]</translation>
+    </message>
+    <message>
+        <source>%1, %2 by %3 pixels</source>
+        <translation>[%1, %2 bý %3 pîxéls]</translation>
+    </message>
+    <message>
+        <source>Open or drop a photo to begin</source>
+        <translation>[Õpéñ õr drõp à phõtõ tõ bégîñ]</translation>
+    </message>
+    <message>
+        <source>%1. %2</source>
+        <translation>[%1. %2]</translation>
+    </message>
+    <message>
+        <source>Nothing selected</source>
+        <translation>[Ñõthîñg séléçtéd]</translation>
+    </message>
+    <message>
+        <source>Nothing to preview</source>
+        <translation>[Ñõthîñg tõ prévîéw]</translation>
+    </message>
+    <message>
+        <source>Loading folder…</source>
+        <translation>[Lõàdîñg fõldér…]</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>[Fõldér]</translation>
+    </message>
+    <message>
+        <source>Glancelot can&apos;t preview this file type</source>
+        <translation>[Glàñçélõt çàñ&apos;t prévîéw thîs fîlé týpé]</translation>
+    </message>
+    <message>
+        <source>This photo could not be shown.</source>
+        <translation>[Thîs phõtõ çõûld ñõt bé shõwñ.]</translation>
+    </message>
+    <message>
+        <source>Select a photo in the grid to preview it here.</source>
+        <translation>[Séléçt à phõtõ îñ thé grîd tõ prévîéw ît héré.]</translation>
+    </message>
+    <message>
+        <source>This folder is empty.</source>
+        <translation>[Thîs fõldér îs émptý.]</translation>
+    </message>
+    <message>
+        <source>This folder can&apos;t be opened.</source>
+        <translation>[Thîs fõldér çàñ&apos;t bé õpéñéd.]</translation>
+    </message>
+    <message>
+        <source>Loading %1…</source>
+        <translation>[Lõàdîñg %1…]</translation>
+    </message>
+    <message>
+        <source>Zoom navigator</source>
+        <translation>[Zõõm ñàvîgàtõr]</translation>
+    </message>
+    <message>
+        <source>Move “%1” to the %2</source>
+        <translation>[Mõvé “%1” tõ thé %2]</translation>
+    </message>
+    <message>
+        <source>Move the photo to the %1</source>
+        <translation>[Mõvé thé phõtõ tõ thé %1]</translation>
+    </message>
+    <message>
+        <source>Resize grid and photo</source>
+        <translation>[Résîzé grîd àñd phõtõ]</translation>
+    </message>
+    <message>
+        <source>The layout is locked or the window is too small to resize the split.</source>
+        <translation>[Thé làýõût îs lõçkéd õr thé wîñdõw îs tõõ smàll tõ résîzé thé splît.]</translation>
+    </message>
+    <message>
+        <source>Left and Right arrows move the divider. Home centres it.</source>
+        <translation>[Léft àñd Rîght àrrõws mõvé thé dîvîdér. Hõmé çéñtrés ît.]</translation>
+    </message>
+    <message>
+        <source>Up and Down arrows move the divider. Home centres it.</source>
+        <translation>[Ûp àñd Dõwñ àrrõws mõvé thé dîvîdér. Hõmé çéñtrés ît.]</translation>
+    </message>
+    <message>
+        <source>Drag to resize. Double-click to centre.</source>
+        <translation>[Dràg tõ résîzé. Dõûblé-çlîçk tõ çéñtré.]</translation>
+    </message>
+    <message>
+        <source>Unlock the layout to resize the split</source>
+        <translation>[Ûñlõçk thé làýõût tõ résîzé thé splît]</translation>
+    </message>
+    <message>
+        <source>Unfreeze the grid and photo panes to resize the split</source>
+        <translation>[Ûñfréézé thé grîd àñd phõtõ pàñés tõ résîzé thé splît]</translation>
+    </message>
+    <message>
+        <source>Showing the grid. Tab switches.</source>
+        <translation>[Shõwîñg thé grîd. Tàb swîtçhés.]</translation>
+    </message>
+    <message>
+        <source>Showing the photo. Tab switches.</source>
+        <translation>[Shõwîñg thé phõtõ. Tàb swîtçhés.]</translation>
+    </message>
+    <message>
+        <source>Grid and photo don&apos;t both fit this window. Showing the grid; press Tab to switch.</source>
+        <translation>[Grîd àñd phõtõ dõñ&apos;t bõth fît thîs wîñdõw. Shõwîñg thé grîd; préss Tàb tõ swîtçh.]</translation>
+    </message>
+    <message>
+        <source>Grid and photo don&apos;t both fit this window. Showing the photo; press Tab to switch.</source>
+        <translation>[Grîd àñd phõtõ dõñ&apos;t bõth fît thîs wîñdõw. Shõwîñg thé phõtõ; préss Tàb tõ swîtçh.]</translation>
+    </message>
+    <message>
+        <source>Stacked to fit this window.</source>
+        <translation>[Stàçkéd tõ fît thîs wîñdõw.]</translation>
+    </message>
+    <message>
+        <source>Placed side by side to fit this window.</source>
+        <translation>[Plàçéd sîdé bý sîdé tõ fît thîs wîñdõw.]</translation>
+    </message>
+    <message>
+        <source>Layout adapted. Reset in Settings.</source>
+        <translation>[Làýõût àdàptéd. Rését îñ Séttîñgs.]</translation>
+    </message>
+    <message>
+        <source>Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing.</source>
+        <translation>[Làýõût àdàptéd tõ fît thîs wîñdõw. Sàvéd préféréñçés àré képt. Çhàñgé õr rését ît îñ Séttîñgs → Brõwsîñg.]</translation>
+    </message>
+    <message>
+        <source>Hide the folder tree</source>
+        <translation>[Hîdé thé fõldér tréé]</translation>
+    </message>
+    <message>
+        <source>Show the folder tree</source>
+        <translation>[Shõw thé fõldér tréé]</translation>
+    </message>
+    <message>
+        <source>View</source>
+        <translation>[Vîéw]</translation>
+    </message>
+    <message>
+        <source>Change view: photo, grid or both</source>
+        <translation>[Çhàñgé vîéw: phõtõ, grîd õr bõth]</translation>
+    </message>
+    <message>
+        <source>View: %1. Change view</source>
+        <translation>[Vîéw: %1. Çhàñgé vîéw]</translation>
+    </message>
+    <message>
+        <source>%1; reverse with %2</source>
+        <translation>[%1; révérsé wîth %2]</translation>
+    </message>
+    <message>
+        <source>Cycle file order</source>
+        <translation>[Çýçlé fîlé õrdér]</translation>
+    </message>
+    <message>
+        <source>name</source>
+        <translation>[ñàmé]</translation>
+    </message>
+    <message>
+        <source>date modified</source>
+        <translation>[dàté mõdîfîéd]</translation>
+    </message>
+    <message>
+        <source>size</source>
+        <translation>[sîzé]</translation>
+    </message>
+    <message>
+        <source>shuffle</source>
+        <translation>[shûfflé]</translation>
+    </message>
+    <message>
+        <source>File order: %1, descending</source>
+        <translation>[Fîlé õrdér: %1, désçéñdîñg]</translation>
+    </message>
+    <message>
+        <source>File order: %1, ascending</source>
+        <translation>[Fîlé õrdér: %1, àsçéñdîñg]</translation>
+    </message>
+    <message>
+        <source>Folder tabs</source>
+        <translation>[Fõldér tàbs]</translation>
+    </message>
+    <message>
+        <source>%1, selected</source>
+        <translation>[%1, séléçtéd]</translation>
+    </message>
+    <message>
+        <source>Close tab %1</source>
+        <translation>[Çlõsé tàb %1]</translation>
+    </message>
+    <message>
+        <source>Workspace layout is locked. Select to unlock</source>
+        <translation>[Wõrkspàçé làýõût îs lõçkéd. Séléçt tõ ûñlõçk]</translation>
+    </message>
+    <message>
+        <source>Workspace layout locked. Unlock layout</source>
+        <translation>[Wõrkspàçé làýõût lõçkéd. Ûñlõçk làýõût]</translation>
+    </message>
+    <message>
+        <source>%1. Find a command: %2</source>
+        <translation>[%1. Fîñd à çõmmàñd: %2]</translation>
+    </message>
+    <message>
+        <source>Settings, palettes and shortcuts</source>
+        <translation>[Séttîñgs, pàléttés àñd shõrtçûts]</translation>
+    </message>
+    <message>
+        <source>Restore the system title bar</source>
+        <translation>[Réstõré thé sýstém tîtlé bàr]</translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation>[Réstõré]</translation>
+    </message>
+    <message>
+        <source>Maximize</source>
+        <translation>[Màxîmîzé]</translation>
+    </message>
+    <message>
+        <source>Previous photo</source>
+        <translation>[Prévîõûs phõtõ]</translation>
+    </message>
+    <message>
+        <source>Next photo</source>
+        <translation>[Ñéxt phõtõ]</translation>
+    </message>
+    <message>
+        <source>%1 selected</source>
+        <translation>[%1 séléçtéd]</translation>
+    </message>
+    <message>
+        <source>No selection</source>
+        <translation>[Ñõ séléçtîõñ]</translation>
+    </message>
+    <message>
+        <source>Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up</source>
+        <translation>[Àrrõw kéýs mõvé · Shîft õr Çtrl séléçts · Éñtér õpéñs · Bàçkspàçé gõés ûp]</translation>
+    </message>
+    <message>
+        <source>Slideshow · %1 s</source>
+        <translation>[Slîdéshõw · %1 s]</translation>
+    </message>
+    <message>
+        <source>Slideshow running, %1 seconds per photo. Escape stops it.</source>
+        <translation>[Slîdéshõw rûññîñg, %1 séçõñds pér phõtõ. Ésçàpé stõps ît.]</translation>
+    </message>
+    <message>
+        <source>%1, …</source>
+        <translation>[%1, …]</translation>
+    </message>
+    <message>
+        <source>Waiting for the next key after %1. Escape cancels.</source>
+        <translation>[Wàîtîñg fõr thé ñéxt kéý àftér %1. Ésçàpé çàñçéls.]</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>[Õpéñ fõldér]</translation>
+    </message>
+    <message>
+        <source>%1 × %2</source>
+        <translation>[%1 × %2]</translation>
+    </message>
+    <message>
+        <source>%1%</source>
+        <translation>[%1%]</translation>
+    </message>
+    <message>
+        <source>Actual size: one image pixel per display pixel</source>
+        <translation>[Àçtûàl sîzé: õñé îmàgé pîxél pér dîsplàý pîxél]</translation>
+    </message>
+    <message>
+        <source>Zoom %1 percent. Show actual size</source>
+        <translation>[Zõõm %1 pérçéñt. Shõw àçtûàl sîzé]</translation>
+    </message>
+    <message>
+        <source>Fit without enlarging</source>
+        <translation>[Fît wîthõût éñlàrgîñg]</translation>
+    </message>
+    <message>
+        <source>Rotate the view clockwise</source>
+        <translation>[Rõtàté thé vîéw çlõçkwîsé]</translation>
+    </message>
+    <message>
+        <source>Toggle metadata inspector</source>
+        <translation>[Tõgglé métàdàtà îñspéçtõr]</translation>
+    </message>
+    <message>
+        <source>Reference — %1</source>
+        <translation>[Référéñçé — %1]</translation>
+    </message>
+    <message>
+        <source>Reference photo %1</source>
+        <translation>[Référéñçé phõtõ %1]</translation>
+    </message>
+    <message>
+        <source>Photographs (%1)</source>
+        <translation>[Phõtõgràphs (%1)]</translation>
+    </message>
+    <message>
+        <source>All files (%1)</source>
+        <translation>[Àll fîlés (%1)]</translation>
     </message>
 </context>
 <context>
@@ -959,12 +1351,12 @@
         <translation>[Çàñçél]</translation>
     </message>
     <message>
-        <source>Named presets for this window slot</source>
-        <translation>[Ñàméd préséts fõr thîs wîñdõw slõt]</translation>
+        <source>Display workspace presets for this window</source>
+        <translation>[Dîsplàý wõrkspàçé préséts fõr thîs wîñdõw]</translation>
     </message>
     <message>
-        <source>Workspace presets include pane placement and lock state. Images are never stored in presets. Applying a preset does not automatically enable output.</source>
-        <translation>[Wõrkspàçé préséts îñçlûdé pàñé plàçéméñt àñd lõçk stàté. Îmàgés àré ñévér stõréd îñ préséts. Àpplýîñg à prését dõés ñõt àûtõmàtîçàllý éñàblé õûtpût.]</translation>
+        <source>Saved for this window only. Workspace presets include pane placement and lock state; pane layout presets in Settings are saved for every window. Images are never stored in presets. Applying a preset does not automatically enable output.</source>
+        <translation>[Sàvéd fõr thîs wîñdõw õñlý. Wõrkspàçé préséts îñçlûdé pàñé plàçéméñt àñd lõçk stàté; pàñé làýõût préséts îñ Séttîñgs àré sàvéd fõr évérý wîñdõw. Îmàgés àré ñévér stõréd îñ préséts. Àpplýîñg à prését dõés ñõt àûtõmàtîçàllý éñàblé õûtpût.]</translation>
     </message>
 </context>
 <context>
@@ -1254,28 +1646,12 @@
         <translation>[Kéép pàñé põsîtîõñs àñd sîzés fîxéd whîlé ûsîñg théîr çõñtéñts.]</translation>
     </message>
     <message>
-        <source>Layout preset</source>
-        <translation>[Làýõût prését]</translation>
-    </message>
-    <message>
-        <source>Review, Browse and Default are built in; your own saved layouts follow.</source>
-        <translation>[Révîéw, Brõwsé àñd Défàûlt àré bûîlt îñ; ýõûr õwñ sàvéd làýõûts fõllõw.]</translation>
-    </message>
-    <message>
         <source>Apply</source>
         <translation>[Àpplý]</translation>
     </message>
     <message>
         <source>Delete</source>
         <translation>[Délété]</translation>
-    </message>
-    <message>
-        <source>Save current layout as</source>
-        <translation>[Sàvé çûrréñt làýõût às]</translation>
-    </message>
-    <message>
-        <source>Preset name</source>
-        <translation>[Prését ñàmé]</translation>
     </message>
     <message>
         <source>Save</source>
@@ -1716,6 +2092,58 @@
     <message>
         <source>Open now</source>
         <translation>[Õpéñ ñõw]</translation>
+    </message>
+    <message>
+        <source>Unavailable while display preferences are saving.</source>
+        <translation>[Ûñàvàîlàblé whîlé dîsplàý préféréñçés àré sàvîñg.]</translation>
+    </message>
+    <message>
+        <source>Unlock the workspace layout to apply a pane layout preset.</source>
+        <translation>[Ûñlõçk thé wõrkspàçé làýõût tõ àpplý à pàñé làýõût prését.]</translation>
+    </message>
+    <message>
+        <source>Frozen: %1. Unfreeze to apply a pane layout preset.</source>
+        <translation>[Frõzéñ: %1. Ûñfréézé tõ àpplý à pàñé làýõût prését.]</translation>
+    </message>
+    <message>
+        <source>Display preferences are saving. Apply the preset when they finish.</source>
+        <translation>[Dîsplàý préféréñçés àré sàvîñg. Àpplý thé prését whéñ théý fîñîsh.]</translation>
+    </message>
+    <message>
+        <source>Restores the default pane placement, sizes and view, and turns off the lock and every freeze.</source>
+        <translation>[Réstõrés thé défàûlt pàñé plàçéméñt, sîzés àñd vîéw, àñd tûrñs õff thé lõçk àñd évérý fréézé.]</translation>
+    </message>
+    <message>
+        <source>Pane layout presets</source>
+        <translation>[Pàñé làýõût préséts]</translation>
+    </message>
+    <message>
+        <source>Saved for every window; applies to this window&apos;s docked panes. Never changes lock, freeze or displays.</source>
+        <translation>[Sàvéd fõr évérý wîñdõw; àpplîés tõ thîs wîñdõw&apos;s dõçkéd pàñés. Ñévér çhàñgés lõçk, fréézé õr dîsplàýs.]</translation>
+    </message>
+    <message>
+        <source>Pane layout preset</source>
+        <translation>[Pàñé làýõût prését]</translation>
+    </message>
+    <message>
+        <source>Save pane layout as</source>
+        <translation>[Sàvé pàñé làýõût às]</translation>
+    </message>
+    <message>
+        <source>Pane layout name</source>
+        <translation>[Pàñé làýõût ñàmé]</translation>
+    </message>
+    <message>
+        <source>Name for the new pane layout preset</source>
+        <translation>[Ñàmé fõr thé ñéw pàñé làýõût prését]</translation>
+    </message>
+    <message>
+        <source>Pane placement</source>
+        <translation>[Pàñé plàçéméñt]</translation>
+    </message>
+    <message>
+        <source>Unlock the workspace layout to freeze or unfreeze a pane.</source>
+        <translation>[Ûñlõçk thé wõrkspàçé làýõût tõ fréézé õr ûñfréézé à pàñé.]</translation>
     </message>
 </context>
 <context>
