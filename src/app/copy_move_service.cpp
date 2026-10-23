@@ -263,13 +263,13 @@ bool replaceWithoutMerge(const std::wstring& from, const std::wstring& to, QStri
     }
     return true;
 }
-#endif
 
 // Name for ReplaceFileW's backup of the replaced target, beside it. Not swept as a leftover.
 QString backupPathFor(const QString& targetPath) {
     const QString suffix = QString::number(QRandomGenerator::global()->generate(), 16).rightJustified(8, QLatin1Char('0'));
     return clean(QFileInfo(targetPath).dir().filePath(QStringLiteral(".~gb%1.tmp").arg(suffix)));
 }
+#endif
 
 FaultHook& faultHook() {
     static FaultHook hook;
