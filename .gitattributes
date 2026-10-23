@@ -11,3 +11,5 @@ docs/verification/lead-integrate-all-2026-10-22/** -text
 
 # Shell scripts run in Linux containers and WSL; keep LF on Windows checkouts.
 *.sh text eol=lf
+
+docs/verification/gate-triage-2026-10-22/*.txt -text
