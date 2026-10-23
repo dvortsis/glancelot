@@ -5,7 +5,9 @@
 #include "glancelot/display_manager.hpp"
 #include "presentation_window.hpp"
 #include <QSet>
+#include <QSGRendererInterface>
 #include <QSignalSpy>
+#include <atomic>
 
 namespace {
 struct BudgetScope {
@@ -43,6 +45,24 @@ class ReferencePinTests : public QObject {
         return QTest::qWaitFor([&] { return referenceWindow(h)->isVisible(); }, 5000)
             && h.viewer.presentationMode() == "pinned";
     }
+    static bool nativeRhi(Harness& h) {
+        const auto* renderer = h.window->rendererInterface();
+        return renderer && QSGRendererInterface::isApiRhiBased(renderer->graphicsApi());
+    }
+    static QString notice(Harness& h) { return h.object("deleteFlow")->property("noticeText").toString(); }
+    // Records the lowest admitted texture byte count the reference canvas reports after any frame (render thread).
+    struct AdmissionFloor {
+        std::atomic<qint64> lowest{0};
+        QMetaObject::Connection connection;
+        AdmissionFloor(QQuickWindow* window, ImageCanvas* canvas) {
+            connection = QObject::connect(window, &QQuickWindow::frameSwapped, window, [this, canvas] {
+                const qint64 now = canvas->admittedTextureBytes();
+                qint64 seen = lowest.load();
+                while (now < seen && !lowest.compare_exchange_weak(seen, now)) {}
+            }, Qt::DirectConnection);
+        }
+        ~AdmissionFloor() { QObject::disconnect(connection); }
+    };
 
     QTemporaryDir* config{};
 private slots:
@@ -68,6 +88,7 @@ private slots:
         QSignalSpy changed(&h.viewer, &ViewerController::referenceChanged);
         QVERIFY(!h.viewer.pinReference());
         h.viewer.trigger("reference-pin"); QTest::qWait(50);
+        QCOMPARE(notice(h), QString("Open a photo first to pin it as a reference."));
         QVERIFY(h.viewer.referenceName().isEmpty());
         QVERIFY(!referenceWindow(h)->isVisible());
         QCOMPARE(changed.count(), 0);
@@ -139,34 +160,40 @@ private slots:
         QVERIFY(openFolder(h, media));
         auto* dm = h.viewer.displayManager();
         const qint64 one = h.viewer.image().sizeInBytes();
-        QVERIFY(pinBoth(h));
+        // Distinct frames: reference p1, output pin p2, current p3. A leaked old reference would then cost a third
+        // image instead of hiding behind the output pin.
+        h.viewer.trigger("reference-pin"); QTRY_VERIFY(referenceWindow(h)->isVisible());
         const QImage first = h.viewer.image();
         QVERIFY(step(h, 2));
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QVERIFY(step(h, 3));
+        QCOMPARE(dm->retainedImageBytes(), 3 * one);   // p3 current, p2 pin (and history), p1 reference
         const Selection selection(h.viewer);
         QSignalSpy pinned(dm, &glancelot::DisplayManager::pinnedPathChanged);
 
-        // Replacing the reference does not touch the output pin.
+        // Replacing the reference does not touch the output pin, and the old reference frame is released.
         h.viewer.trigger("reference-pin");
-        QCOMPARE(h.viewer.referenceName(), QString("p2.png"));
+        QCOMPARE(h.viewer.referenceName(), QString("p3.png"));
         QCOMPARE(referenceCanvas(h)->image().cacheKey(), h.viewer.image().cacheKey());
-        QCOMPARE(dm->pinnedPath(), media.path(0));
+        QCOMPARE(dm->pinnedPath(), media.path(1));
         QCOMPARE(pinned.count(), 0);
-        QCOMPARE(dm->retainedImageBytes(), 2 * one);   // the old reference frame is released; p1 stays as the pin
+        QCOMPARE(dm->retainedImageBytes(), 2 * one);   // p3 (current + reference) and p2; p1 is gone
         QVERIFY(selection.same(h.viewer));
 
         // Replacing the output pin does not touch the reference.
         QSignalSpy reference(&h.viewer, &ViewerController::referenceChanged);
         h.viewer.trigger("presentation-pin");
-        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(dm->pinnedPath(), media.path(2));
         QCOMPARE(reference.count(), 0);
-        QCOMPARE(h.viewer.referenceName(), QString("p2.png"));
+        QCOMPARE(h.viewer.referenceName(), QString("p3.png"));
         QVERIFY(selection.same(h.viewer));
 
         // Stale requests from an older selection generation are refused by both pins.
         QVERIFY(!dm->setReferenceImage(media.path(0), first, 0));
         dm->pinImage(media.path(0), first, 0);
-        QCOMPARE(h.viewer.referenceName(), QString("p2.png"));
-        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(h.viewer.referenceName(), QString("p3.png"));
+        QCOMPARE(dm->pinnedPath(), media.path(2));
         QCOMPARE(reference.count(), 0);
         QVERIFY(selection.same(h.viewer));
         h.viewer.trigger("presentation-close"); flushDeletes();
@@ -177,30 +204,38 @@ private slots:
         QVERIFY(openFolder(h, media));
         auto* dm = h.viewer.displayManager();
         const qint64 one = h.viewer.image().sizeInBytes();
-        QVERIFY(pinBoth(h));
+        // Distinct pins (reference p1, output p2) so the output canvas can only match its own pin.
+        h.viewer.trigger("reference-pin"); QTRY_VERIFY(referenceWindow(h)->isVisible());
+        const qint64 referenceKey = h.viewer.image().cacheKey();
         QVERIFY(step(h, 2));
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        const qint64 pinnedKey = h.viewer.image().cacheKey();
+        QVERIFY(pinnedKey != referenceKey);
+        QVERIFY(step(h, 3));
         const Selection selection(h.viewer);
 
         // Low-memory release drops optional history only; both explicit pins survive.
         dm->releaseCachedImages();
         QCOMPARE(h.viewer.referenceName(), QString("p1.png"));
-        QCOMPARE(dm->pinnedPath(), media.path(0));
-        QCOMPARE(dm->retainedImageBytes(), 2 * one);
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(dm->retainedImageBytes(), 3 * one);   // p3 current, p2 pin, p1 reference
 
         // Emergency recovery returns everything to the controller: the output closes, the reference window stays.
         h.viewer.trigger("monitor-recover"); flushDeletes();
         QTRY_VERIFY(!dm->isPresentationActive());
         QVERIFY(referenceWindow(h)->isVisible());
         QCOMPARE(h.viewer.referenceName(), QString("p1.png"));
-        QCOMPARE(referenceCanvas(h)->image().cacheKey(), dm->referenceImage().cacheKey());
-        QCOMPARE(dm->pinnedPath(), media.path(0));
-        QVERIFY(dm->retainedImageBytes() <= 2 * one);
+        QCOMPARE(dm->referenceImage().cacheKey(), referenceKey);
+        QCOMPARE(referenceCanvas(h)->image().cacheKey(), referenceKey);
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(dm->retainedImageBytes(), 3 * one);
         QVERIFY(selection.same(h.viewer));
 
-        // Reopening the output after recovery shows its pin again; the reference is unchanged.
+        // Reopening the output after recovery shows its own pin again; the reference is unchanged.
         QVERIFY(h.viewer.displayManager()->openPresentation({}, glancelot::PresentationMode::Pinned));
         auto* output = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(output);
-        QCOMPARE(output->primaryCanvas()->image().cacheKey(), dm->referenceImage().cacheKey());
+        QCOMPARE(output->primaryCanvas()->image().cacheKey(), pinnedKey);
         QCOMPARE(h.viewer.referenceName(), QString("p1.png"));
         QVERIFY(selection.same(h.viewer));
         h.viewer.trigger("presentation-close"); flushDeletes();
@@ -257,6 +292,114 @@ private slots:
         QVERIFY(dm->retainedImageBytes() <= 2 * one + 16);
         QVERIFY(selection.same(h.viewer));
         h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Review round 1: a reference pin never sheds the output's held (pending) frame or changes its status; it is
+    // refused instead.
+    void referenceNeverShedsOutputHeldFrame() {
+        BudgetScope budget;
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        h.viewer.trigger("presentation-toggle"); QVERIFY(dm->isPresentationActive());
+        dm->setRoutingPolicy({{"followSelection", false}});
+        QVERIFY(step(h, 2));   // the output keeps p1; p2 waits as its held latest frame
+        QCOMPARE(dm->retainedImageBytes(), 2 * one);
+        glancelot::DisplayManager::setImageBudgetBytes(2 * one + 16);
+        const QString status = dm->routingStatus();
+        const Selection selection(h.viewer);
+        QSignalSpy routing(dm, &glancelot::DisplayManager::routingStatusChanged);
+        QSignalSpy changed(&h.viewer, &ViewerController::referenceChanged);
+
+        // Fits beside the current frame alone, not beside the held frame too: refused, nothing changes.
+        QImage extra(h.viewer.image().size(), QImage::Format_RGBA8888); extra.fill(Qt::magenta);
+        QVERIFY(!dm->setReferenceImage(media.path(2), extra, quint64(1) << 40));
+        QCOMPARE(changed.count(), 0);
+        QCOMPARE(routing.count(), 0);
+        QCOMPARE(dm->routingStatus(), status);
+        QCOMPARE(dm->retainedImageBytes(), 2 * one);
+        QVERIFY(h.viewer.referenceName().isEmpty());
+        QVERIFY(selection.same(h.viewer));
+
+        // Resuming still delivers the held frame, so it was never shed.
+        dm->setRoutingPolicy({{"followSelection", true}});
+        auto* output = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(output);
+        QTRY_COMPARE(output->primaryCanvas()->image().cacheKey(), h.viewer.image().cacheKey());
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Review round 1: a budget refusal says so instead of "Open a photo first".
+    void budgetRefusalHasItsOwnNotice() {
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        glancelot::DisplayManager::setImageBudgetBytes(h.viewer.image().sizeInBytes() / 2);
+        const Selection selection(h.viewer);
+        h.viewer.trigger("reference-pin"); QTest::qWait(50);
+        QVERIFY(h.viewer.referenceName().isEmpty());
+        QVERIFY(!referenceWindow(h)->isVisible());
+        QVERIFY2(!notice(h).contains("Open a photo first"), qPrintable(notice(h)));
+        QVERIFY2(notice(h).contains("image memory"), qPrintable(notice(h)));
+        QVERIFY(selection.same(h.viewer));
+    }
+
+    // Review round 1, native RHI only: closing or shedding the reference releases its GPU texture and admission
+    // reservation (Qt otherwise keeps a hidden window's scene graph, and with it the renderer and its texture).
+    void nativeTextureReleasedOnClose() {
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        if (!nativeRhi(h)) QSKIP("GPU texture admission needs a native RHI backend; the software backend has none.");
+        auto* window = referenceWindow(h); auto* canvas = referenceCanvas(h);
+        const qint64 one = h.viewer.image().sizeInBytes();
+        QCOMPARE(h.viewer.image().format(), QImage::Format_RGBA8888);   // otherwise the canvas never admits a texture
+        AdmissionFloor floor(window, canvas);
+
+        h.viewer.trigger("reference-pin");
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        QTRY_COMPARE(canvas->admittedTextureBytes(), one);
+        h.viewer.trigger("reference-close");
+        QTRY_VERIFY(!window->isVisible());
+        QTRY_COMPARE(canvas->admittedTextureBytes(), qint64(0));
+
+        // Re-pinning after the release renders again and holds exactly one texture.
+        h.viewer.trigger("reference-pin");
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        QTRY_COMPARE(canvas->admittedTextureBytes(), one);
+        // Pin replacement keeps exactly one texture.
+        QVERIFY(step(h, 2));
+        h.viewer.trigger("reference-pin");
+        QCOMPARE(h.viewer.referenceName(), QString("p2.png"));
+        QTRY_COMPARE(canvas->image().cacheKey(), h.viewer.image().cacheKey());
+        QTest::qWait(100);
+        QCOMPARE(canvas->admittedTextureBytes(), one);
+        // The window's own close button releases it too.
+        window->close();
+        QTRY_VERIFY(!window->isVisible());
+        QTRY_COMPARE(canvas->admittedTextureBytes(), qint64(0));
+        QVERIFY2(floor.lowest.load() >= 0, qPrintable(QString::number(floor.lowest.load())));
+    }
+
+    void nativeTextureReleasedOnShed() {
+        BudgetScope budget;
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        if (!nativeRhi(h)) QSKIP("GPU texture admission needs a native RHI backend; the software backend has none.");
+        auto* window = referenceWindow(h); auto* canvas = referenceCanvas(h);
+        const qint64 one = h.viewer.image().sizeInBytes();
+        QCOMPARE(h.viewer.image().format(), QImage::Format_RGBA8888);
+        AdmissionFloor floor(window, canvas);
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+
+        h.viewer.trigger("reference-pin");
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        QTRY_COMPARE(canvas->admittedTextureBytes(), one);
+        QSignalSpy shed(h.viewer.displayManager(), &glancelot::DisplayManager::referenceShed);
+        QVERIFY(step(h, 2));   // a newer current frame sheds the reference
+        QCOMPARE(shed.count(), 1);
+        QTRY_VERIFY(!window->isVisible());
+        QTRY_COMPARE(canvas->admittedTextureBytes(), qint64(0));
+        QVERIFY2(floor.lowest.load() >= 0, qPrintable(QString::number(floor.lowest.load())));
     }
 };
 

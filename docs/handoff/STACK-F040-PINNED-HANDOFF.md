@@ -18,7 +18,7 @@ The reference window (`reference-pin` / `reference-close`) and the MONITOR-OUTPU
 - **Shedding for a newer current frame.** The current frame is never dropped. Order: previous, pending, comparison, reference, pinned output. The reference goes before the output pin because losing it closes a local window with a notice. Losing the output pin would silently change what an audience display shows. `referenceShed(path)` makes the controller set the status "The reference window for <name> closed to keep image memory within its budget."
 - **Stale requests.** A reference whose generation is below the high-water mark is refused, even after a clear.
 - **Selection unchanged.** The reference APIs never touch the current frame, the output mode, the output pin, `currentImageRequested` or `imageRouted`.
-- **Texture release.** The reference `Window` calls `releaseResources()` when it hides. Qt keeps a hidden window's scene graph by default, which held the reference texture and its `CanvasTextureAdmission` reservation until the next pin. On the threaded render loop, releasing a hidden window invalidates its scene graph and destroys the canvas renderer, which releases the texture. `ImageCanvas` already relies on the same mechanism for pane migration.
+- **Texture release (corrected in review round 1).** The original claim here was wrong. Calling `releaseResources()` on the hidden reference window freed nothing: Qt 6.8.3 keeps a hidden window's scene graph by default ("persistent SG, avoiding cleanup"), so the renderer kept its `QImage` copy, its texture and its `CanvasTextureAdmission` reservation. The reference canvas now sets `releaseWhenHidden: true`. That makes its window's scene graph non-persistent, so hiding the window wipes the scene graph and destroys the renderer, which frees all three. See "Review round 1 fixes".
 - **Visible refusal.** When the reference canvas refuses a texture admission, the window shows `referenceCanvas.rendererError` in a status pill. It uses the main window's pill tokens (`Theme.surface`, `Theme.danger`, `radiusCard`, `gapLg`, `textSmall`, `Accessible.AlertMessage`), so the window is no longer blank.
 
 ### Files
@@ -28,7 +28,7 @@ The reference window (`reference-pin` / `reference-close`) and the MONITOR-OUTPU
 | `include/glancelot/display_manager.hpp` | Shared header. Adds the reference slot API and two signals. The exact diff is below. |
 | `src/app/display_manager.cpp` | Reference storage, admission, shed order, `referenceProtected` during output-pin admission |
 | `src/app/viewer_controller.cpp` | Reference section (`referenceImage`, `referenceName`, `pinReference`, `clearReference`) delegates to `DisplayManager`. The `QImage reference` and `referenceLabel` members are removed. Two `connect`s sit next to the existing display-manager connections in `Private()`, about lines 407-412. |
-| `ui/Main.qml` | Only the reference-window block (about lines 2041-2069): status pill and `onVisibleChanged` release. The F054 `rtl` leftovers and the `}    FileDialog {` line are untouched, so EN-06 can repair them without conflicting with this change. |
+| `ui/Main.qml` | Only the reference-window block (about lines 2041-2069): status pill and `onVisibleChanged` release (round 1 replaced the release with `releaseWhenHidden` and also changed the `reference-pin` notice). The F054 `rtl` leftovers and the `}    FileDialog {` line are untouched, so EN-06 can repair them without conflicting with this change. |
 | `tests/reference_pin_tests.cpp` | New |
 | `cmake/ReferencePinTests.cmake`, `CMakeLists.txt` (one `include` line after `MonitorCustomization.cmake`, before `glancelot_attach_recovery_consumers()`) | Provisional target |
 
@@ -141,8 +141,115 @@ The first two depend on how this container's filesystem reports rename identity 
 
 ## Unverified
 
-- **GPU texture release on close** (`releaseResources()` on a hidden reference window) is not observable under the software backend these UI tests use. It needs a native RHI run (Windows gate or physical). The status pill for a refused admission is likewise only exercised structurally (no QML errors, hidden when `rendererError` is empty).
+- **GPU texture release on close** was unverified in the original handoff, and it did not work. Review round 1 fixed it and verified it on Windows D3D11 with the threaded render loop (see below). The status pill for a refused admission is still only exercised structurally (no QML errors, hidden when `rendererError` is empty).
 - **Not done:** cross-window texture admission. The reference canvas keeps its own per-canvas `CanvasTextureAdmission` (256 MiB, the same bound as one presentation window). It is now released on close. Sharing one admission between the reference canvas and the presentation canvases would need a QML-visible hook in `src/render/image_canvas.hpp`, which is not in this packet's grant. `canvas_texture_admission.hpp` therefore needed no change. **Lead decision:** accept per-window texture admission plus aggregate pixel accounting as meeting the contract, or grant `image_canvas.hpp` for a follow-up.
-- **Notice routing:** `Main.qml` line ~729 (`reference-pin` routing, outside this block) still says "Open a photo first…" for any false return. Through the UI, false can only mean "nothing decoded": pinning the current frame never adds bytes, so it is never refused by the budget.
+- **Notice routing:** fixed in review round 1. The original claim that a UI pin is never refused by the budget was wrong: a held output frame or a small budget can refuse it.
 - **UI design skills:** the `ui-design-skills` (application-interface-design and the others) are **not available** in this cloud session. The small QML addition reuses the existing status-pill pattern and theme tokens; no new visual language.
 - No physical multi-monitor or hardware run.
+
+## Review round 1 fixes
+
+Implementer for this round: the lead's local Windows session (the original cloud implementer could not be reached). This is not a self-review; a fresh reviewer re-reviews. Base for the round: `974c42e`.
+
+### Causes
+
+1. **Closing or shedding the reference freed no GPU memory (high).** Qt 6.8.3 keeps a hidden window's scene graph by default. The QML `releaseResources()` call on hide reached the render thread as "persistent SG, avoiding cleanup". The renderer kept its own `QImage` copy (refreshed only during sync), its texture and its `CanvasTextureAdmission` reservation, so `retainedImageBytes()` reported bytes as freed while the GPU side still held them.
+2. **Reference admission ignored the output's held frame.** `setReferenceImage()` counted only the current and pinned frames, then ran `enforceBudget()`. That shed `pendingImage` (the frame a held output shows on resume) and changed the output status to "Output holds its last image...".
+3. **A budget refusal showed "Open a photo first".**
+4. **Weak test checks.** `:154` could not see a leaked old reference because the output pin held the same frame. `:197` used `<=` where the claim is equality. `:203` compared the output canvas with `referenceImage()`, which was the same frame as the pin.
+
+### Changes
+
+| File | Change |
+| --- | --- |
+| `src/render/image_canvas.hpp`, `.cpp` (lead grant) | New opt-in property `releaseWhenHidden` (default false). When true, the canvas calls `setPersistentSceneGraph(false)` on its window, both when the property is set and when the item changes windows, and calls `releaseResources()` when the window hides. A non-persistent scene graph is wiped on hide: the `QQuickRhiItem` node and the `ImageRenderer` are destroyed on the render thread, and `releaseTexture()` frees the texture, the renderer's `QImage` copy and the admission reservation together. Graphics stay persistent (`setPersistentGraphics` is not touched), so re-showing rebuilds only the scene graph. Main-window and presentation canvases are unchanged. |
+| `ui/Main.qml` | `referenceCanvas` sets `releaseWhenHidden: true`. The window's `onVisibleChanged: releaseResources()` is removed. The `reference-pin` route shows its own notice when a decoded photo is refused: "This photo doesn't fit in image memory beside the photos already shown, so the reference window wasn't opened." |
+| `src/app/display_manager.cpp` | `setReferenceImage()` no longer calls `enforceBudget()`. Admission counts these frames as essential: current, pinned, the held `pendingImage` (when `pendingValid`), the comparison frame while comparing, and the previous frame while it is the visible comparison side. If they do not fit, the reference is refused and nothing changes. Otherwise only history the output is not showing is dropped. Admission never changes the output's frames or its routing status. |
+| `include/glancelot/viewer_controller.hpp` | Comments only: the F040 note and `pinReference()`'s return value (lead request). |
+| `tests/reference_pin_tests.cpp` | New: `referenceNeverShedsOutputHeldFrame`, `budgetRefusalHasItsOwnNotice`, `nativeTextureReleasedOnClose`, `nativeTextureReleasedOnShed`. The native cases QSKIP when the window's renderer is not RHI-based (software backend). Strengthened: `pinReplacementParity` (reference p1, output pin p2, current p3; expects exactly `2 * one`, while a leak would give `3 * one`), `recoveryWhileBothActive` (distinct pins; `retainedImageBytes() == 3 * one`; the reopened output canvas is compared with the pin's own `cacheKey`), and `commandsStayDistinct` (checks the "Open a photo first" notice). |
+
+The native cases check three things before any close or shed: the window is exposed, the frame is `Format_RGBA8888`, and `admittedTextureBytes() == one`. After that, close, the window's own close button and a shed must each bring admitted bytes to 0. Re-pinning and pin replacement must hold exactly one texture. A `frameSwapped` probe on the render thread records the lowest admitted value, which must never go below 0.
+
+The lead accepts per-window texture admission for now; the cross-window ledger is E1. The shared-header additions in `display_manager.hpp` are unchanged from the quote above.
+
+### Fail before, pass after
+
+**Before**: corrected tests built against the round-0 sources and QML (`reference_pin_tests_before.exe`, the same build directory).
+
+Offscreen/software (`QT_QPA_PLATFORM=offscreen`, `QT_QUICK_BACKEND=software`):
+
+```
+FAIL!  : ReferencePinTests::referenceNeverShedsOutputHeldFrame() '!dm->setReferenceImage(media.path(2), extra, quint64(1) << 40)' returned FALSE. ()
+FAIL!  : ReferencePinTests::budgetRefusalHasItsOwnNotice() '!notice(h).contains("Open a photo first")' returned FALSE. (Open a photo first to pin it as a reference.)
+SKIP   : ReferencePinTests::nativeTextureReleasedOnClose() GPU texture admission needs a native RHI backend; the software backend has none.
+SKIP   : ReferencePinTests::nativeTextureReleasedOnShed() GPU texture admission needs a native RHI backend; the software backend has none.
+Totals: 8 passed, 2 failed, 2 skipped, 0 blacklisted, 19596ms
+```
+
+Native D3D11, threaded render loop (no platform/backend override, `QT_LOGGING_RULES=qt.scenegraph.renderloop=true`):
+
+```
+FAIL!  : ReferencePinTests::nativeTextureReleasedOnClose() Compared values are not the same
+   Actual   (canvas->admittedTextureBytes()): 256000
+   Expected (qint64(0))                     : 0
+FAIL!  : ReferencePinTests::nativeTextureReleasedOnShed() Compared values are not the same
+   Actual   (canvas->admittedTextureBytes()): 256000
+   Expected (qint64(0))                     : 0
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 43110ms
+```
+
+Render loop on reference close, before the fix:
+
+```
+hide() QQuickWindowQmlImpl_QML_205(referenceWindow)
+releaseResources() in api-call QQuickWindowQmlImpl_QML_205(referenceWindow)
+                    (RT) WM_TryRelease
+                    (RT) - setting exit flag and invalidating
+                    (RT) invalidateGraphics()
+                    (RT) - persistent SG, avoiding cleanup
+```
+
+**After** (this commit, MSVC Release, `build-claude-f040`), run inside the machine gate lock (`gate-lock.ps1 -Branch claude/f040-fix`):
+
+```
+> ctest --test-dir build-claude-f040 -R '^(reference_pin|monitor_output|input_ui|monitor_customization_ui|recovery_controller)$' --output-on-failure
+1/5 Test #13: input_ui .........................   Passed   81.58 sec
+2/5 Test #37: monitor_output ...................   Passed    2.72 sec
+3/5 Test #40: recovery_controller ..............   Passed   14.85 sec
+4/5 Test #43: monitor_customization_ui .........   Passed   22.83 sec
+5/5 Test #44: reference_pin ....................   Passed   14.51 sec
+100% tests passed out of 5
+Total Test time (real) = 136.81 sec
+```
+
+Direct offscreen/software run: `Totals: 10 passed, 0 failed, 2 skipped` (the two native cases QSKIP).
+
+Direct native run (`reference_pin_tests.exe nativeTextureReleasedOnClose nativeTextureReleasedOnShed`, no offscreen or software environment):
+
+```
+PASS   : ReferencePinTests::initTestCase()
+PASS   : ReferencePinTests::nativeTextureReleasedOnClose()
+PASS   : ReferencePinTests::nativeTextureReleasedOnShed()
+PASS   : ReferencePinTests::cleanupTestCase()
+Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 3587ms
+```
+
+Render loop on reference close, after the fix. The main `viewerWindow` still logs "persistent SG, avoiding cleanup" when it hides at teardown, so its scene graph stays persistent:
+
+```
+hide() QQuickWindowQmlImpl_QML_205(referenceWindow)
+                    (RT) WM_TryRelease
+                    (RT) - setting exit flag and invalidating
+                    (RT) invalidateGraphics()
+                    (RT) - invalidating scene graph
+                    (RT) - persistent GL, avoiding cleanup
+```
+
+The `releaseResources()` call that the canvas makes on `visibleChanged` reaches the threaded loop before `hide()`, so it logs "not releasing because window is still active". The release comes from `hide()` itself on the now non-persistent scene graph. The extra call is harmless.
+
+### Still unverified or not done
+
+- **Basic (GUI-thread) render loop.** Its `hide()` never wipes the scene graph, whatever the persistence flags, and its `releaseResources()` only drops caches. On that loop (opt-in, for example OpenGL on Windows) the hidden reference renderer still holds its texture until the window is shown again or destroyed. Windows D3D11 uses the threaded loop.
+- **Pane migration.** The existing `windowChanged` release in `ImageCanvas` (pane migration) depends on the same persistent-scene-graph behaviour. It is unchanged in this round and not re-verified here.
+- **Full offscreen suite.** Not re-run in this round; only the targeted set above was run.
+- **UI design skills.** Read for this round: `application-interface-design` (feedback and states: an error notice says what happened, in specific terms). The QML change is a notice string and one property, with no layout, spacing, geometry, type or motion change, so the other skills did not apply.

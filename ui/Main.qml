@@ -726,7 +726,13 @@ ApplicationWindow {
             }
         }
         // F040
-        else if (id === "reference-pin") { if (!viewer.pinReference()) deleteFlow.showNotice("Open a photo first to pin it as a reference.") }
+        else if (id === "reference-pin") {
+            // A decoded photo that is still refused did not fit in image memory beside the frames already held.
+            if (!viewer.pinReference())
+                deleteFlow.showNotice(viewer.imageReady
+                    ? "This photo doesn't fit in image memory beside the photos already shown, so the reference window wasn't opened."
+                    : "Open a photo first to pin it as a reference.")
+        }
         else if (id === "reference-close") viewer.clearReference()
         // F009
         else if (id === "view-details") photoGrid.details = !photoGrid.details
@@ -2030,6 +2036,9 @@ ApplicationWindow {
             objectName: "referenceCanvas"
             anchors.fill: parent
             image: viewer.referenceImage
+            // Closing or shedding the reference frees its renderer's pixel copy, texture and admission reservation now,
+            // not at the next pin (Qt otherwise keeps a hidden window's scene graph).
+            releaseWhenHidden: true
             background: "#191919"
             focus: true
             Accessible.name: "Reference photo " + viewer.referenceName
@@ -2064,9 +2073,6 @@ ApplicationWindow {
                 Accessible.role: Accessible.AlertMessage
             }
         }
-        // Hiding keeps a window's scene graph by default; release it so closing frees the reference texture and its
-        // admission reservation now rather than at the next pin.
-        onVisibleChanged: if (!visible) releaseResources()
         MouseArea {
             anchors.fill: parent
             property real lastX: 0
