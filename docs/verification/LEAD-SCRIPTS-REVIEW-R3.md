@@ -248,3 +248,34 @@ N2 ticket overflow (planted stale ...-9223372036854775807.json):
 ERROR: Error formatting a string: Format specifier was invalid.   (3 gate requests in a row)
 build-slot: WARNING: Removed stale glancelot-gate-pending-9223372036854775807.json ... SLOT ok; files final=[]
 ```
+
+## Round 3 follow-up: `ff60401`
+
+Verdict: APPROVED. B1 is fixed, and nothing new broke.
+
+- **Reviewed:** `git diff f9ff6d8 ff60401`. It covers the B1 fix, N1 (`-Status` stale rows), N2 (ticket cap and reset), malformed-record handling and the N3 doc line.
+  - Same scratch repo and guard as above, with fresh copies of the three scripts from `ff60401`.
+  - Tests ran from 23:22 to 23:31, one at a time.
+  - No real lock, ticket or slot file was touched.
+- **B1:**
+  - `Remove-StaleGate` now takes the `Get-GateState` result and passes the judged `owner` to `Remove-StaleLockFile`, only when that state came from a file (`fromFile`).
+  - Test 10 ran the interleaving end to end with the new hook. N had `GLANCELOT_LOCK_TEST_STALE_PAUSE_MS=4000` set, and the lock was stale (dead PID 999999). The `origin/main` copy, O2, claimed the lock during N's pause, at 23:22:52.427, and held it for 6 s. N's guard refused to delete O2's record. N started at 23:22:58.979, after O2 ended at 58.434. There was no overlap and nothing was left over.
+  - A malformed planted record (`{"holder":"x"}`, with no `pid` or `started`) was judged stale and removed by N. The old copy fails on that record (`Cannot convert null to type "System.DateTime"`); that is `origin/main`'s own code.
+- **Races, 40 iterations each:**
+  - New against new: 80 intervals, 0 overlaps, 0 cross-iteration overlaps, 0 errors, wins split 19 to 21, no leftovers.
+  - New against old: 80 intervals, 0 overlaps, 0 errors, no leftovers.
+- **Compatibility, both ways (3a to 3e):** passed, including killing an old holder (the new waiter took over) and killing a new holder (the old waiter took over). The old `-Status` reads the new `owner.json`.
+- **Regression reruns:** all passed.
+
+  | Tests | What they covered |
+  |---|---|
+  | 1a to 1f | Child, grandchild and in-process re-entry; each body ran once with its own PID at `depth=4`, and the variable was restored after a throw. |
+  | 2b, 2c | FIFO order; planted tickets skipped; head and middle tickets killed. |
+  | 6a to 6c | Stranded files; the next gate and build started 0.5 s after the reader closed, while the holder shell was still alive. |
+  | 7a to 7g | Throw and `Stop()` released everything. Handles went from 765 to 678 to 678. |
+  | 8 | `-Status`. |
+
+- **N1:** `-Status` now counts only live rows. With one live slot plus an empty, unheld slot 2, it printed `build slots: 1 held of 3; gate requests queued: 0; stale files: 1`.
+- **N2:** tickets are now numbered over live tickets only (stale files are removed first) and capped at 8 digits. With stale planted files `...-9223372036854775807.json` and `...-99999999.json`, the next gate removed both with warnings and ran (`RUN ok`), and no files were left.
+- **Minor, non-blocking.** `GLANCELOT_LOCK_TEST_STALE_PAUSE_MS` is a test hook in production code. It does nothing unless set, but an inherited value would slow stale cleanup. Consider documenting it next to the other environment variables.
+- **Still open:** round-1 N4 (the CI timeout) and notes N-a, N-c and N-d, as listed above. None of them blocks.
