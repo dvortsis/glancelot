@@ -9,30 +9,31 @@ Session: S1 build (cloud), Phase 0 cycle 1. Scope and acceptance: docs/handoff/L
 | Code tip SHA (built and tested) | `dcebfceb02171959d12ac33aeee65bc07c296496` |
 | Branch tip | the commit that adds this handoff and the `docs/TESTING.md` section, directly on top of `dcebfce`; docs only |
 | Review diff | `git diff d355edd <branch tip>` |
+| Review round 1 | commit `build(EN-03): review round 1` on top of `b1ca735`; configure-only checks, no build or test run |
 
 ## What changed
 
 1. **`cmake/TestLabels.cmake` (new).** The root `CMakeLists.txt` includes it once, at the end, under `if(BUILD_TESTING)`, after every test, including those in `MonitorCustomization.cmake`, is registered. It holds one name list per label and:
-   - appends `LABELS` to each listed test. Names are skipped with `if(TEST ...)` when `GLANCELOT_BUILD_VIEWER=OFF`, so a core-only configure still works;
+   - appends `LABELS` to each listed test. (Review round 1: a listed name that is not a registered test now fails configure; with `GLANCELOT_BUILD_VIEWER=OFF` only viewer test names are dropped. See "Review round 1 fixes".);
    - appends `RESOURCE_LOCK budget` to the seven budget tests and `RESOURCE_LOCK clipboard` to the clipboard tests;
    - reads the directory `TESTS` property and stops configure with `FATAL_ERROR` if any registered test has no label, so a new test cannot silently miss the fast loop. I checked this by temporarily dropping `animation` from the lists: configure printed `Test 'animation' has no CTest label. Add it to a list in cmake/TestLabels.cmake (see docs/TESTING.md).` I then restored the list. **Note for the lead:** a new target, such as EN-06's `command_routing` test, needs one line in this file.
 2. **`CMakeLists.txt`:** three added lines (the include). No `add_test` changed, so every QTest `-o <name>-results.txt,txt -o -,txt` argument is unchanged (`ctest -N -V` shows them, for example `grid_ui_tests "-o" ".../folder_grid-results.txt,txt" "-o" "-,txt"`).
 3. **`docs/TESTING.md`:** a new section, "Run part of the automated suite", with a label table, `ctest -L fast`, `ctest -LE budget`, `-L ui`, `-N -L`, the lock behaviour under `-j`, and how to label a new test.
 
-### Assignment (43 tests, all labelled)
+### Assignment (43 tests, all labelled; updated in review round 1)
 
 | Label | Count | Tests | How a test qualifies (from the test source) |
 | --- | --- | --- | --- |
-| `fast` | 32 | all tests not `ui` or `budget`, except `recovery_process` | quick loop; `recovery_process` drives the real app under Xvfb with a 180 s timeout |
+| `fast` | 27 | every test that is not `ui`, `budget` or `native` | quick loop; configure checks the list against this definition |
 | `ui` | 5 | `folder_grid`, `input_ui`, `pathbar_ui`, `fs_watch_ui`, `monitor_customization_ui` | loads the shipped `ui/Main.qml` in a `QQuickWindow` |
 | `budget` | 7 | `fs_watch_budget`, `fs_watch`, `folder_grid`, `cache`, `window_slots`, `recovery_controller`, `input_ui` | the seven tests the plan names (also AGENTS.md); `RESOURCE_LOCK budget` |
-| `process` | 8 | `thumbnails`, `io_scheduler`, `fs_watch`, `window_slots`, `recovery`, `recovery_startup`, `platform_integration`, `recovery_process` | the test itself starts a `QProcess`, the decoder by `GLANCELOT_DECODER_PATH`, or Python. Controller tests that start the decoder only indirectly by opening an image are not labelled `process` |
-| `native` | 6 | `platform_integration`, `file_operation_service`, `monitor_output`, `monitor_customization`, `monitor_customization_ui`, `recovery_process` | platform shell or launcher fixtures, trash and `subst`, screen topology and presentation windows, or a real app window |
-| `clipboard` | 2 | `folder_grid`, `input_ui` | the only tests that call `QGuiApplication::clipboard()`. `pathbar_ui` includes `ui_test_support.hpp`, which includes `<QClipboard>`, but never uses it. `copy_move` and `shortcuts_help` use only the service's internal clipboard or a binding name. `RESOURCE_LOCK clipboard` |
-
-The `process` and `native` boundaries are judgement calls; the reviewer may want to move tests between them. `fast` is the only label the acceptance criterion depends on.
+| `native` | 9 | `platform_integration`, `file_operation_service`, `recovery_process`, `folder_grid`, `window_slots`, `fs_watch`, `file_operations`, `directory_listing`, `selection_export` | real OS desktop shell, trash, `subst`, `cmd` `mklink`, or a window on the real platform plugin (not forced offscreen). Details in "Review round 1 fixes" |
+| `process` | 8 | `thumbnails`, `io_scheduler`, `fs_watch`, `window_slots`, `recovery`, `recovery_startup`, `platform_integration`, `recovery_process` | the test starts a hermetic child: the decoder, a test helper, the app or Python. A `cmd`, `subst` or `explorer` child alone does not count. Can overlap `fast` |
+| `clipboard` | 3 | `folder_grid`, `input_ui`, `metadata` | reaches `QGuiApplication::clipboard()` directly or through product code. `RESOURCE_LOCK clipboard` |
 
 ## Build environment
+
+The build, timing, lock and suite outputs from here to "Review round 1 fixes" were recorded at `dcebfce`, before review round 1, so they show the old label counts (`fast` 32, `native` 6, `clipboard` 2). Round 1 changed only label assignment and configure checks, not tests or commands.
 
 The same as EN-05: Ubuntu 24.04.5, g++ 13.3.0, CMake 3.28.3, Ninja, and Qt 6.8.3 from conda-forge (`qt6-main 6.8.3 hb82b983_5`) in `/opt/qt683`, because the network policy blocks `download.qt.io`. Fresh build directory `build-claude-en-03`: 564 steps, 6 min 35 s on 4 vCPU.
 
@@ -243,8 +244,218 @@ Total Test time (real) = 219.41 sec
 
 These failures are deterministic and environmental, the same as at `afeac1a`; see docs/handoff/EN-05-HANDOFF.md for the base build and the causes. An earlier full-suite attempt was cut off when the cloud worker restarted (exit 137) before any result; the run above is a complete rerun.
 
+## Review round 1 fixes
+
+The lead decided these changes after the stage-1 review. The original implementer was not reachable, so a fix implementer applied them on the lead's Windows PC (Windows 11, MSVC 2022 x64 environment from `VsDevCmd.bat` as `scripts/build.ps1` sets it up, CMake 4.4.4 from `.tools/python`, Ninja, Qt 6.8.3 msvc2022_64 from `.tools/Qt`). The checks were configure-only, as the lead asked: nothing was built and no test was run.
+
+### 1. Clipboard lock covers product-code clipboard use
+
+`src/` writes `QGuiApplication::clipboard()` in two places:
+- `MetadataModel::copySummary`, `copyGps` and `copyTag` (`src/app/metadata_model.cpp:206-226`);
+- `ViewerController::copyDirectory`, `copyFilePath`, `copyFileUrls` and `copyImageBitmap` (`src/app/viewer_controller.cpp:1279-1366`).
+
+Tests reach them in these ways:
+
+| Path to the clipboard | Test |
+| --- | --- |
+| `metadata_tests.cpp:497-506` calls `copySummary`, `copyGps` and `copyTag` directly | `metadata`, **added** |
+| `grid_ui_tests.cpp:2598-2678` calls `copyFilePath`, `copyFileUrls` and `copyImageBitmap`. `:865-877` clicks `copyFolderAddress`, which calls `copyDirectory`, then pastes with Ctrl+V | `folder_grid` (already locked) |
+| `input_ui_tests.cpp:1153-1155` clicks `menuItem-copy-folder-path`, which calls `copyDirectory` | `input_ui` (already locked) |
+
+These paths do not reach the clipboard from any test:
+- No test calls `trigger("copy-path"/"copy-file"/"copy-image")` (the `viewer_controller.cpp:1609-1620` fallbacks).
+- No test sends a copy id through `invoke`. The `invoke` calls in tests use only `rotate`, `monitor-*`, `layout-reset` and `pane-detach-metadata`.
+- No test clicks the `MetadataHud.qml` copy buttons or the favorites "Copy path" item (`FolderTree.qml:944`).
+- No test presses Ctrl+C, Ctrl+Shift+C or Ctrl+Alt+C. `grid_ui_tests.cpp:2585-2595` and `shortcuts_help_tests.cpp:106` only read binding names. `window_slot_tests` binds the `Ctrl+K, Ctrl+C` string to `rotate`.
+- `copy_move` uses only the service's internal cut/copy state.
+- `pathbar_ui` includes `<QClipboard>` through `ui_test_support.hpp` but never uses it.
+
+The `clipboard` list is now `folder_grid input_ui metadata`.
+
+### 2. Label rule
+
+The definitions now match the lead's rule. `docs/TESTING.md` and the header of `cmake/TestLabels.cmake` use the same wording.
+
+- **`fast`** is every test that is not `ui`, `budget` or `native`. Configure now enforces this: a test that is none of the three must be in the `fast` list, and a test that is one of them must not be. Either mismatch fails configure.
+- **`native`** covers tests that touch the real OS: desktop shell integration, the trash, `subst`, `cmd` `mklink`, or a window on the real platform plugin (not forced offscreen).
+
+| Test | Why it is `native` | Was `fast`? |
+| --- | --- | --- |
+| `platform_integration` | real shell integration (reveal/terminal through COM/`explorer`, launcher fixtures) | yes, now removed |
+| `file_operation_service` | real `platform_trash::make()` and `subst` (`file_operation_service_tests.cpp:273-307`) | yes, now removed |
+| `recovery_process` | starts the real app with `QT_QPA_PLATFORM=windows` (or `xcb` under Xvfb), `scripts/verify-recovery.py:128` | no |
+| `folder_grid` | `cmd /c mklink /J` (`grid_ui_tests.cpp:1453`) | no (`ui`, `budget`) |
+| `window_slots` | `cmd.exe /c mklink /J` (`window_slot_tests.cpp:611`) | no (`budget`) |
+| `fs_watch` | `cmd.exe /d /c mklink /J` (`fs_watch_tests.cpp:40`) | no (`budget`) |
+| `file_operations` | `mklink /J` through `system()` (`file_operations_tests.cpp:42`) | yes, now removed (core test) |
+| `directory_listing` | `cmd /d /c mklink /J` (`directory_listing_tests.cpp:105`) | yes, now removed (core test) |
+| `selection_export` | `cmd /c mklink /J` (`selection_export_tests.cpp:510`) | yes, now removed (core test) |
+
+**Removed from `native`:** `monitor_output`, `monitor_customization` and `monitor_customization_ui`.
+- All three are forced offscreen: `CMakeLists.txt:313` and `cmake/MonitorCustomization.cmake:50` set `ENVIRONMENT QT_QPA_PLATFORM=offscreen`, and `monitor_output_tests.cpp:764` sets it again unless `GLANCELOT_MONITOR_NATIVE_COLOR_PROOF` opts in.
+- They use synthetic screens (`tests/monitor_customization_screens.hpp`).
+- `monitor_output` and `monitor_customization` stay in `fast`; `monitor_customization_ui` stays `ui`.
+
+**Unchanged:** `navigation` stays `fast`, because it makes links with `std::filesystem` only and starts no shell. `process` has the same 8 tests: it is for hermetic children, and a test whose only child is `cmd`, `subst` or `explorer` is not `process`.
+
+Five tests left `fast`: `selection_export`, `directory_listing`, `file_operations`, `file_operation_service` and `platform_integration`. That leaves 27, down from 32. With `GLANCELOT_BUILD_VIEWER=OFF`, three of the five core tests are `native`, so only `perf_trace` and `navigation` remain `fast`.
+
+**`fast` time (estimate):**
+- **Linux, serial:** about 42.0 s. The `ctest -L fast` run above took 44.15 s; the five removed tests account for 0.03 + 0.64 + 0.01 + 0.97 + 0.47 = 2.12 s of it.
+- **Windows:** about 71 s, scaling the 75 s figure under "Unverified".
+
+Neither figure was measured. The `mklink` branches never run on Linux, so their Windows time is not part of any measurement.
+
+### 3. A misspelled name fails configure
+
+The `if(TEST ...)` skips are gone. Before any label or lock is applied, every name in every list (`fast ui budget native process clipboard`) is checked against the directory `TESTS` property, so the check covers both the label loop and the lock loop. A name that is not registered stops configure with `message(FATAL_ERROR ...)`.
+- **Viewer on:** every listed name must exist.
+- **`GLANCELOT_BUILD_VIEWER=OFF`:** names that are not in the new `glancelot_tests_core` list (`selection_export perf_trace navigation directory_listing file_operations`) are dropped, because viewer tests do not exist then. Core names are still required, and the core list itself is checked.
+
+Limit: with the viewer off, a misspelled name in a viewer-only list cannot be told apart from a viewer test. The viewer-on configure, which is the normal and gate configuration, catches it. A misspelled core name with the viewer off is still caught, by the missing-label or `fast` checks, as shown below.
+
+### Configure and `ctest -N` output
+
+Viewer on (`build-en03-cfg`):
+
+```
+> cmake -S . -B build-en03-cfg -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DGLANCELOT_BUILD_VIEWER=ON -DCMAKE_PREFIX_PATH=C:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64
+-- Configuring done (88.8s)
+-- Generating done (9.1s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/claude-en-03/build-en03-cfg
+configure exit: 0
+> ctest --test-dir build-en03-cfg -N
+Total Tests: 43
+> ctest --test-dir build-en03-cfg --print-labels
+All Labels:
+  budget
+  clipboard
+  fast
+  native
+  process
+  ui
+> per label: ctest -N -L ^<label>$
+fast : 27
+ui : 5
+budget : 7
+native : 9
+process : 8
+clipboard : 3
+> ctest --test-dir build-en03-cfg -N -LE budget
+Total Tests: 36
+> ctest --test-dir build-en03-cfg -N -L ^fast$
+  Test  #2: perf_trace
+  Test  #3: navigation
+  Test  #6: startup_window_geometry
+  Test  #7: viewer_acceptance
+  Test  #8: thumbnails
+  Test  #9: folder_tree
+  Test #10: pane_layout
+  Test #16: directory_model
+  Test #17: viewport
+  Test #18: themes
+  Test #20: grid_search
+  Test #21: grid_density
+  Test #22: ui_settings
+  Test #26: favorites
+  Test #27: folder_history
+  Test #28: shortcuts_help
+  Test #29: filter
+  Test #31: io_scheduler
+  Test #32: metadata
+  Test #33: animation
+  Test #34: mutation
+  Test #35: copy_move
+  Test #36: format
+  Test #37: monitor_output
+  Test #38: recovery
+  Test #39: recovery_startup
+  Test #42: monitor_customization
+Total Tests: 27
+> ctest --test-dir build-en03-cfg -N -L ^native$
+  Test  #1: selection_export
+  Test  #4: directory_listing
+  Test  #5: file_operations
+  Test #11: window_slots
+  Test #12: folder_grid
+  Test #15: file_operation_service
+  Test #19: platform_integration
+  Test #23: fs_watch
+  Test #41: recovery_process
+Total Tests: 9
+> ctest --test-dir build-en03-cfg -N -L ^clipboard$
+  Test #12: folder_grid
+  Test #13: input_ui
+  Test #32: metadata
+Total Tests: 3
+> ctest --test-dir build-en03-cfg -N -L ^fast$ -L ^native$     (both labels; CMake 4.4 ANDs repeated -L)
+Total Tests: 0
+> RESOURCE_LOCK from ctest --show-only=json-v1
+window_slots: budget
+folder_grid: budget,clipboard
+input_ui: budget,clipboard
+fs_watch: budget
+fs_watch_budget: budget
+cache: budget
+metadata: clipboard
+recovery_controller: budget
+```
+
+The count matches the rule: 43 tests, minus the 16 in the union of `ui`, `budget` and `native`, leaves 27 `fast`. (The unfiltered `ctest -N` output also prints "Could not find executable" for each test, because nothing was built; the listings above keep only the test lines.)
+
+Viewer off (`build-en03-core`):
+
+```
+> cmake -S . -B build-en03-core -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DGLANCELOT_BUILD_VIEWER=OFF
+-- Configuring done (12.0s)
+-- Generating done (0.3s)
+configure exit: 0
+> ctest --test-dir build-en03-core -N
+  Test #1: selection_export
+  Test #2: perf_trace
+  Test #3: navigation
+  Test #4: directory_listing
+  Test #5: file_operations
+Total Tests: 5
+> ctest --test-dir build-en03-core --print-labels
+All Labels:
+  fast
+  native
+> -L ^fast$   -> perf_trace, navigation            Total Tests: 2
+> -L ^native$ -> selection_export, directory_listing, file_operations   Total Tests: 3
+```
+
+Negative checks: a name was misspelled temporarily, configure ran in a separate scratch directory, and then the name was restored.
+
+```
+# clipboard list: metadata -> metdata, viewer on (build-en03-neg)
+CMake Error at cmake/TestLabels.cmake:45 (message):
+  cmake/TestLabels.cmake: 'metdata' in the clipboard list is not a registered
+  test.  Fix the name or remove it.
+Call Stack (most recent call first):
+  CMakeLists.txt:324 (include)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
+
+# same misspelling, viewer off (build-en03-negcore): viewer names are dropped by design
+-- Configuring done (10.8s)
+configure exit: 0
+
+# fast list: navigation -> navigaton, viewer off (build-en03-negcore)
+CMake Error at cmake/TestLabels.cmake:66 (message):
+  Test 'navigation' has no CTest label.  Add it to a list in
+  cmake/TestLabels.cmake (see docs/TESTING.md).
+Call Stack (most recent call first):
+  CMakeLists.txt:324 (include)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
+```
+
+All four scratch build directories were deleted afterwards.
+
 ## Unverified
 
 - Windows: `scripts/build.ps1 -Test` and the authoritative gate have not been run. Both gate paths run CTest serially (`scripts/build.ps1:40` and `Dockerfile:22` call `ctest --output-on-failure` without `-j`). On a serial run, labels and `RESOURCE_LOCK` do not change which tests run or in what order, so the gate behaves as before.
-- `ctest -L fast` timing on Windows: the last gate measured 722 s of tests against about 426 s here, so I would expect about 75 s there. That figure is an estimate, not a measurement.
+- `ctest -L fast` timing on Windows: the last gate measured 722 s of tests against about 426 s here, so I would expect about 75 s there for the old 32-test set and about 71 s for the round 1 set of 27. Both figures are estimates, not measurements.
 - Linux results come from the conda-forge Qt 6.8.3, not aqt.
+- Review round 1 was configure-only. `ctest -L fast` with the 27-test set, and the `clipboard` lock on `metadata`, have not been run on any platform.
