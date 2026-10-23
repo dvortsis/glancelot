@@ -13,10 +13,17 @@ Session: S1 build (cloud), Phase 0 cycle 1. Scope and acceptance: docs/handoff/L
 
 ## What changed
 
+> **Current design (review round 2):**
+> - `cmake/TestLabels.cmake` is included near the top of the root `CMakeLists.txt`, before any `add_test`. It defines `glancelot_test_labels(<test> [LABELS ...] [LOCKS ...])` and holds the central declarations for the existing 43 tests.
+> - `glancelot_finalize_test_labels()` runs at the very end of the root file. It applies the declarations and computes `fast`.
+> - A new test needs no edit to this file and is `fast` by default.
+>
+> Items 1 and 2 below describe the original version; see "Review round 2".
+
 1. **`cmake/TestLabels.cmake` (new).** The root `CMakeLists.txt` includes it once, at the end, under `if(BUILD_TESTING)`, after every test, including those in `MonitorCustomization.cmake`, is registered. It holds one name list per label and:
    - appends `LABELS` to each listed test. (Review round 1: a listed name that is not a registered test now fails configure; with `GLANCELOT_BUILD_VIEWER=OFF` only viewer test names are dropped. See "Review round 1 fixes".);
    - appends `RESOURCE_LOCK budget` to the seven budget tests and `RESOURCE_LOCK clipboard` to the clipboard tests;
-   - reads the directory `TESTS` property and stops configure with `FATAL_ERROR` if any registered test has no label, so a new test cannot silently miss the fast loop. I checked this by temporarily dropping `animation` from the lists: configure printed `Test 'animation' has no CTest label. Add it to a list in cmake/TestLabels.cmake (see docs/TESTING.md).` I then restored the list. **Note for the lead:** a new target, such as EN-06's `command_routing` test, needs one line in this file.
+   - reads the directory `TESTS` property and stops configure with `FATAL_ERROR` if any registered test has no label, so a new test cannot silently miss the fast loop. I checked this by temporarily dropping `animation` from the lists: configure printed `Test 'animation' has no CTest label. Add it to a list in cmake/TestLabels.cmake (see docs/TESTING.md).` I then restored the list. (Superseded in review round 2: the no-label check is gone, and a new target such as EN-06's `command_routing` no longer needs a line in this file.)
 2. **`CMakeLists.txt`:** three added lines (the include). No `add_test` changed, so every QTest `-o <name>-results.txt,txt -o -,txt` argument is unchanged (`ctest -N -V` shows them, for example `grid_ui_tests "-o" ".../folder_grid-results.txt,txt" "-o" "-,txt"`).
 3. **`docs/TESTING.md`:** a new section, "Run part of the automated suite", with a label table, `ctest -L fast`, `ctest -LE budget`, `-L ui`, `-N -L`, the lock behaviour under `-j`, and how to label a new test.
 
@@ -24,11 +31,11 @@ Session: S1 build (cloud), Phase 0 cycle 1. Scope and acceptance: docs/handoff/L
 
 | Label | Count | Tests | How a test qualifies (from the test source) |
 | --- | --- | --- | --- |
-| `fast` | 27 | every test that is not `ui`, `budget` or `native` | quick loop; configure checks the list against this definition |
+| `fast` | 27 | every test that is not `ui`, `budget` or `native` | quick loop; computed at configure since round 2 |
 | `ui` | 5 | `folder_grid`, `input_ui`, `pathbar_ui`, `fs_watch_ui`, `monitor_customization_ui` | loads the shipped `ui/Main.qml` in a `QQuickWindow` |
 | `budget` | 7 | `fs_watch_budget`, `fs_watch`, `folder_grid`, `cache`, `window_slots`, `recovery_controller`, `input_ui` | the seven tests the plan names (also AGENTS.md); `RESOURCE_LOCK budget` |
 | `native` | 9 | `platform_integration`, `file_operation_service`, `recovery_process`, `folder_grid`, `window_slots`, `fs_watch`, `file_operations`, `directory_listing`, `selection_export` | real OS desktop shell, trash, `subst`, `cmd` `mklink`, or a window on the real platform plugin (not forced offscreen). Details in "Review round 1 fixes" |
-| `process` | 8 | `thumbnails`, `io_scheduler`, `fs_watch`, `window_slots`, `recovery`, `recovery_startup`, `platform_integration`, `recovery_process` | the test starts a hermetic child: the decoder, a test helper, the app or Python. A `cmd`, `subst` or `explorer` child alone does not count. Can overlap `fast` |
+| `process` | 22 (round 2) | see "Review round 2" | any child process, directly or through product code (decoder, helper, app, Python, `cmd`, `subst`). Can overlap `fast`. Round 1 had 8 tests, under a narrower rule |
 | `clipboard` | 3 | `folder_grid`, `input_ui`, `metadata` | reaches `QGuiApplication::clipboard()` directly or through product code. `RESOURCE_LOCK clipboard` |
 
 ## Build environment
@@ -303,7 +310,7 @@ The definitions now match the lead's rule. `docs/TESTING.md` and the header of `
 
 **Unchanged:** `navigation` stays `fast`, because it makes links with `std::filesystem` only and starts no shell. `process` has the same 8 tests: it is for hermetic children, and a test whose only child is `cmd`, `subst` or `explorer` is not `process`.
 
-Five tests left `fast`: `selection_export`, `directory_listing`, `file_operations`, `file_operation_service` and `platform_integration`. That leaves 27, down from 32. With `GLANCELOT_BUILD_VIEWER=OFF`, three of the five core tests are `native`, so only `perf_trace` and `navigation` remain `fast`.
+Five tests were removed from `fast`: `selection_export`, `directory_listing`, `file_operations`, `file_operation_service` and `platform_integration`. That leaves 27, down from 32. With `GLANCELOT_BUILD_VIEWER=OFF`, three of the five core tests are `native`, so only `perf_trace` and `navigation` remain `fast`.
 
 **`fast` time (estimate):**
 - **Linux, serial:** about 42.0 s. The `ctest -L fast` run above took 44.15 s; the five removed tests account for 0.03 + 0.64 + 0.01 + 0.97 + 0.47 = 2.12 s of it.
@@ -476,9 +483,141 @@ configure exit: 1
 
 After each negative check the file was restored, and `git diff HEAD` was empty. All scratch build directories (`build-en03-cfg`, `-core`, `-neg`, `-negcore`, `-negA`, `-negB`) were deleted afterwards.
 
+## Review round 2
+
+This round answers `docs/verification/EN-03-REVIEW.md` at `origin/claude/review-en-03` (`2c4ac8a`, CHANGES REQUIRED: B1, B2) and implements the lead's design. The environment is the same as round 1: the Windows PC, configure only, no build and no test run.
+
+### B1. Computed `fast` and a per-feature helper
+
+**`cmake/TestLabels.cmake`** is now included right after `option(GLANCELOT_BUILD_VIEWER ...)` in the root `CMakeLists.txt`, before any `add_test` (the first is in `cmake/ExportTests.cmake`). It defines:
+- **`glancelot_test_labels(<test> [LABELS ui budget native process clipboard] [LOCKS budget clipboard])`.** A feature cmake file calls it next to its `add_test`.
+  - It records the declaration in global properties, so it can also be called before the test exists.
+  - An unknown label or lock fails at the call. `fast` is not a valid label.
+  - `LABELS budget` and `LABELS clipboard` also add the matching `RESOURCE_LOCK`.
+- **`glancelot_finalize_test_labels()`**, which the root file calls at its very end under `if(BUILD_TESTING)`, after every include. It does three things:
+  - fails if any declared test is not in the root directory's `TESTS` property;
+  - applies the declared `LABELS` and `RESOURCE_LOCK`;
+  - appends `fast` to every registered test without `ui`, `budget` or `native`.
+
+  It also walks `SUBDIRECTORIES` and fails if one registers tests. Today there are none, and labels are applied only in the root directory.
+
+**What was removed:** the hand-kept `fast` list, both `fast`-mismatch errors, the "no CTest label" error and the core-name list.
+
+**The existing 43 tests** are still declared centrally, at the bottom of `TestLabels.cmake`. Core tests are declared unconditionally and viewer tests inside `if(GLANCELOT_BUILD_VIEWER)`, so every declaration must exist in either configuration. New packets add their own `glancelot_test_labels` calls instead of editing this file.
+
+### B2. `process` = any child process
+
+The rule is now: a test is `process` if it starts any child process, directly or through product code. That includes `glancelot-decoder` through `ViewerController::open` (`viewer_controller.cpp:870`), its prefetch worker (`:613`) or `ThumbnailService` (`thumbnail_service.cpp:179-201`), a test helper, the app, Python, `cmd` and `subst`. The `PlatformIntegration` `startDetached` calls are the remaining product-code children (see round 1).
+
+I audited all 43 tests statically. The reviewer's process poller saw `acceptance_tests`, `folder_tree_tests`, `filter_tests` and `cache_tests` start the decoder, which agrees with this audit.
+
+**Added** (14):
+
+| Test | Child |
+| --- | --- |
+| `viewer_acceptance`, `folder_tree`, `filter`, `cache` | decoder via `ViewerController::open` (reviewer observed it) |
+| `copy_move` | `controller.open(sample.jpg)` (`copy_move_tests.cpp:354`) |
+| `fs_watch_budget` | `viewer.open(image)` (`fs_watch_budget_tests.cpp:81`) |
+| `folder_grid`, `input_ui`, `monitor_customization_ui`, `recovery_controller` | open generated images through the viewer (33, 6, 3 and 10 `open`/`openFolder`/`next` calls). `folder_grid` also runs `cmd mklink` |
+| `file_operation_service` | `QProcess::execute("subst", ...)` |
+| `file_operations`, `directory_listing`, `selection_export` | `cmd`/`std::system` `mklink /J` (Windows branches) |
+
+**Kept** (8): `thumbnails`, `io_scheduler`, `fs_watch`, `window_slots`, `recovery`, `recovery_startup`, `platform_integration`, `recovery_process`.
+
+**Not `process`**, because no child is started:
+- `pathbar_ui`: only folders and `.txt` files, and its `Harness` uses the fake `PreviewProvider` for thumbnails.
+- `fs_watch_ui`: navigates an empty folder.
+- `monitor_output`: images reach the presentation window through `updateImage`; the viewer is never asked to open a file.
+- `monitor_customization`: in-memory images, no `ViewerController`.
+- `mutation`: reconciles non-existent paths only.
+- `ui_settings`, `shortcuts_help`, `themes`: `ViewerController` used only for settings and bindings.
+- `format`: `RawPreviewExtractor` in process. Its CMake defines `GLANCELOT_DECODER_PATH`, but the source never uses it.
+- `metadata`, `animation`, `directory_model`, `grid_search`, `grid_density`, `favorites`, `folder_history`, `viewport`, `pane_layout`, `startup_window_geometry`, `perf_trace`, `navigation`: no process or viewer open.
+
+The audit is static, so a test could still start the decoder through a path I missed. A missed `process` label adds no lock and changes no selection.
+
+Labels are platform-independent, so a Windows-only `mklink` branch still makes a test `process` and `native`.
+
+### Output
+
+Viewer on, clean tree (`build-en03-cfg`):
+
+```
+configure exit: 0
+> ctest -N                Total Tests: 43
+> ctest --print-labels    budget clipboard fast native process ui
+> -N -L ^fast$  (27)  perf_trace navigation startup_window_geometry viewer_acceptance thumbnails folder_tree pane_layout directory_model viewport themes grid_search grid_density ui_settings favorites folder_history shortcuts_help filter io_scheduler metadata animation mutation copy_move format monitor_output recovery recovery_startup monitor_customization
+> -N -L ^ui$    (5)   folder_grid input_ui pathbar_ui fs_watch_ui monitor_customization_ui
+> -N -L ^budget$ (7)  window_slots folder_grid input_ui fs_watch fs_watch_budget cache recovery_controller
+> -N -L ^native$ (9)  selection_export directory_listing file_operations window_slots folder_grid file_operation_service platform_integration fs_watch recovery_process
+> -N -L ^process$ (22) selection_export directory_listing file_operations viewer_acceptance thumbnails folder_tree window_slots folder_grid input_ui file_operation_service platform_integration fs_watch fs_watch_budget filter cache io_scheduler copy_move recovery recovery_startup recovery_controller recovery_process monitor_customization_ui
+> -N -L ^clipboard$ (3) folder_grid input_ui metadata
+> -N -LE budget           Total Tests: 36
+> -N -L ^fast$ -L ^native$  Total Tests: 0
+> RESOURCE_LOCK: window_slots budget; folder_grid budget,clipboard; input_ui budget,clipboard; fs_watch budget; fs_watch_budget budget; cache budget; metadata clipboard; recovery_controller budget
+```
+
+The `fast` set is identical to round 1 (27 tests), so the reviewer's measured serial Windows run still applies: 118.0 s, 27 of 27 passed. `docs/TESTING.md` now quotes it.
+
+Viewer off (`build-en03-core`):
+
+```
+configure exit: 0
+> ctest -N   Total Tests: 5
+> labels     fast native process
+> fast: perf_trace navigation | native: selection_export directory_listing file_operations | process: same three | clipboard: none
+```
+
+Scratch proofs: a temporary `cmake/ZzDummy.cmake` was included from `CMakeLists.txt` just before the finalize call. Neither file change was committed, and `git status` afterwards showed only the intended files.
+
+```
+# P1, viewer on. TestLabels.cmake untouched.
+add_test(NAME zz_dummy COMMAND ${CMAKE_COMMAND} -E true)
+add_test(NAME zz_declared COMMAND ${CMAKE_COMMAND} -E true)
+glancelot_test_labels(zz_declared LABELS process LOCKS clipboard)
+-- Configuring done (39.6s)
+configure exit: 0
+Total Tests: 45
+All Labels: budget clipboard fast native process ui
+fast: Total Tests: 29   (includes #44 zz_dummy, #45 zz_declared)
+process: Total Tests: 23
+zz_dummy: LABELS=fast RESOURCE_LOCK=
+zz_declared: LABELS=fast,process RESOURCE_LOCK=clipboard
+
+# N1, viewer off: glancelot_test_labels(zz_declared LABELS process LOCKS clipbaord)
+  glancelot_test_labels(zz_declared): unknown lock 'clipbaord'.  Allowed:
+  budget;clipboard.
+Call Stack (most recent call first):
+  cmake/ZzDummy.cmake:2 (glancelot_test_labels)
+  CMakeLists.txt:325 (include)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
+
+# N2, viewer off: glancelot_test_labels(zz_declard LOCKS clipboard)   (test name misspelled)
+CMake Error at cmake/TestLabels.cmake:68 (message):
+  glancelot_test_labels(zz_declard ...): 'zz_declard' is not a registered
+  test.  Fix the name or remove the declaration.
+Call Stack (most recent call first):
+  CMakeLists.txt:328 (glancelot_finalize_test_labels)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
+
+# N3, viewer off: glancelot_test_labels(zz_declared LABELS natve)
+  glancelot_test_labels(zz_declared): unknown label 'natve'.  Allowed:
+  ui;budget;native;process;clipboard (fast is computed).
+Call Stack (most recent call first):
+  cmake/ZzDummy.cmake:2 (glancelot_test_labels)
+  CMakeLists.txt:325 (include)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
+```
+
+In N1 and N3, the first line, `CMake Error at cmake/TestLabels.cmake:<line> (message):`, was cut off by the helper script's last-8-lines filter. The scratch build directories were deleted afterwards.
+
 ## Unverified
 
 - Windows: `scripts/build.ps1 -Test` and the authoritative gate have not been run. Both gate paths run CTest serially (`scripts/build.ps1:40` and `Dockerfile:22` call `ctest --output-on-failure` without `-j`). On a serial run, labels and `RESOURCE_LOCK` do not change which tests run or in what order, so the gate behaves as before.
 - `ctest -L fast` timing on Windows: the last gate measured 722 s of tests against about 426 s here, so I would expect about 75 s there for the old 32-test set and about 71 s for the round 1 set of 27. Both figures are estimates, not measurements.
 - Linux results come from the conda-forge Qt 6.8.3, not aqt.
+- Review round 2 was configure-only, and the `process` audit is static (see "Review round 2").
 - Review round 1 was configure-only. `ctest -L fast` with the 27-test set, and the `clipboard` lock on `metadata`, have not been run on any platform.
