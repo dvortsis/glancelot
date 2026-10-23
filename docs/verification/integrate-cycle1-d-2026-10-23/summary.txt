@@ -1,0 +1,9 @@
+SHA=5908284f07f939bbb04f5c1f55c37ed9f6880f5d
+Fail-fast: 9/9 PASS (345.13 s)
+ctest -N: 46; labels fast 28, ui 7, budget 7, native 9, process 26, clipboard 3
+Windows full gate: 46/46 PASS first run, no reruns; test time 719.06 s; wall 792 s
+  folder_tree 9.43 s (29 passed), folder_grid 205.65 s (74 passed, 4 skipped GLANCELOT_REVIEW_CAPTURE), fs_watch 87.95 s (82 passed), late_baseline 1.67 s
+Access is denied: 2 QWARN (QFileSystemWatcher FindNextChangeNotification) in acceptance and folder_grid passing tests; 2 informational lines in late_baseline output (replace over reader, recorded not asserted)
+generated PNG retry/failure messages: 0
+Docker: PASS 46/46, test time 453.47 s, 1104 s; folder_tree 5.89 s, folder_grid 170.02 s, fs_watch 69.86 s
+Image size 548224002 bytes (c1c2 548222540, +1462)

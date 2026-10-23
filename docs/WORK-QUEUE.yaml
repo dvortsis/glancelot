@@ -3,7 +3,7 @@ project: glancelot
 integration_branch: main
 windows_native_fixture_hold: Retired fixture permanently blocked; replacement qualified on integrated334065e; merge that commit before Windows gates; no restore/exclusions or old-fixture runs; see docs/verification/PLATFORM-FIXTURE-SECURITY-01.md
 lanes: "retired October 22, 2026 (history: docs/AGENT-LANES-PLAN.md); operating model AGENTS.md"
-integration_lock: {holder: lead, branch: lead/integrate-cycle1-d, commit: 5908284, packets: [EN-11], since: '2026-10-23'}
+integration_lock: null
 gate_lock_rule: One full scripts/build.ps1 -Test or docker build at a time on this machine. The machine-local lock lives in the shared git dir via scripts/gate-lock.ps1 (build.ps1 -Test takes it automatically; wrap docker and older worktrees' builds in the main checkout's gate-lock.ps1 -Run); targeted ctest -R runs exempt; never recorded in this file (AGENTS.md, October 20 2026)
 lane_tools: {claude: Claude Code Sonnet 5.5, codex: Codex 6.1 Sol, gemini: Antigravity 3.8 Flash, lead: Claude Code Opus 5.5 (lead/integrator only)}
 lead_round_2026_10_21: User assigned Codex as lead/integrator this round; lane implementations retain their owners and independent cross-lane review rules.
@@ -1218,7 +1218,11 @@ tasks:
   - id: EN-11
     title: Gate stability under load
     owner: lead
-    state: implementing
+    state: integration
+    branch: claude/en-11-gate-stability
+    integrated_commit: 72d5de59f98ffcd3dcf76e1d5355090ce0a0e9f7
+    integrated_evidence: "docs/verification/integrate-cycle1-d-2026-10-23/README.md; Windows 46/46 and Docker 46/46 on 5908284, first run, no reruns"
+    gates_passed: "1 of 3 (cycle1-d); done after two more consecutive full gates pass with these suites"
     depends: [EN-05]
     outcome: folder_tree, folder_grid and fs_watch pass reliably in full gates under the runner and under load
     evidence_of_problem: "Runner gates 39870526245 (c4e0829) and 39874250713 (f033070) both failed folder_tree :427, folder_grid auditReadyCurrentPhotoDoesNotReopen :947 and auditFailedCurrentPhotoCanBeRetriedFromGrid :958, fs_watch :298 and :1023 (generated PNG atomic commit failed: Access is denied). Local full gate on afeac1a outside the runner: 42/43 760.36s, only folder_tree failed (at :430), and it passed 29/29 alone. Hosted windows-2022 43/43."

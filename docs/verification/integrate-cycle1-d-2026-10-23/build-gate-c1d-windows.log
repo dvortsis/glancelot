@@ -1,0 +1,178 @@
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (62.3s)
+-- Generating done (1.7s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+[1/194] Automatic MOC and UIC for target glancelot_recovery_common
+[2/192] Automatic MOC and UIC for target glancelot_test_argv_capture
+[3/190] Automatic MOC and UIC for target glancelot_platform
+[4/188] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/186] Automatic MOC and UIC for target startup_window_geometry_tests
+[6/184] Automatic MOC and UIC for target pane_layout_tests
+[7/182] Automatic MOC and UIC for target glancelot-decoder
+[8/180] Automatic MOC and UIC for target glancelot
+[9/179] Running AUTOMOC file extraction for target glancelot
+[10/179] Automatic MOC and UIC for target theme_tests
+[11/177] Automatic MOC and UIC for target recovery_startup_tests
+[12/175] Running moc --collect-json for target glancelot
+[13/120] Automatic MOC and UIC for target grid_ui_tests
+[14/118] Automatic MOC and UIC for target monitor_output_tests
+[15/116] Automatic MOC and UIC for target fs_watch_ui_tests
+[16/114] Automatic MOC and UIC for target recovery_tests
+[17/112] Automatic MOC and UIC for target recovery_controller_tests
+[18/110] Automatic MOC and UIC for target monitor_customization_tests
+[19/108] Automatic MOC and UIC for target monitor_customization_ui_tests
+[20/106] Automatic MOC and UIC for target translation_coverage_ui_tests
+[21/104] Automatic MOC and UIC for target command_routing_tests
+[22/102] Automatic MOC and UIC for target acceptance_tests
+[23/100] Automatic MOC and UIC for target thumbnail_tests
+[24/98] Automatic MOC and UIC for target folder_tree_tests
+[25/96] Automatic MOC and UIC for target window_slot_tests
+[26/94] Automatic MOC and UIC for target input_ui_tests
+[27/92] Automatic MOC and UIC for target file_operation_service_tests
+[28/90] Automatic MOC and UIC for target pathbar_ui_tests
+[29/88] Automatic MOC and UIC for target directory_model_tests
+[30/86] Automatic MOC and UIC for target canvas_tests
+[31/84] Automatic MOC and UIC for target platform_integration_tests
+[32/82] Automatic MOC and UIC for target grid_search_tests
+[33/80] Automatic MOC and UIC for target grid_density_tests
+[34/78] Automatic MOC and UIC for target ui_settings_tests
+[35/76] Automatic MOC and UIC for target fs_watch_tests
+[36/74] Automatic MOC and UIC for target fs_watch_budget_tests
+[37/72] Automatic MOC and UIC for target late_baseline_tests
+[38/70] Automatic MOC and UIC for target favorites_tests
+[39/68] Automatic MOC and UIC for target folder_history_tests
+[40/66] Automatic MOC and UIC for target shortcuts_help_tests
+[41/64] Automatic MOC and UIC for target filter_tests
+[42/62] Automatic MOC and UIC for target metadata_tests
+[43/60] Automatic MOC and UIC for target io_scheduler_tests
+[44/58] Automatic MOC and UIC for target animation_tests
+[45/56] Automatic MOC and UIC for target mutation_tests
+[46/54] Automatic MOC and UIC for target format_tests
+[47/52] Automatic MOC and UIC for target copy_move_tests
+[48/50] Automatic MOC and UIC for target cache_tests
+Test project C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+      Start  1: selection_export
+ 1/46 Test  #1: selection_export .................   Passed    0.45 sec
+      Start  2: perf_trace
+ 2/46 Test  #2: perf_trace .......................   Passed    0.07 sec
+      Start  3: navigation
+ 3/46 Test  #3: navigation .......................   Passed    3.43 sec
+      Start  4: directory_listing
+ 4/46 Test  #4: directory_listing ................   Passed   18.42 sec
+      Start  5: file_operations
+ 5/46 Test  #5: file_operations ..................   Passed    0.24 sec
+      Start  6: startup_window_geometry
+ 6/46 Test  #6: startup_window_geometry ..........   Passed    0.09 sec
+      Start  7: viewer_acceptance
+ 7/46 Test  #7: viewer_acceptance ................   Passed   11.14 sec
+      Start  8: thumbnails
+ 8/46 Test  #8: thumbnails .......................   Passed    6.18 sec
+      Start  9: folder_tree
+ 9/46 Test  #9: folder_tree ......................   Passed    9.43 sec
+      Start 10: pane_layout
+10/46 Test #10: pane_layout ......................   Passed    1.05 sec
+      Start 11: window_slots
+11/46 Test #11: window_slots .....................   Passed   29.81 sec
+      Start 12: folder_grid
+12/46 Test #12: folder_grid ......................   Passed  205.65 sec
+      Start 13: input_ui
+13/46 Test #13: input_ui .........................   Passed   76.76 sec
+      Start 14: pathbar_ui
+14/46 Test #14: pathbar_ui .......................   Passed    4.16 sec
+      Start 15: file_operation_service
+15/46 Test #15: file_operation_service ...........   Passed    1.30 sec
+      Start 16: directory_model
+16/46 Test #16: directory_model ..................   Passed   29.78 sec
+      Start 17: viewport
+17/46 Test #17: viewport .........................   Passed    0.11 sec
+      Start 18: themes
+18/46 Test #18: themes ...........................   Passed    0.69 sec
+      Start 19: platform_integration
+19/46 Test #19: platform_integration .............   Passed    1.24 sec
+      Start 20: grid_search
+20/46 Test #20: grid_search ......................   Passed    0.35 sec
+      Start 21: grid_density
+21/46 Test #21: grid_density .....................   Passed    0.26 sec
+      Start 22: ui_settings
+22/46 Test #22: ui_settings ......................   Passed    2.02 sec
+      Start 23: fs_watch
+23/46 Test #23: fs_watch .........................   Passed   87.95 sec
+      Start 24: fs_watch_budget
+24/46 Test #24: fs_watch_budget ..................   Passed   80.42 sec
+      Start 25: late_baseline
+25/46 Test #25: late_baseline ....................   Passed    1.67 sec
+      Start 26: fs_watch_ui
+26/46 Test #26: fs_watch_ui ......................   Passed    2.60 sec
+      Start 27: favorites
+27/46 Test #27: favorites ........................   Passed    0.44 sec
+      Start 28: folder_history
+28/46 Test #28: folder_history ...................   Passed    0.07 sec
+      Start 29: shortcuts_help
+29/46 Test #29: shortcuts_help ...................   Passed    0.93 sec
+      Start 30: filter
+30/46 Test #30: filter ...........................   Passed    3.37 sec
+      Start 31: cache
+31/46 Test #31: cache ............................   Passed    6.68 sec
+      Start 32: io_scheduler
+32/46 Test #32: io_scheduler .....................   Passed    0.37 sec
+      Start 33: metadata
+33/46 Test #33: metadata .........................   Passed    0.14 sec
+      Start 34: animation
+34/46 Test #34: animation ........................   Passed    0.46 sec
+      Start 35: mutation
+35/46 Test #35: mutation .........................   Passed    0.24 sec
+      Start 36: copy_move
+36/46 Test #36: copy_move ........................   Passed    0.30 sec
+      Start 37: format
+37/46 Test #37: format ...........................   Passed    0.15 sec
+      Start 38: monitor_output
+38/46 Test #38: monitor_output ...................   Passed    2.76 sec
+      Start 39: recovery
+39/46 Test #39: recovery .........................   Passed   14.41 sec
+      Start 40: recovery_startup
+40/46 Test #40: recovery_startup .................   Passed    0.51 sec
+      Start 41: recovery_controller
+41/46 Test #41: recovery_controller ..............   Passed   15.28 sec
+      Start 42: recovery_process
+42/46 Test #42: recovery_process .................   Passed   31.00 sec
+      Start 43: monitor_customization
+43/46 Test #43: monitor_customization ............   Passed    8.86 sec
+      Start 44: monitor_customization_ui
+44/46 Test #44: monitor_customization_ui .........   Passed   26.25 sec
+      Start 45: translation_coverage_ui
+45/46 Test #45: translation_coverage_ui ..........   Passed   17.92 sec
+      Start 46: command_routing
+46/46 Test #46: command_routing ..................   Passed   13.57 sec
+
+100% tests passed out of 46
+
+Label Time Summary:
+budget       = 502.55 sec*proc (7 tests)
+clipboard    = 282.55 sec*proc (3 tests)
+fast         =  99.28 sec*proc (28 tests)
+native       = 376.06 sec*proc (9 tests)
+process      = 664.47 sec*proc (26 tests)
+ui           = 346.91 sec*proc (7 tests)
+
+Total Test time (real) = 719.06 sec

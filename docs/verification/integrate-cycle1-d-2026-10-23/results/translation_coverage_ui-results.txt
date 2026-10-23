@@ -1,0 +1,40 @@
+********* Start testing of TranslationCoverageUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : TranslationCoverageUiTests::initTestCase()
+PASS   : TranslationCoverageUiTests::catalogCoversEveryInterfaceMessage()
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x24f919170e0, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x24f919170e0, QQuickRhiItem will not be functional
+QINFO  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() clipped settings-controls: "Folder grid: details or thumbnails (elided)" at settings-controls/QQuickPopupItem/QQuickPopupItem/QQuickGridLayout/QQuickStackLayout/Page/QQuickFlickable/QQuickItem/QQuickColumnLayout/QQuickColumnLayout/QQuickRowLayout/UiButton/QQuickRowLayout/Label
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x24f919170e0, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x24f919170e0, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark()
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x24f920f9b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x24f920f9b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x24f920f9b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x24f920f9b60, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark()
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x24f920f7b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x24f920f7b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x24f920f7b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x24f920f7b60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x24f920f7b60, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::pseudoLocaleCompactLight()
+PASS   : TranslationCoverageUiTests::standaloneLeftToRight()
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9d60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9d60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9d60, QQuickRhiItem will not be functional
+QINFO  : TranslationCoverageUiTests::expandedTextClipping() clipped metadata: "[M?t?d?t?????] (elided)" at metadata/metadataHud/QQuickColumnLayout/QQuickRowLayout/QQuickText
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9d60, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9560, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9560, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9560, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9560, QQuickRhiItem will not be functional
+QINFO  : TranslationCoverageUiTests::expandedTextClipping() clipped metadata: "[M?t?d?t?????] (elided)" at metadata/metadataHud/QQuickColumnLayout/QQuickRowLayout/QQuickText
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x24f920f9560, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::expandedTextClipping()
+PASS   : TranslationCoverageUiTests::standaloneRightToLeft()
+PASS   : TranslationCoverageUiTests::cleanupTestCase()
+Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 17776ms
+********* Finished testing of TranslationCoverageUiTests *********

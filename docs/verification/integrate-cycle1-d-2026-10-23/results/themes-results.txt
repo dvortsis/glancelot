@@ -1,0 +1,18 @@
+********* Start testing of ThemeTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : ThemeTests::initTestCase()
+PASS   : ThemeTests::allCatalogVariantsAreValidAndLegible()
+PASS   : ThemeTests::slateIceMatchesUserPalette()
+PASS   : ThemeTests::invalidSelectionsDoNotChangePreferences()
+PASS   : ThemeTests::themeAndControlsPreserveEachOther()
+PASS   : ThemeTests::futureSchemaRemainsByteIdentical()
+PASS   : ThemeTests::corruptPreferencesRemainByteIdentical()
+PASS   : ThemeTests::unavailableConfigIsSessionOnly()
+QINFO  : ThemeTests::topBarRolesMeetContrastInEveryVariant() border/surface separator contrast across 80 variants: min 1.27, max 2.01
+PASS   : ThemeTests::topBarRolesMeetContrastInEveryVariant()
+PASS   : ThemeTests::nativeTitleBarColorsFollowTokens()
+QINFO  : ThemeTests::nativeTitleBarAppliesOnWindows() Windows build 26200: dark=1 caption=1 text=1 border=1
+PASS   : ThemeTests::nativeTitleBarAppliesOnWindows()
+PASS   : ThemeTests::cleanupTestCase()
+Totals: 12 passed, 0 failed, 0 skipped, 0 blacklisted, 565ms
+********* Finished testing of ThemeTests *********

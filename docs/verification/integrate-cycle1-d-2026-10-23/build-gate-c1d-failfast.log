@@ -1,0 +1,31 @@
+Test project C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+    Start  7: viewer_acceptance
+1/9 Test  #7: viewer_acceptance ................   Passed   10.67 sec
+    Start  9: folder_tree
+2/9 Test  #9: folder_tree ......................   Passed   11.51 sec
+    Start 12: folder_grid
+3/9 Test #12: folder_grid ......................   Passed  226.61 sec
+    Start 23: fs_watch
+4/9 Test #23: fs_watch .........................   Passed   85.07 sec
+    Start 25: late_baseline
+5/9 Test #25: late_baseline ....................   Passed    1.72 sec
+    Start 26: fs_watch_ui
+6/9 Test #26: fs_watch_ui ......................   Passed    2.76 sec
+    Start 31: cache
+7/9 Test #31: cache ............................   Passed    5.64 sec
+    Start 33: metadata
+8/9 Test #33: metadata .........................   Passed    0.15 sec
+    Start 34: animation
+9/9 Test #34: animation ........................   Passed    0.47 sec
+
+100% tests passed out of 9
+
+Label Time Summary:
+budget       = 317.32 sec*proc (3 tests)
+clipboard    = 226.76 sec*proc (2 tests)
+fast         =  24.52 sec*proc (5 tests)
+native       = 311.68 sec*proc (2 tests)
+process      = 341.22 sec*proc (6 tests)
+ui           = 229.37 sec*proc (2 tests)
+
+Total Test time (real) = 345.13 sec

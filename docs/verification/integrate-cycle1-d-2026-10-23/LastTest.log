@@ -1,0 +1,742 @@
+Start testing: Oct 23 06:09 Mountain Daylight Time
+----------------------------------------------------------
+1/46 Testing: selection_export
+1/46 Test: selection_export
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/selection_export_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"selection_export" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Running selection_export tests...
+All selection_export tests PASSED!
+<end of output>
+Test time =   0.45 sec
+----------------------------------------------------------
+Test Passed.
+"selection_export" end time: Oct 23 06:09 Mountain Daylight Time
+"selection_export" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/46 Testing: perf_trace
+2/46 Test: perf_trace
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/perf_trace_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"perf_trace" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+PASS ring_bound multithread_drops drain_order flags percentiles redaction monotonic_clock
+disabled_ns_per_span=2.4847 enabled_ns_per_span=77.81 disabled_bound_ns=1000
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"perf_trace" end time: Oct 23 06:09 Mountain Daylight Time
+"perf_trace" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/46 Testing: navigation
+3/46 Test: navigation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/navigation_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"navigation" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+in-progress cancellation observed=1
+link creation: directory=0 cycle=0 file=0
+navigation: all generated fixture tests passed
+<end of output>
+Test time =   3.43 sec
+----------------------------------------------------------
+Test Passed.
+"navigation" end time: Oct 23 06:09 Mountain Daylight Time
+"navigation" time elapsed: 00:00:03
+----------------------------------------------------------
+
+4/46 Testing: directory_listing
+4/46 Test: directory_listing
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/directory_listing_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"directory_listing" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+ordering and types ok
+empty/missing ok
+hidden ok
+windows junction ok
+UNVERIFIED: directory symlink not creatable here (A required privilege is not held by the client.)
+UNVERIFIED: file symlink not creatable here (A required privilege is not held by the client.)
+permission denied ok
+cancellation ok (5/5 racing runs cancelled); 20000 entries listed in 140 ms
+truncation ok
+sort keys ok
+delete burst ok (166 listings, 0 inaccessible)
+churn ok (3248 listings, 0 inaccessible)
+directory listing tests passed
+<end of output>
+Test time =  18.42 sec
+----------------------------------------------------------
+Test Passed.
+"directory_listing" end time: Oct 23 06:09 Mountain Daylight Time
+"directory_listing" time elapsed: 00:00:18
+----------------------------------------------------------
+
+5/46 Testing: file_operations
+5/46 Test: file_operations
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/file_operations_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"file_operations" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+dedupe ok
+rejections ok
+UNVERIFIED: read-only volume rejection (set GLANCELOT_READONLY_FILE to a file on a read-only mount)
+UNVERIFIED: file symlink (needs Developer Mode or privilege on Windows): A required privilege is not held by the client.
+links ok
+bounded count ok
+revalidation ok
+cancellation ok
+backend failures ok
+snapshot ok
+file_operations: all checks passed
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Passed.
+"file_operations" end time: Oct 23 06:09 Mountain Daylight Time
+"file_operations" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/46 Testing: startup_window_geometry
+6/46 Test: startup_window_geometry
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/startup_window_geometry_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/startup_window_geometry-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"startup_window_geometry" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.09 sec
+----------------------------------------------------------
+Test Passed.
+"startup_window_geometry" end time: Oct 23 06:09 Mountain Daylight Time
+"startup_window_geometry" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/46 Testing: viewer_acceptance
+7/46 Test: viewer_acceptance
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/acceptance_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/acceptance-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"viewer_acceptance" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  11.14 sec
+----------------------------------------------------------
+Test Passed.
+"viewer_acceptance" end time: Oct 23 06:09 Mountain Daylight Time
+"viewer_acceptance" time elapsed: 00:00:11
+----------------------------------------------------------
+
+8/46 Testing: thumbnails
+8/46 Test: thumbnails
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/thumbnail_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/thumbnails-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"thumbnails" start time: Oct 23 06:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   6.18 sec
+----------------------------------------------------------
+Test Passed.
+"thumbnails" end time: Oct 23 06:10 Mountain Daylight Time
+"thumbnails" time elapsed: 00:00:06
+----------------------------------------------------------
+
+9/46 Testing: folder_tree
+9/46 Test: folder_tree
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/folder_tree_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/folder_tree-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"folder_tree" start time: Oct 23 06:10 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   9.43 sec
+----------------------------------------------------------
+Test Passed.
+"folder_tree" end time: Oct 23 06:10 Mountain Daylight Time
+"folder_tree" time elapsed: 00:00:09
+----------------------------------------------------------
+
+10/46 Testing: pane_layout
+10/46 Test: pane_layout
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/pane_layout_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/pane_layout-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"pane_layout" start time: Oct 23 06:10 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.05 sec
+----------------------------------------------------------
+Test Passed.
+"pane_layout" end time: Oct 23 06:10 Mountain Daylight Time
+"pane_layout" time elapsed: 00:00:01
+----------------------------------------------------------
+
+11/46 Testing: window_slots
+11/46 Test: window_slots
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/window_slot_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/window_slots-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"window_slots" start time: Oct 23 06:10 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  29.81 sec
+----------------------------------------------------------
+Test Passed.
+"window_slots" end time: Oct 23 06:10 Mountain Daylight Time
+"window_slots" time elapsed: 00:00:29
+----------------------------------------------------------
+
+12/46 Testing: folder_grid
+12/46 Test: folder_grid
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/grid_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/folder_grid-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"folder_grid" start time: Oct 23 06:10 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 205.65 sec
+----------------------------------------------------------
+Test Passed.
+"folder_grid" end time: Oct 23 06:14 Mountain Daylight Time
+"folder_grid" time elapsed: 00:03:25
+----------------------------------------------------------
+
+13/46 Testing: input_ui
+13/46 Test: input_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/input_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/input_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"input_ui" start time: Oct 23 06:14 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  76.76 sec
+----------------------------------------------------------
+Test Passed.
+"input_ui" end time: Oct 23 06:15 Mountain Daylight Time
+"input_ui" time elapsed: 00:01:16
+----------------------------------------------------------
+
+14/46 Testing: pathbar_ui
+14/46 Test: pathbar_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/pathbar_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/pathbar_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"pathbar_ui" start time: Oct 23 06:15 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   4.16 sec
+----------------------------------------------------------
+Test Passed.
+"pathbar_ui" end time: Oct 23 06:15 Mountain Daylight Time
+"pathbar_ui" time elapsed: 00:00:04
+----------------------------------------------------------
+
+15/46 Testing: file_operation_service
+15/46 Test: file_operation_service
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/file_operation_service_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/file_operation_service-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"file_operation_service" start time: Oct 23 06:15 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.30 sec
+----------------------------------------------------------
+Test Passed.
+"file_operation_service" end time: Oct 23 06:15 Mountain Daylight Time
+"file_operation_service" time elapsed: 00:00:01
+----------------------------------------------------------
+
+16/46 Testing: directory_model
+16/46 Test: directory_model
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/directory_model_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/directory_model-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"directory_model" start time: Oct 23 06:15 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  29.78 sec
+----------------------------------------------------------
+Test Passed.
+"directory_model" end time: Oct 23 06:16 Mountain Daylight Time
+"directory_model" time elapsed: 00:00:29
+----------------------------------------------------------
+
+17/46 Testing: viewport
+17/46 Test: viewport
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/canvas_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/viewport-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"viewport" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.11 sec
+----------------------------------------------------------
+Test Passed.
+"viewport" end time: Oct 23 06:16 Mountain Daylight Time
+"viewport" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/46 Testing: themes
+18/46 Test: themes
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/theme_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/themes-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"themes" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.69 sec
+----------------------------------------------------------
+Test Passed.
+"themes" end time: Oct 23 06:16 Mountain Daylight Time
+"themes" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/46 Testing: platform_integration
+19/46 Test: platform_integration
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/platform_integration_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/platform-integration-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"platform_integration" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.24 sec
+----------------------------------------------------------
+Test Passed.
+"platform_integration" end time: Oct 23 06:16 Mountain Daylight Time
+"platform_integration" time elapsed: 00:00:01
+----------------------------------------------------------
+
+20/46 Testing: grid_search
+20/46 Test: grid_search
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/grid_search_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/grid_search-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"grid_search" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"grid_search" end time: Oct 23 06:16 Mountain Daylight Time
+"grid_search" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/46 Testing: grid_density
+21/46 Test: grid_density
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/grid_density_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/grid_density-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"grid_density" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.26 sec
+----------------------------------------------------------
+Test Passed.
+"grid_density" end time: Oct 23 06:16 Mountain Daylight Time
+"grid_density" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/46 Testing: ui_settings
+22/46 Test: ui_settings
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/ui_settings_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/ui_settings-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"ui_settings" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.02 sec
+----------------------------------------------------------
+Test Passed.
+"ui_settings" end time: Oct 23 06:16 Mountain Daylight Time
+"ui_settings" time elapsed: 00:00:02
+----------------------------------------------------------
+
+23/46 Testing: fs_watch
+23/46 Test: fs_watch
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/fs_watch_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/fs-watch-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"fs_watch" start time: Oct 23 06:16 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  87.95 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch" end time: Oct 23 06:17 Mountain Daylight Time
+"fs_watch" time elapsed: 00:01:27
+----------------------------------------------------------
+
+24/46 Testing: fs_watch_budget
+24/46 Test: fs_watch_budget
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/fs_watch_budget_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/fs-watch-budget-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"fs_watch_budget" start time: Oct 23 06:17 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  80.42 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_budget" end time: Oct 23 06:18 Mountain Daylight Time
+"fs_watch_budget" time elapsed: 00:01:20
+----------------------------------------------------------
+
+25/46 Testing: late_baseline
+25/46 Test: late_baseline
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/late_baseline_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/late-baseline-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"late_baseline" start time: Oct 23 06:18 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+late_baseline: in-flight open: provable 1 decodes 1 imageChanged 0 status "No supported images in that folder or its subfolders."
+late_baseline: replace over shared-delete reader: commit 10: Access is denied.
+late_baseline: replace over plain QFile reader: commit 10: Access is denied.
+late_baseline: rename away under plain QFile reader: refused
+<end of output>
+Test time =   1.67 sec
+----------------------------------------------------------
+Test Passed.
+"late_baseline" end time: Oct 23 06:18 Mountain Daylight Time
+"late_baseline" time elapsed: 00:00:01
+----------------------------------------------------------
+
+26/46 Testing: fs_watch_ui
+26/46 Test: fs_watch_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/fs_watch_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/fs-watch-ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"fs_watch_ui" start time: Oct 23 06:18 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.60 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_ui" end time: Oct 23 06:18 Mountain Daylight Time
+"fs_watch_ui" time elapsed: 00:00:02
+----------------------------------------------------------
+
+27/46 Testing: favorites
+27/46 Test: favorites
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/favorites_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/favorites-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"favorites" start time: Oct 23 06:18 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.44 sec
+----------------------------------------------------------
+Test Passed.
+"favorites" end time: Oct 23 06:19 Mountain Daylight Time
+"favorites" time elapsed: 00:00:00
+----------------------------------------------------------
+
+28/46 Testing: folder_history
+28/46 Test: folder_history
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/folder_history_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/folder_history-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"folder_history" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"folder_history" end time: Oct 23 06:19 Mountain Daylight Time
+"folder_history" time elapsed: 00:00:00
+----------------------------------------------------------
+
+29/46 Testing: shortcuts_help
+29/46 Test: shortcuts_help
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/shortcuts_help_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/shortcuts_help-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"shortcuts_help" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.93 sec
+----------------------------------------------------------
+Test Passed.
+"shortcuts_help" end time: Oct 23 06:19 Mountain Daylight Time
+"shortcuts_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+30/46 Testing: filter
+30/46 Test: filter
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/filter_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/filter-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"filter" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.37 sec
+----------------------------------------------------------
+Test Passed.
+"filter" end time: Oct 23 06:19 Mountain Daylight Time
+"filter" time elapsed: 00:00:03
+----------------------------------------------------------
+
+31/46 Testing: cache
+31/46 Test: cache
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/cache_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/cache-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"cache" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   6.68 sec
+----------------------------------------------------------
+Test Passed.
+"cache" end time: Oct 23 06:19 Mountain Daylight Time
+"cache" time elapsed: 00:00:06
+----------------------------------------------------------
+
+32/46 Testing: io_scheduler
+32/46 Test: io_scheduler
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/io_scheduler_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/io_scheduler-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"io_scheduler" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.37 sec
+----------------------------------------------------------
+Test Passed.
+"io_scheduler" end time: Oct 23 06:19 Mountain Daylight Time
+"io_scheduler" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/46 Testing: metadata
+33/46 Test: metadata
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/metadata_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/metadata-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"metadata" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.14 sec
+----------------------------------------------------------
+Test Passed.
+"metadata" end time: Oct 23 06:19 Mountain Daylight Time
+"metadata" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/46 Testing: animation
+34/46 Test: animation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/animation_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/animation-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"animation" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.46 sec
+----------------------------------------------------------
+Test Passed.
+"animation" end time: Oct 23 06:19 Mountain Daylight Time
+"animation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/46 Testing: mutation
+35/46 Test: mutation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/mutation_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/mutation-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"mutation" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Passed.
+"mutation" end time: Oct 23 06:19 Mountain Daylight Time
+"mutation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/46 Testing: copy_move
+36/46 Test: copy_move
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/copy_move_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/copy_move-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"copy_move" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.30 sec
+----------------------------------------------------------
+Test Passed.
+"copy_move" end time: Oct 23 06:19 Mountain Daylight Time
+"copy_move" time elapsed: 00:00:00
+----------------------------------------------------------
+
+37/46 Testing: format
+37/46 Test: format
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/format_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/format-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"format" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.15 sec
+----------------------------------------------------------
+Test Passed.
+"format" end time: Oct 23 06:19 Mountain Daylight Time
+"format" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/46 Testing: monitor_output
+38/46 Test: monitor_output
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/monitor_output_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/monitor_output-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"monitor_output" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.76 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_output" end time: Oct 23 06:19 Mountain Daylight Time
+"monitor_output" time elapsed: 00:00:02
+----------------------------------------------------------
+
+39/46 Testing: recovery
+39/46 Test: recovery
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"recovery" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  14.41 sec
+----------------------------------------------------------
+Test Passed.
+"recovery" end time: Oct 23 06:19 Mountain Daylight Time
+"recovery" time elapsed: 00:00:14
+----------------------------------------------------------
+
+40/46 Testing: recovery_startup
+40/46 Test: recovery_startup
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery_startup_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery-startup-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"recovery_startup" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.51 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_startup" end time: Oct 23 06:19 Mountain Daylight Time
+"recovery_startup" time elapsed: 00:00:00
+----------------------------------------------------------
+
+41/46 Testing: recovery_controller
+41/46 Test: recovery_controller
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery_controller_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery-controller-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"recovery_controller" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  15.28 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_controller" end time: Oct 23 06:19 Mountain Daylight Time
+"recovery_controller" time elapsed: 00:00:15
+----------------------------------------------------------
+
+42/46 Testing: recovery_process
+42/46 Test: recovery_process
+Command: "C:/Python315/python.exe" "C:/src/Github/Glancelot/.worktrees/lead-tester/scripts/verify-recovery.py" "--executable" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/glancelot.exe" "--work-dir" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/recovery-process"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"recovery_process" start time: Oct 23 06:19 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Recovery process verification passed (35 completed commands); evidence: C:\src\Github\Glancelot\.worktrees\lead-tester\build-gate-c1d\recovery-process\run-jib01aug
+<end of output>
+Test time =  31.00 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_process" end time: Oct 23 06:20 Mountain Daylight Time
+"recovery_process" time elapsed: 00:00:30
+----------------------------------------------------------
+
+43/46 Testing: monitor_customization
+43/46 Test: monitor_customization
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/monitor_customization_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/monitor_customization-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"monitor_customization" start time: Oct 23 06:20 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   8.86 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization" end time: Oct 23 06:20 Mountain Daylight Time
+"monitor_customization" time elapsed: 00:00:08
+----------------------------------------------------------
+
+44/46 Testing: monitor_customization_ui
+44/46 Test: monitor_customization_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/monitor_customization_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/monitor_customization_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"monitor_customization_ui" start time: Oct 23 06:20 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  26.25 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization_ui" end time: Oct 23 06:20 Mountain Daylight Time
+"monitor_customization_ui" time elapsed: 00:00:26
+----------------------------------------------------------
+
+45/46 Testing: translation_coverage_ui
+45/46 Test: translation_coverage_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/translation_coverage_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/translation_coverage_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"translation_coverage_ui" start time: Oct 23 06:20 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  17.92 sec
+----------------------------------------------------------
+Test Passed.
+"translation_coverage_ui" end time: Oct 23 06:21 Mountain Daylight Time
+"translation_coverage_ui" time elapsed: 00:00:17
+----------------------------------------------------------
+
+46/46 Testing: command_routing
+46/46 Test: command_routing
+Command: "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/command_routing_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d/command_routing-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1d
+"command_routing" start time: Oct 23 06:21 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  13.57 sec
+----------------------------------------------------------
+Test Passed.
+"command_routing" end time: Oct 23 06:21 Mountain Daylight Time
+"command_routing" time elapsed: 00:00:13
+----------------------------------------------------------
+
+End testing: Oct 23 06:21 Mountain Daylight Time
+
+budget = 502.55 sec*proc
+
+clipboard = 282.55 sec*proc
+
+fast =  99.28 sec*proc
+
+native = 376.06 sec*proc
+
+process = 664.47 sec*proc
+
+ui = 346.91 sec*proc
+
