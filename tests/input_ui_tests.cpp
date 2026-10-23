@@ -1168,7 +1168,8 @@ private slots:
 
     // EN-04 review round 1 (FAVORITES-01 layout): the Favorites section sizes to its content, a long favorites list
     // scrolls inside its own capped section, and the folder list gets the remaining panel height. Before the fix the
-    // section stretched to share the spare height and left the folder list 4 px tall at 1180x780.
+    // section stretched to share the spare height and left the folder list 4 px tall at 1180x780. Round 2: an
+    // overflowing favorites list shows a half-row peek, dropped when it would take the folder list below one row.
     void favoritesSectionLeavesFolderListTheHeight() {
         Media media(1); Harness h; QVERIFY(h.window);
         QVERIFY(openFolder(h, media));
@@ -1202,7 +1203,7 @@ private slots:
         };
         if (qEnvironmentVariableIsSet("GLANCELOT_REVIEW_CAPTURE")) { // review evidence: the tree panel in both themes, before any check
             const QDir out(qEnvironmentVariable("GLANCELOT_REVIEW_CAPTURE")); QVERIFY(out.mkpath("."));
-            for (int count : {0, 2}) {
+            for (int count : {0, 2, 12}) {
                 QVERIFY(fill(count));
                 for (const QSize size : {QSize(1180, 780), QSize(540, 360)}) {
                     QVERIFY(settle(size, count));
@@ -1227,12 +1228,33 @@ private slots:
                     QVERIFY2(favoritesList->height() <= count * rowHeight + 0.5, qPrintable(at));
                     QVERIFY2(favoritesList->height() >= rowHeight - 0.5, qPrintable(at));
                     if (count == 12) QVERIFY2(favoritesList->property("contentHeight").toReal() > favoritesList->height() + 0.5, qPrintable(at));
+                    // Whole rows, plus a half-row peek exactly when more favorites exist than whole rows show.
+                    const int rows = int((favoritesList->height() + 0.5) / rowHeight);
+                    const qreal part = favoritesList->height() - rows * rowHeight;
+                    const bool peek = qAbs(part - rowHeight / 2) < 1;
+                    QVERIFY2(qAbs(part) < 1 || peek, qPrintable(at));
+                    const bool overflows = count > rows;
+                    QVERIFY2(!peek || overflows, qPrintable(at));
+                    if (!overflows) QVERIFY2(qAbs(favoritesList->height() - count * rowHeight) < 1, qPrintable(at));
+                    // Without a peek on an overflowing list, adding one would have taken the folder list below a row.
+                    if (overflows && !peek) QVERIFY2(list->height() - rowHeight / 2 < rowHeight, qPrintable(at));
+                    if (count == 12 && size.height() >= 780) QVERIFY2(peek, qPrintable(at));
                 }
                 // The folder list keeps most of the panel at the default size and at least one whole row at the minimum.
                 if (size.height() >= 780) QVERIFY2(list->height() >= 0.5 * tree->height(), qPrintable(at));
                 else QVERIFY2(list->height() >= rowHeight, qPrintable(at));
             }
         }
+        // Extra chrome at the minimum size (the address feedback line for a missing folder) leaves no room for the peek:
+        // it is dropped and the favorites list shows whole rows only.
+        QVERIFY(fill(12)); QVERIFY(settle(QSize(540, 360), 12));
+        h.viewer.navigateDirectory(places.filePath("missing"));
+        auto* feedback = named(h.window, "folderAddressFeedback"); QVERIFY(feedback);
+        QTRY_VERIFY(feedback->isVisible());
+        QTest::qWait(50);
+        const QString at = "with the address feedback line: " + measure(QSize(540, 360), 12);
+        QVERIFY2(qAbs(favoritesList->height() - rowHeight) < 1, qPrintable(at));
+        QVERIFY2(qAbs(section->height() - section->implicitHeight()) < 1, qPrintable(at));
     }
 
     // Menus stay inside a compact window; the tallest one scrolls instead of running off the edge.
