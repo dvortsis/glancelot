@@ -1,6 +1,8 @@
 # STACK-F040-PINNED re-review (fresh-context Claude reviewer, round 2)
 
-**Verdict: APPROVED. No blocking items.** Five LOW findings below are for the lead to schedule or waive. None of them breaks the frozen F040 contract.
+**Current verdict (round 2 follow-ups, `91fedf3`): CHANGES REQUIRED.** `pinCurrentImage()` during a held-back frame loses the output pin and exceeds the image budget when a reference shares the pin's pixels, and no test covers that path. See "Round 2 follow-ups" at the end.
+
+**Round 1 verdict (`b610348`): APPROVED. No blocking items.** Five LOW findings below are for the lead to schedule or waive. None of them breaks the frozen F040 contract.
 
 - **Reviewed:** `origin/claude/stack-f040-pinned` at `b610348` ("fix(f040): release hidden reference renderer; review round 1"). Full packet `git diff afeac1a b610348`. Emphasis on round 1, `git diff 974c42e b610348`.
 - **Reviewer:** a fresh-context Claude Code (Opus) subagent on the lead's Windows PC. It did not implement this packet and did no earlier review of it. Round 1 was implemented by the lead's local Windows session, so this is not a self-review.
@@ -220,3 +222,142 @@ The main `viewerWindow` still logs "persistent SG, avoiding cleanup" on its own 
 - Pane migration through the pre-existing `windowChanged` release. Unchanged and not re-run.
 - The full `scripts/build.ps1 -Test` suite and `docker build`. They are the integrator's gate.
 - Physical multi-monitor, mixed-DPI and hardware runs.
+
+
+## Round 2 follow-ups (`91fedf3`)
+
+**Verdict: CHANGES REQUIRED.** One blocking item (R2-1). LOW-1, LOW-2 and LOW-5 are otherwise addressed, and their new tests fail without the product changes.
+
+- **Reviewed:** `git diff b610348 91fedf3` on `claude/stack-f040-pinned` ("fix(f040): refusal notices, shed order and canvas persistence; review round 2").
+- **Reviewer and platform:** as above. I built and ran in `.worktrees/review-f040-r2`, checked out at `91fedf3`, with an incremental build through `build-slot.ps1`.
+- **Lead decision applied:** a photo pinned on the output is never dropped for a newer main frame. The newer frame is held back with a status and fetched again when the pin is released.
+
+### R2-1 (blocking): pinning while a frame is held back can lose the output pin and exceed the budget, and it is untested
+
+**Where:** `DisplayManager::pinCurrentImage()` (`src/app/display_manager.cpp`, the `currentWithheld` branch).
+- That branch sets `admittingPin` and `referenceProtected`, then emits `currentImageRequested` synchronously.
+- The controller re-routes the frame through `updateImage()`, which runs `enforceBudget()`.
+- Because `admittingPin` is set, `holdingPin` is false, so `enforceBudget()` drops the **old** pin and switches the output to mirror before `pinImage()` admits the new one.
+- With the reference protected and sharing the old pin's pixels, the new pin then cannot fit either. It is refused too.
+
+**Reproduced (run).** I added two scratch cases to my review worktree only. They are not committed, and I restored the file afterwards. Run offscreen/software against the `91fedf3` product:
+```
+QINFO  : ReferencePinTests::scratchPinCurrentWhileWithheld() pinnedPathChanged QList(QList(QVariant(QString, "")), QList(QVariant(QString, ".../p2.png"))) modeChanges 2
+PASS   : ReferencePinTests::scratchPinCurrentWhileWithheld()
+QINFO  : ReferencePinTests::scratchPinCurrentWhileWithheldWithReference() after pin: pinnedPath "" mode "mirror" reference "p1.png" retained/one 2 budget/one 1.00006 status "Following controller"
+FAIL!  : ReferencePinTests::scratchPinCurrentWhileWithheldWithReference() 'dm->retainedImageBytes() <= glancelot::DisplayManager::imageBudgetBytes()' returned FALSE. (budget exceeded)
+Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 10677ms
+```
+
+**Required tests (exact scenarios), in `tests/reference_pin_tests.cpp`:**
+
+1. **Pin the held-back frame, no reference.**
+   - Setup: 2 generated photos. Run `presentation-toggle` and `presentation-pin` (pins p1). Set `setImageBudgetBytes(one + 16)`. `step` to p2.
+   - Precondition: `routingStatus()` reads "Output keeps its pinned photo: …".
+   - Action: `trigger("presentation-pin")`.
+   - Expect: `pinnedPath() == p2`, and `presentationMode() == "pinned"`. The output's primary canvas `cacheKey` equals `viewer.image()`. `retainedImageBytes() == one`. The status no longer reads "keeps its pinned photo". The selection is unchanged.
+   - Also expect no transient unpin: `pinnedPathChanged` fires once (with p2) and `presentationModeChanged` does not pass through mirror. Today it emits `""` and then p2, with 2 mode changes.
+
+2. **Pin the held-back frame while a reference shares the pin.**
+   - Setup: as above, but use `pinBoth` first, so the reference and the output pin share p1. After `step` to p2, the reference stays (`referenceName() == "p1.png"`) and `retainedImageBytes() == one`.
+   - Action: `trigger("presentation-pin")`.
+   - Expect: `retainedImageBytes() <= imageBudgetBytes()`, and the output is still in `pinned` mode.
+   - Pick one outcome and assert it. Either the new pin p2 takes hold and the reference is shed with its reopen notice (this follows the round-2 order: the reference goes before refusing), or the old pin p1 stays with a status that says the pin was refused. **Today:** `pinnedPath() == ""`, mode `mirror`, `retainedImageBytes() == 2 * one`.
+
+3. **Failure case: pin while a decode is in flight.**
+   - Action: trigger `presentation-pin` while the frame is held back and the controller is loading the next photo. The `currentImageRequested` handler ignores the request while `loading`, so `pinCurrentImage()` returns silently.
+   - Expect: the old pin stays, with a status or notice saying the pin waits for the photo to finish loading. Today there is no feedback.
+
+**Fix direction (implementer's choice):**
+- Decide admission before touching the old pin. Fetch the withheld frame without the `admittingPin` drop, then swap the pin atomically: either shed the reference first, or refuse and keep the old pin.
+- Do not set `referenceProtected` here, or the protection contradicts the documented order, which sheds the reference before refusing.
+
+### LOW-1 notice copy (application-interface-design: feedback and states)
+
+Read for this round. The copy now says what did and did not happen, names the actual cause, and gives one next step. "Follow controller selection" matches the label in `ui/MonitorSettings.qml`. Remaining nits, none blocking:
+
+- **R2-2 (LOW).** "The current one stays." In this app "current" also means the main window's photo. Suggest "The open reference stays."
+- **R2-3 (LOW).** The shed notice text exists twice: in `ui/Main.qml` (`onReferenceShed`, plain English, no `qsTr`) and in the controller (`QCoreApplication::translate`). The two can drift, and the QML copy escapes F054 localization. Suggest one source, for example a controller-built string passed with the signal, or `qsTr` with an `arg`.
+- **R2-4 (LOW).** "Output keeps its pinned photo: the latest frame exceeds the retained-image budget." "Retained-image budget" is internal wording. It matches the existing "Output holds its last image: …" status, so it is consistent, but both could say "image memory" like the new notices.
+
+### LOW-2 and LOW-5 (analysis)
+
+- **LOW-2.** `enforceBudget()` now sheds in this order:
+  1. The previous frame, and a comparison frame the output is not showing.
+  2. The reference, skipped when it shares pixels with the current, pinned or waiting frame.
+  3. The waiting frame, with its existing status.
+  4. A comparison being admitted.
+  5. A pin being admitted.
+  6. Otherwise, hold back the new main frame while the output is pinned.
+
+  This matches the lead decision. `restoreWithheldCurrent()` is queued, so it does not re-enter a budget pass. `closePresentation()` clears the withheld flag. `updateImage()` keeps the "keeps its pinned photo" status while the frame is withheld. The only defect found is R2-1.
+- **LOW-5.** `~ImageCanvas` restores `setPersistentSceneGraph(true)` through the `QPointer`. When the window is mid-destruction, the setter only writes a flag, so this is safe.
+
+### Fail before, pass after (run)
+
+I reverted the product hunks in my review worktree, rebuilt incrementally, ran offscreen/software, then restored with `git checkout 91fedf3 -- <files>`. Afterwards `git status --porcelain` was empty and HEAD was `91fedf3`.
+
+**LOW-1 reverted** (`src/app/viewer_controller.cpp` and `ui/Main.qml` back to `b610348`):
+```
+FAIL!  : ReferencePinTests::budgetRefusalHasItsOwnNotice() Compared values are not the same
+   Actual   (notice(h))                      : "This photo doesn't fit in image memory beside the photos already shown, so the reference window wasn't opened."
+   Expected (joined(kOpenRefused, kTooLarge)): "Not enough image memory to open the reference window. This photo is too large for the image memory budget."
+FAIL!  : ReferencePinTests::refusalNoticeNamesThePinnedOutput() Compared values are not the same
+FAIL!  : ReferencePinTests::refusalNoticeNamesTheComparison() Compared values are not the same
+FAIL!  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() Compared values are not the same
+FAIL!  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() Compared values are not the same
+   Actual   (notice(h)) : ""
+   Expected (shedNotice): "Reference window closed to free image memory. To reopen it, open p2.png and pin it again."
+Totals: 2 passed, 5 failed, 0 skipped, 0 blacklisted, 12457ms
+```
+
+**LOW-2 reverted** (`src/app/display_manager.cpp` back to `b610348`):
+```
+FAIL!  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() Compared values are not the same
+   Actual   (shed.count()): 0
+   Expected (1)           : 1
+FAIL!  : ReferencePinTests::pinnedOutputPhotoIsNeverDropped() Compared values are not the same
+   Actual   (dm->pinnedPath()): ""
+   Expected (media.path(0))   : ".../p1.png"
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 5876ms
+```
+
+### Checks at `91fedf3` (inside `gate-lock.ps1 -Branch review/f040 -Run { ... }`)
+```
+head 91fedf3 porcelain []
+> ctest --test-dir build-review-f040 -R '^(reference_pin|monitor_output|input_ui|monitor_customization_ui)$' --output-on-failure
+1/4 Test #13: input_ui .........................   Passed   70.76 sec
+2/4 Test #37: monitor_output ...................   Passed    2.52 sec
+3/4 Test #43: monitor_customization_ui .........   Passed   27.57 sec
+4/4 Test #44: reference_pin ....................   Passed   26.46 sec
+100% tests passed out of 4
+Total Test time (real) = 127.60 sec
+```
+
+Direct native run in the same block, with no `QT_QPA_PLATFORM` or `QT_QUICK_BACKEND`, and with `QT_LOGGING_RULES=qt.scenegraph.renderloop=true` and `-maxwarnings 0`:
+```
+PASS   : ReferencePinTests::initTestCase()
+PASS   : ReferencePinTests::commandsStayDistinct()
+PASS   : ReferencePinTests::bothPinsShareOneDecodedFrame()
+PASS   : ReferencePinTests::closeParity()
+PASS   : ReferencePinTests::pinReplacementParity()
+PASS   : ReferencePinTests::recoveryWhileBothActive()
+PASS   : ReferencePinTests::budgetShedsReferenceBeforeOutputPin()
+PASS   : ReferencePinTests::referenceNeverShedsOutputHeldFrame()
+PASS   : ReferencePinTests::budgetRefusalHasItsOwnNotice()
+PASS   : ReferencePinTests::refusalNoticeNamesThePinnedOutput()
+PASS   : ReferencePinTests::refusalNoticeNamesTheComparison()
+PASS   : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame()
+PASS   : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed()
+PASS   : ReferencePinTests::pinnedOutputPhotoIsNeverDropped()
+PASS   : ReferencePinTests::nativeTextureReleasedOnClose()
+PASS   : ReferencePinTests::nativeTextureReleasedOnShed()
+PASS   : ReferencePinTests::cleanupTestCase()
+Totals: 17 passed, 0 failed, 0 skipped, 0 blacklisted, 26423ms
+exit 0
+```
+
+With `-maxwarnings 0`, the whole log was kept this time:
+- 55 lines of "invalidating scene graph", 4 of them inside `nativeTextureReleasedOnShed`, so the shed path's scene graph release is now logged.
+- 40 lines of "persistent SG, avoiding cleanup", from the main window, which keeps its persistent scene graph.
+- No QML warnings.
