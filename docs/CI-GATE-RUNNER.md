@@ -2,6 +2,8 @@
 
 Written for: the repository owner setting up the lead's Windows machine, and agent sessions that request gates.
 
+When the lead runs locally on this PC, its local tester runs the full gates directly and this runner is the backup (AGENTS.md, local lead topology). When the lead runs in the cloud, this runner is the gate.
+
 Cloud sessions cannot run `scripts/build.ps1 -Test` themselves. To get a real Windows gate, they push a branch named `gate/<name>`. The `windows-gate` workflow (`.github/workflows/windows-gate.yml`) then runs on this machine as a self-hosted runner:
 
 1. It creates a temporary worktree of `C:\src\Github\Glancelot` at the pushed commit.
