@@ -321,10 +321,10 @@ Runtime image plugins (`/opt/Qt/plugins/imageformats`): `libqgif.so libqicns.so 
 | --- | --- |
 | This gate, wall | 1210 s (compile 620 s, CTest step 484 s / 443 s test time, aqt 39 s, ICU 7 s) |
 | Last recorded `main` gate (`ec05e42`, LEAD-PLAN section 1) | 1096 s wall, 620 s compile, 411 s tests |
-| Changed step, uncached, `afeac1a` vs branch | STEP4_PLACEHOLDER |
+| Changed step, uncached, `afeac1a` vs branch (`docker build --no-cache --target qt`, back to back) | aqt step 33.6 s vs 30.3 s; ICU 6.8 s vs 6.4 s; whole `qt` stage 100.8 s vs 93.0 s; `qt` stage image 2,194,596,132 B vs 2,196,172,194 B (+1.58 MB) |
 | Image size | `glancelot-browser:review-en02` 2,195,923,230 B vs `glancelot-browser:main` 2,191,555,697 B (image `ec829ac89cbe`, built 2026-10-19, commit not recorded): +4.37 MB |
 
-The compile step is unchanged; the wall-clock difference against the recorded gate is test-time variance (`folder_grid` alone is 176 s) and the uncached runtime apt layer, not EN-02. The EN-02 cost is the aqt step difference above plus 0.3 s for the runtime check.
+The compile step is unchanged; the wall-clock difference against the recorded gate is test-time variance (`folder_grid` alone is 176 s) and the uncached runtime apt layer, not EN-02. The EN-02 cost is within mirror noise: the uncached aqt step was 3.3 s faster on the branch run (the `qtimageformats` archive installs in 1.7 s, in parallel with qtbase and qtdeclarative), plus 0.3 s for the new runtime check. Docker time delta: about 0 s (one uncached pair measured -3.3 s), +1.6 MB in the `qt` stage, +4.4 MB in the runtime image against an older `main` image.
 
 ## Cleanup
 
