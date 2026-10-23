@@ -32,7 +32,19 @@ This is not data loss, and it follows from the lead's ReplaceFileW decision. Sug
 
 ### N2. The backup-name loop can reuse an existing name
 
-`replaceFileAtomically` tries 8 random backup names. If all 8 exist, it uses the last one anyway, and ReplaceFileW then overwrites that file. A `.~gb*.tmp` may be the only copy of an original from an earlier unrecoverable 1177. Eight 32-bit collisions in a row are not a practical risk. Still, a one-line refusal ("could not choose a backup name") after the loop closes it for free.
+`replaceFileAtomically` tries 8 random backup names. If all 8 exist, it uses the last one anyway, and ReplaceFileW then overwrites that file. A `.~gb*.tmp` may be the only copy of an original from an earlier unrecoverable 1177.
+
+The reviewer confirmed the overwrite by calling ReplaceFileW directly through P/Invoke. The fixture was:
+
+- `target.bin` holding `AAAA`;
+- `repl.bin` holding `BBBB`;
+- an existing `.~gb0000beef.tmp` holding `CCCC`.
+
+The call returned success on both NTFS and exFAT. Afterwards:
+
+- `target.bin` held `BBBB`;
+- `repl.bin` was gone;
+- `.~gb0000beef.tmp` held `AAAA`, so the old `CCCC` was destroyed. Eight 32-bit collisions in a row are not a practical risk. Still, a one-line refusal ("could not choose a backup name") after the loop closes it for free.
 
 ### N3. The Move fast path can change the source's metadata before falling back
 
@@ -91,7 +103,7 @@ The handoff mentions owner, group and xattrs in a single line. Please carry this
 
 | Item | Result |
 | --- | --- |
-| Identity read failure refuses safely | Yes, by code reading. `compareFileIdentity` returns Unknown when either handle cannot be opened, or when both are on one volume with file index 0. `overwriteRefusal` refuses Unknown. The Move tail keeps a source whose identity is Unknown, and the folder branch refuses it. Handles are opened with `FILE_READ_ATTRIBUTES` and all share modes, so another program's share mode cannot force Unknown. I found no real-world Unknown case to probe; every volume tried gave a usable ID |
+| Identity read failure refuses safely | Yes, by code reading. `compareFileIdentity` returns Unknown when either handle cannot be opened, or when both are on one volume with file index 0. `overwriteRefusal` refuses Unknown. The Move tail keeps a source whose identity is Unknown, and the folder branch refuses it. Handles are opened with `FILE_READ_ATTRIBUTES` and all share modes, so another program's share mode cannot force Unknown. I found no real-world Unknown case to probe; every volume tried gave a usable ID, including P8, where the target was held open without delete sharing and the identity read still succeeded (Different, then a safe error 32) |
 | Re-check before deleting the source (TOCTOU) | Effective. For path aliases (subst, SMB, junction, bind mount) the source name and the target name reach the same directory entry, so the check after the replace still sees Same. Mutation M1 (refusal check off, tail guard on) kept the file in both the subst and SMB Moves with "Same file. Source kept." For a hard link created mid-copy, the check after the replace sees Different, but the target is then a full verified copy, so deleting the source loses nothing. The window left is the gap between the check and `QFile::remove`, which is as small as is practical without handle-based deletion |
 | ReplaceFileW 1175/1176/1177 | 1175 and 1176 (both files where they were) report an error. A leftover backup is named in the message. 1177 moves the backup back, and if that fails it reports the backup's full path, writes nothing at the target and stops the Move fast path. The backup is deleted after success. Only the fault-injected 1177 was exercised (the round-1 tests pass). The real-1177 metadata merge is N3; the crash window is N1 |
 | Fallback refusal for explicit or protected DACLs | Correct. It runs only on 1, 50, 87 or 120, and only when no backup exists and the target is still in place. It refuses if the DACL is protected, has any non-inherited ACE, or cannot be read. A volume without `FILE_PERSISTENT_ACLS` is let through. Mutation M4 (refusal ignored) makes `testOverwriteFallbackRefusesExplicitPermissions` fail. One gap: on the Move fast path the fallback carries the *source's* ACL, as any same-volume rename does. That ACL can be looser than the folder's, but it is the user's own file |
