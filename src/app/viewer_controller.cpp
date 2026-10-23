@@ -356,9 +356,10 @@ struct ViewerController::Private {
                     // quietly when an image is already shown.
                     decodeStartedWithoutBaseline=false;
                     const auto registered=fs_watch::sourceToken(value.imageAfter);
-                    const auto* shown=!loading&&imageReady?cache.object(cacheKey(path)):nullptr;
-                    if(!(shown&&!registered.isEmpty()&&shown->sourceToken==registered)) {
-                        const bool background=!loading&&imageReady;
+                    const bool shown=!loading&&imageReady;
+                    const bool proven=!registered.isEmpty()&&!cache.reuse(cacheKey(path),registered).isNull();
+                    if(!(shown&&proven)) {
+                        const bool background=shown;
                         cancel();cacheReuseAllowed=false;quietDecode=background;decode(path,generation);
                     }
                 }

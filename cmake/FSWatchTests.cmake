@@ -32,6 +32,8 @@ target_link_libraries(late_baseline_tests PRIVATE glancelot_core glancelot_platf
 add_dependencies(late_baseline_tests glancelot-decoder fs_watch_decoder_fixture)
 add_test(NAME late_baseline COMMAND late_baseline_tests -o "${CMAKE_CURRENT_BINARY_DIR}/late-baseline-results.txt,txt" -o -,txt)
 set_tests_properties(late_baseline PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+# EN-03 labels: starts glancelot-decoder and the fixture; no wall-clock assertion.
+glancelot_test_labels(late_baseline LABELS process)
 
 # Lead-frozen real-QML routing regression. Required alongside backend coverage.
 qt_add_executable(fs_watch_ui_tests tests/fs_watch_ui_tests.cpp
