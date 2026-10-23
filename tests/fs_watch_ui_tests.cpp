@@ -16,6 +16,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "file_grid_wiring.hpp"
+#include "viewer_context.hpp"
 #include "image_canvas.hpp"
 
 class FSWatchUiTests : public QObject {
@@ -35,12 +36,11 @@ private slots:
         ViewerController viewer;PaneLayout layout;ThemeManager theme;
         glancelot::MonitorCustomization monitor(viewer.displayManager(),&layout);monitor.setSlot(1);
         FilmstripModel filmstrip;FolderTreeModel folders;DirectoryEntryModel grid;FileOperationService operations;
+        FavoritesModel favorites;FolderHistory history;
         QQmlApplicationEngine engine;
-        engine.rootContext()->setContextProperty("monitorCustomization",&monitor);
         auto imports=engine.importPathList();imports.removeAll(QCoreApplication::applicationDirPath());engine.setImportPathList(imports);
-        for(const auto& item:QList<QPair<QString,QObject*>>{{"viewer",&viewer},{"paneLayout",&layout},{"theme",&theme},
-                {"filmstrip",&filmstrip},{"folderTree",&folders},{"fileGrid",&grid},{"fileOperations",&operations}})
-            engine.rootContext()->setContextProperty(item.first,item.second);
+        installViewerContext(*engine.rootContext(),{.viewer=viewer,.paneLayout=layout,.monitorCustomization=monitor,.filmstrip=filmstrip,
+            .folderTree=folders,.favoritesModel=favorites,.folderHistory=history,.fileGrid=grid,.theme=theme,.fileOperations=operations});
         file_grid_wiring::followViewer(viewer,grid);
         QObject::connect(&viewer,&ViewerController::stateChanged,&filmstrip,[&]{filmstrip.sync(viewer.snapshot());});
         QObject::connect(&viewer,&ViewerController::filesInvalidated,&filmstrip,[&]{filmstrip.invalidate();});

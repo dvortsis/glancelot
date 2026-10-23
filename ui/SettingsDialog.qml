@@ -18,11 +18,11 @@ UiDialog {
     property string settingsFeedback: ""
     readonly property bool wide: availableWidth >= 600
     readonly property var sections: [
-        { id: "appearance", label: "Appearance", icon: "appearance" },
-        { id: "viewing", label: "Viewing", icon: "eye" },
-        { id: "browsing", label: "Browsing", icon: "folder" },
-        { id: "controls", label: "Controls", icon: "keyboard" },
-        { id: "about", label: "About", icon: "info" }
+        { id: "appearance", label: qsTr("Appearance"), icon: "appearance" },
+        { id: "viewing", label: qsTr("Viewing"), icon: "eye" },
+        { id: "browsing", label: qsTr("Browsing"), icon: "folder" },
+        { id: "controls", label: qsTr("Controls"), icon: "keyboard" },
+        { id: "about", label: qsTr("About"), icon: "info" }
     ]
     readonly property int sectionIndex: Math.max(0, sections.findIndex(item => item.id === section))
     title: qsTr("Settings")
@@ -98,7 +98,7 @@ UiDialog {
     // INPUT-02: the window's scope data (routeAllows) replaced its grid allow-list; behaviour in the grid view is unchanged.
     function commandRunnable(id) { return id !== "settings" && host.routeAllows(id) }
     // Why a command cannot run right now, shown in visible text on its row (empty when it can run).
-    function unavailableReason(id) { return id === "settings" ? "Open now" : (commandRunnable(id) ? "" : host.routeBlockedReason(id)) }
+    function unavailableReason(id) { return id === "settings" ? qsTr("Open now") : (commandRunnable(id) ? "" : host.routeBlockedReason(id)) }
     function run(id) {
         if (!commandRunnable(id)) return
         if (id === "palette") { openSection("controls", true); return }
@@ -170,7 +170,7 @@ UiDialog {
                 Layout.fillWidth: true
                 searchIcon: true
                 placeholderText: qsTr("Search settings...")
-                Accessible.name: "Search settings"
+                Accessible.name: qsTr("Search settings")
                 Accessible.description: qsTr("Filters visible settings across all sections.")
                 onTextChanged: {
                     if (text.trim().length > 0 && !dialog.sectionMatches(dialog.section)) {
@@ -197,7 +197,7 @@ UiDialog {
                 model: dialog.sections
                 currentIndex: dialog.sectionIndex
                 Accessible.role: Accessible.PageTabList
-                Accessible.name: "Settings sections"
+                Accessible.name: qsTr("Settings sections")
                 delegate: UiButton {
                     required property var modelData
                     required property int index
@@ -233,10 +233,10 @@ UiDialog {
                     visible: dialog.rowMatches(label, description)
                     modified: theme.mode !== "system"
                     UiComboBox {
-                        model: ["Follow system", "Dark", "Light"]
+                        model: [qsTr("Follow system"), qsTr("Dark"), qsTr("Light")]
                         currentIndex: ["system", "dark", "light"].indexOf(theme.mode)
                         onActivated: theme.mode = ["system", "dark", "light"][currentIndex]
-                        Accessible.name: "Mode"
+                        Accessible.name: qsTr("Mode")
                     }
                 }
                 SettingRow {
@@ -250,19 +250,19 @@ UiDialog {
                             text: "100%"
                             selected: viewer.textScale < 1.15
                             onClicked: viewer.textScale = 1.0
-                            Accessible.name: "100% text scale"
+                            Accessible.name: qsTr("100% text scale")
                         }
                         UiButton {
                             text: "125%"
                             selected: viewer.textScale >= 1.15 && viewer.textScale < 1.4
                             onClicked: viewer.textScale = 1.25
-                            Accessible.name: "125% text scale"
+                            Accessible.name: qsTr("125% text scale")
                         }
                         UiButton {
                             text: "150%"
                             selected: viewer.textScale >= 1.4
                             onClicked: viewer.textScale = 1.5
-                            Accessible.name: "150% text scale"
+                            Accessible.name: qsTr("150% text scale")
                         }
                     }
                 }
@@ -277,7 +277,7 @@ UiDialog {
                 SectionLabel { text: qsTr("Palette"); visible: dialog.rowMatches("Palette", "Themes and color palettes") }
                 ThemePicker { Layout.fillWidth: true; visible: dialog.rowMatches("Palette", "Themes and color palettes") }
                 Note {
-                    text: theme.error || "Changes apply immediately and are saved. Palettes colour the interface only; photo pixels and the canvas backdrop are unchanged."
+                    text: theme.error || qsTr("Changes apply immediately and are saved. Palettes colour the interface only; photo pixels and the canvas backdrop are unchanged.")
                     color: theme.error ? Theme.danger : Theme.muted
                     visible: dialog.rowMatches("Palette", text)
                 }
@@ -288,7 +288,7 @@ UiDialog {
                     visible: dialog.rowMatches(text, "Reset appearance settings to default values")
                     onClicked: {
                         viewer.resetSection("appearance")
-                        dialog.settingsFeedback = "Appearance reset to defaults."
+                        dialog.settingsFeedback = qsTr("Appearance reset to defaults.")
                     }
                 }
             }
@@ -297,16 +297,16 @@ UiDialog {
                 heading: qsTr("Viewing")
                 SettingRow {
                     label: qsTr("Fit current photo")
-                    description: viewer.imageWidth > 0 ? "Each newly opened photo starts at Shrink only." : "Open a photo to change how it fits."
+                    description: viewer.imageWidth > 0 ? qsTr("Each newly opened photo starts at Shrink only.") : qsTr("Open a photo to change how it fits.")
                     visible: dialog.rowMatches(label, description)
                     UiComboBox {
                         readonly property var modes: ["shrink", "fit", "fill", "width", "height", "actual"]
-                        model: ["Shrink only", "Fit", "Fill", "Fit width", "Fit height", "Actual size"]
+                        model: [qsTr("Shrink only"), qsTr("Fit"), qsTr("Fill"), qsTr("Fit width"), qsTr("Fit height"), qsTr("Actual size")]
                         currentIndex: modes.indexOf(dialog.photoCanvas.fitMode)
-                        displayText: currentIndex < 0 ? "Custom zoom" : currentText
+                        displayText: currentIndex < 0 ? qsTr("Custom zoom") : currentText
                         enabled: viewer.imageWidth > 0
                         onActivated: { if (modes[currentIndex] === "actual") dialog.photoCanvas.actualSize(); else dialog.photoCanvas.fit(modes[currentIndex]) }
-                        Accessible.name: "Fit current photo"
+                        Accessible.name: qsTr("Fit current photo")
                     }
                 }
                 SettingRow {
@@ -315,15 +315,17 @@ UiDialog {
                     visible: dialog.rowMatches(label, description)
                     modified: viewer.wheelMode !== "navigate"
                     UiComboBox {
-                        model: ["Next / previous photo", "Zoom", "Pan"]
+                        model: [qsTr("Next / previous photo"), qsTr("Zoom"), qsTr("Pan")]
                         currentIndex: ["navigate", "zoom", "pan"].indexOf(viewer.wheelMode)
                         onActivated: viewer.wheelMode = ["navigate", "zoom", "pan"][currentIndex]
-                        Accessible.name: "Mouse wheel"
+                        Accessible.name: qsTr("Mouse wheel")
                     }
                 }
                 SettingRow {
                     label: qsTr("Canvas backdrop")
-                    description: dialog.host.gridMode ? "Switch to photo view to change the canvas backdrop." : "Steps through the backdrop colours behind the photo" + (viewer.bindingFor("background").length ? " (" + viewer.bindingFor("background") + ")." : ".")
+                    description: dialog.host.gridMode ? qsTr("Switch to photo view to change the canvas backdrop.")
+                        : viewer.bindingFor("background").length ? qsTr("Steps through the backdrop colours behind the photo (%1).").arg(viewer.bindingFor("background"))
+                        : qsTr("Steps through the backdrop colours behind the photo.")
                     visible: dialog.rowMatches(label, description)
                     UiButton { text: qsTr("Next backdrop"); variant: "outline"; enabled: !dialog.host.gridMode; onClicked: dialog.host.invoke("background") }
                 }
@@ -354,7 +356,7 @@ UiDialog {
                     visible: dialog.rowMatches(text, "Reset viewing settings to default values")
                     onClicked: {
                         viewer.resetSection("viewing")
-                        dialog.settingsFeedback = "Viewing settings reset to defaults."
+                        dialog.settingsFeedback = qsTr("Viewing settings reset to defaults.")
                     }
                 }
             }
@@ -434,8 +436,8 @@ UiDialog {
                         id: paneChoice
                         objectName: "layoutPaneChoice"
                         property var ids: ["tree","preview","grid","filmstrip","topbar","statusbar"]
-                        model: ["Folder tree","Image preview","File grid","Filmstrip","Top toolbar","Status toolbar"]
-                        Accessible.name: "Pane to customize"
+                        model: [qsTr("Folder tree"),qsTr("Image preview"),qsTr("File grid"),qsTr("Filmstrip"),qsTr("Top toolbar"),qsTr("Status toolbar")]
+                        Accessible.name: qsTr("Pane to customize")
                     }
                 }
                 SettingRow {
@@ -445,11 +447,11 @@ UiDialog {
                         property string paneId: paneChoice.ids[paneChoice.currentIndex]
                         property var state: paneLayout.panes[paneId]
                         property var regions: ["left","right","top","bottom","center"]
-                        model: ["Left","Right","Top","Bottom","Center"]
+                        model: [qsTr("Left"),qsTr("Right"),qsTr("Top"),qsTr("Bottom"),qsTr("Center")]
                         currentIndex: regions.indexOf(state.region)
                         enabled: !paneLayout.locked && !state.frozen
                         onActivated: paneLayout.move(paneId,regions[currentIndex],state.order)
-                        Accessible.name: "Pane position"
+                        Accessible.name: qsTr("Pane position")
                     }
                 }
                 SettingRow {
@@ -464,7 +466,7 @@ UiDialog {
                         enabled: !paneLayout.locked && !state.frozen
                         validator: IntValidator { bottom: 32; top: 4096 }
                         onAccepted: paneLayout.resize(paneId,Number(text))
-                        Accessible.name: "Preferred pane size in logical pixels"
+                        Accessible.name: qsTr("Preferred pane size in logical pixels")
                     }
                 }
                 UiSwitch {
@@ -504,10 +506,10 @@ UiDialog {
                     visible: dialog.rowMatches(label, description)
                     modified: viewer.sortKey !== "name"
                     UiComboBox {
-                        model: ["Name", "Date modified", "Size", "Shuffle"]
+                        model: [qsTr("Name"), qsTr("Date modified"), qsTr("Size"), qsTr("Shuffle")]
                         currentIndex: ["name", "modified", "size", "shuffle"].indexOf(viewer.sortKey)
                         onActivated: viewer.sortKey = ["name", "modified", "size", "shuffle"][currentIndex]
-                        Accessible.name: "File order"
+                        Accessible.name: qsTr("File order")
                     }
                 }
                 UiSwitch {
@@ -524,10 +526,10 @@ UiDialog {
                     visible: dialog.rowMatches(label, description)
                     modified: viewer.boundaryMode !== "continue"
                     UiComboBox {
-                        model: ["Stop", "Loop this folder", "Continue through tree"]
+                        model: [qsTr("Stop"), qsTr("Loop this folder"), qsTr("Continue through tree")]
                         currentIndex: ["stop", "loop", "continue"].indexOf(viewer.boundaryMode)
                         onActivated: viewer.boundaryMode = ["stop", "loop", "continue"][currentIndex]
-                        Accessible.name: "At the end of a folder"
+                        Accessible.name: qsTr("At the end of a folder")
                     }
                 }
                 UiSwitch {
@@ -550,8 +552,8 @@ UiDialog {
                 }
                 SectionLabel { text: qsTr("This window"); visible: dialog.rowMatches("This window", "Window position memory") }
                 Note {
-                    text: viewer.windowSlot > 0 ? "Window " + viewer.windowSlot + " remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file."
-                                                : "Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch."
+                    text: viewer.windowSlot > 0 ? qsTr("Window %1 remembers its own last folder and photo, and reopens them the next time you start Glancelot without choosing a file.").arg(viewer.windowSlot)
+                                                : qsTr("Position memory is off for this window: the settings folder is busy or unavailable, or it was turned off at launch.")
                     visible: dialog.rowMatches("This window", text)
                 }
                 UiButton {
@@ -561,7 +563,7 @@ UiDialog {
                     visible: dialog.rowMatches(text, "Reset browsing settings to default values")
                     onClicked: {
                         viewer.resetSection("browsing")
-                        dialog.settingsFeedback = "Browsing settings reset to defaults."
+                        dialog.settingsFeedback = qsTr("Browsing settings reset to defaults.")
                     }
                 }
             }
@@ -574,7 +576,7 @@ UiDialog {
                     Layout.fillWidth: true
                     searchIcon: true
                     placeholderText: qsTr("Find a command")
-                    Accessible.name: "Find a command"
+                    Accessible.name: qsTr("Find a command")
                     Accessible.description: qsTr("Enter runs the first match. Down moves to the list.")
                     onAccepted: dialog.runFirstMatch()
                     Keys.onDownPressed: { const first = commandRows.firstVisible(); if (first) first.forceActiveFocus(Qt.TabFocusReason) }
@@ -616,7 +618,7 @@ UiDialog {
                                 alignment: Qt.AlignLeft
                                 text: commandRow.modelData.label
                                 foreground: commandRow.reason.length ? Theme.muted : Theme.text // muted, not opacity: keeps 4.5:1
-                                Accessible.name: (commandRow.reason.length ? "" : "Run ") + commandRow.modelData.label
+                                Accessible.name: commandRow.reason.length ? commandRow.modelData.label : qsTr("Run %1").arg(commandRow.modelData.label)
                                 Accessible.description: commandRow.reason
                                 onClicked: dialog.run(commandRow.modelData.id)
                             }
@@ -640,7 +642,7 @@ UiDialog {
                                     const id = commandRow.modelData.id, label = commandRow.modelData.label, owner = commandRow.settings
                                     Qt.callLater(() => {
                                         const ok = viewer.setBinding(id, sequence)
-                                        owner.bindingMessage = ok ? (sequence.length ? "Shortcut for “" + label + "” is now " + sequence + "." : "Shortcut for “" + label + "” cleared.") : viewer.status
+                                        owner.bindingMessage = ok ? (sequence.length ? qsTr("Shortcut for “%1” is now %2.").arg(label).arg(sequence) : qsTr("Shortcut for “%1” cleared.").arg(label)) : viewer.status
                                         owner.bindingFailed = !ok
                                     })
                                 }
@@ -651,20 +653,20 @@ UiDialog {
                 }
                 Note {
                     visible: commandSearch.text.length > 0 && !commandRows.firstVisible()
-                    text: "No command matches “" + commandSearch.text + "”."
+                    text: qsTr("No command matches “%1”.").arg(commandSearch.text)
                 }
                 UiButton {
                     text: qsTr("Restore default shortcuts")
                     variant: "outline"
                     Layout.topMargin: Theme.gapSm
-                    onClicked: { viewer.resetBindings(); dialog.bindingMessage = "Default shortcuts restored."; dialog.bindingFailed = false }
+                    onClicked: { viewer.resetBindings(); dialog.bindingMessage = qsTr("Default shortcuts restored."); dialog.bindingFailed = false }
                 }
             }
 
             Page {
                 heading: qsTr("About")
                 Label {
-                    text: "Glancelot " + Qt.application.version
+                    text: qsTr("Glancelot %1").arg(Qt.application.version)
                     color: Theme.text
                     font.pixelSize: Theme.textBody
                     font.weight: Font.Medium
@@ -732,14 +734,14 @@ UiDialog {
         id: exportDialog
         title: qsTr("Export Settings")
         fileMode: FileDialog.SaveFile
-        nameFilters: ["JSON settings files (*.json)", "All files (*)"]
+        nameFilters: [qsTr("JSON settings files (*.json)"), qsTr("All files (*)")]
         defaultSuffix: "json"
         onAccepted: {
             const path = dialog.cleanPath(selectedFile)
             if (viewer.exportSettings(path)) {
-                dialog.settingsFeedback = "Settings exported successfully to " + path
+                dialog.settingsFeedback = qsTr("Settings exported successfully to %1").arg(path)
             } else {
-                dialog.settingsFeedback = viewer.status || "Could not export settings."
+                dialog.settingsFeedback = viewer.status || qsTr("Could not export settings.")
             }
         }
     }
@@ -748,13 +750,13 @@ UiDialog {
         id: importDialog
         title: qsTr("Import Settings")
         fileMode: FileDialog.OpenFile
-        nameFilters: ["JSON settings files (*.json)", "All files (*)"]
+        nameFilters: [qsTr("JSON settings files (*.json)"), qsTr("All files (*)")]
         onAccepted: {
             const path = dialog.cleanPath(selectedFile)
             if (viewer.importSettings(path)) {
-                dialog.settingsFeedback = "Settings imported successfully from " + path
+                dialog.settingsFeedback = qsTr("Settings imported successfully from %1").arg(path)
             } else {
-                dialog.settingsFeedback = viewer.status || "Could not import settings."
+                dialog.settingsFeedback = viewer.status || qsTr("Could not import settings.")
             }
         }
     }
@@ -787,9 +789,9 @@ UiDialog {
                     onClicked: {
                         confirmResetDialog.close()
                         if (viewer.resetAllSettings()) {
-                            dialog.settingsFeedback = "All settings have been reset to defaults."
+                            dialog.settingsFeedback = qsTr("All settings have been reset to defaults.")
                         } else {
-                            dialog.settingsFeedback = viewer.status || "Could not reset settings."
+                            dialog.settingsFeedback = viewer.status || qsTr("Could not reset settings.")
                         }
                     }
                 }

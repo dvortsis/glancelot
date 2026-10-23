@@ -1,0 +1,21 @@
+********* Start testing of FileOperationServiceTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FileOperationServiceTests::initTestCase()
+PASS   : FileOperationServiceTests::signalsAndResultMaps()
+PASS   : FileOperationServiceTests::supersededPlanCannotBeConfirmed()
+PASS   : FileOperationServiceTests::confirmAfterCancelReturnsFalse()
+PASS   : FileOperationServiceTests::busyRejectsNewWorkAndCancelStopsBeforeNextItem()
+PASS   : FileOperationServiceTests::changedBetweenPlanAndConfirmIsReported()
+PASS   : FileOperationServiceTests::windowsRefusesPermanentDeletion()
+SKIP   : FileOperationServiceTests::realTrashSmoke() Set GLANCELOT_TRASH_SMOKE=1 to exercise the real Recycle Bin on generated files
+C:\src\Github\Glancelot\.worktrees\lead-tester\tests\file_operation_service_tests.cpp(196) : failure location
+SKIP   : FileOperationServiceTests::realTrashOtherMount() POSIX only (Windows volumes have their own Recycle Bin; see substDriveRefusesWithoutDeleting)
+C:\src\Github\Glancelot\.worktrees\lead-tester\tests\file_operation_service_tests.cpp(228) : failure location
+SKIP   : FileOperationServiceTests::realTrashLockedFileStays() Set GLANCELOT_TRASH_SMOKE=1 to exercise the real Recycle Bin on generated files
+C:\src\Github\Glancelot\.worktrees\lead-tester\tests\file_operation_service_tests.cpp(264) : failure location
+QINFO  : FileOperationServiceTests::substDriveRefusesWithoutDeleting() subst outcome 5 "the Recycle Bin cannot take this item (no Recycle Bin on this drive, or the item is too large)"
+QINFO  : FileOperationServiceTests::substDriveRefusesWithoutDeleting() QFile::moveToTrash on the subst drive returned false ; file still present: true
+PASS   : FileOperationServiceTests::substDriveRefusesWithoutDeleting()
+PASS   : FileOperationServiceTests::cleanupTestCase()
+Totals: 9 passed, 0 failed, 3 skipped, 0 blacklisted, 1185ms
+********* Finished testing of FileOperationServiceTests *********

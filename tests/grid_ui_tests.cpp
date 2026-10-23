@@ -8,6 +8,7 @@
 #include "../src/app/file_grid_wiring.hpp"
 #include <QFileInfo>
 #include "../src/app/file_operation_wiring.hpp"
+#include "../src/app/viewer_context.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
 #include <condition_variable>
@@ -114,6 +115,8 @@ struct Harness {
     QTemporaryDir trashBin;
     TestTrash* trash = new TestTrash(trashBin.path());
     FileOperationService fileOperations{std::unique_ptr<glancelot::TrashBackend>(trash)};
+    FavoritesModel favorites;
+    FolderHistory history;
     QQmlApplicationEngine engine;
     PreviewProvider* provider = new PreviewProvider;
     QQuickWindow* window{};
@@ -124,15 +127,10 @@ struct Harness {
         imports.removeAll(QCoreApplication::applicationDirPath());
         engine.setImportPathList(imports);
         engine.addImageProvider("thumb", provider);
-        engine.rootContext()->setContextProperty("viewer", &viewer);
-        engine.rootContext()->setContextProperty("paneLayout", &layout);
         monitor.setSlot(1);
-        engine.rootContext()->setContextProperty("monitorCustomization", &monitor);
-        engine.rootContext()->setContextProperty("theme", &theme);
-        engine.rootContext()->setContextProperty("filmstrip", &model);
-        engine.rootContext()->setContextProperty("folderTree", &folders);
-        engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
-        engine.rootContext()->setContextProperty("fileOperations", &fileOperations);
+        installViewerContext(*engine.rootContext(), {.viewer = viewer, .paneLayout = layout, .monitorCustomization = monitor,
+            .filmstrip = model, .folderTree = folders, .favoritesModel = favorites, .folderHistory = history,
+            .fileGrid = fileGrid, .theme = theme, .fileOperations = fileOperations});
         file_operation_wiring::follow(fileOperations, viewer, folders); // the shipped reconciliation wiring
         // Tests that inject a listing with fill() must not be overwritten by the (empty) controller snapshot.
         // Live wiring is app/main.cpp's: the same file_grid_wiring helpers, plus the filmstrip connections.
@@ -2424,8 +2422,12 @@ private slots:
             QDir().mkpath(".cache/delete");
             for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/tree-menu-" + mode + "-1180.png")); }
         }
-        QTest::keyClick(h.window, Qt::Key_Down); // INPUT-02: "Open folder" is first; the destructive row stays last
-        QTest::keyClick(h.window, Qt::Key_Down); // highlight the move-to-trash item
+        // Walk the menu with Down to the move-to-trash row, found by identity: the rows above it ("Add to Favorites",
+        // "Open folder") depend on which services the harness installs, and INPUT-02 keeps the destructive row last.
+        QObject* trash = menu->findChild<QObject*>("menuItem-delete-selection"); QVERIFY(trash);
+        QVERIFY(trash->property("enabled").toBool());
+        for (int i = 0; i < 4 && !trash->property("highlighted").toBool(); ++i) QTest::keyClick(h.window, Qt::Key_Down);
+        QVERIFY(trash->property("highlighted").toBool());
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
         QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");

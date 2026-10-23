@@ -1,0 +1,118 @@
+********* Start testing of InputUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : InputUiTests::initTestCase()
+QWARN  : InputUiTests::precedenceMatrixForTheSameKey() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : InputUiTests::precedenceMatrixForTheSameKey() No QRhi found for window 0x230fbb22ff0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::precedenceMatrixForTheSameKey() No QRhi found for window 0x230fbb22ff0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::precedenceMatrixForTheSameKey() No QRhi found for window 0x230fbb22ff0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::precedenceMatrixForTheSameKey() No QRhi found for window 0x230fbb22ff0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::precedenceMatrixForTheSameKey()
+QWARN  : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss() No QRhi found for window 0x23080626aa0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss() No QRhi found for window 0x23080626aa0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss() No QRhi found for window 0x23080626aa0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss() No QRhi found for window 0x23080626aa0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss() No QRhi found for window 0x23080626aa0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss() No QRhi found for window 0x23080626aa0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::chordPendingTimeoutEscapeAndFocusLoss()
+QWARN  : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm() No QRhi found for window 0x230fbb21ff0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::gridSearchKeepsPrintableDefaultsWhileChordsCanArm()
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() No QRhi found for window 0x230fc4fd370, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt() No QRhi found for window 0x230fc4fd370, QQuickRhiItem will not be functional
+PASS   : InputUiTests::escapeCancelsAChordBeforeTheGridOrTreeActOnIt()
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() No QRhi found for window 0x230fbb223f0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys() No QRhi found for window 0x230fbb223f0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::remapsBeatNativePaneKeysAndTreeOwnershipGatesCanvasKeys()
+QWARN  : InputUiTests::cancelledPointerGrabRestoresAKeyHold() No QRhi found for window 0x23084fac8c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::cancelledPointerGrabRestoresAKeyHold() No QRhi found for window 0x23084fac8c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::cancelledPointerGrabRestoresAKeyHold()
+QWARN  : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot() No QRhi found for window 0x23084fac8c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot() No QRhi found for window 0x23084fac8c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::treeDeleteKeyMatchesItsMenuOnARoot()
+QWARN  : InputUiTests::treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() No QRhi found for window 0x23084fac2c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::treeTrashRowRunsTheDeleteCommandOnTheCursorFolder() No QRhi found for window 0x23084fac2c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::treeTrashRowRunsTheDeleteCommandOnTheCursorFolder()
+QWARN  : InputUiTests::treeTrashAndDeleteKeyShareBusyEligibility() No QRhi found for window 0x23084fac6c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::treeTrashAndDeleteKeyShareBusyEligibility() No QRhi found for window 0x23084fac6c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::treeTrashAndDeleteKeyShareBusyEligibility()
+QWARN  : InputUiTests::compactMenusScrollToTheCurrentRow() No QRhi found for window 0x23084fac7c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::compactMenusScrollToTheCurrentRow() No QRhi found for window 0x23084fac7c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::compactMenusScrollToTheCurrentRow()
+QWARN  : InputUiTests::holdActualRestoresOnEveryEnd() No QRhi found for window 0x23084facec0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::holdActualRestoresOnEveryEnd() No QRhi found for window 0x23084facec0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::holdActualRestoresOnEveryEnd() No QRhi found for window 0x23084facec0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::holdActualRestoresOnEveryEnd() No QRhi found for window 0x23084facec0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::holdActualRestoresOnEveryEnd() No QRhi found for window 0x23084facec0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::holdActualRestoresOnEveryEnd()
+QWARN  : InputUiTests::navigatorPresetsAndZoomLock() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::navigatorPresetsAndZoomLock() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::navigatorPresetsAndZoomLock() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::navigatorPresetsAndZoomLock() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::navigatorPresetsAndZoomLock()
+QWARN  : InputUiTests::referenceWindowKeepsItsPhoto() No QRhi found for window 0x23084facbc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::referenceWindowKeepsItsPhoto() No QRhi found for window 0x23084facbc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::referenceWindowKeepsItsPhoto() No QRhi found for window 0x230fbf944e0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::referenceWindowKeepsItsPhoto() No QRhi found for window 0x23084facbc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::referenceWindowKeepsItsPhoto()
+QWARN  : InputUiTests::detailsModeListsRowsWithoutThumbnails() No QRhi found for window 0x23084fac2c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::detailsModeListsRowsWithoutThumbnails()
+QWARN  : InputUiTests::shortcutRecorderCapturesChordsAndExplainsRefusals() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::shortcutRecorderCapturesChordsAndExplainsRefusals() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::shortcutRecorderCapturesChordsAndExplainsRefusals()
+QWARN  : InputUiTests::highContrastIsAAAAndLargeTargetsReachFortyFourPixels() No QRhi found for window 0x23084fac7c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::highContrastIsAAAAndLargeTargetsReachFortyFourPixels() No QRhi found for window 0x23084fac7c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::highContrastIsAAAAndLargeTargetsReachFortyFourPixels()
+QWARN  : InputUiTests::layoutPresetsFromCommandAndSettings() No QRhi found for window 0x23084fac1c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::layoutPresetsFromCommandAndSettings() No QRhi found for window 0x23084fac1c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::layoutPresetsFromCommandAndSettings()
+QWARN  : InputUiTests::everyInteractiveControlIsNamedForAssistiveTechnology() No QRhi found for window 0x23084fac0c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::everyInteractiveControlIsNamedForAssistiveTechnology() No QRhi found for window 0x23084fac0c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::everyInteractiveControlIsNamedForAssistiveTechnology()
+QWARN  : InputUiTests::rightToLeftMirrorsTheWorkspace() No QRhi found for window 0x23084fac3c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::rightToLeftMirrorsTheWorkspace() No QRhi found for window 0x23084fac3c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::rightToLeftMirrorsTheWorkspace() No QRhi found for window 0x23084fac3c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::rightToLeftMirrorsTheWorkspace()
+QWARN  : InputUiTests::tabStripSwitchesLocationsAndHidesAtOneTab() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::tabStripSwitchesLocationsAndHidesAtOneTab() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::tabStripSwitchesLocationsAndHidesAtOneTab() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::tabStripSwitchesLocationsAndHidesAtOneTab() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::tabStripSwitchesLocationsAndHidesAtOneTab()
+QWARN  : InputUiTests::kindChipsFilterTheGridByType() No QRhi found for window 0x23084fac9c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::kindChipsFilterTheGridByType() No QRhi found for window 0x23084fac9c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::kindChipsFilterTheGridByType()
+QWARN  : InputUiTests::gridBadgesAreLabelledAndDoNotOverlap() No QRhi found for window 0x23084fac6c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::gridBadgesAreLabelledAndDoNotOverlap()
+QWARN  : InputUiTests::focusModeHidesChromeAndEscapeRestoresIt() No QRhi found for window 0x23084facac0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::focusModeHidesChromeAndEscapeRestoresIt() No QRhi found for window 0x23084facac0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::focusModeHidesChromeAndEscapeRestoresIt()
+QWARN  : InputUiTests::slideshowAdvancesAndEndsCleanly() No QRhi found for window 0x23085b0fe60, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::slideshowAdvancesAndEndsCleanly() No QRhi found for window 0x23085b0fe60, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::slideshowAdvancesAndEndsCleanly() No QRhi found for window 0x23085b0fe60, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::slideshowAdvancesAndEndsCleanly() No QRhi found for window 0x23085b0fe60, QQuickRhiItem will not be functional
+PASS   : InputUiTests::slideshowAdvancesAndEndsCleanly()
+QWARN  : InputUiTests::rightButtonClickIsTheMenuAndHoldIsTheLoupe() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::rightButtonClickIsTheMenuAndHoldIsTheLoupe() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::rightButtonClickIsTheMenuAndHoldIsTheLoupe() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::rightButtonClickIsTheMenuAndHoldIsTheLoupe() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::rightButtonClickIsTheMenuAndHoldIsTheLoupe() No QRhi found for window 0x23084facdc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::rightButtonClickIsTheMenuAndHoldIsTheLoupe()
+QWARN  : InputUiTests::wheelMatrixAndHighResolutionDeltas() No QRhi found for window 0x23084fac3c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::wheelMatrixAndHighResolutionDeltas() No QRhi found for window 0x23084fac3c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::wheelMatrixAndHighResolutionDeltas() No QRhi found for window 0x23084fac3c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::wheelMatrixAndHighResolutionDeltas()
+QWARN  : InputUiTests::canvasMenuMatchesShortcutsAndOpensFromTheKeyboard() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::canvasMenuMatchesShortcutsAndOpensFromTheKeyboard() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::canvasMenuMatchesShortcutsAndOpensFromTheKeyboard() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::canvasMenuMatchesShortcutsAndOpensFromTheKeyboard()
+QWARN  : InputUiTests::gridMenuNamesItsTargetAndOpensFromTheKeyboard() No QRhi found for window 0x23084faccc0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::gridMenuNamesItsTargetAndOpensFromTheKeyboard()
+QWARN  : InputUiTests::treeRowAndPathBarMenusOpenAndMatch() No QRhi found for window 0x23084fac6c0, QQuickRhiItem will not be functional
+QWARN  : InputUiTests::treeRowAndPathBarMenusOpenAndMatch() No QRhi found for window 0x23084fac6c0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::treeRowAndPathBarMenusOpenAndMatch()
+QWARN  : InputUiTests::menusStayReachableInCompactWindows() No QRhi found for window 0x230fc68abe0, QQuickRhiItem will not be functional
+PASS   : InputUiTests::menusStayReachableInCompactWindows()
+SKIP   : InputUiTests::reviewCaptures() Set GLANCELOT_REVIEW_CAPTURE to write captures.
+C:\src\Github\Glancelot\.worktrees\lead-tester\tests\input_ui_tests.cpp(1177) : failure location
+PASS   : InputUiTests::cleanupTestCase()
+Totals: 32 passed, 0 failed, 1 skipped, 0 blacklisted, 90518ms
+********* Finished testing of InputUiTests *********

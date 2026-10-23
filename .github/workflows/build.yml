@@ -1,5 +1,9 @@
 name: Build and test
-on: [push, pull_request]
+on:
+  push:
+    # gate/* pushes are full gates in windows-gate.yml; running these jobs there too only duplicates work.
+    branches-ignore: ['gate/**']
+  pull_request:
 jobs:
   core:
     strategy:

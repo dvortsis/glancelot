@@ -195,6 +195,8 @@ Rectangle {
             id: favoritesSection
             visible: typeof favoritesModel !== "undefined"
             Layout.fillWidth: true
+            // Size to content: a nested layout fills by default and would share the spare height with the folder list.
+            Layout.fillHeight: false
             spacing: 0
 
             RowLayout {
@@ -268,7 +270,18 @@ Rectangle {
                 id: favoritesList
                 objectName: "favoritesList"
                 Layout.fillWidth: true
-                Layout.preferredHeight: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0) ? Math.min(favoritesModel.count * Theme.rowHeight, 144) : 0
+                // Whole rows, at most 5 and at most a fifth of the panel (one row minimum); a longer list scrolls in place
+                // so the folder tree below keeps most of the height, including at the minimum window size.
+                readonly property int maxRows: Math.max(1, Math.min(5, Math.floor(panel.height / (5 * Theme.rowHeight))))
+                readonly property int favoriteCount: typeof favoritesModel !== "undefined" ? favoritesModel.count : 0
+                // When more favorites exist than fit, half of the next row peeks out so the overflow is visible at rest
+                // (the scroll bar only shows while scrolling or hovered). The peek is dropped rather than take the folder
+                // list below one row: the height this list shares with the folder list is the same with or without it.
+                readonly property real sharedHeight: list.height + height
+                readonly property bool peek: favoriteCount > maxRows
+                                             && sharedHeight - (maxRows + 0.5) * Theme.rowHeight >= Theme.rowHeight
+                Layout.preferredHeight: panel.favoritesExpanded && favoriteCount > 0
+                                        ? Math.min(favoriteCount, maxRows) * Theme.rowHeight + (peek ? Theme.rowHeight / 2 : 0) : 0
                 visible: panel.favoritesExpanded && (typeof favoritesModel !== "undefined" && favoritesModel.count > 0)
                 leftMargin: Theme.gapSm
                 rightMargin: Theme.gapSm

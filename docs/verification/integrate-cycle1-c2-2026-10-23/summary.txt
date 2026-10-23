@@ -1,0 +1,7 @@
+Windows (8943463): 45/45 PASS, 745.75 s test time, 830 s wall
+Docker (febd0edc7e135fb3f1872d1c305849188de1fad9, Dockerfile-only diff): PASS exit 0, 984 s
+Docker build-stage CTest: 100% tests passed, 0 failed out of 45; total 398.26 s
+translation_coverage_ui: Passed 11.61 s; results 9 passed 0 failed 0 skipped
+Image size 548222540 bytes (cycle1-b 548197595, +24945)
+Lock wait 665 s (build slots draining); acquired 04:33:14
+Failed earlier run on 8943463: docker-gate-8943463-fail.log
