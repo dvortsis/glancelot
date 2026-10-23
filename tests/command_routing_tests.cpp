@@ -1,6 +1,7 @@
 // EN-06: a command reached through the shipped Main.qml executes exactly once, whichever side (controller or QML)
 // owns it, and Main.qml loads without QML warnings.
 #include "glancelot/animation_controller.hpp"
+#include "glancelot/folder_history.hpp"
 #include "ui_test_support.hpp"
 #include <QFile>
 #include <QMutex>
@@ -84,6 +85,19 @@ QString executionProblem(const RoutedCase& c, qsizetype executions) {
     if (executions != 1) return QString("%1 executed %2 times").arg(c.id).arg(executions);
     return c.applied() ? QString() : QString("%1 did not apply").arg(c.id);
 }
+
+// Folder history with real (disposable) folders a, b and c. Back starts at c with a and b behind it; forward starts at
+// a with b and c ahead. One step lands on b either way; a second step would skip on to a (back) or c (forward).
+struct HistoryFolders {
+    QTemporaryDir dir;
+    HistoryFolders() { for (const char* name : {"a", "b", "c"}) QDir(dir.path()).mkdir(name); }
+    QString path(const char* name) const { return QDir::cleanPath(dir.filePath(name)); }
+    void arm(FolderHistory& history, bool forward) const {
+        history.clear();
+        for (const char* name : {"a", "b", "c"}) history.recordVisit(path(name));
+        if (forward) { history.goBack(); history.goBack(); }
+    }
+};
 } // namespace
 
 class CommandRoutingTests final : public QObject {
@@ -149,6 +163,46 @@ private slots:
             QCOMPARE(changes.size(), 1);
         }
         for (const auto& emitted : commands) QVERIFY2(!emitted.first().toString().startsWith("storage-profile-"), qPrintable(emitted.first().toString()));
+    }
+    // Folder history back/forward: every route (explicit invoke, the Alt+Left/Alt+Right keys, the mouse Back/Forward
+    // buttons on the canvas) requests navigation exactly once, so one step never skips a folder.
+    void folderHistoryStepsOnceOnEveryRoute() {
+        AnimatedMedia media; HistoryFolders folders; QVERIFY(folders.dir.isValid());
+        FolderHistory history; // declared before the harness so it outlives the window's bindings to it
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.engine.rootContext()->setContextProperty("folderHistory", &history);
+        h.viewer.setFilmstripVisible(false);
+        h.viewer.open(media.dir.filePath("still.png"));
+        QVERIFY(QTest::qWaitFor([&] { return h.viewer.imageReady(); }, 15000));
+        QVERIFY(activate(h));
+        focusCanvas(h); QTRY_VERIFY(h.canvas()->hasActiveFocus());
+        auto* pointer = qobject_cast<QQuickItem*>(h.object("canvasPointer")); QVERIFY(pointer); QTRY_VERIFY(pointer->isVisible());
+        WAIT_FIRST_KEY(h, h.viewer.bindingFor("navigate-back"));
+        WAIT_FIRST_KEY(h, h.viewer.bindingFor("navigate-forward"));
+        const QPoint at = sceneCenter(pointer);
+        struct Route { const char* name; bool forward; std::function<void()> run; };
+        const QList<Route> routes{
+            {"invoke(navigate-back)", false, [&] { QVERIFY(invoke(h, "navigate-back")); }},
+            {"Alt+Left", false, [&] { QTest::keyClick(h.window, Qt::Key_Left, Qt::AltModifier); }},
+            {"mouse BackButton", false, [&] { QTest::mousePress(h.window, Qt::BackButton, {}, at); QTest::mouseRelease(h.window, Qt::BackButton, {}, at); }},
+            {"invoke(navigate-forward)", true, [&] { QVERIFY(invoke(h, "navigate-forward")); }},
+            {"Alt+Right", true, [&] { QTest::keyClick(h.window, Qt::Key_Right, Qt::AltModifier); }},
+            {"mouse ForwardButton", true, [&] { QTest::mousePress(h.window, Qt::ForwardButton, {}, at); QTest::mouseRelease(h.window, Qt::ForwardButton, {}, at); }},
+        };
+        QStringList problems;
+        for (const auto& route : routes) {
+            folders.arm(history, route.forward);
+            QCOMPARE(route.forward ? history.forwardCount() : history.backCount(), 2);
+            focusCanvas(h);
+            QSignalSpy requests(&history, &FolderHistory::navigationRequested);
+            route.run();
+            QTRY_VERIFY2(requests.size() >= 1, route.name);
+            QTest::qWait(50);
+            if (requests.size() != 1) problems << QString("%1 requested navigation %2 times").arg(route.name).arg(requests.size());
+            else if (requests.first().first().toString() != folders.path("b"))
+                problems << QString("%1 went to %2, not b").arg(route.name, requests.first().first().toString());
+        }
+        QVERIFY2(problems.isEmpty(), qPrintable(problems.join("; ")));
     }
     // Loading the window and opening the shortcut cheat sheet (whose key badges once raised a ReferenceError)
     // logs no QML warning.

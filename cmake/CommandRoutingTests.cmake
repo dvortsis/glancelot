@@ -9,6 +9,7 @@ qt_add_executable(command_routing_tests tests/command_routing_tests.cpp
   src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
   src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
   src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp
+  src/app/folder_history.cpp include/glancelot/folder_history.hpp # provisional: not in glancelot_core
   src/render/image_canvas.cpp src/render/image_canvas.hpp)
 target_include_directories(command_routing_tests PRIVATE include src/render)
 target_compile_definitions(command_routing_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

@@ -156,3 +156,87 @@ The rerun of those three gave the same three cases failing again (`0% tests pass
 - **Stale "temporary" comments.** EN-06's plan row asks the lead to remove them from `cmake/MonitorCustomization.cmake` (lines 1–2), `cmake/RecoveryTests.cmake` and `cmake/FSWatchTests.cmake`. They were not touched here, because S1 owns those files this cycle.
 - **Convention for EN-07.** An id that the controller executes in `trigger` (now `toggle-metadata`, `animation-*`, `presentation-*`) emits `viewCommand` only so the view can run its shared first step. It must not have an executing branch in QML. The `copy-*` commands use the other pattern: C++ executes them only when nothing listens, and otherwise QML executes them.
 - **STACK-F054.** It rebases onto this branch. The `Main.qml` diff is three small hunks: around line 685, and the two split lines near 1321 and 2046.
+
+## Review round 1 fixes
+
+Fix implementer: a local Claude Code session on the lead's Windows PC (the original cloud implementer could not be reached; this session did not review the packet). Worktree `.worktrees/claude-en-06`, build directory `build-claude-en-06`.
+
+### Finding (High): `navigate-back` / `navigate-forward` ran twice
+
+- **Cause.** `ViewerController::trigger` has no branch for these ids, so it falls through to `else if(d->bindings.contains(id)) emit viewCommand(id)`. Two QML handlers listen to `viewCommand`: `Main.qml` `handleViewCommand` and `FolderTree.qml`'s `Connections { target: viewer; onViewCommand }`. Both called `folderHistory.navigateBack()` / `navigateForward()`, so Alt+Left, Alt+Right and every explicit route (command search, menus, `app.invoke`) stepped two entries and skipped a folder. The mouse Back/Forward buttons on the canvas called `app.handleViewCommand(...)` directly, bypassing the emit, so they ran only `Main.qml`'s branch, once.
+- **Change (`ui/Main.qml`).**
+  1. Removed the `navigate-back` and `navigate-forward` branches from `handleViewCommand` (one comment line replaces them). `handleViewCommand` still runs its shared first step, `canvas.endLoupe()`, for these ids.
+  2. The canvas `MouseArea` Back/Forward buttons now call `app.invoke("navigate-back")` / `app.invoke("navigate-forward")`, so they take the same route as the keys and menus: `invoke` -> `viewer.trigger` -> `viewCommand` -> `FolderTree.qml` (executes once) and `Main.qml` (ends the loupe). Both ids have global scope, so `routeAllows` always lets them through. Side effect: the mouse route now also calls `wakeHud()`, as the keys already did.
+- **Why the FolderTree handler is the one kept.** `FolderTree { id: treePanel }` is a static child of `Main.qml` (line ~1834), not a `Loader`, so it always exists. Hiding the tree only sets its width to 0 and `visible: false`; `Connections` stay enabled on an invisible item. Detaching the tree pane reparents the same object into a `DetachedPaneHost` window (`item.parent = hosts[id].paneContent`); it is never destroyed. So navigation works with the tree hidden, collapsed or detached. The `FolderTree.qml` handler also holds the other folder-history UI (the back/forward buttons call `folderHistory` directly and are unaffected).
+- **No other route lost.** `git grep` for `navigate-back|navigate-forward` in `ui/` and `src/` after the change: the registry entries, the `FolderTree.qml` handler, the two mouse calls (now `invoke`), and the cheat-sheet labels. Nothing else calls `handleViewCommand` with these ids.
+- `ui-design-skills`: read `application-interface-design` (precedence: platform behaviour and functional correctness). No visual change: no layout, spacing, typography, colour or motion changed.
+
+### Test: `folderHistoryStepsOnceOnEveryRoute` (`tests/command_routing_tests.cpp`)
+
+A `FolderHistory` is installed as the `folderHistory` context property on the harness root context (declared before the harness so it outlives the window's bindings). Three disposable folders `a`, `b`, `c` in a `QTemporaryDir`; before each route the history is re-armed: back starts at `c` with two back entries (`a`, `b`); forward starts at `a` with two forward entries (`b`, `c`). Each route must emit `navigationRequested` exactly once, with directory `b`. Routes: `invoke("navigate-back")`, Alt+Left on the focused canvas, mouse `BackButton` on `canvasPointer`, and the three forward equivalents. A double run shows as a count of 2 (it moves on to `a` or `c`).
+
+Provisional CMake: `src/app/folder_history.cpp` (not in `glancelot_core`) is added to the `command_routing_tests` sources in `cmake/CommandRoutingTests.cmake`, marked provisional. No other CMake change.
+
+### Fail before (new test, `ui/Main.qml` at the branch tip `932e2ea`, Windows)
+
+```
+1/1 Test #44: command_routing ..................***Failed   12.31 sec
+0% tests passed, 1 tests failed out of 1
+```
+`build-claude-en-06\command_routing-results.txt`:
+```
+PASS   : CommandRoutingTests::initTestCase()
+PASS   : CommandRoutingTests::explicitRouteExecutesOnce()
+PASS   : CommandRoutingTests::defaultKeysExecuteOnce()
+PASS   : CommandRoutingTests::storageProfileIsControllerOnly()
+FAIL!  : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute() 'problems.isEmpty()' returned FALSE. (invoke(navigate-back) requested navigation 2 times; Alt+Left requested navigation 2 times; invoke(navigate-forward) requested navigation 2 times; Alt+Right requested navigation 2 times)
+PASS   : CommandRoutingTests::mainQmlLoadsWithoutQmlWarnings()
+PASS   : CommandRoutingTests::cleanupTestCase()
+Totals: 6 passed, 1 failed, 0 skipped, 0 blacklisted, 12207ms
+```
+The mouse routes passed before the fix, as the finding predicted (they bypassed the emit).
+
+### Pass after (Windows, MSVC 2022, Qt 6.8.3 msvc2022_64, offscreen)
+
+`& .\scripts\build.ps1 -BuildDir build-claude-en-06` (no `-Test`), then inside `gate-lock.ps1 -Branch claude/en-06-fix -Run { ... }`:
+`ctest --test-dir build-claude-en-06 -R '^(command_routing|input_ui|folder_grid|directory_model|animation|metadata|shortcuts_help|folder_history)$' --output-on-failure`
+
+Run 1:
+```
+1/8 Test #12: folder_grid ......................***Timeout 399.98 sec
+2/8 Test #13: input_ui .........................   Passed  151.51 sec
+3/8 Test #16: directory_model ..................   Passed   65.00 sec
+4/8 Test #27: folder_history ...................   Passed    0.18 sec
+5/8 Test #28: shortcuts_help ...................   Passed    1.91 sec
+6/8 Test #32: metadata .........................   Passed    0.51 sec
+7/8 Test #33: animation ........................   Passed    0.62 sec
+8/8 Test #44: command_routing ..................   Passed   22.04 sec
+88% tests passed, 1 tests failed out of 8
+```
+`folder_grid` timed out with no failed case (63 cases had passed when it was killed; last `PASS : GridUiTests::deleteActionShowsOnlyWithSelection()`). During the run other sessions were compiling (`ninja`/`cl.exe`) and running `docker` on this machine.
+
+Rerun of `folder_grid` (budget suite, one rerun), same lock wrapper, after the concurrent test run had finished:
+```
+1/1 Test #12: folder_grid ......................   Passed  236.85 sec
+100% tests passed out of 1
+Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 236737ms
+```
+
+`command_routing` after the fix:
+```
+PASS   : CommandRoutingTests::initTestCase()
+PASS   : CommandRoutingTests::explicitRouteExecutesOnce()
+PASS   : CommandRoutingTests::defaultKeysExecuteOnce()
+PASS   : CommandRoutingTests::storageProfileIsControllerOnly()
+PASS   : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute()
+PASS   : CommandRoutingTests::mainQmlLoadsWithoutQmlWarnings()
+PASS   : CommandRoutingTests::cleanupTestCase()
+Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 21798ms
+```
+
+On Windows, `input_ui` and `directory_model` pass, so the cloud-only failures listed earlier in this handoff (`treeRowAndPathBarMenusOpenAndMatch`, `selectionSurvivesRelistSortAndDropsRemovedKeys`) did not reproduce here; `folder_grid`'s `externalRenameAndDeleteRefreshKeepSelection` also passed in the rerun.
+
+### Unverified in this round
+
+- The full offscreen suite and `docker build` (the authoritative `lead-windows-gate` decides).
+- A physical mouse with Back/Forward buttons; the test synthesizes `Qt::BackButton` / `Qt::ForwardButton` presses on the canvas.

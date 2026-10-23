@@ -850,8 +850,7 @@ ApplicationWindow {
         else if (id === "grid-zoom-in") { if (paneAvailable("grid") || gridScope) photoGrid.zoomIn() }
         else if (id === "grid-zoom-out") { if (paneAvailable("grid") || gridScope) photoGrid.zoomOut() }
         else if (id === "grid-zoom-reset") { if (paneAvailable("grid") || gridScope) photoGrid.resetZoom() }
-        else if (id === "navigate-back") { if (typeof folderHistory !== "undefined") folderHistory.navigateBack() }
-        else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
+        // navigate-back/-forward run once in FolderTree's onViewCommand (FolderTree is always instantiated); here they only end the loupe.
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel(); stopSlideshow() }
@@ -1074,8 +1073,8 @@ ApplicationWindow {
             }
             function endPointerLoupe() { loupeDelay.stop(); if (pointerLoupe) { pointerLoupe = false; canvas.endLoupe() } }
             onPressed: mouse => {
-                if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
-                if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
+                if (mouse.button === Qt.BackButton) { app.invoke("navigate-back"); mouse.accepted = true; return }
+                if (mouse.button === Qt.ForwardButton) { app.invoke("navigate-forward"); mouse.accepted = true; return }
                 canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
                 if (mouse.button === Qt.RightButton) loupeDelay.restart()
             }
