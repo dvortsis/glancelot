@@ -180,3 +180,95 @@ The ui-design-skills (application-interface-design, layout, spacing, typography,
 - Windows, the gate and Docker were not run here; the authoritative gate decides.
 - No real RTL language catalog exists: RTL is evidenced by layout direction with the pseudo-locale.
 - No physical display, multi-monitor or assistive-technology checks (NVDA/Orca).
+
+## Review round 1 fixes (fix session S11, cloud)
+
+Written by fix session S11; the original implementer was unavailable. The branch merged `origin/main` at `f325ef6` first (`ed022ba`); the fixes are on top. Review diff: `git diff ed022ba <tip>` for this round, or `git diff afeac1a <tip>` for the packet.
+
+The ui-design-skills (application-interface-design, typography, layout, responsive, design-review) are **not available in this cloud session** either: only document and office skills are installed. The QML edits here are string wrapping, accessibility attributes and one reverted wording, with no new chrome, spacing or colour.
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| 1 | RTL evidence was vacuous: the standalone test only called `setLayoutDirection`, so TransferHud never mirrored (`animation-transfer-ltr.png` and `-rtl.png` had the same md5, `8b7a901f…`) and the order assertion passed without AnimationBar's opt-out. | `standaloneSurfaces` now puts AnimationBar and TransferHud under an Item with `LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft; LayoutMirroring.childrenInherit: true`, as Main.qml does. A control copy of AnimationBar, loaded from the same file with `LayoutMirroring.enabled: false` stripped, must mirror in RTL, which proves the harness mirrors. The real bar must keep previous before next. TransferHud must mirror: cancel leads the status line in RTL and trails it in LTR, and the progress fill starts at the leading edge. The captures are now distinct (LTR `a9c382a0…`, RTL `17391cd8…`). |
+| 2 | Plurals (`%n`) for "%1 tags" and "%1 of %2 items". | **Waived by the lead for this packet.** TODO for E6, below. |
+| 3 | Settings strings skipped. | `ui/ThemePicker.qml`: placeholder `qsTr("Search %1 palettes").arg(…)`, "Search palettes", "Palettes", the card name `qsTr("%1, selected").arg(name)` (unselected cards keep the bare palette name, which is catalog data) and `qsTr("No palettes match “%1”.").arg(…)`. `ui/SettingRow.qml` and `ui/UiSwitch.qml`: "Modified from default". The coverage walk now also checks every visible item's declared accessible name and description (`QQuickAccessibleAttached`), its ToolTip attached text, UiButton's `tip` and field `placeholderText`, not only visible Text. |
+| 4 | The handoff said the removed `Status` message's source text changed. | Corrected in "Catalog" above: the text is unchanged; `90e63e2` made it a plain literal in `src/app/command_registry.cpp` (about line 166). It is now on the C++ follow-up list. |
+| 5 | Delete and Grid translations double-escaped (`&amp;apos;`, shown as "&apos;"). | Fixed in `translations/glancelot_en_XA.ts`. `catalogCoversEveryInterfaceMessage` now fails when a decoded translation has an XML entity its source lacks, and spot-checks both messages. `pseudolocalize.py` already writes `&apos;` correctly; these two predate it. |
+| 6 | Wording edits at `ui/MonitorSettings.qml` ~191 and ~206 belong to STACK-F049. | Reverted to main's English ("Named presets for this window slot" and the three-sentence note), still wrapped in `qsTr`; the `monitorPresetHeading` objectName added with them is gone too (nothing used it). |
+| 7 | `Accessible.checked` without `checkable`; MetadataHud compared against the C++ text "Unknown Camera". | `Accessible.checkable: true` on the metadata filter pills and the loop toggle. `MetadataModel::cameraSummary()` now returns an empty string when make and model are both missing, instead of the English sentinel "Unknown Camera". The HUD hides empty text, and `copySummary` drops the matching comparison. `tests/metadata_tests.cpp` asserts both. **Lead: this touches `src/app/metadata_model.cpp` and `tests/metadata_tests.cpp`, outside F054's QML/translations grant.** It was chosen over a new `hasCamera` property because the property would change the frozen `include/glancelot/metadata_model.hpp`. Nothing else read the sentinel (`grep -rn "Unknown Camera"` finds no other use). Drop the commit's two C++ hunks and restore the QML comparison if you prefer a header change. |
+
+### New allowance in the test
+
+The extended accessible-name check found two plain names in SettingsDialog's F049 preset block on main: "Layout preset" and "Name for the new layout preset". `claude/stack-f049-presets` already wraps them, with new wording ("Pane layout preset"…), and this packet must not edit that block. So the test lists them in `deferredToF049`, next to `deferredToMainQml`. **Delete that list when F049 integrates**, after regenerating the catalog.
+
+### Catalog
+
+```
+$ lupdate ui src app -locations none -no-obsolete -ts translations/glancelot_en_XA.ts
+Updating 'translations/glancelot_en_XA.ts'...
+    Found 475 source text(s) (9 new and 466 already existing)
+    Removed 2 obsolete entries
+$ python3 translations/pseudolocalize.py translations/glancelot_en_XA.ts
+translations/glancelot_en_XA.ts: 9 message(s) pseudo-localized
+```
+
+- The new messages: five ThemePicker, SettingRow and UiSwitch "Modified from default", and MonitorSettings' two restored strings. The two obsolete entries are the reverted F049-style wordings.
+- `git diff translations/` shows only those hunks plus the two escaping fixes, with LF line endings (no CR in the file).
+- A second `lupdate` + `pseudolocalize.py` run is byte-identical ("0 new", "0 message(s) pseudo-localized", `cmp` equal).
+- `lrelease translations/glancelot_en_XA.ts` reports: `Generated 475 translation(s) (475 finished and 0 unfinished)`.
+
+### Negative check: removing AnimationBar's opt-out fails the test
+
+With `LayoutMirroring.enabled: false` deleted from `ui/AnimationBar.qml` (restored afterwards):
+
+```
+PASS   : TranslationCoverageUiTests::initTestCase()
+PASS   : TranslationCoverageUiTests::standaloneLeftToRight()
+FAIL!  : TranslationCoverageUiTests::standaloneRightToLeft() 'previousX<nextX' returned FALSE. (rtl: previous frame at x=460, next frame at x=424)
+   Loc: [/home/user/glancelot/tests/translation_coverage_ui_tests.cpp(292)]
+PASS   : TranslationCoverageUiTests::cleanupTestCase()
+Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 443ms
+```
+
+With the opt-out restored: `Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 596ms`.
+
+### Targeted run
+
+The run used `GLANCELOT_F054_UI_EVIDENCE=$PWD/docs/verification/STACK-F054-COVERAGE` and `QT_QPA_PLATFORM=offscreen`, with `ctest -R "translation_coverage_ui|monitor_customization|animation|metadata|ui_settings|shortcuts_help|input_ui|pathbar_ui|fs_watch_ui"`. Environment: same container setup as above, with conda-forge Qt 6.8.3. `micro.mamba.pm` is now blocked by the proxy, so micromamba 1.5.10 came from `conda.anaconda.org/conda-forge` itself.
+
+```
+ 1/10 Test #13: input_ui .........................***Failed   70.34 sec
+FAIL!  : InputUiTests::treeRowAndPathBarMenusOpenAndMatch() 'menuOpen(rowMenu)' returned FALSE. ()
+ 2/10 Test #14: pathbar_ui .......................   Passed    2.44 sec
+ 3/10 Test #22: ui_settings ......................   Passed    0.50 sec
+ 4/10 Test #25: fs_watch_ui ......................   Passed    1.98 sec
+ 5/10 Test #28: shortcuts_help ...................   Passed    0.26 sec
+ 6/10 Test #32: metadata .........................   Passed    0.02 sec
+ 7/10 Test #33: animation ........................   Passed    0.38 sec
+ 8/10 Test #42: monitor_customization ............   Passed    6.90 sec
+ 9/10 Test #43: monitor_customization_ui .........   Passed   16.37 sec
+10/10 Test #44: translation_coverage_ui ..........   Passed   23.42 sec
+90% tests passed, 1 tests failed out of 10
+Total Test time (real) = 122.62 sec
+```
+
+`input_ui` `treeRowAndPathBarMenusOpenAndMatch` is the documented conda-forge baseline failure (PHASE0-CYCLE1). It is a budget test, so it was rerun once with the same result: `FAIL! : InputUiTests::treeRowAndPathBarMenusOpenAndMatch() 'menuOpen(rowMenu)' returned FALSE.`
+
+### Full offscreen suite (`QT_QPA_PLATFORM=offscreen ctest --test-dir build-claude-stack-f054-coverage --output-on-failure`)
+
+```
+FULL_PLACEHOLDER
+```
+
+### Evidence (docs/verification/STACK-F054-COVERAGE/, regenerated by the targeted run)
+
+- `animation-transfer-ltr.png` / `-rtl.png` are now distinct. In RTL, TransferHud's buttons lead on the left and the progress fill grows from the right. AnimationBar keeps its media order in both.
+- The ThemePicker search placeholder shows as "[Séàrçh 40 pàléttés]" in `settings-appearance-ltr-dark-1180.png`. The Presets page in `monitor-page3-ltr-dark-1180.png` shows main's restored heading and note.
+- `coverage-report.txt` reports 475 catalog messages and no untranslated text, now covering accessible names, tooltips and placeholders. Clipping candidates are unchanged: the two elided C++ command labels, and the metadata title elided only in the 40%-expanded pass.
+
+### TODO and follow-ups (not this packet)
+
+- **E6, plurals (waived here by the lead):** "%1 tags" (`ui/MetadataHud.qml` ~222) and "%1 of %2 items (%3 / %4) — %5%" (`ui/TransferHud.qml` ~102) should become `qsTr("%n tag(s)", "", count)` / `%n` forms. This needs numerusform support in `translations/pseudolocalize.py` (write one `<numerusform>` per plural form) and in the test's `TsTranslator` (read `<numerusform>`, choose by `n`), and the catalog check must accept `%n`.
+- **UiSwitch does not mirror in RTL:** the indicator is placed with `x: control.width - width` and the knob with explicit `x`, so the toggle stays on the right and the knob slides the LTR way. This needs a follow-up in `ui/UiSwitch.qml`.
+- **TransferHud's pause button draws no glyph:** `UiIcon` has no `pause` or `play` path, so the button is blank (visible in both captures). Its accessible name and tooltip are translated. This belongs to COPY-MOVE-01's owner.
+- **The C++ shortcut-conflict status message** (item 4) is on the C++ extraction list above.

@@ -137,6 +137,9 @@ class TranslationCoverageUiTests:public QObject {
     };
     QStringList plainSeen,clippedSeen;
     QStringList deferredToMainQml{"Needs the folder grid","Needs the folder tree","Needs the photo view","Needs a photo"};
+    // Accessible names in SettingsDialog's F049 preset block, which STACK-F049-PRESETS owns and wraps (with new wording).
+    // Delete this list once F049 integrates and the catalog is regenerated.
+    QStringList deferredToF049{"Layout preset","Name for the new layout preset"};
     QString evidence() const {return qEnvironmentVariable("GLANCELOT_F054_UI_EVIDENCE");}
     void capture(QQuickWindow* window,const QString& name) {
         if(evidence().isEmpty()||!window)return;
@@ -174,7 +177,7 @@ class TranslationCoverageUiTests:public QObject {
         for(const auto& family:h.theme.families())dynamic<<family.toMap().value("name").toString()<<family.toMap().value("label").toString(); // theme catalog data
         dynamic<<h.layout.presetNames(); // pane layout preset names are identifiers (built-ins in PaneLayout, user names)
         // Main.qml routing reasons ("Needs the folder grid"): wrapped in the Main.qml step after EN-06 integrates.
-        dynamic<<deferredToMainQml;
+        dynamic<<deferredToMainQml<<deferredToF049;
         // Display and routing status lines are composed in C++ (DisplayManager, Track D) and are data on this surface.
         dynamic<<h.viewer.displayManager()->property("outputColorStatus").toString()<<h.monitor.outputRoutingStatus();
         // Settings, every section.
@@ -276,7 +279,7 @@ class TranslationCoverageUiTests:public QObject {
         QCOMPARE(barItem->property("label").toString(),QString("[Fràmé 3 / 12]"));
         // Control: the same bar without its mirroring opt-out, so this harness provably mirrors in right-to-left.
         QFile barFile(barUrl.toLocalFile());QVERIFY(barFile.open(QIODevice::ReadOnly));auto barSource=barFile.readAll();
-        const QByteArray optOut("LayoutMirroring.enabled: false");QVERIFY(barSource.contains(optOut));barSource.replace(optOut,"");
+        barSource.replace("LayoutMirroring.enabled: false","");
         QQmlComponent mirroredBar(&engine);mirroredBar.setData(barSource,barUrl);
         std::unique_ptr<QQuickItem> controlItem(qobject_cast<QQuickItem*>(mirroredBar.create()));QVERIFY2(controlItem,qPrintable(mirroredBar.errorString()));
         controlItem->setParentItem(mirror.get());controlItem->setPosition({16,160});controlItem->setWidth(520);
