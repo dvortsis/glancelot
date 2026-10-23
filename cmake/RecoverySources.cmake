@@ -1,5 +1,4 @@
-# SAFE-MODE-01 lead-frozen production wiring. Include after glancelot exists,
-# outside BUILD_TESTING, when real feature sources are present.
+# SAFE-MODE-01 production wiring. Include after glancelot exists, outside BUILD_TESTING.
 include_guard(GLOBAL)
 set(glancelot_recovery_implementation_sources
   src/app/settings_recovery.cpp src/app/settings_policy.cpp src/app/settings_diff.cpp

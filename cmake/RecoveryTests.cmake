@@ -1,10 +1,9 @@
-# SAFE-MODE-01 lead-frozen feature wiring. The lead includes this file once real
-# feature sources/tests exist, before candidate builds. No conditional test skip.
+# SAFE-MODE-01 recovery test targets. No conditional test skip.
 include("${CMAKE_CURRENT_LIST_DIR}/RecoverySources.cmake")
 
 qt_add_executable(recovery_tests tests/recovery_tests.cpp
   ${glancelot_recovery_implementation_sources} ${glancelot_recovery_provider_sources}
-  src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+  ${GLANCELOT_VIEWER_SOURCES}
   src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
   src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
   src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp)
@@ -34,7 +33,7 @@ qt_add_executable(recovery_controller_tests tests/recovery_controller_tests.cpp
   src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
   src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
   src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
-  src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+  ${GLANCELOT_VIEWER_SOURCES}
   src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
   ${glancelot_recovery_provider_sources} ${glancelot_recovery_implementation_sources})
 target_compile_definitions(recovery_controller_tests PRIVATE GLANCELOT_RECOVERY_TESTING)
@@ -48,8 +47,8 @@ add_test(NAME recovery_controller COMMAND recovery_controller_tests
   -o "${CMAKE_CURRENT_BINARY_DIR}/recovery-controller-results.txt,txt" -o -,txt)
 set_tests_properties(recovery_controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
 
-# Existing controller/slot consumers retain one definition of each source. This
-# is enabled for the feature branch only; private fault hooks remain test-only.
+# Existing controller/slot consumers retain one definition of each source;
+# private fault hooks remain test-only.
 glancelot_attach_recovery_consumers()
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
