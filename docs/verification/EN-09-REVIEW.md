@@ -11,7 +11,7 @@
 
 - **Repository references.** Spot-checked on the branch and all present: `src/worker/main.cpp` (lines 161-163 one-path argv and `fs_watch::probe`; 176 embedded-JPEG `QBuffer`; 205-206 and 252-253 `convertToColorSpace(SRgb, Format_RGBA8888)` with the exact failure string), `src/render/image_canvas.cpp:97,122` (RGBA8 rejection and `QRhiTexture::RGBA8`), `app/main.cpp:301` (`--window-size` with 540/360 floor), `include/glancelot/contracts.hpp` (`AssetId{path}`, `PixelFormat{Rgba8, Rgba16Float}`, `DisplayCapabilities`, `DecoderCapability`), `file_operations.hpp` (`FileIdentity`, `MutationTarget`), `selection_export.hpp` (`ExportStatus`, `ExportSkip`), `io_scheduler.hpp` (`JobPriority`, `tryAdmit`), `directory_listing.hpp`, `navigation.hpp`, `thumbnail_service.hpp`, `copy_move_service.*`, `display_manager.hpp`, `output_color.hpp`, `raw_preview.cpp`, `metadata_parser.cpp`, `metadata_model.cpp`, `command_registry.cpp` (Ctrl+Shift+P, F11, Ctrl+=/-/0, Alt+Left, Ctrl+Shift+N, Ctrl+Shift+Delete all present), `viewer_controller.cpp` (`setText`, `setUrls`, `setImage` clipboard paths), `docker/start.py` (560x400..3840x2160 bound, `Xtigervnc ... -depth 24 ... -SecurityTypes VncAuth -AlwaysShared`, no `-AcceptSetDesktopSize`), `Dockerfile` (`cp vnc.html index.html`, apt list without any archive library or qtimageformats), `compose.yaml` (`/photos` `read_only: true`), root `CMakeLists.txt` (only `Qt6` and `Threads`; no vcpkg/FetchContent). Inventory and requirement quotes match the source rows verbatim.
 - **Local facts the cloud session could not check.** `.tools/Qt/6.8.3/msvc2022_64/sbom/qtbase-6.8.3.spdx` names LibJPEG-turbo 3.1.0 (`pkg:github/libjpeg-turbo/libjpeg-turbo@3.1.0`), confirming DEP-02's bundled-version claim. `plugins/imageformats` contains `qtiff`, `qwebp`, `qtga` and friends, and the qtimageformats SBOM is present, confirming DEP-09 "already used on Windows".
-- **Web spot-checks (2026-10-22).** libjpeg-turbo releases and 3.2.0 `LICENSE.md` and `turbojpeg.h`; LibRaw releases and `COPYRIGHT`; libheif releases and README; libarchive releases; Exiv2 releases and security advisories; libjxl, libavif, libultrahdr, brotli releases; dav1d tags; kimageformats `CMakeLists.txt` at v6.24.0 and v6.25.0; Qt 6.8 `qjpeghandler.cpp`, `qpnghandler.cpp`, `qimage.cpp`. Results are in the findings and in the fact table at the end.
+- **Web spot-checks (2026-10-22).** libjpeg-turbo releases and 3.2.0 `LICENSE.md` and `turbojpeg.h`; LibRaw releases and `COPYRIGHT`; libheif releases and README; libarchive releases; Exiv2 releases and security advisories; libjxl, libavif, libultrahdr, brotli releases; dav1d tags; xxHash and BLAKE3 releases and licences; Qt 6.8 `qcryptographichash.h`; kimageformats `CMakeLists.txt` at v6.24.0 and v6.25.0; Qt 6.8 `qjpeghandler.cpp`, `qpnghandler.cpp`, `qimage.cpp`. Results are in the findings and in the fact table at the end.
 
 ## Findings
 
@@ -21,7 +21,7 @@ The document's own PNG row notes that `png_set_text` writes `QImage` text keys, 
 
 - `qjpeghandler.cpp` read path saves `JPEG_COM` markers and calls `image->setText(...)` for each; the write path calls `jpeg_write_marker(cinfo, JPEG_COM, ...)` for the image's text (`qt_getImageText`).
 - `qpnghandler.cpp` read path calls `png_get_text` (tEXt, zTXt and iTXt, UTF-8 for iTXt) and `setText`; the write path calls `png_set_text` with every text key, as iTXt when needed.
-- `qimage.cpp` `convertToFormat` copies metadata including the text map (`copyMetadata`, `dst->text = src->text`).
+- `qimage.cpp` `convertToFormat` copies metadata including the text map (`copyMetadata`, `dst->text = src->text`). `transformed()` (and so `scaled`/`scaledToWidth`/`scaledToHeight`), `smoothScaled()`, the rotation helpers and the format-converting `colorTransformed()` also call `copyMetadata`; the worker's in-place `convertToColorSpace` keeps the image's own metadata. So the text survives the decode, colour-conversion and resize steps D9a would use, and is certain to survive an encode straight from the reader's `QImage`.
 
 So a PNG exported by Lightroom or darktable, which carries XMP in the `XML:com.adobe.xmp` iTXt chunk (XMP can include GPS, creator and keywords), keeps that XMP when exported to PNG and gets it written as a (truncated) JPEG comment when exported to JPEG. Source JPEG comments also pass through. The section 5 test ("no APP1/EXIF and no GPS") would pass while the leak exists.
 
@@ -67,9 +67,7 @@ The brotli 1.2.1 / 1.1.1 / 1.0.10 release notes state "CVE-2026-111497: out-of-b
 
 F076 quotes the 1.13.1 default `AllowOverride` list (`desktop,AcceptPointerEvents,SendCutText,AcceptCutText,SendPrimary,SetPrimary`); `AcceptSetDesktopSize` is not in it, so F074a's "narrow `-AllowOverride` so X clients cannot re-enable it" is not needed for resize. Narrowing is still right for F076a/F078a (pointer and clipboard flags). Reword F074a so the shared narrowing is attributed to F076a/F078a.
 
-### F-11 (non-blocking) Handoff header
-
-The handoff says "Written 2026-10-23" while the packet commits are dated 2026-10-22 local time; give the timezone (UTC) or use one date. The tip SHA is `a4085bc0d3ad0a5d2d419dab600f49abc5fd68dd`; the lead should record it when taking the go/no-go.
+Note for the lead: the handoff cannot name its own tip SHA; it is `a4085bc0d3ad0a5d2d419dab600f49abc5fd68dd` (commits dated 2026-10-23 UTC, consistent with the handoff date).
 
 ## Required checks
 
@@ -137,10 +135,13 @@ The handoff says "Written 2026-10-23" while the packet commits are dated 2026-10
 | libarchive 3.8.10 (14 Oct), signed tags (DEP-11) | Confirmed; asset names not listable | Confirmed; `.asc` unconfirmed |
 | Exiv2 0.28.9 (2026-08-30), six GHSAs that day (DEP-01) | 0.28.9 on 30 Aug; seven advisories that day | Count wrong (F-4) |
 | libultrahdr 2.0.2 (13 Aug), ISO 21496-1 since 2.0.0 (DEP-12) vs unconfirmed (F048) | v1.1.0 and v2.0.0 notes name ISO 21496-1 | DEP-12 right, F048 stale (F-6) |
+| Qt 6.8 `QCryptographicHash` has `Sha256` and `Blake2b_256` (DEP-03) | Both in the `Algorithm` enum of `qcryptographichash.h` (6.8) | Confirmed |
+| xxHash v0.8.4, BSD-2-Clause (DEP-03) | v0.8.4 is the newest release; `LICENSE` is BSD 2-Clause | Confirmed |
+| BLAKE3 1.8.7, CC0/Apache-2.0 (DEP-03) | 1.8.7 newest (20 Aug); CC0 1.0, or Apache-2.0 / Apache-2.0 with LLVM exception | Confirmed |
 | Qt JPEG/PNG writers keep ICC and drop EXIF (F071) | True, but text keys (COM, tEXt/iTXt incl. XMP) are read and written back | Incomplete (F-1) |
 
 ## What the lead should do with this
 
 1. Return F-1 to the packet author (or fix in the lead session): F071 sections 2, 4, 5 and 7, DEP-14 and handoff finding 5. Once corrected, this review's verdict becomes APPROVED without a further full re-review; a check of the F071 diff is enough.
-2. Fold F-2 to F-11 in the same pass where cheap; none of them changes a go/no-go.
+2. Fold F-2 to F-10 in the same pass where cheap; none of them changes a go/no-go.
 3. Record go/no-go per item using the agreement table above.
