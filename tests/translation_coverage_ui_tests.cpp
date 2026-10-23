@@ -161,10 +161,14 @@ class TranslationCoverageUiTests:public QObject {
     // The status bar panel: the Rectangle laid out exactly on paneRect("statusbar").
     static QQuickItem* statusBar(QQuickWindow* window) {
         QVariant value;QMetaObject::invokeMethod(window,"paneRect",Q_RETURN_ARG(QVariant,value),Q_ARG(QVariant,QString("statusbar")));
-        const auto rect=value.value<QJSValue>().toVariant().toMap();
-        for(auto* item:window->contentItem()->childItems())
-            if(item->inherits("QQuickRectangle")&&item->width()>0&&qAbs(item->x()-rect.value("x").toDouble())<0.5&&qAbs(item->y()-rect.value("y").toDouble())<0.5
-               &&qAbs(item->width()-rect.value("width").toDouble())<0.5&&qAbs(item->height()-rect.value("height").toDouble())<0.5)return item;
+        auto variant=value.canConvert<QJSValue>()?value.value<QJSValue>().toVariant():value;
+        QRectF rect;
+        if(variant.canConvert<QRectF>()&&variant.metaType().id()!=QMetaType::QVariantMap)rect=variant.toRectF();
+        else {const auto map=variant.toMap();rect=QRectF(map.value("x").toDouble(),map.value("y").toDouble(),map.value("width").toDouble(),map.value("height").toDouble());}
+        if(rect.width()<=0)return nullptr;
+        for(auto* item:descendants(window->contentItem()))
+            if(item->inherits("QQuickRectangle")&&!item->childItems().isEmpty()&&qAbs(item->x()-rect.x())<0.5&&qAbs(item->y()-rect.y())<0.5
+               &&qAbs(item->width()-rect.width())<0.5&&qAbs(item->height()-rect.height())<0.5)return item;
         return nullptr;
     }
     void walkMainWindow(const Harness& h,QStringList dynamic,const QString& tag,bool fullCoverage) {
