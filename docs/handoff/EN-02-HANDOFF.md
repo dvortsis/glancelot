@@ -169,7 +169,9 @@ present exit=0
 absent exit=1
 ```
 
-(Each script run above was piped through `head -n 2`; `exit=` is the script's own status from `PIPESTATUS[0]`.) ShellCheck is not installed in WSL here.
+(Output lines are verbatim; two `$` header lines are annotated: the empty `--build-dir` value is shown as `''`, and "pipefail on" notes that the check script ran `set -o pipefail`. Each script run was piped through `head -n 2`; `exit=` is the script's own status from `PIPESTATUS[0]`.)
+
+Note for other Windows checkouts: a worktree checked out before `5b21b29` (`*.sh text eol=lf`) has a CRLF `linux-bootstrap.sh` in its working tree (the index is LF), and bash then fails with `set: pipefail: invalid option name`. This fix session hit that and converted the working file to LF; re-check-out the file in such worktrees before running it in WSL. ShellCheck is not installed in WSL here.
 
 Unverified after round 1: the relative-prefix fix end to end (it needs a Qt download), `aqt_venv_ok` against a real venv, both Docker probe branches with a daemon, and the new Dockerfile messages (the gate's `docker build` exercises the passing path only).
 
