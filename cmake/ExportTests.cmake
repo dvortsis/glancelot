@@ -1,5 +1,4 @@
-# Lead-frozen EXPORT-CSV-01 (F070) core source and test target. Included from the root CMakeLists.txt once
-# src/core/selection_export.cpp exists on the feature branch; the integrator makes the include unconditional.
+# EXPORT-CSV-01 (F070) core source and test target.
 target_sources(glancelot_core PRIVATE src/core/selection_export.cpp)
 if(BUILD_TESTING)
   add_executable(selection_export_tests tests/selection_export_tests.cpp)
