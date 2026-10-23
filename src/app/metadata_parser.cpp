@@ -1,5 +1,6 @@
 #include "glancelot/metadata_parser.hpp"
 #include "glancelot/io_scheduler.hpp"
+#include "shared_file_read.hpp"
 #include <QFileInfo>
 #include <QImageReader>
 #include <QFile>
@@ -485,8 +486,14 @@ MetadataRecord MetadataParser::parse(const QString& filePath, quint64 generation
     record.fileName = info.fileName();
     record.fileSize = info.size();
 
+    // One shared-delete handle serves the reader and the header read, so parsing
+    // never blocks a writer's atomic replace of the image (EN-11).
+    // An unreadable file keeps its name and size, as before; format and headers stay empty.
+    QFile source;
+    detail::openSharedRead(source, filePath);
+
     // Query basic metadata with QImageReader without decoding full pixels
-    QImageReader reader(filePath);
+    QImageReader reader(&source);
     const QByteArray format = reader.format();
     record.fileFormat = QString::fromLatin1(format).toUpper();
 
@@ -545,12 +552,10 @@ MetadataRecord MetadataParser::parse(const QString& filePath, quint64 generation
 
     // Bounded binary read of headers through IoScheduler priority
     QByteArray headerBytes;
-    {
-        QFile file(filePath);
-        if (file.open(QIODevice::ReadOnly)) {
-            headerBytes = file.read(maxReadBytes);
-        }
+    if (source.isOpen() && source.seek(0)) {
+        headerBytes = source.read(maxReadBytes);
     }
+    source.close();
 
     const uchar* raw = reinterpret_cast<const uchar*>(headerBytes.constData());
     const int rawSize = headerBytes.size();

@@ -1,4 +1,5 @@
 #include "glancelot/animation_controller.hpp"
+#include "shared_file_read.hpp"
 #include <QImageReader>
 #include <QThreadPool>
 #include <QTimer>
@@ -200,7 +201,9 @@ void AnimationController::jumpToFrame(int frame) {
             d->frameImage = d->frameCache[frame];
         } else {
             // Lazy load frame on demand if not cached
-            QImageReader reader(d->filePath);
+            QFile source;
+            detail::openSharedRead(source, d->filePath); // never blocks a writer's replace (EN-11)
+            QImageReader reader(&source);
             if (reader.jumpToImage(frame)) {
                 QImage img = reader.read();
                 if (!img.isNull()) {
@@ -282,7 +285,10 @@ void AnimationController::load(const QString& filePath, quint64 generation) {
     QThreadPool::globalInstance()->start([self, filePath, token]() {
         if (!self) return;
 
-        QImageReader reader(filePath);
+        // Frames are read for a while; a shared-delete handle never blocks a writer's replace (EN-11).
+        QFile source;
+        detail::openSharedRead(source, filePath);
+        QImageReader reader(&source);
         reader.setDecideFormatFromContent(true);
         const QString fmt = QString::fromLatin1(reader.format()).toLower();
         const int count = reader.imageCount();
