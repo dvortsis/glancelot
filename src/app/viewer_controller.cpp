@@ -403,12 +403,8 @@ struct ViewerController::Private {
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
-        // F040: the reference lives in the display manager's retained-image budget; a newer current frame may release it.
-        QObject::connect(&displayManager,&glancelot::DisplayManager::referenceShed,q,[this](const QString& shed){
-            // Main.qml shows this status as a notice too (its referenceShed handler runs after this one).
-            status=QCoreApplication::translate("Status","Reference window closed to free image memory. To reopen it, open %1 and pin it again.").arg(QFileInfo(shed).fileName());
-            emit q->stateChanged();
-        });
+        // F040: the reference lives in the display manager's image budget; a newer frame may release it. Main.qml shows the
+        // one notice for that (referenceShed), so the controller status is left to the photo it describes.
         QObject::connect(&displayManager,&glancelot::DisplayManager::referenceChanged,q,&ViewerController::referenceChanged);
         QObject::connect(q,&ViewerController::stateChanged,q,[this]{ if(tabList.size()>1) emit q->tabsChanged(); });
     }
@@ -1287,7 +1283,7 @@ bool ViewerController::pinReference(){
         next=say("Unpin the output photo to make room.");
     else
         next=say("This photo is too large for the image memory budget.");
-    d->status=(replacing?say("Not enough image memory to replace the reference photo. The current one stays.")
+    d->status=(replacing?say("Not enough image memory to replace the reference photo. The open reference stays.")
                      :say("Not enough image memory to open the reference window."))+u' '+next;
     emit stateChanged();
     return false;

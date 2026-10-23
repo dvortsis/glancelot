@@ -4,6 +4,7 @@
 #include "ui_test_support.hpp"
 #include "glancelot/display_manager.hpp"
 #include "presentation_window.hpp"
+#include <QFileInfo>
 #include <QSet>
 #include <QSGRendererInterface>
 #include <QSignalSpy>
@@ -28,7 +29,11 @@ QString labelOf(const ViewerController& viewer, const QString& id) {
     return {};
 }
 constexpr const char* kOpenRefused = "Not enough image memory to open the reference window.";
-constexpr const char* kReplaceRefused = "Not enough image memory to replace the reference photo. The current one stays.";
+constexpr const char* kReplaceRefused = "Not enough image memory to replace the reference photo. The open reference stays.";
+constexpr const char* kPinRefusedKept = "Not enough image memory to pin this photo on the output. The output keeps its pinned photo.";
+constexpr const char* kPinWaitsForLoad = "The output keeps its pinned photo until the next photo finishes loading. Pin again when it shows.";
+constexpr const char* kKeepsPinned = "Output keeps its pinned photo: the newer photo doesn't fit in image memory.";
+QString shedNotice(const QString& name) { return QString("Reference window closed to free image memory. To reopen it, open %1 and pin it again.").arg(name); }
 constexpr const char* kTooLarge = "This photo is too large for the image memory budget.";
 constexpr const char* kUnpin = "Unpin the output photo to make room.";
 constexpr const char* kCloseComparison = "Close the comparison on the output to make room.";
@@ -38,9 +43,17 @@ QString joined(const char* a, const char* b) { return QString::fromUtf8(a) + u' 
 
 class ReferencePinTests : public QObject {
     Q_OBJECT
+    // Shows photo p<index> (1-based, like currentIndex()). It opens the file directly rather than triggering "next":
+    // after the October 23 main merge a "next" intent was occasionally left queued with no navigation running
+    // (index unchanged, not loading, for 15 s), which is a navigation issue outside this packet. These tests are about
+    // the display budget, so they only need a newer current frame.
+    static QString photo(Harness& h, int index) { return QFileInfo(h.viewer.filePath()).dir().filePath(QString("p%1.png").arg(index)); }
     static bool step(Harness& h, int index) {
-        h.viewer.trigger("next");
-        return QTest::qWaitFor([&] { return h.viewer.currentIndex() == index && h.viewer.imageReady(); }, 15000);
+        h.viewer.open(photo(h, index));
+        if (QTest::qWaitFor([&] { return h.viewer.currentIndex() == index && h.viewer.imageReady(); }, 15000)) return true;
+        qWarning("step(%d) timed out: index %d ready %d loading %d status '%s'", index, h.viewer.currentIndex(), int(h.viewer.imageReady()),
+                 int(h.viewer.loading()), qPrintable(h.viewer.status()));
+        return false;
     }
     static QQuickWindow* referenceWindow(Harness& h) { return h.window->findChild<QQuickWindow*>("referenceWindow"); }
     static ImageCanvas* referenceCanvas(Harness& h) { return h.window->findChild<ImageCanvas*>("referenceCanvas"); }
@@ -268,7 +281,7 @@ private slots:
         QCOMPARE(shed.at(0).at(0).toString(), media.path(0));
         QTRY_VERIFY(!referenceWindow(h)->isVisible());
         QVERIFY(h.viewer.referenceName().isEmpty());
-        QVERIFY(h.viewer.status().contains("p1.png"));
+        QCOMPARE(notice(h), shedNotice("p1.png"));
         QCOMPARE(dm->pinnedPath(), media.path(1));
         QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
         QCOMPARE(h.viewer.filePath(), media.path(2));
@@ -289,11 +302,15 @@ private slots:
         QCOMPARE(h.viewer.referenceName(), QString("p3.png"));
         QVERIFY(dm->retainedImageBytes() <= 2 * one + 16);
 
-        // An output pin that cannot fit never evicts the reference; the pin itself is shed as before.
+        // An output pin that cannot fit even after the reference would go is refused as a whole: the old pin, the output
+        // mode and the reference all stay (round 3: pin replacement is transactional).
         QImage large(h.viewer.image().width(), 2 * h.viewer.image().height(), QImage::Format_RGBA8888); large.fill(Qt::yellow);
+        QSignalSpy pins(dm, &glancelot::DisplayManager::pinnedPathChanged);
         dm->pinImage(media.path(3), large, quint64(1) << 40);
-        QVERIFY(dm->pinnedPath().isEmpty());
-        QCOMPARE(h.viewer.presentationMode(), QString("mirror"));
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(pins.count(), 0);
+        QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
+        QCOMPARE(dm->routingStatus(), QString(kPinRefusedKept));
         QCOMPARE(h.viewer.referenceName(), QString("p3.png"));
         QCOMPARE(changed.count(), 0);
         QVERIFY(dm->retainedImageBytes() <= 2 * one + 16);
@@ -426,8 +443,8 @@ private slots:
         QTRY_VERIFY(!referenceWindow(h)->isVisible());
         QVERIFY(h.viewer.referenceName().isEmpty());
         QVERIFY(referenceCanvas(h)->image().isNull());
-        const QString shedNotice = "Reference window closed to free image memory. To reopen it, open p2.png and pin it again.";
-        QCOMPARE(notice(h), shedNotice);
+        const QString expectedShed = shedNotice("p2.png");
+        QCOMPARE(notice(h), expectedShed);
         // The held frame and the waiting frame are intact, the output status is unchanged, and the bytes add up.
         QCOMPARE(dm->currentPath(), media.path(0));
         QCOMPARE(dm->routingStatus(), status);
@@ -457,12 +474,116 @@ private slots:
         auto* output = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(output);
         QCOMPARE(output->primaryCanvas()->image().cacheKey(), pinnedKey);
         QCOMPARE(dm->retainedImageBytes(), one);
-        QCOMPARE(dm->routingStatus(), QString("Output keeps its pinned photo: the latest frame exceeds the retained-image budget."));
+        QCOMPARE(dm->routingStatus(), QString(kKeepsPinned));
         // Releasing the pin brings the output back to the main photo.
         h.viewer.unpinPresentationImage();
         QTRY_COMPARE(output->primaryCanvas()->image().cacheKey(), h.viewer.image().cacheKey());
         QCOMPARE(dm->currentPath(), media.path(1));
         QCOMPARE(dm->retainedImageBytes(), one);
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Review round 3 (R2-1), scenario 1: pinning the held-back frame replaces the output pin in one step. No transient
+    // unpin, no pass through mirror mode, and exactly one image retained.
+    void pinHeldBackFrameReplacesPinAtomically() {
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");   // pins p1
+        QCOMPARE(dm->pinnedPath(), media.path(0));
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+        QVERIFY(step(h, 2));
+        QVERIFY2(dm->routingStatus().startsWith("Output keeps its pinned photo"), qPrintable(dm->routingStatus()));
+        const Selection selection(h.viewer);
+        QSignalSpy pins(dm, &glancelot::DisplayManager::pinnedPathChanged);
+        QSignalSpy modes(dm, &glancelot::DisplayManager::presentationModeChanged);
+
+        h.viewer.trigger("presentation-pin");
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
+        auto* output = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(output);
+        QCOMPARE(output->primaryCanvas()->image().cacheKey(), h.viewer.image().cacheKey());
+        QCOMPARE(dm->retainedImageBytes(), one);
+        QVERIFY2(!dm->routingStatus().contains("keeps its pinned photo"), qPrintable(dm->routingStatus()));
+        QCOMPARE(pins.count(), 1);
+        QCOMPARE(pins.at(0).at(0).toString(), media.path(1));
+        QCOMPARE(modes.count(), 0);
+        QCOMPARE(dm->routingStatus(), QString("Reference pinned"));
+        QVERIFY(selection.same(h.viewer));
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Scenario 2: the reference shares the old pin's photo. Releasing the old pin leaves the reference as the only
+    // holder of p1, so the new pin takes hold and the reference is shed (with its reopen notice), in the documented
+    // order. The budget is never exceeded and the output never leaves pinned mode.
+    void pinHeldBackFrameWithSharedReference() {
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        QVERIFY(pinBoth(h));   // reference and output pin share p1
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+        QVERIFY(step(h, 2));
+        QCOMPARE(h.viewer.referenceName(), QString("p1.png"));
+        QCOMPARE(dm->retainedImageBytes(), one);
+        QVERIFY2(dm->routingStatus().startsWith("Output keeps its pinned photo"), qPrintable(dm->routingStatus()));
+        const Selection selection(h.viewer);
+        QSignalSpy shed(dm, &glancelot::DisplayManager::referenceShed);
+        QSignalSpy pins(dm, &glancelot::DisplayManager::pinnedPathChanged);
+        QSignalSpy modes(dm, &glancelot::DisplayManager::presentationModeChanged);
+
+        h.viewer.trigger("presentation-pin");
+        QVERIFY(dm->retainedImageBytes() <= glancelot::DisplayManager::imageBudgetBytes());
+        QCOMPARE(dm->retainedImageBytes(), one);
+        QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
+        QCOMPARE(dm->pinnedPath(), media.path(1));
+        QCOMPARE(pins.count(), 1);
+        QCOMPARE(modes.count(), 0);
+        QCOMPARE(shed.count(), 1);
+        QCOMPARE(shed.at(0).at(0).toString(), media.path(0));
+        QTRY_VERIFY(!referenceWindow(h)->isVisible());
+        QCOMPARE(notice(h), shedNotice("p1.png"));
+        QVERIFY(selection.same(h.viewer));
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Scenario 3 (failure case): pinning while the held-back frame's successor is still decoding. The controller cannot
+    // hand over a frame yet, so the old pin and the output stay and the status says to pin again when the photo shows.
+    void pinWhileDecodeInFlightKeepsOldPin() {
+        BudgetScope budget;
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");   // pins p1
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+        QVERIFY(step(h, 2));
+        QVERIFY2(dm->routingStatus().startsWith("Output keeps its pinned photo"), qPrintable(dm->routingStatus()));
+        QSignalSpy pins(dm, &glancelot::DisplayManager::pinnedPathChanged);
+        QSignalSpy modes(dm, &glancelot::DisplayManager::presentationModeChanged);
+
+        // Pin from inside the first state change that reports the next photo loading, so the decode is surely in flight.
+        bool pinned = false; QString pinPath, pinStatus, pinMode;
+        const auto hook = connect(&h.viewer, &ViewerController::stateChanged, &h.viewer, [&] {
+            if (pinned || !h.viewer.loading()) return;
+            pinned = true;
+            h.viewer.trigger("presentation-pin");
+            pinPath = dm->pinnedPath(); pinStatus = dm->routingStatus(); pinMode = h.viewer.presentationMode();
+        });
+        h.viewer.open(photo(h, 3));
+        QTRY_VERIFY(pinned);
+        disconnect(hook);
+        QCOMPARE(pinPath, media.path(0));
+        QCOMPARE(pinMode, QString("pinned"));
+        QCOMPARE(pinStatus, QString(kPinWaitsForLoad));
+        QCOMPARE(pins.count(), 0);
+        QCOMPARE(modes.count(), 0);
+        QVERIFY(dm->retainedImageBytes() <= glancelot::DisplayManager::imageBudgetBytes());
+        QVERIFY(QTest::qWaitFor([&] { return h.viewer.currentIndex() == 3 && h.viewer.imageReady(); }, 15000));
+        QCOMPARE(dm->pinnedPath(), media.path(0));
         h.viewer.trigger("presentation-close"); flushDeletes();
     }
 
