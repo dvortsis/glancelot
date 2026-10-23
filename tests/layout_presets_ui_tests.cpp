@@ -235,7 +235,8 @@ private slots:
         QTRY_VERIFY2(besideControl(h,newer,choice).isEmpty(),qPrintable(besideControl(h,newer,choice)));
         QVERIFY(h.layout.pane("topbar")["visible"].toBool()); // nothing applied
         if(!evidence().isEmpty()) {
-            field->setProperty("text","studio");click(h,save);QTRY_COMPARE(h.layout.feedback(),collision);QTest::qWait(300);
+            flick->setProperty("contentY",std::max(0.,field->mapToItem(flick->property("contentItem").value<QQuickItem*>(),QPointF()).y()+field->height()+4-flick->height()));
+            QTest::qWait(100);field->setProperty("text","studio");click(h,save);QTRY_COMPARE(h.layout.feedback(),collision);QTest::qWait(300);
             QVERIFY(h.window->grabWindow().save(QDir(evidence()).filePath("settings-presets-refusal-dark-560.png")));
         }
     }
