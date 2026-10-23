@@ -111,6 +111,68 @@ curl: (56) CONNECT tunnel failed, response 403
 
 The only format-gated skip in the suite is `animation` `testMultipageTiffNavigation` (`tests/animation_tests.cpp:236`, skips when `QImageReader` lacks `tiff`). The format, thumbnail and grid tests contain no plugin-gated skips (`grep -rn QSKIP tests` and `grep supportedImageFormats tests`), so with `qtimageformats` installed that one case should change from SKIP to PASS and nothing else should change state. Confirm from the Docker build log in the gate (`animation` output: `PASS   : AnimationTests::testMultipageTiffNavigation()`).
 
+## Review round 1 fixes
+
+Fix session on the lead's Windows PC (WSL Ubuntu 24.04 for shell checks), October 22, 2026, after merging `origin/main` (`5b21b29`, adds `*.sh text eol=lf`; `git add --renormalize scripts/linux-bootstrap.sh` changed nothing). A full Windows gate held the machine, so nothing was built, no Docker ran and the script was not run past argument parsing. Line numbers refer to `39788a6`.
+
+1. **Relative `--qt-prefix` / `GLANCELOT_QT_PREFIX` / `--build-dir` gave `$QT_PREFIX/$QT_PREFIX`** (aqt ran after `cd "$QT_PREFIX"` with `-O "$QT_PREFIX"`, lines 112-115). `QT_PREFIX`, `BUILD_DIR` and `AQT_VENV` are now made absolute with `realpath -m --` right after option parsing, before `QT_DIR` is derived.
+2. **Option values (lines 58-61).** A new `need_value` check runs for `--qt-prefix`, `--qt-base`, `--build-dir` and `--jobs`: a missing or empty value, or one starting with `--`, prints `<option> needs a value` and the usage to stderr and exits 2 (previously `$2: unbound variable`, exit 1, or `--debug` taken as a directory).
+3. **`grep -q` under `pipefail`.** The `fast` label detection (line 156) and the dpkg status check (line 78) now feed `grep -q` from a here-string, so an early grep exit cannot turn into 141 and silently select the full suite or reinstall a package. The aqt venv check (line 107) always failed because `aqt version` logs to stderr, which was discarded; the new `aqt_venv_ok` requires `bin/aqt` and `bin/python`, a zero exit from `aqt version >/dev/null 2>&1`, and `importlib.metadata.version("aqtinstall")` equal to `3.3.0`.
+4. **Docker probe (line 130).** With a reachable daemon it now says `docker build` here is advisory only, that on the lead's Windows PC a local `docker build` must run inside `scripts/gate-lock.ps1 -Run` (machine gate lock), and that the authoritative gate (`lead-windows-gate` or the lead's local tester) runs the Docker build and decides done.
+5. **Dockerfile runtime plugin check.** A missing WebP/TIFF/TGA plugin prints `image-format plugin missing: <path>`; an `ldd` `not found` prints the unresolved lines and `image-format plugin has unresolved libraries (listed above): <plugin>`; both then `exit 1`.
+
+Checks (actual output, WSL Ubuntu 24.04, from the worktree root):
+
+```text
+$ bash -n scripts/linux-bootstrap.sh
+exit=0
+
+$ scripts/linux-bootstrap.sh --qt-prefix
+--qt-prefix needs a value
+Usage: scripts/linux-bootstrap.sh [options] [-- extra ctest arguments]
+exit=2
+
+$ scripts/linux-bootstrap.sh --qt-prefix --debug
+--qt-prefix needs a value
+Usage: scripts/linux-bootstrap.sh [options] [-- extra ctest arguments]
+exit=2
+
+$ scripts/linux-bootstrap.sh --build-dir ''
+--build-dir needs a value
+Usage: scripts/linux-bootstrap.sh [options] [-- extra ctest arguments]
+exit=2
+
+$ scripts/linux-bootstrap.sh --jobs
+--jobs needs a value
+Usage: scripts/linux-bootstrap.sh [options] [-- extra ctest arguments]
+exit=2
+
+$ scripts/linux-bootstrap.sh --bogus
+unknown option: --bogus
+Usage: scripts/linux-bootstrap.sh [options] [-- extra ctest arguments]
+exit=2
+
+$ scripts/linux-bootstrap.sh --help
+Usage: scripts/linux-bootstrap.sh [options] [-- extra ctest arguments]
+
+exit=0
+
+$ cd /tmp && realpath -m -- qt-rel ../x/build-rel
+/tmp/qt-rel
+/x/build-rel
+
+$ sh -n -c "<Dockerfile image-format RUN line>"
+exit=0
+
+$ label detection (here-string, pipefail on), labels "  fast" present / absent
+present exit=0
+absent exit=1
+```
+
+(Each script run above was piped through `head -n 2`; `exit=` is the script's own status from `PIPESTATUS[0]`.) ShellCheck is not installed in WSL here.
+
+Unverified after round 1: the relative-prefix fix end to end (it needs a Qt download), `aqt_venv_ok` against a real venv, both Docker probe branches with a daemon, and the new Dockerfile messages (the gate's `docker build` exercises the passing path only).
+
 ## Unverified
 
 - Qt install, configure, build and CTest through the script (blocked: network policy). Rerun `scripts/linux-bootstrap.sh` in a session that can reach `download.qt.io`; the reviewer or lead should record that output.

@@ -34,7 +34,7 @@ RUN printf '[Paths]\nPrefix=/opt/Qt\n' > /opt/glancelot/qt.conf && cp /usr/share
 ENV PATH=/opt/Qt/bin:$PATH LD_LIBRARY_PATH=/opt/Qt/lib DISPLAY=:0 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 GLANCELOT_CONFIG_DIR=/config HOME=/home/viewer
 RUN ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/glancelot/glancelot-decoder | grep -q "not found" && ! LD_LIBRARY_PATH=/opt/Qt/lib ldd /opt/Qt/plugins/platforms/libqxcb.so | grep -q "not found"
 # WebP, TIFF and TGA come from qtimageformats (as on Windows); every image-format plugin must load at runtime.
-RUN for format in qwebp qtiff qtga; do test -f /opt/Qt/plugins/imageformats/lib$format.so || exit 1; done && for plugin in /opt/Qt/plugins/imageformats/*.so; do ! LD_LIBRARY_PATH=/opt/Qt/lib ldd "$plugin" | grep "not found" || exit 1; done
+RUN for format in qwebp qtiff qtga; do test -f /opt/Qt/plugins/imageformats/lib$format.so || { echo "image-format plugin missing: /opt/Qt/plugins/imageformats/lib$format.so" >&2; exit 1; }; done && for plugin in /opt/Qt/plugins/imageformats/*.so; do if LD_LIBRARY_PATH=/opt/Qt/lib ldd "$plugin" | grep "not found"; then echo "image-format plugin has unresolved libraries (listed above): $plugin" >&2; exit 1; fi; done
 USER viewer
 WORKDIR /photos
 EXPOSE 6080

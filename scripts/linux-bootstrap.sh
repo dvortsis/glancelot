@@ -53,12 +53,21 @@ Arguments after -- are passed to ctest (for example: -- -R animation).
 EOF
 }
 
+# An option that takes a value needs one, and it must not be the next option.
+need_value() {
+  if (($# < 2)) || [[ -z $2 || $2 == --* ]]; then
+    echo "$1 needs a value" >&2
+    usage >&2
+    exit 2
+  fi
+}
+
 while (($#)); do
   case $1 in
-    --qt-prefix) QT_PREFIX=$2; shift 2 ;;
-    --qt-base) QT_BASE=$2; shift 2 ;;
-    --build-dir) BUILD_DIR=$2; shift 2 ;;
-    --jobs) JOBS=$2; shift 2 ;;
+    --qt-prefix) need_value "$@"; QT_PREFIX=$2; shift 2 ;;
+    --qt-base) need_value "$@"; QT_BASE=$2; shift 2 ;;
+    --build-dir) need_value "$@"; BUILD_DIR=$2; shift 2 ;;
+    --jobs) need_value "$@"; JOBS=$2; shift 2 ;;
     --debug) BUILD_TYPE=Debug; shift ;;
     --skip-apt) RUN_APT=0; shift ;;
     --qt-only) RUN_BUILD=0; RUN_TESTS=0; shift ;;
@@ -69,13 +78,19 @@ while (($#)); do
   esac
 done
 
+# aqt runs from inside the Qt prefix (see install_qt), so every path must be absolute
+# before anything changes directory; relative values resolve against the caller's directory.
+QT_PREFIX=$(realpath -m -- "$QT_PREFIX")
+BUILD_DIR=$(realpath -m -- "$BUILD_DIR")
+AQT_VENV=$(realpath -m -- "$AQT_VENV")
 QT_DIR=$QT_PREFIX/$QT_VERSION/gcc_64
 step() { printf '\n==> %s\n' "$*"; }
 
 install_packages() {
   local missing=() pkg
   for pkg in "${APT_PACKAGES[@]}"; do
-    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed' || missing+=("$pkg")
+    # Here-strings, not pipes, into grep -q: under pipefail an early grep exit can fail the writer (141).
+    grep -q 'install ok installed' <<<"$(dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null)" || missing+=("$pkg")
   done
   if ((${#missing[@]} == 0)); then
     echo "all ${#APT_PACKAGES[@]} packages already installed"
@@ -99,12 +114,22 @@ qt_complete() {
   && compgen -G "$QT_DIR/lib/libicui18n.so.*" >/dev/null
 }
 
+# The venv is usable when aqt runs and pip metadata names the pinned aqtinstall version
+# (aqt prints its own version through logging on stderr, so its text is not checked).
+aqt_venv_ok() {
+  [[ -x $AQT_VENV/bin/aqt && -x $AQT_VENV/bin/python ]] || return 1
+  "$AQT_VENV/bin/aqt" version >/dev/null 2>&1 || return 1
+  local installed
+  installed=$("$AQT_VENV/bin/python" -c 'import importlib.metadata as m; print(m.version("aqtinstall"))' 2>/dev/null) || return 1
+  [[ $installed == "$AQT_VERSION" ]]
+}
+
 install_qt() {
   if qt_complete; then
     echo "Qt $QT_VERSION with ShaderTools, image formats and ICU already in $QT_DIR"
     return
   fi
-  if [[ ! -x $AQT_VENV/bin/aqt ]] || ! "$AQT_VENV/bin/aqt" version 2>/dev/null | grep -q "aqtinstall(aqt) v$AQT_VERSION"; then
+  if ! aqt_venv_ok; then
     python3 -m venv "$AQT_VENV"
     "$AQT_VENV/bin/pip" install --quiet --disable-pip-version-check "aqtinstall==$AQT_VERSION"
   fi
@@ -127,7 +152,9 @@ probe_docker() {
     echo "docker: not installed"
   elif docker version >/dev/null 2>&1; then
     echo "docker: daemon reachable ($(docker version --format '{{.Server.Version}}' 2>/dev/null))"
-    echo "gate path: 'docker build .' works here as an advisory check; lead-windows-gate (authoritative) still decides done."
+    echo "gate path: 'docker build .' works here as an advisory check only. On the lead's Windows PC a local docker build"
+    echo "must run inside scripts/gate-lock.ps1 -Run (machine gate lock). The authoritative gate (lead-windows-gate or the"
+    echo "lead's local tester) runs the Docker build and decides done. See docs/CI-GATE-RUNNER.md."
     return
   else
     echo "docker: client present, daemon unreachable"
@@ -153,7 +180,7 @@ if ((RUN_TESTS)); then
   if ((${#CTEST_ARGS[@]})); then
     ctest_cmd+=("${CTEST_ARGS[@]}")
     step "CTest (offscreen): ${CTEST_ARGS[*]}"
-  elif ctest --test-dir "$BUILD_DIR" --print-labels 2>/dev/null | grep -qx '  fast'; then
+  elif grep -qx '  fast' <<<"$(ctest --test-dir "$BUILD_DIR" --print-labels 2>/dev/null)"; then
     ctest_cmd+=(-L fast)
     step "CTest (offscreen): -L fast"
   else
