@@ -22,7 +22,7 @@ All five round-1 findings and the QSKIP proof point are resolved and proven with
 | 2 | Missing option values | Resolved | Rerun here: `--qt-prefix`, `--qt-prefix --debug`, `--build-dir ''`, `--jobs` and `--qt-base --skip-apt` each print `<option> needs a value` and exit 2 (proof 2); valid values parsed correctly in every run here |
 | 3 | `grep -q` under `pipefail` | Resolved | Both checks use here-strings. dpkg check: second run prints `all 22 packages already installed`. Label check: no `fast` label exists yet at this base, and the explicit `--` selection was honoured. `aqt_venv_ok`'s three conditions verified against the real venv (proof 2) |
 | 4 | Unclear Docker-probe message | Resolved | Both branches seen: `docker: not installed` + offscreen-only gate path (container), and `docker: daemon reachable (28.4.0)` + advisory-only / gate-lock / authoritative-gate text (WSL host) |
-| 5 | Dockerfile check did not name the failed plugin | Resolved | Messages name the missing path or the plugin with unresolved libraries (code read; `sh -n` passes). Only the passing path is exercised here: `#34 [runtime 11/12] ... DONE 0.3s` |
+| 5 | Dockerfile check did not name the failed plugin | Resolved | Passing path in the gate: `#34 [runtime 11/12] ... DONE 0.3s`. Missing-plugin path proven by running the exact `#34` RUN body in the pre-EN-02 `glancelot-browser:main` image (proof 3). The unresolved-library path was only read (`sh -n` result from the handoff) |
 | 6 | "Skip to pass" cannot be shown by `ctest --output-on-failure` | Resolved | Shown from QtTest output, not CTest status: direct run `PASS   : AnimationTests::testMultipageTiffNavigation()`, results file from the scripted CTest run, and the Docker build stage's `/build/animation-results.txt` all show PASS with `0 skipped`; pre-EN-02 image shows `SKIP` (proofs 2 and 3) |
 
 ## New findings
@@ -311,6 +311,14 @@ TIFF in the gate (the `build` stage re-tagged from cache, `docker build -q --tar
 $ docker run --rm en02-buildstage bash -c "grep -E 'Tiff|Totals' /build/animation-results.txt"
 PASS   : AnimationTests::testMultipageTiffNavigation()
 Totals: 11 passed, 0 failed, 0 skipped, 0 blacklisted, 358ms
+```
+
+The new check's failure path, run with `sh` in the pre-EN-02 runtime image `glancelot-browser:main` (no `qtimageformats`), using the exact `#34` RUN body:
+
+```text
+$ docker run --rm --entrypoint sh glancelot-browser:main -c '<runtime 11/12 RUN body>'; echo exit=$?
+image-format plugin missing: /opt/Qt/plugins/imageformats/libqwebp.so
+exit=1
 ```
 
 Runtime image plugins (`/opt/Qt/plugins/imageformats`): `libqgif.so libqicns.so libqico.so libqjpeg.so libqtga.so (35 KB) libqtiff.so (515 KB) libqwbmp.so libqwebp.so (511 KB)`.
