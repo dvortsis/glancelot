@@ -318,6 +318,15 @@ if(GLANCELOT_BUILD_VIEWER)
   endif()
   # MONITOR-CUSTOM-01 production wiring is required independently of BUILD_TESTING.
   include(cmake/MonitorCustomization.cmake)
+  # EN-04 (provisional; S1 owns CMake this cycle): src/app/viewer_context.hpp installs favoritesModel and
+  # folderHistory too, so every shipped-QML harness compiles them. Fold into the EN-05 viewer source list.
+  if(BUILD_TESTING)
+    foreach(context_consumer IN ITEMS input_ui_tests pathbar_ui_tests grid_ui_tests fs_watch_ui_tests monitor_customization_ui_tests)
+      target_sources(${context_consumer} PRIVATE
+        src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
+        src/app/folder_history.cpp include/glancelot/folder_history.hpp)
+    endforeach()
+  endif()
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
