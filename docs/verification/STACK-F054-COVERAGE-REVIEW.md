@@ -92,8 +92,9 @@ I reviewed the native QML against application-interface-design, layout-spacing, 
 
 1. **EN-03 labels.** `translation_coverage_ui` has no `glancelot_test_labels` line, so EN-03 computes it as `fast`. It loads `ui/Main.qml` and opens an image through the decoder, so declare `glancelot_test_labels(translation_coverage_ui LABELS ui process)`, the same as `monitor_customization_ui`. The provisional registration in the `foreach` of `cmake/MonitorCustomization.cmake` merges cleanly with main; it can move to its own fragment.
 2. **EN-06 / part 2.** Main on `origin/main` still produces the routing reasons "Not in grid view", "Needs the folder grid" and "Needs the folder tree".
-   - `deferredToMainQml` lists "Needs the photo view" and "Needs a photo", which no longer exist, and does not list "Not in grid view". That string passes today only because the walk runs in photo view.
+   - `deferredToMainQml` lists "Needs the photo view" and "Needs a photo", which `git grep` no longer finds anywhere in `ui` or `src` on `origin/main`, and does not list "Not in grid view". That string most likely passes today because the walk runs in photo view.
    - Part 2 must wrap these strings in Main.qml and delete the list. The merge itself is conflict-free.
 3. **F049.** Resolve the adjacent `foreach` edit by listing both suites. Delete `deferredToF049` once F049 integrates, then regenerate the catalog.
 4. **Catalog regeneration** needs a Qt that ships the Linguist tools (cloud or Linux). The Windows `.tools/Qt` has no `lupdate` or `lrelease`.
 5. **Item 7.** Accept or drop the `src/app/metadata_model.cpp` and `tests/metadata_tests.cpp` hunks. They change the value of a property declared in the frozen `metadata_model.hpp`, but not its declaration.
+6. **Lead-owned file.** Commit `8c2c3ea` edits `cmake/MonitorCustomization.cmake`, which is a lead-owned `cmake/*.cmake` file. The handoff discloses this edit as provisional. Keep it or replace it at integration (see note 1).
