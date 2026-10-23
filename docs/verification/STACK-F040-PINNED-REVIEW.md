@@ -6,7 +6,7 @@
 - **Reviewer:** a fresh-context Claude Code (Opus) subagent on the lead's Windows PC. It did not implement this packet and did no earlier review of it. Round 1 was implemented by the lead's local Windows session, so this is not a self-review.
 - **Contract:** `docs/handoff/LEAD-WRAPUP-2026-10-22.md` (F040 bullet). Reference windows and the MONITOR-OUTPUT pinned output may coexist as distinct commands. Both take part in the aggregate pixel and texture admission and release accounting. They cause no duplicate decoding, bypass no budget and never change the selected image. Parity tests cover close, pin replacement and recovery while both are active.
 - **Lead decisions applied:** `src/render/image_canvas.*` is granted to this packet. Per-window texture admission is accepted for now (the cross-window ledger is E1). The `display_manager.hpp` additions are accepted.
-- **Platform:** Windows 11 Pro 10.0.26200, MSVC Release, Qt 6.8.3 (`.tools/Qt/6.8.3/msvc2022_64`), D3D11 through the threaded render loop. No physical multi-monitor run.
+- **Platform:** Windows 11 Pro 10.0.26200, MSVC Release, Qt 6.8.3 (`.tools/Qt/6.8.3/msvc2022_64`), native RHI (Qt's Windows default, D3D11; the graphics API is not printed in the logs) through the threaded render loop, as the `(RT)` lines show. No physical multi-monitor run.
 - **Worktree deviation:** `.worktrees/review-f040` already exists. It is the Gemini lane's earlier review worktree (`agent/review-f040`, `16ff381`), and AGENTS.md forbids editing another agent's worktree. I built in `.worktrees/review-f040-r2` (detached at `b610348`) with build directory `build-review-f040` inside it. This document was written on `.worktrees/review-f040-doc`, branch `claude/review-stack-f040`.
 
 ## Stage-1 review (round 0, `974c42e`) summary
@@ -43,7 +43,7 @@ The stage-1 review was not committed as a document. Its findings are recorded he
 - When the reference is cleared or shed, `visible: viewer.referenceName.length > 0` goes false and the window hides.
 - With a non-persistent scene graph, the threaded loop's `hide()` → `WM_TryRelease` → `invalidateGraphics()` wipes the scene graph. The log shows "invalidating scene graph" and then "persistent GL, avoiding cleanup".
 - That deletes the `QQuickRhiItemNode`, which deletes the `ImageRenderer`. `~ImageRenderer` calls `releaseTexture()`. The renderer's `QImage` copy goes with the object.
-- Graphics stay persistent, so a re-show only rebuilds the scene graph. Qt clears `QQuickRhiItem`'s node pointer through `invalidateSceneGraph()`, so the next `updatePaintNode` creates a fresh node and renderer.
+- Graphics stay persistent, so a re-show only rebuilds the scene graph (run: "persistent GL, avoiding cleanup"). Analysis, from Qt's source rather than these runs: Qt clears `QQuickRhiItem`'s node pointer through `invalidateSceneGraph()`, so the next `updatePaintNode` creates a fresh node and renderer.
 - The re-pin path in `nativeTextureReleasedOnClose` exercises this and holds exactly one texture.
 
 **Admission released exactly once (analysis, consistent with the run).**
