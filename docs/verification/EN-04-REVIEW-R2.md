@@ -157,3 +157,76 @@ PASS   : InputUiTests::favoritesSectionLeavesFolderListTheHeight()
 6. **EN-03 labels.** EN-04 adds no ctest test, so it needs no `glancelot_test_labels` call. The new function runs inside `input_ui`, which `cmake/TestLabels.cmake` already labels `ui budget process clipboard`.
 7. **AGENTS rule (Low).** AGENTS says new UI tests go in a per-feature file. `favoritesSectionLeavesFolderListTheHeight` was added to `tests/input_ui_tests.cpp`. It fits there, because it shares the `input_ui` harness and its tree-panel helpers. If the lead moves it to a per-feature file (for example `tests/favorites_ui_tests.cpp`), the new test target needs its own `cmake/<Feature>Tests.cmake`, the context source list and `glancelot_test_labels(<name> LABELS ui)`.
 8. **Out of scope, for a FAVORITES follow-up (info).** The keyboard context menu opens at `favMenu.popup(panel, Theme.gapXl, (row + 1) * Theme.rowHeight)`. That position ignores the list's offset in the panel and its scroll position. With a list that is shorter and scrolls, the menu can open away from its row. This predates EN-04 and is outside the grant.
+
+## Round 2 follow-ups (tip `8c6701e`)
+
+### Verdict: APPROVED
+
+The packet is now `claude/en-04-harness-wiring` at `8c6701e`. It adds two commits on top of `fc9b5f1`:
+- `951d8a9`: merge of `origin/main` `c903e6f`, with the CMake list.
+- `64a40d7`: the half-row peek.
+
+### Half-row peek (`ui/FolderTree.qml`, Favorites sizing only)
+
+- **Formula:** `min(count, maxRows) * rowHeight`, plus `rowHeight / 2` only when `count > maxRows`. The peek adds height and never removes a whole row.
+- **Floor:**
+  - The peek is dropped when `sharedHeight - (maxRows + 0.5) * rowHeight < rowHeight`, where `sharedHeight = folderList.height + favoritesList.height`.
+  - That sum does not depend on the peek, so the decision cannot flip back and forth.
+  - It is a self-referential binding in form. No result file from my run contains `Binding loop`, `Polish loop`, `TypeError` or `ReferenceError`.
+- **Measured (fixer's figures):**
+  - At 540x360, the folder list goes from 43 to 29 px, which is one 28 px row.
+  - At 1180x780 with 12 favorites, it is 365 px, above the 342 px floor.
+  - The drop branch is tested: with the address feedback line shown at 540x360, the list shows exactly one row.
+- **Design (ui-design-skills):**
+  - The peek fixes my round 2 Important finding. The overflow now shows at rest without relying on hover. This meets responsive-layout's rule against depending on hover for information.
+  - No token, colour, spacing or keyboard change.
+  - The committed crops (12 favorites at both sizes, 2 favorites at 540x360) show a clearly cut half row under the last whole row, in both themes.
+  - The crops stop at 420 px, so the machine's folder listing stays out of the repository.
+  - Polish only: a fade at the cut edge would soften the half-cut glyphs. Not needed.
+- **The extended test still fails on the old QML.** I checked it in a scratch worktree at `8c6701e` with only `input_ui_tests` built, under the gate lock, offscreen. The scratch worktree is removed.
+
+```text
+FolderTree.qml from fc9b5f1 (round 1, no peek):
+FAIL!  : InputUiTests::favoritesSectionLeavesFolderListTheHeight() 'list->height() - rowHeight / 2 < rowHeight' returned FALSE. (2 favorites at 540x360: panel 264, favorites section 73 (content 73), favorites list 28 (content 56), folder list 43)
+...\tests\input_ui_tests.cpp(1240) : failure location
+FolderTree.qml from afeac1a (before EN-04):
+FAIL!  : InputUiTests::favoritesSectionLeavesFolderListTheHeight() 'qAbs(section->height() - section->implicitHeight()) < 1' returned FALSE. (0 favorites at 1180x780: panel 684, favorites section 530 (content 81), favorites list 0 (content 0), folder list 6)
+FolderTree.qml from 8c6701e: Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 3950ms
+```
+
+### Merge with main
+
+- **The merge resolution changed nothing it should not.**
+  - `git diff afeac1a c903e6f` is empty for every file EN-04 changes.
+  - `git diff fc9b5f1 951d8a9` is empty for those files too.
+  - The merge therefore carried EN-04's code as it was. The only EN-04 changes against main are the CMake list and the `command_routing` test.
+- **`GLANCELOT_VIEWER_CONTEXT_SOURCES`** in `cmake/ViewerSources.cmake` lists `favorites_model.cpp` and `folder_history.cpp`, with their headers.
+  - It is used exactly once by each of the six shipped-QML targets:
+    - `grid_ui_tests`, `input_ui_tests` and `pathbar_ui_tests` (root `CMakeLists.txt`);
+    - `fs_watch_ui_tests` (`cmake/FSWatchTests.cmake`);
+    - `monitor_customization_ui_tests` (`target_sources` in `cmake/MonitorCustomization.cmake`);
+    - `command_routing_tests`, whose explicit `folder_history.cpp` is gone.
+  - The provisional loop is gone.
+  - No target compiles either source twice. `git grep favorites_model|folder_history` matches only the app, `favorites_tests`, `folder_history_tests`, `mutation_tests`, `copy_move_tests` and `recovery_controller_tests`, and none of those uses the list.
+- **`command_routing`**
+  - `folderHistoryStepsOnceOnEveryRoute` now binds `FolderHistory& history = h.history`. That is the history `installViewerContext` gave Main.qml before load.
+  - The test still clears it, records a, b and c, steps, and checks the counts on every route. It runs against the same object the QML binds, and the assertions are unchanged.
+  - `setContextProperty` again appears only in `src/app/viewer_context.hpp`.
+
+### Six suites, once
+
+I built incrementally with `build-slot.ps1 -Run { scripts/build.ps1 -BuildDir build-claude-en-04 }` (exit 0). I then ran the suites with `gate-lock.ps1 -Run { ctest -R '^(folder_grid|input_ui|pathbar_ui|fs_watch_ui|monitor_customization_ui|command_routing)$' }`:
+
+```text
+1/6 Test #12: folder_grid ......................   Passed  204.67 sec
+2/6 Test #13: input_ui .........................   Passed   75.02 sec
+3/6 Test #14: pathbar_ui .......................   Passed    3.92 sec
+4/6 Test #25: fs_watch_ui ......................   Passed    2.73 sec
+5/6 Test #43: monitor_customization_ui .........   Passed   24.58 sec
+6/6 Test #44: command_routing ..................   Passed    8.30 sec
+100% tests passed out of 6
+folder_grid 74/0/4 skipped; input_ui 33/0/1; pathbar_ui 4/0; monitor_customization_ui 13/0/1; command_routing 7/0
+PASS   : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute()
+```
+
+**Not verified:** the full offscreen suite and Docker. The authoritative gate decides.
