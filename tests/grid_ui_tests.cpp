@@ -2422,8 +2422,12 @@ private slots:
             QDir().mkpath(".cache/delete");
             for (const auto& mode : {QString("dark"), QString("light")}) { h.theme.setMode(mode); QTest::qWait(150); QVERIFY(h.window->grabWindow().save(".cache/delete/tree-menu-" + mode + "-1180.png")); }
         }
-        QTest::keyClick(h.window, Qt::Key_Down); // INPUT-02: "Open folder" is first; the destructive row stays last
-        QTest::keyClick(h.window, Qt::Key_Down); // highlight the move-to-trash item
+        // Walk the menu with Down to the move-to-trash row, found by identity: the rows above it ("Add to Favorites",
+        // "Open folder") depend on which services the harness installs, and INPUT-02 keeps the destructive row last.
+        QObject* trash = menu->findChild<QObject*>("menuItem-delete-selection"); QVERIFY(trash);
+        QVERIFY(trash->property("enabled").toBool());
+        for (int i = 0; i < 4 && !trash->property("highlighted").toBool(); ++i) QTest::keyClick(h.window, Qt::Key_Down);
+        QVERIFY(trash->property("highlighted").toBool());
         QTest::keyClick(h.window, Qt::Key_Return);
         QTRY_VERIFY(dialogOpen(h, "deleteConfirmation") && phase(h) == "confirm");
         QCOMPARE(deleteFlow(h)->property("title").toString(), "Move this folder to the " + deleteFlow(h)->property("trashName").toString() + "?");

@@ -1128,9 +1128,20 @@ private slots:
             named(h.window, "folderList")->setProperty("currentIndex", h.folders.currentRow());
         }
         // Right click on a row.
-        const auto rows = namedAll(h.window, "folderRow"); QVERIFY(!rows.isEmpty());
-        QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(rows.first()));
+        // The first row (a drive), found by index and scrolled into the clipped viewport first: the keyboard steps above
+        // left the list at the current folder, the first delegate found may be a cached row outside the viewport, and the
+        // Favorites section above the list shortens it. A row other than the cursor's proves the click chose the row.
+        auto* list = named(h.window, "folderList"); QVERIFY(list);
+        const int target = 0;
+        QVERIFY(h.folders.currentRow() != target);
+        auto rowAt = [&](int index) -> QQuickItem* { for (auto* r : namedAll(h.window, "folderRow")) if (r->property("index").toInt() == index) return r; return nullptr; };
+        QVERIFY(QMetaObject::invokeMethod(list, "positionViewAtIndex", Q_ARG(int, target), Q_ARG(int, 4 /* ListView.Contain */)));
+        QTRY_VERIFY(rowAt(target) && list->mapRectToScene(list->boundingRect()).contains(sceneCenter(rowAt(target))));
+        auto* row = rowAt(target);
+        QTest::mouseClick(h.window, Qt::RightButton, {}, sceneCenter(row));
         QTRY_VERIFY(menuOpen(rowMenu));
+        QCOMPARE(QDir::cleanPath(rowMenu->property("path").toString()), QDir::cleanPath(row->property("path").toString())); // the menu is for the clicked row
+        QCOMPARE(list->property("currentIndex").toInt(), target);
         QVERIFY2(menuProblems(h, rowMenu).isEmpty(), qPrintable(menuProblems(h, rowMenu).join("; ")));
         closeMenu(rowMenu); QTRY_VERIFY(!menuOpen(rowMenu));
         // Path bar.
