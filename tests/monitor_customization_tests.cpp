@@ -88,28 +88,37 @@ private slots:
     }
     // A layout preset applied while a coordinator transaction is still saving never leaves a second live state: the
     // runtime layout matches layouts[slot] afterwards, and a superseded edit is reported rather than dropped silently.
+    // Follow-up R1: the order in which the two queued writes land is forced (attemptPendingSettingsNow), not left to two
+    // 25 ms retry timers, so every outcome runs on every platform.
     void layoutPresetDuringPendingTransactionStaysCoherent() {
-        for(int order=0;order<2;++order) { // 0: freeze transaction first, then the preset; 1: preset first, then the freeze
+        enum Outcome {Superseded,Refused,Both};
+        struct Case {bool presetFirst,coordinatorLandsFirst;Outcome expected;const char* name;};
+        for(const auto& c:{Case{false,true,Superseded,"transaction queued first and lands first: it supersedes the preset"},
+                           Case{false,false,Refused,"transaction queued first, preset lands first: transaction refused"},
+                           Case{true,true,Both,"preset applied first, transaction lands first: both apply in order"},
+                           Case{true,false,Refused,"preset applied and lands first: transaction refused"}}) {
             init();Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
             FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
-            if(order==1)QVERIFY(h.panes.applyPreset("Review"));
+            if(c.presetFirst)QVERIFY(h.panes.applyPreset("Review"));
             QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
-            if(order==0)QVERIFY(h.panes.applyPreset("Review"));
+            if(!c.presetFirst)QVERIFY(h.panes.applyPreset("Review"));
+            QVERIFY(glancelot::settings_detail::hasPendingSettings(&h.panes,"layout/1/"));
             lock.release();
-            QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
-            QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
+            // No event loop runs between the release and these calls, so neither retry timer can fire first.
+            if(c.coordinatorLandsFirst){glancelot::settings_detail::attemptPendingSettingsNow(&h.customization);glancelot::settings_detail::attemptPendingSettingsNow(&h.panes);}
+            else {glancelot::settings_detail::attemptPendingSettingsNow(&h.panes);glancelot::settings_detail::attemptPendingSettingsNow(&h.customization);}
+            QVERIFY(!h.customization.saving());QVERIFY(!glancelot::settings_detail::hasPendingSettings(&h.panes));
             // Compare what layouts[slot] loads as, not raw JSON: a preset that lands first writes no "frozen" key.
             PaneLayout disk;disk.setSlot(1);QVERIFY(disk.feedback().isEmpty());QCOMPARE(disk.locked(),h.panes.locked());
             for(const auto& id:QStringList{"tree","topbar","filmstrip","grid"})
                 for(const auto* key:{"visible","frozen","region","extent","order"})
                     QCOMPARE(disk.pane(id).value(key),h.panes.pane(id).value(key));
-            // Whichever write lands first decides; every outcome is explicit and coherent.
             const auto feedback=h.customization.feedback();const bool frozen=h.panes.pane("tree")["frozen"].toBool(),preset=!h.panes.pane("topbar")["visible"].toBool();
-            const bool superseded=feedback.contains("replaced")&&frozen&&!preset&&order==0;
-            const bool refused=feedback.contains("changed while saving")&&!frozen&&preset;
-            const bool both=feedback.isEmpty()&&frozen&&preset&&order==1;
-            qInfo("order %d: %s",order,superseded?"transaction superseded the preset":refused?"preset landed first; transaction refused":"both applied in order");
-            QVERIFY2(superseded||refused||both,qPrintable(QString("order %1 feedback \"%2\" frozen %3 preset %4").arg(order).arg(feedback).arg(frozen).arg(preset)));
+            const QByteArray stateText=QString("%1: feedback \"%2\" frozen %3 preset %4").arg(QString::fromLatin1(c.name),feedback).arg(frozen).arg(preset).toUtf8();
+            const char* state=stateText.constData();qInfo("%s",state);
+            if(c.expected==Superseded)QVERIFY2(feedback.startsWith("Pane layout changes made while saving were replaced")&&frozen&&!preset,state);
+            else if(c.expected==Refused)QVERIFY2(feedback.contains("changed while saving")&&!frozen&&preset,state);
+            else QVERIFY2(feedback.isEmpty()&&frozen&&preset,state);
             cleanup();
         }
         init(); // the harness's own cleanup() runs after this function
@@ -160,19 +169,21 @@ private slots:
     }
     // Review round 1: when a transaction that replaced a pending pane edit also finds a newer presentation session, the
     // "replaced" message leads and the session note follows; neither overwrites the other.
+    // Follow-up R1: the transaction's write is forced to land before the preset's, so the superseded branch always runs.
     void supersededFeedbackSurvivesNewPresentationSession() {
         Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
         FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
         QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
-        QVERIFY(h.panes.applyPreset("Review"));
+        QVERIFY(h.panes.applyPreset("Review"));QVERIFY(glancelot::settings_detail::hasPendingSettings(&h.panes,"layout/1/"));
         QVERIFY(h.manager.openPresentation()); // a newer session than the one the transaction started with
         lock.release();
-        QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
-        QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
-        const auto feedback=h.customization.feedback();const bool replaced=h.panes.pane("topbar")["visible"].toBool();
-        qInfo("%s: %s",replaced?"transaction superseded the preset":"preset landed first",qPrintable(feedback));
-        if(replaced)QVERIFY2(feedback.startsWith("Pane layout changes made while saving were replaced")&&feedback.contains("newer presentation session"),qPrintable(feedback));
-        else QVERIFY2(feedback.contains("changed while saving"),qPrintable(feedback));
+        glancelot::settings_detail::attemptPendingSettingsNow(&h.customization); // before the preset's write can land
+        QVERIFY(!h.customization.saving());
+        QVERIFY(!glancelot::settings_detail::hasPendingSettings(&h.panes)); // the superseded preset write was cancelled
+        const auto feedback=h.customization.feedback();
+        QVERIFY2(h.panes.pane("topbar")["visible"].toBool()&&h.panes.pane("tree")["frozen"].toBool(),qPrintable(feedback)); // replaced
+        qInfo("transaction superseded the preset: %s",qPrintable(feedback));
+        QVERIFY2(feedback.startsWith("Pane layout changes made while saving were replaced")&&feedback.contains("newer presentation session"),qPrintable(feedback));
         h.manager.closePresentation();
     }
     void freezeLockAndEmergencyRecovery() {

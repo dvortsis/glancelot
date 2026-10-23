@@ -43,7 +43,30 @@ UiDialog {
     readonly property string presetBlockedReason: paneLayout.locked ? qsTr("Unlock the workspace layout to apply a pane layout preset.")
         : frozenPanes.length ? qsTr("Frozen: %1. Unfreeze to apply a pane layout preset.").arg(frozenPanes.join(", "))
         : layoutSaving ? qsTr("Display preferences are saving. Apply the preset when they finish.") : ""
+    // F049 follow-up R2: why the last Save or Apply was refused, shown right under the control that was used.
+    property string presetSaveRefusal: ""
+    property string presetApplyRefusal: ""
     title: qsTr("Settings")
+
+    function savePanePreset() {
+        if (paneLayout.savePreset(presetName.text.trim())) { presetName.text = ""; presetSaveRefusal = ""; return }
+        presetSaveRefusal = paneLayout.feedback
+        Qt.callLater(revealItem, saveRefusalNote)
+    }
+    function applyPanePreset() {
+        if (paneLayout.applyPreset(presetChoice.currentText)) { presetApplyRefusal = ""; return }
+        presetApplyRefusal = paneLayout.feedback
+        Qt.callLater(revealItem, applyRefusalNote)
+    }
+    // Scrolls the page just enough to show item (a note that appeared under the control in use).
+    function revealItem(item) {
+        let flick = item.parent
+        while (flick && !(typeof flick.contentY === "number" && flick.contentItem)) flick = flick.parent
+        if (!flick || !item.visible) return
+        const top = item.mapToItem(flick.contentItem, 0, 0).y, bottom = top + item.height + Theme.gapSm
+        if (bottom > flick.contentY + flick.height) flick.contentY = Math.min(bottom - flick.height, Math.max(0, flick.contentHeight - flick.height))
+        else if (top < flick.contentY) flick.contentY = Math.max(0, top - Theme.gapSm)
+    }
 
     function cleanPath(url) {
         let path = url.toString()
@@ -128,7 +151,7 @@ UiDialog {
         for (const command of viewer.commands)
             if (host.fuzzyMatch(command.label, commandSearch.text) && commandRunnable(command.id)) { run(command.id); return }
     }
-    onClosed: { settingsSearch.text = ""; commandSearch.text = ""; bindingMessage = ""; settingsFeedback = "" }
+    onClosed: { settingsSearch.text = ""; commandSearch.text = ""; bindingMessage = ""; settingsFeedback = ""; presetSaveRefusal = ""; presetApplyRefusal = "" }
 
     component SectionLabel: Label {
         color: Theme.muted
@@ -425,59 +448,87 @@ UiDialog {
                     Layout.maximumWidth: dialog.measure
                     text: qsTr("Saved for every window; applies to this window's docked panes. Never changes lock, freeze or displays.")
                 }
+                // Control rows fill the column so they end at the same right edge as the switches and pane controls above
+                // and below; only the prose is held to the measure.
                 RowLayout {
                     spacing: Theme.gapSm
                     Layout.fillWidth: true
-                    Layout.maximumWidth: dialog.measure
                     UiComboBox {
                         id: presetChoice
                         objectName: "layoutPresetChoice"
                         Layout.fillWidth: true
                         model: paneLayout.presetNames
                         Accessible.name: qsTr("Pane layout preset")
+                        onActivated: dialog.presetApplyRefusal = ""
                     }
                     UiButton {
                         objectName: "layoutPresetApply"
                         text: qsTr("Apply")
                         enabled: dialog.presetBlockedReason.length === 0 && presetChoice.currentIndex >= 0
-                        Accessible.description: dialog.presetBlockedReason
-                        onClicked: paneLayout.applyPreset(presetChoice.currentText)
+                        Accessible.description: dialog.presetBlockedReason || dialog.presetApplyRefusal
+                        onClicked: dialog.applyPanePreset()
                     }
                     UiButton {
                         objectName: "layoutPresetDelete"
                         text: qsTr("Delete")
                         variant: "outline"
                         enabled: presetChoice.currentIndex >= 0 && !paneLayout.isBuiltInPreset(presetChoice.currentText)
-                        onClicked: paneLayout.deletePreset(presetChoice.currentText)
+                        onClicked: { dialog.presetApplyRefusal = ""; paneLayout.deletePreset(presetChoice.currentText) }
                     }
                 }
+                // Why Apply is unavailable (muted), or why the last Apply was refused (danger), right under the row.
                 Note {
                     objectName: "layoutPresetBlocked"
                     Layout.maximumWidth: dialog.measure
                     visible: dialog.presetBlockedReason.length > 0
                     text: dialog.presetBlockedReason
                 }
-                SettingRow {
-                    label: qsTr("Save pane layout as")
+                Note {
+                    id: applyRefusalNote
+                    objectName: "layoutPresetApplyRefusal"
                     Layout.maximumWidth: dialog.measure
-                    RowLayout {
-                        spacing: Theme.gapSm
-                        UiTextField {
-                            id: presetName
-                            objectName: "layoutPresetName"
-                            implicitWidth: 180
-                            placeholderText: qsTr("Pane layout name")
-                            maximumLength: 40
-                            Accessible.name: qsTr("Name for the new pane layout preset")
-                            onAccepted: if (paneLayout.savePreset(text.trim())) text = ""
-                        }
-                        UiButton {
-                            objectName: "layoutPresetSave"
-                            text: qsTr("Save")
-                            enabled: presetName.text.trim().length > 0
-                            onClicked: if (paneLayout.savePreset(presetName.text.trim())) presetName.text = ""
-                        }
+                    visible: dialog.presetBlockedReason.length === 0 && dialog.presetApplyRefusal.length > 0
+                    text: dialog.presetApplyRefusal
+                    color: Theme.danger
+                }
+                // Stacked like the preset row: the name field shares the preset choice's left edge and Save ends with Delete.
+                Label {
+                    objectName: "layoutPresetSaveLabel"
+                    text: qsTr("Save pane layout as")
+                    color: Theme.text
+                    font.pixelSize: Theme.textBody
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.gapSm
+                }
+                RowLayout {
+                    spacing: Theme.gapSm
+                    Layout.fillWidth: true
+                    UiTextField {
+                        id: presetName
+                        objectName: "layoutPresetName"
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Pane layout name")
+                        maximumLength: 40
+                        Accessible.name: qsTr("Name for the new pane layout preset")
+                        Accessible.description: dialog.presetSaveRefusal
+                        onTextEdited: dialog.presetSaveRefusal = ""
+                        onAccepted: dialog.savePanePreset()
                     }
+                    UiButton {
+                        objectName: "layoutPresetSave"
+                        text: qsTr("Save")
+                        enabled: presetName.text.trim().length > 0
+                        onClicked: dialog.savePanePreset()
+                    }
+                }
+                Note {
+                    id: saveRefusalNote
+                    objectName: "layoutPresetSaveRefusal"
+                    Layout.maximumWidth: dialog.measure
+                    visible: dialog.presetSaveRefusal.length > 0
+                    text: dialog.presetSaveRefusal
+                    color: Theme.danger
                 }
                 SectionLabel { text: qsTr("Pane placement") }
                 SettingRow {
@@ -549,7 +600,13 @@ UiDialog {
                         }
                     }
                 }
-                Note { visible: paneLayout.feedback.length > 0; text: paneLayout.feedback }
+                Note {
+                    objectName: "layoutFeedback"
+                    // A preset refusal already shows beside the control that caused it.
+                    visible: paneLayout.feedback.length > 0 && paneLayout.feedback !== dialog.presetSaveRefusal
+                             && paneLayout.feedback !== dialog.presetApplyRefusal
+                    text: paneLayout.feedback
+                }
 
                 SettingRow {
                     label: qsTr("File order")

@@ -22,7 +22,10 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property int presetCursor: -1           // F049: the last preset the cycle command applied
-    property string presetSavingFeedback: "" // F049: set while that preset is still being written
+    // F049: each cycle-command press is a request; presetPendingRequest is the press whose write still waits for the
+    // settings file (0: none). Only that write's own outcome reaches the main window (see the Connections below).
+    property int presetRequest: 0
+    property int presetPendingRequest: 0
     property bool focusMode: false          // F049: content only; Escape or the command returns the bars
     property bool navigatorOn: false        // F037 zoom navigator overview
     property rect navRect: Qt.rect(0, 0, 0, 0) // the visible part of the photo, in source pixels
@@ -148,16 +151,26 @@ ApplicationWindow {
         }
     }
     Timer { id: splitMessageTimer; interval: 5000; onTriggered: app.splitMessage = "" }
-    // F049: a preset whose write had to wait reports how it ended here too, not only in Settings.
+    // F049: a preset whose write had to wait reports how it ended here too, not only in Settings. Only the end of that
+    // write counts: "saved" (no message), "could not be saved" or "a newer saved layout was preserved". Any other layout
+    // message (a refusal from Settings, say) means the write's own outcome will not come, so the request disarms silently.
+    function presetWriteSaving(feedback) { return feedback === qsTranslate("Layout", "Saving layout preferences…") }
+    function presetWriteOutcome(feedback) {
+        return feedback === qsTranslate("Layout", "Layout changed for this session; settings could not be saved.")
+            || feedback === qsTranslate("Layout", "Layout changed for this session; a newer saved layout was preserved.")
+    }
     Connections {
         target: paneLayout
-        enabled: app.presetSavingFeedback.length > 0
+        enabled: app.presetPendingRequest > 0 && app.presetPendingRequest === app.presetRequest
         function onChanged() {
-            if (paneLayout.feedback === app.presetSavingFeedback) return
-            app.presetSavingFeedback = ""
-            if (paneLayout.feedback.length) app.showSplitMessage(paneLayout.feedback)
+            const feedback = paneLayout.feedback
+            if (app.presetWriteSaving(feedback)) return
+            app.presetPendingRequest = 0; presetOutcomeTimer.stop()
+            if (app.presetWriteOutcome(feedback)) app.showSplitMessage(feedback)
         }
     }
+    // Bounds the wait: a write gives up after about four seconds, so a request still armed later is stale.
+    Timer { id: presetOutcomeTimer; interval: 6000; onTriggered: app.presetPendingRequest = 0 }
     property bool previewLoadingShown: false
     onPreviewStateChanged: { previewLoadingShown = false; if (previewState === "loading") previewLoadingDelay.restart(); else previewLoadingDelay.stop() }
     Timer { id: previewLoadingDelay; interval: 200; onTriggered: app.previewLoadingShown = true }
@@ -742,8 +755,14 @@ ApplicationWindow {
             // Wait for a display transaction that is saving the layout, as Settings does: when it lands it would replace the preset.
             if (app.monitor && app.monitor.saving) { showSplitMessage(qsTr("Display preferences are saving. Apply the preset when they finish.")); return }
             presetCursor = (presetCursor + 1) % names.length
-            if (paneLayout.applyPreset(names[presetCursor])) { showSplitMessage("Layout: " + names[presetCursor]); presetSavingFeedback = paneLayout.feedback }
-            else showSplitMessage(paneLayout.feedback)
+            const request = ++presetRequest // a newer press replaces any earlier one still waiting
+            presetPendingRequest = 0; presetOutcomeTimer.stop()
+            if (!paneLayout.applyPreset(names[presetCursor])) { showSplitMessage(paneLayout.feedback); return }
+            const feedback = paneLayout.feedback
+            if (presetWriteSaving(feedback)) { presetPendingRequest = request; presetOutcomeTimer.restart() }
+            // An immediate outcome (a newer saved layout was preserved) is shown now, with the preset, and arms nothing.
+            showSplitMessage(feedback.length && !presetWriteSaving(feedback) ? qsTr("Layout: %1. %2").arg(names[presetCursor]).arg(feedback)
+                                                                             : qsTr("Layout: %1").arg(names[presetCursor]))
         }
         else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
         // F031

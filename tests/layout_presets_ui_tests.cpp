@@ -21,6 +21,7 @@
 #include "file_grid_wiring.hpp"
 #include "file_lock.hpp"
 #include "glancelot/settings_file.hpp"
+#include "settings_retry.hpp"
 #include "image_canvas.hpp"
 
 class PresetTestThumbnails final:public QQuickImageProvider {
@@ -52,6 +53,46 @@ class LayoutPresetsUiTests:public QObject {
         template<class T=QQuickItem> T* named(const char* name) const {return window->findChild<T*>(QString::fromLatin1(name));}
     };
     static QString evidence(){return qEnvironmentVariable("GLANCELOT_F049_UI_EVIDENCE");}
+    static QRectF sceneBox(const QQuickItem* item){return item->mapRectToScene(QRectF(0,0,item->width(),item->height()));}
+    // The Settings page's Flickable that scrolls item.
+    static QQuickItem* scroller(QQuickItem* item) {
+        for(auto* parent=item->parentItem();parent;parent=parent->parentItem())
+            if(parent->property("contentY").isValid()&&parent->property("contentItem").value<QQuickItem*>())return parent;
+        return nullptr;
+    }
+    // Opens Settings > Browsing and scrolls so that item is the last row in view, as when a user has just scrolled to it.
+    static QQuickItem* openBrowsingWithLastInView(Harness& h,const char* name) {
+        auto* settings=h.window->findChild<QObject*>("settingsDialog");if(!settings)return nullptr;
+        QMetaObject::invokeMethod(settings,"openSection",Q_ARG(QVariant,QString("browsing")),Q_ARG(QVariant,false));
+        if(!QTest::qWaitFor([&]{return settings->property("opened").toBool();}))return nullptr;
+        auto* item=h.named(name);auto* flick=item?scroller(item):nullptr;if(!flick)return nullptr;
+        QTest::qWait(200);
+        const double y=item->mapToItem(flick->property("contentItem").value<QQuickItem*>(),QPointF()).y();
+        flick->setProperty("contentY",std::max(0.,y+item->height()+4-flick->height()));
+        QTest::qWait(100);return item;
+    }
+    // Visible text items under the open Settings page that show text exactly.
+    static QList<QQuickItem*> textsShowing(Harness& h,const QString& text) {
+        QList<QQuickItem*> found,work{h.window->contentItem()}; // the dialog sits in the window's overlay, under contentItem
+        while(!work.isEmpty()) {
+            auto* item=work.takeLast();if(!item->isVisible())continue;
+            if(item->inherits("QQuickText")&&item->property("text").toString()==text)found<<item;
+            work<<item->childItems();
+        }
+        return found;
+    }
+    // Some visible item shows text inside the page's viewport, directly under the control above it (within one gap).
+    static QString besideControl(Harness& h,const QString& text,QQuickItem* control) {
+        const auto viewport=sceneBox(scroller(control)),above=sceneBox(control);QStringList seen;
+        for(auto* item:textsShowing(h,text)) {
+            const auto box=sceneBox(item);
+            if(viewport.contains(box)&&box.top()>=above.bottom()-1&&box.top()-above.bottom()<=24)return {};
+            seen<<QString("at y=%1-%2").arg(box.top()).arg(box.bottom());
+        }
+        return QString("\"%1\" is not shown under the control (y=%2) inside the viewport (y=%3-%4); shown %5")
+            .arg(text).arg(above.bottom()).arg(viewport.top()).arg(viewport.bottom()).arg(seen.isEmpty()?QString("nowhere"):seen.join(", "));
+    }
+    static void click(Harness& h,QQuickItem* item){QTest::mouseClick(h.window,Qt::LeftButton,{},sceneBox(item).center().toPoint());}
 private slots:
     void initTestCase() {
         for(const auto& font:QDir(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/assets/fonts/geist")).entryList({"*.ttf"},QDir::Files))
@@ -159,7 +200,89 @@ private slots:
         QTRY_COMPARE(h.window->property("splitMessage").toString(),QString("Layout: Review"));
         QTRY_VERIFY_WITH_TIMEOUT(h.window->property("splitMessage").toString().contains("could not be saved"),8000);
         lock.release();
-        QCOMPARE(h.window->property("presetSavingFeedback").toString(),QString());
+        QCOMPARE(h.window->property("presetPendingRequest").toInt(),0);
+    }
+    // Follow-up R2: a refused Save (name collision) or Apply (newer preset record) says why right under the control that
+    // was used, inside the page's viewport at 560 px, not in the general note at the end of "Pane placement".
+    void presetRefusalsShowBesideTheirControls() {
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){
+            root["layoutPresets"]=QJsonObject{{"Future",QJsonObject{{"version",2},{"panes",QJsonObject{}}}}};}).ok());
+        Harness h;QVERIFY(h.window);h.window->resize(560,640);h.window->show();QTRY_VERIFY(h.window->isExposed());
+        QVERIFY(h.monitor.savePreset({},"Studio","workspace"));QTRY_VERIFY(!h.monitor.saving());QCOMPARE(h.monitor.presets().size(),1);
+        // Save: the name belongs to a display workspace preset.
+        auto* field=openBrowsingWithLastInView(h,"layoutPresetName");QVERIFY(field);auto* save=h.named("layoutPresetSave");QVERIFY(save);
+        field->setProperty("text","studio");QTRY_VERIFY(save->isEnabled());
+        click(h,save);
+        const QString collision("A display workspace preset already uses that name. Choose another name.");
+        QTRY_COMPARE(h.layout.feedback(),collision);
+        QTRY_VERIFY2(besideControl(h,collision,field).isEmpty(),qPrintable(besideControl(h,collision,field)));
+        QCOMPARE(field->property("text").toString(),QString("studio")); // the entry is kept for correction
+        // Said once: the general layout note does not repeat it. Screen readers get it as the field's description.
+        QCOMPARE(textsShowing(h,collision).size(),1);
+        QString spoken;for(auto* child:field->children())if(child->inherits("QQuickAccessibleAttached"))spoken=child->property("description").toString();
+        QCOMPARE(spoken,collision);
+        // Editing the name clears the refusal.
+        field->forceActiveFocus();QTest::keyClick(h.window,Qt::Key_X);
+        QTRY_VERIFY(textsShowing(h,collision).isEmpty());
+        // Apply: a preset record a newer version saved is preserved and not applied.
+        auto* choice=h.named("layoutPresetChoice");auto* apply=h.named("layoutPresetApply");QVERIFY(choice);QVERIFY(apply);
+        auto* flick=scroller(choice);flick->setProperty("contentY",std::max(0.,choice->mapToItem(flick->property("contentItem").value<QQuickItem*>(),QPointF()).y()+choice->height()+4-flick->height()));
+        QTest::qWait(100);
+        const int future=h.layout.presetNames().indexOf("Future");QVERIFY(future>=0);choice->setProperty("currentIndex",future);
+        QTRY_VERIFY(apply->isEnabled());click(h,apply);
+        const QString newer("A newer version of Glancelot saved that preset; it was preserved and not applied.");
+        QTRY_COMPARE(h.layout.feedback(),newer);
+        QTRY_VERIFY2(besideControl(h,newer,choice).isEmpty(),qPrintable(besideControl(h,newer,choice)));
+        QVERIFY(h.layout.pane("topbar")["visible"].toBool()); // nothing applied
+        if(!evidence().isEmpty()) {
+            field->setProperty("text","studio");click(h,save);QTRY_COMPARE(h.layout.feedback(),collision);QTest::qWait(300);
+            QVERIFY(h.window->grabWindow().save(QDir(evidence()).filePath("settings-presets-refusal-dark-560.png")));
+        }
+    }
+    // Follow-up R3: the preset and save rows end at the same right edge as the lock switch and the pane controls, and the
+    // name field starts where the preset choice does.
+    void presetControlRowsShareTheColumnEdges() {
+        for(const int width:{560,1180}) {
+            Harness h;QVERIFY(h.window);h.window->resize(width,width==560?640:780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+            QVERIFY(openBrowsingWithLastInView(h,"layoutPresetName"));
+            const QStringList names{"layoutLock","layoutPresetDelete","layoutPresetSave","layoutPaneChoice"};QList<double> rights;
+            for(const auto& name:names){auto* item=h.named(name.toLatin1().constData());QVERIFY(item);rights<<sceneBox(item).right();}
+            const QString edges=QString("width %1: right edges lock %2, delete %3, save %4, pane %5").arg(width).arg(rights[0]).arg(rights[1]).arg(rights[2]).arg(rights[3]);
+            for(const double right:rights)QVERIFY2(qAbs(right-rights[0])<=1,qPrintable(edges));
+            const auto fieldLeft=sceneBox(h.named("layoutPresetName")).left(),choiceLeft=sceneBox(h.named("layoutPresetChoice")).left();
+            QVERIFY2(qAbs(fieldLeft-choiceLeft)<=1,qPrintable(QString("width %1: name field left %2, preset choice left %3").arg(width).arg(fieldLeft).arg(choiceLeft)));
+        }
+    }
+    // Follow-up R4: the main window shows only the outcome of the press's own preset write, never a later, unrelated
+    // layout message, both when the outcome is immediate and while the write is waiting.
+    void presetCommandShowsOnlyItsOwnWriteOutcome() {
+        // Immediate: a newer saved layout is preserved, said with the preset at once; nothing stays armed.
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["layouts"]=QJsonObject{{"1",QJsonObject{{"version",2}}}};}).ok());
+        {
+            Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+            h.viewer.trigger("layout-preset-next");h.viewer.trigger("layout-preset-next"); // Default, then Review
+            QTRY_VERIFY(!h.layout.pane("topbar")["visible"].toBool());
+            QTRY_VERIFY2(h.window->property("splitMessage").toString().startsWith("Layout: Review")&&h.window->property("splitMessage").toString().contains("newer saved layout was preserved"),
+                         qPrintable(h.window->property("splitMessage").toString()));
+            QVERIFY(!h.layout.move("tree","center",0));QVERIFY(h.layout.feedback().contains("center is reserved")); // unrelated, later
+            QTest::qWait(100);
+            QVERIFY2(!h.window->property("splitMessage").toString().contains("center is reserved"),qPrintable(h.window->property("splitMessage").toString()));
+        }
+        cleanup();init();
+        // Waiting: an unrelated refusal while the write waits is not shown, and the write's lost outcome never appears late.
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+        QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        h.viewer.trigger("layout-preset-next");h.viewer.trigger("layout-preset-next");
+        QTRY_COMPARE(h.window->property("splitMessage").toString(),QString("Layout: Review"));
+        QVERIFY(h.window->property("presetPendingRequest").toInt()>0);
+        QVERIFY(!h.layout.move("tree","center",0));QVERIFY(h.layout.feedback().contains("center is reserved"));
+        QTest::qWait(100);
+        QCOMPARE(h.window->property("splitMessage").toString(),QString("Layout: Review"));
+        QCOMPARE(h.window->property("presetPendingRequest").toInt(),0);
+        lock.release();QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.layout),5000);
+        QVERIFY(!h.layout.move("tree","center",0));QTest::qWait(100);
+        QVERIFY2(!h.window->property("splitMessage").toString().contains("center is reserved"),qPrintable(h.window->property("splitMessage").toString()));
     }
     // Evidence captures: dark and light, compact and wide, with the blocked reason showing; plus one while a display
     // transaction is saving, so the switches' and reset's own reasons show.
