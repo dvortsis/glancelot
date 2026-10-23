@@ -5,6 +5,7 @@
 #include <QtTest>
 #include <QImage>
 #include <QImageReader>
+#include <QPointer>
 #include <QProcess>
 #include <QSaveFile>
 #include <QScopeGuard>
