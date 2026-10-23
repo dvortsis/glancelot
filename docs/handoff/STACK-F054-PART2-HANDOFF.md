@@ -11,7 +11,7 @@ Contract: the F054 bullet in `docs/handoff/LEAD-WRAPUP-2026-10-22.md`, the part 
 | Commits | `e1d584b` "i18n(f054): part 2, Main.qml strings, F049 Settings strings and full coverage check"; `f686b45` (status bar found by its pane rectangle); `7450392` (media folder masked in the report; captures); then the commit that adds this file |
 | Review diff | `git diff 04aef7c <this packet's tip>` |
 
-The ui-design-skills were loaded from `~/.agents/skills/ui-design-skills` before any QML edit (application-interface-design, layout-grids, layout-spacing, typography-ui, responsive-layout, design-review). The QML change is strings only: no layout, spacing, colour or component changed.
+The ui-design-skills were loaded from `~/.agents/skills/ui-design-skills` before any QML edit (application-interface-design, layout-grids, layout-spacing, typography-ui, responsive-layout, design-review). The QML change is strings only, plus one tooltip helper and one name-lookup property (see "Grant check"): no layout, spacing, colour or component changed.
 
 ## What changed
 
@@ -137,15 +137,41 @@ At the tip, all 10 functions pass (`Totals: 10 passed, 0 failed, 0 skipped`). Th
 ```
 > git diff --name-only 04aef7c..7450392
 docs/verification/STACK-F054-COVERAGE/part2/coverage-report.txt
-docs/verification/STACK-F054-COVERAGE/part2/main-{grid,photo}-{ltr-dark-1180,ltr-light-560,rtl-dark-1180,rtl-light-560}.png (+ -expanded for the LTR four)
-docs/verification/STACK-F054-COVERAGE/part2/settings-browsing{,-presets}-{ltr-dark-1180,ltr-light-560,rtl-dark-1180,rtl-light-560}.png (+ -expanded for the LTR four)
+docs/verification/STACK-F054-COVERAGE/part2/main-grid-ltr-dark-1180-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/main-grid-ltr-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/main-grid-ltr-light-560-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/main-grid-ltr-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/main-grid-rtl-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/main-grid-rtl-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/main-photo-ltr-dark-1180-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/main-photo-ltr-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/main-photo-ltr-light-560-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/main-photo-ltr-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/main-photo-rtl-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/main-photo-rtl-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-ltr-dark-1180-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-ltr-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-ltr-light-560-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-ltr-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-presets-ltr-dark-1180-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-presets-ltr-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-presets-ltr-light-560-expanded.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-presets-ltr-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-presets-rtl-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-presets-rtl-light-560.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-rtl-dark-1180.png
+docs/verification/STACK-F054-COVERAGE/part2/settings-browsing-rtl-light-560.png
 tests/translation_coverage_ui_tests.cpp
 translations/README.md
 translations/glancelot_en_XA.ts
 ui/Main.qml
 ```
 
-The handoff commit adds this file. Everything is inside the packet's grant: `ui/Main.qml` (strings only, under the brief's grant), the coverage test, `translations/` and the evidence folder. The grant's "Settings > Browsing strings" needed no QML edit. No shared header, CMake file, C++ source or other QML file changed (`git diff --stat 04aef7c..7450392 -- include src cmake CMakeLists.txt ui/SettingsDialog.qml` is empty).
+The handoff commit adds this file. Everything is inside the packet's grant: `ui/Main.qml` (strings, under the brief's grant; the only two non-string edits are listed below), the coverage test, `translations/` and the evidence folder. The grant's "Settings > Browsing strings" needed no QML edit. No shared header, CMake file, C++ source or other QML file changed (`git diff --stat 04aef7c..7450392 -- include src cmake CMakeLists.txt ui/SettingsDialog.qml` is empty).
+
+Two edits in `ui/Main.qml` are not plain string wraps. Both exist only to remove concatenation, and neither changes layout or behaviour:
+- `shortcutHint(id)`, which returned `" (" + binding + ")"` for appending, is replaced by `withShortcut(text, id)`, which returns `qsTr("%1 (%2)")` or the text alone. Its only callers were in `Main.qml` (`git grep shortcutHint -- ui` found none elsewhere).
+- `sortButton` gains `readonly property string orderName`, the translated order word, so its accessible name is one `qsTr("File order: %1, ascending|descending")` message instead of three concatenated pieces.
 
 ## Test results (Windows 11, MSVC, Qt 6.8.3, offscreen and software Quick)
 
