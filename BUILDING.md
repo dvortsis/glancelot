@@ -24,12 +24,37 @@ Core-only validation: `./scripts/build.ps1 -BuildDir build-core -CoreOnly -Test`
 
 ## Linux
 
-Provide Qt 6.8.3 development/private headers, Quick Controls/QML Dialogs runtime modules, ShaderTools, CMake, Ninja and a C++20 compiler. Source/binary Qt builds may be used; do not mix toolkit versions.
+On Ubuntu 24.04 one command installs everything, builds and tests. It mirrors the Dockerfile `qt` and `build` stages, so a cloud or desktop session gets the same Qt and image formats (WebP, TIFF and TGA through `qtimageformats`, as on Windows):
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64
+scripts/linux-bootstrap.sh
+```
+
+The script is idempotent; rerun it after pulling. It:
+
+1. Prints whether a Docker daemon is reachable. Without one, only offscreen CTest runs locally and the Docker build happens in the authoritative gate (`lead-windows-gate`, docs/CI-GATE-RUNNER.md).
+2. Installs the apt packages it is missing, through `sudo` when not root: build-essential, CMake, Ninja, Python3 (with venv), Xvfb, Mesa GL/EGL and the XCB/xkbcommon/fontconfig/D-Bus/GLib runtime libraries. `cmake/RecoveryTests.cmake` requires Python3 and Xvfb. Nothing else needs root.
+3. Installs Qt 6.8.3 `linux_gcc_64` with aqtinstall 3.3.0 into `~/Qt/6.8.3/gcc_64`, unless it is already there: modules `qtshadertools qtimageformats`, archives `qtbase qtdeclarative qtshadertools qtimageformats`, then `icu`. aqt needs HTTPS access to download.qt.io (or a mirror given with `--qt-base`).
+4. Configures and builds `build/` (Release, `BUILD_TESTING=ON`) with Ninja.
+5. Runs CTest with `QT_QPA_PLATFORM=offscreen`: `ctest -L fast` when that label exists, otherwise the full suite.
+
+| Option | Default | Use |
+| --- | --- | --- |
+| `--qt-prefix DIR` | `$GLANCELOT_QT_PREFIX` or `~/Qt` | Qt install root |
+| `--qt-base URL` | `$GLANCELOT_QT_BASE` or aqt's default | Qt download mirror |
+| `--build-dir DIR` | `$GLANCELOT_BUILD_DIR` or `build` | Build directory; track sessions use `build-claude-<task>` |
+| `--jobs N` | `$GLANCELOT_JOBS` or 4 | Parallel compile jobs |
+| `--debug` | Release | Debug build |
+| `--skip-apt` | | Skip system packages (other distributions: install the equivalents yourself) |
+| `--qt-only` / `--no-tests` | | Stop after Qt, or after the build |
+| `-- <ctest args>` | | Replace the default test selection, for example `-- -R animation` |
+
+Manual equivalent with an existing Qt 6.8.3 (development and private headers, Quick Controls, ShaderTools and image formats; do not mix toolkit versions):
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_PREFIX_PATH=$HOME/Qt/6.8.3/gcc_64
 cmake --build build --parallel 4
-ctest --test-dir build --output-on-failure
+QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
 ```
 
 Core-only CI needs no Qt: pass `-DGLANCELOT_BUILD_VIEWER=OFF`. Native Wayland/X11, HDR and physical-monitor accuracy require real desktop hardware and are not validated by a headless build.
