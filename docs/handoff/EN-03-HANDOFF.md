@@ -9,7 +9,7 @@ Session: S1 build (cloud), Phase 0 cycle 1. Scope and acceptance: docs/handoff/L
 | Code tip SHA (built and tested) | `dcebfceb02171959d12ac33aeee65bc07c296496` |
 | Branch tip | the commit that adds this handoff and the `docs/TESTING.md` section, directly on top of `dcebfce`; docs only |
 | Review diff | `git diff d355edd <branch tip>` |
-| Review round 1 | commit `build(EN-03): review round 1` on top of `b1ca735`; configure-only checks, no build or test run |
+| Review round 1 | `5c2dd62` (`build(EN-03): review round 1`, on top of `b1ca735`) plus a docs-only follow-up commit with the extra negative checks; configure-only checks, no build or test run |
 
 ## What changed
 
@@ -296,6 +296,11 @@ The definitions now match the lead's rule. `docs/TESTING.md` and the header of `
 - They use synthetic screens (`tests/monitor_customization_screens.hpp`).
 - `monitor_output` and `monitor_customization` stay in `fast`; `monitor_customization_ui` stays `ui`.
 
+**Native through product code (checked):** I checked whether a `fast` test reaches the real shell or trash through product code. None does.
+- The real trash is reached only through `platform_trash::make()`, which the default `FileOperationService` constructor uses (`src/app/file_operation_service.cpp:281-283`). No `fast` test constructs a `FileOperationService`. The default backend appears only in `file_operation_service` (native), in `ui_test_support.hpp`, and in `fs_watch_ui` and `monitor_customization_ui`, which are `ui` and never delete. `grid_ui` and `input_ui` inject fake backends.
+- Core `executeDeletion` takes the backend as a parameter, and `file_operations` passes a fake one.
+- The shell is reached only through `PlatformIntegration` (`startDetached` to `explorer`, a terminal or `xdg-open`, and `SHOpenFolderAndSelectItems`). Only `platform_integration` calls it with a valid path. `folder_grid` passes invalid paths, and `shortcuts_help` only reads binding names.
+
 **Unchanged:** `navigation` stays `fast`, because it makes links with `std::filesystem` only and starts no shell. `process` has the same 8 tests: it is for hermetic children, and a test whose only child is `cmd`, `subst` or `explorer` is not `process`.
 
 Five tests left `fast`: `selection_export`, `directory_listing`, `file_operations`, `file_operation_service` and `platform_integration`. That leaves 27, down from 32. With `GLANCELOT_BUILD_VIEWER=OFF`, three of the five core tests are `native`, so only `perf_trace` and `navigation` remain `fast`.
@@ -449,9 +454,27 @@ Call Stack (most recent call first):
   CMakeLists.txt:324 (include)
 -- Configuring incomplete, errors occurred!
 configure exit: 1
+
+# fast mismatch A: perf_trace removed from fast and put only in process, viewer off (build-en03-negA)
+CMake Error at cmake/TestLabels.cmake:81 (message):
+  Test 'perf_trace' is not ui, budget or native, so it must be in the fast
+  list in cmake/TestLabels.cmake (see docs/TESTING.md).
+Call Stack (most recent call first):
+  CMakeLists.txt:324 (include)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
+
+# fast mismatch B: navigation added to native and kept in fast, viewer off (build-en03-negB)
+CMake Error at cmake/TestLabels.cmake:83 (message):
+  Test 'navigation' is ui, budget or native, so it must not be in the fast
+  list in cmake/TestLabels.cmake (see docs/TESTING.md).
+Call Stack (most recent call first):
+  CMakeLists.txt:324 (include)
+-- Configuring incomplete, errors occurred!
+configure exit: 1
 ```
 
-All four scratch build directories were deleted afterwards.
+After each negative check the file was restored, and `git diff HEAD` was empty. All scratch build directories (`build-en03-cfg`, `-core`, `-neg`, `-negcore`, `-negA`, `-negB`) were deleted afterwards.
 
 ## Unverified
 
