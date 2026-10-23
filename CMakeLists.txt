@@ -296,6 +296,7 @@ if(GLANCELOT_BUILD_VIEWER)
     add_dependencies(copy_move_tests glancelot-decoder)
     add_test(NAME copy_move COMMAND copy_move_tests -o "${CMAKE_CURRENT_BINARY_DIR}/copy_move-results.txt,txt" -o -,txt)
     set_tests_properties(copy_move PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
+    include(cmake/CopySafetyTests.cmake) # COPY-SAFETY-01 round 1
     qt_add_executable(format_tests tests/format_tests.cpp)
     target_include_directories(format_tests PRIVATE include src/app)
     target_compile_definitions(format_tests PRIVATE GLANCELOT_DECODER_PATH="$<TARGET_FILE:glancelot-decoder>")

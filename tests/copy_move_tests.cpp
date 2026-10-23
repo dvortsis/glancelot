@@ -10,6 +10,7 @@
 #include "glancelot/copy_move_service.hpp"
 #include "glancelot/viewer_controller.hpp"
 #include "copy_safety.hpp"
+#include "copy_safety_test_support.hpp"
 
 class CopyMoveTests final : public QObject {
     Q_OBJECT
@@ -39,6 +40,13 @@ private slots:
     void testOverwriteMoveCrossVolume();
     void testOverwriteReadOnlyTargetKeepsTarget();
     void testOverwriteOntoItselfKeepsFile();
+
+    // COPY-SAFETY-01 review round 1: Windows replace fallback and partial-failure recovery, and the sweep
+    void testOverwriteFallbackKeepsAttributes();
+    void testOverwriteFallbackRefusesExplicitPermissions();
+    void testOverwritePartialReplaceRestoresOriginal();
+    void testOverwritePartialReplaceUnrecoverableKeepsBackup();
+    void testOverwriteSweepSkipsInFlightTemporaryInAnyCase();
 
 private:
     std::unique_ptr<QTemporaryDir> m_tempDir;
@@ -420,12 +428,15 @@ QByteArray sha256Of(const QString& path) {
     return hash.result().toHex();
 }
 
+// Temporaries and replace backups (".~gl*" and ".~gb*"), by prefix rather than the sweep's exact pattern, so a
+// leaked file of either kind fails the test.
 QStringList temporariesIn(const QString& dir) {
     QStringList found;
     const QStringList names = QDir(dir).entryList(QDir::Files | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
     for (const QString& name : names) {
-        if (copy_safety::isTemporaryName(name)) found.append(name);
+        if (name.startsWith(QLatin1String(".~gl")) || name.startsWith(QLatin1String(".~gb"))) found.append(name);
     }
+    found.sort();
     return found;
 }
 
@@ -491,13 +502,18 @@ void CopyMoveTests::testOverwriteTemporaryNaming() {
     QCOMPARE(QFileInfo(temp).absolutePath(), QFileInfo(target).absolutePath());
     QVERIFY(copy_safety::isTemporaryName(QFileInfo(temp).fileName()));
     QVERIFY(temp != copy_safety::temporaryPathFor(target));
+    // Short and independent of the target's name (review N2): ".~gl" + 8 hex + ".tmp".
+    QCOMPARE(QFileInfo(temp).fileName().size(), 16);
+    const QString longTarget = QDir(m_tempDir->path()).filePath(QString(240, QLatin1Char('x')) + QStringLiteral(".jpg"));
+    QCOMPARE(QFileInfo(copy_safety::temporaryPathFor(longTarget)).fileName().size(), 16);
 
-    QVERIFY(copy_safety::isTemporaryName(QStringLiteral(".a.jpg.glancelot-0123456789abcdef.part")));
+    QVERIFY(copy_safety::isTemporaryName(QStringLiteral(".~gl0123abcd.tmp")));
     QVERIFY(!copy_safety::isTemporaryName(QStringLiteral("a.jpg")));
-    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral("a.jpg.glancelot-0123456789abcdef.part")));
-    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".a.jpg.glancelot-0123456789ABCDEF.part")));
-    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".a.jpg.glancelot-0123.part")));
-    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".a.jpg.glancelot-0123456789abcdef.part.jpg")));
+    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral("~gl0123abcd.tmp")));
+    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".~gl0123ABCD.tmp")));
+    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".~gl0123.tmp")));
+    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".~gl0123abcd.tmp.jpg")));
+    QVERIFY(!copy_safety::isTemporaryName(QStringLiteral(".~gb0123abcd.tmp"))); // a replace backup is never swept
 }
 
 void CopyMoveTests::testOverwriteReplacesTargetOnlyAfterCompleteCopy() {
@@ -659,13 +675,13 @@ void CopyMoveTests::testOverwriteRemovesCrashLeftover() {
     // original and a partial temporary sits beside it. The next Overwrite into that folder clears it.
     OverwriteFixture fx;
     QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_crash_leftover"), fx));
-    const QString leftover = QDir(fx.targetDir).filePath(QStringLiteral(".target.bin.glancelot-00000000deadbeef.part"));
-    const QString otherLeftover = QDir(fx.targetDir).filePath(QStringLiteral(".other.jpg.glancelot-0123456789abcdef.part"));
+    const QString leftover = QDir(fx.targetDir).filePath(QStringLiteral(".~gldeadbeef.tmp"));
+    const QString otherLeftover = QDir(fx.targetDir).filePath(QStringLiteral(".~gl01234567.tmp"));
     QVERIFY(writeBytes(leftover, makeData(300 * 1024, 2)));
     QVERIFY(writeBytes(otherLeftover, makeData(10, 3)));
-    // Look-alike user files are never touched.
-    const QStringList userFiles = {QStringLiteral(".target.bin.glancelot-1234.part"), QStringLiteral("target.bin.part"),
-                                   QStringLiteral(".target.bin.glancelot-00000000deadbeef.part.txt")};
+    // Look-alike user files, and a replace backup (which may hold the only copy of an original), are never touched.
+    const QStringList userFiles = {QStringLiteral(".~gb0000beef.tmp"), QStringLiteral(".~gl1234.tmp"),
+                                   QStringLiteral(".~gldeadbeef.tmp.txt"), QStringLiteral("~gldeadbeef.tmp")};
     for (const QString& name : userFiles) QVERIFY(writeBytes(QDir(fx.targetDir).filePath(name), QByteArray("user")));
     QCOMPARE(sha256Of(fx.target), fx.targetHash);
 
@@ -674,14 +690,15 @@ void CopyMoveTests::testOverwriteRemovesCrashLeftover() {
     QVERIFY(outcome.finished);
     QCOMPARE(outcome.succeeded, 1);
     QCOMPARE(sha256Of(fx.target), fx.sourceHash);
-    QCOMPARE(temporariesIn(fx.targetDir), QStringList());
+    QCOMPARE(temporariesIn(fx.targetDir), (QStringList{QStringLiteral(".~gb0000beef.tmp"), QStringLiteral(".~gl1234.tmp"),
+                                                       QStringLiteral(".~gldeadbeef.tmp.txt")}));
     for (const QString& name : userFiles) QVERIFY2(QFile::exists(QDir(fx.targetDir).filePath(name)), qPrintable(name));
 }
 
 void CopyMoveTests::testOverwriteCrashLeftoverWithFailedCopyKeepsTarget() {
     OverwriteFixture fx;
     QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_crash_then_fail"), fx));
-    const QString leftover = QDir(fx.targetDir).filePath(QStringLiteral(".target.bin.glancelot-00000000deadbeef.part"));
+    const QString leftover = QDir(fx.targetDir).filePath(QStringLiteral(".~gldeadbeef.tmp"));
     QVERIFY(writeBytes(leftover, makeData(1024 * 1024, 2)));
     FaultHookScope hook([](copy_safety::FaultPoint point, const QString&, qint64 bytes) {
         return point == copy_safety::FaultPoint::Read && bytes > 0;
@@ -816,6 +833,149 @@ void CopyMoveTests::testOverwriteOntoItselfKeepsFile() {
         QCOMPARE(sha256Of(file), hash);
         QCOMPARE(temporariesIn(dir), QStringList());
     }
+}
+
+// ---- COPY-SAFETY-01 review round 1 -----------------------------------------------------------------------------
+
+void CopyMoveTests::testOverwriteFallbackKeepsAttributes() {
+#ifndef Q_OS_WIN
+    QSKIP("The ReplaceFileW fallback exists only on Windows.");
+#else
+    // ReplaceFileW reports "not supported" (as on some redirectors): the MoveFileExW fallback still gives the
+    // replaced file the target's hidden, system and not-indexed attributes.
+    constexpr DWORD kept = FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
+    FaultHookScope hook([](copy_safety::FaultPoint point, const QString&, qint64) {
+        return point == copy_safety::FaultPoint::ReplaceUnsupported;
+    });
+    for (const auto mode : {CopyMoveService::TransferMode::Copy, CopyMoveService::TransferMode::Move}) {
+        OverwriteFixture fx;
+        QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_fallback_attrs_") + QLatin1String(cstest::modeName(mode)), fx));
+        QVERIFY(cstest::addAttributes(fx.target, kept));
+        CopyMoveService service;
+        const BatchOutcome outcome = runTransfer(service, fx.source, fx.targetDir, mode);
+        const DWORD attributes = cstest::attributesOf(fx.target);
+        cstest::clearAttributes(fx.target);
+        QVERIFY(outcome.finished);
+        QVERIFY2(outcome.succeeded == 1, qPrintable(outcome.lastError));
+        QCOMPARE(sha256Of(fx.target), fx.sourceHash);
+        QCOMPARE(attributes & kept, kept);
+        QCOMPARE(QFile::exists(fx.source), mode == CopyMoveService::TransferMode::Copy);
+        QCOMPARE(cstest::entriesIn(fx.targetDir), QStringList{QStringLiteral("target.bin")});
+    }
+#endif
+}
+
+void CopyMoveTests::testOverwriteFallbackRefusesExplicitPermissions() {
+#ifndef Q_OS_WIN
+    QSKIP("The ReplaceFileW fallback exists only on Windows.");
+#else
+    // The fallback cannot carry the target's own permissions over, so it refuses instead of loosening them.
+    FaultHookScope hook([](copy_safety::FaultPoint point, const QString&, qint64) {
+        return point == copy_safety::FaultPoint::ReplaceUnsupported;
+    });
+    for (const auto mode : {CopyMoveService::TransferMode::Copy, CopyMoveService::TransferMode::Move}) {
+        OverwriteFixture fx;
+        QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_fallback_acl_") + QLatin1String(cstest::modeName(mode)), fx));
+        QVERIFY(cstest::grantLocalServiceRead(fx.target));
+        CopyMoveService service;
+        const BatchOutcome outcome = runTransfer(service, fx.source, fx.targetDir, mode);
+        QVERIFY(outcome.finished);
+        QCOMPARE(outcome.failed, 1);
+        QVERIFY2(outcome.lastError.contains(QStringLiteral("own permissions")) && outcome.lastError.contains(QStringLiteral("Original kept")),
+                 qPrintable(outcome.lastError));
+        QCOMPARE(sha256Of(fx.target), fx.targetHash);
+        QVERIFY(cstest::aclStateOf(fx.target).localServiceExplicit);
+        QCOMPARE(sha256Of(fx.source), fx.sourceHash);
+        QCOMPARE(cstest::entriesIn(fx.targetDir), QStringList{QStringLiteral("target.bin")});
+        QCOMPARE(cstest::entriesIn(fx.sourceDir), QStringList{QStringLiteral("target.bin")});
+    }
+#endif
+}
+
+void CopyMoveTests::testOverwritePartialReplaceRestoresOriginal() {
+#ifndef Q_OS_WIN
+    QSKIP("ReplaceFileW partial failures exist only on Windows.");
+#else
+    // ReplaceFileW renamed the target to its backup name and then failed (ERROR_UNABLE_TO_MOVE_REPLACEMENT_2):
+    // the original is moved back, so the target is byte-identical and no backup or temporary remains.
+    FaultHookScope hook([](copy_safety::FaultPoint point, const QString&, qint64) {
+        return point == copy_safety::FaultPoint::ReplacePartial;
+    });
+    for (const auto mode : {CopyMoveService::TransferMode::Copy, CopyMoveService::TransferMode::Move}) {
+        OverwriteFixture fx;
+        QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_partial_") + QLatin1String(cstest::modeName(mode)), fx));
+        CopyMoveService service;
+        const BatchOutcome outcome = runTransfer(service, fx.source, fx.targetDir, mode);
+        QVERIFY(outcome.finished);
+        QCOMPARE(outcome.failed, 1);
+        QVERIFY2(outcome.lastError.contains(QStringLiteral("Original kept")), qPrintable(outcome.lastError));
+        QCOMPARE(sha256Of(fx.target), fx.targetHash);
+        QCOMPARE(sha256Of(fx.source), fx.sourceHash);
+        QCOMPARE(cstest::entriesIn(fx.targetDir), QStringList{QStringLiteral("target.bin")});
+        QCOMPARE(cstest::entriesIn(fx.sourceDir), QStringList{QStringLiteral("target.bin")});
+    }
+#endif
+}
+
+void CopyMoveTests::testOverwritePartialReplaceUnrecoverableKeepsBackup() {
+#ifndef Q_OS_WIN
+    QSKIP("ReplaceFileW partial failures exist only on Windows.");
+#else
+    // Worst case: the original sits under the backup name and cannot be moved back. Nothing is written at the
+    // target's name, the backup is reported and kept (the sweep never removes it), and the source is kept.
+    FaultHookScope hook([](copy_safety::FaultPoint point, const QString&, qint64) {
+        return point == copy_safety::FaultPoint::ReplacePartial || point == copy_safety::FaultPoint::RestoreBackup;
+    });
+    for (const auto mode : {CopyMoveService::TransferMode::Copy, CopyMoveService::TransferMode::Move}) {
+        OverwriteFixture fx;
+        QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_partial_lost_") + QLatin1String(cstest::modeName(mode)), fx));
+        CopyMoveService service;
+        const BatchOutcome outcome = runTransfer(service, fx.source, fx.targetDir, mode);
+        QVERIFY(outcome.finished);
+        QCOMPARE(outcome.failed, 1);
+        QVERIFY2(outcome.lastError.contains(QStringLiteral("the original file is kept as")), qPrintable(outcome.lastError));
+        QVERIFY2(!outcome.lastError.contains(QStringLiteral("Original kept")), qPrintable(outcome.lastError));
+        QVERIFY(!QFile::exists(fx.target));
+        const QStringList entries = cstest::entriesIn(fx.targetDir);
+        QCOMPARE(entries.size(), 1);
+        QVERIFY2(entries.first().startsWith(QLatin1String(".~gb")), qPrintable(entries.first()));
+        QVERIFY2(outcome.lastError.contains(entries.first()), qPrintable(outcome.lastError));
+        QCOMPARE(sha256Of(QDir(fx.targetDir).filePath(entries.first())), fx.targetHash);
+        QCOMPARE(sha256Of(fx.source), fx.sourceHash);
+        QCOMPARE(cstest::entriesIn(fx.sourceDir), QStringList{QStringLiteral("target.bin")});
+    }
+#endif
+}
+
+void CopyMoveTests::testOverwriteSweepSkipsInFlightTemporaryInAnyCase() {
+#ifndef Q_OS_WIN
+    QSKIP("Only Windows folder names compare case-insensitively.");
+#else
+    // Another batch sweeps the same folder spelled in different case while this copy is writing its temporary
+    // (review N4): the in-flight temporary must be recognised and kept.
+    OverwriteFixture fx;
+    QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_sweep_case"), fx, 2 * 1024 * 1024));
+    const QString otherSpelling = fx.targetDir.toUpper();
+    QVERIFY(otherSpelling != fx.targetDir);
+    std::atomic<int> removed{-1};
+    std::atomic<int> temporariesAfterSweep{-1};
+    const QString targetDir = fx.targetDir;
+    FaultHookScope hook([&](copy_safety::FaultPoint point, const QString&, qint64 bytes) {
+        if (point == copy_safety::FaultPoint::AfterChunk && bytes >= 256 * 1024 && removed.load() < 0) {
+            removed = copy_safety::removeStaleTemporaries(otherSpelling);
+            temporariesAfterSweep = int(temporariesIn(targetDir).size());
+        }
+        return false;
+    });
+    CopyMoveService service;
+    const BatchOutcome outcome = runTransfer(service, fx.source, fx.targetDir, CopyMoveService::TransferMode::Copy);
+    QVERIFY(outcome.finished);
+    QCOMPARE(removed.load(), 0);
+    QCOMPARE(temporariesAfterSweep.load(), 1);
+    QCOMPARE(outcome.succeeded, 1);
+    QCOMPARE(sha256Of(fx.target), fx.sourceHash);
+    QCOMPARE(cstest::entriesIn(fx.targetDir), QStringList{QStringLiteral("target.bin")});
+#endif
 }
 
 QTEST_MAIN(CopyMoveTests)
