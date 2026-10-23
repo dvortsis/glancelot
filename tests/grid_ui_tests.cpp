@@ -955,6 +955,10 @@ private slots:
         // Force identical spelling: Windows normally mixes slash forms and bypasses the no-op branch.
         auto snapshot=h.viewer.snapshot(); snapshot.files={std::filesystem::path(h.viewer.filePath().toStdWString())}; snapshot.current=snapshot.files.front(); h.model.sync(snapshot);
         h.showGrid(); QTRY_VERIFY(h.view()->hasActiveFocus()); QTRY_COMPARE(h.selected(),0);
+        // EN-11: any background stateChanged (a late first scan, a monitor status)
+        // legitimately re-syncs the live model to the navigator's spelling. Re-apply
+        // the forced spelling with no event dispatch between it and the activation.
+        h.model.sync(snapshot); QCOMPARE(h.selected(),0);
         QCOMPARE(h.model.pathAt(0),h.viewer.filePath());
         QVERIFY(QMetaObject::invokeMethod(h.grid(),"activate"));
         QVERIFY2(h.viewer.loading(),"Grid activation must retry a failed current path");

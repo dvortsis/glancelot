@@ -84,17 +84,26 @@ class FSWatchTests : public QObject {
     };
     QTemporaryDir config;
     static bool png(const QString& path,Qt::GlobalColor color,QSize size=QSize(32,24)) {
-        QSaveFile target(path);if(!target.open(QIODevice::WriteOnly)) {
-            qWarning()<<"generated PNG open failed"<<target.error()<<target.errorString();return false;
+        // EN-11: on Windows an external scanner (Defender, the indexer) can briefly
+        // hold a just-written file without delete sharing, so the atomic rename is
+        // refused. Retry the whole write for a bounded time and log every retry; the
+        // viewer's own readers share delete (late_baseline sharedReaderAllowsAtomicReplace).
+        QElapsedTimer elapsed;elapsed.start();
+        for(int attempt=1,delay=10;;++attempt,delay=std::min(delay*2,200)) {
+            QSaveFile target(path);if(!target.open(QIODevice::WriteOnly)) {
+                qWarning()<<"generated PNG open failed"<<target.error()<<target.errorString();return false;
+            }
+            QImage image(size,QImage::Format_RGB32);image.fill(color);
+            if(!image.save(&target,"PNG")) {
+                qWarning()<<"generated PNG encoding failed"<<target.error()<<target.errorString();return false;
+            }
+            if(target.commit())return true;
+            if(target.error()!=QFileDevice::RenameError||elapsed.elapsed()>=2000) {
+                qWarning()<<"generated PNG atomic commit failed"<<target.error()<<target.errorString()<<"attempts"<<attempt;return false;
+            }
+            qInfo()<<"generated PNG atomic commit refused; retrying"<<attempt<<target.errorString();
+            QThread::msleep(unsigned(delay));
         }
-        QImage image(size,QImage::Format_RGB32);image.fill(color);
-        if(!image.save(&target,"PNG")) {
-            qWarning()<<"generated PNG encoding failed"<<target.error()<<target.errorString();return false;
-        }
-        if(!target.commit()) {
-            qWarning()<<"generated PNG atomic commit failed"<<target.error()<<target.errorString();return false;
-        }
-        return true;
     }
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
@@ -771,7 +780,10 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady()&&viewer.image().pixelColor(0,0)==expected,10000);
         QCOMPARE(viewer.filePath(),newerOpen?b:a);QTest::qWait(2300);
         QFile trace(traceFile);QVERIFY(trace.open(QIODevice::ReadOnly));
-        QCOMPARE(trace.readAll().count("decode:begin\n"),newerOpen?3:2);
+        // EN-11: b's late baseline registers the revision b was decoded from, which
+        // proves b current, so it costs no third decode unless b has no source token.
+        const bool bProvable=!fs_watch::sourceToken(fs_watch::probe(fs_watch::native(b))).isEmpty();
+        QCOMPARE(trace.readAll().count("decode:begin\n"),newerOpen?(bProvable?2:3):2);
         QCOMPARE(viewer.image().pixelColor(0,0),expected);
     }
     void delayedOldScopeAndStormAreBounded() {
