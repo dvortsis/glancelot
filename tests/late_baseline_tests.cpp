@@ -181,28 +181,34 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!first||first->state()==QProcess::NotRunning,5000);
     }
 
-    // fs_watch :298/:1023 ("generated PNG atomic commit failed 10 Access is
-    // denied"): an in-process reader holding the image must not block a writer's
-    // atomic replace. Meaningful on Windows; POSIX rename never blocks.
-    void sharedReaderAllowsAtomicReplace() {
+    // A reader holding the image through openSharedRead must not block another
+    // program renaming the image away or deleting it (save-via-backup editors,
+    // Explorer). Meaningful on Windows; POSIX never blocks either.
+    // Hosted windows-2022 evidence (run 39894499556): a replace (QSaveFile commit,
+    // MoveFileEx REPLACE_EXISTING) onto the held name is refused while any handle
+    // is open, shared-delete or not, so this cannot fix fs_watch :298/:1023; the
+    // bounded retry in fs_watch png() does. Replace results are recorded, not asserted.
+    void sharedReaderAllowsRenameAndDelete() {
         QTemporaryDir media;QVERIFY(media.isValid());
-        const auto image=media.filePath("held.png");QVERIFY(png(image,Qt::red));
+        const auto image=media.filePath("held.png"),moved=media.filePath("moved.png");QVERIFY(png(image,Qt::red));
         QFile held;QVERIFY(glancelot::detail::openSharedRead(held,image));
         QImageReader reader(&held);QCOMPARE(reader.size(),QSize(32,24));
-        const auto shared=commitPng(image,Qt::blue);
-        note("replace over shared-delete reader: "+(shared.isEmpty()?QString("ok"):shared));
+        const auto replace=commitPng(image,Qt::blue);
+        note("replace over shared-delete reader: "+(replace.isEmpty()?QString("ok"):replace));
+        QVERIFY2(QFile::rename(image,moved),"A shared-delete reader must not block renaming the image away");
+        QVERIFY2(QFile::remove(moved),"A shared-delete reader must not block deleting the image");
         held.close();
+        QVERIFY(!QFileInfo::exists(image)&&!QFileInfo::exists(moved));
 #ifdef Q_OS_WIN
-        // Record (not assert) the platform behaviour this guards against.
+        // Record (not assert) what a plain QFile reader blocks on this Windows.
+        QVERIFY(png(image,Qt::red));
         {
             QFile plain(image);QVERIFY(plain.open(QIODevice::ReadOnly));
             const auto blocked=commitPng(image,Qt::green);
             note("replace over plain QFile reader: "+(blocked.isEmpty()?QString("ok"):blocked));
+            note(QString("rename away under plain QFile reader: %1").arg(QFile::rename(image,moved)?"ok":"refused"));
         }
-        QVERIFY(png(image,Qt::blue));
 #endif
-        QVERIFY2(shared.isEmpty(),qPrintable("A shared-delete reader must not block QSaveFile::commit: "+shared));
-        QCOMPARE(QImage(image).pixelColor(0,0),QColor(Qt::blue));
     }
 };
 

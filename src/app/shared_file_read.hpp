@@ -1,6 +1,6 @@
 #pragma once
 // EN-11: read-only opens of original media by in-process readers (metadata,
-// animation frames). Viewing must never block another program's atomic save.
+// animation frames), with the decoder worker's share mode.
 #include <QDir>
 #include <QFile>
 #include <QString>
@@ -14,11 +14,13 @@
 #endif
 
 namespace glancelot::detail {
-// QFile opens without FILE_SHARE_DELETE on Windows, so a writer's replace
-// (QSaveFile commit, MoveFileEx/ReplaceFile) over an image being read fails with
-// "Access is denied". Open with the decoder worker's share mode instead; if the
-// native open fails (for example a path only QFile's long-path handling reaches),
-// fall back to QFile so no file that was readable before becomes unreadable.
+// QFile opens without FILE_SHARE_DELETE on Windows, so while the viewer reads an
+// image nobody can delete it or rename it away (Explorer, save-via-backup
+// editors). Delete sharing allows both. It does not allow a replace onto the held
+// name (MoveFileEx REPLACE_EXISTING / QSaveFile commit): Windows refuses that while
+// any handle is open, so readers still keep their handles short. If the native
+// open fails (for example a path only QFile's long-path handling reaches), fall
+// back to QFile so no file that was readable before becomes unreadable.
 inline bool openSharedRead(QFile& file, const QString& path) {
 #ifdef Q_OS_WIN
     const QString native = QDir::toNativeSeparators(path);

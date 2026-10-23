@@ -84,10 +84,10 @@ class FSWatchTests : public QObject {
     };
     QTemporaryDir config;
     static bool png(const QString& path,Qt::GlobalColor color,QSize size=QSize(32,24)) {
-        // EN-11: on Windows an external scanner (Defender, the indexer) can briefly
-        // hold a just-written file without delete sharing, so the atomic rename is
-        // refused. Retry the whole write for a bounded time and log every retry; the
-        // viewer's own readers share delete (late_baseline sharedReaderAllowsAtomicReplace).
+        // EN-11: on Windows the atomic rename is refused while any handle on the
+        // target is open: the viewer's own metadata/animation readers right after a
+        // decode, or an external scanner (Defender, the indexer). Retry the whole
+        // write for a bounded time and log every retry.
         QElapsedTimer elapsed;elapsed.start();
         for(int attempt=1,delay=10;;++attempt,delay=std::min(delay*2,200)) {
             QSaveFile target(path);if(!target.open(QIODevice::WriteOnly)) {

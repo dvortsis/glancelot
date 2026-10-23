@@ -486,8 +486,8 @@ MetadataRecord MetadataParser::parse(const QString& filePath, quint64 generation
     record.fileName = info.fileName();
     record.fileSize = info.size();
 
-    // One shared-delete handle serves the reader and the header read, so parsing
-    // never blocks a writer's atomic replace of the image (EN-11).
+    // One short-lived shared-delete handle serves the reader and the header read,
+    // so parsing never blocks deleting or renaming the image away (EN-11).
     // An unreadable file keeps its name and size, as before; format and headers stay empty.
     QFile source;
     detail::openSharedRead(source, filePath);

@@ -202,7 +202,7 @@ void AnimationController::jumpToFrame(int frame) {
         } else {
             // Lazy load frame on demand if not cached
             QFile source;
-            detail::openSharedRead(source, d->filePath); // never blocks a writer's replace (EN-11)
+            detail::openSharedRead(source, d->filePath); // never blocks delete or rename-away (EN-11)
             QImageReader reader(&source);
             if (reader.jumpToImage(frame)) {
                 QImage img = reader.read();
@@ -285,7 +285,7 @@ void AnimationController::load(const QString& filePath, quint64 generation) {
     QThreadPool::globalInstance()->start([self, filePath, token]() {
         if (!self) return;
 
-        // Frames are read for a while; a shared-delete handle never blocks a writer's replace (EN-11).
+        // Frames are read for a while; a shared-delete handle never blocks delete or rename-away (EN-11).
         QFile source;
         detail::openSharedRead(source, filePath);
         QImageReader reader(&source);
