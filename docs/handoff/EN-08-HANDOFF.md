@@ -9,7 +9,7 @@ Written for: the lead. Documents only; no build, test or queue edit was made. Br
 | `docs/SUPPORTED-CAPABILITIES.md` | Rewritten per platform (Windows, Docker browser desktop, native Linux). Covers formats with Windows/Docker columns, viewing, the merged-but-uncorrected stack features, file operations, second display, safe mode and recovery, Docker specifics, and an "unverified on physical hardware" table. Every row cites code or a verification record. |
 | `README.md` | Replaced "JPEG and PNG" with the actual format set. Replaced "Linux core tests run in WSL" with the full offscreen suite inside the Docker build. Narrowed "RAW … not delivered" to full RAW development. Added the file-operation keys and the 256 MiB decoder limit. Linked the current plan. |
 | `docs/TESTING.md` | "Drop a JPEG/PNG" now reads "drop a supported image" with a link to the formats table. Added a note that file-changing commands should be tested on disposable copies, plus the Linux/Docker suite and the missing-`qtimageformats` caveat. |
-| `docs/DOCKER.md` | "First JPEG/PNG" now reads "first supported image". Added which formats decode in the container (no WebP/TIFF/TGA until EN-02), that the read-only `/photos` mount refuses delete/rename/move, and that the container has no second-monitor output. |
+| `docs/DOCKER.md` | "First JPEG/PNG" now reads "first supported image". Added which formats decode in the container (WebP/TIFF/TGA expected missing until EN-02; inferred, not observed), that the read-only `/photos` mount should refuse delete/rename/move (inferred from the mount, not observed), and that the container has no second-monitor output. |
 | `docs/AGENT-LANES-PLAN.md` | "Superseded" banner at the top pointing to AGENTS.md and LEAD-PLAN-2026-10-22.md; body kept as history. |
 
 Not touched: `AGENTS.md`, `docs/WORK-QUEUE.yaml`, workflows, `BUILDING.md` and `Dockerfile` (EN-02 owns the Linux section and the Qt modules).
@@ -290,7 +290,7 @@ Review: `docs/verification/EN-08-REVIEW.md` at `1401966` (branch `claude/review-
 | Finding | Fix |
 | --- | --- |
 | 1. Paste has no collision choice and no confirmation (blocking) | Removed "collision choice" and the blanket "confirmation" claims from the capability page and the README. Both now say: delete and rename confirm; paste runs at once; a name clash always keeps both files, the new copy gets a numbered name, and the existing file is untouched. Sources: `CopyMoveService::pasteTo` with `CollisionPolicy::RenameBoth`, and `ui/Main.qml` `paste`. |
-| 2. The self-hosted gate has `qtimageformats` (blocking) | The Windows bullet now says the self-hosted gate uses the main checkout's local Qt, which includes the plugins. A new bullet names the hosted advisory job, which installs only `qtbase`, `qtdeclarative` and `qtshadertools`, as the one without them. EN-02 is noted as adding the plugins there too. |
+| 2. The self-hosted gate has `qtimageformats` (blocking) | The Windows bullet now says the self-hosted gate uses the main checkout's local Qt, which includes the plugins. A new bullet names the hosted advisory job, which installs only `qtbase`, `qtdeclarative` and `qtshadertools`, as the one without them. EN-02 was noted as adding the plugins there too; corrected in round 2. |
 | 3. Docker resume after container recreation (blocking) | Viewing row and Docker specifics: the position is stored in the volume; resume after recreating the container is unverified, citing DOCKER-BROWSER.md's "not verified" list. |
 | 4. Re-check against `f325ef6` (blocking) | "Last checked" is now `f325ef6`. File operations has a COPY-SAFETY-01 known-issue note: the Overwrite path truncates the target and deletes it on failure; no UI reaches it; the fix is queued. The cross-volume move "verify" is now described as a size comparison only. |
 | 5. Banner versus AGENTS.md | Kept the banner, on the coordinator's instruction. AGENTS.md on `main` already treats the lanes plan as history. |
@@ -309,3 +309,68 @@ Checks after round 1:
 - **Strict parse.** The strict duplicate-key parse of every block passes.
 - **Queue still valid.** Block 1 inserted into the `f325ef6` queue gives 85 tasks with no duplicate IDs.
 - **Values are strings.** No proposed row value is a non-string.
+
+## Pre-handoff checklist (AGENTS.md)
+
+These are the items that apply to a documents-only packet.
+
+### 1. Fail-before evidence
+
+Not applicable: no assertion or test was added or changed.
+
+### 2. Grant check
+
+The packet grants documents. It excludes `AGENTS.md`, `docs/WORK-QUEUE.yaml`, workflows, and also `BUILDING.md` and `Dockerfile`, which EN-02 owns.
+
+The branch's own changes, from the merge base with `main`:
+
+```
+> git diff --name-only origin/main...HEAD
+README.md
+docs/AGENT-LANES-PLAN.md
+docs/DOCKER.md
+docs/SUPPORTED-CAPABILITIES.md
+docs/TESTING.md
+docs/handoff/EN-08-HANDOFF.md
+```
+
+Nothing falls outside the grant.
+
+`git diff --name-only 3893c77..HEAD` additionally lists `AGENTS.md`, `docs/WORK-QUEUE.yaml` and `docs/handoff/PHASE0-CYCLE1-2026-10-22.md`. Those changes arrive only through the merges of `main` (`f325ef6`, then `4f29124`); this branch makes no edit of its own to them.
+
+### 3. Exact base
+
+- **Cut from:** `origin/main` `3893c77ef` (`3893c77`).
+- **Main merged in:** `f325ef6` for round 1 and `4f29124` for round 2.
+- **Merge base with `origin/main` now:** `4f2912476defde4f549a53c7c1dde6581c8a3539`.
+- **Stacking:** not a stacked packet.
+
+### 4. Tests
+
+Not applicable: documents only, so no build or `ctest` was run. The checks actually run are the strict duplicate-key YAML parse and the SHA and ancestry checks, listed under "Checks run".
+
+### 5. Decisions taken
+
+- **Docker format claims are inferred.** Docker's missing WebP, TIFF and TGA are reported as inferred from the Dockerfile, not as observed. The alternative was running a container, which is out of scope for a docs packet.
+- **ICO and WBMP are listed as not openable.** The decoder accepts them, but the navigation allowlist does not include their extensions, so the page does not list them as supported.
+- **Stack features have their own section.** The thirteen merged stack features are labelled "Merged, corrections outstanding" rather than supported, and the page does not quote a queue state they lack.
+- **Proposed queue rows use existing keys only.** `feature`, `gated_commit` and `review_evidence` each already appear on other rows. All SHA values are quoted.
+- **BUILDING.md and the Dockerfile are left alone.** EN-02 owns them.
+
+### 6. Open questions for the lead
+
+- **Queue rows.** Apply the proposed rows (blocks 1 to 4). Then decide whether `lanes:` on line 5 should be repointed.
+- **Hosted advisory job.** Add `qtimageformats` to it under EN-01 when EN-02 is integrated. The capability page now says this will happen.
+- **Code packet for stale strings.** Two strings in code are stale: `app/startup_intent.cpp:25` ("JPEG/PNG alpha") and the unsupported-format message at `src/worker/main.cpp:232`. They need a code packet.
+
+## Review round 2
+
+Review: `docs/verification/EN-08-REVIEW-R2.md` at `41a65ec` (branch `claude/review-en-08-r2`), verdict CHANGES REQUIRED. I merged `origin/main` `4f29124` (docs only) first.
+
+| Finding | Fix |
+| --- | --- |
+| 1. EN-02 does not add `qtimageformats` to the hosted job (blocking) | The page now says EN-02 adds it to Docker, and the lead adds it to the hosted advisory job under EN-01 once EN-02 is integrated. The round-1 table row 2 is annotated as corrected. |
+| 2. "Window positions" | Both places now say "each window's last folder and photo", per `docs/verification/DOCKER-BROWSER.md`. |
+| 3. New folder missing from the intro | The "Confirmed first" bullet now reads "delete, rename and new folder open a dialog". |
+| 4. Stale DOCKER.md row in "Files changed" | Aligned: the formats and read-only claims are marked inferred, not observed. |
+| 5. Pre-handoff checklist | Added the applicable items above: grant check output, exact base, Decisions taken, Open questions for the lead. |

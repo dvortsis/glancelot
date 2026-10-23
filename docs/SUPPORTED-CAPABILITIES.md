@@ -25,7 +25,7 @@ Each format needs a Qt image plugin:
 - **Hosted advisory Windows job.** The hosted job in `windows-gate.yml` installs only `qtbase`, `qtdeclarative` and `qtshadertools`, so WebP, TIFF and TGA are missing there.
 - **Docker.** The image installs only `qtbase`, `qtdeclarative`, `qtshadertools` and ICU (`Dockerfile`, `qt` stage). WebP, TIFF and TGA are therefore expected to be missing there; this is read from the Dockerfile and was not observed in a container run.
 
-Packet EN-02 adds `qtimageformats` to Docker and to the hosted job. Until it lands, the Windows and Docker columns below differ.
+Packet EN-02 adds `qtimageformats` to Docker. The lead adds it to the hosted advisory job under EN-01 once EN-02 is integrated. Until it lands, the Windows and Docker columns below differ.
 
 | Format | Extensions | Windows | Docker browser desktop | Evidence and limits |
 | --- | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ Known format limits, from the UX audit of `6cc87ee` (`docs/verification/AUDIT-UX
 | Folder grid, filmstrip, lazy folder tree, path bar, favorites, back/forward history, filter (**Ctrl+F**) | Yes | Yes | `docs/verification/FILE-GRID-01.md`, `TREE-01.md`, `PATH-BAR-01.md`, `FAVORITES-01.md`, `FOLDER-HISTORY-01.md`, `FILTER-01.md` |
 | File order: name, modified, size, seeded shuffle; folder order independent of file order | Yes | Yes | SORT-01; `tests/navigation_tests.cpp`. Capture-date and dimension sorts are **not delivered**. |
 | Live folder updates and explicit refresh (**F5**) | Yes | Yes | `docs/verification/FS-WATCH-01.md` (FS-WATCH-01, state `done`) |
-| Per-window resume of the last photo, by window opening order | Yes | Position is stored in the `glancelot-config` volume; resume after recreating the container is **unverified** | WINDOW-RESUME-01; `docs/verification/DOCKER-BROWSER.md` (its "not verified" list) |
+| Per-window resume of the last photo, by window opening order | Yes | Each window's last folder and photo are stored in the `glancelot-config` volume; resume after recreating the container is **unverified** | WINDOW-RESUME-01; `docs/verification/DOCKER-BROWSER.md` (its "not verified" list) |
 | Remappable commands, command palette (**Ctrl+Shift+P**), shortcut cheat sheet (**F1**), scoped keyboard/mouse/wheel input, chords and holds | Yes | Yes; keyboard input through noVNC is unverified (DOCKER-BROWSER-01) | `docs/verification/INPUT-02.md`, `SHORTCUTS-HELP-01.md` |
 | 80 built-in themes (40 families, light and dark) | Yes | Yes | `docs/verification/THEMES.md` |
 | Colour | 8-bit sRGB working pixels; the main canvas is SDR and does not use the monitor's ICC profile | Same | `src/worker/main.cpp`; COLOR-01 and COLOR-04 are open |
@@ -85,7 +85,7 @@ These features were merged with the Claude stack at `3b2b0db` (October 22, 2026)
 
 Viewing never writes to your photos. Every change below happens only on an explicit command, and each command is remappable:
 
-- **Confirmed first:** delete and rename open a dialog (`ui/DeleteFlow.qml`, `ui/RenameFlow.qml`).
+- **Confirmed first:** delete, rename and new folder open a dialog (`ui/DeleteFlow.qml`, `ui/RenameFlow.qml`).
 - **Runs at once:** paste starts immediately, with no confirmation.
 
 | Operation | Default key | Windows | Native Linux | Docker | Evidence |
@@ -131,7 +131,7 @@ Hardware power-loss and sanitizer runs for recovery are **unverified**.
 See [DOCKER.md](DOCKER.md) for setup.
 
 - **Read-only photos.** Photos are mounted read-only at `/photos`, so delete, rename and moving files into that tree should be refused. This is inferred from the mount and the delete planner, not observed.
-- **Settings.** Settings and window positions live in the `glancelot-config` volume. Resume after recreating the container is unverified.
+- **Settings.** Settings and each window's last folder and photo live in the `glancelot-config` volume. Resume after recreating the container is unverified.
 - **One shared desktop.** All browser clients share one desktop and one viewer session. Browser file upload and drag-in are not implemented.
 - **Fixed desktop size.** The remote desktop has a fixed size (`GLANCELOT_DESKTOP_SIZE`, 560x400 to 3840x2160) and renders with Mesa software OpenGL. Physical-pixel zoom, colour accuracy and refresh rate are not meaningful through this route.
 - **WebP, TIFF and TGA.** These are expected not to decode (inferred from the Dockerfile) until EN-02 adds Qt's `qtimageformats` module. See [Image formats](#image-formats).
