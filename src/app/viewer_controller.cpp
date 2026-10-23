@@ -1595,10 +1595,12 @@ void ViewerController::trigger(const QString& id){
     else if(id=="tab-previous"){if(d->tabList.size()>1)activateTab((d->activeTabIndex+d->tabList.size()-1)%d->tabList.size());}
     else if(id=="clear-filter")clearFilter();
     else if(id=="toggle-filter-persistence")toggleFilterPersistence();
-    else if(id=="storage-profile-auto") { setStorageProfile("auto"); emit viewCommand(id); }
-    else if(id=="storage-profile-ssd") { setStorageProfile("ssd"); emit viewCommand(id); }
-    else if(id=="storage-profile-hdd") { setStorageProfile("hdd"); emit viewCommand(id); }
-    else if(id=="storage-profile-network") { setStorageProfile("network"); emit viewCommand(id); }
+    // Storage profiles are I/O scheduler state with nothing for the view to do, so they are not re-broadcast.
+    else if(id=="storage-profile-auto")setStorageProfile("auto");
+    else if(id=="storage-profile-ssd")setStorageProfile("ssd");
+    else if(id=="storage-profile-hdd")setStorageProfile("hdd");
+    else if(id=="storage-profile-network")setStorageProfile("network");
+    // Executed here only; the emit lets the view end the loupe as before any command (Main.qml has no branch for these).
     else if(id=="toggle-metadata") { toggleMetadata(); emit viewCommand(id); }
     else if(id=="animation-toggle-play-pause") { d->animationController.togglePlayPause(); emit viewCommand(id); }
     else if(id=="animation-next-frame") { d->animationController.nextFrame(); emit viewCommand(id); }
