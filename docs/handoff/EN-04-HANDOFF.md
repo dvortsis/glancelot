@@ -100,7 +100,7 @@ DIAG  hit ... QQuickGridLayout "" QRectF(12,740 1156x32)       <- the chevron cl
 Design note (ui-design-skills: application-interface-design, layout-spacing, layout-grids and responsive-layout were read for this change):
 - The folder tree is the panel's primary region. Favorites is a secondary shortcut list, so it gets a bounded region sized to its content, and the tree gets the remaining area. This follows the rule "important regions receive appropriate area".
 - The cap is relative to the panel. That keeps the tree usable from the minimum window size (540x360, panel 264 px, one favorites row) up to tall windows (5 rows). A long list scrolls in place and never pushes the tree off-screen.
-- Rows stay whole, so the edge of the list stays clean. The visible scroll bar shows that more rows exist.
+- Rows stay whole, so the edge of the list stays clean. (Correction, round 2: this first version said "the visible scroll bar shows that more rows exist". That was wrong. `UiScrollBar` is transparent at rest and appears only while the list scrolls or is hovered, so nothing showed the overflow. Round 2 adds a half-row peek; see "Review round 2 follow-ups".)
 - No spacing, colour, type, icon or theme tokens changed. The section keeps its margins, the separator and the empty-state hint.
 
 | Panel (window) | Favorites | Section before / after | Folder list before / after |
@@ -228,3 +228,106 @@ No results file from runs 3 or 4 contains `Binding loop`, `Polish loop`, `TypeEr
 - The packaged app binary was not launched. The screenshots use the shipped QML in the `input_ui` harness on the native platform.
 - Review finding 5 also named `reviewAllLocationsAtMinimumSize` and `addressEditingClipboardAndEscape`. Both pass in the runs above.
 - The Back and Forward buttons narrow the address field, which shows only the tail of the path in the screenshots. That behaviour is unchanged and outside this grant.
+
+## Review round 2 follow-ups
+
+The re-review approved EN-04 (`docs/verification/EN-04-REVIEW-R2.md` on `claude/review-en-04-r2`, `b90f7c4`). This section covers the lead's two follow-ups on October 23, 2026. The implementer and machine are the same as in round 1.
+
+### 1. Half-row peek for overflowing favorites (lead UX decision, `ui/FolderTree.qml` Favorites sizing)
+
+- Problem (review section 4): when the favorites did not all fit, nothing showed it at rest, because `UiScrollBar` is transparent until the list scrolls or is hovered. The round 1 handoff said a visible scroll bar showed the overflow; that was wrong and is corrected above.
+- Change: `favoritesList` height is `min(count, maxRows) * rowHeight`, plus `rowHeight / 2` when `count > maxRows`, so half of the next row peeks out.
+- Floor:
+  - The peek is dropped when it would take the folder list below one row (28 px).
+  - The list decides this from `sharedHeight = folderList.height + favoritesList.height`. That is the height the two lists split, and it is the same with or without the peek.
+  - So the test `sharedHeight - (maxRows + 0.5) * rowHeight >= rowHeight` is stable and cannot flip back and forth.
+  - No binding loop: no results file below contains one, and `input_ui` fails on them.
+- Measured on the native platform (`GLANCELOT_REVIEW_CAPTURE` run). Offscreen runs match within 2 px:
+
+| Window | Favorites | Favorites list (content) | Folder list |
+| --- | --- | --- | --- |
+| 1180x780 | 2 | 56 (56), no peek | 435 |
+| 1180x780 | 12 | 126 (336), 4 rows + peek | 365 (panel 684) |
+| 540x360 | 2 | 42 (56), 1 row + peek | 29 |
+| 540x360 | 12 | 42 (336), 1 row + peek | 29 |
+| 540x360, address feedback line shown | 12 | 28, peek dropped | not asserted; the feedback line uses the room the peek would need |
+
+- `favoritesSectionLeavesFolderListTheHeight` now also checks, for every case:
+  - the list height is whole rows or whole rows plus half a row;
+  - a peek appears only when `count` is more than the whole rows shown;
+  - a list that fits shows exactly `count` rows;
+  - an overflowing list without a peek has a folder list that could not afford one;
+  - 12 favorites at 1180x780 show a peek.
+- A final step covers the drop branch. It navigates to a missing folder so the address feedback line appears at 540x360, then asserts the peek is gone (one whole row) and the section still fits its content.
+- With the round 1 QML (no peek), the extended test fails:
+
+```text
+FAIL!  : InputUiTests::favoritesSectionLeavesFolderListTheHeight() 'list->height() - rowHeight / 2 < rowHeight' returned FALSE. (2 favorites at 540x360: panel 264, favorites section 73 (content 73), favorites list 28 (content 56), folder list 43)
+...\tests\input_ui_tests.cpp(1240) : failure location
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 6073ms
+```
+
+- Screenshots, captured on the native platform with RHI and cropped to the top 420 px so the machine's own temp folder listing stays out of the repository:
+  - `docs/verification/EN-04/tree-after-12fav-{dark,light}-{1180x780,540x360}.png`: the peek with 12 favorites.
+  - `tree-after-{dark,light}-*.png`: recaptured with 2 favorites. At 540x360 they now show the peek.
+  - The before images are unchanged.
+
+### 2. Integration with `main` (`c903e6f`), one-time lead grant for the CMake files
+
+- `git merge origin/main`. The only conflict was in `CMakeLists.txt`, where EN-04's provisional loop met EN-06's `include(cmake/CommandRoutingTests.cmake)`. The loop is gone and main's include stays.
+- `cmake/ViewerSources.cmake` defines `GLANCELOT_VIEWER_CONTEXT_SOURCES`: `favorites_model.cpp`/`.hpp` and `folder_history.cpp`/`.hpp`, with the headers for AUTOMOC. It is separate from `GLANCELOT_VIEWER_SOURCES`, as the lead decided.
+- The list is used by the six targets that load the shipped QML:
+  - `grid_ui_tests`, `input_ui_tests` and `pathbar_ui_tests`, in the root `CMakeLists.txt`;
+  - `fs_watch_ui_tests`, in `cmake/FSWatchTests.cmake`;
+  - `monitor_customization_ui_tests`, through a `target_sources` call after its loop in `cmake/MonitorCustomization.cmake`;
+  - `command_routing_tests`, in `cmake/CommandRoutingTests.cmake`, whose own `folder_history.cpp` line is dropped.
+- `tests/command_routing_tests.cpp` (`folderHistoryStepsOnceOnEveryRoute`) no longer makes its own `FolderHistory` or calls `setContextProperty("folderHistory")`. It uses `h.history`, which is also a fresh, unfed history, so the test behaves the same. After the merge, `git grep -n setContextProperty -- app src tests` again matches only `src/app/viewer_context.hpp`.
+- No new ctest tests, so no EN-03 labels are needed.
+- Build: `build-slot.ps1 -Run { scripts/build.ps1 -BuildDir build-claude-en-04 }` ended `[150/150] Linking CXX executable command_routing_tests.exe` with exit 0.
+
+### Evidence: six suites, twice, under the gate lock
+
+`gate-lock.ps1 -Branch claude/en-04-harness-wiring -Run { ctest --test-dir build-claude-en-04 -R '^(folder_grid|input_ui|pathbar_ui|fs_watch_ui|monitor_customization_ui|command_routing)$' --output-on-failure }`, on the tree committed as `64a40d7` (the merge with main plus the peek):
+
+```text
+=== run 5
+1/6 Test #12: folder_grid ......................   Passed  203.99 sec
+2/6 Test #13: input_ui .........................   Passed   77.88 sec
+3/6 Test #14: pathbar_ui .......................   Passed    3.52 sec
+4/6 Test #25: fs_watch_ui ......................   Passed    2.67 sec
+5/6 Test #43: monitor_customization_ui .........   Passed   21.08 sec
+6/6 Test #44: command_routing ..................   Passed    8.84 sec
+100% tests passed out of 6
+command_routing: PASS   : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute()
+command_routing: Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 8720ms
+folder_grid: PASS   : GridUiTests::treeRowClickEnterAndChevron()
+folder_grid: PASS   : GridUiTests::deleteBrowsingFolderFromTreeVisitsNearestAncestor()
+folder_grid: Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 203795ms
+input_ui: PASS   : InputUiTests::treeRowAndPathBarMenusOpenAndMatch()
+input_ui: PASS   : InputUiTests::favoritesSectionLeavesFolderListTheHeight()
+input_ui: Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 77794ms
+monitor_customization_ui: Totals: 13 passed, 0 failed, 1 skipped, 0 blacklisted, 20955ms
+pathbar_ui: Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 3412ms
+=== run 6
+1/6 Test #12: folder_grid ......................   Passed  236.63 sec
+2/6 Test #13: input_ui .........................   Passed   69.67 sec
+3/6 Test #14: pathbar_ui .......................   Passed    3.21 sec
+4/6 Test #25: fs_watch_ui ......................   Passed    2.32 sec
+5/6 Test #43: monitor_customization_ui .........   Passed   21.98 sec
+6/6 Test #44: command_routing ..................   Passed    7.18 sec
+100% tests passed out of 6
+command_routing: PASS   : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute()
+command_routing: Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 7120ms
+folder_grid: PASS   : GridUiTests::treeRowClickEnterAndChevron()
+folder_grid: PASS   : GridUiTests::deleteBrowsingFolderFromTreeVisitsNearestAncestor()
+folder_grid: Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 236543ms
+input_ui: PASS   : InputUiTests::treeRowAndPathBarMenusOpenAndMatch()
+input_ui: PASS   : InputUiTests::favoritesSectionLeavesFolderListTheHeight()
+input_ui: Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 69598ms
+monitor_customization_ui: Totals: 13 passed, 0 failed, 1 skipped, 0 blacklisted, 21922ms
+pathbar_ui: Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 3143ms
+```
+
+Not verified: the full offscreen suite (the authoritative gate decides), the packaged app binary, and the detached-tree size.
+
+No results file from runs 5 or 6 contains `Binding loop`, `Polish loop`, `TypeError` or `ReferenceError`. `fs_watch_ui` writes no results file.
