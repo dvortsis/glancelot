@@ -4,6 +4,7 @@
 #include "file_lock.hpp"
 #include <QtTest>
 #include <limits>
+#include <QJsonArray>
 class PaneLayoutTests:public QObject {
     Q_OBJECT
 private slots:
@@ -208,6 +209,118 @@ private slots:
         const auto layout=saved["layouts"].toObject()["1"].toObject();
         QCOMPARE(layout["panes"].toObject()["tree"].toObject()["futureField"].toInt(),17);
         QVERIFY(layout["future"].toBool());QCOMPARE(layout["panes"].toObject()["future-pane"].toObject()["custom"].toInt(),42);
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    // STACK-F049-PRESETS: applying a preset merges known placement into layouts[slot]; unknown root, pane and center fields,
+    // snapshotExtras_ and newer data survive, and the preset never writes the lock or a freeze.
+    void presetWritePreservesUnknownAndNewerData() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s) {
+            s["unrelated"]=7;
+            s["layouts"]=QJsonObject{
+                {"1",QJsonObject{{"version",1},{"future",true},{"panes",QJsonObject{
+                    {"tree",QJsonObject{{"region","left"},{"futureField",17}}},{"future-pane",QJsonObject{{"custom",42}}}}},
+                    {"center",QJsonObject{{"orientation","vertical"},{"futureCenter","kept"}}}}},
+                {"4",QJsonObject{{"version",9},{"marker",123}}},
+                {"6",QJsonObject{{"version","1"},{"junk",1}}}};
+        }).ok());
+        PaneLayout model;model.setSlot(1);QVERIFY(model.applyPreset("Review"));QVERIFY(model.feedback().isEmpty());
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());QCOMPARE(saved["unrelated"].toInt(),7);
+        auto layout=saved["layouts"].toObject()["1"].toObject();
+        QVERIFY(layout["future"].toBool());QVERIFY(!layout.contains("locked"));
+        QCOMPARE(layout["panes"].toObject()["tree"].toObject()["futureField"].toInt(),17);
+        QCOMPARE(layout["panes"].toObject()["tree"].toObject()["visible"].toBool(),false);
+        QCOMPARE(layout["panes"].toObject()["future-pane"].toObject()["custom"].toInt(),42);
+        QCOMPARE(layout["center"].toObject()["futureCenter"].toString(),QString("kept"));
+        QCOMPARE(layout["center"].toObject()["orientation"].toString(),QString("horizontal"));
+        for(const auto& pane:layout["panes"].toObject())QVERIFY(!pane.toObject().contains("frozen"));
+        // A newer layout version is never rewritten; the preset applies for this session with feedback.
+        PaneLayout future;future.setSlot(4);QVERIFY(future.applyPreset("Review"));QVERIFY(future.feedback().contains("newer"));
+        QVERIFY(!future.pane("tree")["visible"].toBool());
+        QVERIFY(glancelot::readSettings(saved).ok());
+        QCOMPARE(saved["layouts"].toObject()["4"].toObject(),(QJsonObject{{"version",9},{"marker",123}}));
+        // A malformed layout is replaceable, as for every other layout command.
+        PaneLayout malformed;malformed.setSlot(6);QVERIFY(malformed.applyPreset("Browse"));QVERIFY(malformed.feedback().isEmpty());
+        PaneLayout reread;reread.setSlot(6);QCOMPARE(reread.contentMode(),QString("combined"));QVERIFY(reread.feedback().isEmpty());
+        // snapshotExtras_ (unknown root fields restored by the monitor coordinator) survive when no layout is stored yet.
+        PaneLayout restored;restored.setSlot(8);auto snapshot=restored.snapshot();snapshot["coordinatorExtra"]=QVariantMap{{"a",1}};
+        QVERIFY(restored.restoreSnapshot(snapshot));QVERIFY(restored.applyPreset("Browse"));
+        QVERIFY(glancelot::readSettings(saved).ok());
+        QCOMPARE(saved["layouts"].toObject()["8"].toObject()["coordinatorExtra"].toObject()["a"].toInt(),1);
+        QCOMPARE(restored.snapshot()["coordinatorExtra"].toMap()["a"].toInt(),1);
+        // Unknown runtime pane fields from a restored snapshot survive an apply too.
+        auto panes=snapshot["panes"].toMap();auto tree=panes["tree"].toMap();tree["futureRuntime"]=5;panes["tree"]=tree;snapshot["panes"]=panes;
+        QVERIFY(restored.restoreSnapshot(snapshot));QVERIFY(restored.applyPreset("Review"));
+        QCOMPARE(restored.pane("tree")["futureRuntime"].toInt(),5);QVERIFY(!restored.pane("tree")["visible"].toBool());
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    // A busy settings file queues the preset write on the layout's own retry channel; it lands after earlier edits, keeps a
+    // lock another window set meanwhile, and never touches another slot.
+    void presetWriteRetriesAndKeepsOtherSlotsAndLock() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout one,two;one.setSlot(1);two.setSlot(2);QVERIFY(two.resize("tree",333));QVERIFY(two.freeze("grid",true));
+        QJsonObject before;QVERIFY(glancelot::readSettings(before).ok());const QJsonValue otherSlot=before.value("layouts").toObject().value("2");
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        QVERIFY(one.resize("tree",300));QVERIFY(one.applyPreset("Review"));
+        QVERIFY(!one.feedback().isEmpty()); // "Saving layout preferences…"
+        QVERIFY(!one.pane("tree")["visible"].toBool());
+        lock.release();
+        PaneLayout window;window.setSlot(1);window.setLocked(true); // another window of slot 1 locks it while the preset waits
+        QTRY_VERIFY_WITH_TIMEOUT(one.feedback().isEmpty(),5000);
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        const auto layout=saved["layouts"].toObject()["1"].toObject();
+        QVERIFY(layout["locked"].toBool());
+        QVERIFY(!layout["panes"].toObject()["tree"].toObject()["visible"].toBool());
+        QCOMPARE(layout["panes"].toObject()["tree"].toObject()["extent"].toInt(),280); // the preset's, after the earlier resize
+        QCOMPARE(saved["layouts"].toObject()["2"],otherSlot);
+        PaneLayout reread;reread.setSlot(2);QCOMPARE(reread.pane("tree")["extent"].toInt(),333);QVERIFY(reread.pane("grid")["frozen"].toBool());
+        // A pending write that completes after the window changed slot does not report into the new slot.
+        QVERIFY(lock.acquire(0));PaneLayout moving;moving.setSlot(3);QVERIFY(moving.applyPreset("Browse"));
+        moving.setSlot(5);lock.release();QTest::qWait(300);QVERIFY(moving.feedback().isEmpty());QCOMPARE(moving.contentMode(),QString("preview"));
+        PaneLayout three;three.setSlot(3);QCOMPARE(three.contentMode(),QString("combined"));
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    // Lock and freeze are refused before anything changes or is written; a saved preset never carries either.
+    void presetsObeyLockAndFreezeAuthority() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        PaneLayout model;model.setSlot(1);QVERIFY(model.freeze("tree",true));model.setLocked(true);
+        QVERIFY(model.savePreset("Captured"));
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        const auto entry=saved["layoutPresets"].toObject()["Captured"].toObject();
+        QVERIFY(!entry.contains("locked"));
+        for(const auto& pane:entry["panes"].toObject())QVERIFY(!pane.toObject().contains("frozen"));
+        const auto layoutBefore=saved["layouts"];
+        QVERIFY(!model.applyPreset("Review"));QVERIFY(model.feedback().contains("Unlock"));QVERIFY(model.pane("topbar")["visible"].toBool());
+        model.setLocked(false);
+        QVERIFY(!model.applyPreset("Review"));QVERIFY(model.feedback().contains("Unfreeze"));QVERIFY(model.pane("topbar")["visible"].toBool());
+        QVERIFY(model.freeze("tree",false));QVERIFY(model.applyPreset("Captured"));
+        QVERIFY(!model.locked());QVERIFY(!model.pane("tree")["frozen"].toBool());
+        PaneLayout other;other.setSlot(2);QVERIFY(other.applyPreset("Captured"));
+        QVERIFY(!other.locked());QVERIFY(!other.pane("tree")["frozen"].toBool());
+        Q_UNUSED(layoutBefore);
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    // Newer or unreadable preset data is preserved; names never collide with display workspace presets.
+    void presetStoreMalformedNewerAndNameScopes() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        const QJsonObject future{{"version",2},{"panes",QJsonObject{}},{"hologram",true}};
+        QVERIFY(glancelot::updateSettings([&](QJsonObject& s) {
+            s["layoutPresets"]=QJsonObject{{"Future",future},{"Old",QJsonObject{{"version",1},{"note","kept"},{"panes",QJsonObject{{"tree",QJsonObject{{"region","right"}}}}}}}};
+            s["monitorCustomization"]=QJsonObject{{"version",1},{"slots",QJsonObject{{"3",QJsonObject{{"presets",QJsonArray{QJsonObject{{"id","a"},{"name","Studio"},{"kind","presentation"}}}}}}}}};
+        }).ok());
+        PaneLayout model;model.setSlot(1);QVERIFY(model.presetNames().contains("Future"));
+        QVERIFY(!model.applyPreset("Future"));QVERIFY(model.feedback().contains("newer"));
+        QVERIFY(!model.savePreset("Future"));QVERIFY(model.feedback().contains("newer"));
+        QVERIFY(!model.savePreset("studio"));QVERIFY(model.feedback().contains("display workspace"));
+        QVERIFY(model.applyPreset("Old"));QCOMPARE(model.pane("tree")["region"].toString(),QString("right"));
+        QVERIFY(model.savePreset("Old")); // replacing a current record keeps its unknown fields
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        QCOMPARE(saved["layoutPresets"].toObject()["Future"].toObject(),future);
+        QCOMPARE(saved["layoutPresets"].toObject()["Old"].toObject()["note"].toString(),QString("kept"));
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s){s["layoutPresets"]=QJsonArray{1,2};}).ok());
+        QVERIFY(!model.savePreset("Anything"));QVERIFY(model.feedback().contains("preserved"));QVERIFY(!model.deletePreset("Anything"));
+        QVERIFY(glancelot::readSettings(saved).ok());QCOMPARE(saved["layoutPresets"],QJsonValue(QJsonArray{1,2}));
+        QCOMPARE(model.presetNames(),(QStringList{"Default","Review","Browse"}));
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
 };

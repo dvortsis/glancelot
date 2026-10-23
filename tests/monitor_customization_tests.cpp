@@ -62,6 +62,50 @@ private slots:
         QVERIFY(h.customization.deletePreset(id));QTRY_COMPARE(h.customization.presets().size(),0);
         QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());QCOMPARE(root.value("future").toInt(),42);QCOMPARE(root.value("monitorCustomization").toObject().value("future").toString(),QString("retained"));
     }
+    // STACK-F049-PRESETS: controller layout presets obey the coordinator's canonical lock/freeze, the derived routes follow,
+    // workspace snapshots capture the result, and the two preset kinds never share a name.
+    void layoutPresetsObeyCanonicalLockAndFreeze() {
+        Harness h;
+        h.customization.setLayoutLocked(true);QTRY_VERIFY(h.customization.layoutLocked());
+        QVERIFY(!h.panes.applyPreset("Review"));QVERIFY(h.panes.pane("topbar")["visible"].toBool());
+        h.customization.setLayoutLocked(false);QTRY_VERIFY(!h.customization.layoutLocked());
+        QVERIFY(h.customization.setPaneFrozen("grid",true));QTRY_VERIFY(h.customization.paneRoutes()["grid"].toMap()["frozen"].toBool());
+        QVERIFY(!h.panes.applyPreset("Review"));QVERIFY(h.panes.feedback().contains("Unfreeze"));
+        QVERIFY(h.customization.setPaneFrozen("grid",false));QTRY_VERIFY(!h.panes.pane("grid")["frozen"].toBool());
+        QVERIFY(h.panes.applyPreset("Review"));QVERIFY(!h.customization.paneRoutes()["grid"].toMap()["frozen"].toBool());
+        QVERIFY(h.customization.savePreset({},"Canonical review","workspace"));QTRY_COMPARE(h.customization.presets().size(),1);
+        const auto dock=h.customization.presets()[0].toMap()["snapshot"].toMap()["dock"].toMap();
+        QVERIFY(!dock["panes"].toMap()["topbar"].toMap()["visible"].toBool());QVERIFY(!dock["locked"].toBool());
+        // Distinct names in both directions, case-insensitive.
+        QVERIFY(!h.customization.savePreset({},"review","presentation"));QVERIFY(h.customization.feedback().contains("pane layout preset"));
+        QVERIFY(h.panes.savePreset("Studio"));QVERIFY(!h.customization.savePreset({},"studio","workspace"));
+        QVERIFY(!h.customization.renamePreset(h.customization.presets()[0].toMap()["id"].toString(),"Browse"));
+        QVERIFY(!h.panes.savePreset("Canonical review"));QVERIFY(h.panes.feedback().contains("display workspace"));
+        QCOMPARE(h.customization.presets()[0].toMap()["name"].toString(),QString("Canonical review"));
+        // Another slot's routes and layout are untouched by this slot's presets.
+        Harness other;other.panes.setSlot(2);other.customization.setSlot(2);
+        QVERIFY(other.panes.pane("topbar")["visible"].toBool());QCOMPARE(other.customization.presets().size(),0);
+    }
+    // A layout preset applied while a coordinator transaction is still saving never leaves a second live state: the
+    // runtime layout matches layouts[slot] afterwards, and a superseded edit is reported rather than dropped silently.
+    void layoutPresetDuringPendingTransactionStaysCoherent() {
+        Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
+        QVERIFY(h.panes.applyPreset("Review"));
+        lock.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
+        QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());
+        const auto disk=root["layouts"].toObject()["1"].toObject()["panes"].toObject();
+        for(const auto& id:QStringList{"tree","topbar","filmstrip","grid"})
+            for(const auto* key:{"visible","frozen","region","extent"})
+                QCOMPARE(QJsonValue::fromVariant(h.panes.pane(id).value(key)),disk[id].toObject().value(key));
+        // Whichever write lands first decides; both outcomes are explicit and coherent.
+        if(h.panes.pane("topbar")["visible"].toBool()){QVERIFY(h.customization.feedback().contains("replaced"));QVERIFY(h.panes.pane("tree")["frozen"].toBool());}
+        else {QVERIFY(h.customization.feedback().contains("changed while saving"));QVERIFY(!h.panes.pane("tree")["frozen"].toBool());}
+        PaneLayout reread;reread.setSlot(1);QCOMPARE(reread.snapshot()["panes"].toMap()["tree"],h.panes.snapshot()["panes"].toMap()["tree"]);
+    }
     void freezeLockAndEmergencyRecovery() {
         Harness h;QVERIFY(!h.manager.displays().isEmpty());const auto display=h.manager.displays().first().id;
         QVERIFY(h.customization.detachPane("tree",display));QTRY_VERIFY(h.customization.paneRoutes()["tree"].toMap().value("detached").toBool());

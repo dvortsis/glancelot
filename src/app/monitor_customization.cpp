@@ -88,6 +88,11 @@ struct MonitorCustomization::Private {
     QVariantMap canonicalRoutes() const {
         auto routes=data.value("panes").toMap();for(const auto& id:monitor_state::paneIds){auto route=routes[id].toMap();route["frozen"]=panes->pane(id).value("frozen").toBool();routes[id]=route;}return routes;
     }
+    bool layoutPresetNamed(const QString& name) const {
+        const auto wanted=name.trimmed();
+        for(const auto& existing:panes->presetNames())if(existing.compare(wanted,Qt::CaseInsensitive)==0)return true;
+        return false;
+    }
     bool editable(const QString& id) {
         if(!monitor_state::paneIds.contains(id))return fail("Unknown pane.");
         if(panes->locked())return fail("Unlock the layout before moving panes.");
@@ -176,14 +181,18 @@ struct MonitorCustomization::Private {
                     for(const auto& section:QStringList{"center","panes"})existing[section]=mergeFields(existing.value(section).toObject(),dock.value(section).toObject());layouts[number]=existing;candidate["layouts"]=layouts;*writtenDock=existing.toVariantMap();}
                 if(QJsonDocument(candidate).toJson(QJsonDocument::Indented).size()>1024*1024){*refused="Settings exceed the 1 MiB limit.";return;}
                 root=candidate;*applied=true;
-            },[this,next,routing,committed,expectedWindow,capturedSlot,capturedRevision,applied,refused,written,writtenDock,dockChanged,layoutOnly](SettingsStatus status){
+            },[this,next,routing,committed,expectedWindow,capturedSlot,capturedRevision,applied,refused,written,writtenDock,dockChanged,layoutOnly,currentDock](SettingsStatus status){
                 if(slot!=capturedSlot||revision!=capturedRevision)return;
                 pending=false;
                 if(!status.ok()||!*applied){feedback=refused->isEmpty()?"Monitor preferences could not be saved; previous state is unchanged.":*refused;notify();return;}
                 if(!layoutOnly){data=next;persisted=*written;invalid=false;}data["dock"]=*writtenDock;
                 QSignalBlocker blocked(panes);
+                // layouts[slot] stays the one live owner: this committed transaction supersedes pane edits (a layout
+                // preset, say) made while it was saving, and says so instead of dropping them silently.
+                const bool superseded=dockChanged&&panes->snapshot()!=currentDock;
                 if(dockChanged){settings_detail::cancelPendingSettings(panes,"layout/"+QString::number(slot)+"/");panes->restoreSnapshot(data.value("dock").toMap());}
                 feedback.clear();if(committed)committed();
+                if(superseded)feedback="Pane layout changes made while saving were replaced by the saved monitor layout.";
                 if(expectedWindow==displays->presentationWindow()){if(!routing.isEmpty())displays->setPresentationMode(routing);applyOutput();}
                 else feedback="Preferences saved; the newer presentation session was left unchanged.";
                 blocked.unblock();if(dockChanged)emit panes->changed();notify();
@@ -356,10 +365,12 @@ bool MonitorCustomization::savePreset(const QString& id,const QString& name,cons
     if(kind=="workspace"){snapshot["panes"]=d->canonicalRoutes();snapshot["dock"]=d->panes->snapshot();}
     QVariantMap record=index<0?QVariantMap{}:rows[index].toMap();record["id"]=id.isEmpty()?QUuid::createUuid().toString(QUuid::WithoutBraces):id;record["name"]=name.trimmed();record["kind"]=kind;record["snapshot"]=snapshot;
     if(index<0)rows.append(record);else rows[index]=record;
+    if(d->layoutPresetNamed(name))return d->fail("A pane layout preset already uses that name. Choose another name.");
     if(!monitor_state::presets(rows))return d->fail("Preset names must be unique, nonempty and at most80 characters; at most64 presets are allowed.");
     auto next=d->data;next["presets"]=rows;next["dock"]=d->panes->snapshot();return d->commit(next);
 }
 bool MonitorCustomization::renamePreset(const QString& id,const QString& name) {
+    if(d->layoutPresetNamed(name))return d->fail("A pane layout preset already uses that name. Choose another name.");
     auto rows=presets();bool found=false;for(auto& v:rows){auto r=v.toMap();if(r.value("id")==id){r["name"]=name.trimmed();v=r;found=true;}}
     if(!found||!monitor_state::presets(rows))return d->fail("Choose an existing preset and a unique valid name.");auto next=d->data;next["presets"]=rows;next["dock"]=d->panes->snapshot();return d->commit(next);
 }
