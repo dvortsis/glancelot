@@ -145,6 +145,7 @@ struct ViewerController::Private {
     }
     QTimer deadline,decodeStart;
     bool decodeAwaitingBaseline{},decodeStartedWithoutBaseline{};
+    bool quietDecode{}; // EN-11: a late-baseline refresh of a shown image keeps the newer status line.
     std::unique_ptr<fs_watch::Monitor> monitor;
     std::optional<fs_watch::Observation> pendingObservation;
     quint64 observationRevision{};
@@ -347,7 +348,20 @@ struct ViewerController::Private {
                 if(decodeAwaitingBaseline) {
                     decodeStart.stop();decodeAwaitingBaseline=false;decode(path,generation);
                 } else if(decodeStartedWithoutBaseline) {
-                    decodeStartedWithoutBaseline=false;++generation;cancel();cacheReuseAllowed=false;scan(path,generation);decode(path,generation);
+                    // EN-11: a late baseline is a background refresh. It keeps the
+                    // generation and never touches navigation, so the open's own
+                    // listing and any newer user request already in flight still
+                    // land. Pixels whose verified source revision is the registered
+                    // revision are current; otherwise one fresh decode validates them,
+                    // quietly when an image is already shown.
+                    decodeStartedWithoutBaseline=false;
+                    const auto registered=fs_watch::sourceToken(value.imageAfter);
+                    const bool shown=!loading&&imageReady;
+                    const bool proven=!registered.isEmpty()&&!cache.reuse(cacheKey(path),registered).isNull();
+                    if(!(shown&&proven)) {
+                        const bool background=shown;
+                        cancel();cacheReuseAllowed=false;quietDecode=background;decode(path,generation);
+                    }
                 }
             }
             if(pendingObservation&&pendingObservation->scope==value.scope) {
@@ -590,6 +604,7 @@ struct ViewerController::Private {
         finishDecodeTrace(std::uint8_t(traceFlags | (perfGeneration != generation ? glancelot::perf::Stale : 0)));
         deadline.stop();
         decodeStart.stop();
+        quietDecode=false;
         if (worker) {
             const auto retiredGeneration=workerGeneration;
             glancelot::detail::retireIoProcess(std::exchange(worker,nullptr),std::move(decodeLease),q,[this,retiredGeneration]{
@@ -958,7 +973,7 @@ struct ViewerController::Private {
                     notifyCacheChanged();
                     finishDecodeTrace(glancelot::perf::None,std::uint64_t(image.sizeInBytes()));
                     loading=false; imageReady=true; deadline.stop();
-                    status=message.value("color").toString()+" · display profile not yet managed";
+                    if(!std::exchange(quietDecode,false))status=message.value("color").toString()+" · display profile not yet managed";
                     notePosition(path);
                     process->write("ok\n");
                     displayManager.updateImage(path, image, generation);
