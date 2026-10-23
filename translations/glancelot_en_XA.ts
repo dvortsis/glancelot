@@ -88,7 +88,7 @@
     </message>
     <message>
         <source>you don&apos;t have permission to change its folder</source>
-        <translation>[ýõû dõñ&amp;apos;t hàvé pérmîssîõñ tõ çhàñgé îts fõldér]</translation>
+        <translation>[ýõû dõñ&apos;t hàvé pérmîssîõñ tõ çhàñgé îts fõldér]</translation>
     </message>
 </context>
 <context>
@@ -240,7 +240,7 @@
     <name>Grid</name>
     <message>
         <source>This folder can&apos;t be opened. It may have been moved or deleted, or you may not have permission to read it.</source>
-        <translation>[Thîs fõldér çàñ&amp;apos;t bé õpéñéd. Ît màý hàvé bééñ mõvéd õr délétéd, õr ýõû màý ñõt hàvé pérmîssîõñ tõ réàd ît.]</translation>
+        <translation>[Thîs fõldér çàñ&apos;t bé õpéñéd. Ît màý hàvé bééñ mõvéd õr délétéd, õr ýõû màý ñõt hàvé pérmîssîõñ tõ réàd ît.]</translation>
     </message>
     <message>
         <source>Selected: %1 (%2)</source>
@@ -895,10 +895,6 @@
         <translation>[%1 pàñé héîght]</translation>
     </message>
     <message>
-        <source>Display workspace presets for this window</source>
-        <translation>[Dîsplàý wõrkspàçé préséts fõr thîs wîñdõw]</translation>
-    </message>
-    <message>
         <source>Saved preset</source>
         <translation>[Sàvéd prését]</translation>
     </message>
@@ -939,10 +935,6 @@
         <translation>[Délété prését]</translation>
     </message>
     <message>
-        <source>Workspace presets include pane placement and lock state; they belong to this window. Pane layout presets in Settings are shared by all windows. Images are never stored in presets. Applying a preset does not automatically enable output.</source>
-        <translation>[Wõrkspàçé préséts îñçlûdé pàñé plàçéméñt àñd lõçk stàté; théý bélõñg tõ thîs wîñdõw. Pàñé làýõût préséts îñ Séttîñgs àré shàréd bý àll wîñdõws. Îmàgés àré ñévér stõréd îñ préséts. Àpplýîñg à prését dõés ñõt àûtõmàtîçàllý éñàblé õûtpût.]</translation>
-    </message>
-    <message>
         <source>Reset monitor preferences…</source>
         <translation>[Rését mõñîtõr préféréñçés…]</translation>
     </message>
@@ -965,6 +957,14 @@
     <message>
         <source>Cancel</source>
         <translation>[Çàñçél]</translation>
+    </message>
+    <message>
+        <source>Named presets for this window slot</source>
+        <translation>[Ñàméd préséts fõr thîs wîñdõw slõt]</translation>
+    </message>
+    <message>
+        <source>Workspace presets include pane placement and lock state. Images are never stored in presets. Applying a preset does not automatically enable output.</source>
+        <translation>[Wõrkspàçé préséts îñçlûdé pàñé plàçéméñt àñd lõçk stàté. Îmàgés àré ñévér stõréd îñ préséts. Àpplýîñg à prését dõés ñõt àûtõmàtîçàllý éñàblé õûtpût.]</translation>
     </message>
 </context>
 <context>
@@ -1126,6 +1126,13 @@
     <message>
         <source>Create</source>
         <translation>[Çréàté]</translation>
+    </message>
+</context>
+<context>
+    <name>SettingRow</name>
+    <message>
+        <source>Modified from default</source>
+        <translation>[Mõdîfîéd frõm défàûlt]</translation>
     </message>
 </context>
 <context>
@@ -1873,6 +1880,29 @@
     </message>
 </context>
 <context>
+    <name>ThemePicker</name>
+    <message>
+        <source>Search %1 palettes</source>
+        <translation>[Séàrçh %1 pàléttés]</translation>
+    </message>
+    <message>
+        <source>Search palettes</source>
+        <translation>[Séàrçh pàléttés]</translation>
+    </message>
+    <message>
+        <source>Palettes</source>
+        <translation>[Pàléttés]</translation>
+    </message>
+    <message>
+        <source>%1, selected</source>
+        <translation>[%1, séléçtéd]</translation>
+    </message>
+    <message>
+        <source>No palettes match “%1”.</source>
+        <translation>[Ñõ pàléttés màtçh “%1”.]</translation>
+    </message>
+</context>
+<context>
     <name>TransferHud</name>
     <message>
         <source>%1 B</source>
@@ -1928,6 +1958,13 @@
     <message>
         <source>Close (Esc)</source>
         <translation>[Çlõsé (Ésç)]</translation>
+    </message>
+</context>
+<context>
+    <name>UiSwitch</name>
+    <message>
+        <source>Modified from default</source>
+        <translation>[Mõdîfîéd frõm défàûlt]</translation>
     </message>
 </context>
 </TS>

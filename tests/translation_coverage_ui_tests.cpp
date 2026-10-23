@@ -62,6 +62,22 @@ public:Thumbnails():QQuickImageProvider(Image){}
     QImage requestImage(const QString&,QSize* size,const QSize&) override {QImage image(24,24,QImage::Format_RGB32);image.fill(Qt::gray);if(size)*size=image.size();return image;}
 };
 struct Finding {QString text,where;};
+bool plainEnglish(const QString& text,const QStringList& dynamic) {
+    static const QRegularExpression words("[A-Za-z]{2,}");
+    return !text.isEmpty()&&words.match(text).hasMatch()&&!text.contains('[')&&!dynamic.contains(text);
+}
+// Interface text that is not drawn as a Text item: declared accessible names and descriptions, tooltips (UiButton's tip
+// and the ToolTip attached text) and field placeholders.
+QList<std::pair<QString,QString>> spokenText(QQuickItem* item) {
+    QList<std::pair<QString,QString>> texts;
+    for(auto* child:item->children()) {
+        if(child->inherits("QQuickAccessibleAttached"))texts<<std::pair{child->property("name").toString().trimmed(),QString("accessible name")}<<std::pair{child->property("description").toString().trimmed(),QString("accessible description")};
+        else if(child->inherits("QQuickToolTipAttached"))texts<<std::pair{child->property("text").toString().trimmed(),QString("tooltip")};
+    }
+    for(const char* name:{"placeholderText","tip"})
+        if(item->metaObject()->indexOfProperty(name)>=0)texts<<std::pair{item->property(name).toString().trimmed(),QString(name)};
+    return texts;
+}
 QList<QQuickItem*> descendants(QQuickItem* root) {
     QList<QQuickItem*> all,work{root};
     while(!work.isEmpty()){auto* item=work.takeLast();all<<item;work<<item->childItems();}
@@ -72,10 +88,10 @@ QList<QQuickItem*> descendants(QQuickItem* root) {
 void inspect(QQuickItem* item,const QString& path,QList<Finding>& plain,QList<Finding>& clipped,const QStringList& dynamic) {
     if(!item||!item->isVisible()||item->opacity()<=0.01)return;
     const auto where=path+"/"+(item->objectName().isEmpty()?QString::fromLatin1(item->metaObject()->className()).section('_',0,0):item->objectName());
+    for(const auto& [text,kind]:spokenText(item))if(plainEnglish(text,dynamic))plain.append({text+" ("+kind+")",where});
     if(item->inherits("QQuickText")) {
         const auto text=item->property("text").toString().trimmed();
-        static const QRegularExpression words("[A-Za-z]{2,}");
-        if(!text.isEmpty()&&words.match(text).hasMatch()&&!text.contains('[')&&!dynamic.contains(text))plain.append({text,where});
+        if(plainEnglish(text,dynamic))plain.append({text,where});
         const bool wraps=item->property("wrapMode").toInt()!=0;const bool elides=item->property("elide").toInt()!=Qt::ElideNone;
         if(!text.isEmpty()&&!wraps&&!elides&&item->width()>0&&item->implicitWidth()>item->width()+1)clipped.append({text,where});
         if(!text.isEmpty()&&elides&&item->property("truncated").toBool())clipped.append({text+" (elided)",where});
@@ -226,10 +242,19 @@ class TranslationCoverageUiTests:public QObject {
         capture(host,"detached-metadata-"+tag);
         QVERIFY(h.monitor.redockPane("metadata"));
     }
+    // AnimationBar's previous and next frame buttons (glyph rectangles), in scene x.
+    static std::pair<qreal,qreal> frameStepX(QQuickItem* bar) {
+        QQuickItem* previous=nullptr;QQuickItem* next=nullptr;
+        for(auto* item:descendants(bar))if(item->objectName().isEmpty()&&item->inherits("QQuickRectangle")&&!item->childItems().isEmpty()){
+            const auto text=item->childItems().first()->property("text").toString();
+            if(text==QString::fromUtf8("◀"))previous=item;if(text==QString::fromUtf8("▶"))next=item;}
+        if(!previous||!next)return {-1,-1};
+        return {previous->mapToScene(QPointF()).x(),next->mapToScene(QPointF()).x()};
+    }
     // Stand-alone surfaces whose live state needs hardware or an operation in flight: driven with property maps.
     void standaloneSurfaces(Qt::LayoutDirection direction) {
         QGuiApplication::setLayoutDirection(direction);
-        const auto tag=QString(direction==Qt::RightToLeft?"rtl":"ltr");
+        const bool rtl=direction==Qt::RightToLeft;const auto tag=QString(rtl?"rtl":"ltr");
         QQmlPropertyMap animation,viewer,service;ThemeManager theme; // outlive the engine and its bindings
         QQmlEngine engine;auto imports=engine.importPathList();imports.removeAll(QCoreApplication::applicationDirPath());engine.setImportPathList(imports);
         engine.rootContext()->setContextProperty("theme",&theme);
@@ -237,24 +262,51 @@ class TranslationCoverageUiTests:public QObject {
         viewer.insert("animationController",QVariant::fromValue<QObject*>(&animation));
         for(const auto& [key,value]:std::initializer_list<std::pair<const char*,QVariant>>{{"active",true},{"paused",false},{"progress",0.4},{"completedItems",4},{"totalItems",10},{"transferredBytes",4.5*1024*1024},{"totalBytes",11.0*1024*1024},{"statusMessage","Copying 10 items"}})service.insert(key,value);
         engine.rootContext()->setContextProperty("viewer",&viewer);
-        QQuickWindow window;window.resize(560,160);window.setColor(QColor("#101418"));window.show();QTRY_VERIFY(window.isExposed());
-        QQmlComponent bar(&engine,QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/AnimationBar.qml")));
+        QQuickWindow window;window.resize(560,224);window.setColor(QColor("#101418"));window.show();QTRY_VERIFY(window.isExposed());
+        // The surfaces sit under mirroring set the way Main.qml sets it for the whole interface: the layout direction
+        // alone mirrors nothing.
+        QQmlComponent mirrorComponent(&engine);
+        mirrorComponent.setData("import QtQuick\nItem { LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft; LayoutMirroring.childrenInherit: true }",QUrl());
+        std::unique_ptr<QQuickItem> mirror(qobject_cast<QQuickItem*>(mirrorComponent.create()));QVERIFY2(mirror,qPrintable(mirrorComponent.errorString()));
+        mirror->setParentItem(window.contentItem());mirror->setSize(QSizeF(window.size()));
+        const auto barUrl=QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/AnimationBar.qml"));
+        QQmlComponent bar(&engine,barUrl);
         std::unique_ptr<QQuickItem> barItem(qobject_cast<QQuickItem*>(bar.create()));QVERIFY2(barItem,qPrintable(bar.errorString()));
-        barItem->setParentItem(window.contentItem());barItem->setPosition({16,16});barItem->setWidth(520);
+        barItem->setParentItem(mirror.get());barItem->setPosition({16,16});barItem->setWidth(520);
         QCOMPARE(barItem->property("label").toString(),QString("[Fràmé 3 / 12]"));
+        // Control: the same bar without its mirroring opt-out, so this harness provably mirrors in right-to-left.
+        QFile barFile(barUrl.toLocalFile());QVERIFY(barFile.open(QIODevice::ReadOnly));auto barSource=barFile.readAll();
+        const QByteArray optOut("LayoutMirroring.enabled: false");QVERIFY(barSource.contains(optOut));barSource.replace(optOut,"");
+        QQmlComponent mirroredBar(&engine);mirroredBar.setData(barSource,barUrl);
+        std::unique_ptr<QQuickItem> controlItem(qobject_cast<QQuickItem*>(mirroredBar.create()));QVERIFY2(controlItem,qPrintable(mirroredBar.errorString()));
+        controlItem->setParentItem(mirror.get());controlItem->setPosition({16,160});controlItem->setWidth(520);
         QTest::qWait(100);
         {const auto plain=check(barItem.get(),"animation-bar");QVERIFY2(plain.isEmpty(),qPrintable(describe(plain)));}
-        // Media controls keep their order in right-to-left layout.
-        QQuickItem* previous=nullptr;QQuickItem* next=nullptr;
-        for(auto* item:descendants(barItem.get())){const auto name=item->property("Accessible.name");Q_UNUSED(name);
-            if(item->objectName().isEmpty()&&item->inherits("QQuickRectangle")){const auto text=item->childItems().isEmpty()?QString():item->childItems().first()->property("text").toString();if(text==QString::fromUtf8("◀"))previous=item;if(text==QString::fromUtf8("▶"))next=item;}}
-        QVERIFY(previous);QVERIFY(next);QVERIFY(previous->mapToScene(QPointF()).x()<next->mapToScene(QPointF()).x());
+        const auto [previousX,nextX]=frameStepX(barItem.get());const auto [controlPreviousX,controlNextX]=frameStepX(controlItem.get());
+        QVERIFY(previousX>=0&&controlPreviousX>=0);
+        QCOMPARE(controlPreviousX<controlNextX,!rtl); // the harness mirrors the bar when nothing opts out
+        // Media controls keep their order in right-to-left layout: fails when AnimationBar's opt-out is removed.
+        QVERIFY2(previousX<nextX,qPrintable(QString("%1: previous frame at x=%2, next frame at x=%3").arg(tag).arg(previousX).arg(nextX)));
+        controlItem.reset();
         QQmlComponent hud(&engine,QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/TransferHud.qml")));
         std::unique_ptr<QQuickItem> hudItem(qobject_cast<QQuickItem*>(hud.createWithInitialProperties({{"service",QVariant::fromValue<QObject*>(&service)}})));
-        QVERIFY2(hudItem,qPrintable(hud.errorString()));hudItem->setParentItem(window.contentItem());hudItem->setPosition({16,72});hudItem->setWidth(520);
+        QVERIFY2(hudItem,qPrintable(hud.errorString()));hudItem->setParentItem(mirror.get());hudItem->setPosition({16,72});hudItem->setWidth(520);
         QTest::qWait(150);
         // The status line is the operation's own message (C++), so it is data here.
         {const auto plain=check(hudItem.get(),"transfer-hud",{"Copying 10 items"});QVERIFY2(plain.isEmpty(),qPrintable(describe(plain)));}
+        // TransferHud mirrors: the status line leads and the pause and cancel buttons trail on the reading side, and
+        // progress fills from the leading edge.
+        QQuickItem* status=nullptr;QQuickItem* cancel=nullptr;QQuickItem* fill=nullptr;
+        for(auto* item:descendants(hudItem.get())) {
+            if(item->inherits("QQuickLabel")&&item->property("text").toString()=="Copying 10 items")status=item;
+            if(item->property("iconName").toString()=="close")cancel=item;
+            if(item->inherits("QQuickRectangle")&&item->parentItem()&&item->parentItem()->clip()&&item->parentItem()->height()==6)fill=item;
+        }
+        QVERIFY(status);QVERIFY(cancel);QVERIFY(fill);
+        const auto statusX=status->mapToScene(QPointF()).x(),cancelX=cancel->mapToScene(QPointF()).x();
+        const auto track=fill->parentItem()->mapRectToScene(QRectF(0,0,fill->parentItem()->width(),6)),fillRect=fill->mapRectToScene(QRectF(0,0,fill->width(),6));
+        QVERIFY2(rtl?cancelX<statusX:cancelX>statusX,qPrintable(QString("%1: cancel at x=%2, status at x=%3").arg(tag).arg(cancelX).arg(statusX)));
+        QVERIFY2(rtl?qAbs(fillRect.right()-track.right())<1:qAbs(fillRect.left()-track.left())<1,qPrintable(QString("%1: fill %2-%3 in track %4-%5").arg(tag).arg(fillRect.left()).arg(fillRect.right()).arg(track.left()).arg(track.right())));
         capture(&window,"animation-transfer-"+tag);
     }
 private slots:
@@ -278,10 +330,15 @@ private slots:
             if(xml.name()==u"source")source=xml.readElementText();
             else if(xml.name()==u"translation"){const auto translation=xml.readElementText();++checked;
                 QStringList a,b;for(auto it=placeholders.globalMatch(source);it.hasNext();)a<<it.next().captured();for(auto it=placeholders.globalMatch(translation);it.hasNext();)b<<it.next().captured();
-                a.sort();b.sort();QVERIFY2(a==b,qPrintable(source));QVERIFY2(translation.startsWith('[')&&translation.endsWith(']'),qPrintable(source));}}
+                a.sort();b.sort();QVERIFY2(a==b,qPrintable(source));QVERIFY2(translation.startsWith('[')&&translation.endsWith(']'),qPrintable(source));
+                // Decoded text carries no XML entity its source lacks: a translation escaped twice shows "&apos;" on screen.
+                for(const auto* entity:{"&apos;","&quot;","&amp;","&lt;","&gt;"})QVERIFY2(translation.count(entity)==source.count(entity),qPrintable(source+" -> "+translation));}}
         QVERIFY(checked>400);
         QCOMPARE(qApp->translate("MonitorSettings","Displays and workspaces"),QString::fromUtf8("[Dîsplàýs àñd wõrkspàçés]"));
         QCOMPARE(qApp->translate("TransferHud","%1 of %2 items (%3 / %4) — %5%").arg(1).arg(2).arg("a").arg("b").arg(50),QString::fromUtf8("[1 õf 2 îtéms (a / b) — 50%]"));
+        QCOMPARE(qApp->translate("Delete","you don't have permission to change its folder"),QString::fromUtf8("[ýõû dõñ't hàvé pérmîssîõñ tõ çhàñgé îts fõldér]"));
+        QCOMPARE(qApp->translate("Grid","This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it.").left(28),QString::fromUtf8("[Thîs fõldér çàñ't bé õpéñéd"));
+        QCOMPARE(qApp->translate("ThemePicker","Search %1 palettes").arg(80),QString::fromUtf8("[Séàrçh 80 pàléttés]"));
     }
     void pseudoLocaleLeftToRightDark(){walkMainSurfaces(Qt::LeftToRight,"dark",{1180,780},true);}
     void pseudoLocaleRightToLeftDark(){walkMainSurfaces(Qt::RightToLeft,"dark",{1180,780},false);}

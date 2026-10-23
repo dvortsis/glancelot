@@ -105,7 +105,7 @@ Rectangle {
                     color: Theme.text
                     elide: Text.ElideRight
                     Layout.fillWidth: true
-                    visible: text.length > 0 && text !== "Unknown Camera"
+                    visible: text.length > 0 // the model leaves the summary empty when there is no camera
                 }
 
                 Text {
@@ -176,6 +176,7 @@ Rectangle {
                     readonly property string label: ({All: qsTr("All"), Camera: qsTr("Camera"), Image: qsTr("Image"), GPS: qsTr("GPS"), IPTC: qsTr("IPTC"), Summary: qsTr("Summary")})[modelData] || modelData
                     Accessible.role: Accessible.Button
                     Accessible.name: qsTr("Show %1 tags").arg(label)
+                    Accessible.checkable: true
                     Accessible.checked: active
                     readonly property bool active: root.model && root.model.categoryFilter === modelData
                     implicitWidth: pillText.implicitWidth + Theme.gapSm * 2

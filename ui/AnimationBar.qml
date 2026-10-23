@@ -231,6 +231,7 @@ Rectangle {
             visible: root.isAnimated
             Accessible.role: Accessible.CheckBox
             Accessible.name: qsTr("Loop animation")
+            Accessible.checkable: true
             Accessible.checked: root.isLoop
             implicitWidth: 36
             implicitHeight: Theme.controlHeight - Theme.gapXs

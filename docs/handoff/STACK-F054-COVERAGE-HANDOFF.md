@@ -20,8 +20,8 @@ Contract: docs/handoff/LEAD-WRAPUP-2026-10-22.md (F054 resolution), LEAD-TAKEOVE
    - the presentation/monitor dialog: `ui/MonitorSettings.qml`, with its Displays, Presentation, Panes and Presets pages
    - `ui/DetachedPaneHost.qml`
 
-   Identifiers stay stable: pane ids, metadata filter keys, option values and preset kinds. Translated display names are mapped onto them, for example `paneTitles`, the pill `label`, and `choiceLabel` with `qsTr`. Without a catalog, the English text is unchanged except for three deliberate edits:
-   - MonitorSettings' preset heading becomes "Display workspace presets for this window", and its note adds one sentence on scope. This is the STACK-F049 "distinct names and scopes" follow-through for a file outside F049's grant.
+   Identifiers stay stable: pane ids, metadata filter keys, option values and preset kinds. Translated display names are mapped onto them, for example `paneTitles`, the pill `label`, and `choiceLabel` with `qsTr`. Without a catalog, the English text is unchanged except for two deliberate edits:
+   - *(Reverted in review round 1: this packet changed MonitorSettings' preset heading and note; that copy belongs to STACK-F049, so main's wording is back, wrapped in `qsTr`.)*
    - The pane destination label uses fixed per-pane sentences.
    - AnimationBar builds its frame/page counter in QML ("Frame %1 / %2" / "Page %1 / %2", the same text as `AnimationController::frameLabel`) so it can be translated.
 2. **Accessibility names are kept and translatable.** New names were added where controls had none or only a glyph:
@@ -35,7 +35,7 @@ Contract: docs/handoff/LEAD-WRAPUP-2026-10-22.md (F054 resolution), LEAD-TAKEOVE
    - AnimationBar opts out of mirroring: media and frame-stepping controls keep their order, the usual convention for playback controls.
 4. **Clipping fix found by the new test.** MetadataHud's six filter pills sat in a `RowLayout`, which forced the column wider than a 320 px panel and cut off the close button and tag badges, in English as well. They now wrap in a `Flow`, and the title elides before it can overlap the actions.
 5. **Catalog.**
-   - `translations/glancelot_en_XA.ts` was regenerated with `lupdate ui src app -locations none -no-obsolete`: 468 messages, 250 of them new. `-no-obsolete` removed one stale `Status` message whose source text main had changed.
+   - `translations/glancelot_en_XA.ts` was regenerated with `lupdate ui src app -locations none -no-obsolete`: 468 messages, 250 of them new. `-no-obsolete` removed one `Status` message, "Saved shortcuts conflict or use reserved Escape; default shortcuts are active. Reset shortcuts in Settings to repair them." Its source text did not change: commit `90e63e2` moved it into `src/app/command_registry.cpp` (about line 166) as a plain literal, so `lupdate` no longer extracts it. *(Corrected in review round 1; it is on the C++ follow-up list below.)*
    - New `translations/pseudolocalize.py` is the accenting and bracketing pass the README described. It keeps placeholders and lupdate's escaping.
    - `lrelease` result: "Generated 468 translation(s) (468 finished and 0 unfinished)". README updated.
 6. **Test.** New `tests/translation_coverage_ui_tests.cpp` (provisional target in its own commit, below). It installs a `QTranslator` that reads the committed `.ts` directly, then:
@@ -67,6 +67,7 @@ No shared header changed.
 
 - **`ui/Main.qml`.** It is waiting on EN-06, per the cycle rule. Main's routing reasons ("Needs the folder grid", "Needs the folder tree"…) appear on the Settings Controls page; the test allows them through the explicit `deferredToMainQml` list, which the Main.qml step must delete.
 - **C++ strings outside this packet's files.** These include command labels (context `Commands`), `MetadataModel` tag labels and categories, `DisplayManager` routing and colour status lines, `FileOperationService` status messages, PaneLayout's built-in preset names (Default, Review, Browse, used as identifiers), `MonitorCustomization` feedback strings (plain literals) and `presentation_window.cpp` (Track D). They are listed in the test as data and reported here as follow-ups for a C++ extraction packet (`QT_TRANSLATE_NOOP` or `tr`).
+  - The shortcut-conflict status message in `src/app/command_registry.cpp` (`BindingResolution::error`, about line 166) was translatable through `QCoreApplication::translate("Status", …)` until `90e63e2` made it a plain literal. Wrap it again (`QT_TRANSLATE_NOOP("Status", …)` at the literal, `translate` where `viewer_controller.cpp` shows it).
 - **`ShortcutCheatSheet.qml` `ReferenceError: keys is not defined`** (takeover row). It was not reproduced in this environment: the string does not appear in either full-suite log. EN-06's acceptance owns asserting it is gone, so this packet does not edit that file.
 - **SettingsDialog `sectionMatches` search keywords** are English literals used only for matching; they were not wrapped, so searching in another language matches visible (translated) row labels but not those hidden keywords.
 

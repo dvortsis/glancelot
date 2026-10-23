@@ -285,6 +285,9 @@ void MetadataTests::testBasicModelOperations() {
     model.clear();
     QCOMPARE(model.count(), 0);
     QCOMPARE(model.hasMetadata(), false);
+    // No make or model: an empty summary (the HUD hides it) rather than an English placeholder.
+    QVERIFY(model.cameraSummary().isEmpty());
+    QVERIFY(!model.copySummary().contains(QStringLiteral("Camera")));
 }
 
 void MetadataTests::testSearchAndCategoryFilter() {

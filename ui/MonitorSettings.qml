@@ -188,7 +188,7 @@ UiDialog {
                 ScrollBar.vertical: UiScrollBar {}
                 ColumnLayout {
                     width: parent.width; spacing: Theme.gapMd
-                    Label { objectName: "monitorPresetHeading"; text: qsTr("Display workspace presets for this window"); color: Theme.text; font.pixelSize: Theme.textTitle }
+                    Label { text: qsTr("Named presets for this window slot"); color: Theme.text; font.pixelSize: Theme.textTitle }
                     Label { text: qsTr("Saved preset"); color: Theme.text }
                     UiComboBox { id: presetChoice; Layout.fillWidth: true; model: customization.presets; displayText: count > 0 ? currentText : qsTr("No saved presets"); textRole: "name"; valueRole: "id"; Accessible.name: qsTr("Saved preset"); onActivated: { const saved=customization.presets[currentIndex]; if(saved) {presetName.text=saved.name;presetKind.currentIndex=saved.kind === "workspace" ? 1 : 0} } }
                     Label { text: qsTr("Preset name"); color: Theme.text }
@@ -203,7 +203,7 @@ UiDialog {
                         UiButton { text: qsTr("Apply"); enabled: presetChoice.currentIndex >= 0; onClicked: customization.applyPreset(presetChoice.currentValue) }
                         UiButton { text: qsTr("Delete preset"); enabled: presetChoice.currentIndex >= 0; onClicked: customization.deletePreset(presetChoice.currentValue) }
                     }
-                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: qsTr("Workspace presets include pane placement and lock state; they belong to this window. Pane layout presets in Settings are shared by all windows. Images are never stored in presets. Applying a preset does not automatically enable output."); color: Theme.muted }
+                    Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: qsTr("Workspace presets include pane placement and lock state. Images are never stored in presets. Applying a preset does not automatically enable output."); color: Theme.muted }
                     UiButton { text: qsTr("Reset monitor preferences…"); onClicked: resetConfirm.open() }
                 }
             }
