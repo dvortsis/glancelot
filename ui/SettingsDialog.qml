@@ -406,7 +406,7 @@ UiDialog {
                             id: presetChoice
                             objectName: "layoutPresetChoice"
                             model: paneLayout.presetNames
-                            Accessible.name: "Pane layout preset"
+                            Accessible.name: qsTr("Pane layout preset")
                         }
                         UiButton {
                             objectName: "layoutPresetApply"
@@ -439,7 +439,7 @@ UiDialog {
                             implicitWidth: 180
                             placeholderText: qsTr("Pane layout name")
                             maximumLength: 40
-                            Accessible.name: "Name for the new pane layout preset"
+                            Accessible.name: qsTr("Name for the new pane layout preset")
                             onAccepted: if (paneLayout.savePreset(text.trim())) text = ""
                         }
                         UiButton {
