@@ -1293,9 +1293,11 @@ ApplicationWindow {
     Rectangle {
         id: navigatorPanel
         objectName: "zoomNavigator"
+        // STACK-F049: the navigator follows the preview wherever it is available, including a detached preview window.
+        parent: app.isDetached("preview") && app.detachedHosts.preview ? app.detachedHosts.preview.paneContent : app.contentItem
         readonly property real scaleFactor: viewer.imageWidth > 0 ? Math.min(160 / viewer.imageWidth, 120 / viewer.imageHeight) : 1
         readonly property bool zoomedIn: viewer.imageWidth > 0 && (app.navRect.width < viewer.imageWidth - 1 || app.navRect.height < viewer.imageHeight - 1)
-        visible: app.navigatorOn && app.workspace._previewShown && zoomedIn && !app.layoutEditing
+        visible: app.navigatorOn && app.paneAvailable("preview") && zoomedIn && !app.layoutEditing
         width: Math.round(viewer.imageWidth * scaleFactor) + 2 * Theme.borderWidth
         height: Math.round(viewer.imageHeight * scaleFactor) + 2 * Theme.borderWidth
         x: canvas.x + canvas.width - width - Theme.gapMd
