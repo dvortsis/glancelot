@@ -340,7 +340,7 @@ Nothing falls outside the grant.
 
 ### 3. Exact base
 
-- **Cut from:** `origin/main` `3893c77ef` (`3893c77`).
+- **Cut from:** `origin/main` `3893c77a729511c4a6a8056e2787ba21c39fdfb3`.
 - **Main merged in:** `f325ef6` for round 1 and `4f29124` for round 2.
 - **Merge base with `origin/main` now:** `4f2912476defde4f549a53c7c1dde6581c8a3539`.
 - **Stacking:** not a stacked packet.
