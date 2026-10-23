@@ -942,7 +942,7 @@ tasks:
     title: Linux bootstrap and qtimageformats parity
     owner: lead
     session: S2
-    state: ready
+    state: review
     branch: claude/en-02-linux-bootstrap
     outcome: scripts/linux-bootstrap.sh, qtimageformats in Docker, rewritten BUILDING.md Linux section
     acceptance: Script proven in a fresh cloud session with actual output; Docker gate passes with testMultipageTiffNavigation un-skipped; Docker gate time delta recorded
@@ -950,7 +950,7 @@ tasks:
     title: CTest labels and resource locks
     owner: lead
     session: S1
-    state: ready
+    state: review
     depends: [EN-05]
     branch: claude/en-03-ctest-labels
     granted_files: [CMakeLists.txt, cmake/*.cmake, docs/TESTING.md]
@@ -960,7 +960,7 @@ tasks:
     title: Shared test harness wiring
     owner: lead
     session: S2
-    state: ready
+    state: implementing
     branch: claude/en-04-harness-wiring
     outcome: One QML context wiring helper used by app/main.cpp and all four UI harnesses
     acceptance: All UI suites pass unchanged; one wiring site; favoritesModel and folderHistory injected
@@ -968,7 +968,7 @@ tasks:
     title: Viewer source list and decode-cache extraction
     owner: lead
     session: S1
-    state: ready
+    state: integration
     branch: claude/en-05-viewer-sources
     granted_files: [CMakeLists.txt, cmake/*.cmake, src/app/viewer_controller.cpp (decode-cache block)]
     outcome: cmake/ViewerSources.cmake list used by every target; src/app/decode_cache.{hpp,cpp} with unchanged semantics
@@ -977,7 +977,7 @@ tasks:
     title: Command routing correctness
     owner: lead
     session: S3
-    state: ready
+    state: review
     branch: claude/en-06-routing
     outcome: toggle-metadata and animation-* run once; storage-profile-* handled or not emitted; merge leftovers repaired; no ShortcutCheatSheet ReferenceError
     acceptance: New routed-once test; input_ui, folder_grid, animation and metadata pass
@@ -999,10 +999,16 @@ tasks:
     title: Feasibility and dependency decisions
     owner: lead
     session: S4
-    state: ready
+    state: integration
     branch: claude/en-09-feasibility
     outcome: docs/<ID>-FEASIBILITY.md for F024, F039, F048, F071, F074, F076, F077, F078 and docs/DEP-DECISIONS.md
     acceptance: Each doc has dependencies and licences, platform capability, security model, test strategy and a go/no-go; lead records go/no-go here
+    candidate_commit: fb90c18b88c4c79979ac842199c36b2336243012
+    review_verdict: "APPROVED in round 3 (b519278, docs/verification/EN-09-REVIEW-R3.md on claude/review-en-09-r3); rounds 1 (c7bada9) and 2 (64a33b9) CHANGES REQUIRED, fixed in 6f68aa5 and fb90c18 by a local fix author"
+    lead_decisions:
+      go_no_go: "F024 DEFER (until F023 and F028 integrate); F039 GO slice A (continuous strip, Qt only) and slice B (read-only ZIP/CBZ via a SOURCE-PROVIDER contract and libarchive in the decoder worker), DEFER the rest, UnRAR no-go; F048 GO SDR slices A and B, DEFER HDR output; F071 GO; F074 GO hardening F074a, DEFER resize; F076 GO policy slice F076a, DEFER bridge; F077 NO-GO for v1 (F077-0 docs only); F078 GO view-only password F078a, DEFER rest. Dependencies stay proposals in docs/DEP-DECISIONS.md until the consuming packet's contract freeze."
+      icc_policy: "R3-1: privacy and derived export never copy source ICC bytes. The writer embeds a profile Qt regenerates from the parsed QColorSpace (no description, copyright, device or date fields), or sRGB when the source profile cannot be parsed; the UI says 'colour profile kept'. Applies to F071 and F046/D8."
+      notes: "R3-2..R3-6 non-blocking; the consuming packets (F071, F039 slice B) resolve them"
   - id: EN-10
     title: Housekeeping
     owner: lead
@@ -1012,7 +1018,7 @@ tasks:
   - id: EN-11
     title: Gate stability under load
     owner: lead
-    state: ready
+    state: implementing
     depends: [EN-05]
     outcome: folder_tree, folder_grid and fs_watch pass reliably in full gates under the runner and under load
     evidence_of_problem: "Runner gates 39870526245 (c4e0829) and 39874250713 (f033070) both failed folder_tree :427, folder_grid auditReadyCurrentPhotoDoesNotReopen :947 and auditFailedCurrentPhotoCanBeRetriedFromGrid :958, fs_watch :298 and :1023 (generated PNG atomic commit failed: Access is denied). Local full gate on afeac1a outside the runner: 42/43 760.36s, only folder_tree failed (at :430), and it passed 29/29 alone. Hosted windows-2022 43/43."
@@ -1022,7 +1028,7 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S5
-    state: ready
+    state: review
     branch: claude/stack-f040-pinned
     outcome: Reference window and pinned monitor output stay distinct commands sharing pixel/texture admission and release accounting
     acceptance: Parity tests for close, pin replacement and recovery while both active; no duplicate decode; selected image unchanged
@@ -1030,7 +1036,7 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S5
-    state: ready
+    state: review
     depends: [STACK-F040-PINNED]
     branch: claude/stack-f015-recovery
     outcome: Tabs persist through the production recovery checkpoint
@@ -1039,7 +1045,7 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S6
-    state: ready
+    state: review
     branch: claude/stack-f049-presets
     outcome: Layout presets obey canonical lock/freeze, keep unknown data and stay distinct from monitor workspace presets
     acceptance: Per-slot placement isolation; snapshotExtras_ and newer data survive persistWhole(); navigator follows paneAvailable("preview") when detached
@@ -1047,7 +1053,7 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S6
-    state: ready
+    state: review
     depends: [EN-06]
     branch: claude/stack-f054-coverage
     outcome: Localization coverage for main's newer strings and detached windows
