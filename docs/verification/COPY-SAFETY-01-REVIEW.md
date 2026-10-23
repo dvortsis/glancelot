@@ -116,7 +116,7 @@ There is no `copy_safety` ctest; the regex matched three tests. A direct run of 
 
 I applied the handoff's instrumentation patch to `f325ef6:src/app/copy_move_service.cpp`. The patch is insertions only (0 removed lines). I placed the result in the review worktree, rebuilt `copy_move_tests` against the tip's tests and ran them: `Totals: 10 passed, 13 failed`. The handoff's 13 failures reproduce:
 
-- 11 show data loss or a stale temp: the target is `<missing>` or changed, or temps remain.
+- 10 show data loss or a stale temp: the target changed during the copy (1), the target is `<missing>` (8), or 2 temps remain (1).
 - `testOverwriteReplaceFailureKeepsTargetAndSource` and `testOverwriteMoveSameVolume` fail with `failed 0`, because the base code has no replace step.
 - `testOverwriteReadOnlyTargetKeepsTarget` differs only in its message on Windows (N5).
 
