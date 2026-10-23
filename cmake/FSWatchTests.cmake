@@ -23,6 +23,18 @@ add_test(NAME fs_watch_budget COMMAND fs_watch_budget_tests -o "${CMAKE_CURRENT_
 set_tests_properties(fs_watch fs_watch_budget PROPERTIES
   ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
 
+# EN-11 provisional target (cloud track S7); the lead may move or replace it.
+qt_add_executable(late_baseline_tests tests/late_baseline_tests.cpp ${fs_watch_backend_sources})
+target_include_directories(late_baseline_tests PRIVATE include src/app)
+target_compile_definitions(late_baseline_tests PRIVATE GLANCELOT_FS_WATCH_TESTING)
+target_link_libraries(late_baseline_tests PRIVATE glancelot_core glancelot_platform
+  Qt6::Gui Qt6::Test Qt6::Concurrent)
+add_dependencies(late_baseline_tests glancelot-decoder fs_watch_decoder_fixture)
+add_test(NAME late_baseline COMMAND late_baseline_tests -o "${CMAKE_CURRENT_BINARY_DIR}/late-baseline-results.txt,txt" -o -,txt)
+set_tests_properties(late_baseline PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+# EN-03 labels: starts glancelot-decoder and the fixture; no wall-clock assertion.
+glancelot_test_labels(late_baseline LABELS process)
+
 # Lead-frozen real-QML routing regression. Required alongside backend coverage.
 qt_add_executable(fs_watch_ui_tests tests/fs_watch_ui_tests.cpp
   ${GLANCELOT_VIEWER_SOURCES}

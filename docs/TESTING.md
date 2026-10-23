@@ -36,11 +36,11 @@ Run these commands from a configured build directory; on Linux, set `QT_QPA_PLAT
 
 | Label | Meaning | Tests |
 | --- | --- | --- |
-| `fast` | The quick loop, computed: every test without `ui`, `budget` or `native` | 27 tests |
+| `fast` | The quick loop, computed: every test without `ui`, `budget` or `native` | 28 tests |
 | `ui` | Loads the shipped QML (`ui/Main.qml`) in a `QQuickWindow` | `folder_grid`, `input_ui`, `pathbar_ui`, `fs_watch_ui`, `monitor_customization_ui`, `command_routing` |
 | `budget` | Asserts wall-clock budgets and can fail under machine load | `fs_watch_budget`, `fs_watch`, `folder_grid`, `cache`, `window_slots`, `recovery_controller`, `input_ui` |
 | `native` | Touches the real OS: desktop shell integration, the trash, `subst`, `cmd` `mklink`, or a window on the real platform plugin (not forced offscreen) | `platform_integration`, `file_operation_service`, `recovery_process`, `folder_grid`, `window_slots`, `fs_watch`, `file_operations`, `directory_listing`, `selection_export` |
-| `process` | Starts any child process, directly or through product code: `glancelot-decoder` (through `ViewerController::open` or `ThumbnailService`), a test helper, the app, Python, `cmd` or `subst`. Does not remove a test from `fast` | 24 tests: `command_routing`, `selection_export`, `directory_listing`, `file_operations`, `viewer_acceptance`, `thumbnails`, `folder_tree`, `window_slots`, `folder_grid`, `input_ui`, `pathbar_ui`, `file_operation_service`, `platform_integration`, `fs_watch`, `fs_watch_budget`, `filter`, `cache`, `io_scheduler`, `copy_move`, `recovery`, `recovery_startup`, `recovery_controller`, `recovery_process`, `monitor_customization_ui` |
+| `process` | Starts any child process, directly or through product code: `glancelot-decoder` (through `ViewerController::open` or `ThumbnailService`), a test helper, the app, Python, `cmd` or `subst`. Does not remove a test from `fast` | 25 tests: `command_routing`, `late_baseline`, `selection_export`, `directory_listing`, `file_operations`, `viewer_acceptance`, `thumbnails`, `folder_tree`, `window_slots`, `folder_grid`, `input_ui`, `pathbar_ui`, `file_operation_service`, `platform_integration`, `fs_watch`, `fs_watch_budget`, `filter`, `cache`, `io_scheduler`, `copy_move`, `recovery`, `recovery_startup`, `recovery_controller`, `recovery_process`, `monitor_customization_ui` |
 | `clipboard` | Reaches the system clipboard, directly or through product code | `folder_grid`, `input_ui`, `metadata` |
 
 Common commands:
