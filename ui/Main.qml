@@ -682,13 +682,7 @@ ApplicationWindow {
         else if (id === "layout-lock") { paneLayout.locked = !paneLayout.locked; wakeHud() }
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
-        else if (id === "toggle-metadata") { viewer.toggleMetadata(); wakeHud() }
-        else if (id === "animation-toggle-play-pause") { if (viewer.animationController) viewer.animationController.togglePlayPause() }
-        else if (id === "animation-next-frame") { if (viewer.animationController) viewer.animationController.nextFrame() }
-        else if (id === "animation-previous-frame") { if (viewer.animationController) viewer.animationController.previousFrame() }
-        else if (id === "animation-speed-up") { if (viewer.animationController) viewer.animationController.setSpeed(viewer.animationController.speed * 1.5) }
-        else if (id === "animation-speed-down") { if (viewer.animationController) viewer.animationController.setSpeed(viewer.animationController.speed / 1.5) }
-        else if (id === "animation-toggle-loop") { if (viewer.animationController) viewer.animationController.setLoop(!viewer.animationController.loop) }
+        // toggle-metadata, animation-* and presentation-* run once in ViewerController::trigger; here they only end the loupe.
         else if (id === "combined-orientation") toggleOrientation()
         else if (id === "delete-selection") {
             const blocked = commandBlockedReason(id)
@@ -856,8 +850,7 @@ ApplicationWindow {
         else if (id === "grid-zoom-in") { if (paneAvailable("grid") || gridScope) photoGrid.zoomIn() }
         else if (id === "grid-zoom-out") { if (paneAvailable("grid") || gridScope) photoGrid.zoomOut() }
         else if (id === "grid-zoom-reset") { if (paneAvailable("grid") || gridScope) photoGrid.resetZoom() }
-        else if (id === "navigate-back") { if (typeof folderHistory !== "undefined") folderHistory.navigateBack() }
-        else if (id === "navigate-forward") { if (typeof folderHistory !== "undefined") folderHistory.navigateForward() }
+        // navigate-back/-forward run once in FolderTree's onViewCommand (FolderTree is always instantiated); here they only end the loupe.
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel(); stopSlideshow() }
@@ -1080,8 +1073,8 @@ ApplicationWindow {
             }
             function endPointerLoupe() { loupeDelay.stop(); if (pointerLoupe) { pointerLoupe = false; canvas.endLoupe() } }
             onPressed: mouse => {
-                if (mouse.button === Qt.BackButton) { app.handleViewCommand("navigate-back"); mouse.accepted = true; return }
-                if (mouse.button === Qt.ForwardButton) { app.handleViewCommand("navigate-forward"); mouse.accepted = true; return }
+                if (mouse.button === Qt.BackButton) { app.invoke("navigate-back"); mouse.accepted = true; return }
+                if (mouse.button === Qt.ForwardButton) { app.invoke("navigate-forward"); mouse.accepted = true; return }
                 canvas.forceActiveFocus(); lastX=mouse.x; lastY=mouse.y
                 if (mouse.button === Qt.RightButton) loupeDelay.restart()
             }
@@ -1324,7 +1317,8 @@ ApplicationWindow {
             onPressed: mouse => go(mouse)
             onPositionChanged: mouse => { if (pressed) go(mouse) }
         }
-    }    PhotoGrid {
+    }
+    PhotoGrid {
         id: photoGrid
         z: -3 // Stable controller layer survives native reparenting.
         objectName: "photoGrid"
@@ -2048,7 +2042,8 @@ ApplicationWindow {
             onDoubleClicked: referenceCanvas.fit("shrink")
             onWheel: wheel => { referenceCanvas.zoomAt(Math.pow(1.0015, wheel.pixelDelta.y !== 0 ? wheel.pixelDelta.y * 3 : wheel.angleDelta.y), wheel.x, wheel.y); wheel.accepted = true }
         }
-    }    FileDialog {
+    }
+    FileDialog {
         id: openDialog
         title: qsTr("Open a photo")
         nameFilters: ["Photographs (*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG)", "All files (*)"]

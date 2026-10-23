@@ -8,3 +8,12 @@ docs/verification/grid-resize-test-01/** -text
 docs/verification/cache-baseline-test-01/** -text
 
 docs/verification/lead-integrate-all-2026-10-22/** -text
+
+# Shell scripts run in Linux containers and WSL; keep LF on Windows checkouts.
+*.sh text eol=lf
+
+docs/verification/gate-triage-2026-10-22/*.txt -text
+
+docs/verification/integrate-cycle1-a-2026-10-22/** -text
+
+docs/verification/integrate-cycle1-b-2026-10-23/** -text

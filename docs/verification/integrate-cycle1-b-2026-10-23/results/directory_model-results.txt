@@ -1,0 +1,29 @@
+********* Start testing of DirectoryModelTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : DirectoryModelTests::initTestCase()
+PASS   : DirectoryModelTests::emptyByDefault()
+PASS   : DirectoryModelTests::shuffleSeedMatchesTraversalOrder()
+PASS   : DirectoryModelTests::inactiveByDefaultDoesNoWork()
+PASS   : DirectoryModelTests::foldersFirstMixedKindsAndRoles()
+PASS   : DirectoryModelTests::thumbnailSourceOnlyForImages()
+PASS   : DirectoryModelTests::newestGenerationWins()
+PASS   : DirectoryModelTests::staleResultAfterDeactivationIsDropped()
+PASS   : DirectoryModelTests::selectionModesAndCount()
+PASS   : DirectoryModelTests::selectionSurvivesRelistSortAndDropsRemovedKeys()
+PASS   : DirectoryModelTests::incrementalRefreshInsertsAndRemovesInPlace()
+PASS   : DirectoryModelTests::inactiveReleasesRowsAndKeepsSelection()
+PASS   : DirectoryModelTests::parentNavigationPutsCursorOnTheFolderLeft()
+PASS   : DirectoryModelTests::inaccessibleFolderReportsFailure()
+PASS   : DirectoryModelTests::transientFailureKeepsSelectionForRecovery()
+QINFO  : DirectoryModelTests::reviewTransientFailureKeysDoNotLeak() inactive after failure: selectedCount 0 paths 0
+PASS   : DirectoryModelTests::reviewTransientFailureKeysDoNotLeak()
+PASS   : DirectoryModelTests::currentImageRole()
+QINFO  : DirectoryModelTests::largeInterleavedRefreshStaysResponsive() interleaved + 5000 on 30000 : worst GUI gap 42 ms
+QINFO  : DirectoryModelTests::largeInterleavedRefreshStaysResponsive() interleaved - 15000 : worst GUI gap 52 ms
+PASS   : DirectoryModelTests::largeInterleavedRefreshStaysResponsive()
+QINFO  : DirectoryModelTests::largeFolderStaysResponsive() generated 12001 entries in 3677 ms
+QINFO  : DirectoryModelTests::largeFolderStaysResponsive() listed 12001 entries in 341 ms; worst GUI gap 11 ms
+PASS   : DirectoryModelTests::largeFolderStaysResponsive()
+PASS   : DirectoryModelTests::cleanupTestCase()
+Totals: 20 passed, 0 failed, 0 skipped, 0 blacklisted, 29172ms
+********* Finished testing of DirectoryModelTests *********

@@ -1,0 +1,47 @@
+#29 0.298  1/44 Test  #1: selection_export .................   Passed    0.02 sec
+#29 0.320  2/44 Test  #2: perf_trace .......................   Passed    0.02 sec
+#29 0.505  3/44 Test  #3: navigation .......................   Passed    0.18 sec
+#29 1.547  4/44 Test  #4: directory_listing ................   Passed    1.04 sec
+#29 1.553  5/44 Test  #5: file_operations ..................   Passed    0.01 sec
+#29 1.560  6/44 Test  #6: startup_window_geometry ..........   Passed    0.01 sec
+#29 6.326  7/44 Test  #7: viewer_acceptance ................   Passed    4.77 sec
+#29 9.956  8/44 Test  #8: thumbnails .......................   Passed    3.63 sec
+#29 15.87  9/44 Test  #9: folder_tree ......................   Passed    5.91 sec
+#29 16.27 10/44 Test #10: pane_layout ......................   Passed    0.40 sec
+#29 33.49 11/44 Test #11: window_slots .....................   Passed   17.22 sec
+#29 171.9 12/44 Test #12: folder_grid ......................   Passed  138.41 sec
+#29 216.9 13/44 Test #13: input_ui .........................   Passed   45.00 sec
+#29 219.8 14/44 Test #14: pathbar_ui .......................   Passed    2.88 sec
+#29 220.7 15/44 Test #15: file_operation_service ...........   Passed    0.98 sec
+#29 225.5 16/44 Test #16: directory_model ..................   Passed    4.80 sec
+#29 225.6 17/44 Test #17: viewport .........................   Passed    0.03 sec
+#29 225.9 18/44 Test #18: themes ...........................   Passed    0.30 sec
+#29 226.4 19/44 Test #19: platform_integration .............   Passed    0.47 sec
+#29 226.5 20/44 Test #20: grid_search ......................   Passed    0.10 sec
+#29 226.5 21/44 Test #21: grid_density .....................   Passed    0.07 sec
+#29 227.1 22/44 Test #22: ui_settings ......................   Passed    0.59 sec
+#29 297.0 23/44 Test #23: fs_watch .........................   Passed   69.90 sec
+#29 314.9 24/44 Test #24: fs_watch_budget ..................   Passed   17.91 sec
+#29 316.7 25/44 Test #25: fs_watch_ui ......................   Passed    1.81 sec
+#29 316.9 26/44 Test #26: favorites ........................   Passed    0.17 sec
+#29 316.9 27/44 Test #27: folder_history ...................   Passed    0.01 sec
+#29 317.1 28/44 Test #28: shortcuts_help ...................   Passed    0.18 sec
+#29 318.5 29/44 Test #29: filter ...........................   Passed    1.44 sec
+#29 320.8 30/44 Test #30: cache ............................   Passed    2.30 sec
+#29 320.9 31/44 Test #31: io_scheduler .....................   Passed    0.06 sec
+#29 320.9 32/44 Test #32: metadata .........................   Passed    0.01 sec
+#29 321.3 33/44 Test #33: animation ........................   Passed    0.37 sec
+#29 321.3 34/44 Test #34: mutation .........................   Passed    0.03 sec
+#29 321.4 35/44 Test #35: copy_move ........................   Passed    0.04 sec
+#29 321.4 36/44 Test #36: format ...........................   Passed    0.01 sec
+#29 323.3 37/44 Test #37: monitor_output ...................   Passed    1.97 sec
+#29 334.4 38/44 Test #38: recovery .........................   Passed   11.02 sec
+#29 334.5 39/44 Test #39: recovery_startup .................   Passed    0.13 sec
+#29 346.6 40/44 Test #40: recovery_controller ..............   Passed   12.14 sec
+#29 367.5 41/44 Test #41: recovery_process .................   Passed   20.87 sec
+#29 375.0 42/44 Test #42: monitor_customization ............   Passed    7.46 sec
+#29 387.8 43/44 Test #43: monitor_customization_ui .........   Passed   12.84 sec
+#29 391.7 44/44 Test #44: command_routing ..................   Passed    3.91 sec
+#29 391.7 100% tests passed, 0 tests failed out of 44
+#29 391.7 Total Test time (real) = 391.46 sec
+#36 [runtime 11/12] RUN for format in qwebp qtiff qtga; do test -f /opt/Qt/plugins/imageformats/lib$format.so || { echo "image-format plugin missing: /opt/Qt/plugins/imageformats/lib$format.so" >&2; exit 1; }; done && for plugin in /opt/Qt/plugins/imageformats/*.so; do if LD_LIBRARY_PATH=/opt/Qt/lib ldd "$plugin" | grep "not found"; then echo "image-format plugin has unresolved libraries (listed above): $plugin" >&2; exit 1; fi; done

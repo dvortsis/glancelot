@@ -1,5 +1,7 @@
 # Agent lanes: Claude Code, Codex and Gemini
 
+> **Superseded (October 22, 2026).** The three-lane model is retired. The current operating model is in [AGENTS.md](../AGENTS.md) and the current plan is [docs/handoff/LEAD-PLAN-2026-10-22.md](handoff/LEAD-PLAN-2026-10-22.md). The text below is kept as history only; do not assign or route work from it.
+
 Lead decision, October 18, 2026, approved by the user. Three agent tools work concurrently on Glancelot. This document assigns every remaining task, feature opportunity and performance packet to the lane best suited to it, and defines how the lanes avoid colliding.
 
 - **Gemini lane:** owns everything named in its own plan (`gemini_flash_feature_plan.md`), and other lanes leave those tasks alone. That covers:

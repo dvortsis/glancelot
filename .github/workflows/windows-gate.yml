@@ -43,12 +43,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\Qt
-          key: qt-6.8.3-win64_msvc2022_64-qtbase-qtdeclarative-qtshadertools-aqt3.3.0
+          key: qt-6.8.3-win64_msvc2022_64-qtbase-qtdeclarative-qtshadertools-qtimageformats-aqt3.3.0
       - name: Install Qt (same archives as the Dockerfile)
         if: steps.qt-cache.outputs.cache-hit != 'true'
         run: |
           python -m pip install --disable-pip-version-check aqtinstall==3.3.0
-          python -m aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 -O C:\Qt -m qtshadertools --archives qtbase qtdeclarative qtshadertools
+          python -m aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 -O C:\Qt -m qtshadertools qtimageformats --archives qtbase qtdeclarative qtshadertools qtimageformats
           if ($LASTEXITCODE) { throw 'Qt install failed' }
       - name: Build and test
         run: |
@@ -114,6 +114,8 @@ jobs:
                   docker build --progress=plain -t "glancelot-browser:ci-$env:GITHUB_RUN_ID" . *>&1 | Tee-Object -FilePath (Join-Path $logs 'docker-gate.log')
                   $result.docker = ($LASTEXITCODE -eq 0)
                   $result.dockerSeconds = [int]((Get-Date) - $start).TotalSeconds
+                  # The image is only gate evidence; keep the runner's disk from filling with one image per run.
+                  docker image rm --force "glancelot-browser:ci-$env:GITHUB_RUN_ID" *>&1 | Out-Null
               }
           }
           Copy-Item -ErrorAction SilentlyContinue build-ci/Testing/Temporary/LastTest.log (Join-Path $logs 'windows-LastTest.log')

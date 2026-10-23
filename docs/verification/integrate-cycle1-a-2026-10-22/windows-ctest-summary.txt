@@ -1,0 +1,45 @@
+ 1/43 Test  #1: selection_export .................   Passed    0.45 sec
+ 2/43 Test  #2: perf_trace .......................   Passed    0.08 sec
+ 3/43 Test  #3: navigation .......................   Passed    2.90 sec
+ 4/43 Test  #4: directory_listing ................   Passed   15.34 sec
+ 5/43 Test  #5: file_operations ..................   Passed    0.26 sec
+ 6/43 Test  #6: startup_window_geometry ..........   Passed    0.08 sec
+ 7/43 Test  #7: viewer_acceptance ................   Passed   11.86 sec
+ 8/43 Test  #8: thumbnails .......................   Passed    6.82 sec
+ 9/43 Test  #9: folder_tree ......................   Passed   10.63 sec
+10/43 Test #10: pane_layout ......................   Passed    1.55 sec
+11/43 Test #11: window_slots .....................   Passed   32.38 sec
+12/43 Test #12: folder_grid ......................   Passed  251.20 sec
+13/43 Test #13: input_ui .........................   Passed   90.67 sec
+14/43 Test #14: pathbar_ui .......................   Passed    4.21 sec
+15/43 Test #15: file_operation_service ...........   Passed    1.23 sec
+16/43 Test #16: directory_model ..................   Passed   27.07 sec
+17/43 Test #17: viewport .........................   Passed    0.12 sec
+18/43 Test #18: themes ...........................   Passed    0.78 sec
+19/43 Test #19: platform_integration .............   Passed    1.56 sec
+20/43 Test #20: grid_search ......................   Passed    0.34 sec
+21/43 Test #21: grid_density .....................   Passed    0.25 sec
+22/43 Test #22: ui_settings ......................   Passed    1.61 sec
+23/43 Test #23: fs_watch .........................   Passed   88.34 sec
+24/43 Test #24: fs_watch_budget ..................   Passed  103.74 sec
+25/43 Test #25: fs_watch_ui ......................   Passed    3.07 sec
+26/43 Test #26: favorites ........................   Passed    0.45 sec
+27/43 Test #27: folder_history ...................   Passed    0.08 sec
+28/43 Test #28: shortcuts_help ...................   Passed    0.71 sec
+29/43 Test #29: filter ...........................   Passed    3.03 sec
+30/43 Test #30: cache ............................   Passed    5.56 sec
+31/43 Test #31: io_scheduler .....................   Passed    0.24 sec
+32/43 Test #32: metadata .........................   Passed    0.14 sec
+33/43 Test #33: animation ........................   Passed    0.47 sec
+34/43 Test #34: mutation .........................   Passed    0.18 sec
+35/43 Test #35: copy_move ........................   Passed    0.23 sec
+36/43 Test #36: format ...........................   Passed    0.13 sec
+37/43 Test #37: monitor_output ...................   Passed    2.50 sec
+38/43 Test #38: recovery .........................   Passed   14.04 sec
+39/43 Test #39: recovery_startup .................   Passed    0.51 sec
+40/43 Test #40: recovery_controller ..............   Passed   16.28 sec
+41/43 Test #41: recovery_process .................   Passed   37.05 sec
+42/43 Test #42: monitor_customization ............   Passed    9.33 sec
+43/43 Test #43: monitor_customization_ui .........   Passed   25.34 sec
+100% tests passed out of 43
+Total Test time (real) = 775.10 sec
