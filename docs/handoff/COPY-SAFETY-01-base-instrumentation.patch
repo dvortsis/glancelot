@@ -1,0 +1,270 @@
+diff --git a/src/app/copy_move_service.cpp b/src/app/copy_move_service.cpp
+index 8bbc453..f2366d3 100644
+--- a/src/app/copy_move_service.cpp
++++ b/src/app/copy_move_service.cpp
+@@ -1,4 +1,5 @@
+ #include "glancelot/copy_move_service.hpp"
++#include "copy_safety.hpp"
+ #include <QDir>
+ #include <QFile>
+ #include <QFileInfo>
+@@ -9,12 +10,21 @@
+ #include <QMutexLocker>
+ #include <QWaitCondition>
+ #include <QThread>
++#include <QRandomGenerator>
++#include <QRegularExpression>
++#include <QSet>
+ #include <atomic>
+ 
+ #ifdef Q_OS_WIN
+ #include <windows.h>
++#include <io.h>
+ #else
+ #include <sys/stat.h>
++#include <cerrno>
++#include <cstdio>
++#include <cstring>
++#include <fcntl.h>
++#include <unistd.h>
+ #endif
+ 
+ namespace glancelot {
+@@ -101,6 +111,149 @@ void collectStats(const QString& path, int& itemCount, qint64& byteCount) {
+ 
+ } // namespace
+ 
++namespace copy_safety {
++
++namespace {
++
++QMutex& safetyMutex() {
++    static QMutex mutex;
++    return mutex;
++}
++
++// Temporaries a copy in this process is writing right now; removeStaleTemporaries() leaves them alone.
++QSet<QString>& inFlightTemporaries() {
++    static QSet<QString> paths;
++    return paths;
++}
++
++FaultHook& faultHook() {
++    static FaultHook hook;
++    return hook;
++}
++
++bool injectFault(FaultPoint point, const QString& path, qint64 bytes) {
++    FaultHook hook;
++    {
++        QMutexLocker locker(&safetyMutex());
++        hook = faultHook();
++    }
++    return hook && hook(point, path, bytes);
++}
++
++// Flushes Qt's buffer and the operating system's cache for an open file to the device.
++bool syncToDisk(QFile& file) {
++    if (!file.flush()) return false;
++#ifdef Q_OS_WIN
++    const auto handle = reinterpret_cast<HANDLE>(_get_osfhandle(file.handle()));
++    return handle != INVALID_HANDLE_VALUE && FlushFileBuffers(handle);
++#else
++    return ::fsync(file.handle()) == 0;
++#endif
++}
++
++// A temporary file being written for one Overwrite item. Removes the file on destruction unless released.
++class TemporaryCopy {
++public:
++    explicit TemporaryCopy(const QString& targetPath) {
++        for (int attempt = 0; attempt < 8 && path_.isEmpty(); ++attempt) {
++            const QString candidate = temporaryPathFor(targetPath);
++            file_.setFileName(candidate);
++            // NewOnly: never open (and so never truncate) an existing file, including another copy's temporary.
++            if (file_.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
++                path_ = candidate;
++                QMutexLocker locker(&safetyMutex());
++                inFlightTemporaries().insert(path_);
++            } else if (QFileInfo::exists(candidate)) {
++                continue;
++            } else {
++                break;
++            }
++        }
++    }
++    ~TemporaryCopy() {
++        if (path_.isEmpty()) return;
++        file_.close();
++        if (!released_) QFile::remove(path_);
++        QMutexLocker locker(&safetyMutex());
++        inFlightTemporaries().remove(path_);
++    }
++    TemporaryCopy(const TemporaryCopy&) = delete;
++    TemporaryCopy& operator=(const TemporaryCopy&) = delete;
++
++    bool isOpen() const { return !path_.isEmpty(); }
++    QFile& file() { return file_; }
++    const QString& path() const { return path_; }
++    void release() { released_ = true; }
++
++private:
++    QFile file_;
++    QString path_;
++    bool released_{false};
++};
++
++} // namespace
++
++QString temporaryPathFor(const QString& targetPath) {
++    const QFileInfo info(targetPath);
++    const QString suffix = QString::number(QRandomGenerator::global()->generate64(), 16).rightJustified(16, QLatin1Char('0'));
++    return clean(info.dir().filePath(QStringLiteral(".%1.glancelot-%2.part").arg(info.fileName(), suffix)));
++}
++
++bool isTemporaryName(const QString& fileName) {
++    static const QRegularExpression pattern(QStringLiteral("^\\..+\\.glancelot-[0-9a-f]{16}\\.part$"));
++    return pattern.match(fileName).hasMatch();
++}
++
++bool replaceFileAtomically(const QString& replacementPath, const QString& targetPath, QString* error) {
++    if (injectFault(FaultPoint::Replace, targetPath, 0)) {
++        if (error) *error = QStringLiteral("injected replace failure");
++        return false;
++    }
++#ifdef Q_OS_WIN
++    const std::wstring from = QDir::toNativeSeparators(replacementPath).toStdWString();
++    const std::wstring to = QDir::toNativeSeparators(targetPath).toStdWString();
++    if (!MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
++        if (error) *error = QStringLiteral("Windows error %1").arg(GetLastError());
++        return false;
++    }
++    return true;
++#else
++    if (::rename(QFile::encodeName(replacementPath).constData(), QFile::encodeName(targetPath).constData()) != 0) {
++        if (error) *error = QString::fromLocal8Bit(std::strerror(errno));
++        return false;
++    }
++    // Make the rename itself durable; the data was synced before the rename.
++    const int dirFd = ::open(QFile::encodeName(QFileInfo(targetPath).absolutePath()).constData(), O_RDONLY | O_DIRECTORY);
++    if (dirFd >= 0) {
++        ::fsync(dirFd);
++        ::close(dirFd);
++    }
++    return true;
++#endif
++}
++
++int removeStaleTemporaries(const QString& directory) {
++    const QFileInfoList entries = QDir(directory).entryInfoList(QDir::Files | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
++    int removed = 0;
++    for (const QFileInfo& entry : entries) {
++        if (!isTemporaryName(entry.fileName()) || entry.isSymbolicLink()) continue;
++        const QString path = clean(entry.absoluteFilePath());
++        {
++            QMutexLocker locker(&safetyMutex());
++            if (inFlightTemporaries().contains(path)) continue;
++        }
++        if (QFile::remove(path)) ++removed;
++    }
++    return removed;
++}
++
++void setFaultHookForTesting(FaultHook hook) {
++    QMutexLocker locker(&safetyMutex());
++    faultHook() = std::move(hook);
++}
++
++} // namespace copy_safety
++
+ struct TransferTask {
+     quint64 batchId{0};
+     QStringList sourcePaths;
+@@ -445,6 +598,7 @@ quint64 CopyMoveService::enqueueTransfer(const QStringList& sourcePaths,
+             constexpr qint64 ChunkSize = 64 * 1024;
+             char buffer[ChunkSize];
+             bool copyFailed = false;
++            qint64 bytesCopied = 0;
+ 
+             while (!srcFile.atEnd()) {
+                 if (!self || self->d->cancelled.load()) {
+@@ -455,22 +609,33 @@ quint64 CopyMoveService::enqueueTransfer(const QStringList& sourcePaths,
+                     QThread::msleep(50);
+                 }
+ 
++                if (copy_safety::injectFault(copy_safety::FaultPoint::Read, src, bytesCopied)) {
++                    copyFailed = true;
++                    break;
++                }
+                 const qint64 bytesRead = srcFile.read(buffer, ChunkSize);
+                 if (bytesRead < 0) {
+                     copyFailed = true;
+                     break;
+                 }
++                if (copy_safety::injectFault(copy_safety::FaultPoint::Write, destPath, bytesCopied)) {
++                    copyFailed = true;
++                    break;
++                }
+                 const qint64 bytesWritten = destFile.write(buffer, bytesRead);
+                 if (bytesWritten != bytesRead) {
+                     copyFailed = true;
+                     break;
+                 }
++                bytesCopied += bytesWritten;
+                 self->d->transferredBytes.fetch_add(bytesWritten);
+                 QMetaObject::invokeMethod(self, [self]() {
+                     if (self) emit self->progressChanged();
+                 }, Qt::QueuedConnection);
++                copy_safety::injectFault(copy_safety::FaultPoint::AfterChunk, destPath, bytesCopied);
+             }
+ 
++            if (!copyFailed && copy_safety::injectFault(copy_safety::FaultPoint::Sync, destPath, bytesCopied)) copyFailed = true;
+             destFile.flush();
+             destFile.close();
+             srcFile.close();
+diff --git a/src/app/copy_safety.hpp b/src/app/copy_safety.hpp
+new file mode 100644
+index 0000000..3ec7b3d
+--- /dev/null
++++ b/src/app/copy_safety.hpp
+@@ -0,0 +1,40 @@
++#pragma once
++#include <QString>
++#include <QtGlobal>
++#include <functional>
++
++// COPY-SAFETY-01: Overwrite never destroys the existing target.
++// CopyMoveService copies an Overwrite item into a uniquely named temporary file beside the target (same
++// directory, so same volume), flushes, syncs and size-verifies it, and only then replaces the target
++// atomically. Implemented in copy_move_service.cpp; internal to the app, not a shared contract.
++namespace glancelot::copy_safety {
++
++// Temporary name for `targetPath`: ".<target file name>.glancelot-<16 hex>.part" in the target's directory.
++QString temporaryPathFor(const QString& targetPath);
++
++// True when `fileName` (a bare name, no directory) has the temporaryPathFor() shape.
++bool isTemporaryName(const QString& fileName);
++
++// Atomically replaces (or creates) `targetPath` with `replacementPath`, which must be on the same volume.
++// POSIX: rename(2), then a best-effort fsync of the directory. Windows: MoveFileExW with
++// MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH. On failure neither file is changed and `error` says why.
++bool replaceFileAtomically(const QString& replacementPath, const QString& targetPath, QString* error = nullptr);
++
++// Removes leftover temporaries (isTemporaryName) in `directory` that no copy in this process is writing,
++// e.g. after a crash. Never touches any other file. Returns how many it removed.
++int removeStaleTemporaries(const QString& directory);
++
++// Test-only fault injection. A hook returning true makes the copy fail at that point as if the operating
++// system had reported an error. Called on the copy worker thread; set it before enqueueing and clear it
++// after the batch finishes. Unset in production.
++enum class FaultPoint {
++    Read,        // before each chunk read of the source (bytes = source bytes read so far)
++    Write,       // before each chunk write (bytes = bytes written so far)
++    AfterChunk,  // after each chunk was written; returning true is ignored (use it to cancel or inspect)
++    Sync,        // flush/fsync of the written temporary (simulates a full volume at flush)
++    Replace,     // the atomic replace of the target (simulates access denied or a sharing violation)
++};
++using FaultHook = std::function<bool(FaultPoint point, const QString& path, qint64 bytes)>;
++void setFaultHookForTesting(FaultHook hook);
++
++} // namespace glancelot::copy_safety
