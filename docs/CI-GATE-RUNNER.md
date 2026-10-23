@@ -68,3 +68,28 @@ While a gate runs, avoid starting other full gates or heavy builds on this machi
    - the downloaded logs (`gh run download <id>`).
 4. A run queued with no runner online means this machine is off. Report the gate as pending; do not mark the task done.
 5. Delete the `gate/*` branch after its result is recorded.
+
+## Local capacity and inbox (lead)
+
+Two read-mostly helpers for the lead on this PC, both run from the main checkout in one PowerShell 7 process.
+
+**Build slots.** `scripts/build-slot.ps1` caps local builds at three at once and holds every build while a full gate runs.
+
+```powershell
+& C:\src\Github\Glancelot\scripts\build-slot.ps1 -Branch claude/x -Run { cmake --build build-claude-x }
+& C:\src\Github\Glancelot\scripts\build-slot.ps1 -Status
+```
+
+- Each slot is a file `glancelot-build-slot-<n>.json` in the shared git dir (`git rev-parse --git-common-dir`). It records pid, host, branch, cwd and start time.
+- `-Run` waits for a free slot, up to `-TimeoutMinutes` (default 120). A slot whose holder process is dead, whose PID was reused, or that is older than `-StaleHours` (default 6) counts as free. It is removed only if it still holds the record judged stale. On Windows the holder keeps its slot file open, so a live holder's slot cannot be deleted. The script never kills processes.
+- While another process holds the gate lock (`scripts/gate-lock.ps1`), `-Run` waits. A build started inside the gate holder's own `-Run` block (same process, or a child that inherits `GLANCELOT_GATE_LOCK_HELD`) does not wait. The gate lock itself is never removed here.
+- Nested calls in the same process reuse the slot (`GLANCELOT_BUILD_SLOT_HELD`).
+- Use one slot count for every caller: `-Slots` (default 3) or `$env:GLANCELOT_BUILD_SLOTS`. A caller only looks at slots 1 to N.
+- `gate-lock.ps1` does not wait for build slots. Start a full gate only once `-Status` shows no live slots.
+
+**Inbox.** `scripts/lead-inbox.ps1` fetches with `--prune` and prints one row per `origin/claude/*` packet branch. It is read-only.
+
+- Each row shows: tip SHA and date, task id, queue state on `origin/main`, merged into `origin/main` or not, the handoff, the latest "Review round" heading, and each `origin/claude/review-<task>[-*]` branch with the verdict from its newest review file.
+- The queue row is matched by its `branch:` field. Rows without one are matched by the id parsed from the branch name and marked `*`.
+- The handoff is the newest `docs/handoff/*-HANDOFF.md` that the branch's own commits touched, else `<TASK>-HANDOFF.md`.
+- A review branch that matches no packet gets its own row. `-Json` gives machine output, `-NoFetch` skips the fetch.
