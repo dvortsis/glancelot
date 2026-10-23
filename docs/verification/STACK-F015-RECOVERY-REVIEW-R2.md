@@ -108,7 +108,13 @@ Each path below was traced in the code at `9c8d952`. Paths marked "test" are als
 
 - **`++openSerial` in `open()`.** `openSerial` is read only in `settleOn()` (line 197) and `notePosition()` (line 448), as `grep openSerial src/` shows. `notePosition`'s fence is guarded by `tabSettling`, so outside a settle `notePosition` behaves exactly as before.
   - Presentation, reference and monitor output take `generation` through `displayManager.updateImage(path, image, generation)`. None of them sees `openSerial`.
-  - No other file calls `ViewerController::open`. The QML callers (Filmstrip, PhotoGrid, the drop handler, the open dialog and the `previewDebounce` cursor preview at `Main.qml:146`) are all user-driven.
+  - Other callers of `ViewerController::open`, from `git grep -nE '(\.|->)open\(' -- src app` and `ui/`:
+    - `app/main.cpp:262`: folder-history back/forward, user-driven.
+    - `app/main.cpp:356`: the command-line file.
+    - `src/app/perf_replay.hpp`: the perf harness only.
+    - QML: Filmstrip, PhotoGrid, the drop handler and the open dialog.
+    - The combined-mode cursor preview: `cursorMaybeMoved()` → `schedulePreview()` → `previewDebounce` → `open()` at `Main.qml:146`. It runs when the grid cursor's path changes while the grid has focus. A relist that moves the cursor while the grid has focus (for example after an external delete) could reach it. That would be one more automatic trigger of the B2 kind. It was not tested, and a fix along Option 1 or 2 should cover it too.
+  - None of these callers reads `openSerial`.
   - Main changed nothing in the tab regions or `open()` since the merge-base `afeac1a`: its three controller commits are EN-05 and EN-06.
 - **`setWindowSlot()`, both sites.** With `tabSettling` false, `replayPosition()` is the old `if(!lastDecodedPath.isEmpty()) notePosition(lastDecodedPath)`, so nothing changes.
 - **`setWindowClaim()`.** With `tabSettling` false, the condition reduces to the old `!lastDecodedPath.isEmpty()`, and the folder branch is unchanged.
@@ -216,13 +222,18 @@ reference_pin: Totals: 10 passed, 0 failed, 2 skipped (nativeTextureReleasedOnCl
 **Labels (EN-03).**
 
 - Neither provisional file calls `glancelot_test_labels`, so both tests would be computed as `fast`.
-- Both start `glancelot-decoder` through `ViewerController::open`, so add:
+- Both start `glancelot-decoder` through `ViewerController::open`. `reference_pin` also loads the shipped `ui/Main.qml` through `tests/ui_test_support.hpp`'s `Harness` (line 93). Add:
   - `glancelot_test_labels(tabs_recovery LABELS process)`
-  - `glancelot_test_labels(reference_pin LABELS process)`
-- Neither loads `ui/Main.qml`, and neither asserts a wall-clock budget. `reference_pin`'s `BudgetScope` is the display manager's image-memory budget, not a timing budget. `monitor_output`, which has the same shape, is unlabelled on main.
-- On the scratch merge, `ctest -N -L process -R '^(tabs_recovery|reference_pin)$'` lists both.
+  - `glancelot_test_labels(reference_pin LABELS ui process)`
+- Neither test asserts a wall-clock budget. `reference_pin`'s `BudgetScope` is the display manager's image-memory budget, not a timing budget.
+- On the scratch merge, `ctest -N -L process` lists both tests, and `ctest -N -L ui -R '^(tabs_recovery|reference_pin)$'` lists `reference_pin` only.
 
-**Scratch merge.** The scratch merge is local only and was not pushed. It is `c481611` in `.worktrees/review-f015-r2-merge`: `origin/main` plus `9c8d952`, with the conflict resolved and the two cmake adaptations applied. The tests were not run there.
+**Scratch merge.** The scratch merge is local only and was not pushed. It is `b41f403` in `.worktrees/review-f015-r2-merge`, made of two commits on `origin/main` plus `9c8d952`:
+
+- `c481611`: the conflict resolved and the two cmake adaptations applied.
+- `b41f403`: the `reference_pin` label set to `ui process`.
+
+The tests were not run there.
 
 **Ownership.** N2 is unchanged: both cmake files and the root include are lead-owned.
 
