@@ -62,6 +62,119 @@ private slots:
         QVERIFY(h.customization.deletePreset(id));QTRY_COMPARE(h.customization.presets().size(),0);
         QJsonObject root;QVERIFY(glancelot::readSettings(root).ok());QCOMPARE(root.value("future").toInt(),42);QCOMPARE(root.value("monitorCustomization").toObject().value("future").toString(),QString("retained"));
     }
+    // STACK-F049-PRESETS: controller layout presets obey the coordinator's canonical lock/freeze, the derived routes follow,
+    // workspace snapshots capture the result, and the two preset kinds never share a name.
+    void layoutPresetsObeyCanonicalLockAndFreeze() {
+        Harness h;
+        h.customization.setLayoutLocked(true);QTRY_VERIFY(h.customization.layoutLocked());
+        QVERIFY(!h.panes.applyPreset("Review"));QVERIFY(h.panes.pane("topbar")["visible"].toBool());
+        h.customization.setLayoutLocked(false);QTRY_VERIFY(!h.customization.layoutLocked());
+        QVERIFY(h.customization.setPaneFrozen("grid",true));QTRY_VERIFY(h.customization.paneRoutes()["grid"].toMap()["frozen"].toBool());
+        QVERIFY(!h.panes.applyPreset("Review"));QVERIFY(h.panes.feedback().contains("Unfreeze"));
+        QVERIFY(h.customization.setPaneFrozen("grid",false));QTRY_VERIFY(!h.panes.pane("grid")["frozen"].toBool());
+        QVERIFY(h.panes.applyPreset("Review"));QVERIFY(!h.customization.paneRoutes()["grid"].toMap()["frozen"].toBool());
+        QVERIFY(h.customization.savePreset({},"Canonical review","workspace"));QTRY_COMPARE(h.customization.presets().size(),1);
+        const auto dock=h.customization.presets()[0].toMap()["snapshot"].toMap()["dock"].toMap();
+        QVERIFY(!dock["panes"].toMap()["topbar"].toMap()["visible"].toBool());QVERIFY(!dock["locked"].toBool());
+        // Distinct names in both directions, case-insensitive.
+        QVERIFY(!h.customization.savePreset({},"review","presentation"));QVERIFY(h.customization.feedback().contains("pane layout preset"));
+        QVERIFY(h.panes.savePreset("Studio"));QVERIFY(!h.customization.savePreset({},"studio","workspace"));
+        QVERIFY(!h.customization.renamePreset(h.customization.presets()[0].toMap()["id"].toString(),"Browse"));
+        QVERIFY(!h.panes.savePreset("Canonical review"));QVERIFY(h.panes.feedback().contains("display workspace"));
+        QCOMPARE(h.customization.presets()[0].toMap()["name"].toString(),QString("Canonical review"));
+        // Another slot's routes and layout are untouched by this slot's presets.
+        Harness other;other.panes.setSlot(2);other.customization.setSlot(2);
+        QVERIFY(other.panes.pane("topbar")["visible"].toBool());QCOMPARE(other.customization.presets().size(),0);
+    }
+    // A layout preset applied while a coordinator transaction is still saving never leaves a second live state: the
+    // runtime layout matches layouts[slot] afterwards, and a superseded edit is reported rather than dropped silently.
+    void layoutPresetDuringPendingTransactionStaysCoherent() {
+        for(int order=0;order<2;++order) { // 0: freeze transaction first, then the preset; 1: preset first, then the freeze
+            init();Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+            FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+            if(order==1)QVERIFY(h.panes.applyPreset("Review"));
+            QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
+            if(order==0)QVERIFY(h.panes.applyPreset("Review"));
+            lock.release();
+            QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
+            QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
+            // Compare what layouts[slot] loads as, not raw JSON: a preset that lands first writes no "frozen" key.
+            PaneLayout disk;disk.setSlot(1);QVERIFY(disk.feedback().isEmpty());QCOMPARE(disk.locked(),h.panes.locked());
+            for(const auto& id:QStringList{"tree","topbar","filmstrip","grid"})
+                for(const auto* key:{"visible","frozen","region","extent","order"})
+                    QCOMPARE(disk.pane(id).value(key),h.panes.pane(id).value(key));
+            // Whichever write lands first decides; every outcome is explicit and coherent.
+            const auto feedback=h.customization.feedback();const bool frozen=h.panes.pane("tree")["frozen"].toBool(),preset=!h.panes.pane("topbar")["visible"].toBool();
+            const bool superseded=feedback.contains("replaced")&&frozen&&!preset&&order==0;
+            const bool refused=feedback.contains("changed while saving")&&!frozen&&preset;
+            const bool both=feedback.isEmpty()&&frozen&&preset&&order==1;
+            qInfo("order %d: %s",order,superseded?"transaction superseded the preset":refused?"preset landed first; transaction refused":"both applied in order");
+            QVERIFY2(superseded||refused||both,qPrintable(QString("order %1 feedback \"%2\" frozen %3 preset %4").arg(order).arg(feedback).arg(frozen).arg(preset)));
+            cleanup();
+        }
+        init(); // the harness's own cleanup() runs after this function
+    }
+    // Review round 1: a display preset that already shared its name with a pane layout preset before names were kept apart
+    // can still be updated ("Update snapshot") and renamed to itself; only a new or changed name is refused.
+    void legacyCollidingDisplayPresetNameStaysUpdatable() {
+        Harness h;
+        QVERIFY(h.customization.savePreset({},"Legacy","presentation"));QTRY_VERIFY(!h.customization.saving());
+        QVERIFY(h.customization.savePreset({},"Second","workspace"));QTRY_COMPARE(h.customization.presets().size(),2);
+        QVERIFY(h.panes.savePreset("Studio"));
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){ // names an older build could have stored
+            auto feature=root["monitorCustomization"].toObject();auto rows=feature["slots"].toObject();auto slot=rows["1"].toObject();auto presets=slot["presets"].toArray();
+            auto first=presets[0].toObject();first["name"]="Review";presets[0]=first;auto second=presets[1].toObject();second["name"]="studio";presets[1]=second;
+            slot["presets"]=presets;rows["1"]=slot;feature["slots"]=rows;root["monitorCustomization"]=feature;}).ok());
+        h.customization.reloadPreferences();
+        const auto rows=h.customization.presets();QCOMPARE(rows[0].toMap()["name"].toString(),QString("Review"));
+        const auto builtInId=rows[0].toMap()["id"].toString(),userId=rows[1].toMap()["id"].toString();
+        QVERIFY2(h.customization.savePreset(builtInId,"Review","presentation"),qPrintable(h.customization.feedback())); // Update snapshot
+        QTRY_VERIFY(!h.customization.saving());QVERIFY2(h.customization.feedback().isEmpty(),qPrintable(h.customization.feedback()));
+        QVERIFY2(h.customization.savePreset(userId,"studio","workspace"),qPrintable(h.customization.feedback()));
+        QTRY_VERIFY(!h.customization.saving());QVERIFY2(h.customization.feedback().isEmpty(),qPrintable(h.customization.feedback()));
+        QVERIFY(h.customization.renamePreset(builtInId,"Review"));QTRY_VERIFY(!h.customization.saving());QVERIFY(h.customization.feedback().isEmpty());
+        QVERIFY(!h.customization.renamePreset(builtInId,"Browse"));QVERIFY(h.customization.feedback().contains("pane layout preset"));
+        QVERIFY(!h.customization.savePreset(builtInId,"STUDIO","presentation"));QVERIFY(h.customization.feedback().contains("pane layout preset"));
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        const auto stored=saved["monitorCustomization"].toObject()["slots"].toObject()["1"].toObject()["presets"].toArray();
+        QCOMPARE(stored[0].toObject()["name"].toString(),QString("Review"));QCOMPARE(stored[1].toObject()["name"].toString(),QString("studio"));
+    }
+    // Review round 1: the name check sees display preset saves still queued because the file was busy. In this process the
+    // pane layout preset is refused at once; a pane layout preset another process wrote meanwhile refuses the queued save.
+    void layoutPresetNameChecksIncludeQueuedSaves() {
+        Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        QVERIFY(h.customization.savePreset({},"Queued","presentation"));QVERIFY(h.customization.saving());
+        lock.release(); // the coordinator's retry has not run yet: its save is only queued
+        QVERIFY(!h.panes.savePreset("queued"));QVERIFY(h.panes.feedback().contains("display workspace"));
+        QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);QCOMPARE(h.customization.presets().size(),1);
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());QVERIFY(!saved["layoutPresets"].toObject().contains("queued"));
+        QVERIFY(lock.acquire(0));QVERIFY(h.customization.savePreset({},"Shared","workspace"));QVERIFY(h.customization.saving());
+        lock.release();
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){auto presets=root["layoutPresets"].toObject();presets["shared"]=QJsonObject{{"version",1},{"panes",QJsonObject{}}};root["layoutPresets"]=presets;}).ok());
+        QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
+        QVERIFY2(h.customization.feedback().contains("pane layout preset"),qPrintable(h.customization.feedback()));QCOMPARE(h.customization.presets().size(),1);
+        QVERIFY(glancelot::readSettings(saved).ok());
+        QCOMPARE(saved["monitorCustomization"].toObject()["slots"].toObject()["1"].toObject()["presets"].toArray().size(),1);
+        QVERIFY(saved["layoutPresets"].toObject().contains("shared"));
+    }
+    // Review round 1: when a transaction that replaced a pending pane edit also finds a newer presentation session, the
+    // "replaced" message leads and the session note follows; neither overwrites the other.
+    void supersededFeedbackSurvivesNewPresentationSession() {
+        Harness h;QVERIFY(glancelot::updateSettings([](QJsonObject&){}).ok());
+        FileLock lock(glancelot::settingsFilePath()+".lock");QVERIFY(lock.acquire(0));
+        QVERIFY(h.customization.setPaneFrozen("tree",true));QVERIFY(h.customization.saving());
+        QVERIFY(h.panes.applyPreset("Review"));
+        QVERIFY(h.manager.openPresentation()); // a newer session than the one the transaction started with
+        lock.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!h.customization.saving(),5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!glancelot::settings_detail::hasPendingSettings(&h.panes),5000);
+        const auto feedback=h.customization.feedback();const bool replaced=h.panes.pane("topbar")["visible"].toBool();
+        qInfo("%s: %s",replaced?"transaction superseded the preset":"preset landed first",qPrintable(feedback));
+        if(replaced)QVERIFY2(feedback.startsWith("Pane layout changes made while saving were replaced")&&feedback.contains("newer presentation session"),qPrintable(feedback));
+        else QVERIFY2(feedback.contains("changed while saving"),qPrintable(feedback));
+        h.manager.closePresentation();
+    }
     void freezeLockAndEmergencyRecovery() {
         Harness h;QVERIFY(!h.manager.displays().isEmpty());const auto display=h.manager.displays().first().id;
         QVERIFY(h.customization.detachPane("tree",display));QTRY_VERIFY(h.customization.paneRoutes()["tree"].toMap().value("detached").toBool());

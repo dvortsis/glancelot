@@ -22,6 +22,7 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property int presetCursor: -1           // F049: the last preset the cycle command applied
+    property string presetSavingFeedback: "" // F049: set while that preset is still being written
     property bool focusMode: false          // F049: content only; Escape or the command returns the bars
     property bool navigatorOn: false        // F037 zoom navigator overview
     property rect navRect: Qt.rect(0, 0, 0, 0) // the visible part of the photo, in source pixels
@@ -147,6 +148,16 @@ ApplicationWindow {
         }
     }
     Timer { id: splitMessageTimer; interval: 5000; onTriggered: app.splitMessage = "" }
+    // F049: a preset whose write had to wait reports how it ended here too, not only in Settings.
+    Connections {
+        target: paneLayout
+        enabled: app.presetSavingFeedback.length > 0
+        function onChanged() {
+            if (paneLayout.feedback === app.presetSavingFeedback) return
+            app.presetSavingFeedback = ""
+            if (paneLayout.feedback.length) app.showSplitMessage(paneLayout.feedback)
+        }
+    }
     property bool previewLoadingShown: false
     onPreviewStateChanged: { previewLoadingShown = false; if (previewState === "loading") previewLoadingDelay.restart(); else previewLoadingDelay.stop() }
     Timer { id: previewLoadingDelay; interval: 200; onTriggered: app.previewLoadingShown = true }
@@ -728,8 +739,10 @@ ApplicationWindow {
         else if (id === "layout-preset-next") {
             const names = paneLayout.presetNames
             if (names.length === 0) return
+            // Wait for a display transaction that is saving the layout, as Settings does: when it lands it would replace the preset.
+            if (app.monitor && app.monitor.saving) { showSplitMessage(qsTr("Display preferences are saving. Apply the preset when they finish.")); return }
             presetCursor = (presetCursor + 1) % names.length
-            if (paneLayout.applyPreset(names[presetCursor])) showSplitMessage("Layout: " + names[presetCursor])
+            if (paneLayout.applyPreset(names[presetCursor])) { showSplitMessage("Layout: " + names[presetCursor]); presetSavingFeedback = paneLayout.feedback }
             else showSplitMessage(paneLayout.feedback)
         }
         else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
@@ -1286,9 +1299,11 @@ ApplicationWindow {
     Rectangle {
         id: navigatorPanel
         objectName: "zoomNavigator"
+        // STACK-F049: the navigator follows the preview wherever it is available, including a detached preview window.
+        parent: app.isDetached("preview") && app.detachedHosts.preview ? app.detachedHosts.preview.paneContent : app.contentItem
         readonly property real scaleFactor: viewer.imageWidth > 0 ? Math.min(160 / viewer.imageWidth, 120 / viewer.imageHeight) : 1
         readonly property bool zoomedIn: viewer.imageWidth > 0 && (app.navRect.width < viewer.imageWidth - 1 || app.navRect.height < viewer.imageHeight - 1)
-        visible: app.navigatorOn && app.workspace._previewShown && zoomedIn && !app.layoutEditing
+        visible: app.navigatorOn && app.paneAvailable("preview") && zoomedIn && !app.layoutEditing
         width: Math.round(viewer.imageWidth * scaleFactor) + 2 * Theme.borderWidth
         height: Math.round(viewer.imageHeight * scaleFactor) + 2 * Theme.borderWidth
         x: canvas.x + canvas.width - width - Theme.gapMd
