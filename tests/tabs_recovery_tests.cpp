@@ -710,6 +710,31 @@ private slots:
         QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
     }
 
+    // Esc in the path field cancels a folder route that hangs (an offline share). Cancelling the switch's own route leaves
+    // the tab unavailable rather than on the previous tab's photo, and the dropped result never settles it later, even
+    // though here the folder would have listed another image.
+    void cancellingTheSwitchFolderRouteLeavesTheTabUnavailable() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(QFile::remove(files[1]));   // beta's image is gone; its folder still lists another one
+            QImage other(32, 24, QImage::Format_RGB32); other.fill(Qt::darkGreen); QVERIFY(other.save(media.file("beta/other.png")));
+            QVERIFY(viewer.activateTab(1)); QVERIFY(viewer.directoryPending());   // folder route pending
+            viewer.cancelDirectoryNavigation();
+            const auto now = unavailableDiffers(viewer); QVERIFY2(now.isEmpty(), qPrintable(now));
+            QTest::qWait(1000);   // the dropped route's result has landed by now
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto later = unavailableDiffers(viewer); QVERIFY2(later.isEmpty(), qPrintable(later));
+            const auto live = liveTabsDiffer(viewer, files, 1); QVERIFY2(live.isEmpty(), qPrintable(live));
+        }
+        const auto differ = storedTabsDiffer(config.path(), files, 1); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+
     // Retry (F5, or the placeholder's Retry button, which runs the same command) reopens the target once its folder is back.
     void retryReopensTheTargetWhenItsFolderReturns() {
         QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());

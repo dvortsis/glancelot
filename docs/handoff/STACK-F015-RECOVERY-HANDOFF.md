@@ -646,6 +646,7 @@ New (`tests/tabs_recovery_tests.cpp`):
 | --- | --- |
 | `reopenAfterAFailedFolderSwitchKeepsTheTarget` (rows: F5 refresh, external edit, external delete, F5 after stale decode) | The reviewer's four probe rows. The precondition asserts that the switch failed and live and stored both hold beta for tab 1. The edit row asserts that gamma's file really changed, and the delete row that it is gone. Each row waits 4 s for the watcher. Then it asserts live tabs, the unavailable state (active row flagged; no file, folder, image or loading), stored tabs, the active index and position, and the record `clean`. |
 | `automaticMoveDuringAPendingSwitchNeverSettlesIt` (rows: rename followed, removal followed) | `reconcileRenamedPath` or `reconcileRemovedPaths` on the previous tab's photo while the switch's folder route is pending. The tab never settles on it, the route runs again, and the tab ends unavailable with every location kept. |
+| `cancellingTheSwitchFolderRouteLeavesTheTabUnavailable` | Esc (`cancelDirectoryNavigation()`) while the switch's folder route is pending; beta's folder would have listed another image. The tab is unavailable at once and still is after the dropped result would have landed. Every location is kept, stored and `clean`. (Added after the first push.) |
 | `retryReopensTheTargetWhenItsFolderReturns` | beta's folder is renamed away (the share goes offline), the switch fails, the folder comes back, and F5/Retry reopens beta's own image. Live, stored, active index and `clean` are all asserted. |
 | `retryWhileStillUnavailableKeepsEveryTabsLocation` | The window starts unclaimed. After the switch fails, `setWindowClaim` + `restoreWindow` run (the `app/main.cpp:211` retry); the restore must not replace the live set. Then F5/Retry twice with the folder still gone: still unavailable, every location kept, stored and `clean`. |
 
@@ -673,7 +674,7 @@ Pass after (whole executable, final source):
 Totals: 67 passed, 0 failed, 0 skipped, 0 blacklisted, 67735ms
 ```
 
-67 = initTestCase, cleanupTestCase, 29 functions, and the data rows: 14 malformed, 14 legacy, 3 close-active, 2 stale-decode, 4 second-action, 4 reopen, 2 automatic-move. Each new location assertion reports the stored record or the live strip on failure.
+67 = initTestCase and cleanupTestCase, 22 functions without data rows, and 43 rows across 7 data-driven functions (14 malformed, 14 legacy, 3 close-active, 2 stale-decode, 4 second-action, 4 reopen, 2 automatic-move). Each new location assertion reports the stored record or the live strip on failure. The Esc-cancel test added after this run makes 68 (see "After the first push").
 
 ### Mutation checks
 
@@ -740,6 +741,36 @@ Total Test time (real) = 308.30 sec
 exit 0
 ```
 
+### After the first push (`b0134b0`)
+
+- **Esc-cancel test added:** `cancellingTheSwitchFolderRouteLeavesTheTabUnavailable` (test-only change). `tabs_recovery` was rebuilt, then run twice under `gate-lock.ps1 -Branch claude/f015-fix`. It now has 68 cases: 23 functions without data rows.
+
+  ```
+  1/1 Test #42: tabs_recovery ....................   Passed   59.61 sec
+  1/1 Test #42: tabs_recovery ....................   Passed   59.96 sec
+  ```
+
+- **More UI suites that read the changed `emptyState`, `cancelDirectoryNavigation()` and the `refresh` command,** run in the same gate-lock block:
+
+  ```
+  1/3 Test #12: folder_grid ......................***Failed  244.21 sec
+  2/3 Test #14: pathbar_ui .......................   Passed    4.87 sec
+  3/3 Test #47: command_routing ..................   Passed   10.56 sec
+  FAIL!  : GridUiTests::sortChangesRacingOpensKeepTheAcceptedFolder() 'h.viewer.filePath().startsWith(two.path()) && !h.viewer.filePath().endsWith("a.png")' returned FALSE. ()
+  Totals: 73 passed, 1 failed, 4 skipped, 0 blacklisted, 244043ms
+  ```
+
+- **`folder_grid` rerun once** (a budget-labelled suite; AGENTS.md says rerun once and record both), alone under `gate-lock.ps1`:
+
+  ```
+  1/1 Test #12: folder_grid ......................   Passed  209.14 sec
+  Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 209057ms
+  ```
+
+  The failing case races sort changes against opens and involves no tab. With no tab switch settling, every round-3 path is inert: `noteUserMove()`, `switchSuperseded` and the settle guards all require `tabSettling`. So this reads as load timing; the authoritative gate decides.
+
+- **`grid_ui_tests.cpp` `startupStatusAndEmptyState`** finds the toast by `objectName` and checks status text only, so the restructured empty state does not affect it (it passed in both runs).
+
 ### Files changed in round 3
 
 | File | Change |
@@ -761,7 +792,7 @@ No shared header or queue file changed.
 - Failure and cancellation cases: folder unavailable on switch and close; F5, watcher edit, watcher delete, rename and delete-flow reconciles; a stale decode; a cancelled or superseded folder route; Retry success and repeated failure; the claim retry while unavailable.
 - Unverified:
   - the placeholder's rendering (not screenshot);
-  - Esc cancelling a hanging folder route (code path only; no hanging share here);
+  - a really hanging share (Esc cancellation is tested with a pending route, not an SMB stall). `goToTarget()`'s `QFileInfo::exists(target.image)` is a UI-thread stat; it predates this round (round 0's `activateTab`), but Retry now runs it against offline shares, where it can block for the SMB timeout. Noted, not changed;
   - the transient B1 form (reasoned);
   - the grid/combined-mode and single-location presentation limits above;
   - physical, multi-window and GPU paths.
