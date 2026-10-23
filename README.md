@@ -1,6 +1,6 @@
 # Glancelot
 
-A native, local-first photo viewer for Windows and Linux. Built with C++20, Qt Quick and a dedicated GPU canvas. Early alpha: JPEG and PNG, deterministic depth-first folder navigation, fit/pan/zoom, physical-pixel actual size, hold loupe, remappable keyboard commands, palette and preferences, worker-backed filmstrip, lazy folder tree, and independent per-window location resume.
+A native, local-first photo viewer for Windows and Linux. Built with C++20, Qt Quick and a dedicated GPU canvas. Early alpha: JPEG, PNG, BMP, GIF (animated), TIFF (multipage), WebP and TGA on Windows, embedded previews of common RAW camera files, deterministic depth-first folder navigation, fit/pan/zoom, physical-pixel actual size, hold loupe, remappable keyboard commands, palette and preferences, worker-backed filmstrip, lazy folder tree, and independent per-window location resume.
 
 ## Try the current build
 
@@ -8,7 +8,7 @@ On Windows, double-click **Test Glancelot.cmd** to build, run tests, package and
 
 ## Run
 
-Windows portable package: extract `dist/Glancelot.zip` and run `bin/glancelot.exe`. Keep `glancelot-decoder.exe` beside it. Open with Ctrl+O or drop a JPEG/PNG. Right/Left browse; Page Down/Up jump folders; F fits; 1 shows actual size; R rotates the view; F11 fullscreen; Ctrl+, opens Settings; Ctrl+Shift+P finds a command (Settings → Controls). Drag to pan, Ctrl+wheel zooms, right-button hold shows the loupe. Settings → Controls lists every command: search it, run one with Enter, and remap or clear its shortcut. Settings also hold wheel, folder-boundary, file-order and panel behavior. S cycles file order (name, modified, size, shuffle); Shift+S reverses it. T toggles the filmstrip; Ctrl+B shows the folder tree. Each window remembers its own last successfully opened photo by opening order; explicit file arguments override resume.
+Windows portable package: extract `dist/Glancelot.zip` and run `bin/glancelot.exe`. Keep `glancelot-decoder.exe` beside it. Open with Ctrl+O or drop a supported image ([formats per platform](docs/SUPPORTED-CAPABILITIES.md#image-formats)). Right/Left browse; Page Down/Up jump folders; F fits; 1 shows actual size; R rotates the view; F11 fullscreen; Ctrl+, opens Settings; Ctrl+Shift+P finds a command (Settings → Controls). Drag to pan, Ctrl+wheel zooms, right-button hold shows the loupe. Settings → Controls lists every command: search it, run one with Enter, and remap or clear its shortcut. Settings also hold wheel, folder-boundary, file-order and panel behavior. S cycles file order (name, modified, size, shuffle); Shift+S reverses it. T toggles the filmstrip; Ctrl+B shows the folder tree. File changes happen only on explicit commands with confirmation: Delete moves the selection to the Recycle Bin/Trash, F2 renames, Ctrl+X then Ctrl+V moves files. Each window remembers its own last successfully opened photo by opening order; explicit file arguments override resume.
 
 ## Appearance
 
@@ -18,11 +18,11 @@ The interface is built on Qt Quick Controls' Basic style. Shared design tokens (
 
 Families: Slate & Ice, Graphite, Arctic, Ocean, Cobalt, Indigo, Iris, Lavender, Plum, Orchid, Rose, Cranberry, Ruby, Coral, Terracotta, Copper, Amber, Sandstone, Honey, Olive, Moss, Fern, Forest, Emerald, Jade, Lagoon, Teal, Glacier, Steel, Storm, Midnight, Lilac, Heather, Mulberry, Blush, Clay, Espresso, Parchment, Sage, Monochrome.
 
-Preferences: normal OS application-config directory, or `GLANCELOT_CONFIG_DIR` for portable/test use. Decoder is a separate process with bounded pixel transfer, format allowlist and timeout. Process separation is not yet a complete OS sandbox.
+Preferences: normal OS application-config directory, or `GLANCELOT_CONFIG_DIR` for portable/test use. Decoder is a separate process with bounded pixel transfer (256 MiB decoded limit), content-sniffed format allowlist and timeout. Process separation is not yet a complete OS sandbox.
 
 ## Development and status
 
-See [current capabilities](docs/SUPPORTED-CAPABILITIES.md), [BUILDING.md](BUILDING.md), [execution plan](docs/AGENT-BUILD-PLAN.md), [work queue](docs/WORK-QUEUE.yaml), and [full requirements](docs/REQUIREMENTS.md). The full roadmap remains in progress. RAW, XMP culling, comparison, archive reading, HDR, calibrated monitor output and complete input-matrix support are not delivered by this alpha. Native Linux desktop/GPU behavior remains unqualified; Linux core tests run in WSL.
+See [current capabilities](docs/SUPPORTED-CAPABILITIES.md), [BUILDING.md](BUILDING.md), [execution plan](docs/AGENT-BUILD-PLAN.md), [work queue](docs/WORK-QUEUE.yaml), and [full requirements](docs/REQUIREMENTS.md). The full roadmap remains in progress. Full RAW development (only embedded previews are shown), XMP culling, in-app comparison, archive reading, HDR, ICC-managed canvas output and physical monitor qualification are not delivered by this alpha. The full test suite runs on Windows and on Linux (offscreen, inside the Docker build); native Linux desktop and GPU behavior remain unqualified. The current plan is [docs/handoff/LEAD-PLAN-2026-10-22.md](docs/handoff/LEAD-PLAN-2026-10-22.md).
 
 No telemetry, cloud, mandatory catalog or automatic updates. Source under GPL-3.0-or-later; see LICENSE and THIRD_PARTY_NOTICES.md. Brand assets were supplied by the project owner; their provenance is preserved in assets/brand.
 
