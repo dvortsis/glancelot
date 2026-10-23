@@ -406,7 +406,8 @@ struct ViewerController::Private {
         });
         // F040: the reference lives in the display manager's retained-image budget; a newer current frame may release it.
         QObject::connect(&displayManager,&glancelot::DisplayManager::referenceShed,q,[this](const QString& shed){
-            status=QCoreApplication::translate("Status","The reference window for %1 closed to keep image memory within its budget.").arg(QFileInfo(shed).fileName());
+            // Main.qml shows this status as a notice too (its referenceShed handler runs after this one).
+            status=QCoreApplication::translate("Status","Reference window closed to free image memory. To reopen it, open %1 and pin it again.").arg(QFileInfo(shed).fileName());
             emit q->stateChanged();
         });
         QObject::connect(&displayManager,&glancelot::DisplayManager::referenceChanged,q,&ViewerController::referenceChanged);
@@ -1279,7 +1280,25 @@ QImage ViewerController::referenceImage() const{return d->displayManager.referen
 QString ViewerController::referenceName() const{const auto path=d->displayManager.referencePath();return path.isEmpty()?QString{}:QFileInfo(path).fileName();}
 bool ViewerController::pinReference(){
     if(!d->imageReady||d->image.isNull())return false;
-    return d->displayManager.setReferenceImage(d->path,d->image,d->generation);
+    auto& dm=d->displayManager;
+    const bool replacing=!dm.referencePath().isEmpty();
+    if(dm.setReferenceImage(d->path,d->image,d->generation))return true;
+    // Refused by the retained-image budget. Say what did not happen and name what actually holds the memory; a held
+    // output frame is off screen, so it is named rather than blaming the photos on screen. Main.qml shows this status.
+    const auto say=[](const char* text){return QCoreApplication::translate("Status",text);};
+    QString next;
+    if(dm.isPresentationActive()&&dm.presentationModeString()==QLatin1String("comparison"))
+        next=say("Close the comparison on the output to make room.");
+    else if(dm.isPresentationActive()&&!dm.isPinned()&&dm.currentPath()!=d->path)
+        next=say("Turn on Follow controller selection to release the output's held photo.");
+    else if(!dm.pinnedPath().isEmpty())
+        next=say("Unpin the output photo to make room.");
+    else
+        next=say("This photo is too large for the image memory budget.");
+    d->status=(replacing?say("Not enough image memory to replace the reference photo. The current one stays.")
+                     :say("Not enough image memory to open the reference window."))+u' '+next;
+    emit stateChanged();
+    return false;
 }
 void ViewerController::clearReference(){d->displayManager.clearReferenceImage();}
 QString ViewerController::filePath() const{return d->path;}

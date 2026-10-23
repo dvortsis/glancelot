@@ -228,7 +228,11 @@ protected:
     }
 };
 
-ImageCanvas::~ImageCanvas() { unwatchHold(); }
+ImageCanvas::~ImageCanvas() {
+    unwatchHold();
+    // A canvas destroyed before its window (for example inside a Loader) gives the window back its persistent scene graph.
+    if (m_visibilityWindow) m_visibilityWindow->setPersistentSceneGraph(true);
+}
 ImageCanvas::ImageCanvas(QQuickItem* parent):QQuickRhiItem(parent) {
     setAlphaBlending(false);
     // Release an old hidden window's scene graph instead of waiting for it to render

@@ -253,3 +253,97 @@ The `releaseResources()` call that the canvas makes on `visibleChanged` reaches 
 - **Pane migration.** The existing `windowChanged` release in `ImageCanvas` (pane migration) depends on the same persistent-scene-graph behaviour. It is unchanged in this round and not re-verified here.
 - **Full offscreen suite.** Not re-run in this round; only the targeted set above was run.
 - **UI design skills.** Read for this round: `application-interface-design` (feedback and states: an error notice says what happened, in specific terms). The QML change is a notice string and one property, with no layout, spacing, geometry, type or motion change, so the other skills did not apply.
+
+## Review round 2 follow-ups
+
+The round 1 re-review was APPROVED (`docs/verification/STACK-F040-PINNED-REVIEW.md` on `claude/review-stack-f040`, `4a894be`). This round makes the lead's follow-ups for LOW-1, LOW-2 and LOW-5. Base: `b610348`.
+
+### LOW-1. The refusal notice says what happened and what to do
+
+`ViewerController::pinReference()` writes the refusal into `status`. `Main.qml` shows that status as the notice. The first sentence depends on whether a reference window is already open:
+
+- "Not enough image memory to open the reference window."
+- "Not enough image memory to replace the reference photo. The current one stays."
+
+The second sentence names whatever is actually holding the memory. The checks run in the order listed.
+
+| Condition | Next step |
+| --- | --- |
+| Output is comparing | "Close the comparison on the output to make room." |
+| Output is active, not pinned, and holding an older frame than the main photo (the held frame is off screen) | "Turn on Follow controller selection to release the output's held photo." |
+| Output has a pin | "Unpin the output photo to make room." |
+| None of these | "This photo is too large for the image memory budget." |
+
+"Open a photo first to pin it as a reference." is unchanged.
+
+UI skills: I applied `application-interface-design` (feedback and states). The text is sentence case and says what did and did not happen, with one next step. The notice is the existing `DeleteFlow` toast, so the theme tokens and layout are unchanged.
+
+### LOW-2. Shed order (lead decision)
+
+`enforceBudget()` now sheds in this order:
+
+1. **Speculative caches:** the previous frame, and a comparison frame the output is not showing.
+2. **The reference photo.** It is skipped when it shares pixels with a frame that stays (current, pin or waiting frame), because dropping it would free nothing. When it is shed, the window closes. The main window then shows the notice "Reference window closed to free image memory. To reopen it, open <name> and pin it again." The controller status uses the same text.
+3. **Refuse the new frame:**
+   - A waiting (held or timed) output frame is dropped with the existing status "Output holds its last image: the latest frame exceeds the retained-image budget."
+   - A comparison being admitted is dropped.
+   - A pin being admitted (`admittingPin`) is refused.
+
+A photo pinned on the output is never dropped for a newer main frame. Instead, the output does not retain the newer frame (`currentWithheld`) and sets the status "Output keeps its pinned photo: the latest frame exceeds the retained-image budget." When the pin is released, the output fetches that frame again with a queued `currentImageRequested`. `pinCurrentImage()` fetches the withheld frame first. The current frame is still never dropped while the output shows it.
+
+### LOW-5
+
+`~ImageCanvas` restores `setPersistentSceneGraph(true)` on a window it had made non-persistent.
+
+### Tests (`tests/reference_pin_tests.cpp`)
+
+**Notice wording paths:**
+- `budgetRefusalHasItsOwnNotice`: open refused, photo too large.
+- `refusalNoticeNamesThePinnedOutput`: open refused, unpin.
+- `refusalNoticeNamesTheComparison`: open refused, close the comparison.
+- `refusalNoticeForReplacementNamesTheHeldFrame`: replace refused, the old reference stays, release the held frame.
+- `commandsStayDistinct`: open a photo first.
+
+**Shed order:**
+- `heldOutputKeepsItsFrameReferenceIsShed`: the output holds p1, the reference is p2, and a new frame p3 arrives. The reference is shed with its notice. The held frame and the waiting frame stay intact, the output status is unchanged, `retainedImageBytes() == 2 * one`, and resuming delivers p3.
+- `pinnedOutputPhotoIsNeverDropped`: the output pin survives a newer main frame. It reports its status and keeps exactly one image retained. Unpinning brings the main photo back.
+
+### Output (MSVC Release, `build-claude-f040`)
+
+Run inside `gate-lock.ps1 -Branch claude/f040-fix`:
+
+```
+> ctest --test-dir build-claude-f040 -R '^(reference_pin|monitor_output|input_ui|monitor_customization_ui)$' --output-on-failure
+1/4 Test #13: input_ui .........................   Passed   79.64 sec
+2/4 Test #37: monitor_output ...................   Passed    2.61 sec
+3/4 Test #43: monitor_customization_ui .........   Passed   26.81 sec
+4/4 Test #44: reference_pin ....................   Passed   26.02 sec
+100% tests passed out of 4
+Total Test time (real) = 135.09 sec
+```
+
+Direct offscreen/software run:
+
+```
+Totals: 15 passed, 0 failed, 2 skipped, 0 blacklisted, 25679ms
+```
+
+The two skips are the native cases.
+
+Direct native run (D3D11, threaded loop, `QT_LOGGING_RULES=qt.scenegraph.renderloop=true`, no offscreen or software environment):
+
+```
+PASS   : ReferencePinTests::nativeTextureReleasedOnClose()
+PASS   : ReferencePinTests::nativeTextureReleasedOnShed()
+Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 3704ms
+```
+
+The first run of this round failed `heldOutputKeepsItsFrameReferenceIsShed`. The toast read `viewer.status`, which the decode that caused the shed had already replaced ("Untagged source assumed sRGB · display profile not yet managed"). The QML handler now builds the text from the shed path. The run above is after that fix.
+
+This round has no fail-before run (the lead did not ask for one). Two tests encode behaviour that the round 1 code does not have:
+- `heldOutputKeepsItsFrameReferenceIsShed`: round 1 shed the waiting frame before the reference.
+- `pinnedOutputPhotoIsNeverDropped`: round 1 dropped the pin and switched to mirror.
+
+**Still not covered by tests:**
+- `pinCurrentImage()` while a frame is withheld.
+- A comparison being admitted while the reference is open.

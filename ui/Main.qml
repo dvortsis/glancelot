@@ -727,11 +727,9 @@ ApplicationWindow {
         }
         // F040
         else if (id === "reference-pin") {
-            // A decoded photo that is still refused did not fit in image memory beside the frames already held.
+            // A decoded photo that is still refused hit the image budget; the status says what stayed and what to free.
             if (!viewer.pinReference())
-                deleteFlow.showNotice(viewer.imageReady
-                    ? "This photo doesn't fit in image memory beside the photos already shown, so the reference window wasn't opened."
-                    : "Open a photo first to pin it as a reference.")
+                deleteFlow.showNotice(viewer.imageReady ? viewer.status : "Open a photo first to pin it as a reference.")
         }
         else if (id === "reference-close") viewer.clearReference()
         // F009
@@ -2031,6 +2029,14 @@ ApplicationWindow {
     LayoutMirroring.enabled: rtl
     LayoutMirroring.childrenInherit: true
         onClosing: viewer.clearReference()
+        // The budget released the reference for a newer frame: say so and how to reopen it. The text is built here
+        // because the decode that caused the release also writes viewer.status; it matches the controller's status text.
+        Connections {
+            target: viewer.displayManager
+            function onReferenceShed(path) {
+                deleteFlow.showNotice("Reference window closed to free image memory. To reopen it, open " + path.split(/[\\/]/).pop() + " and pin it again.")
+            }
+        }
         ImageCanvas {
             id: referenceCanvas
             objectName: "referenceCanvas"

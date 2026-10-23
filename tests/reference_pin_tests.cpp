@@ -27,6 +27,13 @@ QString labelOf(const ViewerController& viewer, const QString& id) {
     for (const auto& row : viewer.commands()) if (row.toMap().value("id") == id) return row.toMap().value("label").toString();
     return {};
 }
+constexpr const char* kOpenRefused = "Not enough image memory to open the reference window.";
+constexpr const char* kReplaceRefused = "Not enough image memory to replace the reference photo. The current one stays.";
+constexpr const char* kTooLarge = "This photo is too large for the image memory budget.";
+constexpr const char* kUnpin = "Unpin the output photo to make room.";
+constexpr const char* kCloseComparison = "Close the comparison on the output to make room.";
+constexpr const char* kReleaseHeld = "Turn on Follow controller selection to release the output's held photo.";
+QString joined(const char* a, const char* b) { return QString::fromUtf8(a) + u' ' + QString::fromUtf8(b); }
 } // namespace
 
 class ReferencePinTests : public QObject {
@@ -329,8 +336,10 @@ private slots:
         h.viewer.trigger("presentation-close"); flushDeletes();
     }
 
-    // Review round 1: a budget refusal says so instead of "Open a photo first".
-    void budgetRefusalHasItsOwnNotice() {
+    // Review rounds 1-2: a budget refusal has its own notice. It says whether the window did not open or the old
+    // reference stays, and names the next step for what is actually holding the memory.
+
+    void budgetRefusalHasItsOwnNotice() {   // open refused; the photo alone is too large
         BudgetScope budget;
         Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media));
@@ -339,9 +348,122 @@ private slots:
         h.viewer.trigger("reference-pin"); QTest::qWait(50);
         QVERIFY(h.viewer.referenceName().isEmpty());
         QVERIFY(!referenceWindow(h)->isVisible());
-        QVERIFY2(!notice(h).contains("Open a photo first"), qPrintable(notice(h)));
-        QVERIFY2(notice(h).contains("image memory"), qPrintable(notice(h)));
+        QCOMPARE(notice(h), joined(kOpenRefused, kTooLarge));
         QVERIFY(selection.same(h.viewer));
+    }
+
+    void refusalNoticeNamesThePinnedOutput() {   // open refused; the output's pinned photo holds the memory
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        const qint64 one = h.viewer.image().sizeInBytes();
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");   // output pin p1
+        QVERIFY(step(h, 2));
+        glancelot::DisplayManager::setImageBudgetBytes(2 * one - 16);
+        h.viewer.trigger("reference-pin"); QTest::qWait(50);
+        QVERIFY(!referenceWindow(h)->isVisible());
+        QCOMPARE(notice(h), joined(kOpenRefused, kUnpin));
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    void refusalNoticeNamesTheComparison() {   // open refused; the output's comparison photo holds the memory
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        h.viewer.trigger("presentation-toggle"); QVERIFY(dm->isPresentationActive());
+        QVERIFY(step(h, 2));
+        QImage other(h.viewer.image().size(), QImage::Format_RGBA8888); other.fill(Qt::cyan);
+        dm->setComparisonImage("comparison", other, quint64(1) << 40);
+        QCOMPARE(h.viewer.presentationMode(), QString("comparison"));
+        glancelot::DisplayManager::setImageBudgetBytes(2 * one - 16);
+        h.viewer.trigger("reference-pin"); QTest::qWait(50);
+        QVERIFY(!referenceWindow(h)->isVisible());
+        QCOMPARE(notice(h), joined(kOpenRefused, kCloseComparison));
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    void refusalNoticeForReplacementNamesTheHeldFrame() {   // replace refused; an off-screen held frame is the cause
+        BudgetScope budget;
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        h.viewer.trigger("reference-pin"); QTRY_VERIFY(referenceWindow(h)->isVisible());   // reference p1
+        h.viewer.trigger("presentation-toggle"); QVERIFY(dm->isPresentationActive());
+        dm->setRoutingPolicy({{"followSelection", false}});
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+        QVERIFY(step(h, 2));   // the output holds p1 (also the reference), so the latest frame cannot wait beside it
+        QCOMPARE(dm->currentPath(), media.path(0));
+        h.viewer.trigger("reference-pin"); QTest::qWait(50);
+        QCOMPARE(h.viewer.referenceName(), QString("p1.png"));   // the old reference stays
+        QVERIFY(referenceWindow(h)->isVisible());
+        QCOMPARE(notice(h), joined(kReplaceRefused, kReleaseHeld));
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Review round 2 (LOW-2): a new frame never costs the output its held frame. Speculative caches go first, then the
+    // reference window's photo (with a notice that says how to reopen it).
+    void heldOutputKeepsItsFrameReferenceIsShed() {
+        BudgetScope budget;
+        Media media(3, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        const qint64 heldKey = h.viewer.image().cacheKey();
+        h.viewer.trigger("presentation-toggle"); QVERIFY(dm->isPresentationActive());
+        dm->setRoutingPolicy({{"followSelection", false}});
+        QVERIFY(step(h, 2));   // output holds p1; p2 waits
+        h.viewer.trigger("reference-pin"); QTRY_VERIFY(referenceWindow(h)->isVisible());   // reference p2
+        glancelot::DisplayManager::setImageBudgetBytes(2 * one + 16);
+        const QString status = dm->routingStatus();
+        QSignalSpy shed(dm, &glancelot::DisplayManager::referenceShed);
+
+        QVERIFY(step(h, 3));   // p3 replaces p2 as the waiting frame; only the reference can make room
+        QCOMPARE(shed.count(), 1);
+        QCOMPARE(shed.at(0).at(0).toString(), media.path(1));
+        QTRY_VERIFY(!referenceWindow(h)->isVisible());
+        QVERIFY(h.viewer.referenceName().isEmpty());
+        QVERIFY(referenceCanvas(h)->image().isNull());
+        const QString shedNotice = "Reference window closed to free image memory. To reopen it, open p2.png and pin it again.";
+        QCOMPARE(notice(h), shedNotice);
+        // The held frame and the waiting frame are intact, the output status is unchanged, and the bytes add up.
+        QCOMPARE(dm->currentPath(), media.path(0));
+        QCOMPARE(dm->routingStatus(), status);
+        auto* output = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(output);
+        QCOMPARE(output->primaryCanvas()->image().cacheKey(), heldKey);
+        QCOMPARE(dm->retainedImageBytes(), 2 * one);   // held p1 + waiting p3
+        dm->setRoutingPolicy({{"followSelection", true}});
+        QTRY_COMPARE(output->primaryCanvas()->image().cacheKey(), h.viewer.image().cacheKey());
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // Review round 2 (LOW-2): a pinned output photo is never dropped for a newer main frame. The output does not retain
+    // the newer frame until the pin is released, and says so.
+    void pinnedOutputPhotoIsNeverDropped() {
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        const qint64 pinnedKey = h.viewer.image().cacheKey();
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");
+        QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+        QVERIFY(step(h, 2));
+        QCOMPARE(dm->pinnedPath(), media.path(0));
+        QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
+        auto* output = qobject_cast<glancelot::PresentationWindow*>(dm->presentationWindow()); QVERIFY(output);
+        QCOMPARE(output->primaryCanvas()->image().cacheKey(), pinnedKey);
+        QCOMPARE(dm->retainedImageBytes(), one);
+        QCOMPARE(dm->routingStatus(), QString("Output keeps its pinned photo: the latest frame exceeds the retained-image budget."));
+        // Releasing the pin brings the output back to the main photo.
+        h.viewer.unpinPresentationImage();
+        QTRY_COMPARE(output->primaryCanvas()->image().cacheKey(), h.viewer.image().cacheKey());
+        QCOMPARE(dm->currentPath(), media.path(1));
+        QCOMPARE(dm->retainedImageBytes(), one);
+        h.viewer.trigger("presentation-close"); flushDeletes();
     }
 
     // Review round 1, native RHI only: closing or shedding the reference releases its GPU texture and admission

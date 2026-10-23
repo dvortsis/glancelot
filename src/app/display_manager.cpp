@@ -115,6 +115,8 @@ struct DisplayManager::Private {
     QImage referenceImage;
     quint64 referenceGenerationHighWater{0};
     bool referenceProtected{false};   // while admitting an output pin: one explicit pin never evicts the other
+    bool admittingPin{false};         // pinImage(): the pin is the new frame, so the budget may refuse it
+    bool currentWithheld{false};      // pinned output kept its photo; the newer main frame is fetched again on release
 
     QHash<QString, QString> fitModes;           // per display id
     QHash<QString, QVariantMap> viewports;      // bounded session state by display identity
@@ -191,38 +193,54 @@ struct DisplayManager::Private {
         return total;
     }
 
-    // Shed in order: previous, pending, comparison, reference, pinned. The current image is never dropped. The
-    // reference goes before the pinned output: losing it closes a local window with a notice, while losing the pin
-    // silently switches what an audience display shows.
+    // Budget order when a new frame needs room (review round 2, lead decision):
+    //   1. speculative caches: the previous frame, and a comparison frame the output is not showing;
+    //   2. the F040 reference window's photo, unless it is the frame being admitted or shares pixels with a frame that
+    //      stays (it closes with a notice saying how to reopen it);
+    //   3. refuse the new frame: a waiting (held/timed) output frame, a comparison or pin being admitted, each with its
+    //      existing status. A comparison the output shows is dropped only after that, as before.
+    // The current frame is never dropped, and a photo pinned on the output is never dropped for a newer main frame:
+    // the output keeps the pin, does not retain the newer frame, says so, and fetches it again when the pin is released.
     void enforceBudget() {
-        if (retainedBytes() <= s_imageBudgetBytes) return;
+        const auto fits = [this] { return retainedBytes() <= s_imageBudgetBytes; };
+        if (fits()) return;
+        const auto done = [this] { applyImagesToWindow(); };
         previousImage = QImage(); previousPath.clear();
-        if (retainedBytes() <= s_imageBudgetBytes) {
-            applyImagesToWindow();
-            return;
-        }
-        // Admit a latest frame after shedding optional history, but preserve the
-        // displayed and pinned frames if both cannot fit at once.
-        if(pendingValid){pendingValid=false;pendingImage={};pendingPath.clear();status("Output holds its last image: the latest frame exceeds the retained-image budget.");}
-        if(retainedBytes()<=s_imageBudgetBytes){applyImagesToWindow();return;}
-        comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0;
-        if (retainedBytes() <= s_imageBudgetBytes) {
-            applyImagesToWindow();
-            return;
-        }
-        if (!referenceImage.isNull() && !referenceProtected) {
+        if (mode != PresentationMode::Comparison) { comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0; }
+        if (fits()) return done();
+        const auto kept = [this](const QImage& im) {
+            return !im.isNull() && (im.cacheKey() == currentImage.cacheKey() || im.cacheKey() == pinnedImage.cacheKey()
+                || (pendingValid && im.cacheKey() == pendingImage.cacheKey()));
+        };
+        if (!referenceImage.isNull() && !referenceProtected && !kept(referenceImage)) {
             const auto shed=referencePath;
             referenceImage = QImage(); referencePath.clear();
             emit q->referenceShed(shed);
             emit q->referenceChanged();
-            if (retainedBytes() <= s_imageBudgetBytes) { applyImagesToWindow(); return; }
+            if (fits()) return done();
         }
-        if (!pinnedImage.isNull()) {
+        if(pendingValid){pendingValid=false;pendingImage={};pendingPath.clear();status("Output holds its last image: the latest frame exceeds the retained-image budget.");}
+        if (fits()) return done();
+        comparisonImage = QImage(); comparisonPath.clear(); comparisonGeneration = 0;
+        if (fits()) return done();
+        const bool holdingPin = mode == PresentationMode::Pinned && !admittingPin;
+        if (!pinnedImage.isNull() && !holdingPin) {
             pinnedImage = QImage(); pinnedPath.clear(); pinnedGeneration = 0;
             emit q->pinnedPathChanged(pinnedPath);
             if (mode == PresentationMode::Pinned) q->setMode(PresentationMode::Mirror);
+            if (fits()) return done();
         }
-        applyImagesToWindow();
+        if (holdingPin && !pinnedImage.isNull() && !currentImage.isNull() && currentImage.cacheKey() != pinnedImage.cacheKey()) {
+            currentImage = QImage(); currentWithheld = true;
+            status("Output keeps its pinned photo: the latest frame exceeds the retained-image budget.");
+        }
+        done();
+    }
+    // The pin was released: fetch the withheld main frame again (queued, so it never re-enters a budget pass).
+    void restoreWithheldCurrent() {
+        if (!currentWithheld || mode == PresentationMode::Pinned) return;
+        currentWithheld = false;
+        QMetaObject::invokeMethod(q, [owner = q] { emit owner->currentImageRequested(); }, Qt::QueuedConnection);
     }
 
     void applyImagesToWindow() {
@@ -503,7 +521,7 @@ void DisplayManager::closePresentation() {
     emit presentationActiveChanged(false);
     emit presentationClosed();
     emit outputColorStatusChanged();
-    d->status("Output disabled");emit currentImageRequested();
+    d->currentWithheld=false;d->status("Output disabled");emit currentImageRequested();
 }
 
 void DisplayManager::togglePresentation() {
@@ -530,6 +548,7 @@ void DisplayManager::setMode(PresentationMode mode) {
     d->folderHeld=false;d->followFolder=d->currentPath.isEmpty()?QString{}:QFileInfo(d->currentPath).absolutePath();
     d->applyImagesToWindow();
     emit presentationModeChanged(d->mode);
+    d->restoreWithheldCurrent();
 }
 
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
@@ -561,6 +580,7 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
     }
     d->currentPath = path;
     d->currentImage = image;
+    d->currentWithheld = false;
     d->currentGeneration = generation;
     d->displayedGeneration=generation;
     d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
@@ -570,7 +590,7 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
         d->applyImagesToWindow();
     }
     emit imageRouted(path, generation);
-    d->status(!d->active?QStringLiteral("Output disabled"):d->mode==PresentationMode::Pinned?QStringLiteral("Reference pinned"):d->routingPolicy.value("slideshowTiming")=="independent"?QStringLiteral("Timed output: latest image presented"):QStringLiteral("Following controller"));
+    if (!d->currentWithheld) d->status(!d->active?QStringLiteral("Output disabled"):d->mode==PresentationMode::Pinned?QStringLiteral("Reference pinned"):d->routingPolicy.value("slideshowTiming")=="independent"?QStringLiteral("Timed output: latest image presented"):QStringLiteral("Following controller"));
 }
 
 void DisplayManager::setRoutingPolicy(const QVariantMap& policy) {
@@ -601,6 +621,13 @@ void DisplayManager::synchronizePresentationScreen(QScreen* screen) {
 }
 
 void DisplayManager::pinCurrentImage() {
+    if (d->currentWithheld) {
+        // The pinned output did not retain the newer main frame; fetch it (synchronously) so it can replace the pin.
+        QScopedValueRollback<bool> replacingPin(d->admittingPin, true);
+        QScopedValueRollback<bool> keepReference(d->referenceProtected, true);
+        emit currentImageRequested();
+        if (d->currentImage.isNull()) return;
+    }
     pinImage(d->currentPath, d->currentImage, d->displayedGeneration);
 }
 
@@ -611,6 +638,7 @@ void DisplayManager::pinImage(const QString& path, const QImage& image, quint64 
     d->pinnedGeneration = generation;
     {
         QScopedValueRollback<bool> keepReference(d->referenceProtected, true);
+        QScopedValueRollback<bool> pinIsNew(d->admittingPin, true);
         d->enforceBudget();
     }
     if (!image.isNull() && d->pinnedImage.isNull()) return;   // shed by budget
