@@ -229,7 +229,7 @@ Optionally, list the new IDs on STACK-CORRECTION-01: `covered_rows: [PATH-COMPLE
 ```yaml
     feature: F020
     commit: b13b73941d9420ac2740bdb58aefe9132540daa0
-    integrated_evidence: "Integration merge b13b739 (parents 44d9cf2, 079564b), closed by a78b930. Pre-merge: source e4a5a07 Windows scripts/build.ps1 -Test 28/28 (200.80s) and Docker 28/28 (116.69s, recorded in 44d9cf2; run commit not stated), docs/verification/COPY-MOVE-01.md. No post-integration check of b13b739 itself. First full gate on a descendant: 259d337 Windows 29/29 (220.69s), docs/verification/MAIN-259d337-CLAUDE-VERIFY.md (git merge-base --is-ancestor b13b739 259d337 succeeds); its Docker test count was not recorded (unverified)."
+    integrated_evidence: "Integration merge b13b739 (parents 44d9cf2, 079564b), closed by a78b930. Pre-merge: source e4a5a07 Windows scripts/build.ps1 -Test 28/28 (200.80s) and Docker 28/28 (116.69s, recorded in 44d9cf2; run commit not stated), docs/verification/COPY-MOVE-01.md. No post-integration check of b13b739 itself. Nearest recorded full gate on a descendant: 259d337 Windows 29/29 (220.69s), docs/verification/MAIN-259d337-CLAUDE-VERIFY.md (git merge-base --is-ancestor b13b739 259d337 succeeds); its Docker test count was not recorded (unverified)."
 ```
 
 Sources: `git log --grep copy-move` (`c304b54` freeze, `e4a5a07` source, `a800951` lock, `079564b` main sync, `44d9cf2` Docker evidence, `b13b739` merge, `a78b930` close). The test counts come from `docs/verification/COPY-MOVE-01.md` lines 121–128.
@@ -262,7 +262,11 @@ The existing row already lists `F018` under `requirements`, and the integration 
 - **Proposed YAML parses.** Each block above, indented under a `tasks:` list or a mapping, parses with a PyYAML 6.0.3 loader that rejects duplicate keys.
 - **Queue still parses after the paste.** I inserted block 1 into a copy of `docs/WORK-QUEUE.yaml` at the paste point above and parsed it with the same strict loader: 84 tasks (73 before), no duplicate IDs. The current queue also parses strictly: 73 tasks, no duplicates.
 - **IDs are new.** None of the eleven new IDs appears in `docs/WORK-QUEUE.yaml`, and none repeats within the block.
-- **Commits verified.** Every SHA cited above resolves with `git rev-parse` and is an ancestor of `3b2b0db` (except `ec05e42`, which is a descendant).
+- **Commits verified.**
+  - All 55 distinct hex tokens in this file resolve to commits with `git rev-parse --verify`.
+  - Every stack SHA used in the rows is an ancestor of `3b2b0db`, checked with `git merge-base --is-ancestor`.
+  - `3b2b0db` is an ancestor of `ec05e42`.
+  - `b13b739` is an ancestor of `259d337`.
 - **Stale claims gone.** No "JPEG/PNG", "JPEG and PNG", "WSL" or "core only" claim remains in `README.md`, `docs/TESTING.md`, `docs/DOCKER.md` or `docs/SUPPORTED-CAPABILITIES.md`.
 
 ## Not verified, or left for the lead

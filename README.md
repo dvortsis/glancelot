@@ -1,6 +1,6 @@
 # Glancelot
 
-A native, local-first photo viewer for Windows and Linux. Built with C++20, Qt Quick and a dedicated GPU canvas. Early alpha: JPEG, PNG, BMP, GIF (animated), TIFF (multipage), WebP and TGA on Windows, embedded previews of common RAW camera files, deterministic depth-first folder navigation, fit/pan/zoom, physical-pixel actual size, hold loupe, remappable keyboard commands, palette and preferences, worker-backed filmstrip, lazy folder tree, and independent per-window location resume.
+A native, local-first photo viewer for Windows and Linux. Built with C++20, Qt Quick and a dedicated GPU canvas. Early alpha: JPEG, PNG, BMP, GIF (animated) and embedded previews of common RAW camera files, plus TIFF (multipage), WebP and TGA in the Windows build (not yet in the Docker image), deterministic depth-first folder navigation, fit/pan/zoom, physical-pixel actual size, hold loupe, remappable keyboard commands, palette and preferences, worker-backed filmstrip, lazy folder tree, and independent per-window location resume.
 
 ## Try the current build
 

@@ -8,8 +8,8 @@ Last checked against `main` at `3893c77` (October 22, 2026).
 
 | Platform | Status | How it is tested | Evidence |
 | --- | --- | --- | --- |
-| **Windows 11 x64** | Primary platform. Native C++20 / Qt 6.8.3 Quick app with a GPU canvas, plus a portable ZIP. | Full suite through `scripts/build.ps1 -Test` on the gate machine (43 of 43 on the last full gate). A clean-machine install has not been qualified. | `docs/verification/lead-integrate-all-2026-10-22/README.md`; `BUILDING.md` |
-| **Linux, Docker browser desktop** (amd64) | Supported. The same Qt app runs on a Linux server and is streamed to a browser through TigerVNC/noVNC. | `docker build` compiles the app and runs the full suite offscreen (43 of 43 on the last full gate). | `Dockerfile`; `docs/DOCKER.md`; `docs/verification/DOCKER-BROWSER.md` |
+| **Windows 11 x64** | Primary platform. Native C++20 / Qt 6.8.3 Quick app with a GPU canvas, plus a portable ZIP. | Full suite through `scripts/build.ps1 -Test` on the gate machine: 43 of 43 on `ec05e42`. Later runs on unchanged code hit timing failures in `folder_tree`, `folder_grid` and `fs_watch` under load (`docs/verification/gate-triage-2026-10-22/README.md`; packet EN-11). A clean-machine install has not been qualified. | `docs/verification/lead-integrate-all-2026-10-22/README.md`; `BUILDING.md` |
+| **Linux, Docker browser desktop** (amd64) | Supported. The same Qt app runs on a Linux server and is streamed to a browser through TigerVNC/noVNC. | `docker build` compiles the app and runs the full suite offscreen: 43 of 43 on `ec05e42`. | `Dockerfile`; `docs/DOCKER.md`; `docs/verification/DOCKER-BROWSER.md` |
 | **Linux, native desktop** | Experimental. A local X11/XWayland package for Ubuntu 24.04 x86_64 exists. No native Wayland plugin. | Package built and smoke-tested in a separate Ubuntu runtime with software OpenGL: PNG and JPEG decode and real screenshot colours. No test on a physical desktop. | `tools/platform/LINUX-PACKAGE.md`; `docs/verification/PLATFORM-01.md` |
 | macOS | Not supported. | None. | — |
 
@@ -19,7 +19,12 @@ The core library (navigation, sorting, file planning) also builds and runs its t
 
 Decoding happens in a separate `glancelot-decoder` process. It sniffs the file content, checks it against an allowlist, refuses images whose decoded size would exceed 256 MiB (about 64 megapixels in RGBA), and converts the pixels to 8-bit sRGB (`src/worker/main.cpp`). Folder browsing only lists files whose extension is on the navigation allowlist (`imageCategory` in `src/core/navigation.cpp`).
 
-Each format needs a Qt image plugin. Windows builds install Qt's `qtimageformats` module (`BUILDING.md`, `.github/workflows/build.yml`), and a locally packaged build contained `qwebp`, `qtiff`, `qtga` and `qwbmp`. The Docker image installs only `qtbase`, `qtdeclarative`, `qtshadertools` and ICU (`Dockerfile`, `qt` stage), so WebP, TIFF and TGA are missing there. Packet EN-02 adds `qtimageformats` to Docker; until it lands, the columns below differ.
+Each format needs a Qt image plugin:
+
+- **Windows.** Local Windows builds and the `build.yml` Windows job install Qt's `qtimageformats` module (`BUILDING.md`, `.github/workflows/build.yml`). The portable package copies the installed plugins through Qt's deploy script (`CMakeLists.txt`, `qt_generate_deploy_qml_app_script`). The self-hosted gate job in `windows-gate.yml` does not install `qtimageformats`.
+- **Docker.** The image installs only `qtbase`, `qtdeclarative`, `qtshadertools` and ICU (`Dockerfile`, `qt` stage). WebP, TIFF and TGA are therefore expected to be missing there; this is read from the Dockerfile and was not observed in a container run.
+
+Packet EN-02 adds `qtimageformats` to Docker. Until it lands, the Windows and Docker columns below differ.
 
 | Format | Extensions | Windows | Docker browser desktop | Evidence and limits |
 | --- | --- | --- | --- | --- |
@@ -51,7 +56,7 @@ Known format limits, from the UX audit of `6cc87ee` (`docs/verification/AUDIT-UX
 | File order: name, modified, size, seeded shuffle; folder order independent of file order | Yes | Yes | SORT-01; `tests/navigation_tests.cpp`. Capture-date and dimension sorts are **not delivered**. |
 | Live folder updates and explicit refresh (**F5**) | Yes | Yes | `docs/verification/FS-WATCH-01.md` (FS-WATCH-01, state `done`) |
 | Per-window resume of the last photo, by window opening order | Yes | Yes (stored in the `glancelot-config` volume) | WINDOW-RESUME-01; `docs/verification/DOCKER-BROWSER.md` |
-| Remappable commands, command palette (**Ctrl+Shift+P**), shortcut cheat sheet (**F1**), scoped keyboard/mouse/wheel input, chords and holds | Yes | Yes (browser and noVNC may intercept some keys) | `docs/verification/INPUT-02.md`, `SHORTCUTS-HELP-01.md` |
+| Remappable commands, command palette (**Ctrl+Shift+P**), shortcut cheat sheet (**F1**), scoped keyboard/mouse/wheel input, chords and holds | Yes | Yes; keyboard input through noVNC is unverified (DOCKER-BROWSER-01) | `docs/verification/INPUT-02.md`, `SHORTCUTS-HELP-01.md` |
 | 80 built-in themes (40 families, light and dark) | Yes | Yes | `docs/verification/THEMES.md` |
 | Colour | 8-bit sRGB working pixels; the main canvas is SDR and does not use the monitor's ICC profile | Same | `src/worker/main.cpp`; COLOR-01 and COLOR-04 are open |
 
