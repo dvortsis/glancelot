@@ -8,6 +8,7 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include "glancelot/viewer_controller.hpp"
+#include "decode_cache.hpp"
 #include "glancelot/command_registry.hpp"
 #include "binding_validation.hpp"
 #include "recovery_session.hpp"
@@ -21,7 +22,6 @@
 #include "glancelot/metadata_model.hpp"
 #include "glancelot/metadata_parser.hpp"
 #include <QtConcurrent/QtConcurrentRun>
-#include <QCache>
 #include <QColorSpace>
 #include <QDir>
 #include <QDateTime>
@@ -155,8 +155,7 @@ struct ViewerController::Private {
     std::unique_ptr<QSharedMemory> transfer;
     qint64 admittedPixelBytes{};
     QByteArray output;
-    struct CachedImage { QImage pixels; QString sourceToken; };
-    QCache<QString,CachedImage> cache{128*1024}; // KiB of verified immutable RGBA pixels.
+    glancelot::detail::DecodeCache cache;
     bool cacheNotificationPending{},ioNotificationPending{};
     QString storageProfile{"auto"};
     struct NavigationResult { Navigator navigator; std::optional<std::filesystem::path> destination; QString message; bool directoryVisit{}, directoryFailed{}, sortCompletion{}; };
@@ -640,7 +639,7 @@ struct ViewerController::Private {
                     MEMORYSTATUSEX memory{}; memory.dwLength = sizeof(memory);
                     if (GlobalMemoryStatusEx(&memory)) allowance = std::min(allowance, memory.ullAvailPhys * 4 / 10);
 #endif
-                    const quint64 admitted = quint64(bytes) * 4 + quint64(image.sizeInBytes()) + quint64(cache.totalCost()) * 1024;
+                    const quint64 admitted = quint64(bytes) * 4 + quint64(image.sizeInBytes()) + quint64(cache.bytes());
                     if (admitted > allowance) { cancelLookahead(); return; }
 
                     auto admission=glancelot::detail::admitIoJob(JobPriority::Prefetch,bytes,file);
@@ -668,11 +667,7 @@ struct ViewerController::Private {
                     prefetchTransfer->unlock();
                     if (!owned.isNull()) {
                         owned.setColorSpace(QColorSpace::SRgb);
-                        const int cost = int((owned.sizeInBytes() + 1023) / 1024);
-                        if (!source->isEmpty() && cost <= cache.maxCost()) {
-                            cache.insert(key, new CachedImage{std::move(owned),*source}, cost);
-                            notifyCacheChanged();
-                        }
+                        if (cache.insert(key, std::move(owned), *source)) notifyCacheChanged();
                     }
                     process->write("ok\n");
                     cancelLookahead();
@@ -907,8 +902,7 @@ struct ViewerController::Private {
                 if(revisionOnly) {
                     const auto source=responseSourceToken(message);
                     if(phase!="revision"||!source){fail("Invalid source revision response.");return;}
-                    const auto* cached=cache.object(key);
-                    const QImage reused=cached&&!source->isEmpty()&&cached->sourceToken==*source?cached->pixels:QImage{};
+                    const QImage reused=cache.reuse(key,*source);
                     finishDecodeTrace(glancelot::perf::None);
                     cancel(); // Retire this process before callbacks can select another image.
                     if(reused.isNull()) {
@@ -937,7 +931,7 @@ struct ViewerController::Private {
                     if (GlobalMemoryStatusEx(&memory)) allowance=std::min(allowance, memory.ullAvailPhys*4/10);
 #endif
                     // Include decoder source/converted buffers, shared transfer and parent copy.
-                    const quint64 admitted=quint64(bytes)*4+quint64(image.sizeInBytes())+quint64(cache.totalCost())*1024;
+                    const quint64 admitted=quint64(bytes)*4+quint64(image.sizeInBytes())+quint64(cache.bytes());
                     if (admitted>allowance) { cache.clear();notifyCacheChanged(); if (quint64(bytes)*4+quint64(image.sizeInBytes())>allowance) { fail("Insufficient memory headroom for this image. Close other images or try a smaller file."); return; } }
                     auto admission=glancelot::detail::admitIoJob(JobPriority::Foreground,bytes,file);
                     if(token!=generation||process!=worker)return;
@@ -960,9 +954,7 @@ struct ViewerController::Private {
                     if (owned.isNull()) { fail("Cannot allocate the current image."); return; }
                     image=std::move(owned);
                     image.setColorSpace(QColorSpace::SRgb);
-                    const int cost=int((image.sizeInBytes()+1023)/1024);
-                    if (!source->isEmpty()&&cost<=cache.maxCost())cache.insert(key,new CachedImage{image,*source},cost);
-                    else cache.remove(key);
+                    if (!cache.insert(key,image,*source))cache.remove(key);
                     notifyCacheChanged();
                     finishDecodeTrace(glancelot::perf::None,std::uint64_t(image.sizeInBytes()));
                     loading=false; imageReady=true; deadline.stop();
@@ -1977,7 +1969,7 @@ void ViewerController::toggleFilterPersistence() {
     d->filter.persistence = d->filter.isPersistent() ? glancelot::FilterPersistence::Temporary : glancelot::FilterPersistence::Persistent;
     emit filterChanged();
 }
-qint64 ViewerController::decodedCacheBytes() const { return qint64(d->cache.totalCost()) * 1024; }
+qint64 ViewerController::decodedCacheBytes() const { return d->cache.bytes(); }
 int ViewerController::decodedCacheCount() const { return d->cache.count(); }
 bool ViewerController::isLastDecodeCacheHit() const { return d->lastDecodeCacheHit; }
 void ViewerController::clearDecodedCache() { d->cancelLookahead(); d->cache.clear(); emit cacheChanged(); }
