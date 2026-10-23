@@ -80,14 +80,17 @@ Two read-mostly helpers for the lead on this PC, both run from the main checkout
 & C:\src\Github\Glancelot\scripts\build-slot.ps1 -Status
 ```
 
-- Each slot is a file `glancelot-build-slot-<n>.json` in the shared git dir (`git rev-parse --git-common-dir`). It records pid, host, branch, cwd and start time.
-- `-Run` waits for a free slot, up to `-TimeoutMinutes` (default 120). A slot whose holder process is dead, whose PID was reused, or that is older than `-StaleHours` (default 6) counts as free. It is removed only if it still holds the record judged stale. On Windows the holder keeps its slot file open, so a live holder's slot cannot be deleted: a build that runs longer than `-StaleHours` keeps its slot, and only an exited holder's slot is ever freed. The script never kills processes.
+- Each slot is a file `glancelot-build-slot-<n>.json` in the git common dir of the current directory's repository (`git rev-parse --git-common-dir`). It records pid, host, branch, cwd and start time. Run the scripts from inside the Glancelot checkout or one of its worktrees, or they use another repository's lock area.
+- Every claim (slot, gate-pending marker, gate `owner.json`) is an exclusive file create (`FileMode.CreateNew`). The holder keeps the file open until it releases, so exactly one process wins a claim and, on Windows, a live holder's file cannot be deleted.
+- `-Run` waits for a free slot, up to `-TimeoutMinutes` (default 120). A slot counts as free only when its holder process is dead or its PID now belongs to a later process; a live build keeps its slot however long it runs. `-StaleHours` (default 6) applies only to records from another host. A stale file is removed only if a re-read still shows the record judged stale. The scripts never kill processes.
 - A full gate and a build never overlap, in either direction:
   - `-Run` waits while another process tree holds the gate lock or has a gate request pending.
   - `gate-lock.ps1 -Run` first writes `glancelot-gate-pending-<pid>.json`, so no new slot starts while it waits. It then waits ("Waiting: N build slots held", within `-WaitMinutes`) until no other process tree holds a slot, takes the lock, and removes the marker.
+  - The gate is claimed by creating `glancelot-gate-lock\owner.json` exclusively. The directory is kept, so an older `gate-lock.ps1` that claims the directory still sees the lock, and a lock held by an older copy is honoured.
   - Pending markers are stale-safe like slots: a crashed gate request does not block builds.
 - Nothing deadlocks on itself:
-  - A slot held by the current process or one of its ancestors does not delay that process's gate. So a reviewer that holds a slot can call `gate-lock.ps1` for its targeted tests.
+  - A gate does not wait for slots held by its own process tree, or by a tree that is itself waiting for or holding the gate (that holder is blocked, not building). So a reviewer that holds a slot can call `gate-lock.ps1` for its targeted tests, and two slot holders that both request a gate take the gate one after the other.
+  - A child process started inside a gate's `-Run` block that calls `gate-lock.ps1` again runs without waiting.
   - A build started inside the gate holder's own tree (same process, an ancestor, or a child that inherits `GLANCELOT_GATE_LOCK_HELD`) never waits.
   - The gate lock itself is never removed by `build-slot.ps1`.
 - Nested calls in the same process, or in a child of the slot holder, reuse the slot (`GLANCELOT_BUILD_SLOT_HELD`).

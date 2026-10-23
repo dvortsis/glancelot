@@ -39,31 +39,34 @@ function Get-ForeignGate {
 
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 $stream = $null; $slotPath = $null; $lastMessage = ''
-while (-not $stream) {
-    if ((Get-Date) -gt $deadline) { throw "No build slot after $TimeoutMinutes minutes. $lastMessage" }
-    $gate = Get-ForeignGate
-    if ($gate) {
-        if ("Waiting: $gate" -ne $lastMessage) { $lastMessage = "Waiting: $gate"; Write-Host $lastMessage }
-        Start-Sleep -Seconds $PollSeconds; continue
+$priorHeld = $env:GLANCELOT_BUILD_SLOT_HELD
+try {
+    while (-not $stream) {
+        if ((Get-Date) -gt $deadline) { throw "No build slot after $TimeoutMinutes minutes. $lastMessage" }
+        $gate = Get-ForeignGate
+        if ($gate) {
+            if ("Waiting: $gate" -ne $lastMessage) { $lastMessage = "Waiting: $gate"; Write-Host $lastMessage }
+            Start-Sleep -Seconds $PollSeconds; continue
+        }
+        $reclaimed = $false
+        foreach ($n in 1..$Slots) {
+            $path = Join-Path $commonDir "$slotPrefix$n.json"
+            $stream = Open-LockFile $path (New-LockRecord @{ slot = $n; holder = $Holder; branch = $Branch })
+            if ($stream) { $slotPath = $path; break }
+            $owner = Read-LockJson $path
+            if ((Test-LockStale $owner $path $StaleHours) -and (Remove-StaleLockFile $path $owner)) { $reclaimed = $true }
+        }
+        if (-not $stream -and $reclaimed) { continue }  # a stale slot was just removed: retry at once
+        if (-not $stream) {
+            if ("Waiting: all $Slots build slots held" -ne $lastMessage) { $lastMessage = "Waiting: all $Slots build slots held"; Write-Host $lastMessage }
+            Start-Sleep -Seconds $PollSeconds; continue
+        }
+        # A gate may have been taken or requested between the check and the claim: give the slot back and wait.
+        if (Get-ForeignGate) { Close-LockFile $stream $slotPath; $stream = $null; $slotPath = $null }
     }
-    $reclaimed = $false
-    foreach ($n in 1..$Slots) {
-        $path = Join-Path $commonDir "$slotPrefix$n.json"
-        $stream = Open-LockFile $path (New-LockRecord @{ slot = $n; holder = $Holder; branch = $Branch })
-        if ($stream) { $slotPath = $path; break }
-        $owner = Read-LockJson $path
-        if ((Test-LockStale $owner $path $StaleHours) -and (Remove-StaleLockFile $path $owner)) { $reclaimed = $true }
-    }
-    if (-not $stream -and $reclaimed) { continue }  # a stale slot was just removed: retry at once
-    if (-not $stream) {
-        if ("Waiting: all $Slots build slots held" -ne $lastMessage) { $lastMessage = "Waiting: all $Slots build slots held"; Write-Host $lastMessage }
-        Start-Sleep -Seconds $PollSeconds; continue
-    }
-    # A gate may have been taken or requested between the check and the claim: give the slot back and wait.
-    if (Get-ForeignGate) { Close-LockFile $stream $slotPath; $stream = $null; $slotPath = $null }
-}
-$env:GLANCELOT_BUILD_SLOT_HELD = "$PID"
-try { & $Run } finally {
-    Remove-Item Env:GLANCELOT_BUILD_SLOT_HELD -ErrorAction SilentlyContinue
+    $env:GLANCELOT_BUILD_SLOT_HELD = "$PID"
+    & $Run
+} finally {
+    if ($priorHeld) { $env:GLANCELOT_BUILD_SLOT_HELD = $priorHeld } else { Remove-Item Env:GLANCELOT_BUILD_SLOT_HELD -ErrorAction SilentlyContinue }
     Close-LockFile $stream $slotPath
 }
