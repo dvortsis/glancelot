@@ -14,6 +14,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "file_grid_wiring.hpp"
 #include "file_operation_wiring.hpp"
+#include "viewer_context.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/thumbnail_service.hpp"
 #include "thumbnail_provider.hpp"
@@ -264,16 +265,10 @@ int main(int argc,char** argv) {
     });
     QQmlApplicationEngine engine;
     engine.addImageProvider("thumb",new ThumbnailProvider(&thumbnails));
-    engine.rootContext()->setContextProperty("viewer",&viewer);
-    engine.rootContext()->setContextProperty("paneLayout",&paneLayout);
-    engine.rootContext()->setContextProperty("monitorCustomization",&monitorCustomization);
-    engine.rootContext()->setContextProperty("filmstrip",&filmstrip);
-    engine.rootContext()->setContextProperty("folderTree",&folderTree);
-    engine.rootContext()->setContextProperty("favoritesModel",&favorites);
-    engine.rootContext()->setContextProperty("folderHistory",&folderHistory);
-    engine.rootContext()->setContextProperty("fileGrid",&fileGrid);
-    engine.rootContext()->setContextProperty("theme",&theme);
-    engine.rootContext()->setContextProperty("fileOperations",&fileOperations);
+    // The same helper wires every shipped-QML test harness (src/app/viewer_context.hpp).
+    installViewerContext(*engine.rootContext(),{.viewer=viewer,.paneLayout=paneLayout,.monitorCustomization=monitorCustomization,
+        .filmstrip=filmstrip,.folderTree=folderTree,.favoritesModel=favorites,.folderHistory=folderHistory,.fileGrid=fileGrid,
+        .theme=theme,.fileOperations=fileOperations});
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(2);},Qt::QueuedConnection);
     engine.loadFromModule("Glancelot","Main");
     if(engine.rootObjects().isEmpty())return 2;
