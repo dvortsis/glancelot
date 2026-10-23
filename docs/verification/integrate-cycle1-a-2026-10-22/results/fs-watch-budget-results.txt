@@ -1,0 +1,37 @@
+********* Start testing of FSWatchBudgetTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchBudgetTests::initTestCase()
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE baseline total_ms 0
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-generation total_ms 343
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 25000 total_ms 17377
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 50000 total_ms 34911
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 75000 total_ms 52869
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE initial-publication total_ms 71175
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE ordinary-measurement-complete total_ms 81125
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 70831 ms; initial GUI gap 36 ms; sustained-writer/recovery GUI gap 53 ms; writes 264 invalidations 6
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-writer total_ms 81126
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-measurement-complete total_ms 84868
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 39 ms; GUI gap 82 ms; publication 81 ms; writes 67
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE clear-filter total_ms 84868
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-removal total_ms 84878
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 25000 total_ms 89414
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 50000 total_ms 94165
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 75000 total_ms 98928
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE rename-complete-baseline total_ms 103533
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-destruction total_ms 103608
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 24 identity 0 merge (includes disposal) 18 merge scan 5 reset 0 projection/raw mirror 6 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 42 identity 0 merge (includes disposal) 31 merge scan 7 reset 0 projection/raw mirror 11 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 40 identity 0 merge (includes disposal) 22 merge scan 4 reset 0 projection/raw mirror 17 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 53 identity 0 merge (includes disposal) 30 merge scan 5 reset 0 projection/raw mirror 22 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 43 identity 0 merge (includes disposal) 25 merge scan 4 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 46 identity 0 merge (includes disposal) 27 merge scan 5 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 45 identity 0 merge (includes disposal) 26 merge scan 5 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 81 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 81 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 71 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 71 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 69 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 69 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 14 maximum 81 ms; loading at exit false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_LIFETIME last_phase fixture-destruction total_ms 103619
+PASS   : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchBudgetTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 103623ms
+********* Finished testing of FSWatchBudgetTests *********

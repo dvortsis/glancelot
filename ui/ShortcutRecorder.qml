@@ -22,12 +22,12 @@ UiButton {
     alignment: Qt.AlignLeft
     implicitWidth: 168
     selected: recording
-    text: recording ? (steps.length ? steps.join(", ") + ", …" : "Press a shortcut…") : (binding.length ? binding : "Unassigned")
+    text: recording ? (steps.length ? qsTr("%1, …").arg(steps.join(", ")) : qsTr("Press a shortcut…")) : (binding.length ? binding : qsTr("Unassigned"))
     foreground: recording || binding.length ? Theme.text : Theme.muted
     Accessible.role: Accessible.Button
-    Accessible.name: "Shortcut for " + commandLabel + ": " + (binding.length ? binding : "unassigned")
-    Accessible.description: recording ? "Press the new shortcut. Escape cancels, Backspace clears, Enter accepts."
-                                      : "Activate to record a new shortcut."
+    Accessible.name: binding.length ? qsTr("Shortcut for %1: %2").arg(commandLabel).arg(binding) : qsTr("Shortcut for %1: unassigned").arg(commandLabel)
+    Accessible.description: recording ? qsTr("Press the new shortcut. Escape cancels, Backspace clears, Enter accepts.")
+                                      : qsTr("Activate to record a new shortcut.")
 
     function begin() {  steps = []; explanation = ""; recording = true; chordTimer.stop() }
     function cancel() {  recording = false; steps = []; chordTimer.stop() }

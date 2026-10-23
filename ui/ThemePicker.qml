@@ -32,8 +32,8 @@ ColumnLayout {
         id: search
         Layout.fillWidth: true
         searchIcon: true
-        placeholderText: "Search " + theme.families.length + " palettes"
-        Accessible.name: "Search palettes"
+        placeholderText: qsTr("Search %1 palettes").arg(theme.families.length)
+        Accessible.name: qsTr("Search palettes")
         Keys.onDownPressed: cards.forceActiveFocus(Qt.TabFocusReason)
     }
     GridView {
@@ -52,7 +52,7 @@ ColumnLayout {
         onCurrentIndexChanged: if (activeFocus) Qt.callLater(picker.revealCurrent)
         onActiveFocusChanged: if (activeFocus) Qt.callLater(picker.revealCurrent)
         Accessible.role: Accessible.List
-        Accessible.name: "Palettes"
+        Accessible.name: qsTr("Palettes")
         Keys.onReturnPressed: if (currentItem) currentItem.apply()
         Keys.onEnterPressed: if (currentItem) currentItem.apply()
         Keys.onSpacePressed: if (currentItem) currentItem.apply()
@@ -67,7 +67,7 @@ ColumnLayout {
             width: cards.cellWidth
             height: cards.cellHeight
             Accessible.role: Accessible.ListItem
-            Accessible.name: modelData.name + (selected ? ", selected" : "")
+            Accessible.name: selected ? qsTr("%1, selected").arg(modelData.name) : modelData.name
             Accessible.selected: selected
             Accessible.onPressAction: apply()
             Rectangle {
@@ -120,7 +120,7 @@ ColumnLayout {
     }
     Label {
         visible: picker.shown.length === 0
-        text: "No palettes match “" + search.text.trim() + "”."
+        text: qsTr("No palettes match “%1”.").arg(search.text.trim())
         color: Theme.muted
         font.pixelSize: Theme.textSmall
     }

@@ -1,0 +1,17 @@
+SHA=13b78ffc0bdf8e2f9777b5ea25f715b49ba6fb32
+LOCK_WAIT: started ~22:48, acquired 22:58:56
+WINDOWS:
+100% tests passed out of 44
+Total Test time (real) = 734.15 sec
+WINDOWS_SECONDS=1480
+Total Tests: 44
+Labels: budget clipboard fast native process ui
+DOCKER:
+#29 391.7 100% tests passed, 0 tests failed out of 44
+#29 391.7 Total Test time (real) = 391.46 sec
+DOCKER_EXIT=0 DOCKER_SECONDS=1265
+Runtime plugin check step #36 DONE 0.3s
+Build-stage AnimationTests::testMultipageTiffNavigation PASS (11 passed, 0 skipped); Windows also PASS
+DOCKER_IMAGE_SIZE_BYTES=548197595 (cycle1-a 547658756, +538839)
+QTEST_FAIL_LINES=0
+RERUN=False

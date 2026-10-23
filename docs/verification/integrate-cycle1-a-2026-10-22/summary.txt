@@ -1,0 +1,11 @@
+SHA=49fb635369c10c98359ad5d0f5dc64778a040424
+WINDOWS:
+100% tests passed out of 43
+Total Test time (real) = 775.10 sec
+WINDOWS_SECONDS=1439
+DOCKER:
+#26 390.7 100% tests passed, 0 tests failed out of 43
+#26 390.7 Total Test time (real) = 390.41 sec
+DOCKER_EXIT=0 DOCKER_SECONDS=960
+DOCKER_IMAGE_SIZE_BYTES=547658756
+QTEST_FAIL_LINES=0

@@ -47,29 +47,34 @@ Rectangle {
             }
 
             Text {
-                text: "Metadata"
+                text: qsTr("Metadata")
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textTitle
                 font.bold: true
                 color: Theme.text
+                elide: Text.ElideRight // longer translations give way to the actions instead of overlapping them
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
             }
 
             UiButton {
                 visible: root.model && root.model.hasMetadata
-                text: root.copiedMessage.length > 0 ? root.copiedMessage : "Copy Summary"
-                tip: "Copy summary of camera, exposure, and image details"
+                text: root.copiedMessage.length > 0 ? root.copiedMessage : qsTr("Copy Summary")
+                tip: qsTr("Copy summary of camera, exposure, and image details")
                 onClicked: {
                     if (root.model) {
                         root.model.copySummary()
-                        root.showCopied("Copied!")
+                        root.showCopied(qsTr("Copied!"))
                     }
                 }
             }
 
             UiButton {
-                text: "✕"
-                tip: "Close metadata inspector (I)"
+                // Icon-only like UiDialog's close button: a named, compact control that leaves room for the title.
+                text: qsTr("Close metadata inspector")
+                iconName: "close"
+                iconOnly: true
+                tip: qsTr("Close metadata inspector (I)")
                 onClicked: root.closeRequested()
             }
         }
@@ -100,7 +105,7 @@ Rectangle {
                     color: Theme.text
                     elide: Text.ElideRight
                     Layout.fillWidth: true
-                    visible: text.length > 0 && text !== "Unknown Camera"
+                    visible: text.length > 0 // the model leaves the summary empty when there is no camera
                 }
 
                 Text {
@@ -144,12 +149,12 @@ Rectangle {
                     }
 
                     UiButton {
-                        text: "Copy GPS"
-                        tip: "Copy latitude and longitude coordinates"
+                        text: qsTr("Copy GPS")
+                        tip: qsTr("Copy latitude and longitude coordinates")
                         onClicked: {
                             if (root.model) {
                                 root.model.copyGps()
-                                root.showCopied("GPS Copied!")
+                                root.showCopied(qsTr("GPS Copied!"))
                             }
                         }
                     }
@@ -157,16 +162,22 @@ Rectangle {
             }
         }
 
-        // Category Filter Pills
-        RowLayout {
+        // Category Filter Pills: wrap onto a second line instead of running past a narrow panel or longer translations.
+        Flow {
             Layout.fillWidth: true
             spacing: Theme.gapXs
 
             Repeater {
+                // Filter keys stay English (the model matches them); only the pill text is translated.
                 model: ["All", "Camera", "Image", "GPS", "IPTC", "Summary"]
                 delegate: Rectangle {
                     id: pill
                     required property string modelData
+                    readonly property string label: ({All: qsTr("All"), Camera: qsTr("Camera"), Image: qsTr("Image"), GPS: qsTr("GPS"), IPTC: qsTr("IPTC"), Summary: qsTr("Summary")})[modelData] || modelData
+                    Accessible.role: Accessible.Button
+                    Accessible.name: qsTr("Show %1 tags").arg(label)
+                    Accessible.checkable: true
+                    Accessible.checked: active
                     readonly property bool active: root.model && root.model.categoryFilter === modelData
                     implicitWidth: pillText.implicitWidth + Theme.gapSm * 2
                     implicitHeight: 24
@@ -183,7 +194,7 @@ Rectangle {
                     Text {
                         id: pillText
                         anchors.centerIn: parent
-                        text: pill.modelData
+                        text: pill.label
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.textCaption
                         font.bold: pill.active
@@ -197,7 +208,8 @@ Rectangle {
         UiTextField {
             id: searchField
             Layout.fillWidth: true
-            placeholderText: "Search tags (e.g. ISO, Lens, GPS)..."
+            placeholderText: qsTr("Search tags (e.g. ISO, Lens, GPS)...")
+            Accessible.name: qsTr("Search metadata tags")
             text: root.model ? root.model.searchFilter : ""
             onTextChanged: if (root.model) root.model.searchFilter = text
         }
@@ -208,7 +220,7 @@ Rectangle {
             visible: root.model && root.model.count > 0
 
             Text {
-                text: (root.model ? root.model.count : 0) + " tags"
+                text: qsTr("%1 tags").arg(root.model ? root.model.count : 0)
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textCaption
                 color: Theme.muted
@@ -217,7 +229,7 @@ Rectangle {
 
             Text {
                 visible: searchField.text.length > 0
-                text: "filtered"
+                text: qsTr("filtered")
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textCaption
                 color: Theme.accent
@@ -304,12 +316,12 @@ Rectangle {
 
                     UiButton {
                         visible: rowHover.hovered
-                        text: "Copy"
-                        tip: "Copy tag value to clipboard"
+                        text: qsTr("Copy")
+                        tip: qsTr("Copy tag value to clipboard")
                         onClicked: {
                             if (root.model) {
                                 root.model.copyTag(model.key)
-                                root.showCopied("Copied " + (model.label || model.key))
+                                root.showCopied(qsTr("Copied %1").arg(model.label || model.key))
                             }
                         }
                     }
@@ -336,7 +348,7 @@ Rectangle {
                 }
 
                 Text {
-                    text: searchField.text.length > 0 ? "No tags match filter" : "No metadata available"
+                    text: searchField.text.length > 0 ? qsTr("No tags match filter") : qsTr("No metadata available")
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.textBody
                     color: Theme.muted
@@ -345,7 +357,7 @@ Rectangle {
 
                 UiButton {
                     visible: searchField.text.length > 0
-                    text: "Clear filter"
+                    text: qsTr("Clear filter")
                     Layout.alignment: Qt.AlignHCenter
                     onClicked: searchField.text = ""
                 }
@@ -369,7 +381,7 @@ Rectangle {
                 }
 
                 Text {
-                    text: "Reading metadata..."
+                    text: qsTr("Reading metadata...")
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.textSmall
                     color: Theme.muted

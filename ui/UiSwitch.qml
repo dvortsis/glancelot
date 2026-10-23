@@ -59,7 +59,7 @@ Switch {
                 visible: control.modified
                 Layout.alignment: Qt.AlignVCenter
                 Accessible.role: Accessible.Indicator
-                Accessible.name: "Modified from default"
+                Accessible.name: qsTr("Modified from default")
             }
         }
         Label {

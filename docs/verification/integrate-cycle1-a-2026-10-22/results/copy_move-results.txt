@@ -1,0 +1,13 @@
+********* Start testing of CopyMoveTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : CopyMoveTests::initTestCase()
+PASS   : CopyMoveTests::testSingleFileCopy()
+PASS   : CopyMoveTests::testSingleFileMove()
+PASS   : CopyMoveTests::testCollisionPolicies()
+PASS   : CopyMoveTests::testDirectoryRecursiveTransfer()
+PASS   : CopyMoveTests::testPauseResumeCancel()
+PASS   : CopyMoveTests::testClipboardCutCopyPaste()
+PASS   : CopyMoveTests::testViewerControllerReconciliation()
+PASS   : CopyMoveTests::cleanupTestCase()
+Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 123ms
+********* Finished testing of CopyMoveTests *********

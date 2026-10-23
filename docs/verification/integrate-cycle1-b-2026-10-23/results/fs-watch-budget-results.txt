@@ -1,0 +1,35 @@
+********* Start testing of FSWatchBudgetTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : FSWatchBudgetTests::initTestCase()
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE baseline total_ms 0
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-generation total_ms 330
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 25000 total_ms 16384
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 50000 total_ms 33626
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS generated 75000 total_ms 50983
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE initial-publication total_ms 69600
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE ordinary-measurement-complete total_ms 79054
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100000 entries: generated setup 69269 ms; initial GUI gap 23 ms; sustained-writer/recovery GUI gap 60 ms; writes 261 invalidations 5
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-writer total_ms 79054
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE filtered-measurement-complete total_ms 82255
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k active filter: change 47 ms; GUI gap 93 ms; publication 93 ms; writes 66
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE clear-filter total_ms 82256
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-removal total_ms 82266
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 25000 total_ms 87528
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 50000 total_ms 92574
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PROGRESS removed 75000 total_ms 97333
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE rename-complete-baseline total_ms 101937
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_PHASE fixture-destruction total_ms 102001
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 22 identity 0 merge (includes disposal) 17 merge scan 5 reset 0 projection/raw mirror 4 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 30 identity 0 merge (includes disposal) 22 merge scan 4 reset 0 projection/raw mirror 8 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 46 identity 0 merge (includes disposal) 28 merge scan 7 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 52 identity 0 merge (includes disposal) 30 merge scan 7 reset 0 projection/raw mirror 21 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 60 identity 0 merge (includes disposal) 34 merge scan 6 reset 0 projection/raw mirror 26 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 51 identity 0 merge (includes disposal) 32 merge scan 6 reset 0 projection/raw mirror 18 selection 0 observed/accepted identities 0 1 applied/filtered true false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 93 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 92 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() 100k publication ms: total 75 identity 0 merge (includes disposal) 0 merge scan 0 reset 0 projection/raw mirror 75 selection 0 observed/accepted identities 0 1 applied/filtered true true
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() GUI publication callbacks 12 maximum 93 ms; loading at exit false
+QINFO  : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive() FS_WATCH_LIFETIME last_phase fixture-destruction total_ms 102015
+PASS   : FSWatchBudgetTests::hundredThousandEntriesSustainedWriterKeepsGuiResponsive()
+PASS   : FSWatchBudgetTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 102019ms
+********* Finished testing of FSWatchBudgetTests *********

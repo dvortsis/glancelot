@@ -1,0 +1,39 @@
+********* Start testing of TranslationCoverageUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+PASS   : TranslationCoverageUiTests::initTestCase()
+PASS   : TranslationCoverageUiTests::catalogCoversEveryInterfaceMessage()
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x64c93c69fd00, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x64c93c69fd00, QQuickRhiItem will not be functional
+QINFO  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() clipped settings-controls: "Set storage profile to HDD (Serialized background I/O) (elided)" at settings-controls/QQuickPopupItem/QQuickPopupItem/QQuickGridLayout/QQuickStackLayout/Page/QQuickFlickable/QQuickItem/QQuickColumnLayout/QQuickColumnLayout/QQuickRowLayout/UiButton/QQuickRowLayout/Label
+QINFO  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() clipped settings-controls: "Folder grid: details or thumbnails (elided)" at settings-controls/QQuickPopupItem/QQuickPopupItem/QQuickGridLayout/QQuickStackLayout/Page/QQuickFlickable/QQuickItem/QQuickColumnLayout/QQuickColumnLayout/QQuickRowLayout/UiButton/QQuickRowLayout/Label
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x64c93c69fd00, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark() No QRhi found for window 0x64c93c69fd00, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::pseudoLocaleLeftToRightDark()
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x64c93fcdc350, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x64c93fcdc350, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x64c93fcdc350, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark() No QRhi found for window 0x64c93fcdc350, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::pseudoLocaleRightToLeftDark()
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x64c93e7aac20, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x64c93e7aac20, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x64c93e7aac20, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x64c93e7aac20, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::pseudoLocaleCompactLight() No QRhi found for window 0x64c93e7aac20, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::pseudoLocaleCompactLight()
+PASS   : TranslationCoverageUiTests::standaloneLeftToRight()
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ffaa9c0, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ffaa9c0, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ffaa9c0, QQuickRhiItem will not be functional
+QINFO  : TranslationCoverageUiTests::expandedTextClipping() clipped metadata: "[Métàdàtà••••] (elided)" at metadata/metadataHud/QQuickColumnLayout/QQuickRowLayout/QQuickText
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ffaa9c0, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ddb2450, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ddb2450, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ddb2450, QQuickRhiItem will not be functional
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ddb2450, QQuickRhiItem will not be functional
+QINFO  : TranslationCoverageUiTests::expandedTextClipping() clipped metadata: "[Métàdàtà••••] (elided)" at metadata/metadataHud/QQuickColumnLayout/QQuickRowLayout/QQuickText
+QWARN  : TranslationCoverageUiTests::expandedTextClipping() No QRhi found for window 0x64c93ddb2450, QQuickRhiItem will not be functional
+PASS   : TranslationCoverageUiTests::expandedTextClipping()
+PASS   : TranslationCoverageUiTests::standaloneRightToLeft()
+PASS   : TranslationCoverageUiTests::cleanupTestCase()
+Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 11592ms
+********* Finished testing of TranslationCoverageUiTests *********

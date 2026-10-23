@@ -16,7 +16,13 @@ Window {
     property bool movingGeometry: false
     property string appliedGeometry: ""
     objectName: "detached-" + paneId
-    title: "Glancelot — " + paneId
+    // STACK-F054: pane names are translatable; the route keys stay the stable ids.
+    readonly property string paneTitle: ({tree: qsTr("Tree"), grid: qsTr("Grid"), preview: qsTr("Preview"), metadata: qsTr("Metadata")})[paneId] || paneId
+    title: qsTr("Glancelot — %1").arg(paneTitle)
+    // Right-to-left languages mirror the detached window like the controller (Main.qml); the resize grip stays bottom-right.
+    readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
+    LayoutMirroring.enabled: rtl
+    LayoutMirroring.childrenInherit: true
     minimumWidth: 360; minimumHeight: 280
     color: Theme.background
     flags: Qt.Window | Qt.FramelessWindowHint
@@ -48,8 +54,8 @@ Window {
             RowLayout {
                 Layout.fillWidth: true
                 Label {
-                    text: window.paneId.charAt(0).toUpperCase()+window.paneId.slice(1); color: Theme.text; Layout.fillWidth: true
-                    Accessible.name: text + " pane; move with the title or choose a display in Settings"
+                    text: window.paneTitle; color: Theme.text; Layout.fillWidth: true
+                    Accessible.name: qsTr("%1 pane; move with the title or choose a display in Settings").arg(text)
                     MouseArea {
                         anchors.fill: parent; enabled: !customization.saving && !customization.layoutLocked && !route.frozen
                         cursorShape: Qt.SizeAllCursor
@@ -61,27 +67,28 @@ Window {
                         onCanceled: { window.movingGeometry=false; window.restoreGeometry() }
                     }
                 }
-                UiButton { text: "Settings"; onClicked: appHost.invoke("monitor-settings") }
+                UiButton { text: qsTr("Settings"); onClicked: appHost.invoke("monitor-settings") }
             }
             Flow {
                 Layout.fillWidth: true; spacing: Theme.gapXs
-                UiButton { text: route.frozen ? "Unfreeze" : "Freeze"; enabled: !customization.layoutLocked; onClicked: appHost.invoke("pane-freeze-"+paneId) }
-                UiButton { text: "Move to display…"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-detach-"+paneId) }
-                UiButton { text: "Re-dock"; enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-redock-"+paneId) }
-                UiButton { text: "Recover all"; onClicked: appHost.invoke("monitor-recover") }
+                UiButton { text: route.frozen ? qsTr("Unfreeze") : qsTr("Freeze"); enabled: !customization.layoutLocked; onClicked: appHost.invoke("pane-freeze-"+paneId) }
+                UiButton { text: qsTr("Move to display…"); enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-detach-"+paneId) }
+                UiButton { text: qsTr("Re-dock"); enabled: !customization.saving && !customization.layoutLocked && !route.frozen; onClicked: appHost.invoke("pane-redock-"+paneId) }
+                UiButton { text: qsTr("Recover all"); onClicked: appHost.invoke("monitor-recover") }
             }
         }
         FocusScope { id: body; Layout.fillWidth: true; Layout.fillHeight: true; clip: true }
         Label { Layout.fillWidth: true; Layout.margins: Theme.gapSm; text: customization.feedback || appHost.splitMessage; visible: text.length > 0; color: Theme.muted; wrapMode: Text.Wrap }
     }
     MouseArea {
+        LayoutMirroring.enabled: false // the drag grows width and height from the bottom-right corner in every direction
         anchors.right: parent.right; anchors.bottom: parent.bottom
         width: Theme.iconSize+Theme.gapSm; height: width
         enabled: !customization.saving && !customization.layoutLocked && !route.frozen
         cursorShape: Qt.SizeFDiagCursor
         property point origin
         property size start
-        Accessible.name: "Resize pane; exact width and height are also available in Settings"
+        Accessible.name: qsTr("Resize pane; exact width and height are also available in Settings")
         onPressed: mouse => {window.movingGeometry=true;origin=mapToGlobal(mouse.x,mouse.y);start=Qt.size(window.width,window.height)}
         onPositionChanged: mouse => {if(pressed){const point=mapToGlobal(mouse.x,mouse.y);window.width=Math.max(window.minimumWidth,start.width+point.x-origin.x);window.height=Math.max(window.minimumHeight,start.height+point.y-origin.y)}}
         onReleased: window.commitUserGeometry()

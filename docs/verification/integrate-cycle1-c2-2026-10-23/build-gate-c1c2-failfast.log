@@ -1,0 +1,26 @@
+Test project C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1c2
+    Start 12: folder_grid
+1/7 Test #12: folder_grid ......................   Passed  222.72 sec
+    Start 13: input_ui
+2/7 Test #13: input_ui .........................   Passed   70.83 sec
+    Start 14: pathbar_ui
+3/7 Test #14: pathbar_ui .......................   Passed    4.26 sec
+    Start 25: fs_watch_ui
+4/7 Test #25: fs_watch_ui ......................   Passed    3.38 sec
+    Start 43: monitor_customization_ui
+5/7 Test #43: monitor_customization_ui .........   Passed   24.47 sec
+    Start 44: translation_coverage_ui
+6/7 Test #44: translation_coverage_ui ..........   Passed   17.68 sec
+    Start 45: command_routing
+7/7 Test #45: command_routing ..................   Passed    9.16 sec
+
+100% tests passed out of 7
+
+Label Time Summary:
+budget       = 293.55 sec*proc (2 tests)
+clipboard    = 293.55 sec*proc (2 tests)
+native       = 222.72 sec*proc (1 test)
+process      = 349.11 sec*proc (6 tests)
+ui           = 352.50 sec*proc (7 tests)
+
+Total Test time (real) = 352.89 sec
