@@ -49,7 +49,7 @@ Owner: **Track D** (viewing, decode and colour). Slice A sits naturally after D1
 | Candidate | Licence | GPL-3.0-or-later compatible? | Maintenance (latest release + date) | Windows bundling | Docker bundling |
 | --- | --- | --- | --- | --- | --- |
 | **Qt only** (TIFF 16/32-bit, QColorSpace PQ/HLG, QQuickRhiItem float buffer) | Qt LGPL-3 (dynamic) | Yes | Qt 6.8.3, already pinned | nothing new; needs `qtimageformats`, already in the Windows dev tree | **blocked until EN-02** adds `qtimageformats` to the image |
-| **Write our own Radiance `.hdr` reader** (RGBE + RLE, ~200 lines) | n/a | n/a | n/a | nothing | nothing |
+| **Write our own Radiance `.hdr` reader** (RGBE + RLE, ~200 lines; deferred with COLOR-07, see section 6) | n/a | n/a | n/a | nothing | nothing |
 | libultrahdr | Apache-2.0 **OR** MIT (dual) [4] | Yes | v2.0.2, 13 Aug [5] | CMake build, one small library | not in the image today |
 | OpenEXR | BSD-3-Clause [6] | Yes | v3.5.2, 03 Oct [7] | needs Imath, zlib and optionally libdeflate; several MiB | not in the image today |
 | Imath (OpenEXR dependency) | BSD-3-Clause [8] | Yes | v3.2.3, 20 Aug [9] | header-heavy, small | same |
@@ -60,8 +60,9 @@ libheif, libavif and libjxl belong to `docs/DEP-DECISIONS.md` and FMT-04/FMT-05,
 
 Judgements:
 
-- **Slice A needs nothing.** TIFF 16/32-bit is Qt [1]; Radiance `.hdr` is a short in-house parser in the same spirit as `src/app/raw_preview.cpp` and `src/app/metadata_parser.cpp`; tone mapping and channel isolation are shader work.
-- **libultrahdr is the right library if COLOR-05 is ever promoted** - permissive dual licence, current release, and it is the reference implementation of the gain-map scheme. Its README describes storing an SDR base image with a gain map and metadata so legacy readers see SDR, which is exactly the fallback COLOR-05 requires; it does **not** mention ISO 21496-1 on the front page, so conformance to that specific standard is **unconfirmed** and would have to be checked in `ultrahdr_api.h` and the project docs before any claim.
+- **Slice A needs nothing.** TIFF 16/32-bit is Qt [1]; tone mapping and channel isolation are shader work.
+- **Radiance `.hdr` is not in slice A.** FMT-07 says "TIFF M5; others E3", and COLOR-07 ("EXR/Radiance SDR exposure/highlight compression preview") is deferred below, so an in-house RGBE reader belongs with COLOR-07, not with the M5 slice. It is small (~200 lines), but it is a new parser of untrusted bytes: when promoted it runs inside `glancelot-decoder` (DEP-DECISIONS rule 1), never in the GUI process, and gets an F4 fuzz target like the OpenEXR reader would.
+- **libultrahdr is the right library if COLOR-05 is ever promoted** - permissive dual licence, current release, and it is the reference implementation of the gain-map scheme. Its README describes storing an SDR base image with a gain map and metadata so legacy readers see SDR, which is exactly the fallback COLOR-05 requires. ISO 21496-1 support is **stated upstream**: the v1.1.0 release notes name the "ISO21496-1 standard", v2.0.0 adds HEIF/AVIF "with ISO 21496-1 gain map metadata", and v2.0.1 applies the ISO 21496-1 gain-map patch automatically [5]. Conformance to COLOR-05's own fixtures ("independently labeled variants and conformance fixtures") still has to be proven by test before any support claim.
 - **OpenEXR is a real, justified dependency** for COLOR-07, but it is the heaviest item here and brings Imath. EXR's deep and multipart features are explicitly out of scope per FMT-07 ("EXR deep/multipart/channel limitations explicit"), so the cost buys a narrow slice.
 
 ## 3. Platform capability
@@ -83,7 +84,7 @@ This is the section that decides the recommendation. The evidence is in Qt's own
 - Untrusted input is the central risk and it does not change shape here: everything new is still parsed inside `glancelot-decoder`, a separate process, under the existing allowlist, `QImageReader::setAllocationLimit(256)`, dims <= 32768 and the 256 MiB decoded ceiling. A new format means a new parser behind the same boundary, never in the UI process.
 - **Allocation changes meaningfully.** An `RGBA16FPx4` buffer is 2x and `RGBA32FPx4` 4x the bytes of RGBA8 for the same pixels, so the 256 MiB decode ceiling and the 256 MiB canvas texture budget both have to be expressed in bytes-after-conversion, not in pixels. A 64 MP 32-bit-float image is ~1 GiB and must be rejected or tiered down, not attempted. This is the strongest argument for landing D1 (DECODE-TIER) and E1 (RESOURCE-LEDGER) first.
 - **Non-finite and negative samples.** EXR and Radiance can contain NaN, infinities and negative values; so can float TIFF. The policy must be explicit (clamp or substitute, flagged in the HUD) and tested numerically, because NaN propagating into a tone map produces black or garbage frames and into a histogram produces undefined sorting. COLOR-07 already requires this.
-- EXR is a complex format with its own CVE history; if OpenEXR is ever adopted it should become a fuzz target in the Linux build (Track F4) on the same footing as the metadata and IPC targets.
+- EXR is a complex format with its own CVE history; if OpenEXR is ever adopted it should become a fuzz target in the Linux build (Track F4) on the same footing as the metadata and IPC targets. The same applies to the in-house Radiance RGBE reader when D-hdrfile is promoted: it runs in the decoder worker and gets its own F4 target (truncated scanlines, RLE runs past the line end, exponent extremes, oversized header dimensions).
 - Gain-map images carry a second embedded image plus metadata: both must be bounded independently, and a hostile gain map must not be able to drive the tone map to produce a pathological allocation.
 - No authorization boundary changes: nothing here is a remote feature. Viewing never writes original media; exposure and channel isolation are view-only state (ADV-03 says "view-only persistence tested").
 
@@ -92,8 +93,8 @@ This is the section that decides the recommendation. The evidence is in Qt's own
 Generated fixtures only:
 
 - **16/32-bit TIFF**: write them in-test with `QImageWriter` from a `QImage` in `Format_RGBA64` and `Format_RGBA32FPx4` (the Qt TIFF plugin writes both [1]), then read back and assert exact round-trip of chosen sample values - that is the "reference pixel outputs" COLOR-04 and ADV-03 ask for, with no external tool and no committed binaries.
-- **Radiance `.hdr`**: write a tiny RGBE file byte by byte in the test (both flat and RLE-encoded scanlines), including a scanline of zeros and one with an exponent at the extremes; assert decoded float values and a clean rejection of a truncated file.
-- **Precision labels**: table-driven - 8-bit PNG, 16-bit TIFF, 32-bit float TIFF, Radiance - each asserting the reported source depth, the working-buffer format and the output surface independently. A test must fail if an 8-bit source is ever labelled high precision.
+- **Radiance `.hdr` (only when deferred D-hdrfile is promoted)**: write a tiny RGBE file byte by byte in the test (both flat and RLE-encoded scanlines), including a scanline of zeros and one with an exponent at the extremes; assert decoded float values and a clean rejection of a truncated file; plus the F4 fuzz target (section 4).
+- **Precision labels**: table-driven - 8-bit PNG, 16-bit TIFF, 32-bit float TIFF (and Radiance once D-hdrfile is promoted) - each asserting the reported source depth, the working-buffer format and the output surface independently. A test must fail if an 8-bit source is ever labelled high precision.
 - **Tone map**: numeric tests that the mapping is monotonic, that it is reversible as COLOR-07 requires, that NaN/Inf/negative inputs follow the declared policy, and that exposure 0 with no highlight compression is an identity on an SDR source.
 - **Channel isolation (ADV-03)**: reference pixel outputs for R/G/B/alpha isolation, invert and luminance grayscale on an opaque image and on one with alpha; assert the colour-domain label changes with the mode; assert the source file is untouched.
 - **Failure and cancellation**: a float TIFF whose decoded size exceeds the ledger (rejected with a named reason, nothing admitted); `stop_token` cancel during a high-precision decode; worker killed mid-transfer; a stale generation result dropped rather than replacing a newer selection.
@@ -110,7 +111,7 @@ New test file `tests/precision_ui_tests.cpp` plus a lead-provided `cmake/Precisi
 | **D-prec1** | Worker high-precision decode path: keep `RGBA64`/`RGBA16FPx4` where the source has it, report real source depth and sample format, byte-accurate admission; `PixelFormat::Rgba16Float` finally used; 16/32-bit TIFF (FMT-07's M5 half) | L | D |
 | **D-prec2** | Canvas float working buffer (`QQuickRhiItem::setColorBufferFormat(RGBA16F)`), reversible exposure/highlight tone map, truthful precision labels through D2's capability model | L | D |
 | **D-chan** | ADV-03 channel isolation, invert, luminance grayscale, colour-domain labels, view-only persistence | M | D |
-| **D-hdrfile** | Radiance `.hdr` in-house reader (+ fixtures) | S | D |
+| *deferred* D-hdrfile | Radiance `.hdr` in-house reader in the decoder worker (+ fixtures and an F4 fuzz target); COLOR-07 / FMT-07 E3 scope, promoted with D-exr | S | D |
 | *deferred* D-exr | OpenEXR + Imath, COLOR-07 scope only, no deep/multipart | L | D |
 | *deferred* D-gain | libultrahdr, COLOR-05, SDR base-layer fallback first | L | D |
 | *deferred* D-hdrout | Negotiated HDR swapchain via `_qt_sg_hdr_format`, `hdrInfo()` reporting, UI-white correctness, SDR fallback, Windows-only; completion requires a user RUNBOOK | XL | D |
@@ -119,17 +120,17 @@ Prerequisites: D1 DECODE-TIER (so a float decode has a tier to live in and a fal
 
 ## 7. Recommendation and what would change it
 
-**GO for slice A (D-prec1 + D-prec2 + D-hdrfile) and slice B (D-chan).** They satisfy the M5 parts of the matrix (FMT-07's TIFF, ADV-03), they remove the two worker lines and the one canvas line that currently destroy and reject precision, they need no new dependency, and they produce the honest labels the whole conditional family depends on. They are also the prerequisite for ever doing HDR properly: without a float working buffer there is nothing to send to an HDR surface.
+**GO for slice A (D-prec1 + D-prec2) and slice B (D-chan).** (Review round 1 moved D-hdrfile out of slice A: Radiance is E3 scope under FMT-07 and COLOR-07, so it is deferred with COLOR-07 below.) They satisfy the M5 parts of the matrix (FMT-07's TIFF, ADV-03), they remove the two worker lines and the one canvas line that currently destroy and reject precision, they need no new dependency, and they produce the honest labels the whole conditional family depends on. They are also the prerequisite for ever doing HDR properly: without a float working buffer there is nothing to send to an HDR surface.
 
 **DEFER native HDR output (D-hdrout).** Not because Qt cannot do it - D3D11/D3D12 can negotiate scRGB or HDR10 when Windows reports a PQ output [18][19], and Qt Quick exposes the request through a window property with automatic SDR fallback [16] - but because COLOR-04 requires "calibrated output measurements" and correct UI white on a real display, and because the project's other two platforms cannot do it at all (OpenGL is SDR-only by construction [20]; the container runs an 8-bit VNC desktop). A feature that is Windows-only, hardware-gated and unverifiable in CI should not be promised in v1.
 
-**DEFER COLOR-05 (Ultra HDR), COLOR-06 (Adaptive HDR HEIC) and COLOR-07 (EXR).** COLOR-05 and COLOR-07 each need a new third-party library whose only consumer is a deferred feature; COLOR-06 is already marked conditional and cannot be inferred from HEIC support, which the project does not have either.
+**DEFER COLOR-05 (Ultra HDR), COLOR-06 (Adaptive HDR HEIC) and COLOR-07 (EXR and Radiance).** COLOR-05 and COLOR-07's EXR half each need a new third-party library whose only consumer is a deferred feature; COLOR-07's Radiance half (D-hdrfile) needs no library but is E3 scope and a new untrusted-input parser, so it is promoted together with D-exr, in the worker and fuzzed; COLOR-06 is already marked conditional and cannot be inferred from HEIC support, which the project does not have either.
 
 What would change this:
 
 1. **The user qualifies an HDR display and accepts a Windows-only feature.** Then D-hdrout becomes GO, sequenced after slice A, with a RUNBOOK packet as its completion evidence.
-2. **A gain-map corpus appears in the user's own library.** Then COLOR-05 moves ahead of COLOR-07: libultrahdr is permissive, current and small [4][5], and its SDR base-layer path gives value even with no HDR output - we would show the base image correctly and label the gain map as present but unapplied. Before promising it, confirm whether the API implements ISO 21496-1 as COLOR-05 words it; that is **unconfirmed** here.
-3. **An EXR corpus appears.** Then D-exr becomes GO as a narrow COLOR-07 slice: OpenEXR BSD-3 plus Imath BSD-3 [6][8], scanline images only, deep and multipart explicitly unsupported, non-finite policy tested, and the reader fuzzed.
+2. **A gain-map corpus appears in the user's own library.** Then COLOR-05 moves ahead of COLOR-07: libultrahdr is permissive, current and small [4][5], and its SDR base-layer path gives value even with no HDR output - we would show the base image correctly and label the gain map as present but unapplied. Upstream states ISO 21496-1 support (v1.1.0, v2.0.0, v2.0.1 release notes [5]); before promising it, prove conformance against COLOR-05's labelled variants and fixtures.
+3. **An EXR or Radiance corpus appears.** Then D-exr (and D-hdrfile) become GO as a narrow COLOR-07 slice: OpenEXR BSD-3 plus Imath BSD-3 [6][8], scanline images only, deep and multipart explicitly unsupported, non-finite policy tested, and the reader fuzzed.
 4. **Linux HDR becomes real** (Vulkan backend plus a compositor exposing an HDR surface format [21]). That would make D-hdrout cross-platform and change the cost/benefit - but it needs demonstrating on hardware first, and the project would also have to switch its Linux backend from the Qt default [17].
 
 If the lead wants the smallest possible step: **D-prec1 alone**. Keeping precision in the worker and reporting the real source depth, with the canvas still flattening for display, already converts "we silently throw your 16-bit TIFF away" into "we read it and tell you what we are showing you" - which is what the truthful-labelling criteria actually ask for.
@@ -142,7 +143,7 @@ All accessed 2026-10-22.
 2. Qt 6.8 `QQuickRhiItem` - `enum class TextureFormat { RGBA8, RGBA16F, RGBA32F, RGB10A2 }` and `setColorBufferFormat()` - https://raw.githubusercontent.com/qt/qtdeclarative/6.8/src/quick/items/qquickrhiitem.h
 3. Qt 6.8 `QColorSpace` - `TransferFunction` includes `St2084` and `Hlg`; `Primaries` includes `Bt2020` - https://raw.githubusercontent.com/qt/qtbase/6.8/src/gui/painting/qcolorspace.h
 4. libultrahdr - "distributed under the terms of both the MIT license and the Apache License (Version 2.0)" - https://github.com/google/libultrahdr
-5. libultrahdr releases, newest v2.0.2 dated 13 Aug (the page prints no year) - https://github.com/google/libultrahdr/releases
+5. libultrahdr releases, newest v2.0.2 dated 13 Aug (the page prints no year); v1.1.0 notes name the "ISO21496-1 standard", v2.0.0 adds HEIF/AVIF "with ISO 21496-1 gain map metadata", v2.0.1 "automatically apply the ISO 21496-1 gain map patch" (re-checked in review round 1) - https://github.com/google/libultrahdr/releases
 6. OpenEXR - "OpenEXR is licensed under the BSD-3-Clause license" - https://github.com/AcademySoftwareFoundation/openexr
 7. OpenEXR releases, newest v3.5.2 dated 03 Oct - https://github.com/AcademySoftwareFoundation/openexr/releases
 8. Imath licence file (BSD-3-Clause) - https://raw.githubusercontent.com/AcademySoftwareFoundation/Imath/main/LICENSE.md

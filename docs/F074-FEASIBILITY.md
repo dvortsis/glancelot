@@ -76,7 +76,7 @@ Pixel cost: PERFORMANCE-STRATEGY section 11 notes 3840x2160 is 6.4 times 1440x90
 
 | Packet | Size | Track | Content | Prerequisites |
 | --- | --- | --- | --- | --- |
-| F074a fixed-size hardening | S | F | `-AcceptSetDesktopSize=0` explicitly in `start.py`; narrow `-AllowOverride` so X clients cannot re-enable it; DOCKER.md note; Python RFB client test asserting "prohibited" | none (can join F1) |
+| F074a fixed-size hardening | S | F | `-AcceptSetDesktopSize=0` explicitly in `start.py`; DOCKER.md note; Python RFB client test asserting "prohibited". `AcceptSetDesktopSize` is not in Xvnc 1.13.1's default `-AllowOverride` list (`desktop,AcceptPointerEvents,SendCutText,AcceptCutText,SendPrimary,SetPrimary`, F076 section 3), so X clients cannot re-enable resizing and F074a needs no `-AllowOverride` change. The shared narrowing of `-AllowOverride` to `desktop` belongs to F076a (clipboard flags) and F078a (pointer events); if F074a ships in the same `start.py` change, it carries that narrowing on their behalf | none (can join F1) |
 | RFB-GATE policy proxy core | L | F | Shared with F076b and F078b; handshake tracking, message framing, bounded buffers, fuzz target (F4) | F074a; security review |
 | F074b resize-to-browser | M | F | `GLANCELOT_REMOTE_RESIZE=off|browser`, pixel ceiling, server debounce, controller-only option, Openbox maximize rule, landing page with `resize=remote`, app geometry checks | RFB-GATE, F2 pixel budgets |
 
