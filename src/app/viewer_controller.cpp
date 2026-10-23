@@ -179,10 +179,17 @@ struct ViewerController::Private {
     int positionRetries{};
     bool positionDirty{}, restoreRequested{};
     // F015 tabs: the inactive tabs' locations; the active tab's entry is refreshed from live state whenever it is read.
-    struct TabRecord { QString folder, image; };
+    using TabRecord=recovery::TabLocation;
     QList<TabRecord> tabList;
     int activeTabIndex{0};
     TabRecord liveLocation() const { return {path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path}; }
+    // The production recovery checkpoint carries the tab set with the slot's position: the active tab is that saved
+    // position itself, so the snapshot is coherent even while a tab switch is still decoding.
+    recovery::CheckpointInput checkpointInput(quint64 sequence) const {
+        recovery::CheckpointInput input{pendingFolder,pendingImage,sequence};
+        if(tabList.size()>1){input.tabs=tabList;input.tabs[activeTabIndex]={pendingFolder,pendingImage};input.activeTab=activeTabIndex;}
+        return input;
+    }
     QTimer positionTimer;
     std::unique_ptr<recovery::Session> recoverySession;
     WindowClaim recoveryClaim;
@@ -430,7 +437,7 @@ struct ViewerController::Private {
         if(recoverySession&&!recoveryRetiring) {
             if(positionDirty&&slot>0&&!recoveryFinalized) {
                 if(checkpointSequence<std::numeric_limits<quint64>::max()&&
-                   recoverySession->accept({pendingFolder,pendingImage,checkpointSequence+1})) {
+                   recoverySession->accept(checkpointInput(checkpointSequence+1))) {
                     ++checkpointSequence;positionDirty=false;recoveryPoll.start();
                 }
             }
@@ -1224,25 +1231,26 @@ void ViewerController::flushWindowPosition(){d->writePosition();}
 void ViewerController::restoreWindow(){
     if(d->safeMode||d->explicitPositionIntent||d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
     QString folder,image;
-    QJsonObject entry; // the saved settings entry (F015 tabs); a recovery session only carries folder and image
+    QList<Private::TabRecord> tabs;int activeTab=0; // F015: validated by the recovery session; a legacy entry is read as before
     if(d->recoverySession) {
         if(!d->recoveryResumeReady){d->restorePending=true;d->recoveryPoll.start();return;}
         folder=d->recoveryResume.folder;image=d->recoveryResume.image;
+        tabs=d->recoveryResume.tabs;activeTab=d->recoveryResume.activeTab;
     }else {
         QJsonObject settings;if(!readSettings(settings).ok())return;
-        entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
+        const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
         folder=entry.value("folder").toString();image=entry.value("image").toString();
+        const auto rows=entry.value("tabs").toArray();
+        if(rows.size()>=2&&rows.size()<=recovery::MaxTabs) {
+            for(const auto& row:rows)tabs.append({row.toObject().value("folder").toString(),row.toObject().value("image").toString()});
+            activeTab=qBound(0,entry.value("activeTab").toInt(),int(tabs.size())-1);
+        }
     }
     d->restorePending=false;
     if(folder.isEmpty()&&image.isEmpty())return;
-    {   // F015: a saved tab set returns with its active tab; only that tab navigates now
-        const auto rows=entry.value("tabs").toArray();
-        if(rows.size()>=2&&rows.size()<=8){
-            QList<Private::TabRecord> restored;
-            for(const auto& row:rows)restored.append({row.toObject().value("folder").toString(),row.toObject().value("image").toString()});
-            d->tabList=restored;d->activeTabIndex=qBound(0,entry.value("activeTab").toInt(),int(restored.size())-1);
-            emit tabsChanged();
-        }
+    if(tabs.size()>=2) {   // F015: a saved tab set returns with its active tab; only that tab navigates now
+        d->tabList=tabs;d->activeTabIndex=activeTab;
+        emit tabsChanged();
     }
     d->restoreRequested=true;
     const auto token=d->generation,navigation=d->navigationGeneration,epoch=d->recoveryEpoch;
@@ -1474,7 +1482,8 @@ bool ViewerController::activateTab(int index) {
     d->tabList[d->activeTabIndex]=d->liveLocation();
     d->activeTabIndex=index;
     const auto target=d->tabList[index];
-    d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
+    // Dirty until saved, but the save waits for the switch to settle: the decode notes the position and restarts it.
+    d->positionDirty=d->slot>0;d->positionTimer.stop();
     emit tabsChanged();
     if(!target.image.isEmpty()&&QFileInfo::exists(target.image))open(target.image);
     else navigateDirectory(target.folder);
@@ -1489,7 +1498,8 @@ bool ViewerController::closeTab(int index) {
     else if(closingActive)d->activeTabIndex=qMin(index,int(d->tabList.size())-1);
     const auto target=d->tabList[d->activeTabIndex];
     if(d->tabList.size()<2){d->tabList.clear();d->activeTabIndex=0;}
-    d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
+    d->positionDirty=d->slot>0;
+    if(closingActive)d->positionTimer.stop();else if(d->positionDirty)d->positionTimer.start();
     emit tabsChanged();
     if(closingActive){
         if(!target.image.isEmpty()&&QFileInfo::exists(target.image))open(target.image);

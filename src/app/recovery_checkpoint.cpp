@@ -4,6 +4,7 @@
 #include "window_claim_guard.hpp"
 #include <QDateTime>
 #include <QDir>
+#include <QJsonArray>
 #include <QUuid>
 #include <cmath>
 
@@ -79,9 +80,31 @@ Code position(const QJsonObject& root,int slot,ResumeState& result,Options optio
     const auto valid=policy::merge(root,source,selected,options);if(valid.status.code!=Code::Ok)return valid.status.code;
     const auto row=root.value("windows").toObject().value(QString::number(slot)).toObject();
     result.folder=row.value("folder").toString();result.image=row.value("image").toString();
-    result.hasPosition=!result.folder.isEmpty()||!result.image.isEmpty();return Code::Ok;
+    result.hasPosition=!result.folder.isEmpty()||!result.image.isEmpty();readTabs(row,result);return Code::Ok;
 }
 bool validPath(const QString& value) {return value.size()<=32768&&!value.contains(QChar(0))&&(value.isEmpty()||QDir::isAbsolutePath(value));}
+bool validTabs(const CheckpointInput& input) {
+    if(input.tabs.size()<2)return true;
+    if(input.tabs.size()>MaxTabs||input.activeTab<0||input.activeTab>=input.tabs.size())return false;
+    for(const auto& tab:input.tabs)if(!validPath(tab.folder)||!validPath(tab.image))return false;
+    return input.tabs[input.activeTab]==TabLocation{input.folder,input.image};
+}
+}
+void readTabs(const QJsonObject& row,ResumeState& state) {
+    state.tabs.clear();state.activeTab=0;
+    const auto rows=row.value("tabs"),active=row.value("activeTab");
+    if(!rows.isArray()||!active.isDouble())return;
+    const auto array=rows.toArray();const auto index=active.toDouble();
+    if(array.size()<2||array.size()>MaxTabs||std::floor(index)!=index||index<0||index>=array.size())return;
+    QList<TabLocation> tabs;
+    for(const auto& value:array) {
+        const auto folder=value.toObject().value("folder"),image=value.toObject().value("image");
+        if(!value.isObject()||!folder.isString()||!image.isString()||!validPath(folder.toString())||!validPath(image.toString()))return;
+        tabs.append({folder.toString(),image.toString()});
+    }
+    // Another writer (an offline position restore) may have moved folder/image; its tabs no longer describe this slot.
+    if(tabs[int(index)]!=TabLocation{state.folder,state.image})return;
+    state.tabs=std::move(tabs);state.activeTab=int(index);
 }
 
 BeginResult beginWindow(const WindowClaim& identity,Options options) {
@@ -104,7 +127,7 @@ BeginResult beginWindow(const WindowClaim& identity,Options options) {
     return {written.status,std::move(previous)};
 }
 CheckpointResult checkpoint(const WindowClaim& identity,const CheckpointInput& input,Options options) {
-    if(!input.sequence||!validPath(input.folder)||!validPath(input.image))return {status(Code::Corrupt,options),{},0};
+    if(!input.sequence||!validPath(input.folder)||!validPath(input.image)||!validTabs(input))return {status(Code::Corrupt,options),{},0};
     auto guard=acquire(identity,options);if(!guard.held())return {guard.status,{},0};
     QString revision;
     const auto written=settings_detail::transact(request(guard,options),[&](const settings_detail::View& view) {
@@ -115,6 +138,12 @@ CheckpointResult checkpoint(const WindowClaim& identity,const CheckpointInput& i
         auto windows=windowsValue.toObject();const auto key=QString::number(guard.slot);const auto old=windows.value(key);
         if(!old.isUndefined()&&!old.isObject())return settings_detail::Edit{Code::Corrupt,{}};
         auto position=old.toObject();position["folder"]=input.folder;position["image"]=input.image;position["saved"]=QDateTime::currentSecsSinceEpoch();
+        // F015: the tab snapshot belongs to this revision, so it is replaced (or removed) with the position.
+        if(input.tabs.size()<2){position.remove("tabs");position.remove("activeTab");}
+        else {
+            QJsonArray tabs;for(const auto& tab:input.tabs)tabs.append(QJsonObject{{"folder",tab.folder},{"image",tab.image}});
+            position["tabs"]=tabs;position["activeTab"]=input.activeTab;
+        }
         windows[key]=position;replacement["windows"]=windows;
         revision=QUuid::createUuid().toString(QUuid::WithoutBraces);row.record["checkpointRevision"]=revision;
         row.record["sequence"]=QString::number(input.sequence);row.record["state"]="dirty";row.record["origin"]="navigation";
