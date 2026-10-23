@@ -13,6 +13,7 @@
 #include <QTemporaryDir>
 #include <QThread>
 #include <atomic>
+#include <cstdio>
 #include <memory>
 #include "fs_monitor.hpp"
 #include "fs_revision.hpp"
@@ -61,9 +62,20 @@ class LateBaselineTests : public QObject {
     static int traceCount(const QString& file,const QByteArray& event) {
         QFile trace(file);return trace.open(QIODevice::ReadOnly)?int(trace.readAll().count(event+'\n')):-1;
     }
+    // QTest output does not reach CTest's log on the Windows machines; stderr does.
+    static void note(const QString& text) {
+        std::fprintf(stderr,"late_baseline: %s\n",qPrintable(text));std::fflush(stderr);
+    }
+    static QString commitPng(const QString& path,Qt::GlobalColor color) {
+        QSaveFile target(path);if(!target.open(QIODevice::WriteOnly))return "open: "+target.errorString();
+        QImage image(QSize(32,24),QImage::Format_RGB32);image.fill(color);
+        if(!image.save(&target,"PNG"))return "encode: "+target.errorString();
+        return target.commit()?QString{}:QString("commit %1: %2").arg(int(target.error())).arg(target.errorString());
+    }
     QTemporaryDir config;
 private slots:
     void initTestCase(){QVERIFY(config.isValid());qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());}
+    void cleanup(){if(QTest::currentTestFailed())note(QString("FAILED %1").arg(QTest::currentTestFunction()));}
 
     // folder_tree openFolderWithoutImagesReportsAndKeepsSelection (:427/:430) and
     // folder_grid auditReadyCurrentPhotoDoesNotReopen (:947) under load: the user's
@@ -105,6 +117,8 @@ private slots:
         // time or file index) the token is empty and one fresh decode validates.
         const bool provable=!fs_watch::sourceToken(fs_watch::probe(fs_watch::native(start))).isEmpty();
         qInfo()<<"source revision provable"<<provable;
+        note(QString("in-flight open: provable %1 decodes %2 imageChanged %3 status \"%4\"")
+            .arg(provable).arg(traceCount(traceFile,"decode:begin")).arg(images.count()).arg(viewer.status()));
         QCOMPARE(traceCount(traceFile,"decode:begin"),provable?1:2);
         if(provable)QCOMPARE(images.count(),0);
         // The user's next request is unaffected.
@@ -175,14 +189,20 @@ private slots:
         const auto image=media.filePath("held.png");QVERIFY(png(image,Qt::red));
         QFile held;QVERIFY(glancelot::detail::openSharedRead(held,image));
         QImageReader reader(&held);QCOMPARE(reader.size(),QSize(32,24));
-        QVERIFY2(png(image,Qt::blue),"A shared-delete reader must not block QSaveFile::commit");
+        const auto shared=commitPng(image,Qt::blue);
+        note("replace over shared-delete reader: "+(shared.isEmpty()?QString("ok"):shared));
         held.close();
-        QCOMPARE(QImage(image).pixelColor(0,0),QColor(Qt::blue));
 #ifdef Q_OS_WIN
         // Record (not assert) the platform behaviour this guards against.
-        QFile plain(image);QVERIFY(plain.open(QIODevice::ReadOnly));
-        qInfo()<<"plain QFile reader blocks replace:"<<!png(image,Qt::green);
+        {
+            QFile plain(image);QVERIFY(plain.open(QIODevice::ReadOnly));
+            const auto blocked=commitPng(image,Qt::green);
+            note("replace over plain QFile reader: "+(blocked.isEmpty()?QString("ok"):blocked));
+        }
+        QVERIFY(png(image,Qt::blue));
 #endif
+        QVERIFY2(shared.isEmpty(),qPrintable("A shared-delete reader must not block QSaveFile::commit: "+shared));
+        QCOMPARE(QImage(image).pixelColor(0,0),QColor(Qt::blue));
     }
 };
 
