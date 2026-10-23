@@ -1,0 +1,2202 @@
+HEAD=894346385fe646f2e8dbfbafeb0cf533e39e1110
+Waiting: full gate held by dvort on claude/f040-fix since 10/23/2026 02:56:01
+-- The CXX compiler identification is MSVC 19.44.35229.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - not found
+-- Found Threads: TRUE
+-- Performing Test HAVE_STDATOMIC
+-- Performing Test HAVE_STDATOMIC - Success
+-- Found WrapAtomic: TRUE
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Found Python3: C:/Python315/python.exe (found version "3.15.1") found components: Interpreter
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (137.9s)
+-- Generating done (4.5s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1c2
+[1/632] Automatic MOC and UIC for target glancelot_recovery_common
+[2/632] Automatic MOC and UIC for target glancelot_platform
+[3/632] Building CXX object CMakeFiles\glancelot_core.dir\src\core\directory_listing.cpp.obj
+[4/632] Building CXX object CMakeFiles\glancelot_core.dir\src\core\navigation.cpp.obj
+C:\src\Github\Glancelot\.worktrees\lead-tester\src\core\navigation.cpp(75): warning C4100: 'includeMountedFolders': unreferenced parameter
+[5/632] Building CXX object CMakeFiles\glancelot_core.dir\src\core\file_operations.cpp.obj
+[6/632] Building CXX object CMakeFiles\glancelot_core.dir\src\core\selection_export.cpp.obj
+[7/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\platform_integration.cpp.obj
+[8/632] Building CXX object CMakeFiles\glancelot_platform.dir\glancelot_platform_autogen\mocs_compilation.cpp.obj
+[9/632] Building CXX object CMakeFiles\glancelot_core.dir\src\core\perf_trace.cpp.obj
+C:\src\Github\Glancelot\.worktrees\lead-tester\src\core\perf_trace.cpp(19): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+[10/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\io_scheduler.cpp.obj
+[11/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_model.cpp.obj
+[12/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\metadata_parser.cpp.obj
+[13/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\animation_controller.cpp.obj
+[14/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\mutation_service.cpp.obj
+[15/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\glancelot_recovery_common_autogen\mocs_compilation.cpp.obj
+[16/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\raw_preview.cpp.obj
+[17/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\copy_move_service.cpp.obj
+[18/632] Building CXX object CMakeFiles\glancelot_platform.dir\src\app\display_manager.cpp.obj
+[19/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_diff.cpp.obj
+[20/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_recovery.cpp.obj
+[21/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_policy.cpp.obj
+[22/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\settings_restore.cpp.obj
+[23/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_checkpoint.cpp.obj
+[24/632] Linking CXX static library glancelot_core.lib
+[25/632] Linking CXX static library glancelot_platform.lib
+[26/632] Copying glancelot qml sources into build dir
+[27/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\recovery_session.cpp.obj
+[28/632] Copying glancelot qml resources into build dir
+[29/632] Automatic MOC and UIC for target glancelot-decoder
+[30/632] Automatic MOC and UIC for target glancelot_test_argv_capture
+[31/632] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[32/632] Building CXX object CMakeFiles\glancelot-decoder.dir\glancelot-decoder_autogen\mocs_compilation.cpp.obj
+[33/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\app\settings_maintenance.cpp.obj
+[34/632] Building CXX object CMakeFiles\glancelot_recovery_common.dir\src\app\command_registry.cpp.obj
+[35/632] Linking CXX static library glancelot_recovery_common.lib
+[36/632] Building CXX object CMakeFiles\glancelot-decoder.dir\src\worker\main.cpp.obj
+[37/632] Linking CXX executable glancelot-decoder.exe
+[38/632] Running qmlimportscanner for glancelot
+[39/632] Automatic MOC and UIC for target glancelot
+[40/632] Running AUTOMOC file extraction for target glancelot
+[41/632] Running moc --collect-json for target glancelot
+[42/632] Running qmlimportscanner for grid_ui_tests
+[43/632] Running qmlimportscanner for fs_watch_ui_tests
+[44/632] Running qmlimportscanner for monitor_output_tests
+[45/632] Running qmlimportscanner for monitor_customization_tests
+[46/632] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\glancelot_test_argv_capture_autogen\mocs_compilation.cpp.obj
+[47/632] Running qmlimportscanner for monitor_customization_ui_tests
+[48/632] Building CXX object CMakeFiles\fs_watch_decoder_fixture.dir\fs_watch_decoder_fixture_autogen\mocs_compilation.cpp.obj
+[49/632] Running qmlimportscanner for translation_coverage_ui_tests
+[50/632] Automatic QML type registration for target glancelot
+[51/632] Generating .qsb/src/render/image.vert.qsb
+[52/632] Generating .qsb/src/render/image.frag.qsb
+[53/632] Automatic MOC and UIC for target theme_tests
+[54/632] Building CXX object CMakeFiles\glancelot_test_argv_capture.dir\tests\platform_argv_capture.cpp.obj
+[55/632] Linking CXX executable "native argv ☂ 🧪\glancelot_test_argv_capture.exe"
+[56/632] Automatic MOC and UIC for target recovery_tests
+[57/632] Building CXX object CMakeFiles\fs_watch_decoder_fixture.dir\tests\fs_watch_decoder_fixture.cpp.obj
+[58/632] Running qmlimportscanner for command_routing_tests
+[59/632] Linking CXX executable fs_watch_decoder_fixture.exe
+[60/632] Automatic MOC and UIC for target recovery_startup_tests
+[61/632] Automatic MOC and UIC for target recovery_controller_tests
+[62/632] Automatic MOC and UIC for target grid_ui_tests
+[63/632] Running qmlimportscanner for input_ui_tests
+[64/632] Running qmlimportscanner for thumbnail_tests
+[65/632] Running qmlimportscanner for pathbar_ui_tests
+[66/632] Automatic MOC and UIC for target monitor_output_tests
+[67/632] Automatic MOC and UIC for target fs_watch_ui_tests
+[68/632] Running qmlimportscanner for canvas_tests
+[69/632] Automatic MOC and UIC for target monitor_customization_tests
+[70/632] Running rcc for resource qmake_Glancelot
+[71/632] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+[72/632] Automatic MOC and UIC for target translation_coverage_ui_tests
+[73/632] Automatic MOC and UIC for target monitor_customization_ui_tests
+[74/632] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+[75/632] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+[76/632] Automatic MOC and UIC for target command_routing_tests
+[77/632] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+[78/632] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+[79/632] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+[80/632] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+[81/632] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+[82/632] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+[83/632] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+[84/632] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+[85/632] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+[86/632] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+[87/632] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+[88/632] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+[89/632] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+[90/632] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+[91/632] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+[92/632] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+[93/632] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+[94/632] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+[95/632] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+[96/632] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+[97/632] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+[98/632] Running rcc for resource glancelot_raw_qml_0_extra_qmldirs
+[99/632] Running rcc for resource glancelot_raw_qml_0
+[100/632] Running rcc for resource ui_fonts
+[101/632] Running rcc for resource brand_assets
+[102/632] Running rcc for resource canvas_shaders
+[103/632] Generating .rcc/qmlcache/glancelot_ui/ShortcutRecorder_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutRecorder_qml.cpp.aotstats
+[104/632] Running rcc for resource glancelot_raw_qml_1
+[105/632] Running rcc for resource brand_images
+[106/632] Running rcc for resource glancelot_raw_qml_1_extra_qmldirs
+[107/632] Generating .rcc/qmlcache/glancelot_ui/DetachedPaneHost_qml.cpp
+[108/632] Generating .rcc/qmlcache/glancelot_ui/MonitorSettings_qml.cpp
+[109/632] Automatic MOC and UIC for target acceptance_tests
+[110/632] Automatic MOC and UIC for target startup_window_geometry_tests
+[111/632] Automatic MOC and UIC for target pane_layout_tests
+[112/632] Running rcc for resource input_theme_catalog
+[113/632] Automatic MOC and UIC for target folder_tree_tests
+[114/632] Running rcc for resource input_brand_assets
+[115/632] Running rcc for resource input_canvas_shaders
+[116/632] Automatic MOC and UIC for target window_slot_tests
+[117/632] Automatic MOC and UIC for target platform_integration_tests
+[118/632] Automatic MOC and UIC for target file_operation_service_tests
+[119/632] Automatic MOC and UIC for target directory_model_tests
+[120/632] Automatic MOC and UIC for target ui_settings_tests
+[121/632] Automatic MOC and UIC for target grid_density_tests
+[122/632] Automatic MOC and UIC for target grid_search_tests
+[123/632] Automatic MOC and UIC for target fs_watch_tests
+[124/632] Automatic MOC and UIC for target folder_history_tests
+[125/632] Automatic MOC and UIC for target fs_watch_budget_tests
+[126/632] Automatic MOC and UIC for target favorites_tests
+[127/632] Automatic MOC and UIC for target shortcuts_help_tests
+[128/632] Automatic MOC and UIC for target io_scheduler_tests
+[129/632] Automatic MOC and UIC for target metadata_tests
+[130/632] Automatic MOC and UIC for target filter_tests
+[131/632] Automatic MOC and UIC for target cache_tests
+[132/632] Automatic MOC and UIC for target animation_tests
+[133/632] Automatic MOC and UIC for target mutation_tests
+[134/632] Automatic MOC and UIC for target copy_move_tests
+[135/632] Automatic MOC and UIC for target format_tests
+[136/632] Automatic MOC and UIC for target thumbnail_tests
+[137/632] Running rcc for resource grid_theme_catalog
+[138/632] Running rcc for resource grid_brand_assets
+[139/632] Running rcc for resource grid_canvas_shaders
+[140/632] Running rcc for resource theme_catalog
+[141/632] Automatic MOC and UIC for target pathbar_ui_tests
+[142/632] Running rcc for resource fs_watch_ui_theme
+[143/632] Automatic MOC and UIC for target input_ui_tests
+[144/632] Running rcc for resource fs_watch_ui_brand
+[145/632] Automatic MOC and UIC for target canvas_tests
+[146/632] Running rcc for resource fs_watch_ui_shaders
+[147/632] Running rcc for resource monitor_output_shaders
+[148/632] Running rcc for resource recovery_test_catalog
+[149/632] Running rcc for resource recovery_controller_catalog
+[150/632] Running rcc for resource recovery_startup_catalog
+[151/632] Running rcc for resource monitor_customization_theme
+[152/632] Running rcc for resource monitor_customization_shaders
+[153/632] Running rcc for resource monitor_customization_brand
+[154/632] Running rcc for resource monitor_customization_ui_theme
+[155/632] Running rcc for resource monitor_customization_ui_shaders
+[156/632] Running rcc for resource monitor_customization_ui_brand
+[157/632] Running rcc for resource translation_coverage_ui_shaders
+[158/632] Running rcc for resource translation_coverage_ui_theme
+[159/632] Running rcc for resource translation_coverage_ui_brand
+[160/632] Running rcc for resource routing_canvas_shaders
+[161/632] Running rcc for resource routing_theme_catalog
+[162/632] Running rcc for resource routing_brand_assets
+[163/632] Building CXX object CMakeFiles\perf_trace_tests.dir\tests\perf_trace_tests.cpp.obj
+[164/632] Building CXX object CMakeFiles\selection_export_tests.dir\tests\selection_export_tests.cpp.obj
+[165/632] Building CXX object CMakeFiles\navigation_tests.dir\tests\navigation_tests.cpp.obj
+[166/632] Building CXX object CMakeFiles\directory_listing_tests.dir\tests\directory_listing_tests.cpp.obj
+[167/632] Building CXX object CMakeFiles\file_operations_tests.dir\tests\file_operations_tests.cpp.obj
+[168/632] Building CXX object CMakeFiles\glancelot.dir\src\app\decode_cache.cpp.obj
+[169/632] Building CXX object CMakeFiles\glancelot.dir\glancelot_autogen\mocs_compilation.cpp.obj
+[170/632] Building CXX object CMakeFiles\glancelot.dir\app\main.cpp.obj
+[171/632] Building CXX object CMakeFiles\glancelot.dir\src\app\viewer_controller.cpp.obj
+[172/632] Building CXX object CMakeFiles\glancelot.dir\src\app\settings_file.cpp.obj
+[173/632] Building CXX object CMakeFiles\glancelot.dir\src\app\theme_manager.cpp.obj
+[174/632] Building CXX object CMakeFiles\glancelot.dir\src\render\presentation_window.cpp.obj
+[175/632] Building CXX object CMakeFiles\glancelot.dir\src\app\filmstrip_model.cpp.obj
+[176/632] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_service.cpp.obj
+[177/632] Building CXX object CMakeFiles\glancelot.dir\src\render\image_canvas.cpp.obj
+[178/632] Building CXX object CMakeFiles\glancelot.dir\src\app\thumbnail_provider.cpp.obj
+[179/632] Building CXX object CMakeFiles\glancelot.dir\src\app\pane_layout.cpp.obj
+[180/632] Building CXX object CMakeFiles\glancelot.dir\src\app\folder_tree_model.cpp.obj
+[181/632] Building CXX object CMakeFiles\glancelot.dir\src\app\directory_entry_model.cpp.obj
+[182/632] Building CXX object CMakeFiles\glancelot.dir\src\app\window_slot.cpp.obj
+[183/632] Building CXX object CMakeFiles\glancelot.dir\src\app\folder_history.cpp.obj
+[184/632] Building CXX object CMakeFiles\glancelot.dir\src\app\favorites_model.cpp.obj
+[185/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_qmake_Glancelot.cpp.obj
+[186/632] Building CXX object CMakeFiles\glancelot.dir\src\app\startup_window_geometry.cpp.obj
+[187/632] Building CXX object CMakeFiles\glancelot.dir\src\app\file_operation_service.cpp.obj
+[188/632] Building CXX object CMakeFiles\glancelot.dir\glancelot_qmltyperegistrations.cpp.obj
+[189/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_qmlcache_loader.cpp.obj
+[190/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\Theme_qml.cpp.obj
+[191/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\ThemePicker_qml.cpp.obj
+[192/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\Main_qml.cpp.obj
+[193/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\Filmstrip_qml.cpp.obj
+[194/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\PaneArrangement_qml.cpp.obj
+[195/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\SettingsDialog_qml.cpp.obj
+[196/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\FolderTree_qml.cpp.obj
+[197/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\PhotoGrid_qml.cpp.obj
+[198/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\SettingRow_qml.cpp.obj
+[199/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiButton_qml.cpp.obj
+[200/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiDialog_qml.cpp.obj
+[201/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiComboBox_qml.cpp.obj
+[202/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiSwitch_qml.cpp.obj
+[203/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiScrollBar_qml.cpp.obj
+[204/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiIcon_qml.cpp.obj
+[205/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\UiTextField_qml.cpp.obj
+[206/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\ShortcutCheatSheet_qml.cpp.obj
+[207/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\DeleteFlow_qml.cpp.obj
+[208/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\AnimationBar_qml.cpp.obj
+[209/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\MetadataHud_qml.cpp.obj
+[210/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\RenameFlow_qml.cpp.obj
+[211/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_glancelot_raw_qml_0.cpp.obj
+[212/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\TransferHud_qml.cpp.obj
+[213/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_glancelot_raw_qml_0_extra_qmldirs.cpp.obj
+[214/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_brand_assets.cpp.obj
+[215/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_ui_fonts.cpp.obj
+[216/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\CommandMenuItem_qml.cpp.obj
+[217/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_canvas_shaders.cpp.obj
+[218/632] Building RC object CMakeFiles\glancelot.dir\app\glancelot.rc.res
+[219/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\ShortcutRecorder_qml.cpp.obj
+[220/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_brand_images.cpp.obj
+[221/632] Building CXX object CMakeFiles\glancelot.dir\app\startup_environment.cpp.obj
+[222/632] Building CXX object CMakeFiles\glancelot.dir\app\startup_intent.cpp.obj
+[223/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_glancelot_raw_qml_1.cpp.obj
+[224/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.qt\rcc\qrc_glancelot_raw_qml_1_extra_qmldirs.cpp.obj
+[225/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\MonitorSettings_qml.cpp.obj
+[226/632] Building CXX object CMakeFiles\glancelot.dir\build-gate-c1c2\.rcc\qmlcache\glancelot_ui\DetachedPaneHost_qml.cpp.obj
+[227/632] Building CXX object CMakeFiles\glancelot.dir\src\app\monitor_customization.cpp.obj
+[228/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\decode_cache.cpp.obj
+[229/632] Building CXX object CMakeFiles\grid_ui_tests.dir\grid_ui_tests_autogen\mocs_compilation.cpp.obj
+[230/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[231/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\favorites_model.cpp.obj
+[232/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\settings_file.cpp.obj
+[233/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\folder_history.cpp.obj
+[234/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\pane_layout.cpp.obj
+[235/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[236/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\theme_manager.cpp.obj
+[237/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[238/632] Building CXX object CMakeFiles\grid_ui_tests.dir\tests\grid_ui_tests.cpp.obj
+[239/632] Building CXX object CMakeFiles\grid_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_grid_theme_catalog.cpp.obj
+[240/632] Building CXX object CMakeFiles\grid_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_grid_brand_assets.cpp.obj
+[241/632] Building CXX object CMakeFiles\grid_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_grid_canvas_shaders.cpp.obj
+[242/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[243/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[244/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\render\image_canvas.cpp.obj
+[245/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[246/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\window_slot.cpp.obj
+[247/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[248/632] Building CXX object CMakeFiles\theme_tests.dir\theme_tests_autogen\mocs_compilation.cpp.obj
+[249/632] Building CXX object CMakeFiles\grid_ui_tests.dir\src\render\presentation_window.cpp.obj
+[250/632] Building CXX object CMakeFiles\theme_tests.dir\src\app\decode_cache.cpp.obj
+[251/632] Building CXX object CMakeFiles\theme_tests.dir\src\app\theme_manager.cpp.obj
+[252/632] Building CXX object CMakeFiles\theme_tests.dir\tests\theme_tests.cpp.obj
+[253/632] Building CXX object CMakeFiles\theme_tests.dir\build-gate-c1c2\.qt\rcc\qrc_theme_catalog.cpp.obj
+[254/632] Building CXX object CMakeFiles\theme_tests.dir\src\app\window_slot.cpp.obj
+[255/632] Building CXX object CMakeFiles\theme_tests.dir\src\app\settings_file.cpp.obj
+[256/632] Building CXX object CMakeFiles\theme_tests.dir\src\app\viewer_controller.cpp.obj
+[257/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\fs_watch_ui_tests_autogen\mocs_compilation.cpp.obj
+[258/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\decode_cache.cpp.obj
+[259/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\tests\fs_watch_ui_tests.cpp.obj
+[260/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\favorites_model.cpp.obj
+[261/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\settings_file.cpp.obj
+[262/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[263/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\folder_history.cpp.obj
+[264/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\pane_layout.cpp.obj
+[265/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\theme_manager.cpp.obj
+[266/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[267/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[268/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_fs_watch_ui_theme.cpp.obj
+[269/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_fs_watch_ui_brand.cpp.obj
+[270/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_fs_watch_ui_shaders.cpp.obj
+[271/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[272/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[273/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\render\image_canvas.cpp.obj
+[274/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[275/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\window_slot.cpp.obj
+[276/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[277/632] Building CXX object CMakeFiles\fs_watch_ui_tests.dir\src\render\presentation_window.cpp.obj
+[278/632] Building CXX object CMakeFiles\monitor_output_tests.dir\monitor_output_tests_autogen\mocs_compilation.cpp.obj
+[279/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\decode_cache.cpp.obj
+[280/632] Building CXX object CMakeFiles\monitor_output_tests.dir\tests\monitor_output_tests.cpp.obj
+[281/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\viewer_controller.cpp.obj
+[282/632] Building CXX object CMakeFiles\monitor_output_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_output_shaders.cpp.obj
+[283/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\settings_file.cpp.obj
+[284/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\presentation_window.cpp.obj
+[285/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\render\image_canvas.cpp.obj
+[286/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\startup_window_geometry.cpp.obj
+[287/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\window_slot.cpp.obj
+[288/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\pane_layout.cpp.obj
+[289/632] Building CXX object CMakeFiles\recovery_tests.dir\recovery_tests_autogen\mocs_compilation.cpp.obj
+[290/632] Building CXX object CMakeFiles\monitor_output_tests.dir\src\app\monitor_customization.cpp.obj
+[291/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_recovery.cpp.obj
+[292/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_diff.cpp.obj
+[293/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_policy.cpp.obj
+[294/632] Building CXX object CMakeFiles\recovery_tests.dir\tests\recovery_tests.cpp.obj
+[295/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_restore.cpp.obj
+[296/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\recovery_checkpoint.cpp.obj
+[297/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\recovery_session.cpp.obj
+[298/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\command_registry.cpp.obj
+[299/632] Building CXX object CMakeFiles\recovery_tests.dir\app\settings_maintenance.cpp.obj
+[300/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\window_slot.cpp.obj
+[301/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\decode_cache.cpp.obj
+[302/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\settings_file.cpp.obj
+[303/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\filmstrip_model.cpp.obj
+[304/632] Building CXX object CMakeFiles\recovery_tests.dir\build-gate-c1c2\.qt\rcc\qrc_recovery_test_catalog.cpp.obj
+[305/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\recovery_startup_tests_autogen\mocs_compilation.cpp.obj
+[306/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\directory_entry_model.cpp.obj
+[307/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\viewer_controller.cpp.obj
+[308/632] Building CXX object CMakeFiles\recovery_tests.dir\src\app\folder_tree_model.cpp.obj
+[309/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\tests\recovery_startup_tests.cpp.obj
+[310/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\app\startup_environment.cpp.obj
+[311/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\build-gate-c1c2\.qt\rcc\qrc_recovery_startup_catalog.cpp.obj
+[312/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\app\startup_intent.cpp.obj
+[313/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\src\app\window_slot.cpp.obj
+[314/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\recovery_controller_tests_autogen\mocs_compilation.cpp.obj
+[315/632] Building CXX object CMakeFiles\recovery_startup_tests.dir\src\app\settings_file.cpp.obj
+[316/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\pane_layout.cpp.obj
+[317/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\theme_manager.cpp.obj
+[318/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\favorites_model.cpp.obj
+[319/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\decode_cache.cpp.obj
+[320/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\tests\recovery_controller_tests.cpp.obj
+[321/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\viewer_controller.cpp.obj
+[322/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_file.cpp.obj
+[323/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\directory_entry_model.cpp.obj
+[324/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\window_slot.cpp.obj
+[325/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_diff.cpp.obj
+[326/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_recovery.cpp.obj
+[327/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_policy.cpp.obj
+[328/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\settings_restore.cpp.obj
+[329/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\recovery_checkpoint.cpp.obj
+[330/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\build-gate-c1c2\.qt\rcc\qrc_recovery_controller_catalog.cpp.obj
+[331/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\app\settings_maintenance.cpp.obj
+[332/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\recovery_session.cpp.obj
+[333/632] Building CXX object CMakeFiles\recovery_controller_tests.dir\src\app\command_registry.cpp.obj
+[334/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\decode_cache.cpp.obj
+[335/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\monitor_customization_tests_autogen\mocs_compilation.cpp.obj
+[336/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\viewer_controller.cpp.obj
+[337/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\tests\monitor_customization_tests.cpp.obj
+[338/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\settings_file.cpp.obj
+[339/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\directory_entry_model.cpp.obj
+[340/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\theme_manager.cpp.obj
+[341/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\filmstrip_model.cpp.obj
+[342/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\folder_tree_model.cpp.obj
+[343/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\startup_window_geometry.cpp.obj
+[344/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\file_operation_service.cpp.obj
+[345/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\pane_layout.cpp.obj
+[346/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_customization_theme.cpp.obj
+[347/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_customization_brand.cpp.obj
+[348/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_customization_shaders.cpp.obj
+[349/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\monitor_customization.cpp.obj
+[350/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\render\presentation_window.cpp.obj
+[351/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\render\image_canvas.cpp.obj
+[352/632] Building CXX object CMakeFiles\monitor_customization_tests.dir\src\app\window_slot.cpp.obj
+[353/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\decode_cache.cpp.obj
+[354/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\monitor_customization_ui_tests_autogen\mocs_compilation.cpp.obj
+[355/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\tests\monitor_customization_ui_tests.cpp.obj
+[356/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\settings_file.cpp.obj
+[357/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[358/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[359/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\theme_manager.cpp.obj
+[360/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[361/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[362/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[363/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[364/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\pane_layout.cpp.obj
+[365/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_customization_ui_theme.cpp.obj
+[366/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_customization_ui_brand.cpp.obj
+[367/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_monitor_customization_ui_shaders.cpp.obj
+[368/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[369/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\render\image_canvas.cpp.obj
+[370/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\favorites_model.cpp.obj
+[371/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\render\presentation_window.cpp.obj
+[372/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\folder_history.cpp.obj
+[373/632] Building CXX object CMakeFiles\monitor_customization_ui_tests.dir\src\app\window_slot.cpp.obj
+[374/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\decode_cache.cpp.obj
+[375/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\translation_coverage_ui_tests_autogen\mocs_compilation.cpp.obj
+[376/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\tests\translation_coverage_ui_tests.cpp.obj
+[377/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[378/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\settings_file.cpp.obj
+[379/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[380/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\theme_manager.cpp.obj
+[381/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[382/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[383/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[384/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[385/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\pane_layout.cpp.obj
+[386/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_translation_coverage_ui_theme.cpp.obj
+[387/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_translation_coverage_ui_brand.cpp.obj
+[388/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_translation_coverage_ui_shaders.cpp.obj
+[389/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[390/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\render\image_canvas.cpp.obj
+[391/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\render\presentation_window.cpp.obj
+[392/632] Building CXX object CMakeFiles\translation_coverage_ui_tests.dir\src\app\window_slot.cpp.obj
+[393/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\decode_cache.cpp.obj
+[394/632] Building CXX object CMakeFiles\command_routing_tests.dir\command_routing_tests_autogen\mocs_compilation.cpp.obj
+[395/632] Building CXX object CMakeFiles\command_routing_tests.dir\tests\command_routing_tests.cpp.obj
+[396/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\viewer_controller.cpp.obj
+[397/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\settings_file.cpp.obj
+[398/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\favorites_model.cpp.obj
+[399/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\folder_history.cpp.obj
+[400/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\pane_layout.cpp.obj
+[401/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\theme_manager.cpp.obj
+[402/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\filmstrip_model.cpp.obj
+[403/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\directory_entry_model.cpp.obj
+[404/632] Building CXX object CMakeFiles\command_routing_tests.dir\build-gate-c1c2\.qt\rcc\qrc_routing_theme_catalog.cpp.obj
+[405/632] Building CXX object CMakeFiles\command_routing_tests.dir\build-gate-c1c2\.qt\rcc\qrc_routing_brand_assets.cpp.obj
+[406/632] Building CXX object CMakeFiles\command_routing_tests.dir\build-gate-c1c2\.qt\rcc\qrc_routing_canvas_shaders.cpp.obj
+[407/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\folder_tree_model.cpp.obj
+[408/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\file_operation_service.cpp.obj
+[409/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\startup_window_geometry.cpp.obj
+[410/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\render\image_canvas.cpp.obj
+[411/632] Building CXX object CMakeFiles\startup_window_geometry_tests.dir\startup_window_geometry_tests_autogen\mocs_compilation.cpp.obj
+[412/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\window_slot.cpp.obj
+[413/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\app\monitor_customization.cpp.obj
+[414/632] Building CXX object CMakeFiles\command_routing_tests.dir\src\render\presentation_window.cpp.obj
+[415/632] Building CXX object CMakeFiles\startup_window_geometry_tests.dir\src\app\startup_window_geometry.cpp.obj
+[416/632] Building CXX object CMakeFiles\startup_window_geometry_tests.dir\tests\startup_window_geometry_tests.cpp.obj
+[417/632] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\decode_cache.cpp.obj
+[418/632] Building CXX object CMakeFiles\acceptance_tests.dir\acceptance_tests_autogen\mocs_compilation.cpp.obj
+[419/632] Building CXX object CMakeFiles\acceptance_tests.dir\tests\acceptance_tests.cpp.obj
+[420/632] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\settings_file.cpp.obj
+[421/632] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\window_slot.cpp.obj
+[422/632] Building CXX object CMakeFiles\acceptance_tests.dir\src\app\viewer_controller.cpp.obj
+[423/632] Building CXX object CMakeFiles\thumbnail_tests.dir\thumbnail_tests_autogen\mocs_compilation.cpp.obj
+[424/632] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\filmstrip_model.cpp.obj
+[425/632] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\thumbnail_service.cpp.obj
+[426/632] Building CXX object CMakeFiles\thumbnail_tests.dir\tests\thumbnail_tests.cpp.obj
+[427/632] Building CXX object CMakeFiles\thumbnail_tests.dir\src\app\thumbnail_provider.cpp.obj
+[428/632] Building CXX object CMakeFiles\folder_tree_tests.dir\folder_tree_tests_autogen\mocs_compilation.cpp.obj
+[429/632] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\decode_cache.cpp.obj
+[430/632] Building CXX object CMakeFiles\folder_tree_tests.dir\tests\folder_tree_tests.cpp.obj
+[431/632] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\folder_tree_model.cpp.obj
+[432/632] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\viewer_controller.cpp.obj
+[433/632] Building CXX object CMakeFiles\pane_layout_tests.dir\pane_layout_tests_autogen\mocs_compilation.cpp.obj
+[434/632] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\window_slot.cpp.obj
+[435/632] Building CXX object CMakeFiles\folder_tree_tests.dir\src\app\settings_file.cpp.obj
+[436/632] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\pane_layout.cpp.obj
+[437/632] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\window_slot.cpp.obj
+[438/632] Building CXX object CMakeFiles\pane_layout_tests.dir\tests\pane_layout_tests.cpp.obj
+[439/632] Building CXX object CMakeFiles\pane_layout_tests.dir\src\app\settings_file.cpp.obj
+[440/632] Building CXX object CMakeFiles\window_slot_tests.dir\window_slot_tests_autogen\mocs_compilation.cpp.obj
+[441/632] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\decode_cache.cpp.obj
+[442/632] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\window_slot.cpp.obj
+[443/632] Building CXX object CMakeFiles\window_slot_tests.dir\tests\window_slot_tests.cpp.obj
+[444/632] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\viewer_controller.cpp.obj
+[445/632] Building CXX object CMakeFiles\window_slot_tests.dir\src\app\settings_file.cpp.obj
+[446/632] Building CXX object CMakeFiles\input_ui_tests.dir\input_ui_tests_autogen\mocs_compilation.cpp.obj
+[447/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\decode_cache.cpp.obj
+[448/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[449/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\favorites_model.cpp.obj
+[450/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\settings_file.cpp.obj
+[451/632] Building CXX object CMakeFiles\input_ui_tests.dir\tests\input_ui_tests.cpp.obj
+[452/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\folder_history.cpp.obj
+[453/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\pane_layout.cpp.obj
+[454/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\theme_manager.cpp.obj
+[455/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[456/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[457/632] Building CXX object CMakeFiles\input_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_input_theme_catalog.cpp.obj
+[458/632] Building CXX object CMakeFiles\input_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_input_brand_assets.cpp.obj
+[459/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[460/632] Building CXX object CMakeFiles\input_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_input_canvas_shaders.cpp.obj
+[461/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[462/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\render\image_canvas.cpp.obj
+[463/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\window_slot.cpp.obj
+[464/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[465/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[466/632] Building CXX object CMakeFiles\input_ui_tests.dir\src\render\presentation_window.cpp.obj
+[467/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\pathbar_ui_tests_autogen\mocs_compilation.cpp.obj
+[468/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\decode_cache.cpp.obj
+[469/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\tests\pathbar_ui_tests.cpp.obj
+[470/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\favorites_model.cpp.obj
+[471/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\folder_history.cpp.obj
+[472/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\settings_file.cpp.obj
+[473/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\viewer_controller.cpp.obj
+[474/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\pane_layout.cpp.obj
+[475/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\theme_manager.cpp.obj
+[476/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\filmstrip_model.cpp.obj
+[477/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\directory_entry_model.cpp.obj
+[478/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_input_theme_catalog.cpp.obj
+[479/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_input_brand_assets.cpp.obj
+[480/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\build-gate-c1c2\.qt\rcc\qrc_input_canvas_shaders.cpp.obj
+[481/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\folder_tree_model.cpp.obj
+[482/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\file_operation_service.cpp.obj
+[483/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\render\image_canvas.cpp.obj
+[484/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\window_slot.cpp.obj
+[485/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\startup_window_geometry.cpp.obj
+[486/632] Building CXX object CMakeFiles\file_operation_service_tests.dir\file_operation_service_tests_autogen\mocs_compilation.cpp.obj
+[487/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\app\monitor_customization.cpp.obj
+[488/632] Building CXX object CMakeFiles\pathbar_ui_tests.dir\src\render\presentation_window.cpp.obj
+[489/632] Building CXX object CMakeFiles\file_operation_service_tests.dir\tests\file_operation_service_tests.cpp.obj
+[490/632] Building CXX object CMakeFiles\directory_model_tests.dir\directory_model_tests_autogen\mocs_compilation.cpp.obj
+[491/632] Building CXX object CMakeFiles\file_operation_service_tests.dir\src\app\file_operation_service.cpp.obj
+[492/632] Building CXX object CMakeFiles\directory_model_tests.dir\tests\directory_model_tests.cpp.obj
+[493/632] Building CXX object CMakeFiles\canvas_tests.dir\canvas_tests_autogen\mocs_compilation.cpp.obj
+[494/632] Building CXX object CMakeFiles\platform_integration_tests.dir\platform_integration_tests_autogen\mocs_compilation.cpp.obj
+[495/632] Building CXX object CMakeFiles\directory_model_tests.dir\src\app\directory_entry_model.cpp.obj
+[496/632] Building CXX object CMakeFiles\canvas_tests.dir\tests\canvas_tests.cpp.obj
+[497/632] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_test_adapter.cpp.obj
+[498/632] Building CXX object CMakeFiles\platform_integration_tests.dir\tests\platform_integration_tests.cpp.obj
+[499/632] Building CXX object CMakeFiles\canvas_tests.dir\src\render\image_canvas.cpp.obj
+[500/632] Building CXX object CMakeFiles\grid_search_tests.dir\grid_search_tests_autogen\mocs_compilation.cpp.obj
+[501/632] Building CXX object CMakeFiles\grid_density_tests.dir\grid_density_tests_autogen\mocs_compilation.cpp.obj
+[502/632] Building CXX object CMakeFiles\grid_search_tests.dir\tests\grid_search_tests.cpp.obj
+[503/632] Building CXX object CMakeFiles\grid_search_tests.dir\src\app\directory_entry_model.cpp.obj
+[504/632] Building CXX object CMakeFiles\grid_density_tests.dir\tests\grid_density_tests.cpp.obj
+[505/632] Building CXX object CMakeFiles\grid_density_tests.dir\src\app\directory_entry_model.cpp.obj
+[506/632] Building CXX object CMakeFiles\ui_settings_tests.dir\ui_settings_tests_autogen\mocs_compilation.cpp.obj
+[507/632] Building CXX object CMakeFiles\ui_settings_tests.dir\tests\ui_settings_tests.cpp.obj
+[508/632] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\decode_cache.cpp.obj
+[509/632] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\viewer_controller.cpp.obj
+[510/632] Building CXX object CMakeFiles\fs_watch_tests.dir\fs_watch_tests_autogen\mocs_compilation.cpp.obj
+[511/632] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\window_slot.cpp.obj
+[512/632] Building CXX object CMakeFiles\ui_settings_tests.dir\src\app\settings_file.cpp.obj
+[513/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\decode_cache.cpp.obj
+[514/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\thumbnail_service.cpp.obj
+[515/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\settings_file.cpp.obj
+[516/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\viewer_controller.cpp.obj
+[517/632] Building CXX object CMakeFiles\fs_watch_tests.dir\tests\fs_watch_tests.cpp.obj
+[518/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\directory_entry_model.cpp.obj
+[519/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\filmstrip_model.cpp.obj
+[520/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\folder_tree_model.cpp.obj
+[521/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\fs_watch_budget_tests_autogen\mocs_compilation.cpp.obj
+[522/632] Building CXX object CMakeFiles\fs_watch_tests.dir\src\app\window_slot.cpp.obj
+[523/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\decode_cache.cpp.obj
+[524/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\thumbnail_service.cpp.obj
+[525/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\tests\fs_watch_budget_tests.cpp.obj
+[526/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\settings_file.cpp.obj
+[527/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\viewer_controller.cpp.obj
+[528/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\directory_entry_model.cpp.obj
+[529/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\filmstrip_model.cpp.obj
+[530/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\folder_tree_model.cpp.obj
+[531/632] Building CXX object CMakeFiles\favorites_tests.dir\favorites_tests_autogen\mocs_compilation.cpp.obj
+[532/632] Building CXX object CMakeFiles\fs_watch_budget_tests.dir\src\app\window_slot.cpp.obj
+[533/632] Building CXX object CMakeFiles\favorites_tests.dir\tests\favorites_tests.cpp.obj
+[534/632] Building CXX object CMakeFiles\favorites_tests.dir\src\app\favorites_model.cpp.obj
+[535/632] Building CXX object CMakeFiles\favorites_tests.dir\src\app\window_slot.cpp.obj
+[536/632] Building CXX object CMakeFiles\folder_history_tests.dir\folder_history_tests_autogen\mocs_compilation.cpp.obj
+[537/632] Building CXX object CMakeFiles\favorites_tests.dir\src\app\settings_file.cpp.obj
+[538/632] Building CXX object CMakeFiles\folder_history_tests.dir\tests\folder_history_tests.cpp.obj
+[539/632] Building CXX object CMakeFiles\folder_history_tests.dir\src\app\folder_history.cpp.obj
+[540/632] Building CXX object CMakeFiles\shortcuts_help_tests.dir\shortcuts_help_tests_autogen\mocs_compilation.cpp.obj
+[541/632] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\decode_cache.cpp.obj
+[542/632] Building CXX object CMakeFiles\shortcuts_help_tests.dir\tests\shortcuts_help_tests.cpp.obj
+[543/632] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\window_slot.cpp.obj
+[544/632] Building CXX object CMakeFiles\filter_tests.dir\filter_tests_autogen\mocs_compilation.cpp.obj
+[545/632] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\settings_file.cpp.obj
+[546/632] Building CXX object CMakeFiles\shortcuts_help_tests.dir\src\app\viewer_controller.cpp.obj
+[547/632] Building CXX object CMakeFiles\filter_tests.dir\src\app\decode_cache.cpp.obj
+[548/632] Building CXX object CMakeFiles\filter_tests.dir\src\app\directory_entry_model.cpp.obj
+[549/632] Building CXX object CMakeFiles\filter_tests.dir\tests\filter_tests.cpp.obj
+[550/632] Building CXX object CMakeFiles\filter_tests.dir\src\app\viewer_controller.cpp.obj
+[551/632] Building CXX object CMakeFiles\filter_tests.dir\src\app\settings_file.cpp.obj
+[552/632] Building CXX object CMakeFiles\cache_tests.dir\cache_tests_autogen\mocs_compilation.cpp.obj
+[553/632] Building CXX object CMakeFiles\filter_tests.dir\src\app\window_slot.cpp.obj
+[554/632] Building CXX object CMakeFiles\cache_tests.dir\src\app\decode_cache.cpp.obj
+[555/632] Building CXX object CMakeFiles\cache_tests.dir\src\app\directory_entry_model.cpp.obj
+[556/632] Building CXX object CMakeFiles\cache_tests.dir\tests\cache_tests.cpp.obj
+[557/632] Building CXX object CMakeFiles\cache_tests.dir\src\app\settings_file.cpp.obj
+[558/632] Building CXX object CMakeFiles\cache_tests.dir\src\app\viewer_controller.cpp.obj
+[559/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\io_scheduler_tests_autogen\mocs_compilation.cpp.obj
+[560/632] Building CXX object CMakeFiles\cache_tests.dir\src\app\window_slot.cpp.obj
+[561/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\decode_cache.cpp.obj
+[562/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\tests\io_scheduler_tests.cpp.obj
+[563/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\thumbnail_service.cpp.obj
+[564/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\viewer_controller.cpp.obj
+[565/632] Building CXX object CMakeFiles\metadata_tests.dir\metadata_tests_autogen\mocs_compilation.cpp.obj
+[566/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\settings_file.cpp.obj
+[567/632] Building CXX object CMakeFiles\animation_tests.dir\animation_tests_autogen\mocs_compilation.cpp.obj
+[568/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\directory_entry_model.cpp.obj
+[569/632] Building CXX object CMakeFiles\io_scheduler_tests.dir\src\app\window_slot.cpp.obj
+[570/632] Building CXX object CMakeFiles\metadata_tests.dir\tests\metadata_tests.cpp.obj
+[571/632] Building CXX object CMakeFiles\animation_tests.dir\tests\animation_tests.cpp.obj
+[572/632] Building CXX object CMakeFiles\mutation_tests.dir\mutation_tests_autogen\mocs_compilation.cpp.obj
+[573/632] Building CXX object CMakeFiles\mutation_tests.dir\tests\mutation_tests.cpp.obj
+[574/632] Building CXX object CMakeFiles\mutation_tests.dir\src\app\decode_cache.cpp.obj
+[575/632] Building CXX object CMakeFiles\mutation_tests.dir\src\app\folder_history.cpp.obj
+[576/632] Building CXX object CMakeFiles\mutation_tests.dir\src\app\window_slot.cpp.obj
+[577/632] Building CXX object CMakeFiles\copy_move_tests.dir\copy_move_tests_autogen\mocs_compilation.cpp.obj
+[578/632] Building CXX object CMakeFiles\mutation_tests.dir\src\app\viewer_controller.cpp.obj
+[579/632] Building CXX object CMakeFiles\mutation_tests.dir\src\app\settings_file.cpp.obj
+[580/632] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\decode_cache.cpp.obj
+[581/632] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\folder_history.cpp.obj
+[582/632] Building CXX object CMakeFiles\copy_move_tests.dir\tests\copy_move_tests.cpp.obj
+[583/632] Building CXX object CMakeFiles\format_tests.dir\format_tests_autogen\mocs_compilation.cpp.obj
+[584/632] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\window_slot.cpp.obj
+[585/632] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\viewer_controller.cpp.obj
+[586/632] Linking CXX executable selection_export_tests.exe
+[587/632] Building CXX object CMakeFiles\copy_move_tests.dir\src\app\settings_file.cpp.obj
+[588/632] Linking CXX executable perf_trace_tests.exe
+[589/632] Linking CXX executable navigation_tests.exe
+[590/632] Linking CXX executable directory_listing_tests.exe
+[591/632] Linking CXX executable file_operations_tests.exe
+[592/632] Linking CXX executable startup_window_geometry_tests.exe
+[593/632] Linking CXX executable thumbnail_tests.exe
+[594/632] Linking CXX executable acceptance_tests.exe
+[595/632] Linking CXX executable glancelot.exe
+[596/632] Linking CXX executable pane_layout_tests.exe
+[597/632] Linking CXX executable folder_tree_tests.exe
+[598/632] Linking CXX executable window_slot_tests.exe
+[599/632] Linking CXX executable input_ui_tests.exe
+[600/632] Linking CXX executable grid_ui_tests.exe
+[601/632] Linking CXX executable pathbar_ui_tests.exe
+[602/632] Linking CXX executable file_operation_service_tests.exe
+[603/632] Linking CXX executable directory_model_tests.exe
+[604/632] Linking CXX executable canvas_tests.exe
+[605/632] Linking CXX executable platform_integration_tests.exe
+[606/632] Linking CXX executable theme_tests.exe
+[607/632] Linking CXX executable grid_search_tests.exe
+[608/632] Building CXX object CMakeFiles\format_tests.dir\tests\format_tests.cpp.obj
+[609/632] Linking CXX executable grid_density_tests.exe
+[610/632] Linking CXX executable ui_settings_tests.exe
+[611/632] Linking CXX executable fs_watch_tests.exe
+[612/632] Linking CXX executable fs_watch_budget_tests.exe
+[613/632] Linking CXX executable favorites_tests.exe
+[614/632] Linking CXX executable fs_watch_ui_tests.exe
+[615/632] Linking CXX executable folder_history_tests.exe
+[616/632] Linking CXX executable shortcuts_help_tests.exe
+[617/632] Linking CXX executable filter_tests.exe
+[618/632] Linking CXX executable cache_tests.exe
+[619/632] Linking CXX executable metadata_tests.exe
+[620/632] Linking CXX executable io_scheduler_tests.exe
+[621/632] Linking CXX executable animation_tests.exe
+[622/632] Linking CXX executable format_tests.exe
+[623/632] Linking CXX executable mutation_tests.exe
+[624/632] Linking CXX executable copy_move_tests.exe
+[625/632] Linking CXX executable recovery_startup_tests.exe
+[626/632] Linking CXX executable monitor_output_tests.exe
+[627/632] Linking CXX executable recovery_tests.exe
+[628/632] Linking CXX executable recovery_controller_tests.exe
+[629/632] Linking CXX executable monitor_customization_tests.exe
+[630/632] Linking CXX executable translation_coverage_ui_tests.exe
+[631/632] Linking CXX executable command_routing_tests.exe
+[632/632] Linking CXX executable monitor_customization_ui_tests.exe
+BUILD_RESULT=PASS
+BUILD_SECONDS=1542
+Waiting: 2 build slots held (claude/en-11-fix pid 51008, main pid 31220)
+Waiting: 1 build slots held (main pid 31220)
+FASTLOCK_ACQUIRED=2026-10-23T03:39:57.5009992-06:00 waited=609s
+Test project C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1c2
+    Start 12: folder_grid
+1/7 Test #12: folder_grid ......................   Passed  222.72 sec
+    Start 13: input_ui
+2/7 Test #13: input_ui .........................   Passed   70.83 sec
+    Start 14: pathbar_ui
+3/7 Test #14: pathbar_ui .......................   Passed    4.26 sec
+    Start 25: fs_watch_ui
+4/7 Test #25: fs_watch_ui ......................   Passed    3.38 sec
+    Start 43: monitor_customization_ui
+5/7 Test #43: monitor_customization_ui .........   Passed   24.47 sec
+    Start 44: translation_coverage_ui
+6/7 Test #44: translation_coverage_ui ..........   Passed   17.68 sec
+    Start 45: command_routing
+7/7 Test #45: command_routing ..................   Passed    9.16 sec
+
+100% tests passed out of 7
+
+Label Time Summary:
+budget       = 293.55 sec*proc (2 tests)
+clipboard    = 293.55 sec*proc (2 tests)
+native       = 222.72 sec*proc (1 test)
+process      = 349.11 sec*proc (6 tests)
+ui           = 352.50 sec*proc (7 tests)
+
+Total Test time (real) = 352.89 sec
+FAILFAST_EXIT=0
+Total Tests: 45
+LABEL_fast=Total Tests: 27
+LABEL_ui=Total Tests: 7
+LABEL_budget=Total Tests: 7
+LABEL_native=Total Tests: 9
+LABEL_process=Total Tests: 25
+LABEL_clipboard=Total Tests: 3
+Waiting for gate lock held by dvort on claude/f015-fix since 10/23/2026 03:34:11
+LOCK_ACQUIRED=2026-10-23T03:50:16.5355006-06:00 waited=261s HEAD=894346385fe646f2e8dbfbafeb0cf533e39e1110
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+-- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+-- Configuring done (66.8s)
+-- Generating done (4.4s)
+-- Build files have been written to: C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1c2
+[1/191] Automatic MOC and UIC for target glancelot_test_argv_capture
+[2/189] Automatic MOC and UIC for target glancelot_recovery_common
+[3/187] Automatic MOC and UIC for target glancelot_platform
+[4/185] Automatic MOC and UIC for target fs_watch_decoder_fixture
+[5/183] Automatic MOC and UIC for target startup_window_geometry_tests
+[6/181] Automatic MOC and UIC for target pane_layout_tests
+[7/179] Automatic MOC and UIC for target glancelot-decoder
+[8/177] Automatic MOC and UIC for target glancelot
+[9/176] Running AUTOMOC file extraction for target glancelot
+[10/176] Automatic MOC and UIC for target theme_tests
+[11/174] Running moc --collect-json for target glancelot
+[12/119] Automatic MOC and UIC for target recovery_startup_tests
+[13/117] Automatic MOC and UIC for target grid_ui_tests
+[14/115] Automatic MOC and UIC for target monitor_output_tests
+[15/113] Automatic MOC and UIC for target fs_watch_ui_tests
+[16/111] Automatic MOC and UIC for target recovery_tests
+[17/109] Automatic MOC and UIC for target recovery_controller_tests
+[18/107] Automatic MOC and UIC for target monitor_customization_ui_tests
+[19/105] Automatic MOC and UIC for target monitor_customization_tests
+[20/103] Automatic MOC and UIC for target translation_coverage_ui_tests
+[21/101] Automatic MOC and UIC for target command_routing_tests
+[22/99] Automatic MOC and UIC for target acceptance_tests
+[23/97] Automatic MOC and UIC for target thumbnail_tests
+[24/95] Automatic MOC and UIC for target window_slot_tests
+[25/93] Automatic MOC and UIC for target folder_tree_tests
+[26/91] Automatic MOC and UIC for target input_ui_tests
+[27/89] Automatic MOC and UIC for target pathbar_ui_tests
+[28/87] Automatic MOC and UIC for target file_operation_service_tests
+[29/85] Automatic MOC and UIC for target directory_model_tests
+[30/83] Automatic MOC and UIC for target canvas_tests
+[31/81] Automatic MOC and UIC for target grid_search_tests
+[32/79] Automatic MOC and UIC for target platform_integration_tests
+[33/77] Automatic MOC and UIC for target grid_density_tests
+[34/75] Automatic MOC and UIC for target ui_settings_tests
+[35/73] Automatic MOC and UIC for target fs_watch_tests
+[36/71] Automatic MOC and UIC for target fs_watch_budget_tests
+[37/69] Automatic MOC and UIC for target favorites_tests
+[38/67] Automatic MOC and UIC for target folder_history_tests
+[39/65] Automatic MOC and UIC for target shortcuts_help_tests
+[40/63] Automatic MOC and UIC for target filter_tests
+[41/61] Automatic MOC and UIC for target io_scheduler_tests
+[42/59] Automatic MOC and UIC for target metadata_tests
+[43/57] Automatic MOC and UIC for target animation_tests
+[44/55] Automatic MOC and UIC for target cache_tests
+[45/53] Automatic MOC and UIC for target mutation_tests
+[46/51] Automatic MOC and UIC for target copy_move_tests
+[47/49] Automatic MOC and UIC for target format_tests
+Test project C:/src/Github/Glancelot/.worktrees/lead-tester/build-gate-c1c2
+      Start  1: selection_export
+ 1/45 Test  #1: selection_export .................   Passed    0.84 sec
+      Start  2: perf_trace
+ 2/45 Test  #2: perf_trace .......................   Passed    0.13 sec
+      Start  3: navigation
+ 3/45 Test  #3: navigation .......................   Passed    6.45 sec
+      Start  4: directory_listing
+ 4/45 Test  #4: directory_listing ................   Passed   25.11 sec
+      Start  5: file_operations
+ 5/45 Test  #5: file_operations ..................   Passed    0.47 sec
+      Start  6: startup_window_geometry
+ 6/45 Test  #6: startup_window_geometry ..........   Passed    0.12 sec
+      Start  7: viewer_acceptance
+ 7/45 Test  #7: viewer_acceptance ................   Passed   16.55 sec
+      Start  8: thumbnails
+ 8/45 Test  #8: thumbnails .......................   Passed    7.37 sec
+      Start  9: folder_tree
+ 9/45 Test  #9: folder_tree ......................   Passed   11.16 sec
+      Start 10: pane_layout
+10/45 Test #10: pane_layout ......................   Passed    1.36 sec
+      Start 11: window_slots
+11/45 Test #11: window_slots .....................   Passed   32.17 sec
+      Start 12: folder_grid
+12/45 Test #12: folder_grid ......................   Passed  218.09 sec
+      Start 13: input_ui
+13/45 Test #13: input_ui .........................   Passed   73.90 sec
+      Start 14: pathbar_ui
+14/45 Test #14: pathbar_ui .......................   Passed    3.14 sec
+      Start 15: file_operation_service
+15/45 Test #15: file_operation_service ...........   Passed    1.25 sec
+      Start 16: directory_model
+16/45 Test #16: directory_model ..................   Passed   23.91 sec
+      Start 17: viewport
+17/45 Test #17: viewport .........................   Passed    0.12 sec
+      Start 18: themes
+18/45 Test #18: themes ...........................   Passed    0.77 sec
+      Start 19: platform_integration
+19/45 Test #19: platform_integration .............   Passed    1.13 sec
+      Start 20: grid_search
+20/45 Test #20: grid_search ......................   Passed    0.33 sec
+      Start 21: grid_density
+21/45 Test #21: grid_density .....................   Passed    0.24 sec
+      Start 22: ui_settings
+22/45 Test #22: ui_settings ......................   Passed    1.52 sec
+      Start 23: fs_watch
+23/45 Test #23: fs_watch .........................   Passed   86.67 sec
+      Start 24: fs_watch_budget
+24/45 Test #24: fs_watch_budget ..................   Passed   97.34 sec
+      Start 25: fs_watch_ui
+25/45 Test #25: fs_watch_ui ......................   Passed    2.26 sec
+      Start 26: favorites
+26/45 Test #26: favorites ........................   Passed    0.38 sec
+      Start 27: folder_history
+27/45 Test #27: folder_history ...................   Passed    0.10 sec
+      Start 28: shortcuts_help
+28/45 Test #28: shortcuts_help ...................   Passed    0.65 sec
+      Start 29: filter
+29/45 Test #29: filter ...........................   Passed    3.12 sec
+      Start 30: cache
+30/45 Test #30: cache ............................   Passed    5.75 sec
+      Start 31: io_scheduler
+31/45 Test #31: io_scheduler .....................   Passed    0.27 sec
+      Start 32: metadata
+32/45 Test #32: metadata .........................   Passed    0.17 sec
+      Start 33: animation
+33/45 Test #33: animation ........................   Passed    0.46 sec
+      Start 34: mutation
+34/45 Test #34: mutation .........................   Passed    0.22 sec
+      Start 35: copy_move
+35/45 Test #35: copy_move ........................   Passed    0.25 sec
+      Start 36: format
+36/45 Test #36: format ...........................   Passed    0.15 sec
+      Start 37: monitor_output
+37/45 Test #37: monitor_output ...................   Passed    2.55 sec
+      Start 38: recovery
+38/45 Test #38: recovery .........................   Passed   13.88 sec
+      Start 39: recovery_startup
+39/45 Test #39: recovery_startup .................   Passed    0.52 sec
+      Start 40: recovery_controller
+40/45 Test #40: recovery_controller ..............   Passed   14.65 sec
+      Start 41: recovery_process
+41/45 Test #41: recovery_process .................   Passed   28.68 sec
+      Start 42: monitor_customization
+42/45 Test #42: monitor_customization ............   Passed    9.04 sec
+      Start 43: monitor_customization_ui
+43/45 Test #43: monitor_customization_ui .........   Passed   26.72 sec
+      Start 44: translation_coverage_ui
+44/45 Test #44: translation_coverage_ui ..........   Passed   16.96 sec
+      Start 45: command_routing
+45/45 Test #45: command_routing ..................   Passed    8.75 sec
+
+100% tests passed out of 45
+
+Label Time Summary:
+budget       = 528.56 sec*proc (7 tests)
+clipboard    = 292.16 sec*proc (3 tests)
+fast         = 101.79 sec*proc (27 tests)
+native       = 394.40 sec*proc (9 tests)
+process      = 694.75 sec*proc (25 tests)
+ui           = 349.83 sec*proc (7 tests)
+
+Total Test time (real) = 745.75 sec
+WINDOWS_RESULT=PASS
+WINDOWS_SECONDS=830
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.93kB 0.0s done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.4s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 0.7s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 136B 0.0s done
+#7 DONE 0.0s
+
+#8 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#8 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 978.74kB 1.0s done
+#9 DONE 1.0s
+
+#10 [qt 3/5] RUN python3 -m venv /opt/aqt && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==3.3.0 && /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt -m qtshadertools qtimageformats --archives qtbase qtdeclarative qtshadertools qtimageformats
+#10 CACHED
+
+#11 [qt 4/5] RUN /opt/aqt/bin/aqt install-qt linux desktop 6.8.3 linux_gcc_64 -O /opt/Qt --archives icu
+#11 CACHED
+
+#12 [qt 5/5] RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0t64 && rm -rf /var/lib/apt/lists/*
+#12 CACHED
+
+#13 [build  1/13] RUN apt-get update && apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri && rm -rf /var/lib/apt/lists/*
+#13 CACHED
+
+#14 [qt 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-venv build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev libfontconfig1 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0 libxkbcommon-x11-0 libegl1 && rm -rf /var/lib/apt/lists/*
+#14 CACHED
+
+#15 [build  2/13] WORKDIR /src
+#15 CACHED
+
+#16 [build  3/13] COPY CMakeLists.txt ./
+#16 DONE 0.1s
+
+#17 [build  4/13] COPY cmake cmake
+#17 DONE 0.1s
+
+#18 [build  5/13] COPY app app
+#18 DONE 0.1s
+
+#19 [build  6/13] COPY assets assets
+#19 DONE 0.3s
+
+#20 [build  7/13] COPY include include
+#20 DONE 0.1s
+
+#21 [build  8/13] COPY src src
+#21 DONE 0.1s
+
+#22 [build  9/13] COPY ui ui
+#22 DONE 0.1s
+
+#23 [build 10/13] COPY tests tests
+#23 DONE 0.1s
+
+#24 [build 11/13] COPY scripts scripts
+#24 DONE 0.1s
+
+#25 [build 12/13] RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+#25 0.628 -- The CXX compiler identification is GNU 13.3.0
+#25 0.649 -- Detecting CXX compiler ABI info
+#25 0.730 -- Detecting CXX compiler ABI info - done
+#25 0.739 -- Check for working CXX compiler: /usr/bin/c++ - skipped
+#25 0.739 -- Detecting CXX compile features
+#25 0.740 -- Detecting CXX compile features - done
+#25 0.749 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+#25 0.818 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+#25 0.820 -- Found Threads: TRUE  
+#25 0.846 -- Performing Test HAVE_STDATOMIC
+#25 0.977 -- Performing Test HAVE_STDATOMIC - Success
+#25 0.977 -- Found WrapAtomic: TRUE  
+#25 1.007 -- Found OpenGL: /usr/lib/x86_64-linux-gnu/libOpenGL.so   
+#25 1.008 -- Found WrapOpenGL: TRUE  
+#25 1.013 -- Found XKB: /usr/lib/x86_64-linux-gnu/libxkbcommon.so (Required is at least version "0.5.0") 
+#25 1.017 -- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+#25 1.212 -- Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR) 
+#25 1.307 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.307 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.315 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.315 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.321 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.321 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.326 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.326 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.336 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.336 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.340 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.340 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.497 -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+#25 1.506 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.506 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.512 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.512 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.517 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.518 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.523 src/render/image.vert -> src/render/image.vert.qsb exposed as :/shaders/src/render/image.vert.qsb
+#25 1.523 src/render/image.frag -> src/render/image.frag.qsb exposed as :/shaders/src/render/image.frag.qsb
+#25 1.615 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.615 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.615 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.615 for more information.
+#25 1.754 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.754 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.754 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.754 for more information.
+#25 1.845 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.845 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.845 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.845 for more information.
+#25 1.931 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 1.931 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 1.931 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 1.931 for more information.
+#25 2.014 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.014 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.014 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.014 for more information.
+#25 2.106 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.106 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.106 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.106 for more information.
+#25 2.207 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.207 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.207 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.207 for more information.
+#25 2.298 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.298 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.298 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.298 for more information.
+#25 2.384 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.384 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.384 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.384 for more information.
+#25 2.467 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.467 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.467 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.467 for more information.
+#25 2.553 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.553 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.553 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.553 for more information.
+#25 2.658 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 2.658 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 2.658 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 2.658 for more information.
+#25 2.746 -- Configuring done (2.3s)
+#25 3.049 -- Generating done (0.2s)
+#25 3.055 -- Build files have been written to: /build
+#25 5.328 [1/626] Building CXX object CMakeFiles/glancelot_core.dir/src/core/perf_trace.cpp.o
+#25 5.687 [2/626] Building CXX object CMakeFiles/glancelot_core.dir/src/core/file_operations.cpp.o
+#25 6.745 [3/626] Building CXX object CMakeFiles/glancelot_core.dir/src/core/directory_listing.cpp.o
+#25 7.808 [4/626] Building CXX object CMakeFiles/glancelot_core.dir/src/core/navigation.cpp.o
+#25 8.234 [5/626] Building CXX object CMakeFiles/perf_trace_tests.dir/tests/perf_trace_tests.cpp.o
+#25 9.139 [6/626] Building CXX object CMakeFiles/glancelot_core.dir/src/core/selection_export.cpp.o
+#25 9.172 [7/626] Linking CXX static library libglancelot_core.a
+#25 9.249 [8/626] Linking CXX executable perf_trace_tests
+#25 10.20 [9/626] Building CXX object CMakeFiles/selection_export_tests.dir/tests/selection_export_tests.cpp.o
+#25 10.28 [10/626] Linking CXX executable selection_export_tests
+#25 11.18 [11/626] Automatic MOC and UIC for target glancelot_platform
+#25 12.06 [12/626] Building CXX object CMakeFiles/directory_listing_tests.dir/tests/directory_listing_tests.cpp.o
+#25 12.12 [13/626] Linking CXX executable directory_listing_tests
+#25 12.13 [14/626] Automatic MOC and UIC for target startup_window_geometry_tests
+#25 12.14 [15/626] Copying glancelot qml sources into build dir
+#25 12.14 [16/626] Copying glancelot qml resources into build dir
+#25 12.18 [17/626] Automatic MOC and UIC for target glancelot_recovery_common
+#25 12.18 [18/626] Automatic MOC and UIC for target fs_watch_decoder_fixture
+#25 12.31 [19/626] Running qmlimportscanner for thumbnail_tests
+#25 12.31 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.31 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.31 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.31 for more information.
+#25 12.31 [20/626] Running qmlimportscanner for grid_ui_tests
+#25 12.31 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.31 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.31 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.31 for more information.
+#25 12.42 [21/626] Running qmlimportscanner for pathbar_ui_tests
+#25 12.42 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.42 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.42 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.42 for more information.
+#25 12.42 [22/626] Running qmlimportscanner for input_ui_tests
+#25 12.42 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.42 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.42 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.42 for more information.
+#25 12.53 [23/626] Running qmlimportscanner for fs_watch_ui_tests
+#25 12.53 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.53 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.53 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.53 for more information.
+#25 12.54 [24/626] Running qmlimportscanner for canvas_tests
+#25 12.54 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.54 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.54 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.54 for more information.
+#25 12.64 [25/626] Running qmlimportscanner for monitor_output_tests
+#25 12.64 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.64 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.64 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.64 for more information.
+#25 12.65 [26/626] Running qmlimportscanner for monitor_customization_tests
+#25 12.65 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.65 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.65 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.65 for more information.
+#25 12.74 [27/626] Running qmlimportscanner for monitor_customization_ui_tests
+#25 12.74 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.74 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.74 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.74 for more information.
+#25 12.75 [28/626] Running qmlimportscanner for translation_coverage_ui_tests
+#25 12.75 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.75 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.75 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.75 for more information.
+#25 12.85 [29/626] Running qmlimportscanner for command_routing_tests
+#25 12.85 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.85 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.85 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.85 for more information.
+#25 12.86 [30/626] Running qmlimportscanner for glancelot
+#25 12.86 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 12.86 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 12.86 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 12.86 for more information.
+#25 12.99 [31/626] Building CXX object CMakeFiles/navigation_tests.dir/tests/navigation_tests.cpp.o
+#25 13.05 [32/626] Linking CXX executable navigation_tests
+#25 13.61 [33/626] Building CXX object CMakeFiles/file_operations_tests.dir/tests/file_operations_tests.cpp.o
+#25 13.68 [34/626] Linking CXX executable file_operations_tests
+#25 15.40 [35/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/platform_integration.cpp.o
+#25 16.35 [36/626] Building CXX object CMakeFiles/glancelot_platform.dir/glancelot_platform_autogen/mocs_compilation.cpp.o
+#25 16.39 [37/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/io_scheduler.cpp.o
+#25 18.64 [38/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/metadata_parser.cpp.o
+#25 19.43 [39/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/mutation_service.cpp.o
+#25 19.46 [40/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/metadata_model.cpp.o
+#25 20.04 [41/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/animation_controller.cpp.o
+#25 20.05 [42/626] Building CXX object CMakeFiles/startup_window_geometry_tests.dir/startup_window_geometry_tests_autogen/mocs_compilation.cpp.o
+#25 22.06 [43/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/raw_preview.cpp.o
+#25 22.45 [44/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/copy_move_service.cpp.o
+#25 22.46 [45/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/glancelot_recovery_common_autogen/mocs_compilation.cpp.o
+#25 23.19 [46/626] Building CXX object CMakeFiles/startup_window_geometry_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 24.59 [47/626] Building CXX object CMakeFiles/startup_window_geometry_tests.dir/tests/startup_window_geometry_tests.cpp.o
+#25 24.74 [48/626] Linking CXX executable startup_window_geometry_tests
+#25 25.82 [49/626] Building CXX object CMakeFiles/glancelot_platform.dir/src/app/display_manager.cpp.o
+#25 25.84 [50/626] Linking CXX static library libglancelot_platform.a
+#25 26.79 [51/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_recovery.cpp.o
+#25 28.44 [52/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_diff.cpp.o
+#25 30.39 [53/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_policy.cpp.o
+#25 30.44 [54/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/settings_restore.cpp.o
+#25 30.48 [55/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/recovery_checkpoint.cpp.o
+#25 30.52 [56/626] Automatic MOC and UIC for target glancelot-decoder
+#25 30.53 [57/626] Building CXX object CMakeFiles/glancelot-decoder.dir/glancelot-decoder_autogen/mocs_compilation.cpp.o
+#25 31.97 [58/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/recovery_session.cpp.o
+#25 32.78 [59/626] Automatic MOC and UIC for target file_operation_service_tests
+#25 33.15 [60/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/app/settings_maintenance.cpp.o
+#25 34.23 [61/626] Building CXX object CMakeFiles/glancelot-decoder.dir/src/worker/main.cpp.o
+#25 34.53 [62/626] Linking CXX executable glancelot-decoder
+#25 34.65 [63/626] Building CXX object CMakeFiles/glancelot_recovery_common.dir/src/app/command_registry.cpp.o
+#25 34.67 [64/626] Linking CXX static library libglancelot_recovery_common.a
+#25 34.81 [65/626] Generating .qsb/src/render/image.vert.qsb
+#25 34.81 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 34.81 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 34.81 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 34.81 for more information.
+#25 34.88 [66/626] Generating .qsb/src/render/image.frag.qsb
+#25 34.88 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 34.88 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 34.88 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 34.88 for more information.
+#25 34.96 [67/626] Building CXX object CMakeFiles/file_operation_service_tests.dir/file_operation_service_tests_autogen/mocs_compilation.cpp.o
+#25 35.28 [68/626] Running rcc for resource input_theme_catalog
+#25 35.28 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 35.28 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 35.28 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 35.28 for more information.
+#25 35.46 [69/626] Running rcc for resource input_brand_assets
+#25 35.46 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 35.46 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 35.46 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 35.46 for more information.
+#25 35.47 [70/626] Running rcc for resource input_canvas_shaders
+#25 35.47 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 35.47 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 35.47 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 35.47 for more information.
+#25 36.55 [71/626] Automatic MOC and UIC for target thumbnail_tests
+#25 37.90 [72/626] Automatic MOC and UIC for target glancelot
+#25 37.90 [73/626] Running rcc for resource qmake_Glancelot
+#25 37.90 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 37.90 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 37.90 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 37.90 for more information.
+#25 37.91 [74/626] Generating .rcc/qmlcache/glancelot_qmlcache_loader.cpp
+#25 37.91 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 37.91 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 37.91 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 37.91 for more information.
+#25 37.97 [75/626] Automatic MOC and UIC for target acceptance_tests
+#25 37.98 [76/626] Running rcc for resource glancelot_raw_qml_0_extra_qmldirs
+#25 37.98 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 37.98 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 37.98 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 37.98 for more information.
+#25 38.11 [77/626] Running rcc for resource glancelot_raw_qml_0
+#25 38.11 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.11 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.11 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.11 for more information.
+#25 38.13 [78/626] Running rcc for resource brand_assets
+#25 38.13 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.13 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.13 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.13 for more information.
+#25 38.21 [79/626] Running rcc for resource ui_fonts
+#25 38.21 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.21 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.21 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.21 for more information.
+#25 38.22 [80/626] Running rcc for resource canvas_shaders
+#25 38.22 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.22 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.22 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.22 for more information.
+#25 38.23 [81/626] Running rcc for resource glancelot_raw_qml_1
+#25 38.23 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.23 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.23 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.23 for more information.
+#25 38.24 [82/626] Running rcc for resource glancelot_raw_qml_1_extra_qmldirs
+#25 38.24 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.24 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.24 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.24 for more information.
+#25 38.24 [83/626] Running AUTOMOC file extraction for target glancelot
+#25 38.25 [84/626] Running moc --collect-json for target glancelot
+#25 38.34 [85/626] Automatic QML type registration for target glancelot
+#25 38.34 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.34 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.34 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.34 for more information.
+#25 38.66 [86/626] Running rcc for resource brand_images
+#25 38.66 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.66 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.66 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.66 for more information.
+#25 38.74 [87/626] Generating .rcc/qmlcache/glancelot_ui/Theme_qml.cpp, .rcc/qmlcache/glancelot_ui/Theme_qml.cpp.aotstats
+#25 38.74 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.74 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.74 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.74 for more information.
+#25 38.83 [88/626] Generating .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp, .rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.aotstats
+#25 38.83 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.83 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.83 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.83 for more information.
+#25 38.92 [89/626] Generating .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp, .rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.aotstats
+#25 38.92 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 38.92 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 38.92 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 38.92 for more information.
+#25 39.18 [90/626] Generating .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp, .rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.aotstats
+#25 39.18 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.18 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.18 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.18 for more information.
+#25 39.32 [91/626] Generating .rcc/qmlcache/glancelot_ui/Main_qml.cpp, .rcc/qmlcache/glancelot_ui/Main_qml.cpp.aotstats
+#25 39.32 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.32 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.32 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.32 for more information.
+#25 39.42 [92/626] Generating .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp, .rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.aotstats
+#25 39.42 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.42 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.42 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.42 for more information.
+#25 39.47 [93/626] Generating .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp, .rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.aotstats
+#25 39.47 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.47 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.47 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.47 for more information.
+#25 39.54 [94/626] Generating .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.aotstats
+#25 39.54 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.54 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.54 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.54 for more information.
+#25 39.63 [95/626] Generating .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp, .rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.aotstats
+#25 39.63 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.63 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.63 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.63 for more information.
+#25 39.64 [96/626] Generating .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.aotstats
+#25 39.64 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.64 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.64 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.64 for more information.
+#25 39.71 [97/626] Generating .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp, .rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.aotstats
+#25 39.71 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.71 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.71 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.71 for more information.
+#25 39.72 [98/626] Generating .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp, .rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.aotstats
+#25 39.72 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.72 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.72 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.72 for more information.
+#25 39.78 [99/626] Generating .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp, .rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.aotstats
+#25 39.78 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.78 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.78 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.78 for more information.
+#25 39.79 [100/626] Generating .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp, .rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.aotstats
+#25 39.79 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.79 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.79 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.79 for more information.
+#25 39.85 [101/626] Generating .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp, .rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.aotstats
+#25 39.85 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.85 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.85 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.85 for more information.
+#25 39.86 [102/626] Generating .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp, .rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.aotstats
+#25 39.86 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.86 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.86 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.86 for more information.
+#25 39.99 [103/626] Generating .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.aotstats
+#25 39.99 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 39.99 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 39.99 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 39.99 for more information.
+#25 40.00 [104/626] Generating .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.aotstats
+#25 40.00 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.00 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.00 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.00 for more information.
+#25 40.11 [105/626] Generating .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp, .rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.aotstats
+#25 40.11 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.11 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.11 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.11 for more information.
+#25 40.13 [106/626] Generating .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp, .rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.aotstats
+#25 40.13 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.13 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.13 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.13 for more information.
+#25 40.21 [107/626] Generating .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp, .rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.aotstats
+#25 40.21 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.21 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.21 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.21 for more information.
+#25 40.22 [108/626] Generating .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp, .rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.aotstats
+#25 40.22 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.22 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.22 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.22 for more information.
+#25 40.29 [109/626] Generating .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp, .rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.aotstats
+#25 40.29 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.29 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.29 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.29 for more information.
+#25 40.30 [110/626] Generating .rcc/qmlcache/glancelot_ui/ShortcutRecorder_qml.cpp, .rcc/qmlcache/glancelot_ui/ShortcutRecorder_qml.cpp.aotstats
+#25 40.30 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.30 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.30 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.30 for more information.
+#25 40.40 [111/626] Generating .rcc/qmlcache/glancelot_ui/DetachedPaneHost_qml.cpp
+#25 40.40 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.40 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.40 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.40 for more information.
+#25 40.44 [112/626] Generating .rcc/qmlcache/glancelot_ui/MonitorSettings_qml.cpp
+#25 40.44 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 40.44 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 40.44 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 40.44 for more information.
+#25 40.64 [113/626] Building CXX object CMakeFiles/file_operation_service_tests.dir/tests/file_operation_service_tests.cpp.o
+#25 40.85 [114/626] Building CXX object CMakeFiles/file_operation_service_tests.dir/src/app/file_operation_service.cpp.o
+#25 43.54 [115/626] Building CXX object CMakeFiles/acceptance_tests.dir/acceptance_tests_autogen/mocs_compilation.cpp.o
+#25 45.15 [116/626] Building CXX object CMakeFiles/glancelot.dir/src/app/decode_cache.cpp.o
+#25 45.47 [117/626] Building CXX object CMakeFiles/glancelot.dir/glancelot_autogen/mocs_compilation.cpp.o
+#25 47.99 [118/626] Building CXX object CMakeFiles/glancelot.dir/app/main.cpp.o
+#25 48.42 [119/626] Building CXX object CMakeFiles/glancelot.dir/src/app/theme_manager.cpp.o
+#25 52.45 [120/626] Building CXX object CMakeFiles/glancelot.dir/src/app/settings_file.cpp.o
+#25 53.83 [121/626] Building CXX object CMakeFiles/glancelot.dir/src/render/image_canvas.cpp.o
+#25 54.33 [122/626] Building CXX object CMakeFiles/glancelot.dir/src/render/presentation_window.cpp.o
+#25 55.51 [123/626] Building CXX object CMakeFiles/glancelot.dir/src/app/viewer_controller.cpp.o
+#25 56.76 [124/626] Building CXX object CMakeFiles/glancelot.dir/src/app/filmstrip_model.cpp.o
+#25 57.20 [125/626] Building CXX object CMakeFiles/glancelot.dir/src/app/thumbnail_provider.cpp.o
+#25 57.67 [126/626] Building CXX object CMakeFiles/glancelot.dir/src/app/thumbnail_service.cpp.o
+#25 60.55 [127/626] Building CXX object CMakeFiles/glancelot.dir/src/app/folder_tree_model.cpp.o
+#25 61.44 [128/626] Building CXX object CMakeFiles/glancelot.dir/src/app/pane_layout.cpp.o
+#25 61.58 [129/626] Building CXX object CMakeFiles/glancelot.dir/src/app/window_slot.cpp.o
+#25 63.22 [130/626] Building CXX object CMakeFiles/glancelot.dir/src/app/directory_entry_model.cpp.o
+#25 64.01 [131/626] Building CXX object CMakeFiles/glancelot.dir/src/app/favorites_model.cpp.o
+#25 64.28 [132/626] Building CXX object CMakeFiles/glancelot.dir/src/app/folder_history.cpp.o
+#25 64.30 [133/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_qmake_Glancelot.cpp.o
+#25 64.44 [134/626] Building CXX object CMakeFiles/glancelot.dir/src/app/startup_window_geometry.cpp.o
+#25 65.99 [135/626] Building CXX object CMakeFiles/glancelot.dir/glancelot_qmltyperegistrations.cpp.o
+#25 66.39 [136/626] Building CXX object CMakeFiles/glancelot.dir/src/app/file_operation_service.cpp.o
+#25 66.70 [137/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_qmlcache_loader.cpp.o
+#25 68.47 [138/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/Theme_qml.cpp.o
+#25 69.05 [139/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/ThemePicker_qml.cpp.o
+#25 69.82 [140/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/Filmstrip_qml.cpp.o
+#25 71.79 [141/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/Main_qml.cpp.o
+#25 73.67 [142/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/PaneArrangement_qml.cpp.o
+#25 74.97 [143/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/SettingsDialog_qml.cpp.o
+#25 75.48 [144/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/FolderTree_qml.cpp.o
+#25 76.15 [145/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/PhotoGrid_qml.cpp.o
+#25 76.32 [146/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/SettingRow_qml.cpp.o
+#25 77.51 [147/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiButton_qml.cpp.o
+#25 77.79 [148/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiComboBox_qml.cpp.o
+#25 78.36 [149/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiDialog_qml.cpp.o
+#25 79.50 [150/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiIcon_qml.cpp.o
+#25 79.80 [151/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiScrollBar_qml.cpp.o
+#25 80.10 [152/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiSwitch_qml.cpp.o
+#25 80.68 [153/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/UiTextField_qml.cpp.o
+#25 82.19 [154/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/ShortcutCheatSheet_qml.cpp.o
+#25 83.36 [155/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/DeleteFlow_qml.cpp.o
+#25 85.16 [156/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/RenameFlow_qml.cpp.o
+#25 85.23 [157/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/MetadataHud_qml.cpp.o
+#25 85.28 [158/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/AnimationBar_qml.cpp.o
+#25 85.45 [159/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_glancelot_raw_qml_0.cpp.o
+#25 85.47 [160/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_glancelot_raw_qml_0_extra_qmldirs.cpp.o
+#25 86.30 [161/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/TransferHud_qml.cpp.o
+#25 86.33 [162/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_brand_assets.cpp.o
+#25 86.38 [163/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_ui_fonts.cpp.o
+#25 86.41 [164/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_canvas_shaders.cpp.o
+#25 87.66 [165/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/CommandMenuItem_qml.cpp.o
+#25 87.99 [166/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/ShortcutRecorder_qml.cpp.o
+#25 90.36 [167/626] Building CXX object CMakeFiles/glancelot.dir/app/startup_environment.cpp.o
+#25 90.47 [168/626] Building CXX object CMakeFiles/glancelot.dir/app/startup_intent.cpp.o
+#25 92.95 [169/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_brand_images.cpp.o
+#25 92.97 [170/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_glancelot_raw_qml_1.cpp.o
+#25 93.00 [171/626] Building CXX object CMakeFiles/glancelot.dir/.qt/rcc/qrc_glancelot_raw_qml_1_extra_qmldirs.cpp.o
+#25 93.29 [172/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/MonitorSettings_qml.cpp.o
+#25 93.69 [173/626] Building CXX object CMakeFiles/glancelot.dir/.rcc/qmlcache/glancelot_ui/DetachedPaneHost_qml.cpp.o
+#25 95.28 [174/626] Building CXX object CMakeFiles/acceptance_tests.dir/src/app/decode_cache.cpp.o
+#25 98.20 [175/626] Building CXX object CMakeFiles/glancelot.dir/src/app/monitor_customization.cpp.o
+#25 98.90 [176/626] Linking CXX executable glancelot
+#25 101.5 [177/626] Building CXX object CMakeFiles/acceptance_tests.dir/tests/acceptance_tests.cpp.o
+#25 101.5 /src/tests/acceptance_tests.cpp: In member function 'void AcceptanceTests::explicitOpenDoesNotReuseSameSizeTimestampPixels()':
+#25 101.5 /src/tests/acceptance_tests.cpp:175:51: warning: 'static QDateTime QDateTime::fromSecsSinceEpoch(qint64, Qt::TimeSpec, int)' is deprecated: Pass QTimeZone instead of time-spec, offset [-Wdeprecated-declarations]
+#25 101.5   175 |     const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+#25 101.5       |                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+#25 101.5 In file included from /opt/Qt/6.8.3/gcc_64/include/QtCore/qcborvalue.h:10,
+#25 101.5                  from /opt/Qt/6.8.3/gcc_64/include/QtCore/qjsonvalue.h:7,
+#25 101.5                  from /opt/Qt/6.8.3/gcc_64/include/QtCore/qjsonobject.h:7,
+#25 101.5                  from /opt/Qt/6.8.3/gcc_64/include/QtCore/QJsonObject:1,
+#25 101.5                  from /src/include/glancelot/settings_file.hpp:2,
+#25 101.5                  from /src/tests/acceptance_tests.cpp:3:
+#25 101.5 /opt/Qt/6.8.3/gcc_64/include/QtCore/qdatetime.h:488:22: note: declared here
+#25 101.5   488 |     static QDateTime fromSecsSinceEpoch(qint64 secs, Qt::TimeSpec spec, int offsetFromUtc = 0);
+#25 101.5       |                      ^~~~~~~~~~~~~~~~~~
+#25 101.7 [178/626] Linking CXX executable file_operation_service_tests
+#25 102.1 [179/626] Building CXX object CMakeFiles/acceptance_tests.dir/src/app/settings_file.cpp.o
+#25 103.0 [180/626] Building CXX object CMakeFiles/acceptance_tests.dir/src/app/window_slot.cpp.o
+#25 104.3 [181/626] Building CXX object CMakeFiles/thumbnail_tests.dir/thumbnail_tests_autogen/mocs_compilation.cpp.o
+#25 107.3 [182/626] Building CXX object CMakeFiles/thumbnail_tests.dir/src/app/filmstrip_model.cpp.o
+#25 107.6 [183/626] Building CXX object CMakeFiles/acceptance_tests.dir/src/app/viewer_controller.cpp.o
+#25 107.8 [184/626] Linking CXX executable acceptance_tests
+#25 108.5 [185/626] Building CXX object CMakeFiles/thumbnail_tests.dir/src/app/thumbnail_service.cpp.o
+#25 108.8 [186/626] Automatic MOC and UIC for target folder_tree_tests
+#25 109.4 [187/626] Automatic MOC and UIC for target pane_layout_tests
+#25 110.0 [188/626] Building CXX object CMakeFiles/thumbnail_tests.dir/src/app/thumbnail_provider.cpp.o
+#25 111.6 [189/626] Building CXX object CMakeFiles/thumbnail_tests.dir/tests/thumbnail_tests.cpp.o
+#25 111.6 [190/626] Building CXX object CMakeFiles/folder_tree_tests.dir/folder_tree_tests_autogen/mocs_compilation.cpp.o
+#25 112.0 [191/626] Linking CXX executable thumbnail_tests
+#25 113.4 [192/626] Building CXX object CMakeFiles/folder_tree_tests.dir/src/app/decode_cache.cpp.o
+#25 114.6 [193/626] Building CXX object CMakeFiles/folder_tree_tests.dir/src/app/folder_tree_model.cpp.o
+#25 117.7 [194/626] Building CXX object CMakeFiles/folder_tree_tests.dir/tests/folder_tree_tests.cpp.o
+#25 118.4 [195/626] Building CXX object CMakeFiles/folder_tree_tests.dir/src/app/window_slot.cpp.o
+#25 119.7 [196/626] Building CXX object CMakeFiles/folder_tree_tests.dir/src/app/settings_file.cpp.o
+#25 119.8 [197/626] Building CXX object CMakeFiles/pane_layout_tests.dir/pane_layout_tests_autogen/mocs_compilation.cpp.o
+#25 124.2 [198/626] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/pane_layout.cpp.o
+#25 124.2 [199/626] Building CXX object CMakeFiles/pane_layout_tests.dir/tests/pane_layout_tests.cpp.o
+#25 124.5 [200/626] Building CXX object CMakeFiles/folder_tree_tests.dir/src/app/viewer_controller.cpp.o
+#25 124.8 [201/626] Linking CXX executable folder_tree_tests
+#25 125.7 [202/626] Automatic MOC and UIC for target window_slot_tests
+#25 127.2 [203/626] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/settings_file.cpp.o
+#25 128.1 [204/626] Automatic MOC and UIC for target grid_ui_tests
+#25 129.3 [205/626] Building CXX object CMakeFiles/window_slot_tests.dir/window_slot_tests_autogen/mocs_compilation.cpp.o
+#25 129.3 [206/626] Building CXX object CMakeFiles/pane_layout_tests.dir/src/app/window_slot.cpp.o
+#25 129.5 [207/626] Linking CXX executable pane_layout_tests
+#25 131.1 [208/626] Building CXX object CMakeFiles/window_slot_tests.dir/src/app/decode_cache.cpp.o
+#25 132.2 [209/626] Building CXX object CMakeFiles/window_slot_tests.dir/src/app/window_slot.cpp.o
+#25 132.5 [210/626] Running rcc for resource grid_theme_catalog
+#25 132.5 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 132.5 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 132.5 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 132.5 for more information.
+#25 132.6 [211/626] Running rcc for resource grid_brand_assets
+#25 132.6 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 132.6 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 132.6 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 132.6 for more information.
+#25 132.6 [212/626] Running rcc for resource grid_canvas_shaders
+#25 132.6 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 132.6 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 132.6 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 132.6 for more information.
+#25 137.7 [213/626] Building CXX object CMakeFiles/grid_ui_tests.dir/grid_ui_tests_autogen/mocs_compilation.cpp.o
+#25 137.9 [214/626] Building CXX object CMakeFiles/window_slot_tests.dir/src/app/settings_file.cpp.o
+#25 138.2 [215/626] Building CXX object CMakeFiles/window_slot_tests.dir/tests/window_slot_tests.cpp.o
+#25 139.9 [216/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/decode_cache.cpp.o
+#25 143.1 [217/626] Building CXX object CMakeFiles/window_slot_tests.dir/src/app/viewer_controller.cpp.o
+#25 143.3 [218/626] Linking CXX executable window_slot_tests
+#25 146.1 [219/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/settings_file.cpp.o
+#25 146.6 [220/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/favorites_model.cpp.o
+#25 148.9 [221/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/folder_history.cpp.o
+#25 151.3 [222/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/viewer_controller.cpp.o
+#25 151.4 [223/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/pane_layout.cpp.o
+#25 154.3 [224/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/theme_manager.cpp.o
+#25 154.4 [225/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/filmstrip_model.cpp.o
+#25 155.4 [226/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/directory_entry_model.cpp.o
+#25 159.5 [227/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/folder_tree_model.cpp.o
+#25 159.7 [228/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/file_operation_service.cpp.o
+#25 160.1 [229/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/render/image_canvas.cpp.o
+#25 160.2 [230/626] Building CXX object CMakeFiles/grid_ui_tests.dir/.qt/rcc/qrc_grid_canvas_shaders.cpp.o
+#25 160.4 [231/626] Building CXX object CMakeFiles/grid_ui_tests.dir/.qt/rcc/qrc_grid_theme_catalog.cpp.o
+#25 161.1 [232/626] Building CXX object CMakeFiles/grid_ui_tests.dir/.qt/rcc/qrc_grid_brand_assets.cpp.o
+#25 162.3 [233/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 164.2 [234/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/window_slot.cpp.o
+#25 167.0 [235/626] Automatic MOC and UIC for target input_ui_tests
+#25 168.7 [236/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/render/presentation_window.cpp.o
+#25 171.0 [237/626] Building CXX object CMakeFiles/grid_ui_tests.dir/src/app/monitor_customization.cpp.o
+#25 171.8 [238/626] Building CXX object CMakeFiles/input_ui_tests.dir/input_ui_tests_autogen/mocs_compilation.cpp.o
+#25 173.2 [239/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/decode_cache.cpp.o
+#25 176.1 [240/626] Building CXX object CMakeFiles/grid_ui_tests.dir/tests/grid_ui_tests.cpp.o
+#25 176.6 [241/626] Linking CXX executable grid_ui_tests
+#25 179.3 [242/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/settings_file.cpp.o
+#25 179.9 [243/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/favorites_model.cpp.o
+#25 182.0 [244/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/folder_history.cpp.o
+#25 183.8 [245/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/viewer_controller.cpp.o
+#25 184.5 [246/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/pane_layout.cpp.o
+#25 186.3 [247/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/theme_manager.cpp.o
+#25 186.9 [248/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/filmstrip_model.cpp.o
+#25 187.6 [249/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/directory_entry_model.cpp.o
+#25 188.4 [250/626] Building CXX object CMakeFiles/input_ui_tests.dir/tests/input_ui_tests.cpp.o
+#25 189.2 [251/626] Building CXX object CMakeFiles/input_ui_tests.dir/.qt/rcc/qrc_input_theme_catalog.cpp.o
+#25 190.4 [252/626] Building CXX object CMakeFiles/input_ui_tests.dir/.qt/rcc/qrc_input_brand_assets.cpp.o
+#25 190.4 [253/626] Building CXX object CMakeFiles/input_ui_tests.dir/.qt/rcc/qrc_input_canvas_shaders.cpp.o
+#25 190.9 [254/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/folder_tree_model.cpp.o
+#25 191.5 [255/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/file_operation_service.cpp.o
+#25 191.8 [256/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/render/image_canvas.cpp.o
+#25 192.6 [257/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 194.8 [258/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/window_slot.cpp.o
+#25 195.0 [259/626] Automatic MOC and UIC for target pathbar_ui_tests
+#25 195.7 [260/626] Automatic MOC and UIC for target directory_model_tests
+#25 197.6 [261/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/render/presentation_window.cpp.o
+#25 199.5 [262/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/pathbar_ui_tests_autogen/mocs_compilation.cpp.o
+#25 200.6 [263/626] Building CXX object CMakeFiles/input_ui_tests.dir/src/app/monitor_customization.cpp.o
+#25 200.9 [264/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/decode_cache.cpp.o
+#25 201.1 [265/626] Linking CXX executable input_ui_tests
+#25 202.7 [266/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/tests/pathbar_ui_tests.cpp.o
+#25 204.3 [267/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/favorites_model.cpp.o
+#25 205.4 [268/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/folder_history.cpp.o
+#25 206.8 [269/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/settings_file.cpp.o
+#25 208.5 [270/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/pane_layout.cpp.o
+#25 209.2 [271/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/theme_manager.cpp.o
+#25 210.0 [272/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/viewer_controller.cpp.o
+#25 210.8 [273/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/directory_entry_model.cpp.o
+#25 211.1 [274/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/filmstrip_model.cpp.o
+#25 211.9 [275/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/.qt/rcc/qrc_input_theme_catalog.cpp.o
+#25 213.2 [276/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/.qt/rcc/qrc_input_brand_assets.cpp.o
+#25 213.2 [277/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/.qt/rcc/qrc_input_canvas_shaders.cpp.o
+#25 214.0 [278/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/folder_tree_model.cpp.o
+#25 214.8 [279/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/file_operation_service.cpp.o
+#25 215.3 [280/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/render/image_canvas.cpp.o
+#25 216.0 [281/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 217.0 [282/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/window_slot.cpp.o
+#25 217.9 [283/626] Building CXX object CMakeFiles/directory_model_tests.dir/directory_model_tests_autogen/mocs_compilation.cpp.o
+#25 220.2 [284/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/render/presentation_window.cpp.o
+#25 221.2 [285/626] Automatic MOC and UIC for target canvas_tests
+#25 222.7 [286/626] Building CXX object CMakeFiles/directory_model_tests.dir/tests/directory_model_tests.cpp.o
+#25 222.9 [287/626] Building CXX object CMakeFiles/pathbar_ui_tests.dir/src/app/monitor_customization.cpp.o
+#25 223.4 [288/626] Building CXX object CMakeFiles/directory_model_tests.dir/src/app/directory_entry_model.cpp.o
+#25 223.4 [289/626] Linking CXX executable pathbar_ui_tests
+#25 223.6 [290/626] Linking CXX executable directory_model_tests
+#25 223.9 [291/626] Building CXX object CMakeFiles/canvas_tests.dir/canvas_tests_autogen/mocs_compilation.cpp.o
+#25 224.7 [292/626] Automatic MOC and UIC for target platform_integration_tests
+#25 224.7 [293/626] Automatic MOC and UIC for target theme_tests
+#25 224.7 [294/626] Building CXX object CMakeFiles/platform_integration_tests.dir/platform_integration_tests_autogen/mocs_compilation.cpp.o
+#25 224.7 [295/626] Running rcc for resource theme_catalog
+#25 224.7 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 224.7 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 224.7 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 224.7 for more information.
+#25 227.4 [296/626] Building CXX object CMakeFiles/theme_tests.dir/theme_tests_autogen/mocs_compilation.cpp.o
+#25 227.6 [297/626] Building CXX object CMakeFiles/canvas_tests.dir/tests/canvas_tests.cpp.o
+#25 227.9 [298/626] Building CXX object CMakeFiles/canvas_tests.dir/src/render/image_canvas.cpp.o
+#25 227.9 [299/626] Building CXX object CMakeFiles/platform_integration_tests.dir/tests/platform_integration_tests.cpp.o
+#25 228.3 [300/626] Linking CXX executable canvas_tests
+#25 229.8 [301/626] Building CXX object CMakeFiles/theme_tests.dir/src/app/decode_cache.cpp.o
+#25 230.1 [302/626] Building CXX object CMakeFiles/theme_tests.dir/src/app/theme_manager.cpp.o
+#25 230.1 [303/626] Building CXX object CMakeFiles/theme_tests.dir/.qt/rcc/qrc_theme_catalog.cpp.o
+#25 232.9 [304/626] Building CXX object CMakeFiles/theme_tests.dir/tests/theme_tests.cpp.o
+#25 233.1 [305/626] Linking CXX executable platform_integration_tests
+#25 233.6 [306/626] Building CXX object CMakeFiles/theme_tests.dir/src/app/window_slot.cpp.o
+#25 234.1 [307/626] Automatic MOC and UIC for target grid_search_tests
+#25 234.7 [308/626] Automatic MOC and UIC for target grid_density_tests
+#25 235.8 [309/626] Building CXX object CMakeFiles/theme_tests.dir/src/app/settings_file.cpp.o
+#25 236.2 [310/626] Building CXX object CMakeFiles/grid_search_tests.dir/grid_search_tests_autogen/mocs_compilation.cpp.o
+#25 238.2 [311/626] Building CXX object CMakeFiles/grid_density_tests.dir/grid_density_tests_autogen/mocs_compilation.cpp.o
+#25 239.3 [312/626] Building CXX object CMakeFiles/grid_search_tests.dir/tests/grid_search_tests.cpp.o
+#25 240.6 [313/626] Building CXX object CMakeFiles/theme_tests.dir/src/app/viewer_controller.cpp.o
+#25 240.9 [314/626] Linking CXX executable theme_tests
+#25 241.7 [315/626] Building CXX object CMakeFiles/grid_search_tests.dir/src/app/directory_entry_model.cpp.o
+#25 241.9 [316/626] Automatic MOC and UIC for target ui_settings_tests
+#25 241.9 [317/626] Linking CXX executable grid_search_tests
+#25 242.8 [318/626] Building CXX object CMakeFiles/grid_density_tests.dir/tests/grid_density_tests.cpp.o
+#25 244.7 [319/626] Building CXX object CMakeFiles/ui_settings_tests.dir/ui_settings_tests_autogen/mocs_compilation.cpp.o
+#25 245.2 [320/626] Building CXX object CMakeFiles/grid_density_tests.dir/src/app/directory_entry_model.cpp.o
+#25 245.5 [321/626] Linking CXX executable grid_density_tests
+#25 246.1 [322/626] Building CXX object CMakeFiles/ui_settings_tests.dir/src/app/decode_cache.cpp.o
+#25 246.6 [323/626] Building CXX object CMakeFiles/ui_settings_tests.dir/tests/ui_settings_tests.cpp.o
+#25 246.6 [324/626] Building CXX object CMakeFiles/fs_watch_decoder_fixture.dir/fs_watch_decoder_fixture_autogen/mocs_compilation.cpp.o
+#25 249.5 [325/626] Building CXX object CMakeFiles/fs_watch_decoder_fixture.dir/tests/fs_watch_decoder_fixture.cpp.o
+#25 249.8 [326/626] Linking CXX executable fs_watch_decoder_fixture
+#25 250.0 [327/626] Building CXX object CMakeFiles/ui_settings_tests.dir/src/app/window_slot.cpp.o
+#25 251.7 [328/626] Automatic MOC and UIC for target fs_watch_tests
+#25 251.8 [329/626] Automatic MOC and UIC for target fs_watch_budget_tests
+#25 252.8 [330/626] Building CXX object CMakeFiles/ui_settings_tests.dir/src/app/settings_file.cpp.o
+#25 255.1 [331/626] Building CXX object CMakeFiles/fs_watch_tests.dir/fs_watch_tests_autogen/mocs_compilation.cpp.o
+#25 257.8 [332/626] Building CXX object CMakeFiles/ui_settings_tests.dir/src/app/viewer_controller.cpp.o
+#25 258.1 [333/626] Linking CXX executable ui_settings_tests
+#25 258.4 [334/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/thumbnail_service.cpp.o
+#25 259.6 [335/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/decode_cache.cpp.o
+#25 265.0 [336/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/settings_file.cpp.o
+#25 265.9 [337/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/directory_entry_model.cpp.o
+#25 267.8 [338/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/filmstrip_model.cpp.o
+#25 269.4 [339/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/viewer_controller.cpp.o
+#25 270.7 [340/626] Building CXX object CMakeFiles/fs_watch_tests.dir/tests/fs_watch_tests.cpp.o
+#25 270.7 /src/tests/fs_watch_tests.cpp: In member function 'void FSWatchTests::revisionOnlyWorkerDistinguishesAtomicReplacement()':
+#25 270.7 /src/tests/fs_watch_tests.cpp:447:55: warning: 'static QDateTime QDateTime::fromSecsSinceEpoch(qint64, Qt::TimeSpec, int)' is deprecated: Pass QTimeZone instead of time-spec, offset [-Wdeprecated-declarations]
+#25 270.7   447 |         const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+#25 270.7       |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+#25 270.7 In file included from /opt/Qt/6.8.3/gcc_64/include/QtCore/qcborvalue.h:10,
+#25 270.7                  from /opt/Qt/6.8.3/gcc_64/include/QtCore/qcborarray.h:7,
+#25 270.7                  from /opt/Qt/6.8.3/gcc_64/include/QtCore/QtCore:51,
+#25 270.7                  from /opt/Qt/6.8.3/gcc_64/include/QtTest/QtTestDepends:3,
+#25 270.7                  from /opt/Qt/6.8.3/gcc_64/include/QtTest/QtTest:3,
+#25 270.7                  from /src/tests/fs_watch_tests.cpp:1:
+#25 270.7 /opt/Qt/6.8.3/gcc_64/include/QtCore/qdatetime.h:488:22: note: declared here
+#25 270.7   488 |     static QDateTime fromSecsSinceEpoch(qint64 secs, Qt::TimeSpec spec, int offsetFromUtc = 0);
+#25 270.7       |                      ^~~~~~~~~~~~~~~~~~
+#25 270.7 /src/tests/fs_watch_tests.cpp: In member function 'void FSWatchTests::decodeRejectsSameTupleEditAfterAdmissionProbe()':
+#25 270.7 /src/tests/fs_watch_tests.cpp:465:55: warning: 'static QDateTime QDateTime::fromSecsSinceEpoch(qint64, Qt::TimeSpec, int)' is deprecated: Pass QTimeZone instead of time-spec, offset [-Wdeprecated-declarations]
+#25 270.7   465 |         const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+#25 270.7       |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+#25 270.7 /opt/Qt/6.8.3/gcc_64/include/QtCore/qdatetime.h:488:22: note: declared here
+#25 270.7   488 |     static QDateTime fromSecsSinceEpoch(qint64 secs, Qt::TimeSpec spec, int offsetFromUtc = 0);
+#25 270.7       |                      ^~~~~~~~~~~~~~~~~~
+#25 270.7 /src/tests/fs_watch_tests.cpp: In member function 'void FSWatchTests::rawWorkerRevisionProtocol()':
+#25 270.7 /src/tests/fs_watch_tests.cpp:509:55: warning: 'static QDateTime QDateTime::fromSecsSinceEpoch(qint64, Qt::TimeSpec, int)' is deprecated: Pass QTimeZone instead of time-spec, offset [-Wdeprecated-declarations]
+#25 270.7   509 |         const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+#25 270.7       |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+#25 270.7 /opt/Qt/6.8.3/gcc_64/include/QtCore/qdatetime.h:488:22: note: declared here
+#25 270.7   488 |     static QDateTime fromSecsSinceEpoch(qint64 secs, Qt::TimeSpec spec, int offsetFromUtc = 0);
+#25 270.7       |                      ^~~~~~~~~~~~~~~~~~
+#25 270.7 /src/tests/fs_watch_tests.cpp: In member function 'void FSWatchTests::noncurrentSameTupleReplacementInvalidatesCache()':
+#25 270.7 /src/tests/fs_watch_tests.cpp:673:55: warning: 'static QDateTime QDateTime::fromSecsSinceEpoch(qint64, Qt::TimeSpec, int)' is deprecated: Pass QTimeZone instead of time-spec, offset [-Wdeprecated-declarations]
+#25 270.7   673 |         const auto stamp=QDateTime::fromSecsSinceEpoch(1700000000,Qt::UTC);
+#25 270.7       |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+#25 270.7 /opt/Qt/6.8.3/gcc_64/include/QtCore/qdatetime.h:488:22: note: declared here
+#25 270.7   488 |     static QDateTime fromSecsSinceEpoch(qint64 secs, Qt::TimeSpec spec, int offsetFromUtc = 0);
+#25 270.7       |                      ^~~~~~~~~~~~~~~~~~
+#25 270.8 [341/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/folder_tree_model.cpp.o
+#25 271.7 [342/626] Building CXX object CMakeFiles/fs_watch_tests.dir/src/app/window_slot.cpp.o
+#25 272.0 [343/626] Linking CXX executable fs_watch_tests
+#25 272.8 [344/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/fs_watch_budget_tests_autogen/mocs_compilation.cpp.o
+#25 274.3 [345/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/decode_cache.cpp.o
+#25 275.9 [346/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/thumbnail_service.cpp.o
+#25 277.5 [347/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/tests/fs_watch_budget_tests.cpp.o
+#25 280.3 [348/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/filmstrip_model.cpp.o
+#25 280.9 [349/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/settings_file.cpp.o
+#25 282.0 [350/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/directory_entry_model.cpp.o
+#25 284.7 [351/626] Automatic MOC and UIC for target fs_watch_ui_tests
+#25 285.0 [352/626] Running rcc for resource fs_watch_ui_theme
+#25 285.0 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 285.0 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 285.0 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 285.0 for more information.
+#25 285.1 [353/626] Running rcc for resource fs_watch_ui_brand
+#25 285.1 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 285.1 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 285.1 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 285.1 for more information.
+#25 285.1 [354/626] Running rcc for resource fs_watch_ui_shaders
+#25 285.1 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 285.1 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 285.1 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 285.1 for more information.
+#25 285.7 [355/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/window_slot.cpp.o
+#25 286.1 [356/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/folder_tree_model.cpp.o
+#25 286.9 [357/626] Building CXX object CMakeFiles/fs_watch_budget_tests.dir/src/app/viewer_controller.cpp.o
+#25 287.2 [358/626] Linking CXX executable fs_watch_budget_tests
+#25 288.9 [359/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/decode_cache.cpp.o
+#25 290.2 [360/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/fs_watch_ui_tests_autogen/mocs_compilation.cpp.o
+#25 292.4 [361/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/tests/fs_watch_ui_tests.cpp.o
+#25 293.8 [362/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/favorites_model.cpp.o
+#25 295.3 [363/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/folder_history.cpp.o
+#25 295.5 [364/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/settings_file.cpp.o
+#25 298.4 [365/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/theme_manager.cpp.o
+#25 298.9 [366/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/pane_layout.cpp.o
+#25 300.2 [367/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/viewer_controller.cpp.o
+#25 301.3 [368/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/filmstrip_model.cpp.o
+#25 301.7 [369/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/directory_entry_model.cpp.o
+#25 302.5 [370/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/.qt/rcc/qrc_fs_watch_ui_theme.cpp.o
+#25 303.9 [371/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/.qt/rcc/qrc_fs_watch_ui_brand.cpp.o
+#25 303.9 [372/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/.qt/rcc/qrc_fs_watch_ui_shaders.cpp.o
+#25 303.9 [373/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/folder_tree_model.cpp.o
+#25 305.4 [374/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/file_operation_service.cpp.o
+#25 306.1 [375/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/render/image_canvas.cpp.o
+#25 306.5 [376/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 307.6 [377/626] Automatic MOC and UIC for target favorites_tests
+#25 307.9 [378/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/window_slot.cpp.o
+#25 309.9 [379/626] Building CXX object CMakeFiles/favorites_tests.dir/favorites_tests_autogen/mocs_compilation.cpp.o
+#25 311.8 [380/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/render/presentation_window.cpp.o
+#25 313.0 [381/626] Building CXX object CMakeFiles/favorites_tests.dir/tests/favorites_tests.cpp.o
+#25 313.4 [382/626] Building CXX object CMakeFiles/favorites_tests.dir/src/app/favorites_model.cpp.o
+#25 314.1 [383/626] Automatic MOC and UIC for target folder_history_tests
+#25 314.2 [384/626] Building CXX object CMakeFiles/fs_watch_ui_tests.dir/src/app/monitor_customization.cpp.o
+#25 314.8 [385/626] Linking CXX executable fs_watch_ui_tests
+#25 316.1 [386/626] Building CXX object CMakeFiles/folder_history_tests.dir/folder_history_tests_autogen/mocs_compilation.cpp.o
+#25 317.0 [387/626] Building CXX object CMakeFiles/favorites_tests.dir/src/app/window_slot.cpp.o
+#25 318.1 [388/626] Automatic MOC and UIC for target shortcuts_help_tests
+#25 318.8 [389/626] Building CXX object CMakeFiles/favorites_tests.dir/src/app/settings_file.cpp.o
+#25 318.8 [390/626] Building CXX object CMakeFiles/folder_history_tests.dir/tests/folder_history_tests.cpp.o
+#25 319.1 [391/626] Linking CXX executable favorites_tests
+#25 319.2 [392/626] Building CXX object CMakeFiles/folder_history_tests.dir/src/app/folder_history.cpp.o
+#25 319.5 [393/626] Linking CXX executable folder_history_tests
+#25 321.1 [394/626] Building CXX object CMakeFiles/shortcuts_help_tests.dir/src/app/decode_cache.cpp.o
+#25 321.2 [395/626] Building CXX object CMakeFiles/shortcuts_help_tests.dir/shortcuts_help_tests_autogen/mocs_compilation.cpp.o
+#25 323.7 [396/626] Building CXX object CMakeFiles/shortcuts_help_tests.dir/tests/shortcuts_help_tests.cpp.o
+#25 324.9 [397/626] Automatic MOC and UIC for target filter_tests
+#25 325.3 [398/626] Building CXX object CMakeFiles/shortcuts_help_tests.dir/src/app/window_slot.cpp.o
+#25 328.0 [399/626] Building CXX object CMakeFiles/shortcuts_help_tests.dir/src/app/settings_file.cpp.o
+#25 328.2 [400/626] Building CXX object CMakeFiles/filter_tests.dir/filter_tests_autogen/mocs_compilation.cpp.o
+#25 331.6 [401/626] Building CXX object CMakeFiles/filter_tests.dir/tests/filter_tests.cpp.o
+#25 333.2 [402/626] Building CXX object CMakeFiles/filter_tests.dir/src/app/decode_cache.cpp.o
+#25 333.3 [403/626] Building CXX object CMakeFiles/shortcuts_help_tests.dir/src/app/viewer_controller.cpp.o
+#25 333.6 [404/626] Linking CXX executable shortcuts_help_tests
+#25 334.3 [405/626] Building CXX object CMakeFiles/filter_tests.dir/src/app/directory_entry_model.cpp.o
+#25 335.6 [406/626] Automatic MOC and UIC for target cache_tests
+#25 337.8 [407/626] Building CXX object CMakeFiles/filter_tests.dir/src/app/window_slot.cpp.o
+#25 338.8 [408/626] Building CXX object CMakeFiles/cache_tests.dir/cache_tests_autogen/mocs_compilation.cpp.o
+#25 340.2 [409/626] Building CXX object CMakeFiles/filter_tests.dir/src/app/settings_file.cpp.o
+#25 342.5 [410/626] Building CXX object CMakeFiles/filter_tests.dir/src/app/viewer_controller.cpp.o
+#25 342.8 [411/626] Linking CXX executable filter_tests
+#25 344.3 [412/626] Building CXX object CMakeFiles/cache_tests.dir/src/app/decode_cache.cpp.o
+#25 344.9 [413/626] Building CXX object CMakeFiles/cache_tests.dir/tests/cache_tests.cpp.o
+#25 345.1 [414/626] Building CXX object CMakeFiles/cache_tests.dir/src/app/directory_entry_model.cpp.o
+#25 345.9 [415/626] Automatic MOC and UIC for target io_scheduler_tests
+#25 348.8 [416/626] Building CXX object CMakeFiles/cache_tests.dir/src/app/window_slot.cpp.o
+#25 349.0 [417/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/io_scheduler_tests_autogen/mocs_compilation.cpp.o
+#25 351.0 [418/626] Building CXX object CMakeFiles/cache_tests.dir/src/app/settings_file.cpp.o
+#25 352.3 [419/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/tests/io_scheduler_tests.cpp.o
+#25 353.7 [420/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/src/app/thumbnail_service.cpp.o
+#25 353.7 [421/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/src/app/decode_cache.cpp.o
+#25 353.9 [422/626] Building CXX object CMakeFiles/cache_tests.dir/src/app/viewer_controller.cpp.o
+#25 354.2 [423/626] Linking CXX executable cache_tests
+#25 358.3 [424/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/src/app/window_slot.cpp.o
+#25 359.0 [425/626] Automatic MOC and UIC for target metadata_tests
+#25 359.0 [426/626] Building CXX object CMakeFiles/metadata_tests.dir/metadata_tests_autogen/mocs_compilation.cpp.o
+#25 360.1 [427/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/src/app/directory_entry_model.cpp.o
+#25 360.6 [428/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/src/app/settings_file.cpp.o
+#25 360.9 [429/626] Automatic MOC and UIC for target animation_tests
+#25 360.9 [430/626] Building CXX object CMakeFiles/animation_tests.dir/animation_tests_autogen/mocs_compilation.cpp.o
+#25 361.7 [431/626] Automatic MOC and UIC for target mutation_tests
+#25 363.8 [432/626] Building CXX object CMakeFiles/metadata_tests.dir/tests/metadata_tests.cpp.o
+#25 364.1 [433/626] Linking CXX executable metadata_tests
+#25 365.0 [434/626] Building CXX object CMakeFiles/animation_tests.dir/tests/animation_tests.cpp.o
+#25 365.0 [435/626] Building CXX object CMakeFiles/mutation_tests.dir/mutation_tests_autogen/mocs_compilation.cpp.o
+#25 365.3 [436/626] Linking CXX executable animation_tests
+#25 365.4 [437/626] Building CXX object CMakeFiles/io_scheduler_tests.dir/src/app/viewer_controller.cpp.o
+#25 365.7 [438/626] Linking CXX executable io_scheduler_tests
+#25 367.3 [439/626] Building CXX object CMakeFiles/mutation_tests.dir/src/app/decode_cache.cpp.o
+#25 368.0 [440/626] Building CXX object CMakeFiles/mutation_tests.dir/src/app/folder_history.cpp.o
+#25 369.9 [441/626] Building CXX object CMakeFiles/mutation_tests.dir/tests/mutation_tests.cpp.o
+#25 371.0 [442/626] Automatic MOC and UIC for target copy_move_tests
+#25 372.2 [443/626] Building CXX object CMakeFiles/mutation_tests.dir/src/app/window_slot.cpp.o
+#25 374.2 [444/626] Building CXX object CMakeFiles/copy_move_tests.dir/copy_move_tests_autogen/mocs_compilation.cpp.o
+#25 374.3 [445/626] Building CXX object CMakeFiles/mutation_tests.dir/src/app/settings_file.cpp.o
+#25 377.2 [446/626] Building CXX object CMakeFiles/copy_move_tests.dir/src/app/folder_history.cpp.o
+#25 377.6 [447/626] Building CXX object CMakeFiles/copy_move_tests.dir/tests/copy_move_tests.cpp.o
+#25 378.8 [448/626] Building CXX object CMakeFiles/copy_move_tests.dir/src/app/decode_cache.cpp.o
+#25 379.7 [449/626] Building CXX object CMakeFiles/mutation_tests.dir/src/app/viewer_controller.cpp.o
+#25 380.0 [450/626] Linking CXX executable mutation_tests
+#25 381.0 [451/626] Automatic MOC and UIC for target format_tests
+#25 381.0 [452/626] Building CXX object CMakeFiles/format_tests.dir/format_tests_autogen/mocs_compilation.cpp.o
+#25 382.9 [453/626] Building CXX object CMakeFiles/copy_move_tests.dir/src/app/window_slot.cpp.o
+#25 384.3 [454/626] Automatic MOC and UIC for target monitor_output_tests
+#25 384.4 [455/626] Running rcc for resource monitor_output_shaders
+#25 384.4 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 384.4 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 384.4 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 384.4 for more information.
+#25 384.8 [456/626] Building CXX object CMakeFiles/copy_move_tests.dir/src/app/settings_file.cpp.o
+#25 386.4 [457/626] Building CXX object CMakeFiles/format_tests.dir/tests/format_tests.cpp.o
+#25 386.7 [458/626] Linking CXX executable format_tests
+#25 388.7 [459/626] Building CXX object CMakeFiles/monitor_output_tests.dir/monitor_output_tests_autogen/mocs_compilation.cpp.o
+#25 388.8 [460/626] Building CXX object CMakeFiles/copy_move_tests.dir/src/app/viewer_controller.cpp.o
+#25 389.1 [461/626] Linking CXX executable copy_move_tests
+#25 390.4 [462/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/decode_cache.cpp.o
+#25 393.2 [463/626] Building CXX object CMakeFiles/monitor_output_tests.dir/tests/monitor_output_tests.cpp.o
+#25 395.9 [464/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/settings_file.cpp.o
+#25 395.9 [465/626] Building CXX object CMakeFiles/monitor_output_tests.dir/.qt/rcc/qrc_monitor_output_shaders.cpp.o
+#25 396.1 [466/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/render/presentation_window.cpp.o
+#25 397.7 [467/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/render/image_canvas.cpp.o
+#25 399.3 [468/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/window_slot.cpp.o
+#25 400.1 [469/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/viewer_controller.cpp.o
+#25 400.5 [470/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 401.2 [471/626] Automatic MOC and UIC for target recovery_tests
+#25 401.3 [472/626] Running rcc for resource recovery_test_catalog
+#25 401.3 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 401.3 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 401.3 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 401.3 for more information.
+#25 401.6 [473/626] Automatic MOC and UIC for target recovery_startup_tests
+#25 402.2 [474/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/pane_layout.cpp.o
+#25 404.3 [475/626] Building CXX object CMakeFiles/recovery_tests.dir/recovery_tests_autogen/mocs_compilation.cpp.o
+#25 405.3 [476/626] Building CXX object CMakeFiles/monitor_output_tests.dir/src/app/monitor_customization.cpp.o
+#25 405.8 [477/626] Linking CXX executable monitor_output_tests
+#25 406.2 [478/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/settings_recovery.cpp.o
+#25 408.7 [479/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/settings_diff.cpp.o
+#25 410.1 [480/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/settings_restore.cpp.o
+#25 410.9 [481/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/settings_policy.cpp.o
+#25 412.4 [482/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/recovery_checkpoint.cpp.o
+#25 414.1 [483/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/recovery_session.cpp.o
+#25 416.2 [484/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/command_registry.cpp.o
+#25 416.4 [485/626] Building CXX object CMakeFiles/recovery_tests.dir/app/settings_maintenance.cpp.o
+#25 416.8 [486/626] Building CXX object CMakeFiles/recovery_tests.dir/tests/recovery_tests.cpp.o
+#25 419.4 [487/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/decode_cache.cpp.o
+#25 420.4 [488/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/window_slot.cpp.o
+#25 425.2 [489/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/filmstrip_model.cpp.o
+#25 426.9 [490/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/settings_file.cpp.o
+#25 426.9 [491/626] Building CXX object CMakeFiles/recovery_tests.dir/.qt/rcc/qrc_recovery_test_catalog.cpp.o
+#25 426.9 [492/626] Running rcc for resource recovery_startup_catalog
+#25 426.9 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 426.9 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 426.9 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 426.9 for more information.
+#25 426.9 [493/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/recovery_startup_tests_autogen/mocs_compilation.cpp.o
+#25 429.1 [494/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/directory_entry_model.cpp.o
+#25 432.6 [495/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/folder_tree_model.cpp.o
+#25 434.6 [496/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/app/startup_intent.cpp.o
+#25 436.4 [497/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/tests/recovery_startup_tests.cpp.o
+#25 436.6 [498/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/app/startup_environment.cpp.o
+#25 436.6 [499/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/.qt/rcc/qrc_recovery_startup_catalog.cpp.o
+#25 437.1 [500/626] Building CXX object CMakeFiles/recovery_tests.dir/src/app/viewer_controller.cpp.o
+#25 437.8 [501/626] Linking CXX executable recovery_tests
+#25 438.8 [502/626] Automatic MOC and UIC for target recovery_controller_tests
+#25 438.8 [503/626] Running rcc for resource recovery_controller_catalog
+#25 438.8 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 438.8 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 438.8 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 438.8 for more information.
+#25 440.6 [504/626] Automatic MOC and UIC for target monitor_customization_tests
+#25 441.7 [505/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/src/app/window_slot.cpp.o
+#25 444.5 [506/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/recovery_controller_tests_autogen/mocs_compilation.cpp.o
+#25 446.7 [507/626] Building CXX object CMakeFiles/recovery_startup_tests.dir/src/app/settings_file.cpp.o
+#25 447.0 [508/626] Linking CXX executable recovery_startup_tests
+#25 447.5 [509/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/theme_manager.cpp.o
+#25 447.7 [510/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/pane_layout.cpp.o
+#25 449.2 [511/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/decode_cache.cpp.o
+#25 450.4 [512/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/favorites_model.cpp.o
+#25 454.7 [513/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/tests/recovery_controller_tests.cpp.o
+#25 455.7 [514/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/settings_file.cpp.o
+#25 456.4 [515/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/directory_entry_model.cpp.o
+#25 458.3 [516/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/window_slot.cpp.o
+#25 459.4 [517/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/settings_recovery.cpp.o
+#25 460.6 [518/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/viewer_controller.cpp.o
+#25 461.5 [519/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/settings_diff.cpp.o
+#25 462.6 [520/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/settings_policy.cpp.o
+#25 463.4 [521/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/settings_restore.cpp.o
+#25 463.7 [522/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/recovery_checkpoint.cpp.o
+#25 463.7 [523/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/.qt/rcc/qrc_recovery_controller_catalog.cpp.o
+#25 464.0 [524/626] Running rcc for resource monitor_customization_theme
+#25 464.0 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 464.0 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 464.0 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 464.0 for more information.
+#25 464.1 [525/626] Running rcc for resource monitor_customization_brand
+#25 464.1 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 464.1 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 464.1 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 464.1 for more information.
+#25 464.1 [526/626] Running rcc for resource monitor_customization_shaders
+#25 464.1 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 464.1 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 464.1 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 464.1 for more information.
+#25 464.6 [527/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/recovery_session.cpp.o
+#25 466.0 [528/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/app/settings_maintenance.cpp.o
+#25 466.5 [529/626] Building CXX object CMakeFiles/recovery_controller_tests.dir/src/app/command_registry.cpp.o
+#25 466.8 [530/626] Linking CXX executable recovery_controller_tests
+#25 468.1 [531/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/decode_cache.cpp.o
+#25 468.4 [532/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/monitor_customization_tests_autogen/mocs_compilation.cpp.o
+#25 473.7 [533/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/directory_entry_model.cpp.o
+#25 473.8 [534/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/settings_file.cpp.o
+#25 475.5 [535/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/tests/monitor_customization_tests.cpp.o
+#25 476.3 [536/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/theme_manager.cpp.o
+#25 476.5 [537/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/filmstrip_model.cpp.o
+#25 478.1 [538/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/viewer_controller.cpp.o
+#25 480.0 [539/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/folder_tree_model.cpp.o
+#25 480.7 [540/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/file_operation_service.cpp.o
+#25 481.0 [541/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 482.4 [542/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/pane_layout.cpp.o
+#25 483.1 [543/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/.qt/rcc/qrc_monitor_customization_theme.cpp.o
+#25 484.5 [544/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/.qt/rcc/qrc_monitor_customization_brand.cpp.o
+#25 484.5 [545/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/.qt/rcc/qrc_monitor_customization_shaders.cpp.o
+#25 485.3 [546/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/render/image_canvas.cpp.o
+#25 485.4 [547/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/monitor_customization.cpp.o
+#25 486.4 [548/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/render/presentation_window.cpp.o
+#25 489.0 [549/626] Automatic MOC and UIC for target translation_coverage_ui_tests
+#25 489.2 [550/626] Automatic MOC and UIC for target monitor_customization_ui_tests
+#25 489.3 [551/626] Running rcc for resource translation_coverage_ui_theme
+#25 489.3 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 489.3 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 489.3 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 489.3 for more information.
+#25 489.3 [552/626] Running rcc for resource translation_coverage_ui_shaders
+#25 489.3 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 489.3 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 489.3 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 489.3 for more information.
+#25 489.3 [553/626] Running rcc for resource translation_coverage_ui_brand
+#25 489.3 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 489.3 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 489.3 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 489.3 for more information.
+#25 489.5 [554/626] Running rcc for resource monitor_customization_ui_theme
+#25 489.5 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 489.5 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 489.5 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 489.5 for more information.
+#25 489.6 [555/626] Automatic MOC and UIC for target command_routing_tests
+#25 490.4 [556/626] Building CXX object CMakeFiles/monitor_customization_tests.dir/src/app/window_slot.cpp.o
+#25 490.8 [557/626] Linking CXX executable monitor_customization_tests
+#25 492.2 [558/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/decode_cache.cpp.o
+#25 493.4 [559/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/translation_coverage_ui_tests_autogen/mocs_compilation.cpp.o
+#25 498.2 [560/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/settings_file.cpp.o
+#25 498.6 [561/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/tests/translation_coverage_ui_tests.cpp.o
+#25 499.1 [562/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/directory_entry_model.cpp.o
+#25 500.7 [563/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/theme_manager.cpp.o
+#25 501.2 [564/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/filmstrip_model.cpp.o
+#25 502.0 [565/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/viewer_controller.cpp.o
+#25 503.8 [566/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/folder_tree_model.cpp.o
+#25 505.0 [567/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 505.5 [568/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/file_operation_service.cpp.o
+#25 506.5 [569/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/pane_layout.cpp.o
+#25 507.3 [570/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/.qt/rcc/qrc_translation_coverage_ui_theme.cpp.o
+#25 508.5 [571/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/.qt/rcc/qrc_translation_coverage_ui_brand.cpp.o
+#25 508.5 [572/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/.qt/rcc/qrc_translation_coverage_ui_shaders.cpp.o
+#25 509.6 [573/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/render/image_canvas.cpp.o
+#25 509.7 [574/626] Running rcc for resource monitor_customization_ui_brand
+#25 509.7 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 509.7 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 509.7 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 509.7 for more information.
+#25 509.7 [575/626] Running rcc for resource monitor_customization_ui_shaders
+#25 509.7 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 509.7 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 509.7 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 509.7 for more information.
+#25 509.8 [576/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/render/presentation_window.cpp.o
+#25 510.1 [577/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/monitor_customization.cpp.o
+#25 512.0 [578/626] Building CXX object CMakeFiles/translation_coverage_ui_tests.dir/src/app/window_slot.cpp.o
+#25 513.6 [579/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/decode_cache.cpp.o
+#25 514.2 [580/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/monitor_customization_ui_tests_autogen/mocs_compilation.cpp.o
+#25 518.4 [581/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/tests/monitor_customization_ui_tests.cpp.o
+#25 519.8 [582/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/settings_file.cpp.o
+#25 519.9 [583/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/directory_entry_model.cpp.o
+#25 521.0 [584/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/theme_manager.cpp.o
+#25 522.3 [585/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/filmstrip_model.cpp.o
+#25 522.8 [586/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/viewer_controller.cpp.o
+#25 524.6 [587/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/folder_tree_model.cpp.o
+#25 525.8 [588/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/file_operation_service.cpp.o
+#25 525.8 [589/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 527.6 [590/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/pane_layout.cpp.o
+#25 528.4 [591/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/.qt/rcc/qrc_monitor_customization_ui_theme.cpp.o
+#25 529.6 [592/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/.qt/rcc/qrc_monitor_customization_ui_brand.cpp.o
+#25 529.7 [593/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/.qt/rcc/qrc_monitor_customization_ui_shaders.cpp.o
+#25 530.2 [594/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/render/image_canvas.cpp.o
+#25 530.9 [595/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/render/presentation_window.cpp.o
+#25 531.8 [596/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/monitor_customization.cpp.o
+#25 532.2 [597/626] Linking CXX executable translation_coverage_ui_tests
+#25 532.5 [598/626] Running rcc for resource routing_theme_catalog
+#25 532.5 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 532.5 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 532.5 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 532.5 for more information.
+#25 532.6 [599/626] Running rcc for resource routing_brand_assets
+#25 532.6 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 532.6 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 532.6 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 532.6 for more information.
+#25 532.6 [600/626] Running rcc for resource routing_canvas_shaders
+#25 532.6 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#25 532.6 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#25 532.6 If this causes problems, reconfigure your locale. See the locale(1) manual
+#25 532.6 for more information.
+#25 532.9 [601/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/folder_history.cpp.o
+#25 533.0 [602/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/favorites_model.cpp.o
+#25 534.7 [603/626] Building CXX object CMakeFiles/monitor_customization_ui_tests.dir/src/app/window_slot.cpp.o
+#25 535.2 [604/626] Linking CXX executable monitor_customization_ui_tests
+#25 536.8 [605/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/decode_cache.cpp.o
+#25 537.3 [606/626] Building CXX object CMakeFiles/command_routing_tests.dir/command_routing_tests_autogen/mocs_compilation.cpp.o
+#25 540.7 [607/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/favorites_model.cpp.o
+#25 540.8 [608/626] Building CXX object CMakeFiles/command_routing_tests.dir/tests/command_routing_tests.cpp.o
+#25 543.0 [609/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/settings_file.cpp.o
+#25 543.5 [610/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/folder_history.cpp.o
+#25 545.6 [611/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/pane_layout.cpp.o
+#25 546.3 [612/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/theme_manager.cpp.o
+#25 546.3 [613/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/viewer_controller.cpp.o
+#25 548.3 [614/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/filmstrip_model.cpp.o
+#25 549.1 [615/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/directory_entry_model.cpp.o
+#25 550.0 [616/626] Building CXX object CMakeFiles/command_routing_tests.dir/.qt/rcc/qrc_routing_theme_catalog.cpp.o
+#25 551.2 [617/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/folder_tree_model.cpp.o
+#25 551.2 [618/626] Building CXX object CMakeFiles/command_routing_tests.dir/.qt/rcc/qrc_routing_canvas_shaders.cpp.o
+#25 551.2 [619/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/file_operation_service.cpp.o
+#25 551.3 [620/626] Building CXX object CMakeFiles/command_routing_tests.dir/.qt/rcc/qrc_routing_brand_assets.cpp.o
+#25 552.9 [621/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/startup_window_geometry.cpp.o
+#25 553.5 [622/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/render/image_canvas.cpp.o
+#25 557.3 [623/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/window_slot.cpp.o
+#25 557.8 [624/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/render/presentation_window.cpp.o
+#25 561.2 [625/626] Building CXX object CMakeFiles/command_routing_tests.dir/src/app/monitor_customization.cpp.o
+#25 561.7 [626/626] Linking CXX executable command_routing_tests
+#25 DONE 561.8s
+
+#26 [build 13/13] RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+#26 0.271 Internal ctest changing into directory: /build
+#26 0.274 Test project /build
+#26 0.281       Start  1: selection_export
+#26 0.307  1/45 Test  #1: selection_export .................   Passed    0.03 sec
+#26 0.308       Start  2: perf_trace
+#26 0.331  2/45 Test  #2: perf_trace .......................   Passed    0.02 sec
+#26 0.331       Start  3: navigation
+#26 0.585  3/45 Test  #3: navigation .......................   Passed    0.25 sec
+#26 0.586       Start  4: directory_listing
+#26 1.714  4/45 Test  #4: directory_listing ................   Passed    1.13 sec
+#26 1.714       Start  5: file_operations
+#26 1.722  5/45 Test  #5: file_operations ..................   Passed    0.01 sec
+#26 1.722       Start  6: startup_window_geometry
+#26 1.730  6/45 Test  #6: startup_window_geometry ..........   Passed    0.01 sec
+#26 1.730       Start  7: viewer_acceptance
+#26 6.703  7/45 Test  #7: viewer_acceptance ................   Passed    4.97 sec
+#26 6.703       Start  8: thumbnails
+#26 10.35  8/45 Test  #8: thumbnails .......................   Passed    3.65 sec
+#26 10.35       Start  9: folder_tree
+#26 16.24  9/45 Test  #9: folder_tree ......................   Passed    5.88 sec
+#26 16.24       Start 10: pane_layout
+#26 16.68 10/45 Test #10: pane_layout ......................   Passed    0.44 sec
+#26 16.68       Start 11: window_slots
+#26 33.83 11/45 Test #11: window_slots .....................   Passed   17.15 sec
+#26 33.83       Start 12: folder_grid
+#26 174.7 12/45 Test #12: folder_grid ......................   Passed  140.83 sec
+#26 174.7       Start 13: input_ui
+#26 219.2 13/45 Test #13: input_ui .........................   Passed   44.51 sec
+#26 219.2       Start 14: pathbar_ui
+#26 220.9 14/45 Test #14: pathbar_ui .......................   Passed    1.77 sec
+#26 220.9       Start 15: file_operation_service
+#26 221.9 15/45 Test #15: file_operation_service ...........   Passed    0.97 sec
+#26 221.9       Start 16: directory_model
+#26 225.2 16/45 Test #16: directory_model ..................   Passed    3.33 sec
+#26 225.2       Start 17: viewport
+#26 225.2 17/45 Test #17: viewport .........................   Passed    0.02 sec
+#26 225.2       Start 18: themes
+#26 225.4 18/45 Test #18: themes ...........................   Passed    0.20 sec
+#26 225.4       Start 19: platform_integration
+#26 225.9 19/45 Test #19: platform_integration .............   Passed    0.47 sec
+#26 225.9       Start 20: grid_search
+#26 226.0 20/45 Test #20: grid_search ......................   Passed    0.10 sec
+#26 226.0       Start 21: grid_density
+#26 226.1 21/45 Test #21: grid_density .....................   Passed    0.07 sec
+#26 226.1       Start 22: ui_settings
+#26 226.5 22/45 Test #22: ui_settings ......................   Passed    0.42 sec
+#26 226.5       Start 23: fs_watch
+#26 295.9 23/45 Test #23: fs_watch .........................   Passed   69.44 sec
+#26 295.9       Start 24: fs_watch_budget
+#26 313.7 24/45 Test #24: fs_watch_budget ..................   Passed   17.79 sec
+#26 313.7       Start 25: fs_watch_ui
+#26 315.5 25/45 Test #25: fs_watch_ui ......................   Passed    1.74 sec
+#26 315.5       Start 26: favorites
+#26 315.6 26/45 Test #26: favorites ........................   Passed    0.16 sec
+#26 315.6       Start 27: folder_history
+#26 315.6 27/45 Test #27: folder_history ...................   Passed    0.01 sec
+#26 315.6       Start 28: shortcuts_help
+#26 315.8 28/45 Test #28: shortcuts_help ...................   Passed    0.19 sec
+#26 315.8       Start 29: filter
+#26 317.1 29/45 Test #29: filter ...........................   Passed    1.30 sec
+#26 317.1       Start 30: cache
+#26 319.4 30/45 Test #30: cache ............................   Passed    2.29 sec
+#26 319.4       Start 31: io_scheduler
+#26 319.5 31/45 Test #31: io_scheduler .....................   Passed    0.06 sec
+#26 319.5       Start 32: metadata
+#26 319.5 32/45 Test #32: metadata .........................   Passed    0.01 sec
+#26 319.5       Start 33: animation
+#26 319.8 33/45 Test #33: animation ........................   Passed    0.37 sec
+#26 319.8       Start 34: mutation
+#26 319.9 34/45 Test #34: mutation .........................   Passed    0.03 sec
+#26 319.9       Start 35: copy_move
+#26 319.9 35/45 Test #35: copy_move ........................   Passed    0.04 sec
+#26 319.9       Start 36: format
+#26 319.9 36/45 Test #36: format ...........................   Passed    0.01 sec
+#26 319.9       Start 37: monitor_output
+#26 321.9 37/45 Test #37: monitor_output ...................   Passed    1.93 sec
+#26 321.9       Start 38: recovery
+#26 332.9 38/45 Test #38: recovery .........................   Passed   11.00 sec
+#26 332.9       Start 39: recovery_startup
+#26 333.0 39/45 Test #39: recovery_startup .................   Passed    0.13 sec
+#26 333.0       Start 40: recovery_controller
+#26 345.2 40/45 Test #40: recovery_controller ..............   Passed   12.15 sec
+#26 345.2       Start 41: recovery_process
+#26 366.5 41/45 Test #41: recovery_process .................   Passed   21.38 sec
+#26 366.5       Start 42: monitor_customization
+#26 373.9 42/45 Test #42: monitor_customization ............   Passed    7.41 sec
+#26 373.9       Start 43: monitor_customization_ui
+#26 387.2 43/45 Test #43: monitor_customization_ui .........   Passed   13.25 sec
+#26 387.2       Start 44: translation_coverage_ui
+#26 387.2 44/45 Test #44: translation_coverage_ui ..........***Failed    0.02 sec
+#26 387.2 Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+#26 387.2 Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+#26 387.2 If this causes problems, reconfigure your locale. See the locale(1) manual
+#26 387.2 for more information.
+#26 387.2 ********* Start testing of TranslationCoverageUiTests *********
+#26 387.2 Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+#26 387.2 FAIL!  : TranslationCoverageUiTests::initTestCase() 'translator.loadTs(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/translations/glancelot_en_XA.ts"))' returned FALSE. ()
+#26 387.2    Loc: [/src/tests/translation_coverage_ui_tests.cpp(321)]
+#26 387.2 PASS   : TranslationCoverageUiTests::cleanupTestCase()
+#26 387.2 Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 5ms
+#26 387.2 ********* Finished testing of TranslationCoverageUiTests *********
+#26 387.2 
+#26 387.2       Start 45: command_routing
+#26 391.2 45/45 Test #45: command_routing ..................   Passed    3.95 sec
+#26 391.2 
+#26 391.2 98% tests passed, 1 tests failed out of 45
+#26 391.2 
+#26 391.2 Label Time Summary:
+#26 391.2 budget       = 304.15 sec*proc (7 tests)
+#26 391.2 clipboard    = 185.35 sec*proc (3 tests)
+#26 391.2 fast         =  42.03 sec*proc (27 tests)
+#26 391.2 native       = 251.40 sec*proc (9 tests)
+#26 391.2 process      = 374.16 sec*proc (25 tests)
+#26 391.2 ui           = 206.07 sec*proc (7 tests)
+#26 391.2 
+#26 391.2 Total Test time (real) = 390.91 sec
+#26 391.2 
+#26 391.2 The following tests FAILED:
+#26 391.2 	 44 - translation_coverage_ui (Failed)
+#26 391.2 Errors while running CTest
+#26 ERROR: process "/bin/sh -c QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure" did not complete successfully: exit code: 8
+------
+ > [build 13/13] RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure:
+391.2 fast         =  42.03 sec*proc (27 tests)
+391.2 native       = 251.40 sec*proc (9 tests)
+391.2 process      = 374.16 sec*proc (25 tests)
+391.2 ui           = 206.07 sec*proc (7 tests)
+391.2 
+391.2 Total Test time (real) = 390.91 sec
+391.2 
+391.2 The following tests FAILED:
+391.2 	 44 - translation_coverage_ui (Failed)
+391.2 Errors while running CTest
+------
+Dockerfile:22
+--------------------
+  20 |     COPY scripts scripts
+  21 |     RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+  22 | >>> RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
+  23 |     
+  24 |     FROM ubuntu:24.04 AS runtime
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure" did not complete successfully: exit code: 8
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/j9kcyce6cibyne8u4rt3q9a0k
+DOCKER_EXIT=1 DOCKER_SECONDS=959
+GATE_DONE=2026-10-23T04:20:05.8377761-06:00
