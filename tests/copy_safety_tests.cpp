@@ -91,7 +91,7 @@ void CopySafetyTests::substDriveSameFileIsRefused() {
 #else
     // The reviewer's B1 reproduction: X: is subst'ed to the folder, so "X:/file.bin" and "<folder>/file.bin" are one
     // file on what look like two volumes. Before the fix the Move copied the file onto itself and then deleted it.
-    for (const Mode mode : {Mode::Copy, Mode::Move}) {
+    for (const Mode mode : {Mode::Move, Mode::Copy}) {
         const QString dir = root(QStringLiteral("subst_file_") + QLatin1String(modeName(mode)));
         QVERIFY(QDir().mkpath(dir));
         const QString file = QDir(dir).filePath(QStringLiteral("file.bin"));
