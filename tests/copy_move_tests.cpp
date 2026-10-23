@@ -951,8 +951,9 @@ void CopyMoveTests::testOverwriteSweepSkipsInFlightTemporaryInAnyCase() {
 #ifndef Q_OS_WIN
     QSKIP("Only Windows folder names compare case-insensitively.");
 #else
-    // Another batch sweeps the same folder spelled in different case while this copy is writing its temporary
-    // (review N4): the in-flight temporary must be recognised and kept.
+    // Another batch sweeps the same folder spelled in different case (review N4) in the window between closing
+    // the finished temporary and replacing the target, when nothing holds the file open: the in-flight
+    // temporary must be recognised and kept.
     OverwriteFixture fx;
     QVERIFY(makeFixture(m_tempDir->path(), QStringLiteral("ow_sweep_case"), fx, 2 * 1024 * 1024));
     const QString otherSpelling = fx.targetDir.toUpper();
@@ -960,8 +961,8 @@ void CopyMoveTests::testOverwriteSweepSkipsInFlightTemporaryInAnyCase() {
     std::atomic<int> removed{-1};
     std::atomic<int> temporariesAfterSweep{-1};
     const QString targetDir = fx.targetDir;
-    FaultHookScope hook([&](copy_safety::FaultPoint point, const QString&, qint64 bytes) {
-        if (point == copy_safety::FaultPoint::AfterChunk && bytes >= 256 * 1024 && removed.load() < 0) {
+    FaultHookScope hook([&](copy_safety::FaultPoint point, const QString&, qint64) {
+        if (point == copy_safety::FaultPoint::Replace && removed.load() < 0) {
             removed = copy_safety::removeStaleTemporaries(otherSpelling);
             temporariesAfterSweep = int(temporariesIn(targetDir).size());
         }
