@@ -132,6 +132,7 @@ if(GLANCELOT_BUILD_VIEWER)
     set_tests_properties(window_slots PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 240)
     qt_add_executable(grid_ui_tests tests/grid_ui_tests.cpp
       ${GLANCELOT_VIEWER_SOURCES}
+      ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -153,6 +154,7 @@ if(GLANCELOT_BUILD_VIEWER)
     # INPUT-02: scoped keys, chords, holds, wheel matrix and context menus (its own file; grid_ui_tests stays untouched).
     qt_add_executable(input_ui_tests tests/input_ui_tests.cpp
       ${GLANCELOT_VIEWER_SOURCES}
+      ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -174,6 +176,7 @@ if(GLANCELOT_BUILD_VIEWER)
     # F002: breadcrumbs and path completion (its own file; grid_ui_tests stays untouched).
     qt_add_executable(pathbar_ui_tests tests/pathbar_ui_tests.cpp
       ${GLANCELOT_VIEWER_SOURCES}
+      ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
       src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp

@@ -49,6 +49,7 @@ if(BUILD_TESTING)
     set_tests_properties(${monitor_suite} PROPERTIES
       ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
   endforeach()
+  target_sources(monitor_customization_ui_tests PRIVATE ${GLANCELOT_VIEWER_CONTEXT_SOURCES}) # EN-04: loads the shipped Main.qml
   # Existing shipped-QML fixtures must supply the real new context provider.
   foreach(monitor_consumer IN ITEMS input_ui_tests pathbar_ui_tests grid_ui_tests fs_watch_ui_tests monitor_output_tests)
     if(TARGET ${monitor_consumer})

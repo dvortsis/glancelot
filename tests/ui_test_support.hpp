@@ -7,6 +7,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "../src/app/file_grid_wiring.hpp"
 #include "../src/app/file_operation_wiring.hpp"
+#include "../src/app/viewer_context.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
 #include "glancelot/theme_manager.hpp"
@@ -68,6 +69,8 @@ struct Harness {
     glancelot::MonitorCustomization monitor{viewer.displayManager(), &layout};
     DirectoryEntryModel fileGrid;
     FileOperationService fileOperations;
+    FavoritesModel favorites;
+    FolderHistory history;
     QQmlApplicationEngine engine;
     QQuickWindow* window{};
     explicit Harness(std::unique_ptr<glancelot::TrashBackend> backend = {}) : fileOperations(std::move(backend)) {
@@ -75,15 +78,10 @@ struct Harness {
         imports.removeAll(QCoreApplication::applicationDirPath()); // load the UI from source, not a build-tree module
         engine.setImportPathList(imports);
         engine.addImageProvider("thumb", new PreviewProvider);
-        engine.rootContext()->setContextProperty("viewer", &viewer);
-        engine.rootContext()->setContextProperty("paneLayout", &layout);
         monitor.setSlot(1);
-        engine.rootContext()->setContextProperty("monitorCustomization", &monitor);
-        engine.rootContext()->setContextProperty("theme", &theme);
-        engine.rootContext()->setContextProperty("filmstrip", &model);
-        engine.rootContext()->setContextProperty("folderTree", &folders);
-        engine.rootContext()->setContextProperty("fileGrid", &fileGrid);
-        engine.rootContext()->setContextProperty("fileOperations", &fileOperations);
+        installViewerContext(*engine.rootContext(), {.viewer = viewer, .paneLayout = layout, .monitorCustomization = monitor,
+            .filmstrip = model, .folderTree = folders, .favoritesModel = favorites, .folderHistory = history,
+            .fileGrid = fileGrid, .theme = theme, .fileOperations = fileOperations});
         file_operation_wiring::follow(fileOperations, viewer, folders);
         QObject::connect(&viewer, &ViewerController::stateChanged, &model, [this] { model.sync(viewer.snapshot()); });
         QObject::connect(&viewer, &ViewerController::filesInvalidated, &model, [this] { model.invalidate(); });

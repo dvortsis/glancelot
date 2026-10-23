@@ -168,9 +168,8 @@ private slots:
     // buttons on the canvas) requests navigation exactly once, so one step never skips a folder.
     void folderHistoryStepsOnceOnEveryRoute() {
         AnimatedMedia media; HistoryFolders folders; QVERIFY(folders.dir.isValid());
-        FolderHistory history; // declared before the harness so it outlives the window's bindings to it
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
-        h.engine.rootContext()->setContextProperty("folderHistory", &history);
+        FolderHistory& history = h.history; // EN-04: the harness installs its own (unfed) history, as the app does
         h.viewer.setFilmstripVisible(false);
         h.viewer.open(media.dir.filePath("still.png"));
         QVERIFY(QTest::qWaitFor([&] { return h.viewer.imageReady(); }, 15000));

@@ -18,6 +18,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/file_operation_service.hpp"
 #include "file_grid_wiring.hpp"
+#include "viewer_context.hpp"
 #include "file_lock.hpp"
 #include "glancelot/settings_file.hpp"
 #include "image_canvas.hpp"
@@ -31,7 +32,7 @@ class MonitorCustomizationUiTests:public QObject {
     std::unique_ptr<QTemporaryDir> config;
     struct Harness {
         ViewerController viewer;ThemeManager theme;PaneLayout layout;FilmstripModel filmstrip;FolderTreeModel tree;
-        DirectoryEntryModel grid;FileOperationService operations;
+        DirectoryEntryModel grid;FileOperationService operations;FavoritesModel favorites;FolderHistory history;
         glancelot::MonitorCustomization monitor{viewer.displayManager(),&layout};
         QQmlApplicationEngine engine;QQuickWindow* window{};
         Harness(){
@@ -39,10 +40,8 @@ class MonitorCustomizationUiTests:public QObject {
             engine.addImageProvider("thumb",new MonitorTestThumbnails);
             layout.setSlot(1);monitor.setSlot(1);
             file_grid_wiring::followViewer(viewer,grid);file_grid_wiring::lockThumbnailEpoch(filmstrip,grid);
-            engine.rootContext()->setContextProperty("viewer",&viewer);engine.rootContext()->setContextProperty("theme",&theme);
-            engine.rootContext()->setContextProperty("paneLayout",&layout);engine.rootContext()->setContextProperty("monitorCustomization",&monitor);
-            engine.rootContext()->setContextProperty("filmstrip",&filmstrip);engine.rootContext()->setContextProperty("folderTree",&tree);
-            engine.rootContext()->setContextProperty("fileGrid",&grid);engine.rootContext()->setContextProperty("fileOperations",&operations);
+            installViewerContext(*engine.rootContext(),{.viewer=viewer,.paneLayout=layout,.monitorCustomization=monitor,.filmstrip=filmstrip,
+                .folderTree=tree,.favoritesModel=favorites,.folderHistory=history,.fileGrid=grid,.theme=theme,.fileOperations=operations});
             engine.load(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Main.qml")));
             if(!engine.rootObjects().isEmpty())window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
             monitor.setControllerWindow(window);
