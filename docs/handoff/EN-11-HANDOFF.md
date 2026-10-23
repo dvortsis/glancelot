@@ -6,7 +6,7 @@ Written for: the lead and the fresh local Windows reviewer of EN-11. Track sessi
 | --- | --- |
 | Branch | `claude/en-11-gate-stability` |
 | Base (contract) SHA | `3893c77a729511c4a6a8056e2787ba21c39fdfb3` (`origin/main` at start) |
-| Code tip SHA | `d267a02` (this handoff is committed on top of it; review with `git diff 3893c77 <branch tip>`) |
+| Code tip SHA | `7c9fe09` (handoff commits sit on top of it; review with `git diff 3893c77 <branch tip>`) |
 | Qt used | conda-forge `qt6-main 6.8.3` at `/opt/qt683`. `aqt` got a proxy 403 from `download.qt.io` and `micro.mamba.pm`, so micromamba came from its GitHub release |
 | Docker | not run (no Docker in the cloud session) |
 | ui-design-skills | not used. No UI was changed (the only QML-adjacent change is one grid test precondition) |
@@ -19,6 +19,8 @@ Written for: the lead and the fresh local Windows reviewer of EN-11. Track sessi
 4. `119dbe6` fix: `src/app/metadata_parser.cpp`, `src/app/animation_controller.cpp`, which now use the shared-delete reader.
 5. `9af0092` test: `tests/fs_watch_tests.cpp` (the `png()` fixture helper and one decode-count oracle) and `tests/grid_ui_tests.cpp` (`auditFailedCurrentPhotoCanBeRetriedFromGrid` only).
 6. `d267a02` test: adds an explicit `<QPointer>` include for MSVC.
+7. `b7a0e3f` test: stderr diagnostics, because QTest output does not reach CTest's log on Windows.
+8. `7c9fe09` test: corrects the sharing test after the Windows evidence (`sharedReaderAllowsRenameAndDelete`) and fixes the comments in the readers, the helper and `png()`.
 
 ## Root cause 1: a late first scan dropped the user's newer request (confirmed, product bug)
 
@@ -68,24 +70,36 @@ with the `if` testing `!(shown&&proven)`, where `shown` reduces to `!loading&&im
 
 The navigation finish handler is unchanged. Its silent drop is correct for genuinely newer requests, and no background path bumps the generation while navigation is busy anymore: `reconcileObservation` already defers until navigation is idle.
 
-## Root cause 2: `QSaveFile` rename refused with "Access is denied" (Windows; partly unverifiable here)
+## Root cause 2: `QSaveFile` rename refused with "Access is denied" (Windows, verified on hosted windows-2022)
 
-`QFileDevice` error 10 is `RenameError`: `MoveFileEx(REPLACE_EXISTING)` over the PNG was refused. Right after a decode, the viewer opens the current image in-process twice:
+`QFileDevice` error 10 is `RenameError`: `MoveFileEx(REPLACE_EXISTING)` over the PNG was refused. Right after a decode, the viewer opens the current image in-process:
 
-- `MetadataParser::parse` (QImageReader by file name, then a `QFile` header read)
-- `AnimationController::load` (QImageReader by file name, reading up to 64 frames)
+- `MetadataParser::parse` (QImageReader, then a `QFile` header read)
+- `AnimationController::load` (QImageReader, reading up to 64 frames)
 
-On Windows, `QFile` opens with `FILE_SHARE_READ|FILE_SHARE_WRITE` and no `FILE_SHARE_DELETE`. Both failing fs_watch tests rewrite the image immediately after `imageReady`, which is exactly that window. The decoder worker already opens with delete sharing (`openShared` in `src/worker/main.cpp`), and the monitor's probes use all three share flags.
+Both failing fs_watch tests rewrite the image immediately after `imageReady`, which is exactly that window. External scanners (Defender, the indexer) can hold a just-written file the same way.
 
-**Decision: fix the production readers, and also harden the fixture writer.**
+**Windows evidence** (hosted `viewer` job, [run 39894499556](https://github.com/dvortsis/glancelot/actions/runs/39894499556), stderr diagnostics):
 
-- **Production readers** (a real product issue: viewing must not make an editor's save fail). The new `src/app/shared_file_read.hpp` `openSharedRead()` opens with the worker's share mode through `CreateFileW` + `_open_osfhandle`. If the native open fails (for example a long path only QFile can reach), it falls back to plain `QFile`, so no file that was readable before becomes unreadable. Both readers now read through that one handle.
-  - Metadata still reports name and size for an unreadable file, as before.
-  - I checked that `QImageReader(&handleOpenedFile).format()` and `size()` equal the by-name results for jpg, jpeg, png, webp, tiff, bmp and a misnamed file. Format names come from content sniffing either way.
-  - Not changed: `src/app/raw_preview.cpp` opens RAW files with plain `QFile`, but only inside the decoder process (Track D's file). Suggested follow-up: use `openShared` there.
-- **Fixture writer** (`png()` in `tests/fs_watch_tests.cpp`): it now retries the whole write on `RenameError` for up to 2 s with backoff from 10 ms to 200 ms, logging each retry with `qInfo`. This is for external holders a test cannot control (Defender, the search indexer), which are a well-known cause of this exact error. It is media generation, not an oracle or synchronization. So that the retry cannot hide a regression in our own helper, `late_baseline sharedReaderAllowsAtomicReplace` asserts directly that a reader holding the file through `openSharedRead` does not block `QSaveFile::commit`. The test calls the helper itself; nothing would catch MetadataParser or AnimationController going back to a by-name QImageReader, so review should watch for that.
+```
+late_baseline: replace over shared-delete reader: commit 10: Access is denied.
+late_baseline: replace over plain QFile reader: commit 10: Access is denied.
+```
 
-**Linux cannot reproduce this.** POSIX rename never blocks on open readers, so on Linux that test passes trivially. Windows verification is listed below.
+My first hypothesis was wrong. The brief suggested that delete sharing would let the replace through, but Windows refuses a non-POSIX replace onto a name while **any** handle is open, shared-delete or not. **Production share mode therefore cannot fix `:298`/`:1023`.**
+
+**Decision:**
+
+- **Fixture writer: this is the fix for `:298`/`:1023`.** `png()` in `tests/fs_watch_tests.cpp` retries the whole write on `RenameError` for up to 2 s, with backoff from 10 ms to 200 ms, and logs each retry with `qInfo` (`generated PNG atomic commit refused; retrying`). This is test media generation, not an oracle or synchronization. A holder that never lets go still fails the test after 2 s, with the attempt count. The retry branch never runs on Linux, so it is unexercised here. The gate's `fs-watch-results.txt` shows whether and how often it fires.
+- **Production readers: kept, with a narrower and verified justification.** `src/app/shared_file_read.hpp` `openSharedRead()` opens with the decoder worker's share mode (`CreateFileW` + `_open_osfhandle`, falling back to plain `QFile`). `MetadataParser` and `AnimationController` read through it. While the viewer reads an image, other programs can now delete it or rename it away (Explorer, editors that save by renaming the original to a backup). A plain `QFile` handle blocks both.
+  - `late_baseline sharedReaderAllowsRenameAndDelete` asserts this, and records the replace results instead of asserting them.
+  - Metadata still reports name and size for an unreadable file.
+  - I checked that `QImageReader(&handleOpenedFile).format()` and `size()` equal the by-name results for jpg, jpeg, png, webp, tiff, bmp and a misnamed file.
+  - The lead may instead revert `119dbe6` if this product benefit is not wanted in EN-11. The late-baseline fix does not depend on it.
+  - Commit `119dbe6`'s message overstates the effect (it claims the replace is fixed). The comments were corrected in a later commit; the history was not rewritten.
+- **Follow-ups, not done here:**
+  - `AnimationController::load` holds the handle while it pre-decodes up to 64 frames. Shorten that hold, for example by reading the bounded file into memory first, if product saves over animated files matter.
+  - `src/app/raw_preview.cpp` (inside the decoder process; Track D's file) opens with plain `QFile`.
 
 ## Deterministic tests (gates only, no sleeps as synchronization)
 
@@ -101,7 +115,7 @@ Tests:
 | `lateBaselineKeepsInFlightFolderOpen` | baseline lands while `openFolder(bare)` is in flight (real decoder) | status "No supported images"; current image and pixels kept; exactly 1 `decode:begin` and 0 `imageChanged` when the source token is provable (2 decodes otherwise); the next `openFolder(does-not-exist)` reports "cannot be read" |
 | `lateBaselineRefreshKeepsNewerMessage` | baseline lands after the user's message; registered revision unproven (fixture tokens) and pixels changed | pixels refresh to blue in exactly 2 decodes; the status still says "No supported images" |
 | `lateBaselineDuringDecodeRestartsOnce` | baseline lands while the fallback decode runs (fixture, 60 s delay) | one restart, blue pixels, normal decoder status, first worker retired (regression guard; passes before and after) |
-| `sharedReaderAllowsAtomicReplace` | `QSaveFile` commit over a file held through `openSharedRead` and a QImageReader | commit succeeds, new pixels read back. On Windows it also logs (does not assert) whether a plain `QFile` reader blocks the replace |
+| `sharedReaderAllowsRenameAndDelete` | the image is held through `openSharedRead` and a QImageReader | rename-away and delete succeed. The replace result is logged, and on Windows so are the plain-`QFile` replace and rename results (not asserted) |
 
 ### Fail before (base controller; helper header present, readers unchanged)
 
@@ -112,7 +126,7 @@ FAIL!  : LateBaselineTests::lateBaselineKeepsInFlightFolderOpen() 'viewer.status
 FAIL!  : LateBaselineTests::lateBaselineRefreshKeepsNewerMessage() 'viewer.status().contains("No supported images")' returned FALSE. (sRGB fixture · display profile not yet managed)
    Loc: [/home/user/glancelot/tests/late_baseline_tests.cpp(141)]
 PASS   : LateBaselineTests::lateBaselineDuringDecodeRestartsOnce()
-PASS   : LateBaselineTests::sharedReaderAllowsAtomicReplace()
+PASS   : LateBaselineTests::sharedReaderAllowsAtomicReplace()   (since renamed and corrected, see root cause 2)
 PASS   : LateBaselineTests::cleanupTestCase()
 Totals: 4 passed, 2 failed, 0 skipped, 0 blacklisted, 46420ms
 ```
@@ -125,7 +139,7 @@ QINFO  : LateBaselineTests::lateBaselineKeepsInFlightFolderOpen() source revisio
 PASS   : LateBaselineTests::lateBaselineKeepsInFlightFolderOpen()
 PASS   : LateBaselineTests::lateBaselineRefreshKeepsNewerMessage()
 PASS   : LateBaselineTests::lateBaselineDuringDecodeRestartsOnce()
-PASS   : LateBaselineTests::sharedReaderAllowsAtomicReplace()
+PASS   : LateBaselineTests::sharedReaderAllowsAtomicReplace()   (since renamed and corrected, see root cause 2)
 PASS   : LateBaselineTests::cleanupTestCase()
 Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 888ms
 ```
@@ -136,14 +150,14 @@ Stability: 20/20 passes idle, and 10/10 under 8 busy-loop CPU hogs on a 4-core c
 
 - `fs_watch controllerLateCoalescedBaselineDecodesOnce(newer-open-wins)`: the expected decode count was `3`. It is now `bProvable?2:3`. b was decoded on the fallback, and its late baseline registers the same revision, so the proof makes the old third decode unnecessary; without a source token the count is still 3. The count stays exact and now also pins the no-waste behaviour. The fresh-pixels row is unchanged (2). **Reviewer: please confirm you accept this oracle change.**
 - `folder_grid auditFailedCurrentPhotoCanBeRetriedFromGrid`: the forced path spelling is re-applied (`h.model.sync(snapshot); QCOMPARE(h.selected(),0);`) with no event dispatch between it and `QCOMPARE(pathAt(0), filePath())` and the activation. Any background `stateChanged` (a late scan, a monitor status) legitimately re-syncs the live model to the navigator's spelling, so the old precondition depended on timing. All original assertions and timeouts are unchanged.
-- `fs_watch png()`: retry as described above; every other line of the helper is the same.
+- `fs_watch png()`: retry as described above (this is the fix for `:298`/`:1023`); every other line of the helper is the same.
 - `folder_tree`, and `folder_grid auditReadyCurrentPhotoDoesNotReopen`: unchanged. They are fixed by the product change.
 
 No timeout was changed anywhere.
 
 ## ctest output (Linux, offscreen, conda Qt 6.8.3)
 
-Targeted, on tip `d267a02`:
+Targeted, on `d267a02` (only test-side and comment changes followed; `late_baseline`, `fs_watch`, `metadata` and `animation` were re-run on `7c9fe09`: 4/4 passed):
 
 ```
 1/9 Test  #9: folder_tree ......................   Passed    6.07 sec
@@ -194,21 +208,23 @@ The three failures are exactly the conda-Qt baseline functions listed in PHASE0-
 
 From a read-only checkout at the branch tip, in `.worktrees/review-en-11`, with `build-review-en-11`:
 
-1. Build. MSVC must compile `src/app/shared_file_read.hpp` (`CreateFileW`, `_open_osfhandle`, `_close`) and `tests/late_baseline_tests.cpp`. The hosted `build.yml` `viewer` job result for this branch is recorded below.
-2. `ctest -C Release -R "^late_baseline$" --output-on-failure`. Check in `late-baseline-results.txt`:
-   - `sharedReaderAllowsAtomicReplace` **passes on Windows**. This is the only real proof that the delete-sharing handle lets `QSaveFile::commit` replace a held file. If it fails, the production reader fix does not help on this Windows build: report it, and the fixture retry becomes the only mitigation.
-   - Record the logged line `plain QFile reader blocks replace: true|false`. `true` confirms the mechanism behind `:298` and `:1023`.
-   - `lateBaselineKeepsInFlightFolderOpen` logs `source revision provable true` on NTFS (identity uses the file index and creation time), so the quiet path, with 1 decode and 0 `imageChanged`, is what Windows exercises.
-3. `ctest -C Release -R "^(folder_tree|fs_watch|folder_grid|fs_watch_budget|fs_watch_ui|metadata|animation|cache)$" --output-on-failure` (targeted; `folder_grid` and `fs_watch_budget` respect the gate lock). Check that `fs-watch-results.txt` either has no `generated PNG atomic commit refused; retrying` lines or records how many there were.
+1. Build. MSVC compiles all of it on hosted windows-2022 (see below).
+2. `ctest -C Release -R "^late_baseline$" --output-on-failure`. The stderr lines `late_baseline: …` carry the evidence because QTest output does not reach CTest's log on Windows. Expect:
+   - `in-flight open: provable 1 decodes 1 imageChanged 0 status "No supported images…"`
+   - `replace over shared-delete reader: commit 10: Access is denied.` (recorded)
+   - all six functions passing
+3. `ctest -C Release -R "^(folder_tree|fs_watch|folder_grid|fs_watch_budget|fs_watch_ui|metadata|animation|cache)$" --output-on-failure` (targeted; `folder_grid` and `fs_watch_budget` respect the gate lock). In `fs-watch-results.txt`, count the `generated PNG atomic commit refused; retrying` lines.
 4. Load reproduction (recommended, because it is the acceptance condition): run `folder_tree`, `folder_grid` and `fs_watch` together under load at **base `3893c77`** and at the **branch tip**, so the before/after evidence comes from the same machine. For example, start a full `scripts/build.ps1 -Test` in another worktree, or use the runner while it is idle and nothing else is gating.
 5. Read the metadata and animation behaviour with a GIF or animated PNG and a JPEG with EXIF: the metadata panel format, size and orientation, and animation playback should be unchanged.
-6. Acceptance still requires three consecutive full gates under the runner (`lead-windows-gate`). Only the lead can run those.
+6. Decide whether to keep `119dbe6` (shared-delete readers) as described under root cause 2.
+7. Acceptance still requires three consecutive full gates under the runner (`lead-windows-gate`). Only the lead can run those.
 
 ## Unverified
 
-- Windows share-mode behaviour (above), the MSVC build of the new code (pending the hosted run, below), Docker, and the runner gates.
+- The runner gates, Docker, and the retry branch in `png()` firing (it cannot fire on Linux).
 - The fallback branch, a quiet decode when the source token is empty (FAT, exFAT or network shares without a file id or birth time), runs in `lateBaselineRefreshKeepsNewerMessage` through fixture tokens. It does not run on a real filesystem without identity.
 
-## Hosted Windows feedback (`build.yml`)
+## Hosted Windows feedback (`build.yml`, `viewer` job on windows-2022, MSVC)
 
-- Run [39891265117](https://github.com/dvortsis/glancelot/actions/runs/39891265117) (`9af0092`) and run [39891322833](https://github.com/dvortsis/glancelot/actions/runs/39891322833) (`d267a02`). Results: see the section below.
+- [Run 39891265117](https://github.com/dvortsis/glancelot/actions/runs/39891265117) (`9af0092`): build OK, 43/44. `folder_tree`, `folder_grid`, `fs_watch`, `fs_watch_budget`, `directory_model` and `input_ui` passed; only `late_baseline` failed, with no detail in the log.
+- [Run 39894499556](https://github.com/dvortsis/glancelot/actions/runs/39894499556) (`b7a0e3f`, stderr diagnostics): build OK, 43/44. The failure was `sharedReaderAllowsAtomicReplace`, a wrong assumption about Windows replace semantics (quoted above). The late-baseline tests passed on Windows with `provable 1 decodes 1 imageChanged 0`. The test was then corrected to `sharedReaderAllowsRenameAndDelete`; its Windows run result is recorded below.
