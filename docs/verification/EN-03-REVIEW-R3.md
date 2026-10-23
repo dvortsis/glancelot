@@ -337,3 +337,55 @@ Acceptance ("under about 3 minutes, all pass") is met: 96.1 s, 27 of 27 passed. 
 1. **R3-1:** label `pathbar_ui` `process`, and update `docs/TESTING.md` (23 `process` tests) and the handoff's "Not `process`" list. No gate risk, so the lead may waive it or apply it at integration.
 
 Optional: N1 (WARNING instead of FATAL for subdirectory tests), N2 (`PROJECT_SOURCE_DIR`), N3 (one sentence on platform-only tests).
+
+## Round 3 follow-up
+
+Verdict: **APPROVED** at `dd64c55` (`git diff fdc508c origin/claude/en-03-ctest-labels`). R3-1 is fixed, and N1 is resolved.
+
+**What changed.**
+- `cmake/TestLabels.cmake` declares `glancelot_test_labels(pathbar_ui LABELS ui process)`.
+- `glancelot_finalize_test_labels()` now collects tests from the root and from every subdirectory, recursively, instead of failing.
+- `docs/TESTING.md` and the handoff list 23 `process` tests, and the handoff corrects its wrong `pathbar_ui` bullet.
+
+**CMake versions.** The project minimum is `cmake_minimum_required(VERSION 3.24)`.
+- The root directory still uses the plain `set_property(TEST <name> ...)` and `get_property(... TEST <name> ...)` forms: `in_dir` is empty when `dir` is `CMAKE_SOURCE_DIR`. That is the only path the project takes today, because there is no `add_subdirectory`, so 3.24 through 3.27 behave as before.
+- The `DIRECTORY <dir>` form, which needs 3.28, is reached only for a subdirectory that registers tests. On older CMake, configure stops first with an explicit `FATAL_ERROR`. CMake parses function bodies without checking `set_property` arguments, so an unused 3.28-only form cannot break older versions.
+- Versions in use:
+  - Windows local: 4.4.4, measured.
+  - Ubuntu 24.04 and the Dockerfile (`FROM ubuntu:24.04`, apt `cmake`): 3.28.x. This is the package version; I did not run Docker or Linux this round.
+  - All of them are at or above 3.28, so even a future subdirectory works on them.
+- **Minor, not blocking:** `CMAKE_SOURCE_DIR` (N2) is unchanged.
+
+**Windows, configure only.** In `.worktrees/review-en-05`, `git checkout --detach origin/claude/en-03-ctest-labels` (HEAD `dd64c55`), then reconfigure with CMake 4.4.4:
+
+```
+-- Configuring done (25.8s)
+configure exit: 0
+Total Tests: 43
+== fast : Total Tests: 27      (same 27 as round 2)
+== process : Total Tests: 23   (round 2's 22 plus pathbar_ui)
+== ui : 5   == budget : 7   == native : 9   == clipboard : 3
+pathbar_ui: LABELS=process,ui LOCK=
+```
+
+**Scratch subdirectory check (not committed, reverted).** I added `zzsub/CMakeLists.txt` and included it with `add_subdirectory(zzsub)` after `include(cmake/MonitorCustomization.cmake)`:
+
+```cmake
+add_test(NAME zz_sub_plain COMMAND ${CMAKE_COMMAND} -E true)
+add_test(NAME zz_sub_ui COMMAND ${CMAKE_COMMAND} -E true)
+glancelot_test_labels(zz_sub_ui LABELS ui clipboard)
+```
+
+```
+configure exit: 0
+Total Tests: 45
+fast: Total Tests: 28
+zz_sub_plain: LABELS=fast LOCK=
+zz_sub_ui: LABELS=clipboard,ui LOCK=clipboard
+```
+
+Then I reverted it:
+- `git checkout -- CMakeLists.txt`, removed `zzsub` and its build output; `git status --short` was empty.
+- Reconfigured: exit 0, 43 tests, `process` 23, `fast` 27.
+
+`.worktrees/review-en-05` is left clean at `dd64c55`. The 96.1 s `fast` run above still applies, because round 3 does not change the `fast` set.
