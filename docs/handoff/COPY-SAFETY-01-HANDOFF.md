@@ -23,6 +23,8 @@ No CMake change: the helper lives in the existing `copy_move_service.cpp` (alrea
 
 ## Design
 
+> **Superseded in part by "Review round 1 fixes" below:** same-file detection now uses file identity, not canonical paths (point 1); the temp name is `.~gl<8 hex>.tmp` (point 3); and Windows replaces with `ReplaceFileW` plus a backup name, falling back to `MoveFileExW` only on unsupported volumes (points 3 and 4).
+
 Applies only when the collision policy is `Overwrite` and the item is a regular file. Skip, RenameBoth and the no-collision case keep their code path unchanged.
 
 1. **Refuse before touching anything** (`overwriteRefusal`), when the target exists and is:

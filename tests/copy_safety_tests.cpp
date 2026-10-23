@@ -271,10 +271,16 @@ void CopySafetyTests::replaceKeepsAttributesPermissionsAndStreams() {
         QCOMPARE(sha256Of(dst), sourceHash);
         QCOMPARE(entries, QStringList{QStringLiteral("data.bin")});
         QCOMPARE(QFile::exists(src), mode == Mode::Copy);
-        QCOMPARE(attributes & kept, kept);
+        // One comparison for all three, so a failure shows every piece of metadata that was lost.
+        const auto word = [](bool kept) { return kept ? QStringLiteral("kept") : QStringLiteral("lost"); };
+        const auto summary = [&](bool attributesKept, bool aceKept, bool streamKept) {
+            return QStringLiteral("attributes H+S+I:%1 explicit ACE:%2 Zone.Identifier:%3")
+                .arg(word(attributesKept), word(aceKept), word(streamKept));
+        };
         QVERIFY(acl.read);
-        QVERIFY(acl.localServiceExplicit);
-        QCOMPARE(stream, QByteArray("[ZoneTransfer]\r\nZoneId=3\r\n"));
+        QCOMPARE(summary((attributes & kept) == kept, acl.localServiceExplicit,
+                         stream == QByteArray("[ZoneTransfer]\r\nZoneId=3\r\n")),
+                 summary(true, true, true));
     }
 #endif
 }

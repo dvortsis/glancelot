@@ -477,7 +477,8 @@ bool replaceFileAtomically(const QString& replacementPath, const QString& target
     // Only rwx bits: never carry a set-id or sticky bit onto new content.
     const QByteArray from = QFile::encodeName(replacementPath);
     const QByteArray to = QFile::encodeName(targetPath);
-    struct stat targetStat, replacementStat;
+    struct stat targetStat {};
+    struct stat replacementStat {};
     bool modeChanged = false;
     if (::stat(to.constData(), &targetStat) == 0 && ::stat(from.constData(), &replacementStat) == 0) {
         const mode_t wanted = targetStat.st_mode & 0777;
