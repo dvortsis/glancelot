@@ -1,0 +1,25 @@
+********* Start testing of AcceptanceTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : AcceptanceTests::initTestCase()
+PASS   : AcceptanceTests::generatedTreeReverseOracle()
+PASS   : AcceptanceTests::malformedInputTerminates()
+PASS   : AcceptanceTests::pngPreservesDimensionsAlphaAndColor()
+PASS   : AcceptanceTests::jpegOrientationApplied(normal)
+PASS   : AcceptanceTests::jpegOrientationApplied(mirror-horizontal)
+PASS   : AcceptanceTests::jpegOrientationApplied(rotate-180)
+PASS   : AcceptanceTests::jpegOrientationApplied(mirror-vertical)
+PASS   : AcceptanceTests::jpegOrientationApplied(transpose)
+PASS   : AcceptanceTests::jpegOrientationApplied(rotate-clockwise)
+PASS   : AcceptanceTests::jpegOrientationApplied(transverse)
+PASS   : AcceptanceTests::jpegOrientationApplied(rotate-counterclockwise)
+PASS   : AcceptanceTests::newestOpenWins()
+PASS   : AcceptanceTests::explicitOpenDoesNotReuseSameSizeTimestampPixels()
+PASS   : AcceptanceTests::duplicateBindingRejectedAndSettingsPersist()
+PASS   : AcceptanceTests::escapeAndChordPrefixesCannotDisableCommands()
+PASS   : AcceptanceTests::stopAndLoopBoundaries()
+PASS   : AcceptanceTests::boundaryChangeWhileScanPending()
+PASS   : AcceptanceTests::consecutiveNavigationPreservesStepCount()
+PASS   : AcceptanceTests::folderJumpsAfterExactEmptyVisits()
+PASS   : AcceptanceTests::cleanupTestCase()
+Totals: 21 passed, 0 failed, 0 skipped, 0 blacklisted, 11715ms
+********* Finished testing of AcceptanceTests *********

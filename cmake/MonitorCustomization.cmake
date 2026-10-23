@@ -1,14 +1,5 @@
-# MONITOR-CUSTOM-01 lead-owned registration. The root source-presence guard is
-# temporary while Claude implements the packet; remove it before integration.
+# MONITOR-CUSTOM-01 production registration and test targets.
 include_guard(GLOBAL)
-foreach(monitor_required IN ITEMS
-    src/app/monitor_customization.cpp
-    ui/MonitorSettings.qml ui/DetachedPaneHost.qml
-    tests/monitor_customization_tests.cpp tests/monitor_customization_ui_tests.cpp)
-  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${monitor_required}")
-    message(FATAL_ERROR "MONITOR-CUSTOM-01 requires ${monitor_required}")
-  endif()
-endforeach()
 
 function(glancelot_attach_monitor_customization monitor_target)
   get_target_property(monitor_existing ${monitor_target} SOURCES)
@@ -35,7 +26,7 @@ qt_target_qml_sources(glancelot QML_FILES ui/MonitorSettings.qml ui/DetachedPane
 if(BUILD_TESTING)
   foreach(monitor_suite IN ITEMS monitor_customization monitor_customization_ui)
     qt_add_executable(${monitor_suite}_tests tests/${monitor_suite}_tests.cpp
-      src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
+      ${GLANCELOT_VIEWER_SOURCES}
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
       src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
       src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
