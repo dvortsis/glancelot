@@ -251,6 +251,9 @@ QJsonObject presetPanes(const QJsonObject& panes) {
     return result;
 }
 // Named controller layouts and MONITOR-CUSTOM-01 display workspace presets never share a name, in any window slot.
+// MonitorCustomization names itself on the layout it coordinates (no header change), so a display preset save it still
+// has queued, because the file was busy, counts as taken here too; another process's queued save is refused when it lands.
+QObject* displayPresetQueue(const QObject* layout){return layout->property("_glancelotDisplayPresetQueue").value<QObject*>();}
 bool monitorPresetNamed(const QJsonObject& settings,const QString& name) {
     const auto slotRows=settings.value("monitorCustomization").toObject().value("slots").toObject();
     for(auto slot=slotRows.begin();slot!=slotRows.end();++slot)
@@ -304,8 +307,13 @@ bool PaneLayout::savePreset(const QString& name) {
     const auto result=glancelot::updateSettings([&](QJsonObject& settings){
         const auto value=settings.value("layoutPresets");
         if(!value.isUndefined()&&!value.isObject()){refusal=Refusal::Unreadable;return;}
-        if(monitorPresetNamed(settings,name)){refusal=Refusal::MonitorName;return;}
         auto presets=value.toObject();
+        // Only a new name is checked: re-saving a preset under its own name updates it, even a legacy record that
+        // already shares its name with a display workspace preset.
+        if(!presets.contains(name)) {
+            auto withQueued=settings;glancelot::settings_detail::overlayPendingSettings(displayPresetQueue(this),withQueued);
+            if(monitorPresetNamed(withQueued,name)){refusal=Refusal::MonitorName;return;}
+        }
         if(!presets.contains(name)&&presets.size()>=maxUserPresets){refusal=Refusal::TooMany;return;}
         auto previous=presets.value(name).toObject();
         if(!previous.isEmpty()&&newerVersion(previous)){refusal=Refusal::Newer;return;}

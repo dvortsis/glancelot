@@ -29,13 +29,19 @@ UiDialog {
     // coordinator) and wait while a display transaction is saving it.
     readonly property var monitor: typeof monitorCustomization !== "undefined" ? monitorCustomization : null
     readonly property bool layoutSaving: monitor !== null && monitor.saving
-    readonly property bool anyPaneFrozen: {
-        const panes = paneLayout.panes
-        for (const id in panes) if (panes[id].frozen) return true
-        return false
+    readonly property var paneNames: ({ tree: qsTr("Folder tree"), preview: qsTr("Image preview"), grid: qsTr("File grid"),
+                                         filmstrip: qsTr("Filmstrip"), topbar: qsTr("Top toolbar"), statusbar: qsTr("Status toolbar") })
+    readonly property var frozenPanes: {
+        const panes = paneLayout.panes, names = []
+        for (const id in panes) if (panes[id].frozen) names.push(paneNames[id] || id)
+        return names
     }
+    // About 70 characters of small text: a readable line length for descriptions and the controls stacked under them.
+    readonly property FontMetrics noteMetrics: FontMetrics { font.pixelSize: Theme.textSmall }
+    readonly property real measure: Math.round(noteMetrics.averageCharacterWidth * 70)
+    readonly property string savingReason: qsTr("Unavailable while display preferences are saving.")
     readonly property string presetBlockedReason: paneLayout.locked ? qsTr("Unlock the workspace layout to apply a pane layout preset.")
-        : anyPaneFrozen ? qsTr("Unfreeze every pane to apply a pane layout preset.")
+        : frozenPanes.length ? qsTr("Frozen: %1. Unfreeze to apply a pane layout preset.").arg(frozenPanes.join(", "))
         : layoutSaving ? qsTr("Display preferences are saving. Apply the preset when they finish.") : ""
     title: qsTr("Settings")
 
@@ -389,48 +395,69 @@ UiDialog {
                     objectName: "layoutLock"
                     Layout.fillWidth: true
                     text: qsTr("Lock workspace layout")
-                    description: qsTr("Keep pane positions and sizes fixed while using their contents.")
+                    description: dialog.layoutSaving ? dialog.savingReason : qsTr("Keep pane positions and sizes fixed while using their contents.")
                     checked: paneLayout.locked
                     enabled: !dialog.layoutSaving
                     onToggled: paneLayout.locked = checked
                 }
+                // Reset also clears the lock and every freeze, so it sits with the lock rather than with one pane's placement.
+                UiButton {
+                    objectName: "layoutReset"
+                    text: qsTr("Reset workspace layout")
+                    variant: "outline"
+                    enabled: !dialog.layoutSaving
+                    Accessible.description: resetNote.text
+                    onClicked: paneLayout.reset()
+                }
+                Note {
+                    id: resetNote
+                    Layout.maximumWidth: dialog.measure
+                    text: dialog.layoutSaving ? dialog.savingReason : qsTr("Restores the default pane placement, sizes and view, and turns off the lock and every freeze.")
+                }
                 // F049 presets: apply a saved arrangement in one step; save the current one under a name. Named and scoped
-                // apart from the per-window display workspace presets behind "Displays and workspaces…".
+                // apart from the per-window display workspace presets behind "Displays and workspaces…". The controls stack
+                // under the text so the description keeps a readable line length at every width.
                 SectionLabel { objectName: "layoutPresetHeading"; text: qsTr("Pane layout presets") }
-                SettingRow {
-                    label: qsTr("Pane layout")
-                    description: qsTr("Docked panes, shared by all windows. Never changes lock, freeze or displays.")
-                    RowLayout {
-                        spacing: Theme.gapSm
-                        UiComboBox {
-                            id: presetChoice
-                            objectName: "layoutPresetChoice"
-                            model: paneLayout.presetNames
-                            Accessible.name: qsTr("Pane layout preset")
-                        }
-                        UiButton {
-                            objectName: "layoutPresetApply"
-                            text: qsTr("Apply")
-                            enabled: dialog.presetBlockedReason.length === 0 && presetChoice.currentIndex >= 0
-                            Accessible.description: dialog.presetBlockedReason
-                            onClicked: paneLayout.applyPreset(presetChoice.currentText)
-                        }
-                        UiButton {
-                            objectName: "layoutPresetDelete"
-                            text: qsTr("Delete")
-                            variant: "outline"
-                            enabled: presetChoice.currentIndex >= 0 && !paneLayout.isBuiltInPreset(presetChoice.currentText)
-                            onClicked: paneLayout.deletePreset(presetChoice.currentText)
-                        }
+                Note {
+                    objectName: "layoutPresetScope"
+                    Layout.maximumWidth: dialog.measure
+                    text: qsTr("Saved for every window; applies to this window's docked panes. Never changes lock, freeze or displays.")
+                }
+                RowLayout {
+                    spacing: Theme.gapSm
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: dialog.measure
+                    UiComboBox {
+                        id: presetChoice
+                        objectName: "layoutPresetChoice"
+                        Layout.fillWidth: true
+                        model: paneLayout.presetNames
+                        Accessible.name: qsTr("Pane layout preset")
+                    }
+                    UiButton {
+                        objectName: "layoutPresetApply"
+                        text: qsTr("Apply")
+                        enabled: dialog.presetBlockedReason.length === 0 && presetChoice.currentIndex >= 0
+                        Accessible.description: dialog.presetBlockedReason
+                        onClicked: paneLayout.applyPreset(presetChoice.currentText)
+                    }
+                    UiButton {
+                        objectName: "layoutPresetDelete"
+                        text: qsTr("Delete")
+                        variant: "outline"
+                        enabled: presetChoice.currentIndex >= 0 && !paneLayout.isBuiltInPreset(presetChoice.currentText)
+                        onClicked: paneLayout.deletePreset(presetChoice.currentText)
                     }
                 }
                 Note {
                     objectName: "layoutPresetBlocked"
+                    Layout.maximumWidth: dialog.measure
                     visible: dialog.presetBlockedReason.length > 0
                     text: dialog.presetBlockedReason
                 }
                 SettingRow {
                     label: qsTr("Save pane layout as")
+                    Layout.maximumWidth: dialog.measure
                     RowLayout {
                         spacing: Theme.gapSm
                         UiTextField {
@@ -495,7 +522,9 @@ UiDialog {
                     property string paneId: paneChoice.ids[paneChoice.currentIndex]
                     Layout.fillWidth: true
                     text: qsTr("Freeze this pane")
-                    description: qsTr("Lock its placement and size and keep it visible.")
+                    description: dialog.layoutSaving ? dialog.savingReason
+                        : paneLayout.locked ? qsTr("Unlock the workspace layout to freeze or unfreeze a pane.")
+                        : qsTr("Lock its placement and size and keep it visible.")
                     checked: paneLayout.panes[paneId].frozen
                     enabled: !paneLayout.locked && !dialog.layoutSaving
                     onToggled: paneLayout.freeze(paneId,checked)
@@ -518,7 +547,6 @@ UiDialog {
                         }
                     }
                 }
-                UiButton { text: qsTr("Reset workspace layout"); onClicked: paneLayout.reset() }
                 Note { visible: paneLayout.feedback.length > 0; text: paneLayout.feedback }
 
                 SettingRow {

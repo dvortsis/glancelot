@@ -18,6 +18,7 @@
 #include <QUuid>
 #include <QPainter>
 #include <QSignalBlocker>
+#include <algorithm>
 #include <array>
 #include <optional>
 
@@ -93,6 +94,12 @@ struct MonitorCustomization::Private {
         for(const auto& existing:panes->presetNames())if(existing.compare(wanted,Qt::CaseInsensitive)==0)return true;
         return false;
     }
+    // Only a new or changed name may not match a pane layout preset; an unchanged legacy name can still be updated.
+    bool layoutPresetNameTaken(const QString& id,const QString& name) const {
+        for(const auto& row:data.value("presets").toList())
+            if(row.toMap().value("id")==id&&!id.isEmpty()&&row.toMap().value("name").toString().trimmed()==name.trimmed())return false;
+        return layoutPresetNamed(name);
+    }
     bool editable(const QString& id) {
         if(!monitor_state::paneIds.contains(id))return fail("Unknown pane.");
         if(panes->locked())return fail("Unlock the layout before moving panes.");
@@ -150,7 +157,8 @@ struct MonitorCustomization::Private {
         pending=true;feedback="Saving monitor preferences…";
         const bool accepted=settings_detail::saveWithRetry(q,"monitor-customization/"+number,
             [number,expected,owned,dockChanged,plannedDock,expectedLayout,applied,refused,written,writtenDock,layoutOnly](QJsonObject& root) {
-                *applied=false;auto candidate=root;
+                *applied=false;refused->clear();auto candidate=root; // also run as a read overlay: no stale refusal
+                const auto layoutPresetNames=root.value("layoutPresets").toObject().keys();
                 if(!layoutOnly){auto feature=root.value("monitorCustomization").toObject();
                 if(feature.contains("version")&&feature.value("version")!=QJsonValue(1)){*refused="A newer customization version was preserved.";return;}
                 auto slotRows=feature.value("slots").toObject();auto old=slotRows.value(number).toObject();
@@ -159,7 +167,11 @@ struct MonitorCustomization::Private {
                     const auto value=QJsonValue::fromVariant(it.value());
                     if(it.key()=="presets") {
                         QJsonArray rows;const auto before=old.value("presets").toArray();
-                        for(const auto& entry:value.toArray()){auto record=entry.toObject();for(const auto& prior:before)if(prior.toObject().value("id")==record.value("id")){record=mergeFields(prior.toObject(),record);break;}rows.append(record);}old[it.key()]=rows;
+                        for(const auto& entry:value.toArray()){auto record=entry.toObject();QString priorName;for(const auto& prior:before)if(prior.toObject().value("id")==record.value("id")){priorName=prior.toObject().value("name").toString().trimmed();record=mergeFields(prior.toObject(),record);break;}
+                            // A pane layout preset saved by another window while this save waited keeps its name.
+                            const auto name=record.value("name").toString().trimmed();
+                            if(name!=priorName&&std::any_of(layoutPresetNames.begin(),layoutPresetNames.end(),[&](const QString& taken){return taken.trimmed().compare(name,Qt::CaseInsensitive)==0;})){*refused="A pane layout preset already uses that name. Choose another name.";return;}
+                            rows.append(record);}old[it.key()]=rows;
                     }else if(it.key()=="outputsByDisplay") {
                         auto before=old.value(it.key()).toObject();const auto incoming=value.toObject();
                         for(const auto& id:before.keys())if(!incoming.contains(id)){auto remaining=before.value(id).toObject();for(const auto& field:monitor_state::options().keys())remaining.remove(field);if(remaining.isEmpty())before.remove(id);else before[id]=remaining;}
@@ -192,9 +204,10 @@ struct MonitorCustomization::Private {
                 const bool superseded=dockChanged&&panes->snapshot()!=currentDock;
                 if(dockChanged){settings_detail::cancelPendingSettings(panes,"layout/"+QString::number(slot)+"/");panes->restoreSnapshot(data.value("dock").toMap());}
                 feedback.clear();if(committed)committed();
-                if(superseded)feedback="Pane layout changes made while saving were replaced by the saved monitor layout.";
                 if(expectedWindow==displays->presentationWindow()){if(!routing.isEmpty())displays->setPresentationMode(routing);applyOutput();}
                 else feedback="Preferences saved; the newer presentation session was left unchanged.";
+                // A replaced pane edit is the one outcome nobody asked for, so it leads and is never overwritten.
+                if(superseded){const QString replaced="Pane layout changes made while saving were replaced by the saved monitor layout.";feedback=feedback.isEmpty()?replaced:replaced+" "+feedback;}
                 blocked.unblock();if(dockChanged)emit panes->changed();notify();
             });
         if(!accepted&&pending){pending=false;feedback="Monitor preferences could not be queued.";}
@@ -215,6 +228,9 @@ MonitorCustomization::MonitorCustomization(DisplayManager* manager,PaneLayout* p
         d->notify();
     });
     connect(panes,&PaneLayout::changed,this,[this]{d->notify();});
+    // STACK-F049: PaneLayout::savePreset overlays this coordinator's queued saves when it checks display preset names.
+    panes->setProperty("_glancelotDisplayPresetQueue",QVariant::fromValue<QObject*>(this));
+    connect(this,&QObject::destroyed,panes,[panes]{panes->setProperty("_glancelotDisplayPresetQueue",QVariant());});
 }
 MonitorCustomization::~MonitorCustomization()=default;
 void MonitorCustomization::setControllerWindow(QQuickWindow* window){
@@ -364,13 +380,13 @@ bool MonitorCustomization::savePreset(const QString& id,const QString& name,cons
     QVariantMap snapshot{{"output",outputOptions()},{"routingMode",d->displays->presentationModeString()}};
     if(kind=="workspace"){snapshot["panes"]=d->canonicalRoutes();snapshot["dock"]=d->panes->snapshot();}
     QVariantMap record=index<0?QVariantMap{}:rows[index].toMap();record["id"]=id.isEmpty()?QUuid::createUuid().toString(QUuid::WithoutBraces):id;record["name"]=name.trimmed();record["kind"]=kind;record["snapshot"]=snapshot;
+    if(d->layoutPresetNameTaken(id,name))return d->fail("A pane layout preset already uses that name. Choose another name.");
     if(index<0)rows.append(record);else rows[index]=record;
-    if(d->layoutPresetNamed(name))return d->fail("A pane layout preset already uses that name. Choose another name.");
     if(!monitor_state::presets(rows))return d->fail("Preset names must be unique, nonempty and at most80 characters; at most64 presets are allowed.");
     auto next=d->data;next["presets"]=rows;next["dock"]=d->panes->snapshot();return d->commit(next);
 }
 bool MonitorCustomization::renamePreset(const QString& id,const QString& name) {
-    if(d->layoutPresetNamed(name))return d->fail("A pane layout preset already uses that name. Choose another name.");
+    if(d->layoutPresetNameTaken(id,name))return d->fail("A pane layout preset already uses that name. Choose another name.");
     auto rows=presets();bool found=false;for(auto& v:rows){auto r=v.toMap();if(r.value("id")==id){r["name"]=name.trimmed();v=r;found=true;}}
     if(!found||!monitor_state::presets(rows))return d->fail("Choose an existing preset and a unique valid name.");auto next=d->data;next["presets"]=rows;next["dock"]=d->panes->snapshot();return d->commit(next);
 }

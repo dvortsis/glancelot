@@ -289,15 +289,18 @@ private slots:
         const auto entry=saved["layoutPresets"].toObject()["Captured"].toObject();
         QVERIFY(!entry.contains("locked"));
         for(const auto& pane:entry["panes"].toObject())QVERIFY(!pane.toObject().contains("frozen"));
+        // A refusal changes nothing on disk either: layouts[] is byte-for-byte what it was before the refused apply.
         const auto layoutBefore=saved["layouts"];
         QVERIFY(!model.applyPreset("Review"));QVERIFY(model.feedback().contains("Unlock"));QVERIFY(model.pane("topbar")["visible"].toBool());
+        QJsonObject after;QVERIFY(glancelot::readSettings(after).ok());QCOMPARE(after["layouts"],layoutBefore);
         model.setLocked(false);
+        QVERIFY(glancelot::readSettings(saved).ok());const auto unlockedBefore=saved["layouts"];
         QVERIFY(!model.applyPreset("Review"));QVERIFY(model.feedback().contains("Unfreeze"));QVERIFY(model.pane("topbar")["visible"].toBool());
+        QVERIFY(glancelot::readSettings(after).ok());QCOMPARE(after["layouts"],unlockedBefore);
         QVERIFY(model.freeze("tree",false));QVERIFY(model.applyPreset("Captured"));
         QVERIFY(!model.locked());QVERIFY(!model.pane("tree")["frozen"].toBool());
         PaneLayout other;other.setSlot(2);QVERIFY(other.applyPreset("Captured"));
         QVERIFY(!other.locked());QVERIFY(!other.pane("tree")["frozen"].toBool());
-        Q_UNUSED(layoutBefore);
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
     // Newer or unreadable preset data is preserved; names never collide with display workspace presets.
@@ -321,6 +324,23 @@ private slots:
         QVERIFY(!model.savePreset("Anything"));QVERIFY(model.feedback().contains("preserved"));QVERIFY(!model.deletePreset("Anything"));
         QVERIFY(glancelot::readSettings(saved).ok());QCOMPARE(saved["layoutPresets"],QJsonValue(QJsonArray{1,2}));
         QCOMPARE(model.presetNames(),(QStringList{"Default","Review","Browse"}));
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+    }
+    // Review round 1: a pane layout preset that already shared its name with a display workspace preset before names
+    // were kept apart can still be updated under that name; a new name is still refused, case-insensitively.
+    void legacyCollidingPresetNameStaysUpdatable() {
+        QTemporaryDir config;qputenv("GLANCELOT_CONFIG_DIR",config.path().toUtf8());
+        QVERIFY(glancelot::updateSettings([](QJsonObject& s) {
+            s["layoutPresets"]=QJsonObject{{"Studio",QJsonObject{{"version",1},{"legacy",true},{"panes",QJsonObject{}}}}};
+            s["monitorCustomization"]=QJsonObject{{"version",1},{"slots",QJsonObject{{"2",QJsonObject{{"presets",QJsonArray{QJsonObject{{"id","a"},{"name","Studio"},{"kind","presentation"}}}}}}}}};
+        }).ok());
+        PaneLayout model;model.setSlot(1);QVERIFY(model.resize("tree",310));
+        QVERIFY2(model.savePreset("Studio"),qPrintable(model.feedback()));QVERIFY(model.feedback().isEmpty());
+        QJsonObject saved;QVERIFY(glancelot::readSettings(saved).ok());
+        const auto entry=saved["layoutPresets"].toObject()["Studio"].toObject();
+        QCOMPARE(entry["panes"].toObject()["tree"].toObject()["extent"].toInt(),310);QVERIFY(entry["legacy"].toBool());
+        QVERIFY(!model.savePreset("STUDIO"));QVERIFY(model.feedback().contains("display workspace"));
+        QVERIFY(glancelot::readSettings(saved).ok());QVERIFY(!saved["layoutPresets"].toObject().contains("STUDIO"));
         qunsetenv("GLANCELOT_CONFIG_DIR");
     }
 };
