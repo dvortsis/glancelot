@@ -19,7 +19,7 @@ B2 is resolved except for one test, which is still mislabelled:
 | Item | Value |
 | --- | --- |
 | Reviewer | Fresh-context Claude reviewer (Opus). It did not implement EN-03 and did not do the round-1 or round-2 review |
-| Diff reviewed | `git diff e5c1e5c origin/claude/en-03-ctest-labels` (`fdc508c`): `CMakeLists.txt` (+3/-1), `cmake/TestLabels.cmake` (rewritten), `docs/TESTING.md`, handoff "Review round 2" |
+| Diff reviewed | `git diff e5c1e5c origin/claude/en-03-ctest-labels` (`fdc508c`): `CMakeLists.txt` (+4/-1), `cmake/TestLabels.cmake` (rewritten), `docs/TESTING.md`, handoff "Review round 2" |
 | Code worktree | `.worktrees/review-en-05`, moved from detached `e5c1e5c` to detached `fdc508c`. It stays there, clean |
 | Build directory | `build-review-en-05`, reconfigured and built incrementally |
 | Platform | Windows 11 Pro 10.0.26200, MSVC 2022 x64, CMake/CTest from `.tools/python/Scripts`, Ninja, Qt 6.8.3 msvc2022_64 |
@@ -39,11 +39,11 @@ The source says otherwise:
 - `:23` and `:45` call `openFolder(h, media)`, which runs `h.viewer.open(media.path(0))` (`tests/ui_test_support.hpp:126`). That is `ViewerController::open`, which starts `glancelot-decoder` (`src/app/viewer_controller.cpp:870`, `:987`).
 - The fake `PreviewProvider` replaces only the `thumb` image provider. It does not stop the viewer's own decode.
 
-The process poller (method below) saw it in each of three runs:
+The process poller (method below) saw it in both poller sessions, so in at least two of three runs. The poller keeps one line per test and session, so session 2's two runs collapse into one line. The static path above is decisive on its own.
 
 ```
 pathbar_ui: pathbar_ui_tests.exe -> glancelot-decoder.exe     (poller session 1: 1 run)
-pathbar_ui: pathbar_ui_tests.exe -> glancelot-decoder.exe     (poller session 2: 2 runs)
+pathbar_ui: pathbar_ui_tests.exe -> glancelot-decoder.exe     (poller session 2: 2 runs, one line)
 ```
 
 **Required:**
@@ -223,7 +223,7 @@ process : selection_export directory_listing file_operations
 
 **Method.** A C# Toolhelp32 snapshot poller ran in the background while targeted `ctest -R ^<test>$` runs went one at a time, outside the gate lock (targeted runs are exempt). It recorded every process whose parent was a `*_tests.exe` whose image path lies in `build-review-en-05`, so other agents' builds are excluded. It polled every 5 ms plus the snapshot cost (2324 polls in 76.8 s, about 33 ms per cycle).
 
-The poller misses short-lived children. The positive control `io_scheduler` was seen in only one of three runs. A run with no child is therefore weak evidence by itself, so each "no child" result below is paired with the static checks.
+The poller misses short-lived children. The positive control `io_scheduler` was missed in at least one of three runs (seen in session 2 only). The poller keeps one line per test and session, so repeated runs in a session collapse. A run with no child is therefore weak evidence by itself, so each "no child" result below is paired with the static checks.
 
 **Three tests newly labelled `process`:**
 
@@ -242,7 +242,7 @@ The poller misses short-lived children. The positive control `io_scheduler` was 
 | `format` | none (2 runs) | same; `GLANCELOT_DECODER_PATH` is defined but unused |
 | `fs_watch_ui` | none (2 runs) | `navigateDirectory` on an empty `QTemporaryDir` (`fs_watch_ui_tests.cpp:34`, `:51`) |
 | `favorites`, `mutation`, `shortcuts_help`, `ui_settings`, `monitor_customization`, `themes`, `metadata` | none | same grep finds nothing |
-| **`pathbar_ui`** | **`pathbar_ui_tests.exe -> glancelot-decoder.exe` (3 of 3 runs)** | `openFolder` -> `viewer.open(p1.png)` (R3-1) |
+| **`pathbar_ui`** | **`pathbar_ui_tests.exe -> glancelot-decoder.exe` (both sessions, at least 2 of 3 runs)** | `openFolder` -> `viewer.open(p1.png)` (R3-1) |
 
 Static cross-check: of the targets with `add_dependencies(<t> glancelot-decoder)`, the ones not labelled `process` are `favorites`, `format`, `fs_watch_ui`, `monitor_output`, `monitor_customization`, `mutation`, `pathbar_ui`, `shortcuts_help` and `ui_settings`. A grep of `tests/` for `openFolder(`, `viewer.open`, `controller.open`, `ThumbnailService`, `QProcess`, `std::system`, `startDetached` and `navigateDirectory` hits only `pathbar_ui` (through `ui_test_support.hpp`) and `fs_watch_ui` (empty folder) among them. So `pathbar_ui` is the only remaining mislabel I found.
 
@@ -277,7 +277,7 @@ favorites, mutation, shortcuts_help, ui_settings, monitor_customization, themes,
 children seen: (none)
 ```
 
-An earlier CIM-based poller (about 350 ms per cycle) saw only `recovery_controller_tests.exe -> glancelot-decoder.exe` over the same kind of run, which is why I switched to the faster one. `thumbnail_tests.exe -> WerFault.exe` is from a crash-isolation case in that test, which passed.
+An earlier CIM-based poller (about 350 ms per cycle) saw only `recovery_controller_tests.exe -> glancelot-decoder.exe` over the same kind of run, which is why I switched to the faster one. `thumbnail_tests.exe -> thumbnail_tests.exe` and `-> WerFault.exe` come from the test's own fault cases: it builds `ThumbnailService(QCoreApplication::applicationFilePath())` (`tests/thumbnail_tests.cpp:383`) and runs itself as a fake decoder, and its `crash` mode calls `std::abort()` (`:101`). The test passed.
 
 ### Serial `fast` run inside the gate lock
 
