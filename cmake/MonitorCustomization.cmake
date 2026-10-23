@@ -33,7 +33,8 @@ glancelot_attach_monitor_customization(glancelot)
 qt_target_qml_sources(glancelot QML_FILES ui/MonitorSettings.qml ui/DetachedPaneHost.qml)
 
 if(BUILD_TESTING)
-  foreach(monitor_suite IN ITEMS monitor_customization monitor_customization_ui)
+  # STACK-F054-COVERAGE provisional: translation_coverage_ui shares this harness; the lead may move it to its own fragment.
+  foreach(monitor_suite IN ITEMS monitor_customization monitor_customization_ui translation_coverage_ui)
     qt_add_executable(${monitor_suite}_tests tests/${monitor_suite}_tests.cpp
       src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
