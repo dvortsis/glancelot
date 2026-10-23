@@ -73,7 +73,7 @@ While a gate runs, avoid starting other full gates or heavy builds on this machi
 
 Two read-mostly helpers for the lead on this PC, both run from the main checkout in one PowerShell 7 process.
 
-**Build slots.** `scripts/build-slot.ps1` caps local builds at three at once and holds every build while a full gate runs.
+**Build slots.** `scripts/build-slot.ps1` caps local builds at three at once and keeps builds and full gates apart.
 
 ```powershell
 & C:\src\Github\Glancelot\scripts\build-slot.ps1 -Branch claude/x -Run { cmake --build build-claude-x }
@@ -82,10 +82,18 @@ Two read-mostly helpers for the lead on this PC, both run from the main checkout
 
 - Each slot is a file `glancelot-build-slot-<n>.json` in the shared git dir (`git rev-parse --git-common-dir`). It records pid, host, branch, cwd and start time.
 - `-Run` waits for a free slot, up to `-TimeoutMinutes` (default 120). A slot whose holder process is dead, whose PID was reused, or that is older than `-StaleHours` (default 6) counts as free. It is removed only if it still holds the record judged stale. On Windows the holder keeps its slot file open, so a live holder's slot cannot be deleted: a build that runs longer than `-StaleHours` keeps its slot, and only an exited holder's slot is ever freed. The script never kills processes.
-- While another process holds the gate lock (`scripts/gate-lock.ps1`), `-Run` waits. A build started inside the gate holder's own `-Run` block (same process, or a child that inherits `GLANCELOT_GATE_LOCK_HELD`) does not wait. The gate lock itself is never removed here.
-- Nested calls in the same process reuse the slot (`GLANCELOT_BUILD_SLOT_HELD`).
+- A full gate and a build never overlap, in either direction:
+  - `-Run` waits while another process tree holds the gate lock or has a gate request pending.
+  - `gate-lock.ps1 -Run` first writes `glancelot-gate-pending-<pid>.json`, so no new slot starts while it waits. It then waits ("Waiting: N build slots held", within `-WaitMinutes`) until no other process tree holds a slot, takes the lock, and removes the marker.
+  - Pending markers are stale-safe like slots: a crashed gate request does not block builds.
+- Nothing deadlocks on itself:
+  - A slot held by the current process or one of its ancestors does not delay that process's gate. So a reviewer that holds a slot can call `gate-lock.ps1` for its targeted tests.
+  - A build started inside the gate holder's own tree (same process, an ancestor, or a child that inherits `GLANCELOT_GATE_LOCK_HELD`) never waits.
+  - The gate lock itself is never removed by `build-slot.ps1`.
+- Nested calls in the same process, or in a child of the slot holder, reuse the slot (`GLANCELOT_BUILD_SLOT_HELD`).
 - Use one slot count for every caller: `-Slots` (default 3) or `$env:GLANCELOT_BUILD_SLOTS`. A caller only looks at slots 1 to N.
-- `gate-lock.ps1` does not wait for build slots. Start a full gate only once `-Status` shows no live slots.
+- `gate-lock.ps1 -Status` and `build-slot.ps1 -Status` both show the gate lock, pending gate requests and every slot (live or stale). The shared lock code is `scripts/lock-common.ps1`.
+- A gate run through an older checkout's `gate-lock.ps1` does not know about slots. Run gates through the main checkout's script.
 
 **Inbox.** `scripts/lead-inbox.ps1` fetches with `--prune` and prints one row per `origin/claude/*` packet branch. It is read-only.
 
