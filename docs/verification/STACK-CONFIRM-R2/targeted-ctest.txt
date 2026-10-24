@@ -1,0 +1,30 @@
+Waiting for gate lock held by dvort on review-phase1-followups since 10/24/2026 15:04:30
+Test project C:/src/Github/Glancelot/build-review-stack-confirm-r2
+    Start  7: viewer_acceptance
+1/8 Test  #7: viewer_acceptance ................   Passed   10.64 sec
+    Start 12: folder_grid
+2/8 Test #12: folder_grid ......................   Passed  214.96 sec
+    Start 13: input_ui
+3/8 Test #13: input_ui .........................   Passed   74.28 sec
+    Start 34: animation
+4/8 Test #34: animation ........................   Passed    0.53 sec
+    Start 44: tabs_recovery
+5/8 Test #44: tabs_recovery ....................   Passed   60.90 sec
+    Start 47: translation_coverage_ui
+6/8 Test #47: translation_coverage_ui ..........   Passed   24.23 sec
+    Start 49: command_routing
+7/8 Test #49: command_routing ..................   Passed   10.22 sec
+    Start 52: stack_confirm_ui
+8/8 Test #52: stack_confirm_ui .................   Passed   41.66 sec
+
+100% tests passed out of 8
+
+Label Time Summary:
+budget       = 289.24 sec*proc (2 tests)
+clipboard    = 289.24 sec*proc (2 tests)
+fast         =  72.07 sec*proc (3 tests)
+native       = 214.96 sec*proc (1 test)
+process      = 436.89 sec*proc (7 tests)
+ui           = 365.34 sec*proc (5 tests)
+
+Total Test time (real) = 437.43 sec

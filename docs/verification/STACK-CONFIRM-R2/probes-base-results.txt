@@ -1,0 +1,36 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) No QRhi found for window 0x1f82796ab70, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) No QRhi found for window 0x1f82796ab70, QQuickRhiItem will not be functional
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) t=0ms a #1/2 ready=1 loading=0 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) t=1024ms a #2/2 ready=0 loading=1 on=1
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) No QRhi found for window 0x1f82796ab70, QQuickRhiItem will not be functional
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) t=1177ms a #2/2 ready=1 loading=0 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) t=2045ms b #1/1 ready=0 loading=1 on=1
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) No QRhi found for window 0x1f82796ab70, QQuickRhiItem will not be functional
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) t=2147ms b #1/1 ready=1 loading=0 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) t=3064ms c #1/2 ready=0 loading=1 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo) notice: 
+PASS   : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(good single photo)
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) No QRhi found for window 0x1f82a296090, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) No QRhi found for window 0x1f82a296090, QQuickRhiItem will not be functional
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) t=0ms a #1/2 ready=1 loading=0 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) t=1067ms a #2/2 ready=0 loading=1 on=1
+QWARN  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) No QRhi found for window 0x1f82a296090, QQuickRhiItem will not be functional
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) t=1169ms a #2/2 ready=1 loading=0 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) t=2035ms b #1/1 ready=0 loading=1 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) t=2136ms b #1/1 ready=0 loading=0 on=1
+QINFO  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) notice: 
+FAIL!  : StackConfirmUiTests::probeSlideshowThroughOnePhotoFolder(undecodable single photo) 'QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/c")' returned FALSE. (the slideshow did not cross the one-photo folder into c)
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r2\tests\stack_confirm_ui_tests.cpp(323) : failure location
+QWARN  : StackConfirmUiTests::probeSlideshowWhenAnotherTabCloses() No QRhi found for window 0x1f82a298090, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::probeSlideshowWhenAnotherTabCloses() No QRhi found for window 0x1f82a298090, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::probeSlideshowWhenAnotherTabCloses() No QRhi found for window 0x1f82a298090, QQuickRhiItem will not be functional
+QINFO  : StackConfirmUiTests::probeSlideshowWhenAnotherTabCloses() after closing the other (inactive) tab: activeTab 0 slideshowOn true
+PASS   : StackConfirmUiTests::probeSlideshowWhenAnotherTabCloses()
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 4 passed, 1 failed, 0 skipped, 0 blacklisted, 18645ms
+********* Finished testing of StackConfirmUiTests *********

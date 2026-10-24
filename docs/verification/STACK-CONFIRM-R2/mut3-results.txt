@@ -1,0 +1,13 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x180d5fbfc70, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x180d5fbfc70, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x180d5fbfc70, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() '!flag(h, "slideshowOn")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r2\tests\stack_confirm_ui_tests.cpp(83) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 63125ms
+********* Finished testing of StackConfirmUiTests *********

@@ -1,0 +1,18 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1f416bb5db0, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1f416bb5db0, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1f416bb5db0, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1f416bb5db0, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() '!flag(h, "slideshowOn")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r2\tests\stack_confirm_ui_tests.cpp(119) : failure location
+QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x1f41732f740, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x1f41732f740, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() 'chip("image")->hasActiveFocus()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r2\tests\stack_confirm_ui_tests.cpp(216) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 39819ms
+********* Finished testing of StackConfirmUiTests *********

@@ -1,0 +1,137 @@
+diff --git a/tests/stack_confirm_ui_tests.cpp b/tests/stack_confirm_ui_tests.cpp
+index 5bfd974..5e5197e 100644
+--- a/tests/stack_confirm_ui_tests.cpp
++++ b/tests/stack_confirm_ui_tests.cpp
+@@ -6,6 +6,7 @@
+ #include "ui_test_support.hpp"
+ #include <QAccessible>
+ #include <QAccessibleInterface>
++#include <QElapsedTimer>
+ 
+ namespace {
+ QQuickItem* noticeItem(Harness& h) { return named(h.window, "deleteNotice"); }
+@@ -286,6 +287,124 @@ private slots:
+ 
+         }
+     }
++    // ---- STACK-CONFIRM round 2 review probes (temporary; not part of the packet) ----
++    // R2-P1: boundary "continue" through a folder with a single photo (a: 2, b: 1, c: 2). Does the slideshow reach c?
++    void probeSlideshowThroughOnePhotoFolder_data() {
++        QTest::addColumn<bool>("badSingle");
++        QTest::newRow("good single photo") << false;
++        QTest::newRow("undecodable single photo") << true;
++    }
++    void probeSlideshowThroughOnePhotoFolder() {
++        QFETCH(bool, badSingle);
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QString a = makeFolder(root.path(), "a", 2), b = makeFolder(root.path(), "b", 1), c = makeFolder(root.path(), "c", 2);
++        QVERIFY(!a.isEmpty() && !b.isEmpty() && !c.isEmpty());
++        if (badSingle) overwriteWithText(QDir(b).filePath("b-1.png"));
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(a).filePath("a-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h)); focusCanvas(h);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++        h.viewer.raiseRoot(); QTest::qWait(500);
++        h.viewer.setBoundaryMode("continue");
++        setSlideshowSeconds(h, 1);
++        h.viewer.trigger("slideshow");
++        QTRY_VERIFY(flag(h, "slideshowOn"));
++        QElapsedTimer t; t.start();
++        QString last;
++        while (t.elapsed() < 12000) {
++            const QString now = QString("%1 #%2/%3 ready=%4 loading=%5 on=%6").arg(QDir(h.viewer.directory()).dirName())
++                .arg(h.viewer.currentIndex()).arg(h.viewer.fileCount()).arg(h.viewer.imageReady()).arg(h.viewer.loading()).arg(flag(h, "slideshowOn"));
++            if (now != last) { qInfo().noquote() << QString("t=%1ms").arg(t.elapsed()) << now; last = now; }
++            if (QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/c") && h.viewer.currentIndex() == 2 && h.viewer.imageReady()) break;
++            QTest::qWait(50);
++        }
++        qInfo().noquote() << "notice:" << noticeText(h);
++        QVERIFY2(QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/c") && h.viewer.currentIndex() == 2, "the slideshow did not cross the one-photo folder and reach c-2");
++    }
++    // R2-P2: a good photo keeps its full interval (3 s pace): the skip timer never runs and each photo is held ~3 s.
++    void probeGoodPhotosKeepTheirPace() {
++        Media media(4, QSize(64, 48));
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
++        h.viewer.setBoundaryMode("loop");
++        setSlideshowSeconds(h, 3);
++        QObject* skip = h.object("slideshowSkipTimer"); QVERIFY(skip);
++        h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
++        QElapsedTimer t; t.start();
++        int index = h.viewer.currentIndex(); qint64 since = 0; bool skipRan = false; QList<qint64> holds;
++        while (t.elapsed() < 10500) {
++            skipRan = skipRan || skip->property("running").toBool();
++            if (h.viewer.currentIndex() != index) { holds << t.elapsed() - since; since = t.elapsed(); index = h.viewer.currentIndex(); }
++            QTest::qWait(20);
++        }
++        qInfo() << "hold times (ms):" << holds << "skip timer ran:" << skipRan;
++        QVERIFY(!skipRan);
++        for (int i = 1; i < holds.size(); ++i) QVERIFY2(holds[i] >= 2800, "a good photo was held for less than the pace");
++    }
++    // R2-P3: keyboard on the type chips beyond the tested keys: arrows, Tab past the last chip, Shift+Tab before the first.
++    void probeChipKeyboardEdges() {
++        QTemporaryDir dir; QVERIFY(dir.isValid());
++        QVERIFY(QDir(dir.path()).mkpath("sub1"));
++        QImage image(32, 24, QImage::Format_RGB32); image.fill(Qt::red);
++        QVERIFY(image.save(dir.filePath("a.png")) && image.save(dir.filePath("b.png")) && image.save(dir.filePath("c.png")));
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.open(dir.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h));
++        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 4);
++        auto focusName = [&] { auto* f = h.window->activeFocusItem(); return f ? (f->objectName().isEmpty() ? QString(f->metaObject()->className()) : f->objectName()) : QString("<none>"); };
++        auto state = [&](const char* what) {
++            qInfo().noquote() << what << "-> focus" << focusName() << "| viewer #" << h.viewer.currentIndex() << "| cursorRow" << h.fileGrid.cursorRow()
++                              << "| gridMode" << flag(h, "gridMode") << "| kindFilter" << h.fileGrid.kindFilter();
++        };
++        QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier); QTest::qWait(150); state("Ctrl+Shift+F");
++        for (auto [key, label] : {std::pair{Qt::Key_Right, "Right"}, {Qt::Key_Left, "Left"}, {Qt::Key_Down, "Down"}, {Qt::Key_Up, "Up"}, {Qt::Key_End, "End"}}) {
++            QTest::keyClick(h.window, key); QTest::qWait(150); state(label);
++        }
++        QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier); QTest::qWait(150);
++        QTest::keyClick(h.window, Qt::Key_Tab); QTest::qWait(100); state("Tab 1");
++        QTest::keyClick(h.window, Qt::Key_Tab); QTest::qWait(100); state("Tab 2");
++        QTest::keyClick(h.window, Qt::Key_Tab); QTest::qWait(100); state("Tab 3 (past the last chip)");
++        QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier); QTest::qWait(150);
++        QTest::keyClick(h.window, Qt::Key_Backtab, Qt::ShiftModifier); QTest::qWait(100); state("Shift+Tab before the first chip");
++    }
++    // R2-P4: closing another tab (not the active one) while the slideshow runs.
++    void probeSlideshowWhenAnotherTabCloses() {
++        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
++        h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), 2);
++        h.viewer.open(media.path(0)); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000); QTRY_COMPARE(h.viewer.activeTab(), 1);
++        focusCanvas(h);
++        setSlideshowSeconds(h, 5); h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
++        h.viewer.closeTab(0); QTest::qWait(300);
++        qInfo() << "after closing the other (inactive) tab: activeTab" << h.viewer.activeTab() << "slideshowOn" << flag(h, "slideshowOn");
++    }
++    // R2-P5: a wheel over an overflowing tab strip scrolls the strip only: the photo stays and the slideshow keeps going.
++    void probeWheelOverTabStrip() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        QStringList folders;
++        for (const char* n : {"A folder with a long name number one for the strip", "B folder with a long name number two for the strip", "C folder with a long name number three for the strip"})
++            { folders << makeFolder(root.path(), n, 3); QVERIFY(!folders.last().isEmpty()); }
++        Harness h; QVERIFY(h.window); h.window->resize(900, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(folders[0]).filePath("A-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h));
++        for (int i = 1; i < 3; ++i) {
++            h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), i + 1);
++            h.viewer.open(QDir(folders[i]).filePath(QString("%1-1.png").arg(QChar('A' + i)))); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        }
++        focusCanvas(h);
++        setSlideshowSeconds(h, 10); h.viewer.trigger("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
++        QMetaObject::invokeMethod(h.window, "wakeHud"); QTest::qWait(500);
++        auto* strip = named(h.window, "tabStrip"); QVERIFY(strip && strip->isVisible());
++        const int before = h.viewer.currentIndex(); const qreal x0 = strip->property("contentX").toReal();
++        const QPoint at = sceneCenter(strip);
++        for (int i = 0; i < 3; ++i) { sendWheel(h, at, QPoint(), QPoint(0, 120), Qt::NoModifier); QTest::qWait(60); }
++        QTest::qWait(300);
++        qInfo() << "strip contentWidth" << strip->property("contentWidth").toReal() << "width" << strip->width()
++                << "contentX" << x0 << "->" << strip->property("contentX").toReal()
++                << "| viewer index" << before << "->" << h.viewer.currentIndex() << "| slideshowOn" << flag(h, "slideshowOn");
++    }
+ };
+ 
+ QTEST_MAIN(StackConfirmUiTests)
