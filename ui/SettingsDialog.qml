@@ -493,6 +493,8 @@ UiDialog {
                     visible: dialog.presetBlockedReason.length === 0 && dialog.presetApplyRefusal.length > 0
                     text: dialog.presetApplyRefusal
                     color: Theme.danger
+                    // The layout sizes the note after it appears; reveal it again once its height is known.
+                    onHeightChanged: if (visible && height > 0) Qt.callLater(dialog.revealItem, applyRefusalNote)
                 }
                 // Stacked like the preset row: the name field shares the preset choice's left edge and Save ends with Delete.
                 Label {
@@ -532,6 +534,7 @@ UiDialog {
                     visible: dialog.presetSaveRefusal.length > 0
                     text: dialog.presetSaveRefusal
                     color: Theme.danger
+                    onHeightChanged: if (visible && height > 0) Qt.callLater(dialog.revealItem, saveRefusalNote)
                 }
                 SectionLabel { text: qsTr("Pane placement") }
                 SettingRow {
