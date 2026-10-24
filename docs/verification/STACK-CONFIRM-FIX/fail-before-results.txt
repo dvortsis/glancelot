@@ -3,40 +3,40 @@ Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared 
 PASS   : StackConfirmUiTests::initTestCase()
 QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
 Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
-QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x22d59e9c400, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x22d59e9c400, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x22d59e9c400, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x22d59e9c400, QQuickRhiItem will not be functional
-PASS   : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto()
-QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x22d595e9630, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x22d595e9630, QQuickRhiItem will not be functional
-PASS   : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun()
-QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x22d595e9530, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x22d595e9530, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x22d595e9530, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x22d595e9530, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x1e66a379ed0, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x1e66a379ed0, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() Compared values are not the same
+   Actual   (h.viewer.currentIndex()): 2
+   Expected (3)                      : 3
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(64) : failure location
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x1e66dcf9c60, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x1e66dcf9c60, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() '!flag(h, "slideshowOn")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(83) : failure location
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x1e66dcfa960, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x1e66dcfa960, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x1e66dcfa960, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x1e66dcfa960, QQuickRhiItem will not be functional
 PASS   : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary()
-QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x22d5ac16850, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x22d5ac16850, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x22d5ac16850, QQuickRhiItem will not be functional
-PASS   : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen()
-QWARN  : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor() No QRhi found for window 0x22d595e7d30, QQuickRhiItem will not be functional
-PASS   : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor()
-QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x22d595e6a30, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x22d595e6a30, QQuickRhiItem will not be functional
-PASS   : StackConfirmUiTests::typeChipsWorkFromTheKeyboard()
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x22d5a25c280, QQuickRhiItem will not be functional
-PASS   : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView()
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1e66dcf7160, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1e66dcf7160, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1e66dcf7160, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x1e66dcf7160, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() '!flag(h, "slideshowOn")' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(119) : failure location
+QWARN  : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor() No QRhi found for window 0x1e66dcf7760, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor() 'firstVisible() == before' returned FALSE. (width 1180 (6 columns): first visible 18 before, 19 in details)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(158) : failure location
+QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x1e66dcf9f60, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x1e66dcf9f60, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() 'chip("folder")->hasActiveFocus()' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(206) : failure location
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x1e66ce33970, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x1e66ce33970, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x1e66ce33970, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x1e66ce33970, QQuickRhiItem will not be functional
+FAIL!  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() 'fullyInside(strip, tab)' returned FALSE. (width 1180, active tab 2: the active tab is out of view)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(277) : failure location
 PASS   : StackConfirmUiTests::cleanupTestCase()
-Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 51320ms
+Totals: 3 passed, 6 failed, 0 skipped, 0 blacklisted, 148437ms
 ********* Finished testing of StackConfirmUiTests *********
