@@ -642,7 +642,7 @@ ApplicationWindow {
     // folder boundary mode (a stop boundary ends it) and ends on any manual navigation, Escape, a modal or focus loss.
     property bool slideshowOn: false
     property int slideshowSeconds: 5
-    property int slideshowLastIndex: -1
+    property int slideshowTabs: 1
     // A photo that cannot be shown (undecodable, or gone since the listing) counts as shown: its failure stays in the
     // status bar for a moment and the slideshow steps on. After this many such photos in a row (or a whole pass of a
     // short folder) nothing is playable, so it stops with a notice instead of cycling through errors forever. Five is
@@ -655,29 +655,39 @@ ApplicationWindow {
     property string slideshowStepFrom: "" // the photo a step left; non-empty until that step has landed on another photo
     function startSlideshow() {
         if (viewer.fileCount < 2 || gridMode) return
-        slideshowLastIndex = -1; slideshowFailures = 0; slideshowStepFrom = ""
-        slideshowDirectory = viewer.directory; slideshowTab = viewer.activeTab
+        slideshowFailures = 0; slideshowStepFrom = ""
+        slideshowDirectory = viewer.directory; slideshowTab = viewer.activeTab; slideshowTabs = Math.max(1, viewer.tabs.length)
         slideshowOn = true; slideshowTimer.restart(); wakeHud()
     }
     function stopSlideshow() { slideshowOn = false; slideshowTimer.stop(); slideshowSkipTimer.stop() }
     function setSlideshowSeconds(seconds) { slideshowSeconds = Math.max(1, Math.min(60, seconds)); if (slideshowOn) slideshowTimer.restart() }
     function slideshowStep() {
         if (!slideshowOn || viewer.loading || app.modalOpen) return
-        if (viewer.fileCount < 2) { stopSlideshow(); return }
+        // No folder-size check here: under "continue" the slideshow legitimately passes through folders with one photo.
+        // The failure bound is flat under "continue" and "stop" (it must not depend on the folder the step landed in) and
+        // is one full pass of a short folder only when the slideshow loops that folder.
+        const failureBound = viewer.boundaryMode === "loop" ? Math.max(2, Math.min(slideshowFailureLimit, viewer.fileCount)) : slideshowFailureLimit
         if (viewer.imageReady) slideshowFailures = 0
-        else if (++slideshowFailures >= Math.min(slideshowFailureLimit, viewer.fileCount)) {
+        else if (++slideshowFailures >= failureBound) {
             stopSlideshow()
             deleteFlow.showNotice(qsTr("Slideshow stopped: the last %1 photos could not be opened.").arg(slideshowFailures))
             return
         }
-        if (slideshowLastIndex === viewer.currentIndex) { stopSlideshow(); return } // the last step went nowhere: a boundary
-        slideshowLastIndex = viewer.currentIndex
+        // The last step went nowhere (a stop boundary): the photo is still the one it left. By path, not index: a step from
+        // the only photo of one folder to the only photo of the next lands on the same index.
+        if (slideshowStepFrom.length && viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }
         slideshowStepFrom = viewer.filePath
         viewer.next()
     }
     function slideshowObserve() {
         if (!slideshowOn) return
-        if (viewer.activeTab !== slideshowTab) { stopSlideshow(); return }
+        // A change of the active tab is navigation; closing some other tab only renumbers it (the tab count drops).
+        const tabs = Math.max(1, viewer.tabs.length)
+        if (viewer.activeTab !== slideshowTab) {
+            if (tabs < slideshowTabs) slideshowTab = viewer.activeTab
+            else { stopSlideshow(); return }
+        }
+        slideshowTabs = tabs
         if (viewer.directory !== slideshowDirectory) {
             if (!slideshowStepFrom.length) { stopSlideshow(); return } // not the slideshow's own step across a folder boundary
             slideshowDirectory = viewer.directory
@@ -1874,6 +1884,7 @@ ApplicationWindow {
                 Layout.minimumWidth: 0
                 clip: true
                 contentWidth: tabRow.childrenRect.width
+                rightMargin: interactive ? tabCap + Theme.controlHeight : 0 // room to end on a tab boundary
                 interactive: contentWidth > width
                 boundsBehavior: Flickable.StopAtBounds
                 flickableDirection: Flickable.HorizontalFlick
@@ -1887,7 +1898,16 @@ ApplicationWindow {
                     if (!item || width <= 0) return
                     const left = item.x, right = item.x + item.width
                     if (left < contentX) contentX = Math.max(0, left)
-                    else if (right > contentX + width) contentX = Math.min(Math.max(0, contentWidth - width), right - width)
+                    else if (right > contentX + width) {
+                        // Scroll no further than needed, then on to the next tab boundary so no tab shows as a clipped sliver
+                        // at the left edge (the margin below leaves room for that last step).
+                        let target = right - width
+                        for (let i = 0; i < tabRepeater.count; ++i) {
+                            const tab = tabRepeater.itemAt(i)
+                            if (tab && tab.x >= target - 0.5) { target = tab.x; break }
+                        }
+                        contentX = Math.min(Math.max(0, target), Math.max(0, contentWidth + rightMargin - width))
+                    }
                 }
                 function revealActive() { reveal(tabRepeater.itemAt(viewer.activeTab)) }
                 onWidthChanged: Qt.callLater(revealActive)

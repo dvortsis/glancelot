@@ -105,6 +105,58 @@ private slots:
         QTest::qWait(300);
         QVERIFY2(flag(h, "slideshowOn"), "the slideshow's own step into the next folder ended it");
     }
+    // R2-N1: a failed photo is passed after about a second even at a slow pace (it is not held for a whole interval).
+    void slideshowPassesABadPhotoPromptlyAtASlowPace() {
+        Media media(3, QSize(64, 48));
+        overwriteWithText(media.path(1));
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        QTRY_COMPARE(h.viewer.currentIndex(), 1);
+        h.viewer.setBoundaryMode("loop");
+        setSlideshowSeconds(h, 6);
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 2, 9000); // the bad photo is reached on the 6 s tick
+        QElapsedTimer sinceBad; sinceBad.start();
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 3, 4000); // long before the next 6 s tick
+        QVERIFY2(sinceBad.elapsed() < 3500, qPrintable(QString::number(sinceBad.elapsed())));
+        QVERIFY(flag(h, "slideshowOn"));
+    }
+    // R2-B1: under the default "continue" boundary the slideshow passes through a folder with a single photo, and a step
+    // from one folder's only photo to the next folder's first photo is not mistaken for a dead end.
+    void slideshowPassesThroughAOnePhotoFolder() {
+        QTemporaryDir root; QVERIFY(root.isValid());
+        const QString a = makeFolder(root.path(), "a", 2), b = makeFolder(root.path(), "b", 1), c = makeFolder(root.path(), "c", 2);
+        QVERIFY(!a.isEmpty() && !b.isEmpty() && !c.isEmpty());
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.setFilmstripVisible(false);
+        h.viewer.open(QDir(a).filePath("a-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QVERIFY(activate(h)); focusCanvas(h);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
+        h.viewer.raiseRoot(); QTest::qWait(500);
+        h.viewer.setBoundaryMode("continue");
+        setSlideshowSeconds(h, 1);
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("c-2.png"), 15000);
+        QVERIFY2(flag(h, "slideshowOn"), "the slideshow stopped on its way through the one-photo folder");
+        QVERIFY2(noticeText(h).isEmpty(), qPrintable(noticeText(h)));
+    }
+    // R2-N2: closing a tab other than the active one is not navigation.
+    void slideshowSurvivesClosingAnotherTab() {
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), 2);
+        QTRY_COMPARE(h.viewer.activeTab(), 1);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
+        setSlideshowSeconds(h, 5);
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QVERIFY(h.viewer.closeTab(0)); // the active tab becomes number 0
+        QTRY_COMPARE(h.viewer.activeTab(), 0);
+        QTest::qWait(500);
+        QVERIFY2(flag(h, "slideshowOn"), "closing an inactive tab ended the slideshow");
+    }
     // N-2: another tab, or another folder opened by hand, ends the slideshow (and its indicator).
     void slideshowEndsOnTabSwitchAndFolderOpen() {
         QTemporaryDir other; QVERIFY(other.isValid());
@@ -235,6 +287,35 @@ private slots:
         QTRY_VERIFY(view->hasActiveFocus());
     }
 
+    // R2-N5: Left and Right move between the type chips and stop at the ends; the grid's cursor is not touched.
+    void typeChipsMoveWithTheArrowKeys() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkpath("sub1"));
+        QImage image(32, 24, QImage::Format_RGB32); image.fill(Qt::red);
+        QVERIFY(image.save(dir.filePath("a.png")) && image.save(dir.filePath("b.png")));
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.open(dir.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 3);
+        auto chip = [&](const char* id) { return named(h.window, QString("gridKind-") + id); };
+        auto* view = named(h.window, "photoGridView"); QTRY_VERIFY(view && view->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier);
+        QTRY_VERIFY(chip("folder")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Left); QTest::qWait(100);
+        QVERIFY(chip("folder")->hasActiveFocus()); // stops at the first
+        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(chip("image")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(chip("file")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Right); QTest::qWait(100);
+        QVERIFY(chip("file")->hasActiveFocus()); // and at the last
+        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(chip("image")->hasActiveFocus());
+        QVERIFY(chip("image")->property("visualFocus").toBool());
+        QTest::keyClick(h.window, Qt::Key_Space);
+        QTRY_COMPARE(h.fileGrid.kindFilter(), QString("image"));
+        QTest::keyClick(h.window, Qt::Key_Escape);
+        QTRY_VERIFY(view->hasActiveFocus());
+        QVERIFY(flag(h, "gridMode"));
+        QCOMPARE(h.viewer.fileName(), QString("a.png"));
+    }
     // N-5: long tab names elide, the active tab and its buttons stay in view, and New tab never scrolls away.
     void longTabNamesKeepTheActiveTabInView() {
         QTemporaryDir root; QVERIFY(root.isValid());
@@ -279,6 +360,12 @@ private slots:
                 const QRectF addScene = add->mapRectToScene(QRectF(0, 0, add->width(), add->height()));
                 QVERIFY2(addScene.left() >= 0 && addScene.right() <= width, qPrintable(where + QString(": New tab is out of view (x %1..%2)").arg(addScene.left()).arg(addScene.right())));
                 QVERIFY2(tab->width() <= strip->property("tabCap").toReal() + 0.5, qPrintable(where + ": a tab is wider than the cap"));
+                // R2-N3: no tab is left as a clipped sliver at the strip's left edge.
+                for (int i = 0; i < 3; ++i) for (const char* prefix : {"tab-", "tabClose-"}) {
+                    auto* part = named(h.window, QString("%1%2").arg(prefix).arg(i));
+                    const QRectF r = inStrip(strip, part);
+                    QVERIFY2(!(r.left() < -0.5 && r.right() > 0.5), qPrintable(where + QString(": %1%2 is clipped at the left edge (x %3..%4)").arg(prefix).arg(i).arg(r.left()).arg(r.right())));
+                }
             }
             // A long name is elided, not allowed to take its natural width.
             auto* tab0 = named(h.window, "tab-0");
