@@ -1,0 +1,37 @@
+********* Start testing of LayoutPresetsUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : LayoutPresetsUiTests::initTestCase()
+QWARN  : LayoutPresetsUiTests::identicalLaterLayoutMessageIsNotHiddenByAnEarlierRefusal() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : LayoutPresetsUiTests::identicalLaterLayoutMessageIsNotHiddenByAnEarlierRefusal() No QRhi found for window 0x2b88d31bcc0, QQuickRhiItem will not be functional
+FAIL!  : LayoutPresetsUiTests::identicalLaterLayoutMessageIsNotHiddenByAnEarlierRefusal() 'note->isVisible()' returned FALSE. (the identical later message is still hidden by the earlier refusal)
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\layout_presets_ui_tests.cpp(279) : failure location
+QWARN  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%2) No QRhi found for window 0x2b88dc280b0, QQuickRhiItem will not be functional
+QWARN  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%2) No QRhi found for window 0x2b88dc280b0, QQuickRhiItem will not be functional
+FAIL!  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%2) Compared values are not the same
+   Actual   (spoken)                  : "sale32.png, 32 by 24 pixels"
+   Expected (name+", 32 by 24 pixels"): "sale%2.png, 32 by 24 pixels"
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\layout_presets_ui_tests.cpp(298) : failure location
+QWARN  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%1) No QRhi found for window 0x2b89156b770, QQuickRhiItem will not be functional
+QWARN  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%1) No QRhi found for window 0x2b89156b770, QQuickRhiItem will not be functional
+FAIL!  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%1) Compared values are not the same
+   Actual   (spoken)                  : "a32b.png, 24 by %3 pixels"
+   Expected (name+", 32 by 24 pixels"): "a%1b.png, 32 by 24 pixels"
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\layout_presets_ui_tests.cpp(298) : failure location
+QWARN  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%3) No QRhi found for window 0x2b88dc263b0, QQuickRhiItem will not be functional
+QWARN  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%3) No QRhi found for window 0x2b88dc263b0, QQuickRhiItem will not be functional
+FAIL!  : LayoutPresetsUiTests::fileNamesWithPlaceholderMarkersAreShownAsTyped(%3) Compared values are not the same
+   Actual   (spoken)                  : "10024.png, 32 by 24 pixels"
+   Expected (name+", 32 by 24 pixels"): "100%3.png, 32 by 24 pixels"
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\layout_presets_ui_tests.cpp(298) : failure location
+QWARN  : LayoutPresetsUiTests::lastUnavailableTabShowsThePlaceholder() No QRhi found for window 0x2b88dc258b0, QQuickRhiItem will not be functional
+QWARN  : LayoutPresetsUiTests::lastUnavailableTabShowsThePlaceholder() No QRhi found for window 0x2b88dc258b0, QQuickRhiItem will not be functional
+QWARN  : LayoutPresetsUiTests::lastUnavailableTabShowsThePlaceholder() No QRhi found for window 0x2b88dc258b0, QQuickRhiItem will not be functional
+QWARN  : LayoutPresetsUiTests::lastUnavailableTabShowsThePlaceholder() No QRhi found for window 0x2b88dc258b0, QQuickRhiItem will not be functional
+FAIL!  : LayoutPresetsUiTests::lastUnavailableTabShowsThePlaceholder() Compared values are not the same
+   Actual   (h.viewer.tabs().size()): 0
+   Expected (1)                     : 1
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\layout_presets_ui_tests.cpp(321) : failure location
+PASS   : LayoutPresetsUiTests::cleanupTestCase()
+Totals: 2 passed, 5 failed, 0 skipped, 0 blacklisted, 27374ms
+********* Finished testing of LayoutPresetsUiTests *********
