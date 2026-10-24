@@ -13,7 +13,7 @@ ApplicationWindow {
     minimumWidth: 540
     minimumHeight: 360
     visible: true
-    title: viewer.fileName ? viewer.fileName + " — Glancelot" : "Glancelot"
+    title: viewer.fileName ? qsTr("%1 — Glancelot").arg(viewer.fileName) : "Glancelot" // the product name stays as is
     color: Theme.background
     // F054: layouts mirror when the application layout direction is right-to-left (Arabic, Hebrew, Persian, Urdu locales).
     readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
@@ -22,6 +22,10 @@ ApplicationWindow {
     property bool frameless: false
     property bool hudVisible: true
     property int presetCursor: -1           // F049: the last preset the cycle command applied
+    // F049: each cycle-command press is a request; presetPendingRequest is the press whose write still waits for the
+    // settings file (0: none). Only that write's own outcome reaches the main window (see the Connections below).
+    property int presetRequest: 0
+    property int presetPendingRequest: 0
     property bool focusMode: false          // F049: content only; Escape or the command returns the bars
     property bool navigatorOn: false        // F037 zoom navigator overview
     property rect navRect: Qt.rect(0, 0, 0, 0) // the visible part of the photo, in source pixels
@@ -87,7 +91,7 @@ ApplicationWindow {
     function toggleOrientation() {
         const next = paneLayout.centerSplit.orientation === "vertical" ? "horizontal" : "vertical"
         if (!paneLayout.setCenterOrientation(next)) showSplitMessage(paneLayout.feedback)
-        else if (!combinedMode) showSplitMessage(next === "vertical" ? "Grid and photo will be stacked in the Both view." : "Grid and photo will sit side by side in the Both view.")
+        else if (!combinedMode) showSplitMessage(next === "vertical" ? qsTr("Grid and photo will be stacked in the Both view.") : qsTr("Grid and photo will sit side by side in the Both view."))
     }
     function showSplitMessage(text) { splitMessage = text; splitMessageTimer.restart() }
     // Moves keys between the grid and the preview. A pane revealed by the single-pane fallback becomes visible
@@ -147,6 +151,26 @@ ApplicationWindow {
         }
     }
     Timer { id: splitMessageTimer; interval: 5000; onTriggered: app.splitMessage = "" }
+    // F049: a preset whose write had to wait reports how it ended here too, not only in Settings. Only the end of that
+    // write counts: "saved" (no message), "could not be saved" or "a newer saved layout was preserved". Any other layout
+    // message (a refusal from Settings, say) means the write's own outcome will not come, so the request disarms silently.
+    function presetWriteSaving(feedback) { return feedback === qsTranslate("Layout", "Saving layout preferences…") }
+    function presetWriteOutcome(feedback) {
+        return feedback === qsTranslate("Layout", "Layout changed for this session; settings could not be saved.")
+            || feedback === qsTranslate("Layout", "Layout changed for this session; a newer saved layout was preserved.")
+    }
+    Connections {
+        target: paneLayout
+        enabled: app.presetPendingRequest > 0 && app.presetPendingRequest === app.presetRequest
+        function onChanged() {
+            const feedback = paneLayout.feedback
+            if (app.presetWriteSaving(feedback)) return
+            app.presetPendingRequest = 0; presetOutcomeTimer.stop()
+            if (app.presetWriteOutcome(feedback)) app.showSplitMessage(feedback)
+        }
+    }
+    // Bounds the wait: a write gives up after about four seconds, so a request still armed later is stale.
+    Timer { id: presetOutcomeTimer; interval: 6000; onTriggered: app.presetPendingRequest = 0 }
     property bool previewLoadingShown: false
     onPreviewStateChanged: { previewLoadingShown = false; if (previewState === "loading") previewLoadingDelay.restart(); else previewLoadingDelay.stop() }
     Timer { id: previewLoadingDelay; interval: 200; onTriggered: app.previewLoadingShown = true }
@@ -479,12 +503,12 @@ ApplicationWindow {
     function commandBlockedReason(id) {
         if(id.indexOf("pane-") === 0 && app.monitor) {
             const pane=id.split("-").slice(2).join("-")
-            if(app.monitor.layoutLocked) return "Unlock the layout before changing panes."
-            if(id.indexOf("pane-freeze-") !== 0 && app.monitor.paneRoutes[pane] && app.monitor.paneRoutes[pane].frozen) return "Unfreeze the pane before moving it."
+            if(app.monitor.layoutLocked) return qsTr("Unlock the layout before changing panes.")
+            if(id.indexOf("pane-freeze-") !== 0 && app.monitor.paneRoutes[pane] && app.monitor.paneRoutes[pane].frozen) return qsTr("Unfreeze the pane before moving it.")
         }
         if (id !== "delete-selection") return ""
-        if (fileOperations.busy) return "Wait for the current move to the " + deleteFlow.trashName + " to finish."
-        if (focusRegion === "tree" && treePanel.cursorIsRoot()) return "Drives can't be moved to the " + deleteFlow.trashName + "."
+        if (fileOperations.busy) return qsTr("Wait for the current move to the %1 to finish.").arg(deleteFlow.trashName)
+        if (focusRegion === "tree" && treePanel.cursorIsRoot()) return qsTr("Drives can't be moved to the %1.").arg(deleteFlow.trashName)
         return ""
     }
     // Whether the focused pane lets a command's key act. This one predicate gates shortcuts and context-menu rows.
@@ -512,7 +536,7 @@ ApplicationWindow {
         const blocked = commandBlockedReason(id)
         if (blocked.length) return blocked
         const scope = scopeOf(id)
-        return scope === "canvas" ? "Not in grid view" : scope === "grid" ? "Needs the folder grid" : scope === "tree" ? "Needs the folder tree" : ""
+        return scope === "canvas" ? qsTr("Not in grid view") : scope === "grid" ? qsTr("Needs the folder grid") : scope === "tree" ? qsTr("Needs the folder tree") : ""
     }
     // Keys the grid and tree handle themselves are unbound commands; menus still show them.
     readonly property var fixedKeys: ({ "grid-open": "Enter", "grid-up": "Backspace", "grid-select-all": "Ctrl+A", "tree-open-folder": "Enter" })
@@ -647,7 +671,9 @@ ApplicationWindow {
         }
         return true
     }
-    function shortcutHint(id) { const binding = viewer.bindingFor(id); return binding.length ? " (" + binding + ")" : "" }
+    // A tooltip with the command's current shortcut, when it has one: "Open a photo (Ctrl+O)". One translatable pattern,
+    // so a language can place the key sequence where it reads naturally.
+    function withShortcut(text, id) { const binding = viewer.bindingFor(id); return binding.length ? qsTr("%1 (%2)").arg(text).arg(binding) : text }
     // Kept for --show-themes: appearance now lives in Settings.
     function openThemes() { settingsDialog.openSection("appearance", false) }
     function openSettings(section, focusSearch) { settingsDialog.openSection(section || "appearance", focusSearch || false) }
@@ -696,19 +722,19 @@ ApplicationWindow {
                 } else if (workspace._previewShown && viewer.filePath.length > 0) {
                     deleteFlow.request([viewer.filePath], "command", viewer.directory)
                 } else {
-                    deleteFlow.showNotice("Select items in the grid to move them to the " + deleteFlow.trashName + ".")
+                    deleteFlow.showNotice(qsTr("Select items in the grid to move them to the %1.").arg(deleteFlow.trashName))
                 }
             } else if (viewer.filePath.length > 0) {
                 deleteFlow.request([viewer.filePath], "command", viewer.directory)
             } else {
-                deleteFlow.showNotice("Select items in the grid to move them to the " + deleteFlow.trashName + ".")
+                deleteFlow.showNotice(qsTr("Select items in the grid to move them to the %1.").arg(deleteFlow.trashName))
             }
         }
         else if (id === "delete-current-file") {
             if (viewer.filePath.length > 0) {
                 deleteFlow.request([viewer.filePath], "command", viewer.directory)
             } else {
-                deleteFlow.showNotice("No photo is currently open to move to the " + deleteFlow.trashName + ".")
+                deleteFlow.showNotice(qsTr("No photo is currently open to move to the %1.").arg(deleteFlow.trashName))
             }
         }
         else if (id === "delete-current-folder") {
@@ -716,11 +742,11 @@ ApplicationWindow {
             if (folder.length > 0) {
                 deleteFlow.request([folder], "command", "")
             } else {
-                deleteFlow.showNotice("No folder is currently open to move to the " + deleteFlow.trashName + ".")
+                deleteFlow.showNotice(qsTr("No folder is currently open to move to the %1.").arg(deleteFlow.trashName))
             }
         }
         // F040
-        else if (id === "reference-pin") { if (!viewer.pinReference()) deleteFlow.showNotice("Open a photo first to pin it as a reference.") }
+        else if (id === "reference-pin") { if (!viewer.pinReference()) deleteFlow.showNotice(qsTr("Open a photo first to pin it as a reference.")) }
         else if (id === "reference-close") viewer.clearReference()
         // F009
         else if (id === "view-details") photoGrid.details = !photoGrid.details
@@ -728,9 +754,17 @@ ApplicationWindow {
         else if (id === "layout-preset-next") {
             const names = paneLayout.presetNames
             if (names.length === 0) return
+            // Wait for a display transaction that is saving the layout, as Settings does: when it lands it would replace the preset.
+            if (app.monitor && app.monitor.saving) { showSplitMessage(qsTr("Display preferences are saving. Apply the preset when they finish.")); return }
             presetCursor = (presetCursor + 1) % names.length
-            if (paneLayout.applyPreset(names[presetCursor])) showSplitMessage("Layout: " + names[presetCursor])
-            else showSplitMessage(paneLayout.feedback)
+            const request = ++presetRequest // a newer press replaces any earlier one still waiting
+            presetPendingRequest = 0; presetOutcomeTimer.stop()
+            if (!paneLayout.applyPreset(names[presetCursor])) { showSplitMessage(paneLayout.feedback); return }
+            const feedback = paneLayout.feedback
+            if (presetWriteSaving(feedback)) { presetPendingRequest = request; presetOutcomeTimer.restart() }
+            // An immediate outcome (a newer saved layout was preserved) is shown now, with the preset, and arms nothing.
+            showSplitMessage(feedback.length && !presetWriteSaving(feedback) ? qsTr("Layout: %1. %2").arg(names[presetCursor]).arg(feedback)
+                                                                             : qsTr("Layout: %1").arg(names[presetCursor]))
         }
         else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
         // F031
@@ -1034,8 +1068,8 @@ ApplicationWindow {
                     event.accepted = true
                 }
             }
-            Accessible.name: "Photo canvas"
-            Accessible.description: viewer.fileName.length ? viewer.fileName + ", " + viewer.imageWidth + " by " + viewer.imageHeight + " pixels" : "Open or drop a photo to begin"
+            Accessible.name: qsTr("Photo canvas")
+            Accessible.description: viewer.fileName.length ? qsTr("%1, %2 by %3 pixels").arg(viewer.fileName).arg(viewer.imageWidth).arg(viewer.imageHeight) : qsTr("Open or drop a photo to begin")
         }
         AnimationBar {
             id: animationBar
@@ -1107,7 +1141,7 @@ ApplicationWindow {
             color: Theme.background
             z: 1
             Accessible.role: Accessible.StaticText
-            Accessible.name: stateTitle.text + (stateDetail.text.length ? ". " + stateDetail.text : "")
+            Accessible.name: stateDetail.text.length ? qsTr("%1. %2").arg(stateTitle.text).arg(stateDetail.text) : stateTitle.text
             MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton; onPressed: app.focusPane("preview") }
             ColumnLayout {
                 anchors.centerIn: parent
@@ -1143,8 +1177,8 @@ ApplicationWindow {
                     horizontalAlignment: Text.AlignHCenter
                     elide: Text.ElideMiddle
                     text: ({ folder: previewStatePanel.subjectName, unsupported: previewStatePanel.subjectName, failed: previewStatePanel.subjectName,
-                             none: "Nothing selected", empty: "Nothing to preview", inaccessible: "Nothing to preview",
-                             "loading-folder": "Loading folder…", "no-folder": "Nothing to preview" })[previewStatePanel.stateName] || ""
+                             none: qsTr("Nothing selected"), empty: qsTr("Nothing to preview"), inaccessible: qsTr("Nothing to preview"),
+                             "loading-folder": qsTr("Loading folder…"), "no-folder": qsTr("Nothing to preview") })[previewStatePanel.stateName] || ""
                     color: previewStatePanel.stateName === "no-folder" ? Theme.muted : Theme.text
                     font.pixelSize: Theme.textTitle
                     font.weight: Font.Medium
@@ -1158,10 +1192,10 @@ ApplicationWindow {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                     lineHeight: 1.4
-                    text: ({ folder: "Folder", unsupported: "Glancelot can't preview this file type",
-                             failed: viewer.status.length && !viewer.loading ? viewer.status : "This photo could not be shown.",
-                             none: "Select a photo in the grid to preview it here.", empty: "This folder is empty.",
-                             inaccessible: "This folder can't be opened." })[previewStatePanel.stateName] || ""
+                    text: ({ folder: qsTr("Folder"), unsupported: qsTr("Glancelot can't preview this file type"),
+                             failed: viewer.status.length && !viewer.loading ? viewer.status : qsTr("This photo could not be shown."),
+                             none: qsTr("Select a photo in the grid to preview it here."), empty: qsTr("This folder is empty."),
+                             inaccessible: qsTr("This folder can't be opened.") })[previewStatePanel.stateName] || ""
                     color: Theme.muted
                     font.pixelSize: Theme.textSmall
                 }
@@ -1202,7 +1236,7 @@ ApplicationWindow {
                     UiIcon { name: "spinner"; color: Theme.muted }
                     Label {
                         Layout.fillWidth: true
-                        text: "Loading " + app.leafName(app.previewSubject) + "…"
+                        text: qsTr("Loading %1…").arg(app.leafName(app.previewSubject))
                         elide: Text.ElideMiddle
                         color: Theme.text
                         font.pixelSize: Theme.textSmall
@@ -1263,8 +1297,8 @@ ApplicationWindow {
                 Layout.minimumWidth: 0
                 variant: "primary"
                 text: emptyState.compactContent ? qsTr("Open") : qsTr("Open a photo")
-                Accessible.name: "Open a photo"
-                tip: "Open a photo" + app.shortcutHint("open")
+                Accessible.name: qsTr("Open a photo")
+                tip: app.withShortcut(qsTr("Open a photo"), "open")
                 onClicked: app.invoke("open")
             }
             Label {
@@ -1286,9 +1320,11 @@ ApplicationWindow {
     Rectangle {
         id: navigatorPanel
         objectName: "zoomNavigator"
+        // STACK-F049: the navigator follows the preview wherever it is available, including a detached preview window.
+        parent: app.isDetached("preview") && app.detachedHosts.preview ? app.detachedHosts.preview.paneContent : app.contentItem
         readonly property real scaleFactor: viewer.imageWidth > 0 ? Math.min(160 / viewer.imageWidth, 120 / viewer.imageHeight) : 1
         readonly property bool zoomedIn: viewer.imageWidth > 0 && (app.navRect.width < viewer.imageWidth - 1 || app.navRect.height < viewer.imageHeight - 1)
-        visible: app.navigatorOn && app.workspace._previewShown && zoomedIn && !app.layoutEditing
+        visible: app.navigatorOn && app.paneAvailable("preview") && zoomedIn && !app.layoutEditing
         width: Math.round(viewer.imageWidth * scaleFactor) + 2 * Theme.borderWidth
         height: Math.round(viewer.imageHeight * scaleFactor) + 2 * Theme.borderWidth
         x: canvas.x + canvas.width - width - Theme.gapMd
@@ -1299,7 +1335,7 @@ ApplicationWindow {
         border.color: Theme.border
         radius: Theme.radiusSmall
         Accessible.role: Accessible.Pane
-        Accessible.name: "Zoom navigator"
+        Accessible.name: qsTr("Zoom navigator")
         Accessible.description: qsTr("Click or drag to move the visible area of the photo")
         Rectangle {
             objectName: "navigatorViewport"
@@ -1404,7 +1440,7 @@ ApplicationWindow {
         MenuRule {}
         CommandMenuItem {
             host: app; commandId: "delete-current-file"; iconName: "trash"; danger: true
-            label: viewer.fileName.length ? "Move “" + app.menuName(viewer.fileName) + "” to the " + deleteFlow.trashName : "Move the photo to the " + deleteFlow.trashName
+            label: viewer.fileName.length ? qsTr("Move “%1” to the %2").arg(app.menuName(viewer.fileName)).arg(deleteFlow.trashName) : qsTr("Move the photo to the %1").arg(deleteFlow.trashName)
         }
     }
     ContextMenu {
@@ -1419,7 +1455,7 @@ ApplicationWindow {
         CommandMenuItem {
             host: app; commandId: "delete-selection"; iconName: "trash"; danger: true
             available: gridMenu.targets.length > 0
-            label: gridMenu.targets.length === 1 ? "Move “" + app.menuName(app.leafName(gridMenu.targets[0])) + "” to the " + deleteFlow.trashName
+            label: gridMenu.targets.length === 1 ? qsTr("Move “%1” to the %2").arg(app.menuName(app.leafName(gridMenu.targets[0]))).arg(deleteFlow.trashName)
                 : qsTr("Move %1 items to the %2").arg(gridMenu.targets.length).arg(deleteFlow.trashName)
         }
     }
@@ -1438,8 +1474,9 @@ ApplicationWindow {
         visible: app.combinedMode && split.orientation.length > 0
         z: 6
         Accessible.role: Accessible.Separator
-        Accessible.name: "Resize grid and photo"
-        Accessible.description: editable ? (horizontal ? "Left and Right arrows" : "Up and Down arrows") + " move the divider. Home centres it." : "The layout is locked or the window is too small to resize the split."
+        Accessible.name: qsTr("Resize grid and photo")
+        Accessible.description: !editable ? qsTr("The layout is locked or the window is too small to resize the split.")
+            : horizontal ? qsTr("Left and Right arrows move the divider. Home centres it.") : qsTr("Up and Down arrows move the divider. Home centres it.")
         function commit(value) {
             app.splitDrag = -1
             const next = Math.round(Math.max(0.1, Math.min(0.9, value)) * 1000) / 1000
@@ -1496,7 +1533,7 @@ ApplicationWindow {
         }
         ToolTip.visible: splitMouse.containsMouse && !splitMouse.pressed
         ToolTip.delay: 600
-        ToolTip.text: editable ? "Drag to resize. Double-click to centre." : paneLayout.locked ? "Unlock the layout to resize the split" : "Unfreeze the grid and photo panes to resize the split"
+        ToolTip.text: editable ? qsTr("Drag to resize. Double-click to centre.") : paneLayout.locked ? qsTr("Unlock the layout to resize the split") : qsTr("Unfreeze the grid and photo panes to resize the split")
     }
     Repeater { // the pane that owns keys in the combined view carries the focus ring
         model: ["grid", "preview"]
@@ -1523,9 +1560,10 @@ ApplicationWindow {
         Timer { id: fallbackNoticeTimer; interval: 5000 }
         text: app.splitMessage.length ? app.splitMessage
             : !fallbackNoticeTimer.running ? ""
-            : split.fallback === "single" ? (area.width < 320 ? "Showing the " + (app.focusedPane === "grid" ? "grid" : "photo") + ". Tab switches."
-                : "Grid and photo don't both fit this window. Showing the " + (app.focusedPane === "grid" ? "grid" : "photo") + "; press Tab to switch.")
-            : split.fallback === "reoriented" ? (split.orientation === "vertical" ? "Stacked to fit this window." : "Placed side by side to fit this window.")
+            : split.fallback === "single" ? (area.width < 320 ? (app.focusedPane === "grid" ? qsTr("Showing the grid. Tab switches.") : qsTr("Showing the photo. Tab switches."))
+                : app.focusedPane === "grid" ? qsTr("Grid and photo don't both fit this window. Showing the grid; press Tab to switch.")
+                : qsTr("Grid and photo don't both fit this window. Showing the photo; press Tab to switch."))
+            : split.fallback === "reoriented" ? (split.orientation === "vertical" ? qsTr("Stacked to fit this window.") : qsTr("Placed side by side to fit this window."))
             : ""
         visible: text.length > 0 && !app.layoutEditing && !app.modalOpen
         x: area.x + (area.width - width) / 2
@@ -1548,7 +1586,7 @@ ApplicationWindow {
         x: app.workspace._clear.x+Theme.gapSm
         y: app.workspace._clear.y+Theme.gapSm
         width: Math.max(0,app.workspace._clear.width-2*Theme.gapSm)
-        text: app.workspace._clear.width < 280 ? "Layout adapted. Reset in Settings." : "Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing."
+        text: app.workspace._clear.width < 280 ? qsTr("Layout adapted. Reset in Settings.") : qsTr("Layout adapted to fit this window. Saved preferences are kept. Change or reset it in Settings → Browsing.")
         wrapMode: Text.Wrap
         color: Theme.text
         padding: Theme.gapSm
@@ -1637,15 +1675,15 @@ ApplicationWindow {
                 fillMode: Image.PreserveAspectFit
                 Accessible.ignored: true
             }
-            UiButton { id: openButton; objectName: "openButton"; text: qsTr("Open"); tip: "Open a photo" + app.shortcutHint("open"); onClicked: app.invoke("open") }
+            UiButton { id: openButton; objectName: "openButton"; text: qsTr("Open"); tip: app.withShortcut(qsTr("Open a photo"), "open"); onClicked: app.invoke("open") }
             UiButton {
                 id: foldersButton
                 objectName: "foldersToggle"
                 text: qsTr("Folders")
                 checkable: true
                 checked: viewer.treeVisible
-                tip: (viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree") + app.shortcutHint("tree")
-                Accessible.description: viewer.treeVisible ? "Hide the folder tree" : "Show the folder tree"
+                tip: app.withShortcut(viewer.treeVisible ? qsTr("Hide the folder tree") : qsTr("Show the folder tree"), "tree")
+                Accessible.description: viewer.treeVisible ? qsTr("Hide the folder tree") : qsTr("Show the folder tree")
                 onClicked: { checked = Qt.binding(() => viewer.treeVisible); app.invoke("tree") }
             }
             Rectangle { // content mode: one segmented choice (GRID-PREVIEW-01); a menu in narrow windows
@@ -1659,7 +1697,7 @@ ApplicationWindow {
                 border.width: Theme.borderWidth
                 border.color: Theme.border
                 Accessible.role: Accessible.Grouping
-                Accessible.name: "View"
+                Accessible.name: qsTr("View")
                 Row {
                     id: modeRow
                     x: Theme.gapXxs
@@ -1675,7 +1713,7 @@ ApplicationWindow {
                             iconName: modelData.icon
                             text: modelData.label
                             selected: paneLayout.contentMode === modelData.id
-                            tip: modelData.tip + app.shortcutHint(modelData.command)
+                            tip: app.withShortcut(modelData.tip, modelData.command)
                             Accessible.role: Accessible.RadioButton
                             Accessible.checked: selected
                             Accessible.name: modelData.tip
@@ -1691,9 +1729,9 @@ ApplicationWindow {
                 readonly property var current: app.contentModes.find(mode => mode.id === paneLayout.contentMode) || app.contentModes[0]
                 text: current.label
                 leftPadding: Theme.gapSm + Theme.gapXxs; rightPadding: Theme.gapSm + Theme.gapXxs
-                tip: modeMenu.visible ? "" : "Change view: photo, grid or both"
+                tip: modeMenu.visible ? "" : qsTr("Change view: photo, grid or both")
                 Accessible.role: Accessible.ButtonMenu
-                Accessible.name: "View: " + current.tip + ". Change view"
+                Accessible.name: qsTr("View: %1. Change view").arg(current.tip)
                 onClicked: modeMenu.opened ? modeMenu.close() : modeMenu.open()
                 Menu {
                     id: modeMenu
@@ -1722,8 +1760,11 @@ ApplicationWindow {
                 text: ({ name: qsTr("Name"), modified: qsTr("Date"), size: qsTr("Size"), shuffle: qsTr("Shuffle") }[viewer.sortKey])
                 enabled: viewer.fileCount > 0
                 onClicked: app.invoke("sort")
-                tip: "Cycle file order" + app.shortcutHint("sort") + (viewer.bindingFor("sort-reverse").length ? "; reverse with " + viewer.bindingFor("sort-reverse") : "")
-                Accessible.name: "File order: " + ({ name: "name", modified: "date modified", size: "size", shuffle: "shuffle" }[viewer.sortKey]) + (viewer.sortDescending ? ", descending" : ", ascending")
+                tip: viewer.bindingFor("sort-reverse").length
+                     ? qsTr("%1; reverse with %2").arg(app.withShortcut(qsTr("Cycle file order"), "sort")).arg(viewer.bindingFor("sort-reverse"))
+                     : app.withShortcut(qsTr("Cycle file order"), "sort")
+                readonly property string orderName: ({ name: qsTr("name"), modified: qsTr("date modified"), size: qsTr("size"), shuffle: qsTr("shuffle") }[viewer.sortKey]) || ""
+                Accessible.name: viewer.sortDescending ? qsTr("File order: %1, descending").arg(orderName) : qsTr("File order: %1, ascending").arg(orderName)
                 Accessible.description: qsTr("Changes the order of photos inside folders, not the folder order")
             }
             BarDivider { id: topBarDivider; objectName: "topBarDivider" }
@@ -1741,7 +1782,7 @@ ApplicationWindow {
                 boundsBehavior: Flickable.StopAtBounds
                 flickableDirection: Flickable.HorizontalFlick
                 Accessible.role: Accessible.PageTabList
-                Accessible.name: "Folder tabs"
+                Accessible.name: qsTr("Folder tabs")
                 Row {
                     id: tabRow
                     spacing: Theme.gapXxs
@@ -1757,14 +1798,14 @@ ApplicationWindow {
                                 selected: modelData.active
                                 tip: modelData.folder
                                 Accessible.role: Accessible.PageTab
-                                Accessible.name: modelData.title + (modelData.active ? ", selected" : "")
+                                Accessible.name: modelData.active ? qsTr("%1, selected").arg(modelData.title) : modelData.title
                                 onClicked: viewer.activateTab(index)
                             }
                             UiButton {
                                 objectName: "tabClose-" + index
                                 iconName: "close"
                                 iconOnly: true
-                                text: "Close tab " + modelData.title
+                                text: qsTr("Close tab %1").arg(modelData.title)
                                 onClicked: viewer.closeTab(index)
                             }
                         }
@@ -1790,28 +1831,30 @@ ApplicationWindow {
                 // the tooltip and accessible name.
                 iconOnly: !topPanel.fitLockLabel
                 text: qsTr("Layout locked")
-                tip: "Workspace layout is locked. Select to unlock" + app.shortcutHint("layout-lock")
-                Accessible.name: "Workspace layout locked. Unlock layout"
+                tip: app.withShortcut(qsTr("Workspace layout is locked. Select to unlock"), "layout-lock")
+                Accessible.name: qsTr("Workspace layout locked. Unlock layout")
                 onClicked: app.invoke("layout-lock")
             }
             UiButton {
                 id: settingsButton
                 objectName: "settingsButton"
                 text: qsTr("Settings")
-                tip: "Settings, palettes and shortcuts" + app.shortcutHint("settings") + (viewer.bindingFor("palette").length ? ". Find a command: " + viewer.bindingFor("palette") : "")
+                tip: viewer.bindingFor("palette").length
+                     ? qsTr("%1. Find a command: %2").arg(app.withShortcut(qsTr("Settings, palettes and shortcuts"), "settings")).arg(viewer.bindingFor("palette"))
+                     : app.withShortcut(qsTr("Settings, palettes and shortcuts"), "settings")
                 onClicked: app.invoke("settings")
             }
-            UiButton { id: exitFullScreenButton; text: qsTr("Exit full screen"); visible: app.visibility === Window.FullScreen; tip: "Exit full screen" + app.shortcutHint("fullscreen"); onClicked: app.invoke("fullscreen") }
+            UiButton { id: exitFullScreenButton; text: qsTr("Exit full screen"); visible: app.visibility === Window.FullScreen; tip: app.withShortcut(qsTr("Exit full screen"), "fullscreen"); onClicked: app.invoke("fullscreen") }
             // Window controls must never be pushed out of a narrow bar, so "Show frame" yields its room there; the
             // command stays in Settings and command search, with its shortcut.
-            UiButton { id: showFrameButton; objectName: "showFrameButton"; text: qsTr("Show frame"); visible: app.frameless && topPanel.fitShowFrame; tip: "Restore the system title bar" + app.shortcutHint("frameless"); onClicked: app.invoke("frameless") }
+            UiButton { id: showFrameButton; objectName: "showFrameButton"; text: qsTr("Show frame"); visible: app.frameless && topPanel.fitShowFrame; tip: app.withShortcut(qsTr("Restore the system title bar"), "frameless"); onClicked: app.invoke("frameless") }
             BarDivider { id: windowDivider; visible: app.ownsTitleBar }
             WindowControl { id: minimizeButton; objectName: "minimizeButton"; text: qsTr("Minimize"); iconName: "minimize"; visible: app.ownsTitleBar; onClicked: app.showMinimized() }
             WindowControl {
                 id: maximizeButton
                 objectName: "maximizeButton"
                 readonly property bool maximized: app.visibility === Window.Maximized
-                text: maximized ? "Restore" : "Maximize"
+                text: maximized ? qsTr("Restore") : qsTr("Maximize")
                 iconName: maximized ? "restore" : "maximize"
                 visible: app.frameless && app.visibility !== Window.FullScreen
                 onClicked: app.toggleMaximized()
@@ -1909,18 +1952,18 @@ ApplicationWindow {
             width: statusbarScroll.availableWidth-2*Theme.gapMd
             x: Theme.gapMd
             y: Math.max(0,(statusbarScroll.availableHeight-implicitHeight)/2)
-            UiButton { text: qsTr("Previous"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Previous photo" + app.shortcutHint("previous"); onClicked: app.invoke("previous") }
+            UiButton { text: qsTr("Previous"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: app.withShortcut(qsTr("Previous photo"), "previous"); onClicked: app.invoke("previous") }
             BarLabel {
                 visible: !app.gridMode && !app.combinedMode
                 text: viewer.fileCount > 0 ? qsTr("%1 of %2").arg(viewer.currentIndex).arg(viewer.fileCount) : qsTr("No photo")
                 Layout.leftMargin: Theme.gapXs; Layout.rightMargin: Theme.gapXs
             }
-            UiButton { text: qsTr("Next"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: "Next photo" + app.shortcutHint("next"); onClicked: app.invoke("next") }
+            UiButton { text: qsTr("Next"); visible: !app.gridMode && !app.combinedMode; enabled: viewer.fileCount > 0; tip: app.withShortcut(qsTr("Next photo"), "next"); onClicked: app.invoke("next") }
             BarLabel {
                 visible: app.paneAvailable("grid")
                 font.features: { "tnum": 1 }
-                text: photoGrid.selectedCount > 1 ? photoGrid.selectedCount + " selected"
-                    : photoGrid.selectedIndex >= 0 ? (photoGrid.selectedIndex + 1) + " of " + fileGrid.count : "No selection"
+                text: photoGrid.selectedCount > 1 ? qsTr("%1 selected").arg(photoGrid.selectedCount)
+                    : photoGrid.selectedIndex >= 0 ? qsTr("%1 of %2").arg(photoGrid.selectedIndex + 1).arg(fileGrid.count) : qsTr("No selection")
                 Layout.leftMargin: Theme.gapXs
             }
             BarLabel {
@@ -1928,50 +1971,50 @@ ApplicationWindow {
                 Layout.maximumWidth: Math.max(120, app.width - (app.combinedMode ? 760 : 520))
                 Layout.leftMargin: Theme.gapMd
                 elide: Text.ElideRight
-                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : "Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up")
+                text: fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0 ? fileGrid.selectedSummary : (viewer.status.length > 0 ? viewer.status : qsTr("Arrow keys move · Shift or Ctrl selects · Enter opens · Backspace goes up"))
                 color: (fileGrid.selectedCount > 0 && fileGrid.selectedSummary.length > 0) || viewer.status.length > 0 ? Theme.text : Theme.muted
             }
             BarLabel { // F031: the slideshow state, with its pace
                 objectName: "slideshowIndicator"
                 visible: app.slideshowOn
                 Layout.leftMargin: Theme.gapSm
-                text: "Slideshow · " + app.slideshowSeconds + " s"
+                text: qsTr("Slideshow · %1 s").arg(app.slideshowSeconds)
                 color: Theme.text
                 Accessible.role: Accessible.StaticText
-                Accessible.name: "Slideshow running, " + app.slideshowSeconds + " seconds per photo. Escape stops it."
+                Accessible.name: qsTr("Slideshow running, %1 seconds per photo. Escape stops it.").arg(app.slideshowSeconds)
             }
             BarLabel { // INPUT-02: the first key of a two-key shortcut was pressed; the second key or Escape ends it
                 objectName: "chordPending"
                 visible: app.chordPending
                 Layout.leftMargin: Theme.gapSm
-                text: app.chordFirst + ", …"
+                text: qsTr("%1, …").arg(app.chordFirst)
                 color: Theme.text
                 font.family: Theme.monoFamily
                 leftPadding: Theme.gapSm; rightPadding: Theme.gapSm; topPadding: Theme.gapXxs; bottomPadding: Theme.gapXxs
                 background: Rectangle { radius: Theme.radiusSmall; color: Theme.surface; border.width: Theme.borderWidth; border.color: Theme.primary }
                 Accessible.role: Accessible.StaticText
-                Accessible.name: "Waiting for the next key after " + app.chordFirst + ". Escape cancels."
+                Accessible.name: qsTr("Waiting for the next key after %1. Escape cancels.").arg(app.chordFirst)
             }
             Item { Layout.fillWidth: true }
             UiButton { visible: app.gridMode; text: qsTr("Back to photo"); tip: qsTr("Back to photo (Esc)"); onClicked: app.showCanvas() }
-            UiButton { objectName: "gridOpenSelected"; visible: app.paneAvailable("grid"); variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? "Open folder" : "Open"; enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: qsTr("Open the item under the cursor (Enter)"); onClicked: photoGrid.activate() }
-            BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: viewer.imageWidth + " × " + viewer.imageHeight; Layout.rightMargin: Theme.gapSm }
+            UiButton { objectName: "gridOpenSelected"; visible: app.paneAvailable("grid"); variant: "primary"; text: fileGrid.kindAt(photoGrid.selectedIndex) === "folder" ? qsTr("Open folder") : qsTr("Open"); enabled: photoGrid.selectedIndex >= 0 && fileGrid.kindAt(photoGrid.selectedIndex) !== "file"; tip: qsTr("Open the item under the cursor (Enter)"); onClicked: photoGrid.activate() }
+            BarLabel { visible: !app.gridMode && app.width > 780 && viewer.imageWidth > 0; text: qsTr("%1 × %2").arg(viewer.imageWidth).arg(viewer.imageHeight); Layout.rightMargin: Theme.gapSm }
             UiButton {
                 visible: !app.gridMode
-                text: Math.round(canvas.zoom*100) + "%"
+                text: qsTr("%1%").arg(Math.round(canvas.zoom*100))
                 font.features: { "tnum": 1 }
                 enabled: viewer.imageWidth > 0
                 onClicked: app.invoke("actual")
-                tip: "Actual size: one image pixel per display pixel" + app.shortcutHint("actual")
-                Accessible.name: "Zoom " + Math.round(canvas.zoom*100) + " percent. Show actual size"
+                tip: app.withShortcut(qsTr("Actual size: one image pixel per display pixel"), "actual")
+                Accessible.name: qsTr("Zoom %1 percent. Show actual size").arg(Math.round(canvas.zoom*100))
             }
-            UiButton { text: qsTr("Fit"); visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: "Fit without enlarging" + app.shortcutHint("fit") }
-            UiButton { text: qsTr("Rotate"); visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: "Rotate the view clockwise" + app.shortcutHint("rotate") }
+            UiButton { text: qsTr("Fit"); visible: !app.gridMode; enabled: viewer.imageWidth > 0; onClicked: app.invoke("fit"); tip: app.withShortcut(qsTr("Fit without enlarging"), "fit") }
+            UiButton { text: qsTr("Rotate"); visible: !app.gridMode && app.width > 680; enabled: viewer.imageWidth > 0; onClicked: app.invoke("rotate"); tip: app.withShortcut(qsTr("Rotate the view clockwise"), "rotate") }
             UiButton {
                 text: qsTr("Info")
                 visible: !app.gridMode
                 variant: viewer.metadataVisible ? "primary" : "standard"
-                tip: "Toggle metadata inspector"
+                tip: qsTr("Toggle metadata inspector")
                 onClicked: app.invoke("toggle-metadata")
             }
         }
@@ -2012,7 +2055,7 @@ ApplicationWindow {
         objectName: "referenceWindow"
         width: 720; height: 520; minimumWidth: 320; minimumHeight: 240
         visible: viewer.referenceName.length > 0
-        title: "Reference — " + viewer.referenceName
+        title: qsTr("Reference — %1").arg(viewer.referenceName)
         color: Theme.background
     // F054: layouts mirror when the application layout direction is right-to-left (Arabic, Hebrew, Persian, Urdu locales).
     readonly property bool rtl: Qt.application.layoutDirection === Qt.RightToLeft
@@ -2026,7 +2069,7 @@ ApplicationWindow {
             image: viewer.referenceImage
             background: "#191919"
             focus: true
-            Accessible.name: "Reference photo " + viewer.referenceName
+            Accessible.name: qsTr("Reference photo %1").arg(viewer.referenceName)
             Keys.onEscapePressed: viewer.clearReference()
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_F) { fit("shrink"); event.accepted = true }
@@ -2046,7 +2089,8 @@ ApplicationWindow {
     FileDialog {
         id: openDialog
         title: qsTr("Open a photo")
-        nameFilters: ["Photographs (*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG)", "All files (*)"]
+        // The patterns are not translated: only the labels in front of them are.
+        nameFilters: [qsTr("Photographs (%1)").arg("*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG"), qsTr("All files (%1)").arg("*")]
         onAccepted: { viewer.open(selectedFile.toString()); app.showCanvas() }
         onRejected: app.focusContent()
     }

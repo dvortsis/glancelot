@@ -24,8 +24,8 @@ glancelot_attach_monitor_customization(glancelot)
 qt_target_qml_sources(glancelot QML_FILES ui/MonitorSettings.qml ui/DetachedPaneHost.qml)
 
 if(BUILD_TESTING)
-  # translation_coverage_ui (STACK-F054-COVERAGE) shares this harness.
-  foreach(monitor_suite IN ITEMS monitor_customization monitor_customization_ui translation_coverage_ui)
+  # translation_coverage_ui (STACK-F054-COVERAGE) and layout_presets_ui (STACK-F049-PRESETS) share this harness.
+  foreach(monitor_suite IN ITEMS monitor_customization monitor_customization_ui translation_coverage_ui layout_presets_ui)
     qt_add_executable(${monitor_suite}_tests tests/${monitor_suite}_tests.cpp
       ${GLANCELOT_VIEWER_SOURCES}
       src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
@@ -59,3 +59,4 @@ if(BUILD_TESTING)
   endforeach()
 endif()
 glancelot_test_labels(translation_coverage_ui LABELS ui process)
+glancelot_test_labels(layout_presets_ui LABELS ui process)

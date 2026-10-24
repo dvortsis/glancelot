@@ -89,10 +89,10 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
     if(slot_==0)return;
     const auto unsupported=std::make_shared<bool>(false);
     struct Completion {bool done{},deferred{};};const auto completion=std::make_shared<Completion>();
-    const auto slot=slot_;const auto panes=panes_;const auto centerState=center_;const auto mode=mode_;const auto locked=locked_;
+    const auto slot=slot_;const auto panes=panes_;const auto centerState=center_;const auto mode=mode_;const auto locked=locked_;const auto extras=snapshotExtras_;
     const auto directory=QDir::cleanPath(QFileInfo(glancelot::settingsDirectory()).absoluteFilePath());
     const auto channel="layout/"+QString::number(slot)+"/"+id+"/"+fields.keys().join('/')+(reset?"/reset":"")+(lockOnly?"/locked":"");
-    glancelot::settings_detail::saveWithRetry(this,channel,[id,fields,reset,lockOnly,slot,panes,centerState,mode,locked,unsupported](QJsonObject& settings) {
+    glancelot::settings_detail::saveWithRetry(this,channel,[id,fields,reset,lockOnly,slot,panes,centerState,mode,locked,extras,unsupported](QJsonObject& settings) {
         auto layouts=settings.value("layouts").toObject();
         auto layout=layouts.value(QString::number(slot)).toObject();
         // Never downgrade or overwrite a newer layout schema; a malformed one is replaced.
@@ -100,6 +100,19 @@ void PaneLayout::persist(const QString& id,const QJsonObject& fields,bool reset,
         if(!layout.isEmpty()&&!currentVersion(layout))layout=QJsonObject{};
         layout["version"]=1;
         if(lockOnly)layout["locked"]=locked;
+        else if(id=="_preset") { // F049: {panes:{id:{field:value}}, center:{field:value}}; never lock or freeze
+            for(auto it=extras.begin();it!=extras.end();++it)if(!layout.contains(it.key()))layout[it.key()]=it.value();
+            auto stored=layout.value("panes").toObject();const auto changes=fields.value("panes").toObject();
+            for(auto pane=changes.begin();pane!=changes.end();++pane) {
+                auto entry=stored.value(pane.key()).toObject();const auto values=pane.value().toObject();
+                for(auto it=values.begin();it!=values.end();++it)entry[it.key()]=it.value();
+                stored[pane.key()]=entry;
+            }
+            layout["panes"]=stored;
+            auto center=layout.value("center").toObject();const auto centerChanges=fields.value("center").toObject();
+            for(auto it=centerChanges.begin();it!=centerChanges.end();++it)center[it.key()]=it.value();
+            layout["center"]=center;
+        }
         else if(id=="_center") {
             auto center=layout.value("center").toObject();
             for(auto it=fields.begin();it!=fields.end();++it)center[it.key()]=it.value();
@@ -226,6 +239,28 @@ bool PaneLayout::setContentMode(const QString& mode) {
 namespace {
 constexpr int maxUserPresets=12;
 bool presetNameValid(const QString& name){const auto trimmed=name.trimmed();return !trimmed.isEmpty()&&trimmed.size()<=40&&trimmed==name;}
+const QStringList& presetPaneFields(){static const QStringList keys{"region","order","extent","visible"};return keys;}
+// The placement a preset carries: known geometry and visibility fields only, never "frozen".
+QJsonObject presetPanes(const QJsonObject& panes) {
+    QJsonObject result;
+    for(auto it=panes.begin();it!=panes.end();++it) {
+        const auto pane=it.value().toObject();QJsonObject entry;
+        for(const auto& key:presetPaneFields())if(pane.contains(key))entry[key]=pane.value(key);
+        result[it.key()]=entry;
+    }
+    return result;
+}
+// Named controller layouts and MONITOR-CUSTOM-01 display workspace presets never share a name, in any window slot.
+// MonitorCustomization names itself on the layout it coordinates (no header change), so a display preset save it still
+// has queued, because the file was busy, counts as taken here too; another process's queued save is refused when it lands.
+QObject* displayPresetQueue(const QObject* layout){return layout->property("_glancelotDisplayPresetQueue").value<QObject*>();}
+bool monitorPresetNamed(const QJsonObject& settings,const QString& name) {
+    const auto slotRows=settings.value("monitorCustomization").toObject().value("slots").toObject();
+    for(auto slot=slotRows.begin();slot!=slotRows.end();++slot)
+        for(const auto& row:slot.value().toObject().value("presets").toArray())
+            if(row.toObject().value("name").toString().trimmed().compare(name,Qt::CaseInsensitive)==0)return true;
+    return false;
+}
 }
 QStringList PaneLayout::builtIns() const{return {QStringLiteral("Default"),QStringLiteral("Review"),QStringLiteral("Browse")};}
 QJsonObject PaneLayout::userPresets() const {
@@ -266,14 +301,30 @@ QJsonObject PaneLayout::presetObject(const QString& name) const {
 bool PaneLayout::savePreset(const QString& name) {
     if(!presetNameValid(name)){feedback_=QCoreApplication::translate("Layout","Preset names are 1 to 40 characters with no leading or trailing space.");emit changed();return false;}
     if(isBuiltInPreset(name)){feedback_=QCoreApplication::translate("Layout","That name belongs to a built-in preset. Choose another.");emit changed();return false;}
-    QJsonObject entry{{"version",1},{"panes",panes_},{"center",QJsonObject{{"orientation",center_.value("orientation")},{"ratio",center_.value("ratio")},{"mode",mode_}}}};
-    bool tooMany=false;
+    // Placement, visibility and content mode only: lock and freeze stay with the layout's own lock/freeze authority.
+    QJsonObject entry{{"version",1},{"panes",presetPanes(panes_)},{"center",QJsonObject{{"orientation",center_.value("orientation")},{"ratio",center_.value("ratio")},{"mode",mode_}}}};
+    enum class Refusal{None,TooMany,Newer,Unreadable,MonitorName} refusal=Refusal::None;
     const auto result=glancelot::updateSettings([&](QJsonObject& settings){
-        auto presets=settings.value("layoutPresets").toObject();
-        if(!presets.contains(name)&&presets.size()>=maxUserPresets){tooMany=true;return;}
-        presets[name]=entry;settings["layoutPresets"]=presets;
+        const auto value=settings.value("layoutPresets");
+        if(!value.isUndefined()&&!value.isObject()){refusal=Refusal::Unreadable;return;}
+        auto presets=value.toObject();
+        // Only a new name is checked: re-saving a preset under its own name updates it, even a legacy record that
+        // already shares its name with a display workspace preset.
+        if(!presets.contains(name)) {
+            auto withQueued=settings;glancelot::settings_detail::overlayPendingSettings(displayPresetQueue(this),withQueued);
+            if(monitorPresetNamed(withQueued,name)){refusal=Refusal::MonitorName;return;}
+        }
+        if(!presets.contains(name)&&presets.size()>=maxUserPresets){refusal=Refusal::TooMany;return;}
+        auto previous=presets.value(name).toObject();
+        if(!previous.isEmpty()&&newerVersion(previous)){refusal=Refusal::Newer;return;}
+        if(!currentVersion(previous))previous={};
+        for(auto it=entry.begin();it!=entry.end();++it)previous[it.key()]=it.value(); // unknown fields of the old record survive
+        presets[name]=previous;settings["layoutPresets"]=presets;
     });
-    if(tooMany){feedback_=QCoreApplication::translate("Layout","You can keep up to 12 presets. Delete one first.");emit changed();return false;}
+    if(refusal==Refusal::TooMany){feedback_=QCoreApplication::translate("Layout","You can keep up to 12 presets. Delete one first.");emit changed();return false;}
+    if(refusal==Refusal::Newer){feedback_=QCoreApplication::translate("Layout","A newer version of Glancelot saved a preset with that name. Choose another name.");emit changed();return false;}
+    if(refusal==Refusal::Unreadable){feedback_=QCoreApplication::translate("Layout","Saved layout presets are unreadable and were preserved; reset settings to save new presets.");emit changed();return false;}
+    if(refusal==Refusal::MonitorName){feedback_=QCoreApplication::translate("Layout","A display workspace preset already uses that name. Choose another name.");emit changed();return false;}
     if(!result.ok()){feedback_=QCoreApplication::translate("Layout","The preset could not be saved.");emit changed();return false;}
     feedback_.clear();emit presetsChanged();emit changed();return true;
 }
@@ -288,15 +339,12 @@ bool PaneLayout::deletePreset(const QString& name) {
     if(!found||!result.ok())return false;
     emit presetsChanged();return true;
 }
+// One value-owned, retried merge of everything a preset sets into layouts[slot]. Unknown root, pane and center fields
+// (and snapshotExtras_ when the stored layout is missing or replaceable) survive; a newer layout version is never
+// rewritten; lock and freeze are left to their own commands and to the monitor coordinator.
 void PaneLayout::persistWhole() {
-    if(slot_==0)return;
-    glancelot::updateSettings([&](QJsonObject& settings){
-        auto layouts=settings.value("layouts").toObject();
-        auto layout=layouts.value(QString::number(slot_)).toObject();
-        if(!layout.isEmpty()&&newerVersion(layout))return;
-        layout=QJsonObject{{"version",1},{"locked",locked_},{"panes",panes_},{"center",QJsonObject{{"orientation",center_.value("orientation")},{"ratio",center_.value("ratio")},{"mode",mode_}}}};
-        layouts[QString::number(slot_)]=layout;settings["layouts"]=layouts;
-    });
+    QJsonObject center{{"orientation",center_.value("orientation")},{"ratio",center_.value("ratio")},{"mode",mode_}};
+    persist("_preset",QJsonObject{{"panes",presetPanes(panes_)},{"center",center}});
 }
 bool PaneLayout::applyPreset(const QString& name) {
     bool known=false;for(const auto& candidate:presetNames())if(candidate.compare(name,Qt::CaseInsensitive)==0)known=true;
@@ -304,10 +352,21 @@ bool PaneLayout::applyPreset(const QString& name) {
     if(locked_){feedback_=QCoreApplication::translate("Layout","Unlock the layout before applying a preset.");emit changed();return false;}
     for(const auto& id:panes_.keys())if(panes_.value(id).toObject().value("frozen").toBool()){feedback_=QCoreApplication::translate("Layout","Unfreeze the panes before applying a preset.");emit changed();return false;}
     const auto preset=presetObject(name);
-    if(preset.isEmpty()){feedback_=QCoreApplication::translate("Layout","That preset could not be read.");emit changed();return false;}
-    panes_=preset.value("panes").toObject();
+    if(preset.isEmpty()) {
+        const bool newer=newerVersion(userPresets().value(name).toObject());
+        feedback_=newer?QCoreApplication::translate("Layout","A newer version of Glancelot saved that preset; it was preserved and not applied.")
+                       :QCoreApplication::translate("Layout","That preset could not be read.");
+        emit changed();return false;
+    }
+    // Known placement fields replace this window's; unknown pane and center fields from newer versions stay.
+    const auto placement=preset.value("panes").toObject();
+    for(auto it=placement.begin();it!=placement.end();++it) {
+        auto pane=panes_.value(it.key()).toObject();const auto values=it.value().toObject();
+        for(const auto& key:presetPaneFields())pane[key]=values.value(key);
+        panes_[it.key()]=pane;
+    }
     const auto c=preset.value("center").toObject();
-    center_={{"orientation",c.value("orientation")},{"ratio",c.value("ratio")}};
+    center_["orientation"]=c.value("orientation");center_["ratio"]=c.value("ratio");
     mode_=c.value("mode").toString();
     feedback_.clear();persistWhole();emit changed();return true;
 }

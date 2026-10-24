@@ -135,11 +135,7 @@ class TranslationCoverageUiTests:public QObject {
             if(window){window->resize(size);window->show();}
         }
     };
-    QStringList plainSeen,clippedSeen;
-    QStringList deferredToMainQml{"Needs the folder grid","Needs the folder tree","Needs the photo view","Needs a photo"};
-    // Accessible names in SettingsDialog's F049 preset block, which STACK-F049-PRESETS owns and wraps (with new wording).
-    // Delete this list once F049 integrates and the catalog is regenerated.
-    QStringList deferredToF049{"Layout preset","Name for the new layout preset"};
+    QStringList plainSeen,clippedSeen,reportedSeen;
     QString evidence() const {return qEnvironmentVariable("GLANCELOT_F054_UI_EVIDENCE");}
     void capture(QQuickWindow* window,const QString& name) {
         if(evidence().isEmpty()||!window)return;
@@ -162,6 +158,44 @@ class TranslationCoverageUiTests:public QObject {
         QStringList labels;for(const auto& row:viewer.commands()){const auto map=row.toMap();labels<<map.value("label").toString()<<map.value("binding").toString()<<map.value("binding").toString().split(", ");}
         return labels;
     }
+    // The status bar panel: the Rectangle laid out exactly on paneRect("statusbar").
+    static QQuickItem* statusBar(QQuickWindow* window) {
+        QVariant value;QMetaObject::invokeMethod(window,"paneRect",Q_RETURN_ARG(QVariant,value),Q_ARG(QVariant,QString("statusbar")));
+        auto variant=value.canConvert<QJSValue>()?value.value<QJSValue>().toVariant():value;
+        QRectF rect;
+        if(variant.canConvert<QRectF>()&&variant.metaType().id()!=QMetaType::QVariantMap)rect=variant.toRectF();
+        else {const auto map=variant.toMap();rect=QRectF(map.value("x").toDouble(),map.value("y").toDouble(),map.value("width").toDouble(),map.value("height").toDouble());}
+        if(rect.width()<=0)return nullptr;
+        for(auto* item:descendants(window->contentItem()))
+            if(item->inherits("QQuickRectangle")&&!item->childItems().isEmpty()&&qAbs(item->x()-rect.x())<0.5&&qAbs(item->y()-rect.y())<0.5
+               &&qAbs(item->width()-rect.width())<0.5&&qAbs(item->height()-rect.height())<0.5)return item;
+        return nullptr;
+    }
+    void walkMainWindow(const Harness& h,QStringList dynamic,const QString& tag,bool fullCoverage) {
+        auto* top=h.window->findChild<QQuickItem*>("topBar");QVERIFY(top);auto* bottom=statusBar(h.window);QVERIFY(bottom);
+        for(const auto* view:{"photo","grid"}) {
+            if(QString(view)=="grid"){h.window->setProperty("gridMode",true);QTRY_VERIFY(h.window->property("gridMode").toBool());}
+            QTest::qWait(200);
+            // Data on these bars: the C++ status line, the file and folder names and the tab titles.
+            auto here=dynamic;
+            for(const auto* name:{"status","fileName","directory"})here<<h.viewer.property(name).toString();
+            for(const auto& tab:h.viewer.property("tabs").toList())here<<tab.toMap().value("title").toString();
+            for(auto* bar:{top,bottom}) {
+                const auto plain=check(bar,QString("main-%1-%2").arg(view,bar==top?"top-bar":"status-bar"),here);
+                if(fullCoverage)QVERIFY2(plain.isEmpty(),qPrintable(describe(plain)));
+            }
+            // Everything else in the window (tree, path bar, grid, filmstrip components): reported for follow-up only.
+            QList<Finding> rest,clipped;inspect(h.window->contentItem(),QString("main-%1").arg(view),rest,clipped,here);
+            // Bar text is asserted above. The generated media folder is data: masked so the report is stable and local paths stay out.
+            const auto folder=QDir::fromNativeSeparators(h.viewer.property("directory").toString());
+            for(const auto& f:rest) {
+                auto text=f.text;if(!folder.isEmpty()){text.replace(folder,"<folder>");text.replace(QFileInfo(folder).fileName(),"<folder>");}
+                if(text!="<folder>")reportedSeen<<QString("main-%1: \"%2\" at %3").arg(view,text,f.where);
+            }
+            capture(h.window,QString("main-%1-%2").arg(view,tag));
+        }
+        h.window->setProperty("gridMode",false);QTRY_VERIFY(!h.window->property("gridMode").toBool());
+    }
     void walkMainSurfaces(Qt::LayoutDirection direction,const QString& mode,QSize size,bool fullCoverage) {
         QGuiApplication::setLayoutDirection(direction);
         const auto tag=QString("%1-%2-%3").arg(direction==Qt::RightToLeft?"rtl":"ltr",mode).arg(size.width())+(translator.expand?"-expanded":"");
@@ -176,10 +210,12 @@ class TranslationCoverageUiTests:public QObject {
         dynamic<<"generated.png"<<QFileInfo(path).absolutePath()<<"Glancelot";
         for(const auto& family:h.theme.families())dynamic<<family.toMap().value("name").toString()<<family.toMap().value("label").toString(); // theme catalog data
         dynamic<<h.layout.presetNames(); // pane layout preset names are identifiers (built-ins in PaneLayout, user names)
-        // Main.qml routing reasons ("Needs the folder grid"): wrapped in the Main.qml step after EN-06 integrates.
-        dynamic<<deferredToMainQml<<deferredToF049;
         // Display and routing status lines are composed in C++ (DisplayManager, Track D) and are data on this surface.
         dynamic<<h.viewer.displayManager()->property("outputColorStatus").toString()<<h.monitor.outputRoutingStatus();
+        // The main window (STACK-F054 part 2, ui/Main.qml): the top bar and the status bar must be fully translated, in the
+        // photo view and in the grid view. Text from components outside Main.qml (folder tree, path bar, grid, filmstrip)
+        // is reported, not asserted.
+        walkMainWindow(h,dynamic,tag,fullCoverage);
         // Settings, every section.
         auto* settings=h.window->findChild<QObject*>("settingsDialog");QVERIFY(settings);
         for(const auto* section:{"appearance","viewing","browsing","controls","about"}) {
@@ -189,6 +225,15 @@ class TranslationCoverageUiTests:public QObject {
             const auto plain=check(popupItem(settings),QString("settings-%1").arg(section),dynamic);
             if(fullCoverage)QVERIFY2(plain.isEmpty(),qPrintable(describe(plain)));
             capture(h.window,QString("settings-%1-%2").arg(section,tag));
+            // Browsing: the F049 pane layout preset block sits below the fold; capture it scrolled into view too.
+            if(QString(section)=="browsing"&&!evidence().isEmpty()) {
+                auto* heading=h.window->findChild<QQuickItem*>("layoutPresetHeading");QVERIFY(heading);
+                for(auto* item=heading->parentItem();item;item=item->parentItem())
+                    if(item->property("contentY").isValid()&&item->property("contentHeight").toDouble()>item->height()) {
+                        const double y=heading->mapToItem(item->property("contentItem").value<QQuickItem*>(),QPointF()).y();
+                        item->setProperty("contentY",std::clamp(y-8,0.,item->property("contentHeight").toDouble()-item->height()));break;}
+                capture(h.window,QString("settings-browsing-presets-%1").arg(tag));
+            }
         }
         QVERIFY(QMetaObject::invokeMethod(settings,"close"));QTRY_VERIFY(!settings->property("opened").toBool());
         // Displays and workspaces, every page.
@@ -342,10 +387,14 @@ private slots:
         QCOMPARE(qApp->translate("Delete","you don't have permission to change its folder"),QString::fromUtf8("[ýõû dõñ't hàvé pérmîssîõñ tõ çhàñgé îts fõldér]"));
         QCOMPARE(qApp->translate("Grid","This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it.").left(28),QString::fromUtf8("[Thîs fõldér çàñ't bé õpéñéd"));
         QCOMPARE(qApp->translate("ThemePicker","Search %1 palettes").arg(80),QString::fromUtf8("[Séàrçh 80 pàléttés]"));
+        // Part 2: Main.qml and the STACK-F049 Settings strings are in the catalog.
+        QCOMPARE(qApp->translate("Main","Needs the folder grid"),QString::fromUtf8("[Ñééds thé fõldér grîd]"));
+        QCOMPARE(qApp->translate("SettingsDialog","Pane layout name"),QString::fromUtf8("[Pàñé làýõût ñàmé]"));
     }
     void pseudoLocaleLeftToRightDark(){walkMainSurfaces(Qt::LeftToRight,"dark",{1180,780},true);}
     void pseudoLocaleRightToLeftDark(){walkMainSurfaces(Qt::RightToLeft,"dark",{1180,780},false);}
     void pseudoLocaleCompactLight(){walkMainSurfaces(Qt::LeftToRight,"light",{560,640},false);}
+    void pseudoLocaleRightToLeftCompactLight(){walkMainSurfaces(Qt::RightToLeft,"light",{560,640},false);}
     void standaloneLeftToRight(){standaloneSurfaces(Qt::LeftToRight);}
     // Text 40% longer than English: every surface is walked again and clipping candidates are reported, not asserted.
     void expandedTextClipping(){translator.expand=true;walkMainSurfaces(Qt::LeftToRight,"dark",{1180,780},false);walkMainSurfaces(Qt::LeftToRight,"light",{560,640},false);translator.expand=false;}
@@ -356,6 +405,8 @@ private slots:
         QTextStream out(&report);out<<"# Generated by translation_coverage_ui_tests (en_XA pseudo-locale, offscreen)\n";
         out<<"catalog messages: "<<translator.size()<<"\n\n## Untranslated visible text (named surfaces)\n";
         plainSeen.removeDuplicates();for(const auto& line:plainSeen)out<<line<<"\n";if(plainSeen.isEmpty())out<<"none\n";
+        out<<"\n## Main window, outside ui/Main.qml (folder tree, path bar, grid, filmstrip): reported for follow-up, not asserted\n";
+        reportedSeen.removeDuplicates();for(const auto& line:reportedSeen)out<<line<<"\n";if(reportedSeen.isEmpty())out<<"none\n";
         out<<"\n## Clipping candidates (text wider than its box without wrap or elide, or elided)\n";
         clippedSeen.removeDuplicates();for(const auto& line:clippedSeen)out<<line<<"\n";if(clippedSeen.isEmpty())out<<"none\n";
     }

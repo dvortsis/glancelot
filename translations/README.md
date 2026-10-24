@@ -12,7 +12,7 @@ Refresh a catalog: `lupdate ui src app -locations none -ts translations/glancelo
 shows at a glance which text is not translatable (it stays plain) and where translated text would be clipped. Regenerate it with
 `lupdate ui src app -locations none -no-obsolete -ts translations/glancelot_en_XA.ts` followed by
 `python3 translations/pseudolocalize.py translations/glancelot_en_XA.ts`, which fills every unfinished message and keeps
-placeholders (%1, %L1, %n). STACK-F054-COVERAGE regenerated it with 475 messages. `translation_coverage_ui_tests` reads this
+placeholders (%1, %L1, %n). STACK-F054-COVERAGE part 2 regenerated it with 582 messages. `translation_coverage_ui_tests` reads this
 file directly and fails when a named surface shows plain English or a message is unfinished.
 
 Not extracted by `lupdate`: strings looked up at run time by their English text, namely command names (context `Commands`),
