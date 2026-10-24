@@ -13,6 +13,12 @@ QString noticeText(Harness& h) { auto* item = noticeItem(h); return item ? item-
 void setSlideshowSeconds(Harness& h, int seconds) {
     QVERIFY(QMetaObject::invokeMethod(h.window, "setSlideshowSeconds", Q_ARG(QVariant, seconds)));
 }
+// Ends a slideshow and lets any step it had in flight land before the harness and its folders are torn down.
+void settleSlideshow(Harness& h) {
+    QMetaObject::invokeMethod(h.window, "stopSlideshow");
+    QTest::qWait(400);
+    QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading(), 5000);
+}
 void overwriteWithText(const QString& path) {
     QFile bad(path);
     QVERIFY(bad.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -104,6 +110,7 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/b"), 10000);
         QTest::qWait(300);
         QVERIFY2(flag(h, "slideshowOn"), "the slideshow's own step into the next folder ended it");
+        settleSlideshow(h);
     }
     // R2-N1: a failed photo is passed after about a second even at a slow pace (it is not held for a whole interval).
     void slideshowPassesABadPhotoPromptlyAtASlowPace() {
@@ -141,6 +148,7 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("c-2.png"), 15000);
         QVERIFY2(flag(h, "slideshowOn"), "the slideshow stopped on its way through the one-photo folder");
         QVERIFY2(noticeText(h).isEmpty(), qPrintable(noticeText(h)));
+        settleSlideshow(h);
     }
     // R2-N2: closing a tab other than the active one is not navigation.
     void slideshowSurvivesClosingAnotherTab() {
@@ -156,6 +164,7 @@ private slots:
         QTRY_COMPARE(h.viewer.activeTab(), 0);
         QTest::qWait(500);
         QVERIFY2(flag(h, "slideshowOn"), "closing an inactive tab ended the slideshow");
+        settleSlideshow(h);
     }
     // N-2: another tab, or another folder opened by hand, ends the slideshow (and its indicator).
     void slideshowEndsOnTabSwitchAndFolderOpen() {
