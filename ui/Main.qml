@@ -773,7 +773,7 @@ ApplicationWindow {
             const feedback = paneLayout.feedback
             if (presetWriteSaving(feedback)) { presetPendingRequest = request; presetOutcomeTimer.restart() }
             // An immediate outcome (a newer saved layout was preserved) is shown now, with the preset, and arms nothing.
-            showSplitMessage(feedback.length && !presetWriteSaving(feedback) ? qsTr("Layout: %1. %2").arg(names[presetCursor]).arg(feedback)
+            showSplitMessage(feedback.length && !presetWriteSaving(feedback) ? fillText(qsTr("Layout: %1. %2"), [names[presetCursor], feedback])
                                                                              : qsTr("Layout: %1").arg(names[presetCursor]))
         }
         else if (id === "focus-mode") { focusMode = !focusMode; wakeHud() }
@@ -1151,7 +1151,7 @@ ApplicationWindow {
             color: Theme.background
             z: 1
             Accessible.role: Accessible.StaticText
-            Accessible.name: stateDetail.text.length ? qsTr("%1. %2").arg(stateTitle.text).arg(stateDetail.text) : stateTitle.text
+            Accessible.name: stateDetail.text.length ? app.fillText(qsTr("%1. %2"), [stateTitle.text, stateDetail.text]) : stateTitle.text
             MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton; onPressed: app.focusPane("preview") }
             ColumnLayout {
                 anchors.centerIn: parent

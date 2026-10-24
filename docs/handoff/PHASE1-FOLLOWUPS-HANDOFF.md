@@ -45,7 +45,7 @@ Notes. (a) Item 1 has no fail-before: it removes a workaround and cannot fail on
 - `translations/glancelot_en_XA.ts` (item 7)
 - `docs/handoff/PHASE1-FOLLOWUPS-HANDOFF.md`, `docs/verification/PHASE1-FOLLOWUPS/*`
 
-Nothing under `include/`, `cmake/`, root `CMakeLists.txt`, `docs/WORK-QUEUE.yaml`, `AGENTS.md` or `.github/`. Judgement calls: `Main.qml` and `viewer_controller.cpp` are hot files; I touched only the regions named in the brief plus the placeholder hint, and `display_manager.cpp` is outside the list but is the file item 5 names. The item 3 and item 2 UI tests live in `tests/layout_presets_ui_tests.cpp` (existing target with the shipped-QML harness) to avoid a new `cmake/*.cmake` target; a dedicated per-feature test file would be cleaner if the lead wants one.
+(Round 1 only; round 2 below adds the lead-granted `include/` comment line.) Nothing under `include/`, `cmake/`, root `CMakeLists.txt`, `docs/WORK-QUEUE.yaml`, `AGENTS.md` or `.github/`. Judgement calls: `Main.qml` and `viewer_controller.cpp` are hot files; I touched only the regions named in the brief plus the placeholder hint, and `display_manager.cpp` is outside the list but is the file item 5 names. The item 3 and item 2 UI tests live in `tests/layout_presets_ui_tests.cpp` (existing target with the shipped-QML harness) to avoid a new `cmake/*.cmake` target; a dedicated per-feature test file would be cleaner if the lead wants one.
 
 ### 3. Exact base
 
@@ -92,6 +92,14 @@ No baseline failures; `folder_grid` (231 s), `fs_watch` and `fs_watch_budget` pa
 4. In the 560 px capture the top bar shows a window-control glyph overlapping "Settings" and a truncated "No ph... open" title. The top bar is untouched by this packet, so I treat it as existing; worth a look.
 5. `translations/README.md` still says the catalog has 582 messages (now 589).
 6. Cycle documents or the queue may want the `PHASE1-FOLLOWUPS` row; I did not edit `docs/WORK-QUEUE.yaml`.
+
+## Round 2: lead's answers to the open questions
+
+- **Open question 2 (done).** `fillText` now also fills `Main.qml` "Layout: %1. %2" (preset name, then layout feedback) and the previewState accessible name "%1. %2" (file name, then detail). New test `presetNamesAndPreviewFileNamesWithPlaceholderMarkersAreShownAsTyped` (`layout_presets_ui`): a preset named `Fit%2` and a corrupt file `bad%2.png` in combined mode. Fail-before (revert of the two lines, same binary, tests load Main.qml from source): `fail-before/layout-followup2.txt` ("Layout: FitLayout changed for this session...") and, for the preview half alone, `fail-before/layout-followup2-previewstate-only.txt` ("badThis alpha supports JPEG, ...images..png. ..."). With the fix: `after-fix/layout-followup2.txt` passes.
+- **Open question 1 (done, lead grant, comment only).** `include/glancelot/viewer_controller.hpp` line 46: `tabs` is empty while there is one tab, except one row (the active, unavailable tab) when that tab's folder is unavailable. `git diff e967a0c -- include` shows only that comment line.
+- **Open question 5 (done).** `translations/README.md` now says 589 messages (582 at F054 part 2).
+- **Open question 3.** `pinImage()` stale-generation silence left as is, by the lead's decision (a stale request is superseded by a newer one by design).
+- Grant check additions: `include/glancelot/viewer_controller.hpp` (lead's comment-only grant), `translations/README.md` (lead's instruction). Full offscreen suite rerun on the new tip: see `after-fix/full-suite2-ctest-summary.txt`.
 
 ## UI skills
 

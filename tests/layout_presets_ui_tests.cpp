@@ -305,6 +305,30 @@ private slots:
         auto* gridRow=h.window->findChild<QObject*>("menuItem-delete-selection");QVERIFY(gridRow);
         QCOMPARE(gridRow->property("text").toString(),QString::fromUtf8("Move \xE2\x80\x9C")+name+QString::fromUtf8("\xE2\x80\x9D to the ")+bin);
     }
+    // Same defect class, the two other places user text came first: a pane layout preset's name in the "Layout: %1. %2"
+    // message of the preset command, and the combined preview state's accessible name ("%1. %2": file name, then detail).
+    void presetNamesAndPreviewFileNamesWithPlaceholderMarkersAreShownAsTyped() {
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["layouts"]=QJsonObject{{"1",QJsonObject{{"version",2}}}};}).ok());
+        {
+            Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+            QVERIFY(h.layout.savePreset("Fit%2"));
+            const int index=h.layout.presetNames().indexOf("Fit%2");QVERIFY(index>=0);
+            for(int press=0;press<=index;++press)h.viewer.trigger("layout-preset-next"); // the cursor starts before the first preset
+            QTRY_VERIFY2(h.window->property("splitMessage").toString().contains("newer saved layout was preserved"),qPrintable(h.window->property("splitMessage").toString()));
+            const auto message=h.window->property("splitMessage").toString();
+            QVERIFY2(message.startsWith("Layout: Fit%2. "),qPrintable(message));
+            QCOMPARE(message.count("Fit%2"),1);
+        }
+        QTemporaryDir media;QVERIFY(media.isValid());
+        const QString bad=media.filePath("bad%2.png");{QFile file(bad);QVERIFY(file.open(QIODevice::WriteOnly));file.write("generated: not a PNG");}
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+        h.viewer.trigger("view-combined");QTRY_VERIFY(h.window->property("combinedMode").toBool());
+        h.viewer.open(bad);
+        auto* panel=h.named("previewState");auto* title=h.named("previewStateTitle");auto* detail=h.named("previewStateDetail");QVERIFY(panel);QVERIFY(title);QVERIFY(detail);
+        QTRY_VERIFY_WITH_TIMEOUT(panel->isVisible()&&!h.viewer.loading()&&title->property("text").toString()=="bad%2.png"&&!detail->property("text").toString().isEmpty(),15000);
+        QString spoken;for(auto* child:panel->children())if(child->inherits("QQuickAccessibleAttached"))spoken=child->property("name").toString();
+        QCOMPARE(spoken,QString("bad%2.png. ")+detail->property("text").toString());
+    }
     // PHASE1-FOLLOWUPS item 2 (F015 gap): the last remaining tab's folder is unavailable. The view names the folder and offers
     // Retry (not the welcome screen); Retry opens the tab once the folder is back. Evidence: GLANCELOT_PHASE1_UI_EVIDENCE.
     void lastUnavailableTabShowsThePlaceholder() {
