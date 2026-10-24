@@ -332,7 +332,7 @@ Rectangle {
                         text: modelData.label
                         selected: fileGrid.kindFilter === modelData.id
                         implicitHeight: Theme.controlHeight - Theme.gapSm
-                        // N-1: a keyboard user reaches the chips with Tab or Ctrl+Shift+F from the grid and switches one with
+                        // N-1: a keyboard user reaches the chips with Ctrl+Shift+F from the grid (Tab and Shift+Tab then walk them) and switches one with
                         // Space or Enter; the button's own focus ring shows where they are.
                         focusPolicy: Qt.StrongFocus
                         tip: qsTr("Show only %1. Select again to clear. Ctrl+Shift+F moves here from the grid.").arg(modelData.label)
@@ -559,7 +559,7 @@ Rectangle {
         enabled: panel.inputEnabled
         Accessible.role: Accessible.List
         Accessible.name: "Items in " + panel.folderPath
-        Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo.")
+        Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo. Ctrl+Shift+F moves to the type filters.")
         ScrollBar.vertical: UiScrollBar { }
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier

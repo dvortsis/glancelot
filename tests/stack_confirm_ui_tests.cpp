@@ -1,4 +1,6 @@
 // STACK-CONFIRM-FIX: regressions found by the whole-stack confirmation review (docs/verification/STACK-CONFIRM-REVIEW.md).
+// (A vanished-file slideshow case was tried and dropped: the viewer relists at once, so the vanished name never reaches a decode;
+//  the undecodable-photo case exercises the same fail() path and is the one that fails on the base.)
 //   B-1 slideshow over undecodable or vanished photos, N-2 slideshow ends on tab and folder navigation, G-1 details mode keeps the
 //   visible anchor, N-1 type chips on the keyboard, N-5 long tab names. One executable, offscreen, like the other *_ui tests.
 #include "ui_test_support.hpp"
@@ -65,20 +67,6 @@ private slots:
         // And on round the loop, never stuck: back at the first photo, then past the bad one again.
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 1, 8000);
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 3, 8000);
-        QVERIFY(flag(h, "slideshowOn"));
-    }
-    // B-1: a file that vanished after it was listed behaves the same.
-    void slideshowSkipsAVanishedPhoto() {
-        Media media(3, QSize(64, 48));
-        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
-        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
-        QTRY_COMPARE(h.viewer.currentIndex(), 1);
-        h.viewer.setBoundaryMode("loop");
-        QVERIFY(QFile::remove(media.path(1)));
-        setSlideshowSeconds(h, 1);
-        h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
-        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("p3.png"), 8000);
         QVERIFY(flag(h, "slideshowOn"));
     }
     // B-1: a run of failures is bounded: the slideshow stops and says why instead of cycling through errors.
