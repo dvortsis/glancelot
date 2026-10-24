@@ -83,3 +83,33 @@ After the last code change (grid description sentence + catalog), `targeted-ctes
 - Docker/Linux build and run: not run. `longTabNamesKeepTheActiveTabInView` and `detailsToggleKeepsTheVisibleAnchor` assert geometry, and Linux fonts have moved geometry assertions before (942ebfe); the lead's gate decides.
 - Physical displays, fractional DPI, screen readers (names and roles were checked through `QAccessible`, not NVDA or Narrator).
 - The tab strip's scroll sliver: when the active tab is scrolled into view the neighbouring tab's edge can show as a few clipped pixels at the strip's left edge (visible in `tabs-after-1180.png`). Cosmetic; not changed.
+
+## Round 2 (STACK-CONFIRM-REVIEW-R2, origin/claude/review-stack-confirm-r2 6d0bfc4)
+
+Base for this round: `509f6f9` (round 1 tip). Code commit the full suite ran on: `607546c` (the tip commit of this round is that plus this section and evidence files).
+
+| Item | Result | Where |
+| --- | --- | --- |
+| R2-B1 slideshow stops in a one-photo folder | Fixed. The `fileCount < 2` stop is gone; "went nowhere" is judged by file path (`slideshowStepFrom` still equal to `viewer.filePath` at the next step), not index; the failure bound is a flat 5 under "continue" and "stop", and `min(5, fileCount)` (at least 2) only under "loop". `slideshowLastIndex` is removed. | `ui/Main.qml` `slideshowStep` |
+| R2-N2 closing an inactive tab | Fixed. The slideshow remembers the tab count; an active-tab index change with a lower tab count is a renumbering, not navigation. Closing the active tab still ends it (the folder changes, or the count rule stops it). | `ui/Main.qml` `slideshowObserve` |
+| R2-N5 arrow keys between chips | Done. Left/Right move along the chips and stop at the ends (also claimed in ShortcutOverride so no window shortcut takes them); the accessible description names them. | `ui/PhotoGrid.qml` chip delegate |
+| R2-N1 skip delay pinned | Done: `slideshowPassesABadPhotoPromptlyAtASlowPace` (6 s pace, bad photo must be passed in under 3.5 s). | test file |
+| R2-N3 clipped tab sliver | Fixed with a simple change: when scrolling right to reveal a tab the strip continues to the next tab boundary (`rightMargin` leaves room for that last step), so no tab is left clipped at the left edge. A test asserts it at both widths for every tab and close button. Capture: `tabs-r2-1180.png`, `tabs-r2-560.png`. A sliver can still appear if the user scrolls by wheel or drag to an arbitrary offset; that is user-driven. | `ui/Main.qml` `tabStrip.reveal` |
+| R2-N4 no cue for other tabs at 560 px | Not done, as instructed (E5). | |
+
+New tests (all in `tests/stack_confirm_ui_tests.cpp`): `slideshowPassesThroughAOnePhotoFolder` (a:2, b:1, c:2, default "continue", must reach c-2.png with the slideshow on and no notice), `slideshowSurvivesClosingAnotherTab`, `typeChipsMoveWithTheArrowKeys`, `slideshowPassesABadPhotoPromptlyAtASlowPace`, plus the sliver assertion in `longTabNamesKeepTheActiveTabInView`. The slideshow tests now stop the slideshow and wait for any step in flight before teardown (`settleSlideshow`).
+
+Fail-before (the same test binary with `ui/` from `509f6f9`; `fail-before-results-r2.txt`): 9 passed, 4 failed:
+```
+FAIL!  slideshowPassesThroughAOnePhotoFolder()   Actual (h.viewer.fileName()): "b-1.png"   (stopped in b)
+FAIL!  slideshowSurvivesClosingAnotherTab()      closing an inactive tab ended the slideshow
+FAIL!  typeChipsMoveWithTheArrowKeys()           'chip("image")->hasActiveFocus()' returned FALSE
+FAIL!  longTabNamesKeepTheActiveTabInView()      width 1180, active tab 2: tabClose-0 is clipped at the left edge (x -18..14)
+```
+Pass-after (`pass-after-results-r2.txt`): 13 passed, 0 failed. `slideshowPassesABadPhotoPromptlyAtASlowPace` passes on `509f6f9` (it pins existing behaviour); its fail evidence is a mutation, `skip-timer-mutation-results.txt` (skip-timer start removed: `FAIL! ... the requested timeout (4000 ms) was too short, 5100 ms would have been sufficient`).
+
+Tests: targeted ctest `100% tests passed, 0 tests failed out of 6` (folder_grid, input_ui, tabs_recovery, translation_coverage_ui, command_routing, stack_confirm_ui; `targeted-ctest-r2.txt`), then the full suite on `607546c` (`full-suite-build-log-r2.txt`): `100% tests passed out of 52`, `Total Test time (real) = 905.99 sec`.
+
+Decisions taken this round: the failure bound stays a constant 5 outside "loop" (rather than "distinct paths tried") because it is the simplest bound that does not depend on the folder the step landed in; tab identity for N-2 is the tab count rule rather than a per-tab id (tabs carry no id in `tabs()`; adding one is a controller change).
+
+Observed, not explained: one intermittent hang of `slideshowKeepsGoingAcrossAFolderBoundary` (the round 1 guard test) while the machine was busy: `QFATAL: Test function timed out` after 300 s in one ctest run, and 1 of 5 sequential direct runs hung at 60 s; it did not reproduce in 41 sequential, 48 parallel and 40 parallel runs afterwards (the last 40 after `settleSlideshow` was added), and the two later full/targeted ctest runs passed. The hang happens after the usual start-up output, so it is in the test body or teardown. I did not establish whether it predates this round (it was not seen at `509f6f9`, but that test ran only a handful of times). If it appears at the gate, rerun once and tell me; the likely suspect is teardown racing an in-flight cross-folder navigation, which `settleSlideshow` now avoids.
