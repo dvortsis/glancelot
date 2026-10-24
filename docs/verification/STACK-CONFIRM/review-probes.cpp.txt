@@ -1,0 +1,113 @@
+// STACK-CONFIRM review probes. Local only: pasted after "private slots:" in tests/input_ui_tests.cpp at e967a0c (plus #include <QJsonDocument>),
+// built as input_ui_tests and run by function name; the product tree was restored afterwards. Reusable as fail-before tests for B-1 and G-1.
+
+    // ---- STACK-CONFIRM review probes (local only, never committed)
+    void probeSlideshowOverUndecodablePhoto() {
+        Media media(3, QSize(64, 48));
+        { QFile bad(media.path(1)); QVERIFY(bad.open(QIODevice::WriteOnly | QIODevice::Truncate)); bad.write("not a png at all, just bytes"); bad.close(); }
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        QTRY_COMPARE(h.viewer.currentIndex(), 1);
+        h.viewer.setBoundaryMode("loop");
+        QVERIFY(QMetaObject::invokeMethod(h.window, "setSlideshowSeconds", Q_ARG(QVariant, 1)));
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QStringList trace;
+        for (int s = 0; s < 8; ++s) {
+            QTest::qWait(1000);
+            trace << QString("t=%1s index=%2 ready=%3 loading=%4 on=%5 status=\"%6\"").arg(s + 1).arg(h.viewer.currentIndex())
+                     .arg(h.viewer.imageReady()).arg(h.viewer.loading()).arg(flag(h, "slideshowOn")).arg(h.viewer.status());
+        }
+        for (const auto& line : trace) qInfo("%s", qPrintable(line));
+        QVERIFY2(h.viewer.currentIndex() != 2 || !flag(h, "slideshowOn"), "slideshow stays on, stuck at the undecodable photo");
+    }
+    void probeSlideshowAcrossTabAndFolderNavigation() {
+        QTemporaryDir other; QVERIFY(other.isValid());
+        QImage image(64, 48, QImage::Format_RGB32); image.fill(Qt::blue);
+        for (const char* n : {"o1.png", "o2.png", "o3.png"}) QVERIFY(image.save(other.filePath(n)));
+        Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
+        QVERIFY(QMetaObject::invokeMethod(h.window, "setSlideshowSeconds", Q_ARG(QVariant, 5)));
+        auto invoke = [&](const char* id) { QMetaObject::invokeMethod(h.window, "invoke", Q_ARG(QVariant, QString(id))); };
+        invoke("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        invoke("tab-new"); QTest::qWait(300);
+        qInfo("after tab-new: slideshowOn=%d tabs=%d", flag(h, "slideshowOn"), int(h.viewer.tabs().size()));
+        h.viewer.openFolder(other.path()); QTRY_VERIFY(h.viewer.imageReady()); QTest::qWait(300);
+        qInfo("after opening another folder in tab 2 (breadcrumb/tree route): slideshowOn=%d dir=%s", flag(h, "slideshowOn"), qPrintable(h.viewer.directory()));
+        invoke("tab-previous"); QTest::qWait(1500);
+        qInfo("after tab-previous: slideshowOn=%d dir=%s", flag(h, "slideshowOn"), qPrintable(h.viewer.directory()));
+    }
+    void probeGrabUnavailableTabPlaceholder() {
+        auto other = std::make_unique<QTemporaryDir>(); QVERIFY(other->isValid());
+        const QString gone = QDir(other->path()).filePath("A folder with a fairly long name that was on a share");
+        QVERIFY(QDir().mkpath(gone));
+        QImage image(64, 48, QImage::Format_RGB32); image.fill(Qt::blue); QVERIFY(image.save(QDir(gone).filePath("o1.png")));
+        Media media(2, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), 2);
+        h.viewer.open(QDir(gone).filePath("o1.png")); QTRY_VERIFY(h.viewer.imageReady());
+        h.viewer.trigger("tab-previous"); QTRY_VERIFY(h.viewer.imageReady()); QTest::qWait(500);
+        QVERIFY(QDir(gone).removeRecursively());
+        h.viewer.trigger("tab-next"); QTest::qWait(2500);
+        qInfo("tabs: %s", qPrintable(QJsonDocument::fromVariant(h.viewer.tabs()).toJson(QJsonDocument::Compact)));
+        qInfo("status: %s", qPrintable(h.viewer.status()));
+        const QString out = qEnvironmentVariable("STACK_CONFIRM_GRAB_DIR");
+        if (!out.isEmpty()) {
+            for (const char* mode : {"dark", "light"}) {
+                h.theme.setMode(mode); QTest::qWait(300);
+                QVERIFY(h.window->grabWindow().save(QDir(out).filePath(QString("f015-unavailable-%1-1180.png").arg(mode))));
+            }
+            h.window->resize(560, 600); QTest::qWait(500);
+            QVERIFY(h.window->grabWindow().save(QDir(out).filePath("f015-unavailable-light-560.png")));
+        }
+    }
+    void probeDetailsToggleKeepsVisibleAnchor() {
+        Media media(120, QSize(32, 24)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
+        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 120);
+        auto* view = named(h.window, "photoGridView"); QVERIFY(view);
+        auto firstVisible = [&] {
+            const qreal y = view->property("contentY").toReal() + 4;
+            int index = -1;
+            QMetaObject::invokeMethod(view, "indexAt", Q_RETURN_ARG(int, index), Q_ARG(qreal, 8), Q_ARG(qreal, y));
+            return index;
+        };
+        auto inView = [&](int row) {
+            for (auto* c : namedAll(h.window, "photoGridCell")) if (c->property("index").toInt() == row) {
+                const QPointF top = c->mapToItem(view, QPointF(0, 0));
+                return top.y() + c->height() > 0 && top.y() < view->height();
+            }
+            return false;
+        };
+        QTest::qWait(400);
+        // Case A: wheel-style scroll to the middle, cursor left at the top (off screen).
+        const qreal mid = (view->property("contentHeight").toReal() - view->height()) / 2;
+        view->setProperty("contentY", view->property("originY").toReal() + mid); QTest::qWait(300);
+        const int beforeA = firstVisible();
+        h.viewer.trigger("view-details"); QTRY_VERIFY(h.object("photoGrid")->property("details").toBool()); QTest::qWait(400);
+        const int afterA = firstVisible();
+        qInfo("case A (scrolled, cursor off screen): first visible before %d, after details %d", beforeA, afterA);
+        h.viewer.trigger("view-details"); QTRY_VERIFY(!h.object("photoGrid")->property("details").toBool()); QTest::qWait(400);
+        const int backA = firstVisible();
+        qInfo("case A: first visible after returning to thumbnails %d", backA);
+        // Case B: keyboard cursor on a visible item in the middle.
+        view->setProperty("contentY", view->property("originY").toReal() + mid); QTest::qWait(300);
+        const int cursor = firstVisible() + 2; h.fileGrid.select(cursor, DirectoryEntryModel::Replace); QTest::qWait(300);
+        const bool cursorBefore = inView(cursor);
+        h.viewer.trigger("view-details"); QTRY_VERIFY(h.object("photoGrid")->property("details").toBool()); QTest::qWait(400);
+        qInfo("case B (cursor %d visible=%d): after details first visible %d, cursor visible=%d", cursor, cursorBefore, firstVisible(), inView(cursor));
+        h.viewer.trigger("view-details"); QTest::qWait(400);
+        qInfo("case B: back to thumbnails, first visible %d, cursor visible=%d", firstVisible(), inView(cursor));
+        for (const int width : {1180, 1800, 760}) {
+            h.window->resize(width, 780); QTest::qWait(500);
+            const qreal m = (view->property("contentHeight").toReal() - view->height()) / 5;
+            view->setProperty("contentY", view->property("originY").toReal() + m); QTest::qWait(300);
+            const int b = firstVisible();
+            const int columns = h.object("photoGrid")->property("columns").toInt();
+            h.viewer.trigger("view-details"); QTRY_VERIFY(h.object("photoGrid")->property("details").toBool()); QTest::qWait(400);
+            const int a = firstVisible();
+            qInfo("width %d (%d columns): first visible before %d, after details %d", width, columns, b, a);
+            h.viewer.trigger("view-details"); QTRY_VERIFY(!h.object("photoGrid")->property("details").toBool()); QTest::qWait(400);
+        }
+        QVERIFY2(qAbs(afterA - beforeA) <= 1, "details toggle moved the visible anchor");
+    }
