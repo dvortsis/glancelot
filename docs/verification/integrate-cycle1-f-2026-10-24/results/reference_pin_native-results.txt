@@ -1,0 +1,24 @@
+********* Start testing of ReferencePinTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : ReferencePinTests::initTestCase()
+PASS   : ReferencePinTests::commandsStayDistinct()
+PASS   : ReferencePinTests::bothPinsShareOneDecodedFrame()
+PASS   : ReferencePinTests::closeParity()
+PASS   : ReferencePinTests::pinReplacementParity()
+PASS   : ReferencePinTests::recoveryWhileBothActive()
+PASS   : ReferencePinTests::budgetShedsReferenceBeforeOutputPin()
+PASS   : ReferencePinTests::referenceNeverShedsOutputHeldFrame()
+PASS   : ReferencePinTests::budgetRefusalHasItsOwnNotice()
+PASS   : ReferencePinTests::refusalNoticeNamesThePinnedOutput()
+PASS   : ReferencePinTests::refusalNoticeNamesTheComparison()
+PASS   : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame()
+PASS   : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed()
+PASS   : ReferencePinTests::pinnedOutputPhotoIsNeverDropped()
+PASS   : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically()
+PASS   : ReferencePinTests::pinHeldBackFrameWithSharedReference()
+PASS   : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin()
+PASS   : ReferencePinTests::nativeTextureReleasedOnClose()
+PASS   : ReferencePinTests::nativeTextureReleasedOnShed()
+PASS   : ReferencePinTests::cleanupTestCase()
+Totals: 20 passed, 0 failed, 0 skipped, 0 blacklisted, 43563ms
+********* Finished testing of ReferencePinTests *********

@@ -14,7 +14,7 @@ lead_plan_2026_10_22: "User-approved execution plan: enablement phase EN-01..EN-
 operating_model: "AGENTS.md (October 22, 2026): lead plus track and fresh-context review sessions; CI lead-windows-gate decides done. Lanes retired."
 phase0_memory_action: act_mvk70jg4_e555f0e2e57c
 current_cycle: docs/handoff/PHASE0-CYCLE1-2026-10-22.md
-pause_now: "User decision (2026-10-23): paused once the running tasks finished. All five reported; EN-11 merged (cycle1-d, gate 1 of 3); nothing running. Start no new reviews, fixes, gates or sessions until the user resumes. Resume point: docs/handoff/LEAD-PAUSE-2026-10-23.md (start at its section 3)."
+pause_now: "User decision (2026-10-24): wrap up the in-flight slices and merge when possible (done: cycle1-f dab3c74). Remaining Phase 1: STACK-CONFIRM and closeout; start nothing else until the user resumes. Resume notes: docs/handoff/LEAD-PAUSE-2026-10-23.md and docs/verification/integrate-cycle1-f-2026-10-24/README.md"
 pause_after_phase1: "User decision (2026-10-22): finish Phase 1 (STACK-F040, F015, F049, F054 parts 1-2, STACK-CONFIRM, their integration and evidence) and the Phase 0 packets already in flight (EN-02..EN-06, EN-08, EN-09, EN-11, COPY-SAFETY-01, lead scripts), then pause. Do not freeze Phase 2 contracts or start EN-07 or Phase 2 packets until the user resumes."
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -1222,7 +1222,7 @@ tasks:
     branch: claude/en-11-gate-stability
     integrated_commit: 72d5de59f98ffcd3dcf76e1d5355090ce0a0e9f7
     integrated_evidence: "docs/verification/integrate-cycle1-d-2026-10-23/README.md; Windows 46/46 and Docker 46/46 on 5908284, first run, no reruns"
-    gates_passed: "1 of 3 (cycle1-d); done after two more consecutive full gates pass with these suites"
+    gates_passed: "2 of 3 (cycle1-d, cycle1-f); done after one more consecutive full gate passes with these suites"
     depends: [EN-05]
     outcome: folder_tree, folder_grid and fs_watch pass reliably in full gates under the runner and under load
     evidence_of_problem: "Runner gates 39870526245 (c4e0829) and 39874250713 (f033070) both failed folder_tree :427, folder_grid auditReadyCurrentPhotoDoesNotReopen :947 and auditFailedCurrentPhotoCanBeRetriedFromGrid :958, fs_watch :298 and :1023 (generated PNG atomic commit failed: Access is denied). Local full gate on afeac1a outside the runner: 42/43 760.36s, only folder_tree failed (at :430), and it passed 29/29 alone. Hosted windows-2022 43/43."
@@ -1232,7 +1232,9 @@ tasks:
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
     owner: lead
-    state: review
+    state: done
+    integrated_commit: dab3c74035b5a8b86f5c9a75b2cccc9d7a5f61a1
+    integrated_evidence: "docs/verification/integrate-cycle1-f-2026-10-24/README.md; Windows 51/51 and Docker 50/50 on 71477bd"
     branch: claude/copy-safety-01
     review: "APPROVED round 2 at 4005869 (claude/review-copy-safety-01-r2 2f6ac32); N2 backup-name reuse fix before integration; N1 non-atomic ReplaceFileW backup recovery proposed for B2 (docs/handoff/LEAD-PAUSE-2026-10-23.md)"
     priority: 1
@@ -1244,7 +1246,9 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S5
-    state: review
+    state: done
+    integrated_commit: dab3c74035b5a8b86f5c9a75b2cccc9d7a5f61a1
+    integrated_evidence: "docs/verification/integrate-cycle1-f-2026-10-24/README.md; Windows 51/51 and Docker 50/50 on 71477bd"
     branch: claude/stack-f040-pinned
     outcome: Reference window and pinned monitor output stay distinct commands sharing pixel/texture admission and release accounting
     acceptance: Parity tests for close, pin replacement and recovery while both active; no duplicate decode; selected image unchanged
@@ -1252,7 +1256,9 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S5
-    state: review
+    state: done
+    integrated_commit: dab3c74035b5a8b86f5c9a75b2cccc9d7a5f61a1
+    integrated_evidence: "docs/verification/integrate-cycle1-f-2026-10-24/README.md; Windows 51/51 and Docker 50/50 on 71477bd"
     depends: [STACK-F040-PINNED]
     branch: claude/stack-f015-recovery
     outcome: Tabs persist through the production recovery checkpoint
@@ -1261,7 +1267,9 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S6
-    state: review
+    state: done
+    integrated_commit: dab3c74035b5a8b86f5c9a75b2cccc9d7a5f61a1
+    integrated_evidence: "docs/verification/integrate-cycle1-f-2026-10-24/README.md; Windows 51/51 and Docker 50/50 on 71477bd"
     branch: claude/stack-f049-presets
     outcome: Layout presets obey canonical lock/freeze, keep unknown data and stay distinct from monitor workspace presets
     acceptance: Per-slot placement isolation; snapshotExtras_ and newer data survive persistWhole(); navigator follows paneAvailable("preview") when detached
@@ -1269,7 +1277,9 @@ tasks:
     parent: STACK-CORRECTION-01
     owner: lead
     session: S6
-    state: implementing
+    state: done
+    integrated_commit: dab3c74035b5a8b86f5c9a75b2cccc9d7a5f61a1
+    integrated_evidence: "docs/verification/integrate-cycle1-f-2026-10-24/README.md; Windows 51/51 and Docker 50/50 on 71477bd"
     part1_integrated_commit: 3f6258d2a11245638b475429e9cc76435dbb7419
     part2: "Main.qml strings, F049 Settings strings, deferred lists removed, catalog regenerated; branch claude/stack-f054-part2 (with STACK-F049 follow-ups)"
     depends: [EN-06]

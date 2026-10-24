@@ -94,3 +94,17 @@ Tell the F040 reviewer that the direct-open `step()` hides this question; it mus
 ## 7. Held until the user resumes after Phase 1
 
 Phase 2 contract freeze (drafts on `claude/contracts-draft-a` 25e63a9 and `claude/contracts-draft-b` b1c835d), EN-07, and all Phase 2 track packets.
+
+## 8. Update, October 24, 2026: in-flight slices merged
+
+At the user's request the four in-flight packets were reviewed, gated and merged (cycle1-f, merge `dab3c74`; evidence docs/verification/integrate-cycle1-f-2026-10-24/README.md). Sections 2 to 4 above are superseded. What is left:
+
+- **STACK-CONFIRM and the Phase 1 closeout.** Then Phase 1 is done and `pause_after_phase1` applies.
+- **EN-11** has 2 of 3 passing full gates; the next full gate counts.
+- **"next" stall** (section 3): the F040 reviewer merged main (with EN-11) and restored `step()` to press "next": `reference_pin` passed 5 of 5. The merged tests still open files directly; restore `next()` in `tests/reference_pin_tests.cpp` as a small follow-up.
+- **Follow-ups from the reviews** (non-blocking):
+  - F015: one remaining tab whose folder is unavailable shows the welcome screen, not the placeholder (fix without a header change: `tabs()` returns the active row while it is unavailable); the placeholder was never rendered in a capture.
+  - F054 part 2: in `Main.qml` (about lines 1072, 1443, 1458) a file name containing `%2` is rescanned by a later `.arg()`; `presetRefusalShown` in SettingsDialog.qml is never cleared; the coverage test asserts only Main.qml's top and status bars; PhotoGrid strings, `DeleteFlow.trashName` and `pane_layout.cpp` literals are still untranslated.
+  - F040: a stale capture in `pinCurrentImage()` returns without a status; reword the F040 comment in `include/glancelot/viewer_controller.hpp`.
+  - COPY-SAFETY-01 N1 (lead decision): accepted; B2 (OPERATION-JOURNAL) recovers `.~gb*.tmp` backups at startup.
+- **Main checkout.** An untracked older `tests/copy_safety_tests.cpp` was found in the main checkout and moved to the lead's scratchpad; `README.md` has an uncommitted rewrite that the lead did not make and left untouched.

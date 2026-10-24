@@ -1,0 +1,29 @@
+********* Start testing of MetadataTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : MetadataTests::initTestCase()
+PASS   : MetadataTests::testBasicModelOperations()
+PASS   : MetadataTests::testSearchAndCategoryFilter()
+PASS   : MetadataTests::testParserWithSampleImage()
+QWARN  : MetadataTests::testValidJpegExif() qt.gui.imageio.jpeg: JPEG datastream contains no image
+QWARN  : MetadataTests::testValidJpegExif() qt.gui.imageio.jpeg: JPEG datastream contains no image
+PASS   : MetadataTests::testValidJpegExif()
+QWARN  : MetadataTests::testGpsMetadataAndFormatting() qt.gui.imageio.jpeg: JPEG datastream contains no image
+QWARN  : MetadataTests::testGpsMetadataAndFormatting() qt.gui.imageio.jpeg: JPEG datastream contains no image
+PASS   : MetadataTests::testGpsMetadataAndFormatting()
+QWARN  : MetadataTests::testIptcMetadataExtraction() qt.gui.imageio.jpeg: JPEG datastream contains no image
+QWARN  : MetadataTests::testIptcMetadataExtraction() qt.gui.imageio.jpeg: JPEG datastream contains no image
+PASS   : MetadataTests::testIptcMetadataExtraction()
+QWARN  : MetadataTests::testMalformedHeaderResilience() qt.gui.imageio.jpeg: JPEG datastream contains no image
+QWARN  : MetadataTests::testMalformedHeaderResilience() qt.gui.imageio.jpeg: JPEG datastream contains no image
+PASS   : MetadataTests::testMalformedHeaderResilience()
+QWARN  : MetadataTests::testCircularIfdLoopPrevention() qt.gui.imageio.jpeg: JPEG datastream contains no image
+QWARN  : MetadataTests::testCircularIfdLoopPrevention() qt.gui.imageio.jpeg: JPEG datastream contains no image
+PASS   : MetadataTests::testCircularIfdLoopPrevention()
+QWARN  : MetadataTests::testOrientationMapping() qt.gui.imageio.jpeg: JPEG datastream contains no image
+QWARN  : MetadataTests::testOrientationMapping() qt.gui.imageio.jpeg: JPEG datastream contains no image
+PASS   : MetadataTests::testOrientationMapping()
+PASS   : MetadataTests::testClipboardHelpers()
+PASS   : MetadataTests::testGenerationValidation()
+PASS   : MetadataTests::cleanupTestCase()
+Totals: 13 passed, 0 failed, 0 skipped, 0 blacklisted, 106ms
+********* Finished testing of MetadataTests *********

@@ -1,0 +1,24 @@
+********* Start testing of CommandRoutingTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : CommandRoutingTests::initTestCase()
+QWARN  : CommandRoutingTests::explicitRouteExecutesOnce() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : CommandRoutingTests::explicitRouteExecutesOnce() No QRhi found for window 0x20103488de0, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::explicitRouteExecutesOnce() No QRhi found for window 0x20103488de0, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::explicitRouteExecutesOnce() No QRhi found for window 0x20103488de0, QQuickRhiItem will not be functional
+PASS   : CommandRoutingTests::explicitRouteExecutesOnce()
+QWARN  : CommandRoutingTests::defaultKeysExecuteOnce() No QRhi found for window 0x201036f3910, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::defaultKeysExecuteOnce() No QRhi found for window 0x201036f3910, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::defaultKeysExecuteOnce() No QRhi found for window 0x201036f3910, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::defaultKeysExecuteOnce() No QRhi found for window 0x201036f3910, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::defaultKeysExecuteOnce() No QRhi found for window 0x201036f3910, QQuickRhiItem will not be functional
+PASS   : CommandRoutingTests::defaultKeysExecuteOnce()
+PASS   : CommandRoutingTests::storageProfileIsControllerOnly()
+QWARN  : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute() No QRhi found for window 0x2010348a8e0, QQuickRhiItem will not be functional
+QWARN  : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute() No QRhi found for window 0x2010348a8e0, QQuickRhiItem will not be functional
+PASS   : CommandRoutingTests::folderHistoryStepsOnceOnEveryRoute()
+QWARN  : CommandRoutingTests::mainQmlLoadsWithoutQmlWarnings() No QRhi found for window 0x201036f3210, QQuickRhiItem will not be functional
+PASS   : CommandRoutingTests::mainQmlLoadsWithoutQmlWarnings()
+PASS   : CommandRoutingTests::cleanupTestCase()
+Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 17551ms
+********* Finished testing of CommandRoutingTests *********

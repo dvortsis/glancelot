@@ -1,0 +1,107 @@
+********* Start testing of ReferencePinTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : ReferencePinTests::initTestCase()
+QWARN  : ReferencePinTests::commandsStayDistinct() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : ReferencePinTests::commandsStayDistinct() No QRhi found for window 0x1bcc34b05a0, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::commandsStayDistinct()
+QWARN  : ReferencePinTests::bothPinsShareOneDecodedFrame() No QRhi found for window 0x1bcc3a16e50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::bothPinsShareOneDecodedFrame() No QRhi found for window 0x1bcc3a16e50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::bothPinsShareOneDecodedFrame() No QRhi found for window 0x1bcc622c9a0, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::bothPinsShareOneDecodedFrame()
+QWARN  : ReferencePinTests::closeParity() No QRhi found for window 0x1bcc6a1d270, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::closeParity() No QRhi found for window 0x1bcc6a1d270, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::closeParity() No QRhi found for window 0x1bcc3a14d50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::closeParity() No QRhi found for window 0x1bcc4ef9710, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::closeParity() No QRhi found for window 0x1bcc6a1d270, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::closeParity() No QRhi found for window 0x1bcc3a14d50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::closeParity()
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc3a14850, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc3a14850, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc6a1e170, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc3a14850, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc7854220, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc3a14850, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinReplacementParity() No QRhi found for window 0x1bcc6a1e170, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::pinReplacementParity()
+QWARN  : ReferencePinTests::recoveryWhileBothActive() No QRhi found for window 0x1bcc3a15d50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::recoveryWhileBothActive() No QRhi found for window 0x1bcc3a15d50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::recoveryWhileBothActive() No QRhi found for window 0x1bcc6a1d770, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::recoveryWhileBothActive() No QRhi found for window 0x1bcc3a15d50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::recoveryWhileBothActive() No QRhi found for window 0x1bcca1e6380, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::recoveryWhileBothActive() No QRhi found for window 0x1bcc3a15d50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::recoveryWhileBothActive()
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcc3a17450, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcc3a17450, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcc6a1d370, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcc3a17450, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcca68afb0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcc3a17450, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() No QRhi found for window 0x1bcc6a1d370, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::budgetShedsReferenceBeforeOutputPin()
+QWARN  : ReferencePinTests::referenceNeverShedsOutputHeldFrame() No QRhi found for window 0x1bcc3a17c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::referenceNeverShedsOutputHeldFrame() No QRhi found for window 0x1bcc3a17c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::referenceNeverShedsOutputHeldFrame() No QRhi found for window 0x1bcca4ff6e0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::referenceNeverShedsOutputHeldFrame() No QRhi found for window 0x1bcc3a17c50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::referenceNeverShedsOutputHeldFrame()
+QWARN  : ReferencePinTests::budgetRefusalHasItsOwnNotice() No QRhi found for window 0x1bcc3a15d50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::budgetRefusalHasItsOwnNotice() No QRhi found for window 0x1bcc3a15d50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::budgetRefusalHasItsOwnNotice()
+QWARN  : ReferencePinTests::refusalNoticeNamesThePinnedOutput() No QRhi found for window 0x1bcc3a14b50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesThePinnedOutput() No QRhi found for window 0x1bcc3a14b50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesThePinnedOutput() No QRhi found for window 0x1bcc4d620e0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesThePinnedOutput() No QRhi found for window 0x1bcc3a14b50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::refusalNoticeNamesThePinnedOutput()
+QWARN  : ReferencePinTests::refusalNoticeNamesTheComparison() No QRhi found for window 0x1bcc3a15c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesTheComparison() No QRhi found for window 0x1bcc3a15c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesTheComparison() No QRhi found for window 0x1bcc37a7d20, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesTheComparison() No QRhi found for window 0x1bcc3a15c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesTheComparison() No QRhi found for window 0x1bcc37a7d20, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeNamesTheComparison() No QRhi found for window 0x1bcc37a7d20, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::refusalNoticeNamesTheComparison()
+QWARN  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() No QRhi found for window 0x1bcc3a14e50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() No QRhi found for window 0x1bcc3a14e50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() No QRhi found for window 0x1bcc6a1cc70, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() No QRhi found for window 0x1bcc45a38d0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() No QRhi found for window 0x1bcc3a14e50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame() No QRhi found for window 0x1bcc45a38d0, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::refusalNoticeForReplacementNamesTheHeldFrame()
+QWARN  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() No QRhi found for window 0x1bcc3a16350, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() No QRhi found for window 0x1bcc3a16350, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() No QRhi found for window 0x1bcc38cd390, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() No QRhi found for window 0x1bcc3a16350, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() No QRhi found for window 0x1bcc6a1f570, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed() No QRhi found for window 0x1bcc3a16350, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::heldOutputKeepsItsFrameReferenceIsShed()
+QWARN  : ReferencePinTests::pinnedOutputPhotoIsNeverDropped() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinnedOutputPhotoIsNeverDropped() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinnedOutputPhotoIsNeverDropped() No QRhi found for window 0x1bcc3802af0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinnedOutputPhotoIsNeverDropped() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::pinnedOutputPhotoIsNeverDropped()
+QWARN  : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically() No QRhi found for window 0x1bcc3a17c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically() No QRhi found for window 0x1bcc3a17c50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically() No QRhi found for window 0x1bcc2e34f40, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically() No QRhi found for window 0x1bcc3a17c50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically()
+QWARN  : ReferencePinTests::pinHeldBackFrameWithSharedReference() No QRhi found for window 0x1bcc3a15f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameWithSharedReference() No QRhi found for window 0x1bcc3a15f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameWithSharedReference() No QRhi found for window 0x1bcc6a1e370, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameWithSharedReference() No QRhi found for window 0x1bcc4513f80, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinHeldBackFrameWithSharedReference() No QRhi found for window 0x1bcc3a15f50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::pinHeldBackFrameWithSharedReference()
+QWARN  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() No QRhi found for window 0x1bcc618b9c0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() No QRhi found for window 0x1bcc618b9c0, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() No QRhi found for window 0x1bcc3a17f50, QQuickRhiItem will not be functional
+PASS   : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin()
+QWARN  : ReferencePinTests::nativeTextureReleasedOnClose() No QRhi found for window 0x1bcc3a17350, QQuickRhiItem will not be functional
+SKIP   : ReferencePinTests::nativeTextureReleasedOnClose() GPU texture admission needs a native RHI backend; the software backend has none.
+C:\src\Github\Glancelot\.worktrees\lead-integrate-c1f\tests\reference_pin_tests.cpp(595) : failure location
+QWARN  : ReferencePinTests::nativeTextureReleasedOnShed() No QRhi found for window 0x1bcc3a18350, QQuickRhiItem will not be functional
+SKIP   : ReferencePinTests::nativeTextureReleasedOnShed() GPU texture admission needs a native RHI backend; the software backend has none.
+C:\src\Github\Glancelot\.worktrees\lead-integrate-c1f\tests\reference_pin_tests.cpp(630) : failure location
+PASS   : ReferencePinTests::cleanupTestCase()
+Totals: 18 passed, 0 failed, 2 skipped, 0 blacklisted, 46461ms
+********* Finished testing of ReferencePinTests *********

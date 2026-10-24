@@ -1,0 +1,4 @@
+Waiting: 1 earlier gate request(s) ahead of ticket 2 (review-f040-r3)
+Waiting for gate lock held by dvort on review-f040-r3 since 10/24/2026 09:32:22
+WINDOWS exit 1 2266s
+DOCKER exit 1 1265s

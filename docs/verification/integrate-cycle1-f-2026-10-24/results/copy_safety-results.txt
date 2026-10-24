@@ -1,0 +1,17 @@
+********* Start testing of CopySafetyTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : CopySafetyTests::initTestCase()
+PASS   : CopySafetyTests::aliasFolderSameFileIsRefused()
+PASS   : CopySafetyTests::substDriveSameFileIsRefused()
+PASS   : CopySafetyTests::substDriveFolderMoveIntoItselfKeepsEverything()
+PASS   : CopySafetyTests::aliasFolderMoveIntoItselfKeepsEmptySubfolder()
+PASS   : CopySafetyTests::hardLinkIsTheSameFile()
+SKIP   : CopySafetyTests::fileSymlinkToTargetIsRefused() This account cannot create symbolic links (Windows without Developer Mode).
+C:\src\Github\Glancelot\.worktrees\lead-integrate-c1f\tests\copy_safety_tests.cpp(206) : failure location
+PASS   : CopySafetyTests::replaceKeepsAttributesPermissionsAndStreams()
+PASS   : CopySafetyTests::replaceKeepsRestrictivePermissions()
+PASS   : CopySafetyTests::overwriteLongPath()
+PASS   : CopySafetyTests::overwriteLongFileName()
+PASS   : CopySafetyTests::cleanupTestCase()
+Totals: 11 passed, 0 failed, 1 skipped, 0 blacklisted, 816ms
+********* Finished testing of CopySafetyTests *********

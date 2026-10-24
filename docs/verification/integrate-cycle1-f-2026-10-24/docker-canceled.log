@@ -1,0 +1,58 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 3.96kB 3.0s done
+#1 DONE 3.1s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 5.0s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 ...
+
+#6 [auth] library/ubuntu:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/ubuntu:24.04
+#5 DONE 1.7s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 32B 0.9s
+#7 transferring context: 136B 1.8s done
+#7 DONE 1.8s
+
+#8 [qt 1/5] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#8 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 303.07kB 4.0s
+#9 transferring context: 442.54kB 9.1s
+#9 transferring context: 589.81kB 14.8s
+#9 transferring context: 961.09kB 19.9s
+#9 transferring context: 1.33MB 25.2s
+#9 transferring context: 1.44MB 30.5s
+#9 transferring context: 1.58MB 35.6s
+#9 transferring context: 1.68MB 45.1s
+#9 transferring context: 1.76MB 53.1s
+#9 transferring context: 1.81MB 59.6s
+#9 transferring context: 1.84MB 65.7s
+#9 transferring context: 1.92MB 76.7s
+#9 transferring context: 1.96MB 82.9s
+#9 transferring context: 1.99MB 89.2s
+#9 transferring context: 1.99MB 94.1s done
+#9 CANCELED
+ERROR: failed to build: failed to solve: Canceled: rpc error: code = Canceled desc = context canceled
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/bv2vikkgg8zinfdw2utqxv57d

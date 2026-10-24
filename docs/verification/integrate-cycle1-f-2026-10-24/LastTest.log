@@ -1,0 +1,817 @@
+Start testing: Oct 24 10:55 Mountain Daylight Time
+----------------------------------------------------------
+1/51 Testing: selection_export
+1/51 Test: selection_export
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/selection_export_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"selection_export" start time: Oct 24 10:55 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Running selection_export tests...
+All selection_export tests PASSED!
+<end of output>
+Test time =   0.45 sec
+----------------------------------------------------------
+Test Passed.
+"selection_export" end time: Oct 24 10:55 Mountain Daylight Time
+"selection_export" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/51 Testing: perf_trace
+2/51 Test: perf_trace
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/perf_trace_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"perf_trace" start time: Oct 24 10:55 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+PASS ring_bound multithread_drops drain_order flags percentiles redaction monotonic_clock
+disabled_ns_per_span=2.3684 enabled_ns_per_span=71.409 disabled_bound_ns=1000
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"perf_trace" end time: Oct 24 10:55 Mountain Daylight Time
+"perf_trace" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/51 Testing: navigation
+3/51 Test: navigation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/navigation_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"navigation" start time: Oct 24 10:55 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+in-progress cancellation observed=1
+link creation: directory=0 cycle=0 file=0
+navigation: all generated fixture tests passed
+<end of output>
+Test time =   3.24 sec
+----------------------------------------------------------
+Test Passed.
+"navigation" end time: Oct 24 10:55 Mountain Daylight Time
+"navigation" time elapsed: 00:00:03
+----------------------------------------------------------
+
+4/51 Testing: directory_listing
+4/51 Test: directory_listing
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/directory_listing_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"directory_listing" start time: Oct 24 10:55 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+ordering and types ok
+empty/missing ok
+hidden ok
+windows junction ok
+UNVERIFIED: directory symlink not creatable here (A required privilege is not held by the client.)
+UNVERIFIED: file symlink not creatable here (A required privilege is not held by the client.)
+permission denied ok
+cancellation ok (5/5 racing runs cancelled); 20000 entries listed in 143 ms
+truncation ok
+sort keys ok
+delete burst ok (165 listings, 0 inaccessible)
+churn ok (3012 listings, 0 inaccessible)
+directory listing tests passed
+<end of output>
+Test time =  24.28 sec
+----------------------------------------------------------
+Test Passed.
+"directory_listing" end time: Oct 24 10:56 Mountain Daylight Time
+"directory_listing" time elapsed: 00:00:24
+----------------------------------------------------------
+
+5/51 Testing: file_operations
+5/51 Test: file_operations
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/file_operations_tests.exe"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"file_operations" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+dedupe ok
+rejections ok
+UNVERIFIED: read-only volume rejection (set GLANCELOT_READONLY_FILE to a file on a read-only mount)
+UNVERIFIED: file symlink (needs Developer Mode or privilege on Windows): A required privilege is not held by the client.
+links ok
+bounded count ok
+revalidation ok
+cancellation ok
+backend failures ok
+snapshot ok
+file_operations: all checks passed
+<end of output>
+Test time =   0.32 sec
+----------------------------------------------------------
+Test Passed.
+"file_operations" end time: Oct 24 10:56 Mountain Daylight Time
+"file_operations" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/51 Testing: startup_window_geometry
+6/51 Test: startup_window_geometry
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/startup_window_geometry_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/startup_window_geometry-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"startup_window_geometry" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.09 sec
+----------------------------------------------------------
+Test Passed.
+"startup_window_geometry" end time: Oct 24 10:56 Mountain Daylight Time
+"startup_window_geometry" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/51 Testing: viewer_acceptance
+7/51 Test: viewer_acceptance
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/acceptance_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/acceptance-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"viewer_acceptance" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  12.17 sec
+----------------------------------------------------------
+Test Passed.
+"viewer_acceptance" end time: Oct 24 10:56 Mountain Daylight Time
+"viewer_acceptance" time elapsed: 00:00:12
+----------------------------------------------------------
+
+8/51 Testing: thumbnails
+8/51 Test: thumbnails
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/thumbnail_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/thumbnails-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"thumbnails" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   7.39 sec
+----------------------------------------------------------
+Test Passed.
+"thumbnails" end time: Oct 24 10:56 Mountain Daylight Time
+"thumbnails" time elapsed: 00:00:07
+----------------------------------------------------------
+
+9/51 Testing: folder_tree
+9/51 Test: folder_tree
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/folder_tree_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/folder_tree-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"folder_tree" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  11.01 sec
+----------------------------------------------------------
+Test Passed.
+"folder_tree" end time: Oct 24 10:56 Mountain Daylight Time
+"folder_tree" time elapsed: 00:00:11
+----------------------------------------------------------
+
+10/51 Testing: pane_layout
+10/51 Test: pane_layout
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/pane_layout_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/pane_layout-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"pane_layout" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.22 sec
+----------------------------------------------------------
+Test Passed.
+"pane_layout" end time: Oct 24 10:56 Mountain Daylight Time
+"pane_layout" time elapsed: 00:00:02
+----------------------------------------------------------
+
+11/51 Testing: window_slots
+11/51 Test: window_slots
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/window_slot_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/window_slots-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"window_slots" start time: Oct 24 10:56 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  33.86 sec
+----------------------------------------------------------
+Test Passed.
+"window_slots" end time: Oct 24 10:57 Mountain Daylight Time
+"window_slots" time elapsed: 00:00:33
+----------------------------------------------------------
+
+12/51 Testing: folder_grid
+12/51 Test: folder_grid
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/grid_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/folder_grid-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"folder_grid" start time: Oct 24 10:57 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 256.16 sec
+----------------------------------------------------------
+Test Passed.
+"folder_grid" end time: Oct 24 11:01 Mountain Daylight Time
+"folder_grid" time elapsed: 00:04:16
+----------------------------------------------------------
+
+13/51 Testing: input_ui
+13/51 Test: input_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/input_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/input_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"input_ui" start time: Oct 24 11:01 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  94.66 sec
+----------------------------------------------------------
+Test Passed.
+"input_ui" end time: Oct 24 11:03 Mountain Daylight Time
+"input_ui" time elapsed: 00:01:34
+----------------------------------------------------------
+
+14/51 Testing: pathbar_ui
+14/51 Test: pathbar_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/pathbar_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/pathbar_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"pathbar_ui" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   5.68 sec
+----------------------------------------------------------
+Test Passed.
+"pathbar_ui" end time: Oct 24 11:03 Mountain Daylight Time
+"pathbar_ui" time elapsed: 00:00:05
+----------------------------------------------------------
+
+15/51 Testing: file_operation_service
+15/51 Test: file_operation_service
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/file_operation_service_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/file_operation_service-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"file_operation_service" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.31 sec
+----------------------------------------------------------
+Test Passed.
+"file_operation_service" end time: Oct 24 11:03 Mountain Daylight Time
+"file_operation_service" time elapsed: 00:00:01
+----------------------------------------------------------
+
+16/51 Testing: directory_model
+16/51 Test: directory_model
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/directory_model_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/directory_model-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"directory_model" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  28.41 sec
+----------------------------------------------------------
+Test Passed.
+"directory_model" end time: Oct 24 11:03 Mountain Daylight Time
+"directory_model" time elapsed: 00:00:28
+----------------------------------------------------------
+
+17/51 Testing: viewport
+17/51 Test: viewport
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/canvas_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/viewport-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"viewport" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.11 sec
+----------------------------------------------------------
+Test Passed.
+"viewport" end time: Oct 24 11:03 Mountain Daylight Time
+"viewport" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/51 Testing: themes
+18/51 Test: themes
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/theme_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/themes-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"themes" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.71 sec
+----------------------------------------------------------
+Test Passed.
+"themes" end time: Oct 24 11:03 Mountain Daylight Time
+"themes" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/51 Testing: platform_integration
+19/51 Test: platform_integration
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/platform_integration_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/platform-integration-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"platform_integration" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.31 sec
+----------------------------------------------------------
+Test Passed.
+"platform_integration" end time: Oct 24 11:03 Mountain Daylight Time
+"platform_integration" time elapsed: 00:00:01
+----------------------------------------------------------
+
+20/51 Testing: grid_search
+20/51 Test: grid_search
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/grid_search_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/grid_search-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"grid_search" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.36 sec
+----------------------------------------------------------
+Test Passed.
+"grid_search" end time: Oct 24 11:03 Mountain Daylight Time
+"grid_search" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/51 Testing: grid_density
+21/51 Test: grid_density
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/grid_density_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/grid_density-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"grid_density" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"grid_density" end time: Oct 24 11:03 Mountain Daylight Time
+"grid_density" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/51 Testing: ui_settings
+22/51 Test: ui_settings
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/ui_settings_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/ui_settings-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"ui_settings" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.62 sec
+----------------------------------------------------------
+Test Passed.
+"ui_settings" end time: Oct 24 11:03 Mountain Daylight Time
+"ui_settings" time elapsed: 00:00:01
+----------------------------------------------------------
+
+23/51 Testing: fs_watch
+23/51 Test: fs_watch
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/fs_watch_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/fs-watch-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"fs_watch" start time: Oct 24 11:03 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  88.86 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch" end time: Oct 24 11:05 Mountain Daylight Time
+"fs_watch" time elapsed: 00:01:28
+----------------------------------------------------------
+
+24/51 Testing: fs_watch_budget
+24/51 Test: fs_watch_budget
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/fs_watch_budget_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/fs-watch-budget-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"fs_watch_budget" start time: Oct 24 11:05 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time = 101.71 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_budget" end time: Oct 24 11:06 Mountain Daylight Time
+"fs_watch_budget" time elapsed: 00:01:41
+----------------------------------------------------------
+
+25/51 Testing: late_baseline
+25/51 Test: late_baseline
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/late_baseline_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/late-baseline-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"late_baseline" start time: Oct 24 11:06 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+late_baseline: in-flight open: provable 1 decodes 1 imageChanged 0 status "No supported images in that folder or its subfolders."
+late_baseline: replace over shared-delete reader: commit 10: Access is denied.
+late_baseline: replace over plain QFile reader: commit 10: Access is denied.
+late_baseline: rename away under plain QFile reader: refused
+<end of output>
+Test time =   1.81 sec
+----------------------------------------------------------
+Test Passed.
+"late_baseline" end time: Oct 24 11:06 Mountain Daylight Time
+"late_baseline" time elapsed: 00:00:01
+----------------------------------------------------------
+
+26/51 Testing: fs_watch_ui
+26/51 Test: fs_watch_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/fs_watch_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/fs-watch-ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"fs_watch_ui" start time: Oct 24 11:06 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   4.01 sec
+----------------------------------------------------------
+Test Passed.
+"fs_watch_ui" end time: Oct 24 11:06 Mountain Daylight Time
+"fs_watch_ui" time elapsed: 00:00:04
+----------------------------------------------------------
+
+27/51 Testing: favorites
+27/51 Test: favorites
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/favorites_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/favorites-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"favorites" start time: Oct 24 11:06 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.44 sec
+----------------------------------------------------------
+Test Passed.
+"favorites" end time: Oct 24 11:06 Mountain Daylight Time
+"favorites" time elapsed: 00:00:00
+----------------------------------------------------------
+
+28/51 Testing: folder_history
+28/51 Test: folder_history
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/folder_history_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/folder_history-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"folder_history" start time: Oct 24 11:06 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.09 sec
+----------------------------------------------------------
+Test Passed.
+"folder_history" end time: Oct 24 11:06 Mountain Daylight Time
+"folder_history" time elapsed: 00:00:00
+----------------------------------------------------------
+
+29/51 Testing: shortcuts_help
+29/51 Test: shortcuts_help
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/shortcuts_help_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/shortcuts_help-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"shortcuts_help" start time: Oct 24 11:06 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.82 sec
+----------------------------------------------------------
+Test Passed.
+"shortcuts_help" end time: Oct 24 11:06 Mountain Daylight Time
+"shortcuts_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+30/51 Testing: filter
+30/51 Test: filter
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/filter_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/filter-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"filter" start time: Oct 24 11:06 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.48 sec
+----------------------------------------------------------
+Test Passed.
+"filter" end time: Oct 24 11:07 Mountain Daylight Time
+"filter" time elapsed: 00:00:03
+----------------------------------------------------------
+
+31/51 Testing: cache
+31/51 Test: cache
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/cache_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/cache-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"cache" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   6.20 sec
+----------------------------------------------------------
+Test Passed.
+"cache" end time: Oct 24 11:07 Mountain Daylight Time
+"cache" time elapsed: 00:00:06
+----------------------------------------------------------
+
+32/51 Testing: io_scheduler
+32/51 Test: io_scheduler
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/io_scheduler_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/io_scheduler-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"io_scheduler" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"io_scheduler" end time: Oct 24 11:07 Mountain Daylight Time
+"io_scheduler" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/51 Testing: metadata
+33/51 Test: metadata
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/metadata_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/metadata-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"metadata" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.20 sec
+----------------------------------------------------------
+Test Passed.
+"metadata" end time: Oct 24 11:07 Mountain Daylight Time
+"metadata" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/51 Testing: animation
+34/51 Test: animation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/animation_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/animation-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"animation" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.50 sec
+----------------------------------------------------------
+Test Passed.
+"animation" end time: Oct 24 11:07 Mountain Daylight Time
+"animation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/51 Testing: mutation
+35/51 Test: mutation
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/mutation_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/mutation-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"mutation" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.22 sec
+----------------------------------------------------------
+Test Passed.
+"mutation" end time: Oct 24 11:07 Mountain Daylight Time
+"mutation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/51 Testing: copy_move
+36/51 Test: copy_move
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/copy_move_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/copy_move-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"copy_move" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.65 sec
+----------------------------------------------------------
+Test Passed.
+"copy_move" end time: Oct 24 11:07 Mountain Daylight Time
+"copy_move" time elapsed: 00:00:01
+----------------------------------------------------------
+
+37/51 Testing: copy_safety
+37/51 Test: copy_safety
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/copy_safety_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/copy_safety-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"copy_safety" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.93 sec
+----------------------------------------------------------
+Test Passed.
+"copy_safety" end time: Oct 24 11:07 Mountain Daylight Time
+"copy_safety" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/51 Testing: format
+38/51 Test: format
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/format_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/format-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"format" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.16 sec
+----------------------------------------------------------
+Test Passed.
+"format" end time: Oct 24 11:07 Mountain Daylight Time
+"format" time elapsed: 00:00:00
+----------------------------------------------------------
+
+39/51 Testing: monitor_output
+39/51 Test: monitor_output
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/monitor_output_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/monitor_output-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"monitor_output" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.61 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_output" end time: Oct 24 11:07 Mountain Daylight Time
+"monitor_output" time elapsed: 00:00:02
+----------------------------------------------------------
+
+40/51 Testing: recovery
+40/51 Test: recovery
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"recovery" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  14.74 sec
+----------------------------------------------------------
+Test Passed.
+"recovery" end time: Oct 24 11:07 Mountain Daylight Time
+"recovery" time elapsed: 00:00:14
+----------------------------------------------------------
+
+41/51 Testing: recovery_startup
+41/51 Test: recovery_startup
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery_startup_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery-startup-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"recovery_startup" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.53 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_startup" end time: Oct 24 11:07 Mountain Daylight Time
+"recovery_startup" time elapsed: 00:00:00
+----------------------------------------------------------
+
+42/51 Testing: recovery_controller
+42/51 Test: recovery_controller
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery_controller_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery-controller-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"recovery_controller" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  15.43 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_controller" end time: Oct 24 11:07 Mountain Daylight Time
+"recovery_controller" time elapsed: 00:00:15
+----------------------------------------------------------
+
+43/51 Testing: recovery_process
+43/51 Test: recovery_process
+Command: "C:/Python315/python.exe" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/scripts/verify-recovery.py" "--executable" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/glancelot.exe" "--work-dir" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/recovery-process"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"recovery_process" start time: Oct 24 11:07 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+Recovery process verification passed (35 completed commands); evidence: C:\src\Github\Glancelot\.worktrees\lead-integrate-c1f\build-gate-c1f2\recovery-process\run-8skgfvo0
+<end of output>
+Test time =  36.77 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_process" end time: Oct 24 11:08 Mountain Daylight Time
+"recovery_process" time elapsed: 00:00:36
+----------------------------------------------------------
+
+44/51 Testing: tabs_recovery
+44/51 Test: tabs_recovery
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/tabs_recovery_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/tabs_recovery-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"tabs_recovery" start time: Oct 24 11:08 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  61.66 sec
+----------------------------------------------------------
+Test Passed.
+"tabs_recovery" end time: Oct 24 11:09 Mountain Daylight Time
+"tabs_recovery" time elapsed: 00:01:01
+----------------------------------------------------------
+
+45/51 Testing: monitor_customization
+45/51 Test: monitor_customization
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/monitor_customization_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/monitor_customization-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"monitor_customization" start time: Oct 24 11:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   9.61 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization" end time: Oct 24 11:09 Mountain Daylight Time
+"monitor_customization" time elapsed: 00:00:09
+----------------------------------------------------------
+
+46/51 Testing: monitor_customization_ui
+46/51 Test: monitor_customization_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/monitor_customization_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/monitor_customization_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"monitor_customization_ui" start time: Oct 24 11:09 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  34.94 sec
+----------------------------------------------------------
+Test Passed.
+"monitor_customization_ui" end time: Oct 24 11:10 Mountain Daylight Time
+"monitor_customization_ui" time elapsed: 00:00:34
+----------------------------------------------------------
+
+47/51 Testing: translation_coverage_ui
+47/51 Test: translation_coverage_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/translation_coverage_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/translation_coverage_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"translation_coverage_ui" start time: Oct 24 11:10 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  27.59 sec
+----------------------------------------------------------
+Test Passed.
+"translation_coverage_ui" end time: Oct 24 11:10 Mountain Daylight Time
+"translation_coverage_ui" time elapsed: 00:00:27
+----------------------------------------------------------
+
+48/51 Testing: layout_presets_ui
+48/51 Test: layout_presets_ui
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/layout_presets_ui_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/layout_presets_ui-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"layout_presets_ui" start time: Oct 24 11:10 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  28.58 sec
+----------------------------------------------------------
+Test Passed.
+"layout_presets_ui" end time: Oct 24 11:11 Mountain Daylight Time
+"layout_presets_ui" time elapsed: 00:00:28
+----------------------------------------------------------
+
+49/51 Testing: command_routing
+49/51 Test: command_routing
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/command_routing_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/command_routing-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"command_routing" start time: Oct 24 11:11 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  17.75 sec
+----------------------------------------------------------
+Test Passed.
+"command_routing" end time: Oct 24 11:11 Mountain Daylight Time
+"command_routing" time elapsed: 00:00:17
+----------------------------------------------------------
+
+50/51 Testing: reference_pin
+50/51 Test: reference_pin
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/reference_pin_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/reference_pin-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"reference_pin" start time: Oct 24 11:11 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  46.67 sec
+----------------------------------------------------------
+Test Passed.
+"reference_pin" end time: Oct 24 11:12 Mountain Daylight Time
+"reference_pin" time elapsed: 00:00:46
+----------------------------------------------------------
+
+51/51 Testing: reference_pin_native
+51/51 Test: reference_pin_native
+Command: "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/reference_pin_tests.exe" "-o" "C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2/reference_pin_native-results.txt,txt" "-o" "-,txt"
+Directory: C:/src/Github/Glancelot/.worktrees/lead-integrate-c1f/build-gate-c1f2
+"reference_pin_native" start time: Oct 24 11:12 Mountain Daylight Time
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =  43.79 sec
+----------------------------------------------------------
+Test Passed.
+"reference_pin_native" end time: Oct 24 11:12 Mountain Daylight Time
+"reference_pin_native" time elapsed: 00:00:43
+----------------------------------------------------------
+
+End testing: Oct 24 11:12 Mountain Daylight Time
+
+budget = 596.89 sec*proc
+
+clipboard = 351.02 sec*proc
+
+fast = 166.48 sec*proc
+
+native = 488.04 sec*proc
+
+process = 981.99 sec*proc
+
+ui = 559.83 sec*proc
+
