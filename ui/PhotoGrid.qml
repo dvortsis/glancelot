@@ -328,6 +328,7 @@ Rectangle {
                     model: [{ id: "folder", label: qsTr("Folders") }, { id: "image", label: qsTr("Photos") }, { id: "file", label: qsTr("Other files") }]
                     delegate: UiButton {
                         required property var modelData
+                        required property int index
                         objectName: "gridKind-" + modelData.id
                         text: modelData.label
                         selected: fileGrid.kindFilter === modelData.id
@@ -341,14 +342,17 @@ Rectangle {
                         Accessible.checked: selected
                         Accessible.focusable: true
                         Accessible.name: qsTr("Show only %1").arg(modelData.label)
-                        Accessible.description: qsTr("Type filter. Press Space to switch it, Escape to return to the items.")
+                        Accessible.description: qsTr("Type filter. Press Space to switch it, Left or Right to move to another type, Escape to return to the items.")
                         onClicked: {
                             fileGrid.kindFilter = (fileGrid.kindFilter === modelData.id ? "" : modelData.id)
                             if (!visualFocus) panel.focusGrid() // a pointer click leaves the keyboard where it was: on the items
                         }
                         // The window's Escape (leave the grid) must not run while the chip owns the key.
-                        Keys.onShortcutOverride: event => { if (event.key === Qt.Key_Escape) event.accepted = true }
+                        Keys.onShortcutOverride: event => { if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Right) event.accepted = true }
                         Keys.onEscapePressed: event => { panel.focusGrid(); event.accepted = true }
+                        // Left and Right move along the group (they stop at its ends), as in any segmented choice.
+                        Keys.onLeftPressed: event => { const other = kindRepeater.itemAt(index - 1); if (other) other.forceActiveFocus(Qt.TabFocusReason); event.accepted = true }
+                        Keys.onRightPressed: event => { const other = kindRepeater.itemAt(index + 1); if (other) other.forceActiveFocus(Qt.TabFocusReason); event.accepted = true }
                     }
                 }
             }
