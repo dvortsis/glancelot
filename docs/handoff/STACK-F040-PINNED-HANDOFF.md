@@ -253,3 +253,212 @@ The `releaseResources()` call that the canvas makes on `visibleChanged` reaches 
 - **Pane migration.** The existing `windowChanged` release in `ImageCanvas` (pane migration) depends on the same persistent-scene-graph behaviour. It is unchanged in this round and not re-verified here.
 - **Full offscreen suite.** Not re-run in this round; only the targeted set above was run.
 - **UI design skills.** Read for this round: `application-interface-design` (feedback and states: an error notice says what happened, in specific terms). The QML change is a notice string and one property, with no layout, spacing, geometry, type or motion change, so the other skills did not apply.
+
+## Review round 2 follow-ups
+
+The round 1 re-review was APPROVED (`docs/verification/STACK-F040-PINNED-REVIEW.md` on `claude/review-stack-f040`, `4a894be`). This round makes the lead's follow-ups for LOW-1, LOW-2 and LOW-5. Base: `b610348`.
+
+### LOW-1. The refusal notice says what happened and what to do
+
+`ViewerController::pinReference()` writes the refusal into `status`. `Main.qml` shows that status as the notice. The first sentence depends on whether a reference window is already open:
+
+- "Not enough image memory to open the reference window."
+- "Not enough image memory to replace the reference photo. The current one stays."
+
+The second sentence names whatever is actually holding the memory. The checks run in the order listed.
+
+| Condition | Next step |
+| --- | --- |
+| Output is comparing | "Close the comparison on the output to make room." |
+| Output is active, not pinned, and holding an older frame than the main photo (the held frame is off screen) | "Turn on Follow controller selection to release the output's held photo." |
+| Output has a pin | "Unpin the output photo to make room." |
+| None of these | "This photo is too large for the image memory budget." |
+
+"Open a photo first to pin it as a reference." is unchanged.
+
+UI skills: I applied `application-interface-design` (feedback and states). The text is sentence case and says what did and did not happen, with one next step. The notice is the existing `DeleteFlow` toast, so the theme tokens and layout are unchanged.
+
+### LOW-2. Shed order (lead decision)
+
+`enforceBudget()` now sheds in this order:
+
+1. **Speculative caches:** the previous frame, and a comparison frame the output is not showing.
+2. **The reference photo.** It is skipped when it shares pixels with a frame that stays (current, pin or waiting frame), because dropping it would free nothing. When it is shed, the window closes. The main window then shows the notice "Reference window closed to free image memory. To reopen it, open <name> and pin it again." The controller status uses the same text.
+3. **Refuse the new frame:**
+   - A waiting (held or timed) output frame is dropped with the existing status "Output holds its last image: the latest frame exceeds the retained-image budget."
+   - A comparison being admitted is dropped.
+   - A pin being admitted (`admittingPin`) is refused.
+
+A photo pinned on the output is never dropped for a newer main frame. Instead, the output does not retain the newer frame (`currentWithheld`) and sets the status "Output keeps its pinned photo: the latest frame exceeds the retained-image budget." When the pin is released, the output fetches that frame again with a queued `currentImageRequested`. `pinCurrentImage()` fetches the withheld frame first. The current frame is still never dropped while the output shows it.
+
+### LOW-5
+
+`~ImageCanvas` restores `setPersistentSceneGraph(true)` on a window it had made non-persistent.
+
+### Tests (`tests/reference_pin_tests.cpp`)
+
+**Notice wording paths:**
+- `budgetRefusalHasItsOwnNotice`: open refused, photo too large.
+- `refusalNoticeNamesThePinnedOutput`: open refused, unpin.
+- `refusalNoticeNamesTheComparison`: open refused, close the comparison.
+- `refusalNoticeForReplacementNamesTheHeldFrame`: replace refused, the old reference stays, release the held frame.
+- `commandsStayDistinct`: open a photo first.
+
+**Shed order:**
+- `heldOutputKeepsItsFrameReferenceIsShed`: the output holds p1, the reference is p2, and a new frame p3 arrives. The reference is shed with its notice. The held frame and the waiting frame stay intact, the output status is unchanged, `retainedImageBytes() == 2 * one`, and resuming delivers p3.
+- `pinnedOutputPhotoIsNeverDropped`: the output pin survives a newer main frame. It reports its status and keeps exactly one image retained. Unpinning brings the main photo back.
+
+### Output (MSVC Release, `build-claude-f040`)
+
+Run inside `gate-lock.ps1 -Branch claude/f040-fix`:
+
+```
+> ctest --test-dir build-claude-f040 -R '^(reference_pin|monitor_output|input_ui|monitor_customization_ui)$' --output-on-failure
+1/4 Test #13: input_ui .........................   Passed   79.64 sec
+2/4 Test #37: monitor_output ...................   Passed    2.61 sec
+3/4 Test #43: monitor_customization_ui .........   Passed   26.81 sec
+4/4 Test #44: reference_pin ....................   Passed   26.02 sec
+100% tests passed out of 4
+Total Test time (real) = 135.09 sec
+```
+
+Direct offscreen/software run:
+
+```
+Totals: 15 passed, 0 failed, 2 skipped, 0 blacklisted, 25679ms
+```
+
+The two skips are the native cases.
+
+Direct native run (D3D11, threaded loop, `QT_LOGGING_RULES=qt.scenegraph.renderloop=true`, no offscreen or software environment):
+
+```
+PASS   : ReferencePinTests::nativeTextureReleasedOnClose()
+PASS   : ReferencePinTests::nativeTextureReleasedOnShed()
+Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 3704ms
+```
+
+The first run of this round failed `heldOutputKeepsItsFrameReferenceIsShed`. The toast read `viewer.status`, which the decode that caused the shed had already replaced ("Untagged source assumed sRGB · display profile not yet managed"). The QML handler now builds the text from the shed path. The run above is after that fix.
+
+This round has no fail-before run (the lead did not ask for one). Two tests encode behaviour that the round 1 code does not have:
+- `heldOutputKeepsItsFrameReferenceIsShed`: round 1 shed the waiting frame before the reference.
+- `pinnedOutputPhotoIsNeverDropped`: round 1 dropped the pin and switched to mirror.
+
+**Still not covered by tests:**
+- `pinCurrentImage()` while a frame is withheld.
+- A comparison being admitted while the reference is open.
+
+## Review round 3 fixes
+
+The round 2 confirm was CHANGES REQUIRED (`docs/verification/STACK-F040-PINNED-REVIEW.md` on `claude/review-stack-f040`, `758f5f2`, "Round 2 follow-ups"). Base for this round: `91fedf3`. `origin/main` (`b9dc0ec`) is merged in as `b3e530e`, with one conflict in `CMakeLists.txt`: both the EN-06 `CommandRoutingTests` include and this packet's include are kept.
+
+### R2-1 (blocking): pin replacement is transactional
+
+**Cause.** `pinCurrentImage()` set `admittingPin` while it re-routed the held-back frame through `updateImage()`, so `enforceBudget()` dropped the old pin and switched to mirror before the new pin was admitted. When the reference shared the old pin's photo, the new pin was refused as well. The result was no pin, mirror mode and memory at 2x the budget.
+
+**Fix (`src/app/display_manager.cpp`).**
+- `pinCurrentImage()`, while a frame is held back, now captures the controller's answer to `currentImageRequested` (`capturingWithheld`) instead of routing it. Nothing changes during the capture.
+- Both pin paths go through `Private::admitPin()`. It decides admission before touching the old pin:
+  - It counts what is kept after the swap: the current frame (the adopted held-back frame), the new pin and a waiting output frame. Shared pixels count once; the old pin does not count.
+  - **Does not fit:** nothing changes (old pin, output mode, reference, held-back frame). The output status says "Not enough image memory to pin this photo on the output. The output keeps its pinned photo." Without an old pin, it says only the first sentence.
+  - **Fits:** the pin is swapped in one step: one `pinnedPathChanged`, no pass through mirror, status "Reference pinned". Room is made in the documented order: speculative caches, then the reference with its reopen notice. The budget is never exceeded; `Q_ASSERT` holds by construction.
+- **No photo yet** (the controller is still decoding, so it ignores the request): the old pin stays. The status says "The output keeps its pinned photo until the next photo finishes loading. Pin again when it shows."
+- `admittingPin` and `referenceProtected` are removed. An output pin may now shed the reference, as the round 2 order requires.
+
+**Behaviour change.** An output pin that cannot fit used to be shed after it was set, which unpinned the output and switched it to mirror. It is now refused, and the old pin stays. `budgetShedsReferenceBeforeOutputPin` now asserts the old pin, pinned mode, no `pinnedPathChanged` and the refusal status.
+
+### Copy (application-interface-design, feedback and states)
+
+- **R2-2:** "The current one stays." is now "The open reference stays." In this app, "current" also means the main photo.
+- **R2-3:** there is one shed notice. The controller no longer writes a shed status. `Main.qml` shows `qsTr("Reference window closed to free image memory. To reopen it, open %1 and pin it again.")`. "Open a photo first…" is also wrapped in `qsTr`.
+- **R2-4:** user wording replaces "retained-image budget":
+  - "Output holds its last photo: the latest photo doesn't fit in image memory."
+  - "Output keeps its pinned photo: the newer photo doesn't fit in image memory."
+
+### Integration grant (CMake)
+
+- `cmake/ReferencePinTests.cmake` uses `${GLANCELOT_VIEWER_SOURCES}` and `${GLANCELOT_VIEWER_CONTEXT_SOURCES}` (EN-05 and EN-04, as for `command_routing`). It declares `glancelot_test_labels(reference_pin LABELS ui process)`.
+- New Windows-only (`if(WIN32)`) entry `reference_pin_native`:
+  - It runs the same executable with `ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=unset:;QT_QUICK_BACKEND=unset:"`, labelled `ui native process`.
+  - The gate therefore runs `nativeTextureReleasedOnClose` and `nativeTextureReleasedOnShed` on D3D11 every time; there they pass, not skip.
+
+### Tests
+
+- **Scenario 1, `pinHeldBackFrameReplacesPinAtomically`.** Pin p1, set the budget to one image + 16, and step to p2 (held back). Then `presentation-pin`.
+  - The pin is p2, in pinned mode, and the output canvas shows the main photo.
+  - `retainedImageBytes() == one`, and the status is "Reference pinned".
+  - Exactly one `pinnedPathChanged` (p2), no mode change, and the selection is unchanged.
+- **Scenario 2, `pinHeldBackFrameWithSharedReference`.** `pinBoth` (reference and pin share p1), then the same setup.
+  - The budget is never exceeded, and `retainedImageBytes() == one`.
+  - The output stays pinned with p2: one `pinnedPathChanged`, no mode change.
+  - The reference (p1) is shed with the notice "… open p1.png and pin it again."
+- **Scenario 3, `pinWhileDecodeInFlightKeepsOldPin`.** It pins from inside the first `stateChanged` that reports `loading()` for p3, so the decode is surely in flight.
+  - The old pin p1 stays, in pinned mode, with the "until the next photo finishes loading" status.
+  - No pin or mode signals fire, and the budget is held.
+  - After p3 shows, the pin is still p1.
+- **Test helper change.** `step()` now opens `p<index>.png` directly instead of triggering "next". After the main merge, a "next" intent was twice left queued with nothing running. The diagnostic printed "step(2) timed out: index 1 ready 1 loading 0" in `closeParity` and `pinnedOutputPhotoIsNeverDropped`. That is navigation, outside this packet; it is listed as an open question below. These tests only need a newer current frame.
+
+### Fail before (tests built against `b3e530e` product code, offscreen/software, direct run)
+
+```
+FAIL!  : ReferencePinTests::pinHeldBackFrameReplacesPinAtomically() Compared values are not the same
+   Actual   (pins.count()): 2
+   Expected (1)           : 1
+FAIL!  : ReferencePinTests::pinWhileDecodeInFlightKeepsOldPin() Compared values are not the same
+   Actual   (pinStatus)                : "Output keeps its pinned photo: the latest frame exceeds the retained-image budget."
+   Expected (QString(kPinWaitsForLoad)): "The output keeps its pinned photo until the next photo finishes loading. Pin again when it shows."
+FAIL!  : ReferencePinTests::budgetShedsReferenceBeforeOutputPin() Compared values are not the same
+   Actual   (dm->pinnedPath()): ""
+   Expected (media.path(1))   : ".../p2.png"
+FAIL!  : ReferencePinTests::pinHeldBackFrameWithSharedReference() 'dm->retainedImageBytes() <= glancelot::DisplayManager::imageBudgetBytes()' returned FALSE. ()
+```
+
+The scenario 2 line comes from a solo rerun (`Totals: 2 passed, 1 failed`). In the combined run, that case first hit the "next" stall described above.
+
+### Pass after: gated runs (`gate-lock.ps1 -Branch claude/f040-fix`, two consecutive runs; the shell had no `QT_QPA_PLATFORM` or `QT_QUICK_BACKEND`)
+
+```
+> ctest --test-dir build-claude-f040 -R '^(reference_pin|reference_pin_native|monitor_output|input_ui|monitor_customization_ui)$' --output-on-failure
+run 1
+1/5 Test #13: input_ui .........................   Passed  100.47 sec
+2/5 Test #37: monitor_output ...................   Passed    2.58 sec
+3/5 Test #43: monitor_customization_ui .........   Passed   25.27 sec
+4/5 Test #46: reference_pin ....................   Passed   30.38 sec
+5/5 Test #47: reference_pin_native .............   Passed   28.23 sec
+100% tests passed out of 5
+Total Test time (real) = 187.20 sec
+run 2
+1/5 Test #13: input_ui .........................   Passed   75.94 sec
+2/5 Test #37: monitor_output ...................   Passed    2.45 sec
+3/5 Test #43: monitor_customization_ui .........   Passed   24.59 sec
+4/5 Test #46: reference_pin ....................   Passed   27.46 sec
+5/5 Test #47: reference_pin_native .............   Passed   39.20 sec
+100% tests passed out of 5
+Total Test time (real) = 169.65 sec
+```
+
+QTest results:
+
+| Test | Run 1 | Run 2 |
+| --- | --- | --- |
+| `reference_pin` | 18 passed, 0 failed, 2 skipped (the native cases) | same |
+| `reference_pin_native` | 20 passed, 0 failed, 0 skipped, including `nativeTextureReleasedOnClose` and `nativeTextureReleasedOnShed` | same |
+
+### Checklist
+
+1. **Fail-before:** shown above for the three scenarios and for the changed oversize-pin assertion. The copy-only assertions (R2-2/3/4) match the new strings exactly. Against round 2 they fail only on the text.
+2. **Grant check.** `git diff --name-only b3e530e` lists:
+   - `cmake/ReferencePinTests.cmake` (one-time grant)
+   - `src/app/display_manager.cpp`
+   - `src/app/viewer_controller.cpp` (reference section and the shed connection)
+   - `tests/reference_pin_tests.cpp`
+   - `ui/Main.qml` (the reference-pin route and the reference-window block)
+
+   Root `CMakeLists.txt` changed only in the merge conflict resolution.
+3. **Exact base:** `91fedf3` plus the `origin/main` merge `b3e530e` (parent `b9dc0ec`).
+4. **Runs:** targeted runs above. The full offscreen suite was not run (the lead asked for the targeted set twice).
+5. **Decisions taken.**
+   - Scenario 2 outcome: the new pin takes hold, and the reference is shed with its notice. This follows the round 2 order: the reference goes before refusing.
+   - The pin refusal and in-flight messages are output (routing) statuses, beside "Output holds its last photo".
+
+   **Open question for the lead:** after the main merge, `ViewerController::next()` twice left an intent queued with no navigation running in these tests (`navigationIntents` drains only when a navigation finishes). Worth a navigation-owner look.

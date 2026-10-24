@@ -1,8 +1,9 @@
-# STACK-F040-PINNED provisional target (S5): parity of the F040 reference window and the MONITOR-OUTPUT pinned output.
-# Viewer sources come from the EN-05 list (cmake/ViewerSources.cmake).
+# STACK-F040-PINNED (S5): parity of the F040 reference window and the MONITOR-OUTPUT pinned output.
+# Sources follow the EN-05 viewer list and the EN-04 context services, as for command_routing.
 if(BUILD_TESTING)
   qt_add_executable(reference_pin_tests tests/reference_pin_tests.cpp
-    ${GLANCELOT_VIEWER_SOURCES} ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
+    ${GLANCELOT_VIEWER_SOURCES}
+    ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
     src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
     src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
     src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
@@ -22,5 +23,13 @@ if(BUILD_TESTING)
   add_dependencies(reference_pin_tests glancelot-decoder)
   add_test(NAME reference_pin COMMAND reference_pin_tests -o "${CMAKE_CURRENT_BINARY_DIR}/reference_pin-results.txt,txt" -o -,txt)
   set_tests_properties(reference_pin PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 240)
-  glancelot_test_labels(reference_pin LABELS ui process) # EN-03: loads the shipped Main.qml; starts glancelot-decoder
+  glancelot_test_labels(reference_pin LABELS ui process)
+  if(WIN32)
+    # The same executable on the real platform plugin and native RHI (D3D11), with no offscreen or software override,
+    # so every gate exercises the GPU texture release path (nativeTextureReleasedOnClose/OnShed do not skip here).
+    add_test(NAME reference_pin_native COMMAND reference_pin_tests -o "${CMAKE_CURRENT_BINARY_DIR}/reference_pin_native-results.txt,txt" -o -,txt)
+    set_tests_properties(reference_pin_native PROPERTIES TIMEOUT 240
+      ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=unset:;QT_QUICK_BACKEND=unset:")
+    glancelot_test_labels(reference_pin_native LABELS ui native process)
+  endif()
 endif()

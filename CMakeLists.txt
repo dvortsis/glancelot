@@ -322,10 +322,10 @@ if(GLANCELOT_BUILD_VIEWER)
   endif()
   # MONITOR-CUSTOM-01 production wiring is required independently of BUILD_TESTING.
   include(cmake/MonitorCustomization.cmake)
-  include(cmake/ReferencePinTests.cmake)
   if(BUILD_TESTING)
     include(cmake/CommandRoutingTests.cmake) # EN-06; needs the monitor-customization helper above
   endif()
+  include(cmake/ReferencePinTests.cmake)
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
