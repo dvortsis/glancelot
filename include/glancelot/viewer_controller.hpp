@@ -43,7 +43,7 @@ class ViewerController : public QObject {
     Q_PROPERTY(qreal textScale READ textScale WRITE setTextScale NOTIFY stateChanged)
     Q_PROPERTY(bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY stateChanged)
     // F053: a high-contrast palette (WCAG AAA text and non-text contrast) and 44 px touch-sized targets. Both persist.
-    // F015 tabs (shape A: a tab is a saved location; switching navigates). Empty while there is one tab. At most 8 tabs; they persist
+    // F015 tabs (shape A: a tab is a saved location; switching navigates). Empty while there is one tab, except one row (the active, unavailable tab) when that tab's folder is unavailable. At most 8 tabs; they persist
     // with the window's position and restore with the active one navigated.
     Q_PROPERTY(QVariantList tabs READ tabs NOTIFY tabsChanged)
     Q_PROPERTY(int activeTab READ activeTab NOTIFY tabsChanged)

@@ -680,7 +680,10 @@ void DisplayManager::pinCurrentImage() {
         d->status(QStringLiteral("The output keeps its pinned photo until the next photo finishes loading. Pin again when it shows."));
         return;
     }
-    if (d->capturedGeneration < d->pinnedGeneration) return;   // stale
+    if (d->capturedGeneration < d->pinnedGeneration) {   // older than the pin already holding the output: nothing changes
+        d->status(QStringLiteral("The photo changed while it was being pinned. The output keeps its pinned photo. Pin again to use the current photo."));
+        return;
+    }
     if (!d->admitPin(d->capturedPath, image, d->capturedGeneration, true)) return;
     d->applyImagesToWindow();
     setMode(PresentationMode::Pinned);

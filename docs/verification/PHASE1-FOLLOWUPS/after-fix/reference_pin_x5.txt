@@ -1,0 +1,20 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-phase1-followups/build-claude-phase1-followups
+Test project C:/src/Github/Glancelot/.worktrees/claude-phase1-followups/build-claude-phase1-followups
+    Start 50: reference_pin
+    Test #50: reference_pin ....................   Passed   38.82 sec
+    Start 50: reference_pin
+    Test #50: reference_pin ....................   Passed   37.06 sec
+    Start 50: reference_pin
+    Test #50: reference_pin ....................   Passed   35.74 sec
+    Start 50: reference_pin
+    Test #50: reference_pin ....................   Passed   31.08 sec
+    Start 50: reference_pin
+1/1 Test #50: reference_pin ....................   Passed   36.09 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+process    =  36.09 sec*proc (1 test)
+ui         =  36.09 sec*proc (1 test)
+
+Total Test time (real) = 178.80 sec

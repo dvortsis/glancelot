@@ -1,0 +1,13 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-phase1-followups/build-claude-phase1-followups
+Test project C:/src/Github/Glancelot/.worktrees/claude-phase1-followups/build-claude-phase1-followups
+    Start 51: reference_pin_native
+1/1 Test #51: reference_pin_native .............   Passed   43.97 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+native     =  43.97 sec*proc (1 test)
+process    =  43.97 sec*proc (1 test)
+ui         =  43.97 sec*proc (1 test)
+
+Total Test time (real) =  43.98 sec
