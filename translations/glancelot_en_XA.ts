@@ -860,6 +860,26 @@
         <source>All files (%1)</source>
         <translation>[Àll fîlés (%1)]</translation>
     </message>
+    <message>
+        <source>%1 is unavailable</source>
+        <translation>[%1 îs ûñàvàîlàblé]</translation>
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation>[Rétrý]</translation>
+    </message>
+    <message>
+        <source>Retry this tab&apos;s folder</source>
+        <translation>[Rétrý thîs tàb&apos;s fõldér]</translation>
+    </message>
+    <message>
+        <source>Reconnect the drive or network share, then retry. Your other tabs keep their places.</source>
+        <translation>[Réçõññéçt thé drîvé õr ñétwõrk shàré, théñ rétrý. Ýõûr õthér tàbs kéép théîr plàçés.]</translation>
+    </message>
+    <message>
+        <source>Reference window closed to free image memory. To reopen it, open %1 and pin it again.</source>
+        <translation>[Référéñçé wîñdõw çlõséd tõ fréé îmàgé mémõrý. Tõ réõpéñ ît, õpéñ %1 àñd pîñ ît àgàîñ.]</translation>
+    </message>
 </context>
 <context>
     <name>MetadataHud</name>
@@ -2290,6 +2310,10 @@
     <message>
         <source>Wheel behavior changed for this session; settings could not be saved.</source>
         <translation>[Whéél béhàvîõr çhàñgéd fõr thîs séssîõñ; séttîñgs çõûld ñõt bé sàvéd.]</translation>
+    </message>
+    <message>
+        <source>This tab&apos;s folder is unavailable: %1. Retry when it is back, or open another photo.</source>
+        <translation>[Thîs tàb&apos;s fõldér îs ûñàvàîlàblé: %1. Rétrý whéñ ît îs bàçk, õr õpéñ àñõthér phõtõ.]</translation>
     </message>
 </context>
 <context>
