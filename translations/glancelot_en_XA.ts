@@ -1485,12 +1485,12 @@
         <translation>[Shõw õñlý %1. Séléçt àgàîñ tõ çléàr. Çtrl+Shîft+F mõvés héré frõm thé grîd.]</translation>
     </message>
     <message>
-        <source>Type filter. Press Space to switch it, Escape to return to the items.</source>
-        <translation>[Týpé fîltér. Préss Spàçé tõ swîtçh ît, Ésçàpé tõ rétûrñ tõ thé îtéms.]</translation>
-    </message>
-    <message>
         <source>Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo. Ctrl+Shift+F moves to the type filters.</source>
         <translation>[Àrrõw kéýs mõvé. Shîft éxtéñds, Çtrl+Spàçé tõgglés, Çtrl+À séléçts àll. Éñtér õpéñs à fõldér õr phõtõ. Bàçkspàçé gõés ûp. Ésçàpé çléàrs thé séléçtîõñ, théñ rétûrñs tõ thé phõtõ. Çtrl+Shîft+F mõvés tõ thé týpé fîltérs.]</translation>
+    </message>
+    <message>
+        <source>Type filter. Press Space to switch it, Left or Right to move to another type, Escape to return to the items.</source>
+        <translation>[Týpé fîltér. Préss Spàçé tõ swîtçh ît, Léft õr Rîght tõ mõvé tõ àñõthér týpé, Ésçàpé tõ rétûrñ tõ thé îtéms.]</translation>
     </message>
 </context>
 <context>

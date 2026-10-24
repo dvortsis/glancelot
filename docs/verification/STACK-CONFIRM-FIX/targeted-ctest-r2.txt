@@ -1,35 +1,26 @@
 Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
 Test project C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
     Start 12: folder_grid
-1/6 Test #12: folder_grid ......................   Passed  209.92 sec
+1/6 Test #12: folder_grid ......................   Passed  228.01 sec
     Start 13: input_ui
-2/6 Test #13: input_ui .........................   Passed   76.41 sec
+2/6 Test #13: input_ui .........................   Passed   75.53 sec
     Start 44: tabs_recovery
-3/6 Test #44: tabs_recovery ....................   Passed   58.28 sec
+3/6 Test #44: tabs_recovery ....................   Passed   58.54 sec
     Start 47: translation_coverage_ui
-4/6 Test #47: translation_coverage_ui ..........   Passed   23.38 sec
+4/6 Test #47: translation_coverage_ui ..........   Passed   22.57 sec
     Start 49: command_routing
-5/6 Test #49: command_routing ..................   Passed    8.95 sec
+5/6 Test #49: command_routing ..................   Passed    8.75 sec
     Start 52: stack_confirm_ui
-6/6 Test #52: stack_confirm_ui .................Exit code 0xc0000409
-***Exception: 315.73 sec
+6/6 Test #52: stack_confirm_ui .................   Passed   61.70 sec
 
-         slideshowKeepsGoingAcrossAFolderBoundary function time: 300000ms, total time: 315523ms
-
-
-83% tests passed, 1 tests failed out of 6
+100% tests passed, 0 tests failed out of 6
 
 Label Time Summary:
-budget       = 286.34 sec*proc (2 tests)
-clipboard    = 286.34 sec*proc (2 tests)
-fast         =  58.28 sec*proc (1 test)
-native       = 209.92 sec*proc (1 test)
-process      = 692.68 sec*proc (6 tests)
-ui           = 634.40 sec*proc (5 tests)
+budget       = 303.54 sec*proc (2 tests)
+clipboard    = 303.54 sec*proc (2 tests)
+fast         =  58.54 sec*proc (1 test)
+native       = 228.01 sec*proc (1 test)
+process      = 455.10 sec*proc (6 tests)
+ui           = 396.56 sec*proc (5 tests)
 
-Total Test time (real) = 692.71 sec
-
-The following tests FAILED:
-	 52 - stack_confirm_ui (Exit code 0xc0000409
-)          process ui
-Errors while running CTest
+Total Test time (real) = 455.13 sec
