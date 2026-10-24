@@ -1,0 +1,16 @@
+Test project C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
+    Start 52: stack_confirm_ui
+1/1 Test #52: stack_confirm_ui .................***Failed  177.03 sec
+
+
+0% tests passed, 1 tests failed out of 1
+
+Label Time Summary:
+process    = 177.03 sec*proc (1 test)
+ui         = 177.03 sec*proc (1 test)
+
+Total Test time (real) = 177.14 sec
+
+The following tests FAILED:
+	 52 - stack_confirm_ui (Failed)                         process ui
+Errors while running CTest

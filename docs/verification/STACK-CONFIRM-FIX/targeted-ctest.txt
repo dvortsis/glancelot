@@ -1,0 +1,40 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
+Test project C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
+      Start 12: folder_grid
+ 1/13 Test #12: folder_grid ......................   Passed  275.38 sec
+      Start 13: input_ui
+ 2/13 Test #13: input_ui .........................   Passed   96.09 sec
+      Start 14: pathbar_ui
+ 3/13 Test #14: pathbar_ui .......................   Passed    5.19 sec
+      Start 17: viewport
+ 4/13 Test #17: viewport .........................   Passed    0.13 sec
+      Start 22: ui_settings
+ 5/13 Test #22: ui_settings ......................   Passed    1.44 sec
+      Start 29: shortcuts_help
+ 6/13 Test #29: shortcuts_help ...................   Passed    0.81 sec
+      Start 30: filter
+ 7/13 Test #30: filter ...........................   Passed    3.22 sec
+      Start 44: tabs_recovery
+ 8/13 Test #44: tabs_recovery ....................   Passed   59.28 sec
+      Start 46: monitor_customization_ui
+ 9/13 Test #46: monitor_customization_ui .........   Passed   37.82 sec
+      Start 47: translation_coverage_ui
+10/13 Test #47: translation_coverage_ui ..........   Passed   31.09 sec
+      Start 48: layout_presets_ui
+11/13 Test #48: layout_presets_ui ................   Passed   29.58 sec
+      Start 49: command_routing
+12/13 Test #49: command_routing ..................   Passed   13.60 sec
+      Start 52: stack_confirm_ui
+13/13 Test #52: stack_confirm_ui .................   Passed   48.32 sec
+
+100% tests passed, 0 tests failed out of 13
+
+Label Time Summary:
+budget       = 371.47 sec*proc (2 tests)
+clipboard    = 371.47 sec*proc (2 tests)
+fast         =  64.88 sec*proc (5 tests)
+native       = 275.38 sec*proc (1 test)
+process      = 599.58 sec*proc (10 tests)
+ui           = 537.08 sec*proc (8 tests)
+
+Total Test time (real) = 602.00 sec

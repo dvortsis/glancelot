@@ -880,6 +880,10 @@
         <source>Reference window closed to free image memory. To reopen it, open %1 and pin it again.</source>
         <translation>[Référéñçé wîñdõw çlõséd tõ fréé îmàgé mémõrý. Tõ réõpéñ ît, õpéñ %1 àñd pîñ ît àgàîñ.]</translation>
     </message>
+    <message>
+        <source>Slideshow stopped: the last %1 photos could not be opened.</source>
+        <translation>[Slîdéshõw stõppéd: thé làst %1 phõtõs çõûld ñõt bé õpéñéd.]</translation>
+    </message>
 </context>
 <context>
     <name>MetadataHud</name>
@@ -1479,6 +1483,14 @@
     <message>
         <source>Try again</source>
         <translation>[Trý àgàîñ]</translation>
+    </message>
+    <message>
+        <source>Show only %1. Select again to clear. Ctrl+Shift+F moves here from the grid.</source>
+        <translation>[Shõw õñlý %1. Séléçt àgàîñ tõ çléàr. Çtrl+Shîft+F mõvés héré frõm thé grîd.]</translation>
+    </message>
+    <message>
+        <source>Type filter. Press Space to switch it, Escape to return to the items.</source>
+        <translation>[Týpé fîltér. Préss Spàçé tõ swîtçh ît, Ésçàpé tõ rétûrñ tõ thé îtéms.]</translation>
     </message>
 </context>
 <context>
