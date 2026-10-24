@@ -1,0 +1,42 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() manual a-2 -> b-1 took 5618 ms (gap 300 empty folders)
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() manual b-1 -> a-2 took 5442 ms
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() t= 0 a-1.png on=1 loading=0 ready=1
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() t= 5043 a-2.png on=1 loading=1 ready=0
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() t= 5122 a-2.png on=1 loading=0 ready=1
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() t= 15027 a-2.png on=0 loading=0 ready=1
+QINFO  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() after stop + 8 s: b-1.png notice: 
+FAIL!  : StackConfirmUiTests::probeSlideshowAcrossASlowFolderStep() 'h.viewer.fileName() == "b-2.png"' returned FALSE. (the slideshow stopped before reaching b-2 (a slow step of its own was taken for a dead end))
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r3\tests\stack_confirm_ui_tests.cpp(172) : failure location
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=540 active=2 strip=119 cap=96 contentX=269 contentW=388 tab=-9..87 close=..119 OUT OF VIEW clipped: tab-2[-9..87]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=540 active=0 strip=119 cap=96 contentX=0 contentW=388 tab=0..96 close=..128 OUT OF VIEW clipped: tabClose-0[96..128]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=540 active=1 strip=119 cap=96 contentX=139 contentW=388 tab=-9..87 close=..119 OUT OF VIEW clipped: tab-1[-9..87]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=540 active=2 strip=119 cap=96 contentX=269 contentW=388 tab=-9..87 close=..119 OUT OF VIEW clipped: tab-2[-9..87]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=540 active=1 strip=119 cap=96 contentX=139 contentW=388 tab=-9..87 close=..119 OUT OF VIEW clipped: tab-1[-9..87]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=540 active=0 strip=119 cap=96 contentX=0 contentW=388 tab=0..96 close=..128 OUT OF VIEW clipped: tabClose-0[96..128]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=560 active=2 strip=139 cap=96 contentX=249 contentW=388 tab=11..107 close=..139 OK clipped: tabClose-1[-23..9]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=560 active=0 strip=139 cap=96 contentX=0 contentW=388 tab=0..96 close=..128 OK clipped: tab-1[130..226]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=560 active=1 strip=139 cap=96 contentX=119 contentW=388 tab=11..107 close=..139 OK clipped: tabClose-0[-23..9]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=560 active=2 strip=139 cap=96 contentX=249 contentW=388 tab=11..107 close=..139 OK clipped: tabClose-1[-23..9]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=560 active=1 strip=139 cap=96 contentX=119 contentW=388 tab=11..107 close=..139 OK clipped: tabClose-0[-23..9]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=560 active=0 strip=139 cap=96 contentX=0 contentW=388 tab=0..96 close=..128 OK clipped: tab-1[130..226]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=700 active=2 strip=184 cap=96 contentX=204 contentW=388 tab=56..152 close=..184 OK clipped: tab-1[-74..22]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=700 active=0 strip=184 cap=96 contentX=0 contentW=388 tab=0..96 close=..128 OK clipped: tab-1[130..226]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=700 active=1 strip=184 cap=96 contentX=74 contentW=388 tab=56..152 close=..184 OK clipped: tab-0[-74..22]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=700 active=2 strip=184 cap=96 contentX=204 contentW=388 tab=56..152 close=..184 OK clipped: tab-1[-74..22]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=700 active=1 strip=184 cap=96 contentX=74 contentW=388 tab=56..152 close=..184 OK clipped: tab-0[-74..22]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=700 active=0 strip=184 cap=96 contentX=0 contentW=388 tab=0..96 close=..128 OK clipped: tab-1[130..226]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=1180 active=2 strip=466 cap=192 contentX=210 contentW=676 tab=242..434 close=..466 OK clipped: tabClose-0[-18..14]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=1180 active=0 strip=466 cap=192 contentX=0 contentW=676 tab=0..192 close=..224 OK clipped: tab-2[452..644]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=1180 active=1 strip=466 cap=192 contentX=0 contentW=676 tab=226..418 close=..450 OK clipped: tab-2[452..644]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=1180 active=2 strip=466 cap=192 contentX=210 contentW=676 tab=242..434 close=..466 OK clipped: tabClose-0[-18..14]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=1180 active=1 strip=466 cap=192 contentX=0 contentW=676 tab=226..418 close=..450 OK clipped: tab-2[452..644]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() w=1180 active=0 strip=466 cap=192 contentX=0 contentW=676 tab=0..192 close=..224 OK clipped: tab-2[452..644]
+QINFO  : StackConfirmUiTests::probeTabStripAtWindowMinimum() wheel toward the end: contentX 210 -> 210 (contentWidth 676, width 466)
+FAIL!  : StackConfirmUiTests::probeTabStripAtWindowMinimum() 'bad == 0' returned FALSE. (6 placements left the active tab out of view)
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r3\tests\stack_confirm_ui_tests.cpp(226) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 57858ms
+********* Finished testing of StackConfirmUiTests *********

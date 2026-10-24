@@ -1,0 +1,39 @@
+== M1 failure bound back to min(5, fileCount) in every boundary mode :: stack_confirm_ui_tests_tip.exe slideshowPassesThroughAOnePhotoFolder slideshowSkipsAnUndecodablePhoto slideshowStopsAfterAnUnplayableRun slideshowPassesABadPhotoPromptlyAtASlowPace slideshowKeepsGoingAcrossAFolderBoundary
+PASS   : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder()
+PASS   : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto()
+PASS   : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun()
+PASS   : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace()
+PASS   : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary()
+Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 35836ms
+== M2 the path-based "went nowhere" stop deleted :: input_ui_tests.exe slideshowAdvancesAndEndsCleanly
+FAIL!  : InputUiTests::slideshowAdvancesAndEndsCleanly() '!flag(h, "slideshowOn")' returned FALSE. ()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 15995ms
+== M3 went-nowhere judged by index again (base behaviour) :: stack_confirm_ui_tests_tip.exe slideshowPassesThroughAOnePhotoFolder
+PASS   : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 6467ms
+== M4 tab-count rule reverted (any active-tab index change stops the slideshow) :: stack_confirm_ui_tests_tip.exe slideshowSurvivesClosingAnotherTab slideshowEndsOnTabSwitchAndFolderOpen
+FAIL!  : StackConfirmUiTests::slideshowSurvivesClosingAnotherTab() 'flag(h, "slideshowOn")' returned FALSE. (closing an inactive tab ended the slideshow)
+PASS   : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen()
+Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 3810ms
+== M5 tab strip rightMargin removed :: stack_confirm_ui_tests_tip.exe longTabNamesKeepTheActiveTabInView
+FAIL!  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() '!(r.left() < -0.5 && r.right() > 0.5)' returned FALSE. (width 1180, active tab 2: tabClose-0 is clipped at the left edge (x -18..14))
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 3014ms
+== M6 chip Right arrow handler removed :: stack_confirm_ui_tests_tip.exe typeChipsMoveWithTheArrowKeys typeChipsWorkFromTheKeyboard
+FAIL!  : StackConfirmUiTests::typeChipsMoveWithTheArrowKeys() 'chip("image")->hasActiveFocus()' returned FALSE. ()
+PASS   : StackConfirmUiTests::typeChipsWorkFromTheKeyboard()
+Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 21965ms
+ M tests/stack_confirm_ui_tests.cpp
+?? docs/verification/STACK-CONFIRM-R3/
+(M3 above gated the index check on a pending step, which is not the base behaviour; rerun as M3b, ungated like the base)
+== M3 went-nowhere judged by index again (base behaviour) :: stack_confirm_ui_tests_tip.exe slideshowPassesThroughAOnePhotoFolder
+FAIL!  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() Compared values are not the same
+   Actual   (h.viewer.fileName()): "c-1.png"
+   Expected (QString("c-2.png")) : "c-2.png"
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 57260ms
+ M tests/stack_confirm_ui_tests.cpp
+?? docs/verification/STACK-CONFIRM-R3/
+== M7 skip timer start removed (a settled failure waits for the main tick) :: stack_confirm_ui_tests_tip.exe slideshowPassesABadPhotoPromptlyAtASlowPace
+FAIL!  : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace() QTestLib: This test case check ("(h.viewer.currentIndex()) == (3)") failed because the requested timeout (4000 ms) was too short, 5050 ms would have been sufficient this time.
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 13992ms
+ M tests/stack_confirm_ui_tests.cpp
+?? docs/verification/STACK-CONFIRM-R3/

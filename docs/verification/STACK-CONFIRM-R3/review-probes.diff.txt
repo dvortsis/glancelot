@@ -1,0 +1,124 @@
+diff --git a/tests/stack_confirm_ui_tests.cpp b/tests/stack_confirm_ui_tests.cpp
+index 2fc797e..ec38693 100644
+--- a/tests/stack_confirm_ui_tests.cpp
++++ b/tests/stack_confirm_ui_tests.cpp
+@@ -112,6 +112,119 @@ private slots:
+         QVERIFY2(flag(h, "slideshowOn"), "the slideshow's own step into the next folder ended it");
+         settleSlideshow(h);
+     }
++    // ---- R3 review probe P0 (temporary): the guard test exactly as it was before settleSlideshow was added.
++    void probeGuardWithoutSettle() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QString a = makeFolder(root.path(), "a", 2), b = makeFolder(root.path(), "b", 2);
++        QVERIFY(!a.isEmpty() && !b.isEmpty());
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(a).filePath("a-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h)); focusCanvas(h);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++        h.viewer.raiseRoot(); QTest::qWait(500);
++        h.viewer.setBoundaryMode("continue");
++        setSlideshowSeconds(h, 1);
++        h.viewer.trigger("slideshow");
++        QTRY_VERIFY(flag(h, "slideshowOn"));
++        QTRY_VERIFY_WITH_TIMEOUT(QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/b"), 10000);
++        QTest::qWait(300);
++        QVERIFY2(flag(h, "slideshowOn"), "the slideshow's own step into the next folder ended it");
++    }
++    // ---- R3 review probes (temporary; reverted after running) ----
++    // P1: a slow cross-folder step (many empty sibling folders between a and b) under "continue" at a 1 s pace.
++    void probeSlideshowAcrossASlowFolderStep() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QString a = makeFolder(root.path(), "a", 2), b = makeFolder(root.path(), "b", 2);
++        QVERIFY(!a.isEmpty() && !b.isEmpty());
++        const int gap = qEnvironmentVariableIntValue("PROBE_GAP") > 0 ? qEnvironmentVariableIntValue("PROBE_GAP") : 500;
++        for (int i = 0; i < gap; ++i) QVERIFY(QDir(root.path()).mkpath(QString("a%1").arg(i, 5, 10, QChar('0'))));
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(a).filePath("a-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h)); focusCanvas(h);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++        h.viewer.raiseRoot(); QTest::qWait(500);
++        h.viewer.setBoundaryMode("continue");
++        // Manual timing of the slow step: a-1 -> a-2 -> (gap) -> b-1, then back.
++        h.viewer.next(); QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("a-2.png"), 10000);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
++        QElapsedTimer t; t.start();
++        h.viewer.next(); QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("b-1.png"), 60000);
++        qInfo() << "manual a-2 -> b-1 took" << t.elapsed() << "ms (gap" << gap << "empty folders)";
++        t.restart();
++        h.viewer.previous(); QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("a-2.png"), 60000);
++        qInfo() << "manual b-1 -> a-2 took" << t.elapsed() << "ms";
++        h.viewer.previous(); QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("a-1.png"), 10000);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
++        const int pace = qEnvironmentVariableIntValue("PROBE_PACE") > 0 ? qEnvironmentVariableIntValue("PROBE_PACE") : 1;
++        setSlideshowSeconds(h, pace);
++        h.viewer.trigger("slideshow");
++        QTRY_VERIFY(flag(h, "slideshowOn"));
++        t.restart();
++        QString last;
++        while (t.elapsed() < 25000 + 4000 * pace) {
++            const QString now = QString("%1 on=%2 loading=%3 ready=%4").arg(h.viewer.fileName()).arg(flag(h, "slideshowOn")).arg(h.viewer.loading()).arg(h.viewer.imageReady());
++            if (now != last) { qInfo().noquote() << "t=" << t.elapsed() << now; last = now; }
++            if (!flag(h, "slideshowOn")) { QTest::qWait(8000); qInfo().noquote() << "after stop + 8 s:" << h.viewer.fileName() << "notice:" << noticeText(h); break; }
++            QTest::qWait(20);
++        }
++        QVERIFY2(h.viewer.fileName() == "b-2.png", "the slideshow stopped before reaching b-2 (a slow step of its own was taken for a dead end)");
++        settleSlideshow(h);
++    }
++    // P2: the tab strip at the 540 px window minimum: the active tab stays fully in view whichever tab is active.
++    void probeTabStripAtWindowMinimum() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QStringList names{
++            "A fairly long folder name from last summer's trip to the coast with the whole family",
++            "Another extremely long folder name that keeps going and going well past any sensible tab width",
++            "Third folder with a name that is also much longer than a tab should ever be"};
++        QStringList folders;
++        for (const auto& name : names) { folders << makeFolder(root.path(), name, 2); QVERIFY(!folders.last().isEmpty()); }
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(folders[0]).filePath("A-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h));
++        for (int i = 1; i < 3; ++i) {
++            h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), i + 1);
++            h.viewer.open(QDir(folders[i]).filePath(QString("%1-1.png").arg(names[i].left(1)))); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++            QTRY_COMPARE(h.viewer.activeTab(), i);
++        }
++        auto* strip = named(h.window, "tabStrip"); QVERIFY(strip);
++        int bad = 0;
++        for (const int width : {540, 560, 700, 1180}) {
++            h.window->resize(width, 780); QTest::qWait(600);
++            for (int active : {2, 0, 1, 2, 1, 0}) {
++                h.viewer.activateTab(active); QTRY_COMPARE(h.viewer.activeTab(), active);
++                QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
++                QMetaObject::invokeMethod(h.window, "wakeHud"); QTest::qWait(500);
++                auto* tab = named(h.window, QString("tab-%1").arg(active));
++                auto* close = named(h.window, QString("tabClose-%1").arg(active));
++                const QRectF rt = inStrip(strip, tab), rc = inStrip(strip, close);
++                const bool ok = fullyInside(strip, tab) && fullyInside(strip, close);
++                QString clipped;
++                for (int i = 0; i < 3; ++i) for (const char* prefix : {"tab-", "tabClose-"}) {
++                    const QRectF r = inStrip(strip, named(h.window, QString("%1%2").arg(prefix).arg(i)));
++                    if ((r.left() < -0.5 && r.right() > 0.5) || (r.left() < strip->width() - 0.5 && r.right() > strip->width() + 0.5)) clipped += QString(" %1%2[%3..%4]").arg(prefix).arg(i).arg(r.left()).arg(r.right());
++                }
++                qInfo().noquote() << QString("w=%1 active=%2 strip=%3 cap=%4 contentX=%5 contentW=%6 tab=%7..%8 close=..%9 %10 clipped:%11")
++                    .arg(width).arg(active).arg(strip->width()).arg(strip->property("tabCap").toReal()).arg(strip->property("contentX").toReal())
++                    .arg(strip->property("contentWidth").toReal()).arg(rt.left()).arg(rt.right()).arg(rc.right()).arg(ok ? "OK" : "OUT OF VIEW").arg(clipped);
++                if (!ok) ++bad;
++            }
++        }
++        // Wheel over the strip after a reveal into the right margin.
++        h.window->resize(1180, 780); QTest::qWait(600);
++        h.viewer.activateTab(2); QTRY_COMPARE(h.viewer.activeTab(), 2); QTest::qWait(500);
++        QMetaObject::invokeMethod(h.window, "wakeHud"); QTest::qWait(300);
++        const qreal before = strip->property("contentX").toReal();
++        const QPoint at = strip->mapToScene(QPointF(strip->width() / 2, strip->height() / 2)).toPoint();
++        sendWheel(h, at, QPoint(), QPoint(0, -120), Qt::NoModifier); QTest::qWait(200);
++        const qreal afterDown = strip->property("contentX").toReal();
++        qInfo().noquote() << QString("wheel toward the end: contentX %1 -> %2 (contentWidth %3, width %4)").arg(before).arg(afterDown)
++            .arg(strip->property("contentWidth").toReal()).arg(strip->width());
++        QVERIFY2(bad == 0, qPrintable(QString("%1 placements left the active tab out of view").arg(bad)));
++    }
+     // R2-N1: a failed photo is passed after about a second even at a slow pace (it is not held for a whole interval).
+     void slideshowPassesABadPhotoPromptlyAtASlowPace() {
+         Media media(3, QSize(64, 48));

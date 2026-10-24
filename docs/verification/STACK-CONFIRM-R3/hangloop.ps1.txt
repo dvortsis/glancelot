@@ -1,0 +1,38 @@
+param([string]$Exe, [string]$Function = 'slideshowKeepsGoingAcrossAFolderBoundary', [int]$Runs = 10, [string]$Tag = 'idle',
+      [string]$OutDir, [int]$SampleAfter = 30, [int]$FunctionTimeoutMs = 90000)
+$ErrorActionPreference = 'Continue'
+New-Item -ItemType Directory -Force $OutDir | Out-Null
+$qt = 'C:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64'
+$env:PATH = "$qt\bin;$env:PATH"
+$env:QT_QPA_PLATFORM = 'offscreen'
+$env:QT_QUICK_BACKEND = 'software'
+$env:QTEST_FUNCTION_TIMEOUT = "$FunctionTimeoutMs"
+$summary = Join-Path $OutDir "summary-$Tag.txt"
+for ($i = 1; $i -le $Runs; $i++) {
+    $log = Join-Path $OutDir ("run-$Tag-{0:d3}.txt" -f $i)
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $p = Start-Process -FilePath $Exe -ArgumentList @($Function, '-o', "$log,txt") -PassThru -NoNewWindow
+    $sampled = $false
+    while (-not $p.HasExited) {
+        Start-Sleep -Milliseconds 250
+        if (-not $sampled -and $sw.Elapsed.TotalSeconds -gt $SampleAfter) {
+            $sampled = $true
+            $samp = Join-Path $OutDir ("hang-$Tag-{0:d3}.txt" -f $i)
+            foreach ($k in 1..2) {
+                try {
+                    $pp = Get-Process -Id $p.Id -ErrorAction Stop
+                    "sample $k at $([int]$sw.Elapsed.TotalSeconds) s: CPU total $($pp.TotalProcessorTime.TotalMilliseconds) ms, threads $($pp.Threads.Count)" | Add-Content $samp
+                    $pp.Threads | ForEach-Object { "  tid $($_.Id) state $($_.ThreadState) wait $(try { $_.WaitReason } catch { '-' }) cpu $($_.TotalProcessorTime.TotalMilliseconds)" } | Add-Content $samp
+                } catch { "sample failed: $_" | Add-Content $samp }
+                if ($k -eq 1) { & (Join-Path $PSScriptRoot 'stackdump\stackdump.exe') $p.Id "$(Split-Path $Exe -Parent);$qt\bin" *> ($samp -replace 'hang-','stacks-') }; Start-Sleep -Seconds 5
+            }
+        }
+    }
+    $sw.Stop()
+    $out = Get-Content $log -Raw -ErrorAction SilentlyContinue
+    $totals = ([regex]::Match($out, 'Totals: [^\r\n]*')).Value
+    $fail = ([regex]::Matches($out, 'FAIL!.*') | ForEach-Object Value) -join ' | '
+    $line = "{0} run {1:d3}: exit {2} {3:n1}s {4} {5}" -f $Tag, $i, $p.ExitCode, $sw.Elapsed.TotalSeconds, $totals, $fail
+    $line | Add-Content $summary
+    Write-Host $line
+}

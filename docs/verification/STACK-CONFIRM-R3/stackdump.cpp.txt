@@ -1,0 +1,52 @@
+// Review tool: print every thread's call stack of a live process (exports/PDB symbols via dbghelp).
+#include <windows.h>
+#include <tlhelp32.h>
+#include <dbghelp.h>
+#include <cstdio>
+#include <cstdlib>
+#pragma comment(lib, "dbghelp.lib")
+
+int main(int argc, char** argv) {
+    if (argc < 2) { std::printf("usage: stackdump <pid> [symbol path]\n"); return 2; }
+    const DWORD pid = std::strtoul(argv[1], nullptr, 10);
+    HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+    if (!process) { std::printf("OpenProcess failed %lu\n", GetLastError()); return 1; }
+    SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+    if (!SymInitialize(process, argc > 2 ? argv[2] : nullptr, TRUE)) { std::printf("SymInitialize failed %lu\n", GetLastError()); return 1; }
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    THREADENTRY32 te{}; te.dwSize = sizeof(te);
+    for (BOOL ok = Thread32First(snap, &te); ok; ok = Thread32Next(snap, &te)) {
+        if (te.th32OwnerProcessID != pid) continue;
+        HANDLE thread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
+        if (!thread) continue;
+        SuspendThread(thread);
+        CONTEXT ctx{}; ctx.ContextFlags = CONTEXT_FULL;
+        std::printf("=== thread %lu\n", te.th32ThreadID);
+        if (GetThreadContext(thread, &ctx)) {
+            STACKFRAME64 frame{};
+            frame.AddrPC.Offset = ctx.Rip; frame.AddrPC.Mode = AddrModeFlat;
+            frame.AddrFrame.Offset = ctx.Rbp; frame.AddrFrame.Mode = AddrModeFlat;
+            frame.AddrStack.Offset = ctx.Rsp; frame.AddrStack.Mode = AddrModeFlat;
+            for (int i = 0; i < 64; ++i) {
+                if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, process, thread, &frame, &ctx, nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr)) break;
+                if (!frame.AddrPC.Offset) break;
+                char buffer[sizeof(SYMBOL_INFO) + 512]{};
+                auto* symbol = reinterpret_cast<SYMBOL_INFO*>(buffer);
+                symbol->SizeOfStruct = sizeof(SYMBOL_INFO); symbol->MaxNameLen = 511;
+                DWORD64 displacement = 0;
+                IMAGEHLP_MODULE64 module{}; module.SizeOfStruct = sizeof(module);
+                const char* moduleName = SymGetModuleInfo64(process, frame.AddrPC.Offset, &module) ? module.ModuleName : "?";
+                if (SymFromAddr(process, frame.AddrPC.Offset, &displacement, symbol))
+                    std::printf("  %2d %s!%s+0x%llx\n", i, moduleName, symbol->Name, displacement);
+                else
+                    std::printf("  %2d %s!0x%llx\n", i, moduleName, frame.AddrPC.Offset);
+            }
+        }
+        ResumeThread(thread);
+        CloseHandle(thread);
+    }
+    CloseHandle(snap);
+    SymCleanup(process);
+    CloseHandle(process);
+    return 0;
+}

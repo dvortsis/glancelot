@@ -1,0 +1,60 @@
+$ErrorActionPreference = 'Stop'
+$w = 'C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r3'
+$b = "$w\build-review-stack-confirm-r3"
+$s = 'C:\Users\dvort\AppData\Local\Temp\claude\C--src-Github-Glancelot\3964ed69-a862-46ee-810f-014ad601c81c\scratchpad'
+$env:PATH = "C:\src\Github\Glancelot\.tools\Qt\6.8.3\msvc2022_64\bin;$env:PATH"
+$env:QT_QPA_PLATFORM = 'offscreen'; $env:QT_QUICK_BACKEND = 'software'
+Set-Location $b
+$main = "$w\ui\Main.qml"; $grid = "$w\ui\PhotoGrid.qml"
+$mutations = @(
+  @{ id = 'M7'; desc = 'skip timer start removed (a settled failure waits for the main tick)'; file = $main
+     old = 'if (!viewer.loading && !viewer.imageReady && slideshowStepFrom.length === 0) slideshowSkipTimer.start()'
+     new = ''
+     exe = 'stack_confirm_ui_tests_tip.exe'; targs = 'slideshowPassesABadPhotoPromptlyAtASlowPace' },
+  @{ id = 'M1'; desc = 'failure bound back to min(5, fileCount) in every boundary mode'; file = $main
+     old = 'const failureBound = viewer.boundaryMode === "loop" ? Math.max(2, Math.min(slideshowFailureLimit, viewer.fileCount)) : slideshowFailureLimit'
+     new = 'const failureBound = Math.min(slideshowFailureLimit, viewer.fileCount)'
+     exe = 'stack_confirm_ui_tests_tip.exe'; targs = 'slideshowPassesThroughAOnePhotoFolder slideshowSkipsAnUndecodablePhoto slideshowStopsAfterAnUnplayableRun slideshowPassesABadPhotoPromptlyAtASlowPace slideshowKeepsGoingAcrossAFolderBoundary' },
+  @{ id = 'M2'; desc = 'the path-based "went nowhere" stop deleted'; file = $main
+     old = 'if (slideshowStepFrom.length && viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }'
+     new = ''
+     exe = 'input_ui_tests.exe'; targs = 'slideshowAdvancesAndEndsCleanly' },
+  @{ id = 'M3'; desc = 'went-nowhere judged by index again (base behaviour)'; file = $main
+     old = 'if (slideshowStepFrom.length && viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }'
+     new = 'if (viewer.currentIndex === app.r3LastIndex) { stopSlideshow(); return }; app.r3LastIndex = viewer.currentIndex'
+     extraOld = 'property int slideshowTabs: 1'; extraNew = "property int slideshowTabs: 1`n    property int r3LastIndex: -1"
+     exe = 'stack_confirm_ui_tests_tip.exe'; targs = 'slideshowPassesThroughAOnePhotoFolder' },
+  @{ id = 'M4'; desc = 'tab-count rule reverted (any active-tab index change stops the slideshow)'; file = $main
+     old = 'if (tabs < slideshowTabs) slideshowTab = viewer.activeTab'
+     new = 'if (false) slideshowTab = viewer.activeTab'
+     exe = 'stack_confirm_ui_tests_tip.exe'; targs = 'slideshowSurvivesClosingAnotherTab slideshowEndsOnTabSwitchAndFolderOpen' },
+  @{ id = 'M5'; desc = 'tab strip rightMargin removed'; file = $main
+     old = 'rightMargin: interactive ? tabCap + Theme.controlHeight : 0 // room to end on a tab boundary'
+     new = 'rightMargin: 0'
+     exe = 'stack_confirm_ui_tests_tip.exe'; targs = 'longTabNamesKeepTheActiveTabInView' },
+  @{ id = 'M6'; desc = 'chip Right arrow handler removed'; file = $grid
+     old = 'Keys.onRightPressed: event => { const other = kindRepeater.itemAt(index + 1); if (other) other.forceActiveFocus(Qt.TabFocusReason); event.accepted = true }'
+     new = ''
+     exe = 'stack_confirm_ui_tests_tip.exe'; targs = 'typeChipsMoveWithTheArrowKeys typeChipsWorkFromTheKeyboard' }
+)
+$only = $args
+foreach ($m in $mutations) {
+  if ($only.Count -and $only -notcontains $m.id) { continue }
+  $text = [IO.File]::ReadAllText($m.file)
+  if (-not $text.Contains($m.old)) { "$($m.id): ANCHOR NOT FOUND" | Tee-Object -Append "$s\mutations.txt"; continue }
+  $mut = $text.Replace($m.old, $m.new)
+  if ($m.extraOld) { $mut = $mut.Replace($m.extraOld, $m.extraNew) }
+  [IO.File]::WriteAllText($m.file, $mut)
+  try {
+    foreach ($r in @(,@($m.exe, $m.targs))) {
+      $out = "$s\mut-$($m.id).txt"
+      & "$b\$($r[0])" @($r[1] -split ' ') -o "$out,txt" | Out-Null
+      $lines = Get-Content $out | Where-Object { $_ -match '^(PASS|FAIL!|Totals)' -or $_ -match 'Actual|Expected|returned FALSE|timeout' } | Where-Object { $_ -notmatch 'initTestCase|cleanupTestCase' }
+      "== $($m.id) $($m.desc) :: $($r[0]) $($r[1])" | Tee-Object -Append "$s\mutations.txt"
+      $lines | Tee-Object -Append "$s\mutations.txt"
+    }
+  } finally {
+    git -C $w checkout HEAD -- ui
+  }
+}
+git -C $w status --short | Tee-Object -Append "$s\mutations.txt"

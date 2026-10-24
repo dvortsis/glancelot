@@ -1,0 +1,27 @@
+Test project C:/src/Github/Glancelot/.worktrees/review-stack-confirm-r3/build-review-stack-confirm-r3
+    Start  7: viewer_acceptance
+1/7 Test  #7: viewer_acceptance ................   Passed   11.78 sec
+    Start 12: folder_grid
+2/7 Test #12: folder_grid ......................   Passed  229.30 sec
+    Start 13: input_ui
+3/7 Test #13: input_ui .........................   Passed   84.50 sec
+    Start 44: tabs_recovery
+4/7 Test #44: tabs_recovery ....................   Passed   59.52 sec
+    Start 47: translation_coverage_ui
+5/7 Test #47: translation_coverage_ui ..........   Passed   24.57 sec
+    Start 49: command_routing
+6/7 Test #49: command_routing ..................   Passed   10.06 sec
+    Start 52: stack_confirm_ui
+7/7 Test #52: stack_confirm_ui .................   Passed   60.75 sec
+
+100% tests passed out of 7
+
+Label Time Summary:
+budget       = 313.80 sec*proc (2 tests)
+clipboard    = 313.80 sec*proc (2 tests)
+fast         =  71.29 sec*proc (2 tests)
+native       = 229.30 sec*proc (1 test)
+process      = 480.47 sec*proc (7 tests)
+ui           = 409.18 sec*proc (5 tests)
+
+Total Test time (real) = 480.87 sec
