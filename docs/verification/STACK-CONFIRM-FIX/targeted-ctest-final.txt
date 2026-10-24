@@ -1,0 +1,20 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
+Test project C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-fix/build-claude-stack-confirm-fix
+    Start 13: input_ui
+1/4 Test #13: input_ui .........................   Passed  137.21 sec
+    Start 47: translation_coverage_ui
+2/4 Test #47: translation_coverage_ui ..........   Passed   34.16 sec
+    Start 49: command_routing
+3/4 Test #49: command_routing ..................   Passed   14.65 sec
+    Start 52: stack_confirm_ui
+4/4 Test #52: stack_confirm_ui .................   Passed   45.34 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Label Time Summary:
+budget       = 137.21 sec*proc (1 test)
+clipboard    = 137.21 sec*proc (1 test)
+process      = 231.36 sec*proc (4 tests)
+ui           = 231.36 sec*proc (4 tests)
+
+Total Test time (real) = 231.39 sec

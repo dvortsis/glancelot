@@ -59,9 +59,29 @@ Rectangle {
     readonly property bool compact: height < 420
     // F009: one row per item with name, size and modified time instead of thumbnail tiles.
     property bool details: false
+    // What the cell geometry is built from. It follows `details` from onDetailsChanged, after the first visible item has been
+    // read from the old geometry, so changing mode can put that item back in view (F009: the visible anchor survives).
+    property bool detailsLayout: false
+    onDetailsChanged: {
+        if (!visible || fileGrid.count === 0 || grid.cellHeight <= 0) { detailsLayout = details; return }
+        const offset = Math.max(0, grid.contentY - grid.originY)
+        const first = Math.min(fileGrid.count - 1, Math.floor(offset / grid.cellHeight) * columns)
+        const cursorTop = Math.floor(Math.max(0, fileGrid.cursorRow) / columns) * grid.cellHeight
+        const cursorVisible = fileGrid.cursorRow >= 0 && cursorTop < offset + grid.height && cursorTop + grid.cellHeight > offset
+        detailsLayout = details
+        grid.forceLayout()
+        keepAnchor(first, cursorVisible)
+        Qt.callLater(keepAnchor, first, cursorVisible) // a layout that settles a frame later (rows realised, bounds clamped) lands on it too
+    }
+    function keepAnchor(first, cursorVisible) {
+        if (!visible || fileGrid.count === 0 || details !== detailsLayout) return
+        const top = Math.floor(Math.min(first, fileGrid.count - 1) / columns) * grid.cellHeight
+        grid.contentY = grid.originY + Math.max(0, Math.min(top, grid.contentHeight - grid.height))
+        if (cursorVisible && fileGrid.cursorRow >= 0) grid.positionViewAtIndex(fileGrid.cursorRow, GridView.Contain)
+    }
     function sizeText(bytes) { return bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : bytes < 1073741824 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1073741824).toFixed(2) + " GB" }
     readonly property int targetWidth: compact ? Math.max(96, Math.floor(currentBucketSize * 0.85)) : (currentBucketSize + 16)
-    readonly property int columns: details ? 1 : Math.max(1, Math.min(24, Math.floor(grid.width / targetWidth)))
+    readonly property int columns: detailsLayout ? 1 : Math.max(1, Math.min(24, Math.floor(grid.width / targetWidth)))
     readonly property int count: grid.count
     readonly property int thumbEdge: currentBucketSize >= 220 ? 512 : 256
     // DirectoryEntryModel::SelectMode (the model is a context property, so its enum type is not registered)
@@ -117,6 +137,15 @@ Rectangle {
         grid.positionViewAtIndex(row, GridView.Contain)
     }
     function focusGrid() { if (visible && inputEnabled) grid.forceActiveFocus(Qt.TabFocusReason) }
+    // N-1: moves the keyboard to the type chips (the active one, else the first). False when they are not shown.
+    function focusKindChips() {
+        if (!visible || !inputEnabled || !kindChips.visible) return false
+        let target = kindRepeater.itemAt(0)
+        for (let i = 0; i < kindRepeater.count; ++i) if (kindRepeater.itemAt(i).selected) target = kindRepeater.itemAt(i)
+        if (!target) return false
+        target.forceActiveFocus(Qt.TabFocusReason)
+        return true
+    }
     function enter() {
         const current = fileGrid.currentImage
         // Re-entering keeps the browsing cursor unless the viewed photo changed meanwhile.
@@ -212,6 +241,7 @@ Rectangle {
             if (event.key === Qt.Key_Escape) return panel.chordPending ? "" : "escape"
             if (event.key === Qt.Key_Backspace) return "up"
         }
+        if (mods === (Qt.ControlModifier | Qt.ShiftModifier) && event.key === Qt.Key_F && kindChips.visible) return "kinds"
         if (mods === Qt.ControlModifier) {
             if (event.key === Qt.Key_A) return "all"
             if (event.key === Qt.Key_I) return "invert"
@@ -287,12 +317,14 @@ Rectangle {
                 Accessible.name: "Folder " + panel.folderPath
             }
             Row { // F042 type chips: show only folders, photos or other files; a second click (or Esc) clears
+                id: kindChips
                 objectName: "gridKindChips"
                 visible: panel.width >= 600 && fileGrid.directory.length > 0
                 spacing: Theme.gapXxs
                 Accessible.role: Accessible.Grouping
                 Accessible.name: qsTr("Show only")
                 Repeater {
+                    id: kindRepeater
                     model: [{ id: "folder", label: qsTr("Folders") }, { id: "image", label: qsTr("Photos") }, { id: "file", label: qsTr("Other files") }]
                     delegate: UiButton {
                         required property var modelData
@@ -300,12 +332,23 @@ Rectangle {
                         text: modelData.label
                         selected: fileGrid.kindFilter === modelData.id
                         implicitHeight: Theme.controlHeight - Theme.gapSm
-                        focusPolicy: Qt.NoFocus
+                        // N-1: a keyboard user reaches the chips with Ctrl+Shift+F from the grid (Tab and Shift+Tab then walk them) and switches one with
+                        // Space or Enter; the button's own focus ring shows where they are.
+                        focusPolicy: Qt.StrongFocus
+                        tip: qsTr("Show only %1. Select again to clear. Ctrl+Shift+F moves here from the grid.").arg(modelData.label)
                         Accessible.role: Accessible.CheckBox
                         Accessible.checkable: true
                         Accessible.checked: selected
+                        Accessible.focusable: true
                         Accessible.name: qsTr("Show only %1").arg(modelData.label)
-                        onClicked: fileGrid.kindFilter = (fileGrid.kindFilter === modelData.id ? "" : modelData.id)
+                        Accessible.description: qsTr("Type filter. Press Space to switch it, Escape to return to the items.")
+                        onClicked: {
+                            fileGrid.kindFilter = (fileGrid.kindFilter === modelData.id ? "" : modelData.id)
+                            if (!visualFocus) panel.focusGrid() // a pointer click leaves the keyboard where it was: on the items
+                        }
+                        // The window's Escape (leave the grid) must not run while the chip owns the key.
+                        Keys.onShortcutOverride: event => { if (event.key === Qt.Key_Escape) event.accepted = true }
+                        Keys.onEscapePressed: event => { panel.focusGrid(); event.accepted = true }
                     }
                 }
             }
@@ -504,7 +547,7 @@ Rectangle {
         cellWidth: width / panel.columns
         // Bound rows as well as columns, including cache/partially visible rows. A very tall
         // viewport grows the cells instead of submitting hundreds of simultaneous previews.
-        cellHeight: panel.details ? Theme.rowHeight + Theme.gapSm : panel.compact
+        cellHeight: panel.detailsLayout ? Theme.rowHeight + Theme.gapSm : panel.compact
                     ? (height >= 200 ? Math.floor(height / Math.max(2, Math.floor(height / Math.min(panel.currentBucketSize, cellWidth * 0.6 + 40))))
                                      : Math.max(100, height))
                     : Math.max(Math.floor(panel.currentBucketSize * 0.9), Math.min(Math.floor(panel.currentBucketSize * 1.4), cellWidth * 0.75 + 46),
@@ -516,7 +559,7 @@ Rectangle {
         enabled: panel.inputEnabled
         Accessible.role: Accessible.List
         Accessible.name: "Items in " + panel.folderPath
-        Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo.")
+        Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo. Ctrl+Shift+F moves to the type filters.")
         ScrollBar.vertical: UiScrollBar { }
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier
@@ -544,7 +587,7 @@ Rectangle {
             if (panel.keyAction(event).length) event.accepted = true
         }
         Keys.onPressed: event => {
-            if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_F) {
+            if ((event.modifiers & Qt.ControlModifier) && !(event.modifiers & Qt.ShiftModifier) && event.key === Qt.Key_F) {
                 panel.openFilter()
                 event.accepted = true
                 return
@@ -634,6 +677,7 @@ Rectangle {
             if (action === "activate") { panel.activate(); return }
             if (action === "up") { panel.goUp(); return }
             if (action === "menu") { panel.contextAtCursor(); return }
+            if (action === "kinds") { panel.focusKindChips(); return }
             if (action === "all") { fileGrid.selectAll(); return }
             if (action === "invert") { fileGrid.invertSelection(); return }
             if (action === "clear") { fileGrid.clearSelection(); return }

@@ -884,6 +884,10 @@
         <source>Reconnect the drive or network share, then retry.</source>
         <translation>[Réçõññéçt thé drîvé õr ñétwõrk shàré, théñ rétrý.]</translation>
     </message>
+    <message>
+        <source>Slideshow stopped: the last %1 photos could not be opened.</source>
+        <translation>[Slîdéshõw stõppéd: thé làst %1 phõtõs çõûld ñõt bé õpéñéd.]</translation>
+    </message>
 </context>
 <context>
     <name>MetadataHud</name>
@@ -1465,10 +1469,6 @@
         <translation>[Shõwîñg 100,000 îtéms. Thîs fõldér hàs mõré thàt àré ñõt lîstéd héré.]</translation>
     </message>
     <message>
-        <source>Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo.</source>
-        <translation>[Àrrõw kéýs mõvé. Shîft éxtéñds, Çtrl+Spàçé tõgglés, Çtrl+À séléçts àll. Éñtér õpéñs à fõldér õr phõtõ. Bàçkspàçé gõés ûp. Ésçàpé çléàrs thé séléçtîõñ, théñ rétûrñs tõ thé phõtõ.]</translation>
-    </message>
-    <message>
         <source>No preview</source>
         <translation>[Ñõ prévîéw]</translation>
     </message>
@@ -1483,6 +1483,18 @@
     <message>
         <source>Try again</source>
         <translation>[Trý àgàîñ]</translation>
+    </message>
+    <message>
+        <source>Show only %1. Select again to clear. Ctrl+Shift+F moves here from the grid.</source>
+        <translation>[Shõw õñlý %1. Séléçt àgàîñ tõ çléàr. Çtrl+Shîft+F mõvés héré frõm thé grîd.]</translation>
+    </message>
+    <message>
+        <source>Type filter. Press Space to switch it, Escape to return to the items.</source>
+        <translation>[Týpé fîltér. Préss Spàçé tõ swîtçh ît, Ésçàpé tõ rétûrñ tõ thé îtéms.]</translation>
+    </message>
+    <message>
+        <source>Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo. Ctrl+Shift+F moves to the type filters.</source>
+        <translation>[Àrrõw kéýs mõvé. Shîft éxtéñds, Çtrl+Spàçé tõgglés, Çtrl+À séléçts àll. Éñtér õpéñs à fõldér õr phõtõ. Bàçkspàçé gõés ûp. Ésçàpé çléàrs thé séléçtîõñ, théñ rétûrñs tõ thé phõtõ. Çtrl+Shîft+F mõvés tõ thé týpé fîltérs.]</translation>
     </message>
 </context>
 <context>
