@@ -49,15 +49,29 @@ UiDialog {
     // The layout feedback last shown inline as a refusal: the general layout note never repeats it, even after the
     // inline note was cleared by editing (the layout keeps that feedback until its next change).
     property string presetRefusalShown: ""
+    // True while this dialog's own Save or Apply runs: the layout's change signal it causes is the refusal itself.
+    property bool presetRequestRunning: false
     title: qsTr("Settings")
 
+    // Any other change of the layout is a new message (even one with the same text as the refusal), so the general note
+    // may show it again.
+    Connections {
+        target: paneLayout
+        function onChanged() { if (!dialog.presetRequestRunning) dialog.presetRefusalShown = "" }
+    }
     function savePanePreset() {
-        if (paneLayout.savePreset(presetName.text.trim())) { presetName.text = ""; presetSaveRefusal = ""; return }
+        presetRequestRunning = true
+        const saved = paneLayout.savePreset(presetName.text.trim())
+        presetRequestRunning = false
+        if (saved) { presetName.text = ""; presetSaveRefusal = ""; return }
         presetSaveRefusal = presetRefusalShown = paneLayout.feedback
         Qt.callLater(revealItem, saveRefusalNote)
     }
     function applyPanePreset() {
-        if (paneLayout.applyPreset(presetChoice.currentText)) { presetApplyRefusal = ""; return }
+        presetRequestRunning = true
+        const applied = paneLayout.applyPreset(presetChoice.currentText)
+        presetRequestRunning = false
+        if (applied) { presetApplyRefusal = ""; return }
         presetApplyRefusal = presetRefusalShown = paneLayout.feedback
         Qt.callLater(revealItem, applyRefusalNote)
     }

@@ -674,6 +674,12 @@ ApplicationWindow {
     // A tooltip with the command's current shortcut, when it has one: "Open a photo (Ctrl+O)". One translatable pattern,
     // so a language can place the key sequence where it reads naturally.
     function withShortcut(text, id) { const binding = viewer.bindingFor(id); return binding.length ? qsTr("%1 (%2)").arg(text).arg(binding) : text }
+    // Fills %1..%9 of a translated pattern in one pass. Chained .arg() calls rescan the whole string each time, so a file
+    // name that contains "%2" would be filled in by the next value; here a value is never searched for markers. (QML's
+    // String.arg() takes a single value, so arg(a, b) is not available.) A marker with no value is left as written.
+    function fillText(pattern, values) {
+        return pattern.replace(/%([1-9])/g, (marker, n) => n <= values.length ? String(values[n - 1]) : marker)
+    }
     // Kept for --show-themes: appearance now lives in Settings.
     function openThemes() { settingsDialog.openSection("appearance", false) }
     function openSettings(section, focusSearch) { settingsDialog.openSection(section || "appearance", focusSearch || false) }
@@ -1073,7 +1079,7 @@ ApplicationWindow {
                 }
             }
             Accessible.name: qsTr("Photo canvas")
-            Accessible.description: viewer.fileName.length ? qsTr("%1, %2 by %3 pixels").arg(viewer.fileName).arg(viewer.imageWidth).arg(viewer.imageHeight) : qsTr("Open or drop a photo to begin")
+            Accessible.description: viewer.fileName.length ? app.fillText(qsTr("%1, %2 by %3 pixels"), [viewer.fileName, viewer.imageWidth, viewer.imageHeight]) : qsTr("Open or drop a photo to begin")
         }
         AnimationBar {
             id: animationBar
@@ -1263,7 +1269,8 @@ ApplicationWindow {
             // state names the tab's folder and offers Retry (the same command as F5) instead of the welcome content.
             readonly property var unavailableTab: {
                 const rows = viewer.tabs
-                const row = rows.length > 1 ? rows[viewer.activeTab] : undefined
+                // Two or more tabs: the active row. One tab: tabs lists a row only while that tab's folder is unavailable.
+                const row = rows.length > 0 ? rows[viewer.activeTab] : undefined
                 return row && row.unavailable ? row : null
             }
             readonly property bool unavailable: unavailableTab !== null
@@ -1352,11 +1359,14 @@ ApplicationWindow {
                 onClicked: app.invoke(emptyState.unavailable ? "refresh" : "open")
             }
             Label {
+                objectName: "emptyStateHint"
                 Layout.fillWidth: true
                 Layout.topMargin: Theme.gapSm
                 horizontalAlignment: Text.AlignHCenter
                 visible: !emptyState.compactContent
-                text: emptyState.unavailable ? qsTr("Reconnect the drive or network share, then retry. Your other tabs keep their places.")
+                // The last tab left has no other tabs to reassure about.
+                text: emptyState.unavailable ? (viewer.tabs.length > 1 ? qsTr("Reconnect the drive or network share, then retry. Your other tabs keep their places.")
+                                                                       : qsTr("Reconnect the drive or network share, then retry."))
                                              : qsTr("or drop a JPEG or PNG here. Arrow keys browse the folder.")
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
@@ -1491,7 +1501,7 @@ ApplicationWindow {
         MenuRule {}
         CommandMenuItem {
             host: app; commandId: "delete-current-file"; iconName: "trash"; danger: true
-            label: viewer.fileName.length ? qsTr("Move “%1” to the %2").arg(app.menuName(viewer.fileName)).arg(deleteFlow.trashName) : qsTr("Move the photo to the %1").arg(deleteFlow.trashName)
+            label: viewer.fileName.length ? app.fillText(qsTr("Move “%1” to the %2"), [app.menuName(viewer.fileName), deleteFlow.trashName]) : qsTr("Move the photo to the %1").arg(deleteFlow.trashName)
         }
     }
     ContextMenu {
@@ -1506,7 +1516,7 @@ ApplicationWindow {
         CommandMenuItem {
             host: app; commandId: "delete-selection"; iconName: "trash"; danger: true
             available: gridMenu.targets.length > 0
-            label: gridMenu.targets.length === 1 ? qsTr("Move “%1” to the %2").arg(app.menuName(app.leafName(gridMenu.targets[0]))).arg(deleteFlow.trashName)
+            label: gridMenu.targets.length === 1 ? app.fillText(qsTr("Move “%1” to the %2"), [app.menuName(app.leafName(gridMenu.targets[0])), deleteFlow.trashName])
                 : qsTr("Move %1 items to the %2").arg(gridMenu.targets.length).arg(deleteFlow.trashName)
         }
     }
