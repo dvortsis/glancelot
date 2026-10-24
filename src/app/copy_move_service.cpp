@@ -423,6 +423,11 @@ bool replaceFileAtomically(const QString& replacementPath, const QString& target
     // 1177 leaves the original as the backup, which is moved back below.
     QString backupPath = backupPathFor(targetPath);
     for (int attempt = 0; attempt < 8 && QFileInfo::exists(backupPath); ++attempt) backupPath = backupPathFor(targetPath);
+    // An existing ".~gb" may be the only copy of an earlier original (COPY-SAFETY-01 review N2): never reuse one.
+    if (QFileInfo::exists(backupPath)) {
+        if (error) *error = QStringLiteral("no free backup name beside the target");
+        return false;
+    }
     const std::wstring backup = winPath(backupPath);
     DWORD code = ERROR_SUCCESS;
     if (injectFault(FaultPoint::ReplaceUnsupported, targetPath, 0)) {
