@@ -139,6 +139,14 @@ public:
     Q_INVOKABLE void setComparisonImage(const QString& path, const QImage& image, quint64 generation);
     // Comparison against the pinned image, else the previously shown image.
     Q_INVOKABLE void compareWithPinnedOrPrevious();
+    // F040 reference window: a second explicit pin, distinct from the output's pinned mode, held in the same
+    // aggregate retained-image budget. Callers pass an already decoded frame (shared, never re-decoded). Refused
+    // (false, nothing changes) when stale or when it cannot fit beside the current and pinned-output frames.
+    // Never changes the current frame, the output mode or the pinned output.
+    bool setReferenceImage(const QString& path, const QImage& image, quint64 generation);
+    void clearReferenceImage();
+    QImage referenceImage() const;
+    QString referencePath() const;
 
     // Per-output fit mode, remembered by display id and restored when that output reopens.
     Q_INVOKABLE void setOutputFitMode(const QString& mode);
@@ -174,6 +182,9 @@ signals:
     void pinnedPathChanged(const QString& path);
     void presentationClosed();
     void imageRouted(const QString& path, quint64 generation);
+    void referenceChanged();
+    // The budget released the reference to admit a newer current frame; referenceChanged follows.
+    void referenceShed(const QString& path);
     void outputColorStatusChanged();
 
 private:

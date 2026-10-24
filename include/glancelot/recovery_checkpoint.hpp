@@ -1,10 +1,21 @@
 #pragma once
 #include "settings_recovery.hpp"
+#include <QList>
 
 namespace glancelot::recovery {
+// F015 tabs: one saved folder/image location per tab, owned by value.
+struct TabLocation {
+    QString folder, image;
+    bool operator==(const TabLocation&) const = default;
+};
+inline constexpr int MaxTabs = 8;
 struct ResumeState {
     bool hasPosition{}, priorDirty{};
     QString folder, image, checkpointRevision;
+    // Appended, defaulted: empty for a single location (an entry without tabs, or tab state that is malformed,
+    // oversized or disagrees with folder/image). Otherwise 2..MaxTabs records and tabs[activeTab] == {folder, image}.
+    QList<TabLocation> tabs;
+    int activeTab{};
 };
 struct BeginResult {
     Status status;
@@ -13,6 +24,10 @@ struct BeginResult {
 struct CheckpointInput {
     QString folder, image;
     quint64 sequence{}; // positive, monotonic within one claim; stale commits refuse
+    // Appended, defaulted: fewer than two records save one location and remove stored tabs. Otherwise at most MaxTabs
+    // records with tabs[activeTab] == {folder, image}, written in the same transaction as folder/image and the revision.
+    QList<TabLocation> tabs;
+    int activeTab{};
 };
 struct CheckpointResult {
     Status status;
