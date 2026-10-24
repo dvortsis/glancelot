@@ -1,4 +1,5 @@
 #include "recovery_session.hpp"
+#include "recovery_tabs.hpp"
 #include "settings_transaction.hpp"
 #include "settings_raw.hpp"
 #include "settings_policy.hpp"
@@ -49,7 +50,7 @@ std::optional<ResumeState> readOnlyPosition(const WindowClaim& identity) {
     if(policy::merge(root,root,selected,{}).status.code!=Code::Ok)return {};
     const auto row=root.value("windows").toObject().value(QString::number(claim->slot)).toObject();
     ResumeState result;result.folder=row.value("folder").toString();result.image=row.value("image").toString();
-    result.hasPosition=!result.folder.isEmpty()||!result.image.isEmpty();
+    result.hasPosition=!result.folder.isEmpty()||!result.image.isEmpty();readTabs(row,result);
     return result;
 }
 }

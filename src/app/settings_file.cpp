@@ -297,6 +297,8 @@ public:
     bool submit(QString channel,std::function<void(QJsonObject&)> edit,std::function<void(SettingsStatus)> completed) {
         return submit({std::move(channel),QDir::cleanPath(QFileInfo(settingsDirectory()).absoluteFilePath()),std::move(edit),std::move(completed),{}});
     }
+    // Tests: one retry attempt now, in place of the next timer tick.
+    void runNow(){timer.stop();run();}
     void run() {
         if(pending.empty())return;
         auto value=std::move(pending.front());pending.pop_front();
@@ -335,6 +337,10 @@ void settings_detail::cancelPendingSettings(QObject* owner,const QString& channe
     if(!owner||owner->thread()!=QThread::currentThread())return;
     const auto directory=QDir::cleanPath(QFileInfo(settingsDirectory()).absoluteFilePath());
     for(auto* child:owner->children())if(auto* retries=dynamic_cast<SettingsRetries*>(child)){retries->cancel(directory,channelPrefix);return;}
+}
+void settings_detail::attemptPendingSettingsNow(QObject* owner) {
+    if(!owner||owner->thread()!=QThread::currentThread())return;
+    for(auto* child:owner->children())if(auto* retries=dynamic_cast<SettingsRetries*>(child)){retries->runNow();return;}
 }
 
 bool resetSettings(QString* movedTo) {

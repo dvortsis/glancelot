@@ -19,4 +19,7 @@ void overlayPendingSettings(QObject* owner,QJsonObject& settings);
 bool hasPendingSettings(QObject* owner,const QString& channelPrefix = {});
 // Explicit successful import/reset supersedes pending edits in its owned scope.
 void cancelPendingSettings(QObject* owner,const QString& channelPrefix = {});
+// Tests: makes the owner's oldest queued write attempt now, synchronously (its completion runs inline), instead of
+// on its next 25 ms retry tick. Lets a test fix the order in which two owners' queued writes land.
+void attemptPendingSettingsNow(QObject* owner);
 }

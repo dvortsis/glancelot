@@ -12,6 +12,7 @@
 #include "glancelot/command_registry.hpp"
 #include "binding_validation.hpp"
 #include "recovery_session.hpp"
+#include "recovery_tabs.hpp"
 #include "window_claim_guard.hpp"
 #include "glancelot/io_scheduler.hpp"
 #include "glancelot/filter_state.hpp"
@@ -113,8 +114,7 @@ BoundaryMode boundaryValue(const QString& value) {
 
 struct ViewerController::Private {
     ViewerController* q;
-    QImage image, reference;
-    QString referenceLabel;
+    QImage image;
     QString path, status{"Open a JPEG or PNG to begin."}, boundary{"continue"}, wheel{"navigate"};
     QString directoryError,monitorError;
     bool directoryPending{};
@@ -179,11 +179,74 @@ struct ViewerController::Private {
     QString pendingFolder, pendingImage, lastDecodedPath;
     int positionRetries{};
     bool positionDirty{}, restoreRequested{};
-    // F015 tabs: the inactive tabs' locations; the active tab's entry is refreshed from live state whenever it is read.
-    struct TabRecord { QString folder, image; };
+    // F015 tabs: the inactive tabs' locations; the active tab's entry is refreshed from live state whenever it is read,
+    // except while a switch settles. From activateTab(), closeTab() of the active tab or a restore until the target is
+    // noted (notePosition(), or a folder without images), live state may still be the previous tab's, so the active
+    // tab's location is its stored one, mirrored in pendingFolder/pendingImage.
+    using TabRecord=recovery::TabLocation;
     QList<TabRecord> tabList;
     int activeTabIndex{0};
+    bool tabSettling{};
+    // Review round 2: open() counts the images it opens and settleOn() records the count. A decode settles the switch only
+    // if its image was opened after the switch began. The folder route neither bumps the generation nor cancels a decode
+    // of the previous tab still in flight, and a late baseline re-decodes the previous tab's path under a new generation;
+    // neither may settle the target on the previous tab's image.
+    quint64 openSerial{},settleSerial{};
+    // Review round 3 (lead decision). (a) A tab's location changes only from an open or a folder visit in the switch
+    // target's own folder, or after the user navigates explicitly in that tab (settleAny); never from a reopen, refresh
+    // or reconcile of content that belongs to the previous tab. Reconciles and the tab code itself run as automatic
+    // moves, which never count as the user's. (b) When the switch's own folder route fails (or is cancelled) the previous
+    // tab's content is retired and the tab is marked unavailable: it keeps its stored location, the view shows that
+    // state, and F5 (the placeholder's Retry runs the same command) retries the target.
+    QString settleFolder;
+    bool settleAny{},tabUnavailable{};
+    quint64 settleNavigation{};   // the navigation sequence the switch's folder route submitted; 0 for the image route
+    int automaticMoves{};
+    struct AutomaticMove {
+        Private* d; explicit AutomaticMove(Private* p):d(p){++d->automaticMoves;} ~AutomaticMove(){--d->automaticMoves;}
+        AutomaticMove(const AutomaticMove&)=delete; AutomaticMove& operator=(const AutomaticMove&)=delete;
+    };
     TabRecord liveLocation() const { return {path.isEmpty()?displayPath(nav.snapshot().directory):QFileInfo(path).absolutePath(),path}; }
+    TabRecord activeLocation() const { return tabSettling?TabRecord{pendingFolder,pendingImage}:liveLocation(); }
+    void settleOn(const TabRecord& target) {
+        pendingFolder=target.folder;pendingImage=target.image;tabSettling=true;settleSerial=openSerial;
+        settleFolder=target.folder;settleAny=false;tabUnavailable=false;settleNavigation=0;
+    }
+    bool settlesIn(const QString& folder) const { return settleAny||fs_watch::key(folder)==fs_watch::key(settleFolder); }
+    // Called by every navigation entry point: one the user started (not a reconcile or the tab code) takes the tab over.
+    void noteUserMove() { if(tabSettling&&automaticMoves==0){settleAny=true;tabUnavailable=false;} }
+    // The tab route: the target's image when it still exists, otherwise its folder (whose result may end unavailable).
+    void goToTarget(const TabRecord& target) {
+        const AutomaticMove automatic(this);
+        if(!target.image.isEmpty()&&QFileInfo::exists(target.image))q->open(target.image);
+        else {q->navigateDirectory(target.folder);settleNavigation=navigationGeneration;}
+    }
+    void retryTarget() { const TabRecord target{pendingFolder,pendingImage};settleOn(target);emit q->tabsChanged();goToTarget(target); }
+    // The switch's folder route failed: nothing of the previous tab stays on screen or under watch, so nothing can
+    // reopen it into this tab. The pending position stays the target's stored location.
+    void showUnavailable() {
+        ++generation;cancel();
+        path.clear();image=QImage{};imageReady=false;loading=false;metadataModel.clear();lastDecodedPath.clear();
+        displayManager.updateImage(QString(),QImage(),generation);
+        nav=Navigator{};nav.setBoundary(boundaryValue(boundary));observe();
+        tabUnavailable=true;directoryPending=false;settleNavigation=0;
+        status=QCoreApplication::translate("Status","This tab's folder is unavailable: %1. Retry when it is back, or open another photo.").arg(QDir::toNativeSeparators(pendingFolder));
+        directoryError=status;
+        emit q->imageChanged();emit q->filesInvalidated();emit q->tabsChanged();emit q->stateChanged();
+    }
+    // A slot or claim change replays the position (app/main.cpp:211 retries a busy startup claim on a live window). Mid
+    // switch the position is the target's stored location, never the last decoded image, which may be the previous tab's.
+    void replayPosition() {
+        if(!tabSettling){if(!lastDecodedPath.isEmpty())notePosition(lastDecodedPath);return;}
+        if(slot>0){positionRetries=0;positionDirty=true;positionTimer.start();}
+    }
+    // The production recovery checkpoint carries the tab set with the slot's position: the active tab is that saved
+    // position itself. Mid-switch it is the target's stored location, so every tab keeps its own location.
+    recovery::CheckpointInput checkpointInput(quint64 sequence) const {
+        recovery::CheckpointInput input{pendingFolder,pendingImage,sequence};
+        if(tabList.size()>1){input.tabs=tabList;input.tabs[activeTabIndex]={pendingFolder,pendingImage};input.activeTab=activeTabIndex;}
+        return input;
+    }
     QTimer positionTimer;
     std::unique_ptr<recovery::Session> recoverySession;
     WindowClaim recoveryClaim;
@@ -418,6 +481,9 @@ struct ViewerController::Private {
         QObject::connect(&displayManager, &glancelot::DisplayManager::presentationModeChanged, q, [this](glancelot::PresentationMode) {
             emit q->presentationChanged();
         });
+        // F040: the reference lives in the display manager's image budget; a newer frame may release it. Main.qml shows the
+        // one notice for that (referenceShed), so the controller status is left to the photo it describes.
+        QObject::connect(&displayManager,&glancelot::DisplayManager::referenceChanged,q,&ViewerController::referenceChanged);
         QObject::connect(q,&ViewerController::stateChanged,q,[this]{ if(tabList.size()>1) emit q->tabsChanged(); });
     }
     ~Private() {
@@ -428,6 +494,9 @@ struct ViewerController::Private {
     }
     void notePosition(const QString& file) {
         lastDecodedPath=file;
+        // Opened before the switch, or outside the target's folder without the user moving: the target keeps its location.
+        if(tabSettling&&(openSerial==settleSerial||!settlesIn(QFileInfo(file).absolutePath())))return;
+        tabSettling=false;tabUnavailable=false;
         if (slot<=0) return;
         positionRetries=0;
         pendingImage=file; pendingFolder=QFileInfo(file).absolutePath(); positionDirty=true;
@@ -438,7 +507,7 @@ struct ViewerController::Private {
         if(recoverySession&&!recoveryRetiring) {
             if(positionDirty&&slot>0&&!recoveryFinalized) {
                 if(checkpointSequence<std::numeric_limits<quint64>::max()&&
-                   recoverySession->accept({pendingFolder,pendingImage,checkpointSequence+1})) {
+                   recoverySession->accept(checkpointInput(checkpointSequence+1))) {
                     ++checkpointSequence;positionDirty=false;recoveryPoll.start();
                 }
             }
@@ -451,14 +520,13 @@ struct ViewerController::Private {
         if (!positionDirty || slot<=0) return true;
         const QString folder=pendingFolder,image=pendingImage;
         const int target=slot;
-        QJsonArray tabRows;
-        if(tabList.size()>1)for(int i=0;i<tabList.size();++i){const auto record=i==activeTabIndex?liveLocation():tabList[i];tabRows.append(QJsonObject{{"folder",record.folder},{"image",record.image}});}
+        // Lead decision (round 2): production always claims a slot, so tab state is written only by the recovery
+        // checkpoint. This no-claim position writer saves folder/image alone; replacing the entry drops stale tabs.
         const auto result=updateSettings([&](QJsonObject& object) {
             // Re-read under the lock: only this slot's entry changes; other windows' slots, bindings, themes
             // and unknown keys stay as they are on disk.
             auto windows=object.value("windows").toObject();
             QJsonObject saved{{"folder",folder},{"image",image},{"saved",QDateTime::currentSecsSinceEpoch()}};
-            if(!tabRows.isEmpty()){saved["tabs"]=tabRows;saved["activeTab"]=activeTabIndex;}
             windows[QString::number(target)]=saved;
             object["windows"]=windows;
         },final);
@@ -790,6 +858,7 @@ struct ViewerController::Private {
         if(!pendingObservation||navigationBusy||pendingNavigation||!navigationIntents.empty())return;
         auto value=std::move(*pendingObservation);pendingObservation.reset();
         if(value.scope!=monitor->generation())return;
+        const AutomaticMove automatic(this); // F015: reopening or relisting what is shown never moves a tab
         monitor->acknowledge(value);
         const auto& current=*value.after;
         // A proven original identity wins even when a new object already reused
@@ -1024,12 +1093,22 @@ struct ViewerController::Private {
                         ++generation; cancel();
                         path.clear(); image=QImage{}; imageReady=false; loading=false; metadataModel.clear();
                         displayManager.updateImage(QString(), QImage(), generation);
-                        lastDecodedPath.clear(); pendingImage.clear();
-                        pendingFolder=displayPath(result.navigator.snapshot().directory);
-                        positionRetries=0;positionDirty=slot>0;
-                        if(positionDirty)positionTimer.start();
+                        lastDecodedPath.clear();
+                        const auto visited=displayPath(result.navigator.snapshot().directory);
+                        if(!tabSettling||settlesIn(visited)) { // F015: a reconcile's visit of another folder never settles a switch
+                            pendingImage.clear(); tabSettling=false; tabUnavailable=false;
+                            pendingFolder=visited;
+                            positionRetries=0;positionDirty=slot>0;
+                            if(positionDirty)positionTimer.start();
+                        }
                     }
                 }
+                const bool switchFailed=result.directoryVisit&&result.directoryFailed&&tabSettling&&!settleAny&&
+                    settleNavigation!=0&&sequence==settleNavigation; // F015: this tab's own folder route failed
+                // F015: an automatic navigation (a reconcile) replaced the switch's own folder route before its result,
+                // which is now dropped; the route runs again once this result is applied.
+                const bool switchSuperseded=tabSettling&&!settleAny&&settleNavigation!=0&&sequence!=settleNavigation;
+                if(sequence==settleNavigation)settleNavigation=0;
                 const bool clearedImage=result.directoryVisit&&!result.directoryFailed&&!result.destination;
                 const auto oldDir = displayPath(nav.snapshot().directory);
                 nav=std::move(result.navigator); nav.setBoundary(boundaryValue(boundary));
@@ -1047,9 +1126,12 @@ struct ViewerController::Private {
                 else if(result.sortCompletion) { setSortFeedback(QString("Sorted by %1%2").arg(sortKeyName(nav.sort().key),nav.sort().descending?" (reversed)":"")); emit q->stateChanged(); }
                 else if(scanJob && !result.message.isEmpty()) { status=result.message; emit q->stateChanged(); }
                 else if(!scanJob) { status=!result.message.isEmpty() ? result.message : emptyMessage.isEmpty() ? QString("Folder boundary reached. Change the boundary mode or choose another image.") : emptyMessage; emit q->stateChanged(); }
-                if(result.directoryFailed&&!path.isEmpty())scan(path,generation);
+                if(switchFailed)showUnavailable();
+                else if(result.directoryFailed&&!path.isEmpty())scan(path,generation);
                 if(!result.destination && !pendingNavigation && needsResort()) startResort();
                 if(!navigationBusy && navigationReady && !navigationIntents.empty()) { const auto intent=navigationIntents.front(); navigationIntents.pop_front(); navigate(intent.first,intent.second); }
+                // Later queued work re-detects the supersession when its own result lands.
+                if(switchSuperseded&&tabSettling&&!settleAny&&!navigationBusy&&!pendingNavigation)retryTarget();
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
             if(!navigationBusy)reconcileObservation();
@@ -1187,7 +1269,7 @@ void ViewerController::setWindowSlot(int slot){
     if(d->recoverySession&&d->recoverySession->snapshot().busy) {
         d->recoveryRetiring=true;d->pendingRecoveryClaim.reset();d->recoveryClaim={};
         d->slot=slot;d->positionDirty=false;d->positionTimer.stop();d->recoveryPoll.start();
-        if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+        if(slot>0)d->replayPosition();
         emit stateChanged();return;
     }
     d->recoverySession.reset();d->recoveryClaim={};d->recoveryPoll.stop();
@@ -1195,7 +1277,7 @@ void ViewerController::setWindowSlot(int slot){
     d->recoveryResumeReady=false;d->recoveryFinalized=false;d->checkpointSequence=0;
     d->positionTimer.stop(); d->positionDirty=false;
     d->slot=slot;
-    if(slot>0&&!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    if(slot>0)d->replayPosition();
     emit stateChanged();
 }
 void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
@@ -1214,7 +1296,7 @@ void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
     d->positionDirty=false;d->recoveryResumeReady=false;d->recoveryFinalized=false;d->restoreRequested=false;
     d->beginFailureReported=false;d->reportedCheckpointFailure=0;
     d->recoverySession=std::make_unique<recovery::Session>(identity);d->recoveryPoll.start();
-    if(!d->lastDecodedPath.isEmpty())d->notePosition(d->lastDecodedPath);
+    if(d->tabSettling||!d->lastDecodedPath.isEmpty())d->replayPosition();
     else if(d->navigationReady&&!d->directoryPending&&!d->nav.snapshot().directory.empty()) {
         d->pendingImage.clear();d->pendingFolder=displayPath(d->nav.snapshot().directory);
         d->positionDirty=true;d->positionTimer.start();
@@ -1226,26 +1308,25 @@ void ViewerController::flushWindowPosition(){d->writePosition();}
 void ViewerController::restoreWindow(){
     if(d->safeMode||d->explicitPositionIntent||d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
     QString folder,image;
-    QJsonObject entry; // the saved settings entry (F015 tabs); a recovery session only carries folder and image
+    QList<Private::TabRecord> tabs;int activeTab=0; // F015: validated by recovery::readTabs on every path
     if(d->recoverySession) {
         if(!d->recoveryResumeReady){d->restorePending=true;d->recoveryPoll.start();return;}
         folder=d->recoveryResume.folder;image=d->recoveryResume.image;
-    }else {
+        tabs=d->recoveryResume.tabs;activeTab=d->recoveryResume.activeTab;
+    }else {   // legacy no-claim read: the same validation as a claimed begin
         QJsonObject settings;if(!readSettings(settings).ok())return;
-        entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
-        folder=entry.value("folder").toString();image=entry.value("image").toString();
+        const auto entry=settings.value("windows").toObject().value(QString::number(d->slot)).toObject();
+        recovery::ResumeState legacy;legacy.folder=entry.value("folder").toString();legacy.image=entry.value("image").toString();
+        recovery::readTabs(entry,legacy);
+        folder=legacy.folder;image=legacy.image;tabs=legacy.tabs;activeTab=legacy.activeTab;
     }
     d->restorePending=false;
     if(folder.isEmpty()&&image.isEmpty())return;
-    {   // F015: a saved tab set returns with its active tab; only that tab navigates now
-        const auto rows=entry.value("tabs").toArray();
-        if(rows.size()>=2&&rows.size()<=8){
-            QList<Private::TabRecord> restored;
-            for(const auto& row:rows)restored.append({row.toObject().value("folder").toString(),row.toObject().value("image").toString()});
-            d->tabList=restored;d->activeTabIndex=qBound(0,entry.value("activeTab").toInt(),int(restored.size())-1);
-            emit tabsChanged();
-        }
+    if(tabs.size()>=2) {   // F015: a saved tab set returns with its active tab; only that tab navigates now
+        d->tabList=tabs;d->activeTabIndex=activeTab;
+        emit tabsChanged();
     }
+    d->settleOn({folder,image}); // until the restore lands, the active tab is the saved location
     d->restoreRequested=true;
     const auto token=d->generation,navigation=d->navigationGeneration,epoch=d->recoveryEpoch;
     const QPointer<ViewerController> alive(this);
@@ -1274,18 +1355,34 @@ void ViewerController::restoreWindow(){
     },""});
 }
 QImage ViewerController::image() const{return d->image;}
-QImage ViewerController::referenceImage() const{return d->reference;}
-QString ViewerController::referenceName() const{return d->referenceLabel;}
+// F040: the reference window and the MONITOR-OUTPUT pinned output are distinct pins held by the display manager under
+// one retained-image budget. Pinning hands over the frame the canvas already shows (no decode) and never changes the
+// selection or the output.
+QImage ViewerController::referenceImage() const{return d->displayManager.referenceImage();}
+QString ViewerController::referenceName() const{const auto path=d->displayManager.referencePath();return path.isEmpty()?QString{}:QFileInfo(path).fileName();}
 bool ViewerController::pinReference(){
     if(!d->imageReady||d->image.isNull())return false;
-    d->reference=d->image; // implicitly shared: no pixel copy
-    d->referenceLabel=QFileInfo(d->path).fileName();
-    emit referenceChanged();return true;
+    auto& dm=d->displayManager;
+    const bool replacing=!dm.referencePath().isEmpty();
+    if(dm.setReferenceImage(d->path,d->image,d->generation))return true;
+    // Refused by the retained-image budget. Say what did not happen and name what actually holds the memory; a held
+    // output frame is off screen, so it is named rather than blaming the photos on screen. Main.qml shows this status.
+    const auto say=[](const char* text){return QCoreApplication::translate("Status",text);};
+    QString next;
+    if(dm.isPresentationActive()&&dm.presentationModeString()==QLatin1String("comparison"))
+        next=say("Close the comparison on the output to make room.");
+    else if(dm.isPresentationActive()&&!dm.isPinned()&&dm.currentPath()!=d->path)
+        next=say("Turn on Follow controller selection to release the output's held photo.");
+    else if(!dm.pinnedPath().isEmpty())
+        next=say("Unpin the output photo to make room.");
+    else
+        next=say("This photo is too large for the image memory budget.");
+    d->status=(replacing?say("Not enough image memory to replace the reference photo. The open reference stays.")
+                     :say("Not enough image memory to open the reference window."))+u' '+next;
+    emit stateChanged();
+    return false;
 }
-void ViewerController::clearReference(){
-    if(d->reference.isNull())return;
-    d->reference=QImage{};d->referenceLabel.clear();emit referenceChanged();
-}
+void ViewerController::clearReference(){d->displayManager.clearReferenceImage();}
 QString ViewerController::filePath() const{return d->path;}
 QString ViewerController::fileName() const{return QFileInfo(d->path).fileName();}
 QString ViewerController::directory() const{return d->path.isEmpty()?displayPath(d->nav.snapshot().directory):QFileInfo(d->path).absolutePath();}
@@ -1456,49 +1553,50 @@ QVariantList ViewerController::tabs() const {
     QVariantList rows;
     if(d->tabList.size()<2)return rows;
     for(int i=0;i<d->tabList.size();++i){
-        const auto record=i==d->activeTabIndex?d->liveLocation():d->tabList[i];
+        const auto record=i==d->activeTabIndex?d->activeLocation():d->tabList[i];
         QString title=QFileInfo(record.folder).fileName();
         if(title.isEmpty())title=record.folder;
-        rows.append(QVariantMap{{"title",title},{"folder",record.folder},{"image",record.image},{"active",i==d->activeTabIndex}});
+        rows.append(QVariantMap{{"title",title},{"folder",record.folder},{"image",record.image},{"active",i==d->activeTabIndex},
+                             {"unavailable",i==d->activeTabIndex&&d->tabUnavailable}}); // round 3: its folder is unavailable
     }
     return rows;
 }
 int ViewerController::activeTab() const{return d->tabList.size()<2?0:d->activeTabIndex;}
 bool ViewerController::newTab() {
-    if(d->tabList.size()>=8)return false;
-    if(d->tabList.isEmpty())d->tabList.append(d->liveLocation());
-    else d->tabList[d->activeTabIndex]=d->liveLocation();
-    d->tabList.insert(d->activeTabIndex+1,d->liveLocation()); // a copy of where you are, next to it
+    if(d->tabList.size()>=recovery::MaxTabs)return false;
+    const auto here=d->activeLocation();
+    if(d->tabList.isEmpty())d->tabList.append(here);
+    else d->tabList[d->activeTabIndex]=here;
+    d->tabList.insert(d->activeTabIndex+1,here); // a copy of where you are, next to it
     ++d->activeTabIndex;
     d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
     emit tabsChanged();return true;
 }
 bool ViewerController::activateTab(int index) {
     if(d->tabList.size()<2||index<0||index>=d->tabList.size()||index==d->activeTabIndex)return false;
-    d->tabList[d->activeTabIndex]=d->liveLocation();
+    d->tabList[d->activeTabIndex]=d->activeLocation();
     d->activeTabIndex=index;
     const auto target=d->tabList[index];
+    // Until the target is noted, a checkpoint saves its stored location as the slot's position: every tab keeps its own.
+    d->settleOn(target);
     d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
     emit tabsChanged();
-    if(!target.image.isEmpty()&&QFileInfo::exists(target.image))open(target.image);
-    else navigateDirectory(target.folder);
+    d->goToTarget(target);
     return true;
 }
 bool ViewerController::closeTab(int index) {
     if(d->tabList.size()<2||index<0||index>=d->tabList.size())return false;
-    d->tabList[d->activeTabIndex]=d->liveLocation();
+    d->tabList[d->activeTabIndex]=d->activeLocation();
     const bool closingActive=index==d->activeTabIndex;
     d->tabList.removeAt(index);
     if(index<d->activeTabIndex)--d->activeTabIndex;
     else if(closingActive)d->activeTabIndex=qMin(index,int(d->tabList.size())-1);
     const auto target=d->tabList[d->activeTabIndex];
     if(d->tabList.size()<2){d->tabList.clear();d->activeTabIndex=0;}
+    if(closingActive)d->settleOn(target); // the closed tab's location is never saved again
     d->positionDirty=d->slot>0;if(d->positionDirty)d->positionTimer.start();
     emit tabsChanged();
-    if(closingActive){
-        if(!target.image.isEmpty()&&QFileInfo::exists(target.image))open(target.image);
-        else navigateDirectory(target.folder);
-    }
+    if(closingActive)d->goToTarget(target);
     return true;
 }QVariantList ViewerController::commands() const{
     QVariantList rows;
@@ -1574,7 +1672,7 @@ void ViewerController::open(const QString& value){
     // Consume the caller's intent once: decode may wait for registration, while
     // a nested explicit open must not inherit the navigation-only cache policy.
     const bool fromNavigation=std::exchange(d->navigationOpen,false);
-    if(!fromNavigation){d->explicitPositionIntent=true;d->restorePending=false;}
+    if(!fromNavigation){d->explicitPositionIntent=true;d->restorePending=false;d->noteUserMove();}
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString path=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(!fromNavigation) {
@@ -1589,18 +1687,18 @@ void ViewerController::open(const QString& value){
         }
     }
     d->removedPaths.clear();
-    ++d->generation; d->cancel();
+    ++d->generation; d->cancel(); ++d->openSerial; // F015: a tab switch settles only on an image opened after it began
     d->cacheReuseAllowed=fromNavigation;
     d->path=path;d->loading=true;d->imageReady=false;d->status=QCoreApplication::translate("Status","Opening %1…").arg(QFileInfo(path).fileName());
     d->observe(true);d->pendingObservation.reset();
     d->decodeAwaitingBaseline=true;d->decodeStartedWithoutBaseline=false;d->decodeStart.start();
     emit stateChanged(); d->scan(path,d->generation);
 }
-void ViewerController::next(){d->explicitPositionIntent=true;d->navigate(1,false);}void ViewerController::previous(){d->explicitPositionIntent=true;d->navigate(-1,false);}
-void ViewerController::nextFolder(){d->explicitPositionIntent=true;d->navigate(1,true);}void ViewerController::previousFolder(){d->explicitPositionIntent=true;d->navigate(-1,true);}
+void ViewerController::next(){d->explicitPositionIntent=true;d->noteUserMove();d->navigate(1,false);}void ViewerController::previous(){d->explicitPositionIntent=true;d->noteUserMove();d->navigate(-1,false);}
+void ViewerController::nextFolder(){d->explicitPositionIntent=true;d->noteUserMove();d->navigate(1,true);}void ViewerController::previousFolder(){d->explicitPositionIntent=true;d->noteUserMove();d->navigate(-1,true);}
 void ViewerController::trigger(const QString& id){
     if(id=="next")next();else if(id=="previous")previous();else if(id=="next-folder")nextFolder();else if(id=="previous-folder")previousFolder();
-    else if(id=="refresh"){d->observe();d->monitor->refresh();}
+    else if(id=="refresh"){if(d->tabUnavailable)d->retryTarget();else{d->observe();d->monitor->refresh();}} // F015: F5 retries an unavailable tab
     else if(id=="filmstrip")setFilmstripVisible(!d->filmstrip);
     else if(id=="sort"){const char* cycle[]={"name","modified","size","shuffle"};int at=0;for(int i=0;i<4;++i)if(sortKey()==cycle[i])at=i;setSortKey(cycle[(at+1)%4]);}
     else if(id=="sort-reverse")setSortDescending(!d->sortSpec.descending);
@@ -1703,14 +1801,18 @@ void ViewerController::setTreePinned(bool value){if(d->treePin==value)return;d->
 void ViewerController::cancelDirectoryNavigation() {
     d->explicitPositionIntent=true;d->restorePending=false;
     if(d->directoryPending) {
+        // F015: cancelling a tab switch's own folder route (a hanging share) leaves that tab unavailable, not showing the
+        // previous tab's photo.
+        const bool switchCancelled=d->tabSettling&&!d->settleAny&&d->settleNavigation!=0&&d->settleNavigation==d->navigationGeneration;
         d->navigationStop.request_stop();d->navigationStop=std::stop_source{};
         ++d->navigationGeneration;d->pendingNavigation.reset();d->navigationIntents.clear();
+        if(switchCancelled){d->showUnavailable();return;}
         if(!d->path.isEmpty())d->scan(d->path,d->generation);
     }
     d->directoryPending=false;d->directoryError.clear();emit stateChanged();
 }
 void ViewerController::navigateDirectory(const QString& value) {
-    d->explicitPositionIntent=true;d->restorePending=false;
+    d->explicitPositionIntent=true;d->restorePending=false;d->noteUserMove();
     d->navigationIntents.clear();
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     const auto cancellation=d->navigationStop.get_token();
@@ -2047,6 +2149,7 @@ glancelot::MutationService* ViewerController::mutationService() const {
 
 void ViewerController::reconcileRenamedPath(const QString& oldPath, const QString& newPath) {
     if(oldPath.isEmpty()||newPath.isEmpty())return;
+    const Private::AutomaticMove automatic(d.get()); // F015: following a rename never moves a tab
     const auto old=QDir::cleanPath(QDir::fromNativeSeparators(oldPath));
     const auto replacement=QDir::cleanPath(QDir::fromNativeSeparators(newPath));
     const auto remap=[&](const QString& value) -> QString {

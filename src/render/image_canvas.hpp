@@ -19,6 +19,11 @@ class ImageCanvas : public QQuickRhiItem {
     Q_PROPERTY(bool checkerboard READ checkerboard WRITE setCheckerboard NOTIFY appearanceChanged)
     Q_PROPERTY(bool nearest READ nearest WRITE setNearest NOTIFY appearanceChanged)
     Q_PROPERTY(QString rendererError READ rendererError NOTIFY rendererErrorChanged)
+    // Opt-in for canvases in windows that are hidden while unused (the F040 reference window). Qt keeps a hidden
+    // window's scene graph by default, so the renderer would keep its pixel copy, texture and texture-admission
+    // reservation. When true, the canvas makes its window's scene graph non-persistent and releases the window's
+    // resources when it hides, which destroys the renderer and frees all three. Main-window canvases leave it false.
+    Q_PROPERTY(bool releaseWhenHidden READ releaseWhenHidden WRITE setReleaseWhenHidden NOTIFY releaseWhenHiddenChanged)
 public:
     explicit ImageCanvas(QQuickItem* parent = nullptr);
     ~ImageCanvas() override;
@@ -34,6 +39,8 @@ public:
     bool nearest() const { return m_nearest; }
     void setNearest(bool value);
     QString rendererError() const { return m_rendererError; }
+    bool releaseWhenHidden() const { return m_releaseWhenHidden; }
+    void setReleaseWhenHidden(bool value);
     // Per-canvas GPU texture admission limit (default 256 MiB). Owners of several canvases lower it
     // so the aggregate stays bounded.
     qint64 textureBudget() const { return m_textureBudget; }
@@ -77,12 +84,17 @@ signals:
     void rendererErrorChanged();
     void loupeChanged();
     void zoomLockChanged();
+    void releaseWhenHiddenChanged();
 protected:
     QQuickRhiItemRenderer* createRenderer() override;
     void geometryChange(const QRectF&, const QRectF&) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 private:
     void unwatchHold();
+    void watchVisibility(QQuickWindow* window);
+    bool m_releaseWhenHidden{};
+    QPointer<QQuickWindow> m_visibilityWindow;
+    QMetaObject::Connection m_visibilityConnection;
     int m_holdKey{};
     bool m_zoomLock{};
     QPointer<QQuickWindow> m_holdWindow;
