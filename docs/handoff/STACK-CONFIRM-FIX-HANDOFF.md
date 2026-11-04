@@ -113,3 +113,34 @@ Tests: targeted ctest `100% tests passed, 0 tests failed out of 6` (folder_grid,
 Decisions taken this round: the failure bound stays a constant 5 outside "loop" (rather than "distinct paths tried") because it is the simplest bound that does not depend on the folder the step landed in; tab identity for N-2 is the tab count rule rather than a per-tab id (tabs carry no id in `tabs()`; adding one is a controller change).
 
 Observed, not explained: one intermittent hang of `slideshowKeepsGoingAcrossAFolderBoundary` (the round 1 guard test) while the machine was busy: `QFATAL: Test function timed out` after 300 s in one ctest run, and 1 of 5 sequential direct runs hung at 60 s; it did not reproduce in 41 sequential, 48 parallel and 40 parallel runs afterwards (the last 40 after `settleSlideshow` was added), and the two later full/targeted ctest runs passed. The hang happens after the usual start-up output, so it is in the test body or teardown. I did not establish whether it predates this round (it was not seen at `509f6f9`, but that test ran only a handful of times). If it appears at the gate, rerun once and tell me; the likely suspect is teardown racing an in-flight cross-folder navigation, which `settleSlideshow` now avoids.
+
+## Round 3 (STACK-CONFIRM-REVIEW-R3, origin/claude/review-stack-confirm-r3 4f43bab)
+
+Base for this round: `b7ca003`. Grants used: `src/app/viewer_controller.cpp`, a new `src/app/shared_memory_reaper.hpp`, and ONE addition to `include/glancelot/viewer_controller.hpp`.
+
+Exact header diff:
+```
++    // True from the moment a navigation step (next, previous, a folder step, an open) is requested until it has settled: its job has run,
++    // the destination (if any) has been handed to open(), and no further step is queued. A step that ends with this false and the same
++    // filePath went nowhere (a boundary). stateChanged is emitted when it falls back to false.
++    Q_PROPERTY(bool navigating READ navigating NOTIFY stateChanged)
+ ...
+-    bool imageReady() const;
++    bool imageReady() const; bool navigating() const;
+```
+
+| Item | Result |
+| --- | --- |
+| R3-B2 shared-memory hang | Fixed. Cause: on Windows `QSharedMemory` create/attach/detach take a named system semaphore (count 1, no owner). A worker killed or crashed while inside its own attach()/detach() never returns the count, and the GUI thread then blocked forever in `~QSharedMemory` -> `detach` -> `lock` (right after `cancel()`/`cancelLookahead()` killed the worker, or in a `lock()` before reading pixels). On POSIX Qt uses SysV semaphores with SEM_UNDO, so this is Windows-specific. Fix (`shared_memory_reaper.hpp`, `viewer_controller.cpp`): the GUI thread never calls `lock()`/`unlock()` on a transfer segment (the worker finished writing before it sent the message that makes the viewer read), and an attached segment is destroyed by a short-lived thread (`SharedMemoryReaper`), so a dead worker can block only that thread. At most 16 such threads; beyond that the segment is leaked on purpose (counter, warning) so thread count and lifetime stay bounded. |
+| R3-B1 in-flight step | Fixed with the new `navigating` property (set from the request of a step until its result is applied and its destination handed to `open()`, including queued intents). The slideshow does not step while `navigating`, treats a step as a dead end only when it has settled on the photo it left (stopping at once, not at the next tick), and clears `slideshowStepFrom` on settle (R3-N4). The controller emits `stateChanged` when `navigating` falls. |
+| R3-N1 540 px | Tab cap now shrinks so a tab plus its close button fits the strip; `reveal()` never scrolls past the active tab. Test widths now 1180, 560, 540. |
+| R3-N2 wheel clamp | Includes `rightMargin`. Test `tabStripWheelRespectsTheMargin`. |
+| R3-N3 bound pinned | `slideshowPassesAnUndecodableLoneFolderPhoto` (a:2, b:1 undecodable, c:2, "continue"); mutation to `min(5, fileCount)` fails it (`bound-mutation-results-r3.txt`). |
+
+Alternatives for B2 considered: a native file mapping without a cross-process lock (needs the worker changed and Qt's key mangling replicated; rejected for this round), not killing workers that may be in attach/detach (cannot know), and a native-key `QSharedMemory` mode (it still uses the system semaphore). Not verified: Linux (no hang expected: SysV semaphores undo on death); the dead-worker state was reproduced by a holder that locks the segment and never unlocks, not by killing a real decoder at the exact instant.
+
+New tests (`tests/stack_confirm_ui_tests.cpp`): `destroyingASegmentWaitsForTheLockOfADeadWorker` (the old blocking call, reproduced deterministically: the destructor does not return while a "dead worker" holds the lock), `theReaperNeverBlocksTheCallerOnAHeldLock`, `blockedTeardownsAreBounded`, `navigatingSpansAStep`, `slideshowWaitsForASlowFolderStep` (1 s pace with 300 empty sibling folders, 5 s pace with 600), `slideshowPassesAnUndecodableLoneFolderPhoto`, `tabStripWheelRespectsTheMargin`, and 540 px in `longTabNamesKeepTheActiveTabInView`. Fixed sleeps in the test file are replaced by condition waits (`frames()`, `QTRY` with deadlines of at least 10000 ms); the few that must let time pass are marked `// sleep-ok`.
+
+Fail-before (same binary, `ui/Main.qml` from `b7ca003`; `fail-before-results-r3.txt`): `slideshowWaitsForASlowFolderStep` fails at both paces (`the slideshow ended at a-2.png (navigating 1)`), `tabStripWheelRespectsTheMargin` fails (`contentX 226 -> 210`), the 540 px case fails (`active tab 2: the active tab is out of view`). The reaper tests have no pre-fix counterpart; `destroyingASegmentWaitsForTheLockOfADeadWorker` shows the replaced call hangs.
+
+Stress: `slideshowKeepsGoingAcrossAFolderBoundary` 200 runs (4 parallel x 50): see `stress-r3.txt`.

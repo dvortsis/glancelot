@@ -652,7 +652,7 @@ ApplicationWindow {
     // Manual navigation ends the slideshow: another tab, or another folder that its own step did not cross into.
     property string slideshowDirectory: ""
     property int slideshowTab: 0
-    property string slideshowStepFrom: "" // the photo a step left; non-empty until that step has landed on another photo
+    property string slideshowStepFrom: "" // the photo a step left; non-empty from the request until the step has settled
     function startSlideshow() {
         if (viewer.fileCount < 2 || gridMode) return
         slideshowFailures = 0; slideshowStepFrom = ""
@@ -662,7 +662,8 @@ ApplicationWindow {
     function stopSlideshow() { slideshowOn = false; slideshowTimer.stop(); slideshowSkipTimer.stop() }
     function setSlideshowSeconds(seconds) { slideshowSeconds = Math.max(1, Math.min(60, seconds)); if (slideshowOn) slideshowTimer.restart() }
     function slideshowStep() {
-        if (!slideshowOn || viewer.loading || app.modalOpen) return
+        // A step of its own that is still running (listing a big folder, walking many folders) is not a dead end: wait for it.
+        if (!slideshowOn || viewer.loading || viewer.navigating || app.modalOpen) return
         // No folder-size check here: under "continue" the slideshow legitimately passes through folders with one photo.
         // The failure bound is flat under "continue" and "stop" (it must not depend on the folder the step landed in) and
         // is one full pass of a short folder only when the slideshow loops that folder.
@@ -673,11 +674,9 @@ ApplicationWindow {
             deleteFlow.showNotice(qsTr("Slideshow stopped: the last %1 photos could not be opened.").arg(slideshowFailures))
             return
         }
-        // The last step went nowhere (a stop boundary): the photo is still the one it left. By path, not index: a step from
-        // the only photo of one folder to the only photo of the next lands on the same index.
-        if (slideshowStepFrom.length && viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }
-        slideshowStepFrom = viewer.filePath
+        const from = viewer.filePath
         viewer.next()
+        slideshowStepFrom = from // set once the step is requested, so no observation in between reads it as settled
     }
     function slideshowObserve() {
         if (!slideshowOn) return
@@ -692,9 +691,15 @@ ApplicationWindow {
             if (!slideshowStepFrom.length) { stopSlideshow(); return } // not the slideshow's own step across a folder boundary
             slideshowDirectory = viewer.directory
         }
-        if (slideshowStepFrom.length && viewer.filePath !== slideshowStepFrom) slideshowStepFrom = ""
+        // The step has settled (the controller says so): if the photo is still the one it left, it went nowhere, a true
+        // boundary, and the slideshow ends. By path, not index: a step from the only photo of one folder to the only photo of
+        // the next lands on the same index. Otherwise the step landed and the next one may follow.
+        if (slideshowStepFrom.length && !viewer.navigating) {
+            if (viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }
+            slideshowStepFrom = ""
+        }
         // A settled failure is not waiting for anything: step on shortly instead of holding the error for a whole interval.
-        if (!viewer.loading && !viewer.imageReady && slideshowStepFrom.length === 0) slideshowSkipTimer.start()
+        if (!viewer.loading && !viewer.navigating && !viewer.imageReady && slideshowStepFrom.length === 0) slideshowSkipTimer.start()
     }
     Connections {
         target: viewer
@@ -1893,7 +1898,8 @@ ApplicationWindow {
                 // N-5: a tab never takes more than this much of the strip (long folder names elide, the full name is the
                 // tooltip and accessible name), the strip scrolls when the tabs still do not fit, and the active tab with
                 // its close button is always scrolled into view. The New tab button sits outside the scrolling part.
-                readonly property real tabCap: Math.max(Theme.controlHeight * 3, Math.min(Theme.controlHeight * 6, Math.floor(width / 2) - Theme.controlHeight))
+                // A tab plus its close button always fits the strip, down to the narrowest window (R3-N1).
+                readonly property real tabCap: Math.max(Theme.controlHeight * 1.5, Math.min(Math.max(Theme.controlHeight * 3, Math.min(Theme.controlHeight * 6, Math.floor(width / 2) - Theme.controlHeight)), width - Theme.controlHeight))
                 function reveal(item) {
                     if (!item || width <= 0) return
                     const left = item.x, right = item.x + item.width
@@ -1906,6 +1912,7 @@ ApplicationWindow {
                             const tab = tabRepeater.itemAt(i)
                             if (tab && tab.x >= target - 0.5) { target = tab.x; break }
                         }
+                        target = Math.min(target, item.x) // never past the active tab itself (a row wider than the strip starts at its own left edge)
                         contentX = Math.min(Math.max(0, target), Math.max(0, contentWidth + rightMargin - width))
                     }
                 }
@@ -1916,7 +1923,7 @@ ApplicationWindow {
                 WheelHandler { // a wheel over the strip scrolls it sideways
                     target: null
                     enabled: tabStrip.interactive
-                    onWheel: event => tabStrip.contentX = Math.max(0, Math.min(tabStrip.contentWidth - tabStrip.width, tabStrip.contentX - (event.angleDelta.x || event.angleDelta.y)))
+                    onWheel: event => tabStrip.contentX = Math.max(0, Math.min(tabStrip.contentWidth + tabStrip.rightMargin - tabStrip.width, tabStrip.contentX - (event.angleDelta.x || event.angleDelta.y)))
                 }
                 Row {
                     id: tabRow
