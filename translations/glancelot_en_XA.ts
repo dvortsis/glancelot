@@ -880,6 +880,10 @@
         <source>Reference window closed to free image memory. To reopen it, open %1 and pin it again.</source>
         <translation>[Référéñçé wîñdõw çlõséd tõ fréé îmàgé mémõrý. Tõ réõpéñ ît, õpéñ %1 àñd pîñ ît àgàîñ.]</translation>
     </message>
+    <message>
+        <source>Reconnect the drive or network share, then retry.</source>
+        <translation>[Réçõññéçt thé drîvé õr ñétwõrk shàré, théñ rétrý.]</translation>
+    </message>
 </context>
 <context>
     <name>MetadataHud</name>

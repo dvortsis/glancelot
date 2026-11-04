@@ -92,6 +92,7 @@ class LayoutPresetsUiTests:public QObject {
         return QString("\"%1\" is not shown under the control (y=%2) inside the viewport (y=%3-%4); shown %5")
             .arg(text).arg(above.bottom()).arg(viewport.top()).arg(viewport.bottom()).arg(seen.isEmpty()?QString("nowhere"):seen.join(", "));
     }
+    static void writeImage(const QString& path){QDir().mkpath(QFileInfo(path).absolutePath());QImage image(32,24,QImage::Format_RGB32);image.fill(Qt::darkCyan);QVERIFY(image.save(path));}
     static void click(Harness& h,QQuickItem* item){QTest::mouseClick(h.window,Qt::LeftButton,{},sceneBox(item).center().toPoint());}
 private slots:
     void initTestCase() {
@@ -252,6 +253,119 @@ private slots:
             for(const double right:rights)QVERIFY2(qAbs(right-rights[0])<=1,qPrintable(edges));
             const auto fieldLeft=sceneBox(h.named("layoutPresetName")).left(),choiceLeft=sceneBox(h.named("layoutPresetChoice")).left();
             QVERIFY2(qAbs(fieldLeft-choiceLeft)<=1,qPrintable(QString("width %1: name field left %2, preset choice left %3").arg(width).arg(fieldLeft).arg(choiceLeft)));
+        }
+    }
+    // PHASE1-FOLLOWUPS item 4: the general layout note is held back only while its text is the refusal shown beside a
+    // control. Once the refusal is dismissed, the same message arriving later from another route (a command, a second
+    // action) is a new message and shows.
+    void identicalLaterLayoutMessageIsNotHiddenByAnEarlierRefusal() {
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){
+            root["layoutPresets"]=QJsonObject{{"Future",QJsonObject{{"version",2},{"panes",QJsonObject{}}}}};}).ok());
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+        auto* choice=openBrowsingWithLastInView(h,"layoutPresetChoice");QVERIFY(choice);
+        auto* apply=h.named("layoutPresetApply");auto* note=h.named("layoutFeedback");auto* settings=h.window->findChild<QObject*>("settingsDialog");
+        QVERIFY(apply);QVERIFY(note);QVERIFY(settings);
+        const int future=h.layout.presetNames().indexOf("Future");QVERIFY(future>=0);choice->setProperty("currentIndex",future);
+        QTRY_VERIFY(apply->isEnabled());click(h,apply);
+        const QString newer("A newer version of Glancelot saved that preset; it was preserved and not applied.");
+        QTRY_COMPARE(h.layout.feedback(),newer);
+        QTRY_COMPARE(textsShowing(h,newer).size(),1);QVERIFY(!note->isVisible());   // beside the control only
+        // The user dismisses the refusal (choosing another preset does this); the layout keeps its feedback, still not repeated.
+        settings->setProperty("presetApplyRefusal","");
+        QTRY_VERIFY(textsShowing(h,newer).isEmpty());QVERIFY(!note->isVisible());
+        // The same text arrives again from another route (the preset command, for instance): a new message, so it shows.
+        QVERIFY(!h.layout.applyPreset("Future"));
+        QCOMPARE(h.layout.feedback(),newer);
+        QTRY_VERIFY2(note->isVisible(),"the identical later message is still hidden by the earlier refusal");
+        QCOMPARE(textsShowing(h,newer).size(),1);
+    }
+    // PHASE1-FOLLOWUPS item 3: a file name that looks like a placeholder ("%2") is shown as typed in the canvas's accessible
+    // description and in the delete menus. QString-style arg() would rescan it and fill in the next value.
+    void fileNamesWithPlaceholderMarkersAreShownAsTyped_data() {
+        QTest::addColumn<QString>("name");
+        QTest::newRow("%2") << "sale%2.png";
+        QTest::newRow("%1") << "a%1b.png";
+        QTest::newRow("%3") << "100%3.png";
+    }
+    void fileNamesWithPlaceholderMarkersAreShownAsTyped() {
+        QFETCH(QString,name);
+        QTemporaryDir media;QVERIFY(media.isValid());const QString path=media.filePath(name);writeImage(path);
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+        h.viewer.open(path);QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady()&&h.viewer.imageWidth()==32,15000);QCOMPARE(h.viewer.fileName(),name);
+        // The canvas's accessible description: name, then the pixel size.
+        auto* canvas=h.named("canvas");QVERIFY(canvas);QString spoken;
+        for(auto* child:canvas->children())if(child->inherits("QQuickAccessibleAttached"))spoken=child->property("description").toString();
+        QCOMPARE(spoken,name+", 32 by 24 pixels");
+        // The photo's delete row names the file and where it goes.
+        auto* trash=h.window->findChild<QObject*>("deleteFlow");QVERIFY(trash);const QString bin=trash->property("trashName").toString();QVERIFY(!bin.isEmpty());
+        auto* row=h.window->findChild<QObject*>("menuItem-delete-current-file");QVERIFY(row);
+        QCOMPARE(row->property("text").toString(),QString::fromUtf8("Move \xE2\x80\x9C")+name+QString::fromUtf8("\xE2\x80\x9D to the ")+bin);
+        // The grid's single-item delete row.
+        auto* gridMenu=h.window->findChild<QObject*>("gridContextMenu");QVERIFY(gridMenu);gridMenu->setProperty("targets",QStringList{path});
+        auto* gridRow=h.window->findChild<QObject*>("menuItem-delete-selection");QVERIFY(gridRow);
+        QCOMPARE(gridRow->property("text").toString(),QString::fromUtf8("Move \xE2\x80\x9C")+name+QString::fromUtf8("\xE2\x80\x9D to the ")+bin);
+    }
+    // Same defect class, the two other places user text came first: a pane layout preset's name in the "Layout: %1. %2"
+    // message of the preset command, and the combined preview state's accessible name ("%1. %2": file name, then detail).
+    void presetNamesAndPreviewFileNamesWithPlaceholderMarkersAreShownAsTyped() {
+        QVERIFY(glancelot::updateSettings([](QJsonObject& root){root["layouts"]=QJsonObject{{"1",QJsonObject{{"version",2}}}};}).ok());
+        {
+            Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+            QVERIFY(h.layout.savePreset("Fit%2"));
+            const int index=h.layout.presetNames().indexOf("Fit%2");QVERIFY(index>=0);
+            for(int press=0;press<=index;++press)h.viewer.trigger("layout-preset-next"); // the cursor starts before the first preset
+            QTRY_VERIFY2(h.window->property("splitMessage").toString().contains("newer saved layout was preserved"),qPrintable(h.window->property("splitMessage").toString()));
+            const auto message=h.window->property("splitMessage").toString();
+            QVERIFY2(message.startsWith("Layout: Fit%2. "),qPrintable(message));
+            QCOMPARE(message.count("Fit%2"),1);
+        }
+        QTemporaryDir media;QVERIFY(media.isValid());
+        const QString bad=media.filePath("bad%2.png");{QFile file(bad);QVERIFY(file.open(QIODevice::WriteOnly));file.write("generated: not a PNG");}
+        Harness h;QVERIFY(h.window);h.window->resize(1180,780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+        h.viewer.trigger("view-combined");QTRY_VERIFY(h.window->property("combinedMode").toBool());
+        h.viewer.open(bad);
+        auto* panel=h.named("previewState");auto* title=h.named("previewStateTitle");auto* detail=h.named("previewStateDetail");QVERIFY(panel);QVERIFY(title);QVERIFY(detail);
+        QTRY_VERIFY_WITH_TIMEOUT(panel->isVisible()&&!h.viewer.loading()&&title->property("text").toString()=="bad%2.png"&&!detail->property("text").toString().isEmpty(),15000);
+        QString spoken;for(auto* child:panel->children())if(child->inherits("QQuickAccessibleAttached"))spoken=child->property("name").toString();
+        QCOMPARE(spoken,QString("bad%2.png. ")+detail->property("text").toString());
+    }
+    // PHASE1-FOLLOWUPS item 2 (F015 gap): the last remaining tab's folder is unavailable. The view names the folder and offers
+    // Retry (not the welcome screen); Retry opens the tab once the folder is back. Evidence: GLANCELOT_PHASE1_UI_EVIDENCE.
+    void lastUnavailableTabShowsThePlaceholder() {
+        for(const int width:{1180,560}) {
+            QTemporaryDir media;QVERIFY(media.isValid());
+            const QString a=media.filePath("Holiday trip/a.png"),b=media.filePath("Beta/b.png");writeImage(a);writeImage(b);
+            Harness h;QVERIFY(h.window);h.window->resize(width,width==560?640:780);h.window->show();QTRY_VERIFY(h.window->isExposed());
+            h.viewer.open(a);QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(),15000);
+            QVERIFY(h.viewer.newTab());h.viewer.open(b);QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady()&&h.viewer.fileName()=="b.png",15000);
+            QVERIFY(QDir(media.path()).rename("Holiday trip","Holiday trip-away"));   // the first tab's folder goes offline
+            QVERIFY(h.viewer.activateTab(0));QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading()&&!h.viewer.directoryPending(),10000);
+            QVERIFY(h.viewer.closeTab(1));   // only the unavailable tab is left
+            QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading()&&!h.viewer.directoryPending(),10000);
+            QCOMPARE(h.viewer.tabs().size(),1);
+            auto* empty=h.named("emptyState");auto* title=h.named("tabUnavailableTitle");auto* action=h.named("emptyStateAction");
+            QVERIFY(empty);QVERIFY(title);QVERIFY(action);
+            QTRY_VERIFY2(empty->isVisible(),qPrintable(QString("width %1: no empty state, status '%2'").arg(width).arg(h.viewer.status())));
+            QTRY_VERIFY(title->isVisible());
+            QCOMPARE(title->property("text").toString(),QString("Holiday trip is unavailable"));
+            QCOMPARE(action->property("text").toString(),QString("Retry"));
+            QVERIFY(!h.named("tabStrip")->isVisible());   // one tab: no strip
+            auto* hint=h.named("emptyStateHint");QVERIFY(hint);QVERIFY(hint->isVisible());   // there are no other tabs to mention
+            QCOMPARE(hint->property("text").toString(),QString("Reconnect the drive or network share, then retry."));
+            for(auto* image:empty->findChildren<QQuickItem*>())if(image->inherits("QQuickImage"))QVERIFY2(!image->isVisible(),"the welcome mascot is still shown");
+            const auto box=title->mapRectToScene(QRectF(0,0,title->width(),title->height()));
+            QVERIFY2(QRectF(0,0,h.window->width(),h.window->height()).contains(box),qPrintable(QString("title %1,%2 %3x%4 leaves the window").arg(box.x()).arg(box.y()).arg(box.width()).arg(box.height())));
+            if(!qEnvironmentVariable("GLANCELOT_PHASE1_UI_EVIDENCE").isEmpty()) {
+                QTest::qWait(300);
+                QVERIFY(h.window->grabWindow().save(QDir(qEnvironmentVariable("GLANCELOT_PHASE1_UI_EVIDENCE")).filePath(QString("last-tab-unavailable-%1.png").arg(width))));
+            }
+            // Retry with the folder still away keeps the placeholder; with the folder back it opens the tab.
+            click(h,action);QTest::qWait(300);QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading()&&!h.viewer.directoryPending(),10000);
+            QTRY_VERIFY(empty->isVisible());QCOMPARE(title->property("text").toString(),QString("Holiday trip is unavailable"));
+            QVERIFY(QDir(media.path()).rename("Holiday trip-away","Holiday trip"));
+            click(h,action);
+            QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady()&&h.viewer.fileName()=="a.png",15000);
+            QTRY_VERIFY(!empty->isVisible());QVERIFY(h.viewer.tabs().isEmpty());
         }
     }
     // Follow-up R4: the main window shows only the outcome of the press's own preset write, never a later, unrelated

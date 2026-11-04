@@ -1,0 +1,14 @@
+********* Start testing of TabsRecoveryTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : TabsRecoveryTests::initTestCase()
+FAIL!  : TabsRecoveryTests::lastTabUnavailableAfterClosingTheActiveTabKeepsItsRow() 'state.isEmpty()' returned FALSE. (expected the one unavailable tab as a row, got 0 rows)
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\tabs_recovery_tests.cpp(819) : failure location
+FAIL!  : TabsRecoveryTests::lastTabUnavailableAfterClosingTheOtherTabKeepsItsRow() 'state.isEmpty()' returned FALSE. (expected the one unavailable tab as a row, got 0 rows)
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\tabs_recovery_tests.cpp(842) : failure location
+FAIL!  : TabsRecoveryTests::retryFromTheLastUnavailableTabOpensItAndEmptiesTheList() 'before.isEmpty()' returned FALSE. (expected the one unavailable tab as a row, got 0 rows)
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\tabs_recovery_tests.cpp(862) : failure location
+FAIL!  : TabsRecoveryTests::navigatingAwayFromTheLastUnavailableTabEmptiesTheList() 'before.isEmpty()' returned FALSE. (expected the one unavailable tab as a row, got 0 rows)
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\tabs_recovery_tests.cpp(888) : failure location
+PASS   : TabsRecoveryTests::cleanupTestCase()
+Totals: 2 passed, 4 failed, 0 skipped, 0 blacklisted, 4622ms
+********* Finished testing of TabsRecoveryTests *********

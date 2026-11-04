@@ -790,6 +790,109 @@ private slots:
         QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
     }
 
+    // PHASE1-FOLLOWUPS item 2 (F015 gap): the last remaining tab's folder is unavailable. With one tab `tabs()` is
+    // otherwise empty, so the view fell back to the welcome screen; while the tab is unavailable it returns that one row,
+    // so the placeholder can name the folder and offer Retry. The tab strip still needs two rows to show.
+    static QString onlyUnavailableTabDiffers(const ViewerController& viewer, const QString& folder, const QString& image) {
+        const auto rows = viewer.tabs();
+        if (rows.size() != 1) return QString("expected the one unavailable tab as a row, got %1 rows").arg(rows.size());
+        const auto row = rows.at(0).toMap();
+        if (!same(row.value("folder").toString(), folder)) return "wrong folder: " + row.value("folder").toString();
+        if (!same(row.value("image").toString(), image)) return "wrong image: " + row.value("image").toString();
+        if (!row.value("active").toBool()) return "the row is not active";
+        if (viewer.activeTab() != 0) return "activeTab is not 0";
+        return unavailableDiffers(viewer);
+    }
+    void lastTabUnavailableAfterClosingTheActiveTabKeepsItsRow() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(viewer.closeTab(1));   // beta: tabs are now alpha and gamma, gamma active
+            QVERIFY(QDir(media.dir.filePath("alpha")).removeRecursively());   // the remaining tab's folder goes away
+            QVERIFY(viewer.closeTab(1));   // close the active tab: alpha is the last one and must open
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto state = onlyUnavailableTabDiffers(viewer, QFileInfo(files[0]).absolutePath(), files[0]);
+            QVERIFY2(state.isEmpty(), qPrintable(state));
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), {files[0]}, 0).isEmpty(), 5000);   // one location, its own
+        }
+        const auto differ = storedTabsDiffer(config.path(), {files[0]}, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+    void lastTabUnavailableAfterClosingTheOtherTabKeepsItsRow() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(viewer.closeTab(0));   // alpha: beta and gamma, gamma active
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), {files[1], files[2]}, 1).isEmpty(), 5000);
+            QVERIFY(QDir(media.dir.filePath("beta")).removeRecursively());
+            QVERIFY(viewer.activateTab(0));   // beta is gone: unavailable, with two tabs
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            QCOMPARE(viewer.tabs().size(), 2);
+            const auto two = unavailableDiffers(viewer); QVERIFY2(two.isEmpty(), qPrintable(two));
+            QVERIFY(viewer.closeTab(1));   // the other (inactive) tab goes; the unavailable one is the last
+            const auto state = onlyUnavailableTabDiffers(viewer, QFileInfo(files[1]).absolutePath(), files[1]);
+            QVERIFY2(state.isEmpty(), qPrintable(state));
+            QTRY_VERIFY_WITH_TIMEOUT(storedTabsDiffer(config.path(), {files[1]}, 0).isEmpty(), 5000);
+        }
+        const auto differ = storedTabsDiffer(config.path(), {files[1]}, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+        QCOMPARE(record(config.path()).value("state"), QJsonValue("clean"));
+    }
+    // Retry works from the single row, and once the tab opens the list is empty again (no strip, no placeholder).
+    void retryFromTheLastUnavailableTabOpensItAndEmptiesTheList() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        {
+            WindowSlot slot(config.path(), 0); QCOMPARE(slot.number(), 1);
+            ViewerController viewer; viewer.setWindowClaim(slot.claimIdentity());
+            QVERIFY(openThreeTabs(config.path(), viewer, media, 2));
+            QVERIFY(viewer.closeTab(1));
+            QVERIFY(QDir(media.dir.path()).rename("alpha", "alpha-offline"));
+            QVERIFY(viewer.closeTab(1));
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto before = onlyUnavailableTabDiffers(viewer, QFileInfo(files[0]).absolutePath(), files[0]);
+            QVERIFY2(before.isEmpty(), qPrintable(before));
+            viewer.trigger("refresh");   // Retry while the folder is still away: still the one unavailable row
+            QTest::qWait(300);
+            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+            const auto still = onlyUnavailableTabDiffers(viewer, QFileInfo(files[0]).absolutePath(), files[0]);
+            QVERIFY2(still.isEmpty(), qPrintable(still));
+            QVERIFY(QDir(media.dir.path()).rename("alpha-offline", "alpha"));
+            viewer.trigger("refresh");
+            QTRY_VERIFY2_WITH_TIMEOUT(shows(viewer, files[0]), qPrintable(viewer.status() + " showing " + viewer.filePath()), 10000);
+            QVERIFY(viewer.tabs().isEmpty());   // one tab again: no row, the strip stays hidden
+            QCOMPARE(viewer.activeTab(), 0);
+        }
+        const auto differ = storedTabsDiffer(config.path(), {files[0]}, 0); QVERIFY2(differ.isEmpty(), qPrintable(differ));
+    }
+    // Leaving the unavailable state by the user's own navigation drops the row too (one tab: the list is empty again).
+    void navigatingAwayFromTheLastUnavailableTabEmptiesTheList() {
+        QTemporaryDir config; Media media; QVERIFY(config.isValid() && media.dir.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8());
+        const auto files = images(media);
+        ViewerController viewer;
+        QVERIFY(showThreeTabs(viewer, media, 2));
+        QVERIFY(viewer.closeTab(1));
+        QVERIFY(QDir(media.dir.filePath("alpha")).removeRecursively());
+        QVERIFY(viewer.closeTab(1));
+        QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading() && !viewer.directoryPending(), 10000);
+        const auto before = onlyUnavailableTabDiffers(viewer, QFileInfo(files[0]).absolutePath(), files[0]);
+        QVERIFY2(before.isEmpty(), qPrintable(before));
+        QSignalSpy changed(&viewer, &ViewerController::tabsChanged);
+        viewer.open(files[2]);
+        QTRY_VERIFY_WITH_TIMEOUT(shows(viewer, files[2]), 10000);
+        QVERIFY(viewer.tabs().isEmpty());
+        QVERIFY2(changed.count() > 0, "tabsChanged must announce that the unavailable row is gone");
+    }
+
     // Lead decision (round 2, N3): production always claims a slot, so tab state is written only by the recovery
     // checkpoint. The no-claim position writer (setWindowSlot without a claim, kept for window_slots) writes no tabs and
     // drops a stale stored set rather than leaving it next to a position it did not write.

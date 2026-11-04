@@ -32,6 +32,7 @@ constexpr const char* kOpenRefused = "Not enough image memory to open the refere
 constexpr const char* kReplaceRefused = "Not enough image memory to replace the reference photo. The open reference stays.";
 constexpr const char* kPinRefusedKept = "Not enough image memory to pin this photo on the output. The output keeps its pinned photo.";
 constexpr const char* kPinWaitsForLoad = "The output keeps its pinned photo until the next photo finishes loading. Pin again when it shows.";
+constexpr const char* kPinStale = "The photo changed while it was being pinned. The output keeps its pinned photo. Pin again to use the current photo.";
 constexpr const char* kKeepsPinned = "Output keeps its pinned photo: the newer photo doesn't fit in image memory.";
 QString shedNotice(const QString& name) { return QString("Reference window closed to free image memory. To reopen it, open %1 and pin it again.").arg(name); }
 constexpr const char* kTooLarge = "This photo is too large for the image memory budget.";
@@ -43,13 +44,17 @@ QString joined(const char* a, const char* b) { return QString::fromUtf8(a) + u' 
 
 class ReferencePinTests : public QObject {
     Q_OBJECT
-    // Shows photo p<index> (1-based, like currentIndex()). It opens the file directly rather than triggering "next":
-    // after the October 23 main merge a "next" intent was occasionally left queued with no navigation running
-    // (index unchanged, not loading, for 15 s), which is a navigation issue outside this packet. These tests are about
-    // the display budget, so they only need a newer current frame.
+    // Shows photo p<index> (1-based, like currentIndex()) by pressing "next" from the photo before it, as a user does.
+    // Before EN-11 a late first watcher scan could leave a "next" intent queued with nothing running (the October 23
+    // stall, "step(2) timed out: index 1 ready 1 loading 0"); EN-11 fixed it, so these tests no longer open files
+    // directly. If the stall ever returns, step() times out here: report it, do not work around it.
     static QString photo(Harness& h, int index) { return QFileInfo(h.viewer.filePath()).dir().filePath(QString("p%1.png").arg(index)); }
     static bool step(Harness& h, int index) {
-        h.viewer.open(photo(h, index));
+        if (h.viewer.currentIndex() != index - 1) {   // "next" moves one photo; a bigger jump needs a different helper
+            qWarning("step(%d) needs to start at photo %d, not %d", index, index - 1, h.viewer.currentIndex());
+            return false;
+        }
+        h.viewer.trigger("next");
         if (QTest::qWaitFor([&] { return h.viewer.currentIndex() == index && h.viewer.imageReady(); }, 15000)) return true;
         qWarning("step(%d) timed out: index %d ready %d loading %d status '%s'", index, h.viewer.currentIndex(), int(h.viewer.imageReady()),
                  int(h.viewer.loading()), qPrintable(h.viewer.status()));
@@ -584,6 +589,39 @@ private slots:
         QVERIFY(dm->retainedImageBytes() <= glancelot::DisplayManager::imageBudgetBytes());
         QVERIFY(QTest::qWaitFor([&] { return h.viewer.currentIndex() == 3 && h.viewer.imageReady(); }, 15000));
         QCOMPARE(dm->pinnedPath(), media.path(0));
+        h.viewer.trigger("presentation-close"); flushDeletes();
+    }
+
+    // PHASE1-FOLLOWUPS item 5 (failure case): the frame the controller hands over is older than the pin that holds the
+    // output (a pin made at a later generation, for example by another route while this request was in flight). It is
+    // refused, the old pin, the mode and the selection stay, and the status says why instead of keeping the previous
+    // message ("the newer photo doesn't fit"), which no longer describes what happened.
+    void pinWithAStaleCaptureSaysSo() {
+        BudgetScope budget;
+        Media media(2, QSize(320, 200)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openFolder(h, media));
+        auto* dm = h.viewer.displayManager();
+        const qint64 one = h.viewer.image().sizeInBytes();
+        const QImage first = h.viewer.image();
+        h.viewer.trigger("presentation-toggle"); h.viewer.trigger("presentation-pin");   // pins p1
+        QCOMPARE(dm->pinnedPath(), media.path(0));
+        glancelot::DisplayManager::setImageBudgetBytes(one + 16);
+        QVERIFY(step(h, 2));
+        QCOMPARE(dm->routingStatus(), QString(kKeepsPinned));   // p2 is withheld from the full output budget
+        dm->pinImage(media.path(0), first, 1'000'000'000);       // the pin is now newer than any decode the viewer will report
+        QCOMPARE(dm->pinnedPath(), media.path(0));
+        const Selection selection(h.viewer);
+        QSignalSpy pins(dm, &glancelot::DisplayManager::pinnedPathChanged);
+        QSignalSpy modes(dm, &glancelot::DisplayManager::presentationModeChanged);
+
+        h.viewer.trigger("presentation-pin");
+        QCOMPARE(dm->routingStatus(), QString(kPinStale));
+        QCOMPARE(dm->pinnedPath(), media.path(0));
+        QCOMPARE(h.viewer.presentationMode(), QString("pinned"));
+        QCOMPARE(pins.count(), 0);
+        QCOMPARE(modes.count(), 0);
+        QCOMPARE(dm->retainedImageBytes(), one);
+        QVERIFY(selection.same(h.viewer));
         h.viewer.trigger("presentation-close"); flushDeletes();
     }
 

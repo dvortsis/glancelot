@@ -214,7 +214,9 @@ struct ViewerController::Private {
     }
     bool settlesIn(const QString& folder) const { return settleAny||fs_watch::key(folder)==fs_watch::key(settleFolder); }
     // Called by every navigation entry point: one the user started (not a reconcile or the tab code) takes the tab over.
-    void noteUserMove() { if(tabSettling&&automaticMoves==0){settleAny=true;tabUnavailable=false;} }
+    void noteUserMove() { if(tabSettling&&automaticMoves==0){settleAny=true;clearUnavailable();} }
+    // The unavailable state ends; the one-tab row (tabs()) and the placeholder follow it, so listeners are told.
+    void clearUnavailable() { if(tabUnavailable){tabUnavailable=false;emit q->tabsChanged();} }
     // The tab route: the target's image when it still exists, otherwise its folder (whose result may end unavailable).
     void goToTarget(const TabRecord& target) {
         const AutomaticMove automatic(this);
@@ -496,7 +498,7 @@ struct ViewerController::Private {
         lastDecodedPath=file;
         // Opened before the switch, or outside the target's folder without the user moving: the target keeps its location.
         if(tabSettling&&(openSerial==settleSerial||!settlesIn(QFileInfo(file).absolutePath())))return;
-        tabSettling=false;tabUnavailable=false;
+        tabSettling=false;clearUnavailable();
         if (slot<=0) return;
         positionRetries=0;
         pendingImage=file; pendingFolder=QFileInfo(file).absolutePath(); positionDirty=true;
@@ -1096,7 +1098,7 @@ struct ViewerController::Private {
                         lastDecodedPath.clear();
                         const auto visited=displayPath(result.navigator.snapshot().directory);
                         if(!tabSettling||settlesIn(visited)) { // F015: a reconcile's visit of another folder never settles a switch
-                            pendingImage.clear(); tabSettling=false; tabUnavailable=false;
+                            pendingImage.clear(); tabSettling=false; clearUnavailable();
                             pendingFolder=visited;
                             positionRetries=0;positionDirty=slot>0;
                             if(positionDirty)positionTimer.start();
@@ -1551,7 +1553,17 @@ int ViewerController::imageHeight() const{return d->image.height();}
 // ---- F015 tabs (shape A)
 QVariantList ViewerController::tabs() const {
     QVariantList rows;
-    if(d->tabList.size()<2)return rows;
+    if(d->tabList.size()<2) {
+        // One tab has no strip, so the list is empty - except while that tab's folder is unavailable: the one row (the
+        // tab's stored location) lets the view name the folder and offer Retry instead of the welcome screen.
+        if(d->tabUnavailable) {
+            const auto record=d->activeLocation();
+            QString title=QFileInfo(record.folder).fileName();
+            if(title.isEmpty())title=record.folder;
+            rows.append(QVariantMap{{"title",title},{"folder",record.folder},{"image",record.image},{"active",true},{"unavailable",true}});
+        }
+        return rows;
+    }
     for(int i=0;i<d->tabList.size();++i){
         const auto record=i==d->activeTabIndex?d->activeLocation():d->tabList[i];
         QString title=QFileInfo(record.folder).fileName();

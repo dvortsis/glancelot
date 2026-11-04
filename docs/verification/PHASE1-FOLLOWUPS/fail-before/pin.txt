@@ -1,0 +1,15 @@
+********* Start testing of ReferencePinTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : ReferencePinTests::initTestCase()
+QWARN  : ReferencePinTests::pinWithAStaleCaptureSaysSo() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : ReferencePinTests::pinWithAStaleCaptureSaysSo() No QRhi found for window 0x22a20d60430, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWithAStaleCaptureSaysSo() No QRhi found for window 0x22a20d60430, QQuickRhiItem will not be functional
+QWARN  : ReferencePinTests::pinWithAStaleCaptureSaysSo() No QRhi found for window 0x22a24cccd30, QQuickRhiItem will not be functional
+FAIL!  : ReferencePinTests::pinWithAStaleCaptureSaysSo() Compared values are not the same
+   Actual   (dm->routingStatus()): "Output keeps its pinned photo: the newer photo doesn't fit in image memory."
+   Expected (QString(kPinStale)) : "The photo changed while it was being pinned. The output keeps its pinned photo. Pin again to use the current photo."
+C:\src\Github\Glancelot\.worktrees\claude-phase1-followups\tests\reference_pin_tests.cpp(618) : failure location
+PASS   : ReferencePinTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2747ms
+********* Finished testing of ReferencePinTests *********
