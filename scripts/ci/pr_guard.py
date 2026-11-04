@@ -4,9 +4,9 @@
 CI runs this in the `guard` job of .github/workflows/build.yml; `ci-ok` cannot pass when it fails. Sessions can
 run the same checks before pushing:
 
-    python3 scripts/ci/pr_guard.py --base origin/main --head-ref claude/<task>
+    python scripts/ci/pr_guard.py --base origin/main --head-ref claude/<task>
 
-It needs PyYAML (on this PC, run it through `wsl -e python3`).
+It needs PyYAML (pip install pyyaml==6.0.2).
 """
 import argparse
 import json
@@ -21,16 +21,21 @@ import yaml
 QUEUE = "docs/WORK-QUEUE.yaml"
 STATES = {"ready", "implementing", "review", "integration", "done"}
 LEAD_ONLY = (".github/workflows/", "scripts/ci/")
+SHIPPED_DOCS = {"README.md", "THIRD_PARTY_NOTICES.md"}  # Dockerfile and scripts/build.ps1 copy these
+HOSTED_RUNNER = re.compile(r"^(ubuntu|windows|macos)-[\w.-]+$")
+PR_TRIGGERS = {"pull_request", "pull_request_target", "workflow_run"}
 SIZE_NOTICE = 1500
 SIZE_LIMIT = 3000
 MIN_DEADLINE_MS = 10000
-SLEEP = re.compile(r"QTest::qWait\s*\(|QThread::(?:u|m)?sleep\s*\(|this_thread::sleep_|\bSleep\s*\(|\bu?sleep\s*\(")
-TIMED_WAIT = re.compile(r"QTRY_\w+_WITH_TIMEOUT\s*\(.*,\s*(\d+)\s*\)")
+SLEEP = re.compile(r"QTest::qWait\s*\(|\bq?[mu]?[Ss]leep\s*\(|this_thread::sleep_")
+TIMED_WAIT = re.compile(r"QTRY_\w+_WITH_TIMEOUT\s*\(.*,\s*(\d+)\s*\)|qWaitFor\s*\(.*,\s*(\d+)\s*\)|\.wait\s*\(\s*(\d+)\s*\)")
 
 
-def is_docs_only(path):
+def is_docs_only(path, status="M"):
     """A docs-only pull request skips the builds: nothing here reaches a compiler or a test."""
-    return path.startswith("docs/") or path.endswith(".md") or path == ".gitattributes"
+    if path in SHIPPED_DOCS:
+        return status != "D"
+    return path.startswith("docs/") or path.endswith(".md")
 
 
 def counts_toward_size(path):
@@ -101,7 +106,8 @@ def queue_scope_errors(base_text, head_text, head_ref):
 
 
 def wait_errors(path, added_lines):
-    """New test code waits on a condition with a deadline of at least 10 s, never for a fixed time."""
+    """New test code waits on a condition with a deadline of at least 10 s, never for a fixed time.
+    Best effort: plain QTRY_* (5 s default) and multi-line calls stay with the reviewer."""
     errors = []
     for line in added_lines:
         if "sleep-ok:" in line:
@@ -109,7 +115,7 @@ def wait_errors(path, added_lines):
         if SLEEP.search(line):
             errors.append(f"{path}: fixed sleep in a test: {line.strip()}")
         timed = TIMED_WAIT.search(line)
-        if timed and int(timed.group(1)) < MIN_DEADLINE_MS:
+        if timed and int(next(g for g in timed.groups() if g)) < MIN_DEADLINE_MS:
             errors.append(f"{path}: deadline under {MIN_DEADLINE_MS} ms: {line.strip()}")
     return errors
 
@@ -133,21 +139,45 @@ def lead_only_errors(paths, head_ref, labels):
             for path in paths if path.startswith(LEAD_ONLY)]
 
 
+def _runner_labels(job):
+    runs_on = job.get("runs-on", [])
+    if isinstance(runs_on, dict):
+        runs_on = runs_on.get("labels", [runs_on.get("group", "")])
+    return [runs_on] if isinstance(runs_on, str) else list(runs_on)
+
+
 def workflow_errors(workflows):
-    """A workflow that can reach the self-hosted runner never takes pull requests (public repository)."""
+    """A workflow that pull requests can start uses hosted runners only (public repository). This is a backstop:
+    a pull request runs its own copy of this file, so the real barrier is the fork approval policy."""
     errors = []
     for name, text in workflows.items():
         data = yaml.safe_load(text) or {}
         triggers = data.get("on", data.get(True)) or {}
         names = [triggers] if isinstance(triggers, str) else list(triggers)
-        pull_request = any(t in ("pull_request", "pull_request_target") for t in names)
-        if pull_request and "self-hosted" in text:
+        if not PR_TRIGGERS & set(names):
+            continue
+        if "self-hosted" in text:
             errors.append(f"{name}: takes pull requests and can reach the self-hosted runner")
+            continue
+        for job_name, job in (data.get("jobs") or {}).items():
+            for label in _runner_labels(job or {}):
+                if "${{" not in str(label) and not HOSTED_RUNNER.match(str(label)):
+                    errors.append(f"{name}: job {job_name} takes pull requests and runs on {label}")
     return errors
 
 
-def git(*args, check=True):
-    return subprocess.run(["git", *args], check=check, capture_output=True, text=True, encoding="utf-8").stdout
+def git(*args):
+    return subprocess.run(["git", *args], check=True, capture_output=True, text=True, encoding="utf-8",
+                          errors="replace").stdout
+
+
+def changed_files(merge_base, head):
+    """(status, path) pairs. Renames count as a delete plus an add, so moving code into docs/ is still a code change."""
+    pairs = []
+    for line in git("diff", "--name-status", "--no-renames", merge_base, head).splitlines():
+        status, path = line.split("\t", 1)
+        pairs.append((status, path))
+    return pairs
 
 
 def added_lines_by_file(merge_base, head):
@@ -169,6 +199,13 @@ def changed_size(merge_base, head):
     return total
 
 
+def show_queue(commit):
+    try:
+        return git("show", f"{commit}:{QUEUE}")
+    except subprocess.CalledProcessError:
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", help="base commit or ref of the pull request")
@@ -179,31 +216,41 @@ def main():
     event = {}
     if os.environ.get("GITHUB_EVENT_PATH"):
         event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8")).get("pull_request") or {}
-    labels = {label["name"] for label in event.get("labels", [])}
-    if os.environ.get("PR_LABELS"):
-        labels |= set(os.environ["PR_LABELS"].split())
+    # The build.yml step reads these live, because a rerun replays the old event.
+    title = os.environ.get("PR_TITLE", event.get("title"))
+    body = os.environ.get("PR_BODY", event.get("body"))
+    labels = set(os.environ["PR_LABELS"].split()) if "PR_LABELS" in os.environ else \
+        {label["name"] for label in event.get("labels", [])}
     base = args.base or (event.get("base") or {}).get("sha")
     head = (event.get("head") or {}).get("sha") or args.head
     head_ref = args.head_ref or (event.get("head") or {}).get("ref") or ""
 
-    errors = queue_errors(git("show", f"{head}:{QUEUE}"))
+    errors = []
+    head_queue = show_queue(head)
+    if head_queue is None:
+        errors.append(f"{QUEUE} is missing at {head}")
+    else:
+        errors += queue_errors(head_queue)
     workflow_dir = Path(".github/workflows")
-    errors += workflow_errors({p.name: p.read_text(encoding="utf-8") for p in workflow_dir.glob("*.yml")})
+    workflow_files = [*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")]
+    errors += workflow_errors({p.name: p.read_text(encoding="utf-8") for p in workflow_files})
 
     code = True
     if base:
         merge_base = git("merge-base", base, head).strip()
-        paths = [p for p in git("diff", "--name-only", merge_base, head).splitlines() if p]
-        code = not all(is_docs_only(p) for p in paths)
+        files = changed_files(merge_base, head)
+        paths = [path for _, path in files]
+        code = not all(is_docs_only(path, status) for status, path in files)
         size = changed_size(merge_base, head)
         errors += lead_only_errors(paths, head_ref, labels)
-        errors += size_errors(size, event.get("body"), head_ref)
+        errors += size_errors(size, body, head_ref)
         if size > SIZE_NOTICE:
             print(f"::notice::{size} changed lines; aim for about {SIZE_NOTICE}")
         if event:
-            errors += title_errors(event.get("title"))
-        if QUEUE in paths and not errors:
-            errors += queue_scope_errors(git("show", f"{merge_base}:{QUEUE}"), git("show", f"{head}:{QUEUE}"), head_ref)
+            errors += title_errors(title)
+        base_queue = show_queue(merge_base)
+        if QUEUE in paths and base_queue and head_queue and not errors:
+            errors += queue_scope_errors(base_queue, head_queue, head_ref)
         if not is_integration_branch(head_ref):
             for path, lines in added_lines_by_file(merge_base, head).items():
                 errors += wait_errors(path, lines)

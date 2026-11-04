@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Unit tests for pr_guard.py. Run from the repository root: python3 scripts/ci/test_pr_guard.py"""
+import os
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -25,8 +28,48 @@ class DocsOnly(unittest.TestCase):
 
     def test_everything_else_builds(self):
         for path in ("src/app/a.cpp", "ui/Main.qml", "CMakeLists.txt", ".github/workflows/build.yml",
-                     "translations/glancelot_en_XA.ts", "scripts/ci/pr_guard.py", "docker/start.py"):
+                     "translations/glancelot_en_XA.ts", "scripts/ci/pr_guard.py", "docker/start.py",
+                     ".gitattributes"):
             self.assertFalse(pr_guard.is_docs_only(path), path)
+
+    def test_deleting_a_shipped_doc_builds(self):
+        self.assertTrue(pr_guard.is_docs_only("README.md", "M"))
+        self.assertFalse(pr_guard.is_docs_only("README.md", "D"))
+        self.assertFalse(pr_guard.is_docs_only("THIRD_PARTY_NOTICES.md", "D"))
+        self.assertTrue(pr_guard.is_docs_only("docs/a.md", "D"))
+
+
+class Renames(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.directory.name)
+        self.run_git("init", "-q")
+        self.run_git("config", "user.email", "test@example.invalid")
+        self.run_git("config", "user.name", "test")
+        Path("CMakeLists.txt").write_text("project(x)\n" * 20)
+        Path("docs").mkdir()
+        Path("docs/a.md").write_text("a\n" * 20)
+        self.run_git("add", "-A")
+        self.run_git("commit", "-qm", "base")
+
+    def run_git(self, *args):
+        subprocess.run(["git", *args], check=True, capture_output=True)
+
+    def classify(self):
+        files = pr_guard.changed_files("HEAD~1", "HEAD")
+        return all(pr_guard.is_docs_only(path, status) for status, path in files)
+
+    def test_moving_code_into_docs_is_a_code_change(self):
+        self.run_git("mv", "CMakeLists.txt", "docs/CMakeLists.md")
+        self.run_git("commit", "-qm", "move")
+        self.assertFalse(self.classify())
+
+    def test_moving_docs_within_docs_is_docs_only(self):
+        self.run_git("mv", "docs/a.md", "docs/b.md")
+        self.run_git("commit", "-qm", "move")
+        self.assertTrue(self.classify())
 
 
 class Queue(unittest.TestCase):
@@ -70,11 +113,16 @@ class QueueScope(unittest.TestCase):
 
 class Waits(unittest.TestCase):
     def test_fixed_sleeps_fail(self):
-        for line in ("QTest::qWait(100);", "QThread::msleep(5);", "std::this_thread::sleep_for(1s);", "Sleep(10);"):
+        for line in ("QTest::qWait(100);", "QThread::msleep(5);", "std::this_thread::sleep_for(1s);", "Sleep(10);",
+                     "QTest::qSleep(5);", "usleep(5);"):
             self.assertTrue(pr_guard.wait_errors("tests/a.cpp", [line]), line)
 
     def test_short_deadline_fails(self):
         self.assertTrue(pr_guard.wait_errors("tests/a.cpp", ["QTRY_VERIFY_WITH_TIMEOUT(ready(), 5000);"]))
+
+    def test_other_short_waits_fail(self):
+        for line in ("QTest::qWaitFor([&] { return ready(); }, 500);", "QVERIFY(spy.wait(100));"):
+            self.assertTrue(pr_guard.wait_errors("tests/a.cpp", [line]), line)
 
     def test_long_deadline_passes(self):
         self.assertEqual(pr_guard.wait_errors("tests/a.cpp", ["QTRY_VERIFY_WITH_TIMEOUT(ready(), 10000);"]), [])
@@ -128,6 +176,14 @@ class Workflows(unittest.TestCase):
         for trigger in ("pull_request:", "pull_request_target:"):
             text = f"on:\n  {trigger}\njobs:\n  a:\n    runs-on: [self-hosted, windows]\n"
             self.assertTrue(pr_guard.workflow_errors({"a.yml": text}), trigger)
+
+    def test_other_pull_request_triggers_and_yaml_labels_fail(self):
+        text = "on:\n  workflow_run:\njobs:\n  a:\n    runs-on: glancelot-gate\n"
+        self.assertTrue(pr_guard.workflow_errors({"a.yaml": text}))
+
+    def test_pull_request_on_matrix_runner_passes(self):
+        text = "on:\n  pull_request:\njobs:\n  a:\n    runs-on: ${{ matrix.os }}\n"
+        self.assertEqual(pr_guard.workflow_errors({"a.yml": text}), [])
 
     def test_pull_request_on_hosted_runner_passes(self):
         text = "on:\n  pull_request:\njobs:\n  a:\n    runs-on: windows-2022\n"

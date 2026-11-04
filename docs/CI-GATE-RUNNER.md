@@ -66,7 +66,7 @@ While a gate runs, avoid starting other full gates or heavy builds on this machi
 - the `ci-ok` check from `.github/workflows/build.yml` must pass (it is not required to be up to date with `main`);
 - force pushes and deletion are off.
 
-The rules around it are in AGENTS.md, "Pull requests and merging". `.github/workflows/build.yml` uses hosted runners only. This self-hosted runner still takes only `gate/**` pushes and manual runs, and `scripts/ci/pr_guard.py` fails any workflow that combines `pull_request` with `self-hosted`.
+The rules around it are in AGENTS.md, "Pull requests and merging". `.github/workflows/build.yml` uses hosted runners only. This self-hosted runner still takes only `gate/**` pushes and manual runs, and `scripts/ci/pr_guard.py` fails any workflow that pull requests can start and that names a runner other than a hosted one. That lint is a backstop, since a pull request runs its own copy of it. The real barrier is the approval policy for forks in the setup above.
 
 To read or lift the protection, use *Settings → Branches* in GitHub, or:
 
