@@ -54,8 +54,8 @@ The header is frozen as committed: the `k*` bounds, `Kind`, `requiresJournal`, `
 
 **Test migration (B2's brief grants this).** Under the rules below, `enqueueTransfer` with Overwrite behaves as "no consent", so existing tests can't keep the real trash or the fallback route as they are:
 
-- both `runTransfer` helpers (`tests/copy_move_tests.cpp:458`, `tests/copy_safety_test_support.hpp:71`) construct the service with a fake `TrashBackend` reporting `Available`, so no fixture reaches the real trash;
-- the fallback tests, such as `testOverwriteFallbackKeepsAttributes` (`tests/copy_move_tests.cpp:840`), go through `planTransfer` and `confirmTransfer(..., permanentReplaceConsent = true)` with a fake reporting `Unavailable`.
+- both `runTransfer` helpers (`tests/copy_move_tests.cpp:456`, `tests/copy_safety_test_support.hpp:69`) construct the service with a fake `TrashBackend` reporting `Available`, so no fixture reaches the real trash;
+- the fallback tests, such as `testOverwriteFallbackKeepsAttributes` in `tests/copy_move_tests.cpp`, go through `planTransfer` and `confirmTransfer(..., permanentReplaceConsent = true)` with a fake reporting `Unavailable`.
 
 The tests move and none is weakened: every existing assertion on target bytes, attributes and permissions stays.
 

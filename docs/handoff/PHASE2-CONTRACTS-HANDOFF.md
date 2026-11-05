@@ -1,8 +1,8 @@
 # PHASE2-CONTRACTS handoff
 
 - Branch: `claude/phase2-contracts`
-- Tip: the last commit on the branch. A commit can't name itself, so the report to the lead and the PR state its SHA. Code and headers are at `caa6a6a`; every later commit changes only `docs/`.
-- Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `3a14044`, which adds only merge-protection tooling and docs: outside `docs/`, `git diff --name-only b1d57cd 3a14044` lists only `.gitattributes`, `AGENTS.md`, `.github/*` and `scripts/*`. No source, header or CMake file changed, so nothing here needed it Not merged in, because nothing conflicts. Not stacked on anything.
+- Tip: the last commit on the branch. A commit can't name itself, so the report to the lead and the PR state its SHA. Code and headers are at `eeb4562`; every later commit changes only `docs/`.
+- Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `3a14044`, which adds only merge-protection tooling and docs: outside `docs/`, `git diff --name-only b1d57cd 3a14044` lists only `.gitattributes`, `AGENTS.md`, `.github/*` and `scripts/*`. No source, header or CMake file changed there, and nothing conflicts, so it is not merged in. Not stacked on anything.
 - Worktree and build: `.claude/worktrees/recursing-bassi-58ba22`, `build-claude-phase2-contracts`.
 - ui-design-skills: not read, because this packet changes no QML. Consumers' UI work (C3, D2, B1, B2) must read them; COMPARE-PANES says so for C3, and AGENTS.md covers the rest.
 
@@ -29,10 +29,10 @@ Freezes the seven cross-track contracts from section 6 of the lead plan, checked
 | --- | --- |
 | A2 | `navigation.hpp` (`setDefaultSortKeyReader`), `directory_listing.hpp`, `directory_entry_model.hpp` (roles, `requestMetadata`, `requestAllMetadata`); also `settings_policy.cpp:140`, `SettingsDialog.qml:637-638`, `Main.qml:1827` |
 | B1 | `file_operation_service.hpp`, `copy_move_service.hpp` (`planTransfer`, `confirmTransfer`), `mutation_service.hpp` (`planRename`, `confirmRename`) |
-| B2 | `file_operations.hpp` (`trashToken`, `TrashAvailability`, `probeTrash`), `src/app/copy_safety.hpp`, the Overwrite prompt's QML, Overwrite and asset rename behind B1's entry points, the COPY-SAFETY-01 sweep test |
+| B2 | `file_operations.hpp` (`trashToken`, `TrashAvailability`, `probeTrash`), `src/app/copy_safety.hpp`, `copy_move_service.hpp` (the injected backend), the Overwrite prompt's QML, Overwrite and asset rename behind B1's entry points, the COPY-SAFETY-01 sweep change, and the migration of the existing Overwrite tests to a fake backend (`tests/copy_move_tests.cpp`, `tests/copy_safety_test_support.hpp`, `tests/copy_safety_tests.cpp`), with every assertion kept |
 | C3 | `pane_layout.hpp`, plus named regions of `viewer_controller.*` and `Main.qml` |
 | D1 | `display_manager.hpp`, `viewer_controller.hpp` (`imageTier`, `imageFinal`, `imageColour`), `src/app/decode_cache.hpp` |
-| D2 | `src/app/viewer_context.hpp`, `Main.qml` `reference-pin` handler and `referenceWindow` block |
+| D2 | `src/app/viewer_context.hpp`, `viewer_controller.cpp:1001` and `:1047` (the status suffix only), `Main.qml` `reference-pin` handler and `referenceWindow` block |
 | F1 | `Dockerfile` `ENV`: `GLANCELOT_DEPLOYMENT=container` |
 
 ## Lead decisions written in
@@ -44,7 +44,7 @@ Freezes the seven cross-track contracts from section 6 of the lead plan, checked
 
 ### 1. Fail-before evidence
 
-At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the new headers do not exist. Every assertion was also checked by breaking its target, in `docs/verification/PHASE2-CONTRACTS/fail-before.txt` (MSVC, actual output). The review round's new and changed assertions were broken the same way, in `docs/verification/PHASE2-CONTRACTS/fail-before-r2.txt`: all 10 fail, by static assertion, by test exit 1 or by a moc compile error. The first round's results:
+At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the new headers do not exist. Every assertion was also checked by breaking its target, in `docs/verification/PHASE2-CONTRACTS/fail-before.txt` (MSVC, actual output). The review rounds' new and changed assertions were broken the same way, in `docs/verification/PHASE2-CONTRACTS/fail-before-r2.txt` (all 10 fail, by static assertion, by test exit 1 or by a moc compile error) and `fail-before-r3.txt` (the one new assertion fails). The first round's results:
 
 | Mutation | Result |
 | --- | --- |
@@ -58,7 +58,7 @@ At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the 
 
 ### 2. Grant check
 
-`git diff --name-only b1d57cd..caa6a6a`. Commits after `caa6a6a` touch only `docs/`.
+`git diff --name-only b1d57cd..eeb4562`. Commits after `eeb4562` touch only `docs/`.
 
 ```text
 CMakeLists.txt
@@ -72,8 +72,10 @@ docs/contracts/OPERATION-JOURNAL.md
 docs/contracts/RESOURCE-LEDGER.md
 docs/decisions/2026-11-05-phase2-contracts.md
 docs/handoff/PHASE2-CONTRACTS-HANDOFF.md
+docs/verification/PHASE2-CONTRACTS/fail-before-r2.txt
 docs/verification/PHASE2-CONTRACTS/fail-before.txt
 docs/verification/PHASE2-CONTRACTS/full-suite-tail.txt
+docs/verification/PHASE2-CONTRACTS/targeted-r2.txt
 include/glancelot/asset_group.hpp
 include/glancelot/capability_model.hpp
 include/glancelot/compare_panes.hpp
@@ -101,7 +103,14 @@ Base `b1d57cd0ad9cab09a3f9a5483b726921b0c4dbcc`. `git merge-base origin/main HEA
 
 ### 4. Tests
 
-Targeted (Windows, MSVC 2022, Qt 6.8.3, offscreen), on `caa6a6a`. `fs_watch` is added for review finding B3:
+Targeted (Windows, MSVC 2022, Qt 6.8.3, offscreen). Round 2's fixes changed one header, which only this test includes, so under the lead's gate decision only it ran, on `eeb4562`, through a build slot:
+
+```text
+1/1 Test #45: contract_headers .................   Passed    0.08 sec
+100% tests passed out of 1
+```
+
+The previous round's targeted run, on `caa6a6a`, including `fs_watch` for B3:
 
 ```text
  1/11 Test  #3: navigation .......................   Passed    2.96 sec
@@ -118,7 +127,7 @@ Targeted (Windows, MSVC 2022, Qt 6.8.3, offscreen), on `caa6a6a`. `fs_watch` is 
 100% tests passed out of 11
 ```
 
-Full suite, `scripts/build.ps1 -BuildDir build-claude-phase2-contracts -Test` through `scripts/build-slot.ps1`, on `caa6a6a`:
+Full suite: **not run locally on `eeb4562`**, by the lead's gate decision. The PR's hosted `viewer` job is the full suite for this head, and the tester gates the exact head before merge. The last local run was `scripts/build.ps1 -BuildDir build-claude-phase2-contracts -Test` through `scripts/build-slot.ps1`, on `caa6a6a`:
 
 ```text
 100% tests passed out of 52
@@ -133,11 +142,11 @@ Other checks:
 
 - `pr_guard.py` from `origin/main`: `pr_guard: code=True, 0 error(s)`.
 - Linux GCC 13.3 (WSL) with the project's flags, on the three `FileMeta{a,b,c}` sites: `navigation.cpp` and `directory_listing.cpp` compile with 0 warnings, so positional initializers stay clean under `-Wextra`.
-- Reference check: a script compared the `file:line` references in the contracts and the decision record against `b1d57cd`. 119 resolve, with the file present and the line in range. The two that don't are `CompareView.qml`, which C3 creates, and the review document, which lives on `claude/review-phase2-contracts`. The script does not check what a line says; I read those lines while rewriting, and a reviewer may want to sample them.
+- Reference check: a script compared the `file:line` references in the contracts and the decision record against `b1d57cd`. 123 of 126 resolve, with the file present and the line in range. The three that don't are `CompareView.qml`, which C3 creates, `src/app/directory_scan.hpp`, which PR 7 adds, and the review document, which lives on `claude/review-phase2-contracts`. The script does not check what a line says; I read those lines while rewriting, and a reviewer may want to sample them.
 
 ### 5. Decisions taken
 
-All in `docs/decisions/2026-11-05-phase2-contracts.md`: 76 rows, each draft question plus each problem found against `main`. Problems the drafts got wrong, beyond stale line numbers:
+All in `docs/decisions/2026-11-05-phase2-contracts.md`: 83 rows, each draft question plus each problem found against `main`. Problems the drafts got wrong, beyond stale line numbers:
 
 - **Pane generations (P6).** Taking a generation from the controller's counter would cancel the current image's decode. The session owns its own counter.
 - **Pane decode path (P7).** `Private::decode` is bound to one worker and the selection, so C3 models its path on `startPrefetch`.
@@ -155,11 +164,32 @@ For the lead:
 
 - **Plan edges.** Please add **D1 -> D2** (B8: the HUD and `colour.source` read `imageTier` and `imageColour`). If D2 must land first, its brief can grant the `imageColour` property alone, with `tagged` parsed from the worker's two existing strings. E1, D1 and C3 start after PR 3 merges. Asset-scope rename arrives with B2, not B1.
 - **C3 and D1.** I recommend ordering C3 after D1 (CP-N5). Before D1, 4-up holds 16 MP per pane and 2-up holds 32 MP, so typical camera files show `TooLarge` in 4-up. The contract is honest about it either way.
-- **PR 3 round 5.** Not on `origin/claude/stack-confirm-fix` at this push (`9c0c919`), so the transfer wording isn't checked against it yet. Please have it checked when round 5 lands. The contracts name no class, so the check is that the rules hold.
+- **PR 3 round 5.** Not pushed yet. The lead re-checks the transfer wording when it is. The contracts name no class.
 - **A1 (PR 7).** A trial merge of this branch with `origin/claude/a1-perf-enum` (`git merge-tree`) is clean. Both PRs add a line to `CMakeLists.txt`, in different places. Its `ScanOrder` sends the new sort keys through `fileSortBefore`, so they keep natural order. META-ROLES now says the grid path is that scan once PR 7 lands. A2's diff no longer changes `listDirectory`'s parameters.
 - G-5 is D2's acceptance, and STACK-CONFIRM's carve-out can point at this contract.
 
-## Review fixes
+## Review fixes, round 2
+
+Review: `docs/verification/PHASE2-CONTRACTS-REVIEW-R2.md` on `claude/review-phase2-contracts-r2` (`0e19e58`), CHANGES REQUIRED at `01fe089`. This push also carries the held commit `13c015c` (META-ROLES and A1's grid scan).
+
+**B1 and B5 are closed.** Round 1 left each one table row short, and R2-B1 and R2-B2 are those rows.
+
+| Finding | Fix |
+| --- | --- |
+| **R2-B1** (closes B1) | OPERATION-JOURNAL: a backup is unlinked only on `copy_safety::compareFileIdentity(backup, target) == Same`, and on POSIX with a link count of at least 2. `Unknown` falls through to the `TrashFailed` or `TargetOccupied` report. A new contract-wide rule says an identity with no file index never counts as a match, so the Trash and Overwrite reconcile rows and revalidation get the same protection. The deletion rule in the protocol names all three things reconcile may remove. Test added |
+| **R2-B2** (closes B5) | "Not started" for in-place writes is decided by the sealed preimage's checksum against the target. An unsealed preimage counts only when size and modified also match, and identity where the volume has one. Same-size tests with no file index added |
+| **R2-B3** | `enqueueTransfer` stays "no consent". B2's brief grants moving both `runTransfer` helpers to a fake backend, and the fallback tests to `confirmTransfer` with consent. No assertion is weakened. Grant table updated |
+| **R2-B4** | The asset Overwrite and rename-reversal tests move to B2's list. B1 asserts the refusals |
+| N1 | `undoAvailable`: `None` if any Done item has none, otherwise the union (header comment, test) |
+| N2 | `OperationJournal::open(directory, status, trash = nullptr)` (header, compile check, fail-before) |
+| N3 | `CopyMoveService` constructor diff, and the grant |
+| N4, N5 | A plan tests hard links on POSIX; a re-plan after a stop reports `"permanent"`, so the consent is reachable; consent counts only on a `"permanent"` plan |
+| N6 | Trash catch-all row; rename in the Done row; `BatchRename` and `CreateFolder` covered; no-replace move to `replacedPath`; `dismiss` is "terminal or reconciled" |
+| N7, N8 | Key pass fenced by listing generation only; an entry read without the overlay misses for rating; a new listing resumes from the cache; A2 adds the pass record |
+| N9, N10, N11 | Baseline proof at the shown tier; every tier of the current image reserves as ledger `Foreground`; "of one non-empty token" |
+| N12, N13, N14, N15, N16 | Stale populator line deleted; D2's two status lines granted; API name removed; one collision decision per plan; handoff sentence and SHA fixed |
+
+## Review fixes, round 1
 
 Review: `docs/verification/PHASE2-CONTRACTS-REVIEW.md` on `claude/review-phase2-contracts` (`979206a`), CHANGES REQUIRED at `53dab6c`. J1 and J4 were not reopened.
 
@@ -203,7 +233,7 @@ This packet has no runtime paths beyond the two natural-order lines, which the t
 
 ## Exact `include/` diff
 
-`git diff b1d57cd caa6a6a -- include/`
+`git diff b1d57cd eeb4562 -- include/`
 
 ```diff
 diff --git a/include/glancelot/asset_group.hpp b/include/glancelot/asset_group.hpp
@@ -608,10 +638,10 @@ index 58525ff..6ac8994 100644
                      const std::filesystem::path& b, const FileMeta& metaB);
 diff --git a/include/glancelot/operation_journal.hpp b/include/glancelot/operation_journal.hpp
 new file mode 100644
-index 0000000..b6878a5
+index 0000000..f8d703b
 --- /dev/null
 +++ b/include/glancelot/operation_journal.hpp
-@@ -0,0 +1,176 @@
+@@ -0,0 +1,177 @@
 +#pragma once
 +#include "file_operations.hpp" // FileIdentity, TargetKind
 +#include <QString>
@@ -706,7 +736,7 @@ index 0000000..b6878a5
 +    quint32 done{}, failed{}, unknown{}, notStarted{}, displaced{};
 +    quint32 heldBackups{};          // items whose original still sits at backupPath or replacedPath
 +    bool reconciled{};              // a reconcile pass has resolved this operation; durable
-+    std::uint32_t undoAvailable{};  // intersection over Done items; None if any Done item has none
++    std::uint32_t undoAvailable{};  // None if any Done item has none; otherwise the union over Done items
 +    quint64 revision{};             // increments on every durable change; UI drops older revisions
 +    qint64 createdMs{}, updatedMs{};
 +};
@@ -733,7 +763,8 @@ index 0000000..b6878a5
 +class OperationJournal {
 +public:
 +    // Null with Status when the directory cannot be used. Callers then apply requiresJournal(): see the contract.
-+    static std::unique_ptr<OperationJournal> open(const QString& directory, Status* status);
++    // `trash` (not owned) serves trashBackup, so tests can pass a fake; null uses the platform trash.
++    static std::unique_ptr<OperationJournal> open(const QString& directory, Status* status, glancelot::TrashBackend* trash = nullptr);
 +    ~OperationJournal();
 +    // Plan step, before the confirmation: a synced scratch append, so a confirmation can say the journal is unavailable.
 +    Status probe();
@@ -760,7 +791,7 @@ index 0000000..b6878a5
 +    // Explicit user actions on a finding. Restore never replaces an existing file; trash goes through TrashBackend.
 +    Status restoreBackup(OperationId operation, quint32 index);
 +    Status trashBackup(OperationId operation, quint32 index);
-+    Status dismiss(OperationId operation);    // completed or reconciled only; Conflict while a backup is held; pruning skips those too
++    Status dismiss(OperationId operation);    // terminal or reconciled only; Conflict while a backup is held; pruning skips those too
 +private:
 +    OperationJournal();
 +    struct Private;
