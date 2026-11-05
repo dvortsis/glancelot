@@ -176,13 +176,15 @@ private slots:
         QTemporaryDir dir;
         touch(dir, "a.JPG");
         touch(dir, "a.jpg");
-        const bool separate = QDir(dir.path()).entryList(QDir::Files).size() == 2;
-        const auto e = expand({nativeOf(dir.filePath("a.JPG"))}, Scope::Asset, Operation::Trash, nullptr);
+        touch(dir, "A.XMP");
+        const bool separate = QDir(dir.path()).entryList(QDir::Files).size() == 3;
+        const auto e = expand({nativeOf(dir.filePath("a.jpg"))}, Scope::Asset, Operation::Trash, nullptr);
         if (separate) {
-            QCOMPARE(included(e), QStringList{"a.JPG"});
-            QCOMPARE(excluded(e).at("a.jpg"), Exclusion::Collision);
+            QCOMPARE(included(e), QStringList{"a.jpg"});
+            QCOMPARE(excluded(e).at("a.JPG"), Exclusion::Collision);
+            QCOMPARE(excluded(e).size(), std::size_t(1)); // A.XMP has another stem here
         } else {
-            QCOMPARE(e.included.size(), std::size_t(1));
+            QCOMPARE(included(e), (QStringList{"a.jpg", "A.XMP"})); // one file, however the selection spells it
             QVERIFY(e.excluded.empty());
         }
     }
@@ -225,11 +227,11 @@ private slots:
         QVERIFY(groups(files, true).groups.empty());
     }
     void groupIdsAndOrderAreStable() {
-        const QStringList files{"b.jpg", "b.xmp", "a.CR2", "a.mov", "a.jpg", "a.xmp"};
+        const QStringList files{"b.jpg", "b.xmp", "a.mp4", "a.CR2", "a.mov", "a.jpg", "a.xmp"};
         const auto snapshot = groups(files);
         QCOMPARE(snapshot.groups.size(), std::size_t(2));
         QCOMPARE(QString::fromStdString(snapshot.groups[0].stemKey), QString("a"));
-        QCOMPARE(members(snapshot.groups[0]), (QStringList{"a.CR2", "a.jpg", "a.mov", "a.xmp"}));
+        QCOMPARE(members(snapshot.groups[0]), (QStringList{"a.CR2", "a.jpg", "a.mov", "a.mp4", "a.xmp"}));
         QVERIFY(snapshot.groups[0].id != snapshot.groups[1].id);
     }
     void truncatedListingSetsIncomplete() {
@@ -493,6 +495,8 @@ private slots:
         const auto e = expand({root() / "a.CR2"}, Scope::Asset, Operation::Trash, nullptr);
         QVERIFY(e.companionsIncomplete);
         QCOMPARE(included(e), QStringList{"a.CR2"});
+        // Duplicates still collapse when no listing ever arrives.
+        QCOMPARE(included(expand({root() / "a.CR2", root() / "a.CR2"}, Scope::Asset, Operation::Trash, nullptr)), QStringList{"a.CR2"});
     }
 
     // --- Expansion robustness
