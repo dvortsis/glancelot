@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QVariantMap>
 #include <memory>
 
 namespace glancelot {
@@ -65,6 +66,13 @@ public:
                                        glancelot::CopyMoveService::TransferMode mode,
                                        glancelot::CopyMoveService::CollisionPolicy collision = glancelot::CopyMoveService::CollisionPolicy::RenameBoth);
 
+    // scope: "file" | "asset". Summary as planScoped, plus collisions [{path, target, requestedBy}] and, from B2, replaceFate
+    // "trash" | "permanent" per the trash probe. confirmTransfer executes exactly the snapshotted list; one collision policy per plan.
+    Q_INVOKABLE quint64 planTransfer(const QStringList& sourcePaths, const QString& destinationDirectory,
+                                     glancelot::CopyMoveService::TransferMode mode, const QString& scope);
+    Q_INVOKABLE bool confirmTransfer(quint64 id, glancelot::CopyMoveService::CollisionPolicy collision,
+                                     bool permanentReplaceConsent = false);
+
     Q_INVOKABLE void pause();
     Q_INVOKABLE void resume();
     Q_INVOKABLE void cancel();
@@ -84,6 +92,7 @@ signals:
     void itemFinished(const QString& sourcePath, const QString& destPath, bool success, const QString& error);
     void batchFinished(quint64 batchId, int successfulCount, int failedCount);
     void pathsMutated(const QStringList& sourcePaths, const QStringList& destPaths, bool isMove);
+    void transferPlanReady(quint64 id, const QVariantMap& summary);
 
 private:
     struct Private;

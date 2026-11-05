@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include <QVariantList>
 #include <QVariantMap>
 #include <memory>
 
@@ -59,6 +60,10 @@ public:
     // Emits pathRenamed(oldPath, newPath) on success.
     Q_INVOKABLE QVariantMap renamePath(const QString& sourcePath, const QString& newName);
 
+    // scope: "file" | "asset". Summary: renames [{from, to}], collisions, excluded. Asset scope returns a refusal until B2 lands.
+    Q_INVOKABLE quint64 planRename(const QString& sourcePath, const QString& newName, const QString& scope);
+    Q_INVOKABLE bool confirmRename(quint64 id);
+
     // Creates a new folder named `folderName` inside `parentDirectory`.
     // Returns QVariantMap:
     //   "success": bool
@@ -70,6 +75,8 @@ public:
 signals:
     void pathRenamed(const QString& oldPath, const QString& newPath);
     void folderCreated(const QString& folderPath);
+    void renamePlanReady(quint64 id, const QVariantMap& summary);
+    void renameFinished(quint64 id, const QVariantList& results);
 
 private:
     struct Private;

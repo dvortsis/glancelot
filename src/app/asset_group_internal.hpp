@@ -1,8 +1,9 @@
 #pragma once
-// Private to src/app and tests/asset_group_tests.cpp: the seam that lets tests count, slow down and fake the filesystem
-// reads behind assets::expand (whose signature is frozen), and name helpers.
+// Private to src/app and tests/asset_group_tests.cpp: helpers the three mutation services share, and the seam that lets
+// tests count, slow down and fake the filesystem reads behind assets::expand (whose signature is frozen).
 #include "glancelot/asset_group.hpp"
 #include <QString>
+#include <QVariantMap>
 #include <chrono>
 #include <functional>
 #include <optional>
@@ -27,6 +28,10 @@ inline const GroupingSnapshot* hintIfCurrent(const GroupingSnapshot* snapshot, s
     return snapshot && snapshot->listingGeneration == currentListingGeneration ? snapshot : nullptr;
 }
 
+// "file" and anything unknown is FileOnly, so a typo can never widen an operation.
+Scope scopeFromName(const QString& name);
+QString scopeName(Scope scope);
+
 QString displayPath(const std::filesystem::path& path);
 std::filesystem::path nativePath(const QString& path);
 
@@ -34,4 +39,13 @@ std::filesystem::path nativePath(const QString& path);
 // IMG + .CR2.xmp. A name with no extension (or only a leading dot) has an empty suffix.
 struct AssetName { QString stem, suffix; };
 AssetName splitAssetName(const QString& fileName, SidecarStyle sidecar);
+
+// The summary keys every scoped plan shares: companions [{path, name, role, requestedBy, included, exclusion}] (included
+// ones first, at most kMaxExcludedListed), companionsNotListed, companionsIncomplete. `exclusion` is empty on an included
+// companion. An empty scope name leaves the scope key out.
+void addCompanionSummary(QVariantMap& summary, const Expansion& expansion, Scope scope);
+
+enum class SnapshotState { Same, Changed, Missing };
+// Revalidation for transfers and renames: identity for everything, plus size and modified time for files.
+SnapshotState compareToSnapshot(const MutationTarget& snapshot);
 }

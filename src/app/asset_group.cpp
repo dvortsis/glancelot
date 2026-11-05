@@ -3,6 +3,7 @@
 #include "glancelot/raw_preview.hpp"
 #include <QDir>
 #include <QFile>
+#include <QVariantList>
 #include <algorithm>
 #include <atomic>
 #include <set>
@@ -65,6 +66,8 @@ QString leaf(const fs::path& path) { return displayPath(path.filename()); }
 }
 
 void setLookupBackendForTests(LookupBackend* backend) { activeLookup.store(backend ? backend : &realLookup); }
+Scope scopeFromName(const QString& name) { return name == QLatin1String("asset") ? Scope::Asset : Scope::FileOnly; }
+QString scopeName(Scope scope) { return scope == Scope::Asset ? QStringLiteral("asset") : QStringLiteral("file"); }
 QString displayPath(const fs::path& path) {
 #ifdef Q_OS_WIN
     return QDir::fromNativeSeparators(QString::fromStdWString(path.native()));
@@ -90,6 +93,15 @@ AssetName splitAssetName(const QString& fileName, SidecarStyle sidecar) {
         parts = {inner.stem, inner.suffix + parts.suffix};
     }
     return parts;
+}
+SnapshotState compareToSnapshot(const MutationTarget& snapshot) {
+    std::error_code error;
+    const auto now = snapshotTarget(snapshot.path, error);
+    if (error) return SnapshotState::Changed; // can't confirm it is the same item, so it isn't touched
+    if (!now) return SnapshotState::Missing;
+    const bool same = now->identity == snapshot.identity && now->kind == snapshot.kind && now->link == snapshot.link
+        && (snapshot.kind != TargetKind::File || (now->bytes == snapshot.bytes && now->modified == snapshot.modified));
+    return same ? SnapshotState::Same : SnapshotState::Changed;
 }
 }
 
@@ -508,5 +520,50 @@ std::vector<std::pair<fs::path, fs::path>> renameAsset(const Expansion& planned,
         renames.emplace_back(item.member.path, item.member.path.parent_path() / detail::nativePath(name));
     }
     return renames;
+}
+
+namespace detail {
+namespace {
+QString roleName(Role role) {
+    switch (role) {
+    case Role::Raw: return QStringLiteral("raw");
+    case Role::Rendered: return QStringLiteral("rendered");
+    case Role::Derived: return QStringLiteral("derived");
+    case Role::Sidecar: return QStringLiteral("sidecar");
+    case Role::MotionVideo: return QStringLiteral("motionVideo");
+    default: return QStringLiteral("other");
+    }
+}
+QString exclusionName(Exclusion reason) {
+    switch (reason) {
+    case Exclusion::Ambiguous: return QStringLiteral("ambiguous");
+    case Exclusion::Collision: return QStringLiteral("collision");
+    case Exclusion::Missing: return QStringLiteral("missing");
+    case Exclusion::LimitReached: return QStringLiteral("limitReached");
+    default: return QStringLiteral("notApplicable");
+    }
+}
+}
+void addCompanionSummary(QVariantMap& summary, const Expansion& expansion, Scope scope) {
+    QVariantList companions;
+    qsizetype notListed = qsizetype(expansion.excludedNotListed);
+    const auto row = [](const fs::path& path, Role role, const fs::path& requestedBy, bool included, const QString& exclusion) {
+        return QVariantMap{{"path", displayPath(path)}, {"name", leaf(path)}, {"role", roleName(role)}, {"requestedBy", displayPath(requestedBy)},
+                           {"included", included}, {"exclusion", exclusion}};
+    };
+    for (const Planned& item : expansion.included) {
+        if (!item.companion) continue;
+        if (companions.size() < qsizetype(kMaxExcludedListed)) companions.append(row(item.member.path, item.member.role, item.requestedBy, true, {}));
+        else ++notListed;
+    }
+    for (const Excluded& item : expansion.excluded) {
+        if (companions.size() < qsizetype(kMaxExcludedListed)) companions.append(row(item.path, classify(leaf(item.path)).role, item.requestedBy, false, exclusionName(item.reason)));
+        else ++notListed;
+    }
+    summary.insert(QStringLiteral("scope"), scopeName(scope));
+    summary.insert(QStringLiteral("companions"), companions);
+    summary.insert(QStringLiteral("companionsNotListed"), double(notListed));
+    summary.insert(QStringLiteral("companionsIncomplete"), expansion.companionsIncomplete);
+}
 }
 }
