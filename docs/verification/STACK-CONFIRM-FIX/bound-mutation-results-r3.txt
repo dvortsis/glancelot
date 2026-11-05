@@ -1,0 +1,6 @@
+Mutation: failure bound min(5, fileCount) in every mode:
+PASS   : StackConfirmUiTests::initTestCase()
+FAIL!  : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto() Compared values are not the same
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(307) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 76721ms

@@ -1,0 +1,14 @@
+exit code: 3
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+FAIL!  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder) '!flag(h, "slideshowOn")' returned FALSE. (the manual open was taken for the slideshow's own step)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(562) : failure location
+FAIL!  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory) '!flag(h, "slideshowOn")' returned FALSE. (the manual open was taken for the slideshow's own step)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(562) : failure location
+FAIL!  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo) '!flag(h, "slideshowOn")' returned FALSE. (the manual open was taken for the slideshow's own step)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(562) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 3 failed, 0 skipped, 0 blacklisted, 12685ms
+********* Finished testing of StackConfirmUiTests *********

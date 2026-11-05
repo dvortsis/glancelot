@@ -8,13 +8,13 @@
 #include "glancelot/raw_preview.hpp" 
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QSharedMemory>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <QDateTime>
 #include "../app/fs_source_token.hpp"
+#include "../app/transfer_segment.hpp"
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <fcntl.h>
@@ -193,8 +193,8 @@ int main(int argc, char** argv) {
         QJsonParseError parseError;
         const auto configuration = QJsonDocument::fromJson(QByteArray(request), &parseError).object();
         if (parseError.error != QJsonParseError::NoError || configuration.value("key").toString().isEmpty()) return fail("Invalid shared-memory admission request.");
-        QSharedMemory transfer(configuration.value("key").toString());
-        if (!transfer.attach(QSharedMemory::ReadWrite) || transfer.size() < capacity) return fail("Cannot attach admitted pixel transfer buffer.");
+        glancelot::detail::TransferSegment transfer(configuration.value("key").toString());
+        if (!transfer.attach() || transfer.size() < capacity) return fail("Cannot attach admitted pixel transfer buffer.");
 
         QImage image = reader.read();
         previewBuf->close();
@@ -240,8 +240,8 @@ int main(int argc, char** argv) {
     QJsonParseError parseError;
     const auto configuration = QJsonDocument::fromJson(QByteArray(request), &parseError).object();
     if (parseError.error != QJsonParseError::NoError || configuration.value("key").toString().isEmpty()) return fail("Invalid shared-memory admission request.");
-    QSharedMemory transfer(configuration.value("key").toString());
-    if (!transfer.attach(QSharedMemory::ReadWrite) || transfer.size() < capacity) return fail("Cannot attach admitted pixel transfer buffer.");
+    glancelot::detail::TransferSegment transfer(configuration.value("key").toString());
+    if (!transfer.attach() || transfer.size() < capacity) return fail("Cannot attach admitted pixel transfer buffer.");
     QImage image = reader.read();
     source.close();
     if (image.isNull()) return fail("Image decode failed: " + reader.errorString());
@@ -253,8 +253,7 @@ int main(int argc, char** argv) {
     if (image.isNull() || image.format() != QImage::Format_RGBA8888) return fail("Cannot convert source pixels to the SDR working format.");
     const qint64 bytes = qint64(image.width()) * image.height() * 4;
     if (bytes > transfer.size() || bytes != capacity) return fail("Decoded dimensions exceed the admitted transfer.");
-    // No lock: the parent maps the buffer but reads it only after the "decoded" message below, so nothing races. Holding the
-    // system semaphore here let a parent that cancelled (killed this process) mid-copy block forever when it detached.
+    // No lock: the parent maps the buffer but reads it only after the "decoded" message below, so nothing races.
     auto* output = static_cast<unsigned char*>(transfer.data());
     for (int y=0; y<image.height(); ++y) std::memcpy(output+qint64(y)*image.width()*4, image.constScanLine(y), size_t(image.width())*4);
     const auto finalRevision=fs_watch::probe(fs_watch::native(path));
