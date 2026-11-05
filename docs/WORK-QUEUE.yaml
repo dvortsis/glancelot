@@ -1259,7 +1259,7 @@ tasks:
     owner: lead
     state: ready
     depends: [B1, PHASE2-CONTRACTS]
-    lead_note_b1: "B1 moves or skips a whole asset on a collision under asset scope and names every member stem (n) (ASSET-GROUP.md, Lead decisions). B2's Overwrite still applies only to members that collide; reconcile the two in B2's brief."
+    lead_note_b1: "B1 moves or skips a whole asset on a collision under asset scope and names every member stem (n) (ASSET-GROUP.md, Lead decisions). B2's Overwrite still applies only to members that collide, which can leave the destination's old non-colliding companions (an old IMG.CR2.xmp, say) beside the new photo, describing the wrong picture. B2's brief decides whether Overwrite also replaces or removes those companions, through the journal, and tests it."
     brief_notes: "From docs/verification/PHASE2-CONTRACTS-REVIEW-R3.md. Required acceptance tests: R3-N2 (a same-size Overwrite killed before the replace on a volume with no file index must not read as Done) and R3-N4 (an offline volume at restart is not 'backup vanished', and the only record of an original is never pruned). Also resolve in the contract text with the packet: R3-N1 (what revalidation and undo fall through to on an index-less identity), R3-N3 (permanent consent after a refused trash must take effect), R3-N5 (test migration wording: the service is built at 38 test sites, and the fake must move the file away), R3-N6, R3-N7 (preimage record synced before the mutation), R3-N8."
   - id: A2
     title: META-ROLES core (F042 core)
