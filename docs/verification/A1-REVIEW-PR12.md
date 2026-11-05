@@ -121,7 +121,7 @@ The truncated refresh matters most: the result is thrown away, so the user sees 
 
 ### Non-blocking, should fix
 
-- **N0. Each selection change may cost about 0.4 s at a million rows. Measure it first; if it holds, treat it as blocking.** `selectedCount`, `selectedBytes`, `selectedSummary` and `selectedPaths` each walk every row and hash its key whenever the selection is not empty. On the model at 1,000,000 rows, with one item selected, under the gate lock:
+- **N0. Each selection change probably costs about 0.5 s at a million rows. Required in the fix round: measure it, and fix it if it is over 250 ms.** `selectedCount`, `selectedBytes`, `selectedSummary` and `selectedPaths` each walk every row and hash its key whenever the selection is not empty. On the model at 1,000,000 rows, with one item selected, under the gate lock:
 
   ```text
   PROBE_MS selectedCount 33    selectedBytes 30    selectedSummary 93
@@ -129,7 +129,13 @@ The truncated refresh matters most: the result is thrown away, so the user sees 
   PROBE_MS selectedCount 46    selectedBytes 46    selectedSummary 104
   ```
 
-  These values are bound in QML and re-read on every `selectionChanged`: `ui/Main.qml` lines 923, 940, 2151, 2160 and 2161, and `ui/PhotoGrid.qml` lines 14, 514, 515, 560 and 567. The status line alone reads `selectedSummary` twice and `selectedCount` twice. So one arrow key with a selection probably costs 0.4 s or more on the GUI thread, against about 40 ms at 100,000 rows. I tried to time an arrow key in the shipped QML, but my probe's key did not reach the grid's handler, and I ran out of gate time to fix it, so this figure is an estimate. A count kept up to date as the selection changes, and bytes summed only over the selected keys, would make it independent of the row count.
+  These are bound in QML and walk the rows again on every `selectionChanged`:
+
+  - `ui/Main.qml` line 2160 reads `selectedCount` and `selectedSummary` twice.
+  - `ui/Main.qml` line 2161 reads `selectedCount` and `selectedSummary`.
+  - `ui/PhotoGrid.qml` lines 14, 514, 515 and 567 read `selectedCount`, and line 560 does too while `deleteBlocked` is set.
+
+  Lines 923, 940 and 2151 of `ui/Main.qml` read PhotoGrid's cached property, or run only inside functions. Each summary also calls the count and the bytes. So one arrow key with a selection probably costs about 0.5 s on the GUI thread, against about 50 ms at 100,000 rows. I tried to time an arrow key in the shipped QML, but my probe's key did not reach the grid's handler, and I ran out of gate time to fix it, so this figure is an estimate. A count kept up to date as the selection changes, and bytes summed only over the selected keys, would make it independent of the row count.
 - **N1. Selecting everything at a million rows.** `selectAll` took 541 ms, `clearSelection` 196 ms and one read of `selectedCount` with all selected 177 ms. These are explicit commands with visible results, so I would not hold the PR for them, but they are over budget.
 - **N2. The memory estimate falls short of the measured peak.** See "Memory bound" below. The check is still safe because the headroom covers it.
 - **N3. No sign of work during a sort at large sizes.** A sort at 1,000,000 rows re-enumerates for several seconds, and the old order stays with nothing on screen to say anything is happening. "Listing more items…" shows only for a page, and the grid's loading state needs a count of zero. At the lead's 1,000,000 limit, pressing S looks like nothing happened for several seconds, which is the complaint the sort decision set out to fix. The banner could show a short status while `loading` is set in a truncated folder.
@@ -154,7 +160,7 @@ The truncated refresh matters most: the result is thrown away, so the user sees 
 | A newer folder cancels a page | Holds. `abandonScan` stops the token and raises the generation; `aNewerFolderCancelsLoadMoreAndStartsAtTheFirstCap` |
 | Going inactive during a page keeps state | Holds. `entryLimit` stays raised and `loadingMore` clears; `goingInactiveDuringLoadMoreKeepsTheRaisedCap` |
 | Stale results cannot replace a newer folder | Holds. The watcher compares its token with `generation` before publishing |
-| A page's rows are not freed on the GUI thread | Holds for a page. `replaceRows` retires the old listing to the pool. Other paths are in the million-row section |
+| A page's rows are not freed on the GUI thread | Holds for a page. `replaceRows` retires the old listing to the pool. Other paths do not hold: see B3 |
 | Visible row, focus and selection survive | Holds on the page path. Tests through the shipped QML: `showMoreFromTheKeyboardKeepsThePhotoInView`, `showMoreKeepsTheVisibleRowWhileBrowsing` |
 
 ### 2. Sort and hidden files in a truncated folder
@@ -262,6 +268,8 @@ FAIL!  : PerfEnumUiTests::notEnoughMemoryKeepsTheRowsAndSaysWhy() '!f.showMore()
 
 The tests catch both. The handoff's mutation tables were not otherwise rerun.
 
+After the mutations and the probes, `git checkout -- src/app/directory_entry_model.cpp tests/perf_enum_tests.cpp tests/perf_enum_ui_tests.cpp` restored the checkout. `git status --short` at `a687a30770ce1d9464a649973f2a4fffcf6cd473` then printed nothing.
+
 ## Not verified
 
 - The first frame after a million-row publish with a real renderer, and delegate rebuild cost at that size.
@@ -270,4 +278,4 @@ The tests catch both. The handoff's mutation tables were not otherwise rerun.
 - The out-of-bounds read in B1, and N4 to N6, which are from reading the code.
 - The arrow-key cost in N0, which is estimated from the model timings and the bindings, not measured in QML.
 - `docker build` and the full suite, by the rules for this role.
-- Linux. Hosted CI covers it. On `a687a30`, `guard`, `core (ubuntu-24.04)`, `core (windows-2022)` and `viewer` had passed when this was written, and `ci-ok` was still queued.
+- Linux. Hosted CI covers it. On `a687a30`, `guard`, `core (ubuntu-24.04)`, `core (windows-2022)` and `viewer` and `ci-ok` all passed.
