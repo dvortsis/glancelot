@@ -2,6 +2,7 @@
 """Unit tests for pr_guard.py. Run from the repository root: python3 scripts/ci/test_pr_guard.py"""
 import contextlib
 import io
+import json
 import os
 import subprocess
 import sys
@@ -200,10 +201,8 @@ class CommitExemptions(unittest.TestCase):
         self.assertEqual(commit_lint.message_errors('Reapply "fix(grid): x"'), [])
         self.assertEqual(pr_guard.title_errors('Revert "feat(grid): x (A1)"', 30), [])
 
-    def test_legacy_subjects_only_in_old_prs(self):
-        self.assertEqual(commit_lint.message_errors("A1: show more", legacy=True), [])
+    def test_legacy_prs(self):
         self.assertTrue(commit_lint.message_errors("A1: show more"))
-        self.assertTrue(commit_lint.message_errors("update stuff", legacy=True))
         self.assertTrue(pr_guard.is_legacy_pr(18))
         self.assertFalse(pr_guard.is_legacy_pr(19))
         self.assertFalse(pr_guard.is_legacy_pr(None))
@@ -233,15 +232,34 @@ class CommitRange(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("A1: after the rule", errors[0])
 
-    def test_old_prs_and_integration_batches_accept_task_subjects(self):
+    def test_old_prs_and_integration_batches_skip_the_subject_check(self):
         self.commit("base", "2026-11-01T00:00:00Z")
-        self.commit("EN-07: after the rule", "2026-11-06T00:00:02Z")
-        self.assertEqual(pr_guard.commit_errors("HEAD~1", "HEAD", 18, "claude/en-07"), [])
-        self.assertEqual(pr_guard.commit_errors("HEAD~1", "HEAD", 30, "lead/integrate-9"), [])
-        self.assertEqual(len(pr_guard.commit_errors("HEAD~1", "HEAD", 19, "claude/en-07")), 1)
-        self.assertEqual(len(pr_guard.commit_errors("HEAD~1", "HEAD", None, "claude/en-07")), 1)
-        self.commit("update stuff", "2026-11-06T00:00:03Z")
-        self.assertEqual(len(pr_guard.commit_errors("HEAD~2", "HEAD", 18, "claude/en-07")), 1)
+        for subject in ("EN-07: after the rule", "test(EN-07): an old style with an uppercase scope", "wip: x"):
+            self.commit(subject, "2026-11-06T00:00:02Z")
+        self.assertEqual(pr_guard.commit_errors("HEAD~3", "HEAD", 18, "claude/en-07"), [])
+        self.assertEqual(pr_guard.commit_errors("HEAD~3", "HEAD", 30, "lead/integrate-9"), [])
+        self.assertEqual(len(pr_guard.commit_errors("HEAD~3", "HEAD", 19, "claude/en-07")), 3)
+        self.assertEqual(len(pr_guard.commit_errors("HEAD~3", "HEAD", None, "claude/en-07")), 3)
+
+    def test_ci_reads_the_pr_number_from_the_event(self):
+        Path("docs").mkdir()
+        Path("docs/WORK-QUEUE.yaml").write_text(QUEUE, encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], check=True, capture_output=True)
+        self.commit("base", "2026-11-01T00:00:00Z")
+        self.commit("test(EN-07): after the rule", "2026-11-06T00:00:02Z")
+        sha = lambda ref: subprocess.run(["git", "rev-parse", ref], check=True, capture_output=True, text=True).stdout.strip()
+        saved = {k: os.environ.pop(k) for k in ("GITHUB_EVENT_PATH", "GITHUB_OUTPUT", "PR_TITLE", "PR_BODY", "PR_LABELS")
+                 if k in os.environ}
+        self.addCleanup(os.environ.update, saved)
+        self.addCleanup(os.environ.pop, "GITHUB_EVENT_PATH", None)
+        for number, expected in ((18, 0), (19, 1)):
+            event = {"pull_request": {"number": number, "title": "refactor(ui): move handlers (EN-07)", "body": "",
+                                      "labels": [], "base": {"sha": sha("HEAD~1")},
+                                      "head": {"sha": sha("HEAD"), "ref": "claude/en-07"}}}
+            Path("event.json").write_text(json.dumps(event), encoding="utf-8")
+            os.environ["GITHUB_EVENT_PATH"] = str(Path("event.json").resolve())
+            with mock.patch.object(sys, "argv", ["pr_guard"]), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(pr_guard.main(), expected, number)
 
     def test_main_passes_the_pr_number_through(self):
         Path("docs").mkdir()

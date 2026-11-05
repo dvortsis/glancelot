@@ -4,6 +4,9 @@
 lint="$(git rev-parse --show-toplevel)/scripts/ci/commit_lint.py"
 [ -f "$lint" ] || exit 0  # a branch from before the rule
 git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 && exit 0  # a merge keeps its own subject
+case "$(sed -n 1p "$1")" in  # amending a merge: no MERGE_HEAD, but HEAD has two parents
+    "Merge "*) git rev-parse -q --verify HEAD^2 >/dev/null 2>&1 && exit 0 ;;
+esac
 for py in python3 python py; do
     if "$py" -c "" >/dev/null 2>&1; then
         exec "$py" "$lint" --file "$1"

@@ -145,10 +145,11 @@ def title_errors(title, number=None):
 
 
 def commit_errors(merge_base, head, number, head_ref):
-    # PRs opened before the rule may keep adding '<TASK-ID>: ' commits, since shared branches are never reworded,
-    # and the lead's integration batches carry those commits unchanged.
-    legacy = is_legacy_pr(number) or is_integration_branch(head_ref)
-    return commit_lint.range_errors(f"{merge_base}..{head}", legacy=legacy)
+    # PRs opened before the rule used several subject styles and can't reword shared history, so their commits
+    # aren't checked; the lead's integration batches carry those commits unchanged. Everything else is.
+    if is_legacy_pr(number) or is_integration_branch(head_ref):
+        return []
+    return commit_lint.range_errors(f"{merge_base}..{head}")
 
 
 def lead_only_errors(paths, head_ref, labels):

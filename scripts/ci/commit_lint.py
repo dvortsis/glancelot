@@ -22,7 +22,7 @@ CUTOFF = datetime(2026, 11, 6, tzinfo=timezone.utc)
 # Real merge commits are skipped in a range, and the hook skips merges (MERGE_HEAD). Fixups pass only locally.
 LOCAL_ONLY = ("fixup! ", "squash! ", "amend! ")
 REVERT = re.compile(r'^(Revert|Reapply) ".+"$')  # git's and GitHub's own revert subjects
-LEGACY = re.compile(r"^[A-Z][A-Z0-9-]*: \S")  # '<TASK-ID>: <title>', allowed only in PRs opened before the rule
+LEGACY = re.compile(r"^[A-Z][A-Z0-9-]*: \S")  # '<TASK-ID>: <title>' PR titles, allowed only for PRs before the rule
 FORMAT = "use 'type(scope): description', for example 'fix(grid): keep the selection during arrival' (docs/RELEASING.md)"
 
 
@@ -46,14 +46,14 @@ def subject_errors(subject):
     return errors
 
 
-def message_errors(message, local=False, legacy=False):
+def message_errors(message, local=False):
     lines = [line for line in (message or "").splitlines() if not line.startswith("#")]
     while lines and not lines[0].strip():
         lines.pop(0)
     if not lines:
         return ["empty commit message"]
     subject = lines[0].rstrip()
-    if (local and subject.startswith(LOCAL_ONLY)) or REVERT.match(subject) or (legacy and LEGACY.match(subject)):
+    if (local and subject.startswith(LOCAL_ONLY)) or REVERT.match(subject):
         return []
     errors = subject_errors(subject)
     if len(lines) > 1 and lines[1].strip():
@@ -61,7 +61,7 @@ def message_errors(message, local=False, legacy=False):
     return errors
 
 
-def range_errors(rev_range, cutoff=CUTOFF, legacy=False):
+def range_errors(rev_range, cutoff=CUTOFF):
     out = subprocess.run(["git", "log", "--no-merges", "--format=%H%x1f%cI%x1f%B%x1e", rev_range],
                          check=True, capture_output=True, text=True, encoding="utf-8").stdout
     errors = []
@@ -72,7 +72,7 @@ def range_errors(rev_range, cutoff=CUTOFF, legacy=False):
         sha, committed, message = record.split("\x1f", 2)
         if datetime.fromisoformat(committed) < cutoff:
             continue
-        errors += [f"commit {sha[:9]}: {error}" for error in message_errors(message, legacy=legacy)]
+        errors += [f"commit {sha[:9]}: {error}" for error in message_errors(message)]
     return errors
 
 
