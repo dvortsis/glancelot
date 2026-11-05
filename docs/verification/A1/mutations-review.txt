@@ -85,5 +85,5 @@ exit 1
   Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 51807ms
 ### n5-probes-before-definitive [src/app/directory_scan.hpp] -> perf_enum_tests trace10k
 exit 1
-  FAIL!  : PerfEnumTests::trace10k() 'second.definitiveMs < 500' returned FALSE. (10k definitive order took 1477 ms)
-  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 16058ms
+  FAIL!  : PerfEnumTests::trace10k() 'second.firstRowMs < second.settledMs / 2' returned FALSE. (10k first row took 2387 of 3397 ms)
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 10020ms

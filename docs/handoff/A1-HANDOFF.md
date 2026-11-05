@@ -3,7 +3,7 @@
 PR 1 of 2 for A1 (PERF-ENUM + F016). The continuation beyond the 100k cap ("Show more") is the stacked PR 2, as the lead approved. It has its own section in this file on its branch.
 
 - **Branch:** `claude/a1-perf-enum`
-- **Code tip:** `43be88d`, after the first review's fixes. The commit after it adds only this file and `docs/verification/A1/`. The last local full suite was at `902a765`. By the lead's decision the PR's hosted `viewer` job is now the full suite.
+- **Code tip:** `88f995d`, after the first review's fixes. The commit after it adds only this file and `docs/verification/A1/`. The last local full suite was at `902a765`. By the lead's decision the PR's hosted `viewer` job is now the full suite.
 - **Exact base:** `3a14044` (`origin/main`, not stacked). `main` had not moved when this was written.
 - **PR:** https://github.com/dvortsis/glancelot/pull/7
 
@@ -57,7 +57,7 @@ The "after" lines are in `docs/verification/A1/traces-after.txt` (`902a765`, gat
 | **C1.** The 10k numbers overstated the gain | The table above, this file's summary, the comment in `trace10k` and the PR description | None |
 | **N1.** "1 items so far" | Singular strings, added to `en_XA` | `oneItemSoFarReadsInTheSingular`, `oneMatchSoFarReadsInTheSingular` |
 | **N2.** `cursorRow` stale during arrival | `selectionChanged` after a folder insert and at the definitive order | `cursorRowIsNotifiedWhenRowsMoveAroundIt` |
-| **N5.** Weak oracle in `trace10k` | First row compared with the end of loading, not with a fixed 500 ms | `trace10k` |
+| **N5.** Weak oracle in `trace10k` | First row and definitive order compared with the end of loading, not with a fixed 500 ms | `trace10k` |
 | **N7.** PR description | Updated with C1 | None |
 
 **Both `forceLayout` calls stay, because they fix different paths.** B2's runs before the position is read, and folders landing above the view make that read wrong without it. Mine runs before `contentHeight` is read when the viewport is restored. When the order is unchanged no layout signal fires, so B2's never runs on that path, and Try again would clamp short. Each has a mutation that fails only its own test.
@@ -69,7 +69,7 @@ The "after" lines are in `docs/verification/A1/traces-after.txt` (`902a765`, gat
 
 ## Files changed
 
-Grant check, `git diff --name-only 3a14044..43be88d`:
+Grant check, `git diff --name-only 3a14044..88f995d`:
 
 ```text
 CMakeLists.txt
@@ -109,7 +109,7 @@ Everything is in the brief's grant except these, which it allows or the lead gra
 
 ## Tests
 
-**After the first review, at `43be88d`, in build slots.** No budget oracle changed, and by the lead's decision no local full suite ran. Three runs, because the first two were on a heavily loaded machine (`perf_enum` took 228 s against 63 s on a quieter one):
+**After the first review, at `88f995d`, in build slots.** No budget oracle changed, and by the lead's decision no local full suite ran. Three runs, because the first two were on a heavily loaded machine (`perf_enum` took 228 s against 63 s on a quieter one):
 
 ```text
 Run 1, all 19 targeted, at 2b7c197:
