@@ -406,7 +406,7 @@ private slots:
             Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
             h.viewer.open(media.path(0));
             QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(h.viewer.filePath()), 15000);
-            QVERIFY(mappedTransfers(bytes) > 0);
+            QTRY_VERIFY_WITH_TIMEOUT(mappedTransfers(bytes) > 0, 15000); // a late file event can restart the decode
         }
         const QStringList keys = fixture.keys(); QVERIFY(!keys.isEmpty());
 #ifdef Q_OS_WIN
