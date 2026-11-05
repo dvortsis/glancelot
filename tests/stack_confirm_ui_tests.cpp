@@ -410,7 +410,8 @@ private slots:
 #ifdef Q_OS_WIN
         for (const QString& key : keys) QTRY_VERIFY2_WITH_TIMEOUT(!transferStillExists(key), qPrintable("still alive: " + key), 15000);
 #else
-        QTRY_COMPARE_WITH_TIMEOUT(systemSegments(bytes) - systemBefore, 0, 15000);
+        // At once, with no event loop in between: a closing application has none left to release the segment later.
+        QCOMPARE(systemSegments(bytes) - systemBefore, 0);
 #endif
     }
     // The slideshow's own walk with real decoders, for the rate acceptance (R4-B2): run by hand, with GL_STACK_RATE_PASSES and
