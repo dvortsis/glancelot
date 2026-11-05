@@ -52,7 +52,7 @@ Until A2 lands both keys are unreachable, and they give natural order: `sortKeyN
 +    bool sortPartial_{};
 ```
 
-`include/glancelot/directory_listing.hpp`: `DirectoryListing` gains `bool sortPartial{false}`. If A1 has changed these signatures by then, A2 appends to A1's form. `Navigator` is constructed fresh at several controller sites (`viewer_controller.cpp:1197`, `:1341`, `:1838`, `:1953`, `:1966`), which is why the reader is process-wide: a per-instance setter would silently give natural order at any site it missed.
+`include/glancelot/directory_listing.hpp`: `DirectoryListing` gains `bool sortPartial{false}`. If A1 has changed these signatures by then, A2 appends to A1's form. PR 7 (A1, not merged at this freeze) moves the grid from `listDirectory` to a scan in `src/app/directory_scan.hpp`, so once it lands the grid path means that scan: it reads the same default reader, and A2 adds `sortPartial` to its result. Its `ScanOrder` already sends these two keys through `fileSortBefore`, so they keep natural order until A2. `Navigator` is constructed fresh at several controller sites (`viewer_controller.cpp:1197`, `:1341`, `:1838`, `:1953`, `:1966`), which is why the reader is process-wide: a per-instance setter would silently give natural order at any site it missed.
 
 `include/glancelot/directory_entry_model.hpp`:
 
@@ -140,6 +140,7 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 - An empty or failing reader makes every key missing, so the result equals ascending natural order in both directions. Shuffle, Name, Modified and Size are unchanged byte for byte.
 - `needMeta` in `sortedImageFiles` (`navigation.cpp:241`) becomes `Modified || Size || Captured || Dimensions`, so the reader receives each file's stat data (size and modified), which it needs as the cache revision. The reader is then called once over the listed files before sorting. Name and Shuffle still skip stat.
 - **One pass per folder and revision.** The grid and navigation workers share a pass: the first spends the budget and records the pass in `MetadataKeyCache`, and the other reads the cache only. So their unread sets, and `sortPartial`, agree, and traversal matches the grid even when partial.
+- **Arrival (A1).** While a captured or dimensions sort reads its keys, rows stay in the order they arrived. `arriving` (PR 7) and `sortPending` stay true until the keys are in, and the definitive order is published once.
 - **Crossing a folder under these sorts.** There is no previous order to keep, so the landing waits for the pass or its budget, cancellable, with `navigating` showing (PR 3).
 - Capture time orders by the wall-clock value the camera recorded. The offset is shown, never used for ordering.
 
@@ -198,7 +199,7 @@ Generated media only. New `tests/meta_roles_tests.cpp` (core, no display) and `t
   - ascending and descending, with missing values last in both directions;
   - equal keys break ties by natural name;
   - an empty reader equals ascending natural order;
-  - traversal (`Navigator::step`), `sortedImageFiles` and `listDirectory` produce the same image order for the same folder.
+  - traversal (`Navigator::step`), `sortedImageFiles`, `listDirectory` and the grid's own listing path produce the same image order for the same folder.
 - **Settings:** a saved `captured` key survives `settings_policy` validation and a restart; a build that does not know the key falls back to Name.
 - **Parity across construction sites:** under `captured`, a step that crosses a folder boundary, a lookahead and a folder jump all use the installed reader, with no site falling back to natural order.
 - **Order path:**

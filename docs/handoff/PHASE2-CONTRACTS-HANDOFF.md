@@ -2,7 +2,7 @@
 
 - Branch: `claude/phase2-contracts`
 - Tip: the last commit on the branch. A commit can't name itself, so the report to the lead and the PR state its SHA. Code and headers are at `caa6a6a`; every later commit changes only `docs/`.
-- Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `f24f2e7`, which adds only merge-protection tooling and docs: outside `docs/`, `git diff --name-only b1d57cd f24f2e7` lists only `.gitattributes`, `AGENTS.md`, `.github/*` and `scripts/*`. No source, header or CMake file changed, so nothing here needed it Not merged in, because nothing conflicts. Not stacked on anything.
+- Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `3a14044`, which adds only merge-protection tooling and docs: outside `docs/`, `git diff --name-only b1d57cd 3a14044` lists only `.gitattributes`, `AGENTS.md`, `.github/*` and `scripts/*`. No source, header or CMake file changed, so nothing here needed it Not merged in, because nothing conflicts. Not stacked on anything.
 - Worktree and build: `.claude/worktrees/recursing-bassi-58ba22`, `build-claude-phase2-contracts`.
 - ui-design-skills: not read, because this packet changes no QML. Consumers' UI work (C3, D2, B1, B2) must read them; COMPARE-PANES says so for C3, and AGENTS.md covers the rest.
 
@@ -156,7 +156,7 @@ For the lead:
 - **Plan edges.** Please add **D1 -> D2** (B8: the HUD and `colour.source` read `imageTier` and `imageColour`). If D2 must land first, its brief can grant the `imageColour` property alone, with `tagged` parsed from the worker's two existing strings. E1, D1 and C3 start after PR 3 merges. Asset-scope rename arrives with B2, not B1.
 - **C3 and D1.** I recommend ordering C3 after D1 (CP-N5). Before D1, 4-up holds 16 MP per pane and 2-up holds 32 MP, so typical camera files show `TooLarge` in 4-up. The contract is honest about it either way.
 - **PR 3 round 5.** Not on `origin/claude/stack-confirm-fix` at this push (`9c0c919`), so the transfer wording isn't checked against it yet. Please have it checked when round 5 lands. The contracts name no class, so the check is that the rules hold.
-- **A1** is working in the listing and navigation code. A2's diff no longer changes `listDirectory`'s parameters, which lowers the collision.
+- **A1 (PR 7).** A trial merge of this branch with `origin/claude/a1-perf-enum` (`git merge-tree`) is clean. Both PRs add a line to `CMakeLists.txt`, in different places. Its `ScanOrder` sends the new sort keys through `fileSortBefore`, so they keep natural order. META-ROLES now says the grid path is that scan once PR 7 lands. A2's diff no longer changes `listDirectory`'s parameters.
 - G-5 is D2's acceptance, and STACK-CONFIRM's carve-out can point at this contract.
 
 ## Review fixes
