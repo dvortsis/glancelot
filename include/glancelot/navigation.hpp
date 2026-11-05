@@ -1,5 +1,6 @@
 #pragma once
 #include "contracts.hpp"
+#include <functional>
 #include <optional>
 #include <system_error>
 #include <stop_token>
@@ -14,14 +15,30 @@ std::vector<std::filesystem::path> imageFiles(const std::filesystem::path& direc
 // Stepping across a boundary starts at the target folder's visible sorted endpoint to avoid skipping images.
 // Ties break by natural name; entries whose metadata cannot be read sort last in both directions. Shuffle is a
 // deterministic permutation of (file name, seed): it does not change when files are added or removed elsewhere.
-enum class SortKey { Name, Modified, Size, Shuffle };
+// META-ROLES (docs/contracts/META-ROLES.md). Captured: EXIF capture time as a wall-clock value, ignoring any offset. Dimensions:
+// display-oriented pixel area, then width. Missing values are last in both directions and ties break by natural name. Until
+// packet A2 supplies keys every value is missing, so both give natural order. Append only.
+enum class SortKey { Name, Modified, Size, Shuffle, Captured, Dimensions };
 struct SortSpec {
     SortKey key{SortKey::Name};
     bool descending{false};
     std::uint64_t seed{1};
     bool operator==(const SortSpec&) const = default;
 };
-struct FileMeta { std::int64_t modified{}; std::uintmax_t size{}; bool known{}; };
+// `known` means the stat succeeded. The extended keys carry their own flags so "missing last" applies per key; they are
+// appended with defaults so positional FileMeta{modified, size, known} stays valid.
+struct FileMeta {
+    std::int64_t modified{}; std::uintmax_t size{}; bool known{};
+    std::int64_t captured{};                     // wall-clock milliseconds on a fixed epoch
+    std::uint32_t pixelWidth{}, pixelHeight{};   // display-oriented
+    bool capturedKnown{}, dimensionsKnown{};
+};
+// META-ROLES order path. Fills the extended keys for `files` (same length as `meta`) on the calling worker thread. It honours
+// `cancel`, reads a bounded header per file under IoScheduler Metadata admission, and leaves a *Known flag false for any file
+// it could not or would not read. Returns false when the folder budget ended the pass early (the result is then partial).
+// Packet A2 adds the parameters that carry it; core stays Qt-free because the app installs the reader.
+using SortKeyReader = std::function<bool(const std::vector<std::filesystem::path>& files,
+                                         std::vector<FileMeta>& meta, std::stop_token cancel)>;
 // The file order itself (exposed so ordering properties, e.g. unreadable metadata last, are testable).
 bool fileSortBefore(const SortSpec& sort, const std::filesystem::path& a, const FileMeta& metaA,
                     const std::filesystem::path& b, const FileMeta& metaB);
