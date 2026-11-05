@@ -107,6 +107,54 @@ private:
 };
 }
 
+// Lists a folder whole, leaves the cursor on a row that arrives late, then lists it again up to that point.
+struct CursorStillToArrive {
+    QTemporaryDir dir;
+    FakeFolder whole, held;
+    std::shared_ptr<std::atomic_bool> hold = std::make_shared<std::atomic_bool>(false);
+    std::unique_ptr<SeamScope> seam;
+    std::unique_ptr<DirectoryEntryModel> model;
+    QString path;
+    bool start(int folderEvery) {
+        const auto names = [folderEvery](int i) {
+            return folderEvery && i % folderEvery == 0 ? QString("dir%1").arg(2000 - i, 5, 10, QChar('0')) : QString("f%1.png").arg(2000 - i, 5, 10, QChar('0'));
+        };
+        whole.total = held.total = 2000; whole.name = held.name = names; held.heldAfter = 1024;
+        seam = std::make_unique<SeamScope>(nullptr);
+        directory_scan::testSeam.enumerator = [a = whole.enumerator(), b = held.enumerator(), use = hold](
+            const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
+            return (use->load() ? b : a)(d, hidden, cancel, limit, sink);
+        };
+        model = std::make_unique<DirectoryEntryModel>();
+        model->setActive(true);
+        model->setDirectory(dir.path());
+        if (!QTest::qWaitFor([&] { return !model->loading() && model->count() == 2000; }, 10000)) return false;
+        path = QDir(dir.path()).filePath(QString("f%1.png").arg(2000 - 1501, 5, 10, QChar('0'))); // enumerated after the hold
+        model->select(model->rowOf(path));
+        if (model->pathAt(model->cursorRow()) != path) return false;
+        model->setActive(false);
+        hold->store(true);
+        model->setActive(true);
+        return true;
+    }
+};
+// The selection totals, read the slow way: what each row says about itself.
+std::pair<int, qint64> totalsFromRows(const DirectoryEntryModel& model) {
+    int count = 0; qint64 bytes = 0;
+    for (int i = 0; i < model.count(); ++i) {
+        const QModelIndex at = model.index(i);
+        if (!model.data(at, DirectoryEntryModel::SelectedRole).toBool()) continue;
+        ++count;
+        const qint64 size = model.data(at, DirectoryEntryModel::SizeRole).toLongLong();
+        if (size > 0) bytes += size;
+    }
+    return {count, bytes};
+}
+QStringList pathsFromRows(const DirectoryEntryModel& model) {
+    QStringList paths;
+    for (int i = 0; i < model.count(); ++i) if (model.data(model.index(i), DirectoryEntryModel::SelectedRole).toBool()) paths << model.pathAt(i);
+    return paths;
+}
 class PerfEnumTests : public QObject {
     Q_OBJECT
     QTemporaryDir ten, hundred;
@@ -755,6 +803,89 @@ private slots:
         QCOMPARE(staleAfterInsert, 0);
         QVERIFY(!staleAtDefinitive);
         QCOMPARE(model.pathAt(notified), path);
+    }
+    void selectionTotalsFollowEveryChange() {
+        QTemporaryDir dir;
+        FakeFolder plain, fewer, held;
+        const auto names = [](int i) { return i % 10 == 0 ? QString("dir%1").arg(2000 - i, 5, 10, QChar('0')) : QString("f%1.png").arg(2000 - i, 5, 10, QChar('0')); };
+        plain.total = held.total = 2000; fewer.total = 1500; plain.name = fewer.name = held.name = names; held.heldAfter = 1024;
+        auto source = std::make_shared<std::atomic_int>(0);
+        SeamScope seam(nullptr);
+        directory_scan::testSeam.enumerator = [a = plain.enumerator(), b = fewer.enumerator(), c = held.enumerator(), source](
+            const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
+            return (source->load() == 0 ? a : source->load() == 1 ? b : c)(d, hidden, cancel, limit, sink);
+        };
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
+        // Read at every change signal too, as QML would: the totals must already be current there.
+        int stale = 0;
+        const auto readNow = [&] { if (std::make_pair(model.selectedCount(), model.selectedBytes()) != totalsFromRows(model)) ++stale; };
+        connect(&model, &QAbstractItemModel::rowsInserted, this, readNow);
+        connect(&model, &QAbstractItemModel::rowsRemoved, this, readNow);
+        connect(&model, &QAbstractItemModel::modelReset, this, readNow);
+        connect(&model, &QAbstractItemModel::layoutChanged, this, readNow);
+        connect(&model, &QAbstractItemModel::dataChanged, this, readNow);
+        connect(&model, &DirectoryEntryModel::countChanged, this, readNow);
+        connect(&model, &DirectoryEntryModel::selectionChanged, this, readNow);
+        connect(&model, &DirectoryEntryModel::directoryChanged, this, readNow);
+        const auto check = [&](const char* when) {
+            const auto expected = totalsFromRows(model);
+            QVERIFY2(model.selectedCount() == expected.first, when);
+            QVERIFY2(model.selectedBytes() == expected.second, when);
+            QVERIFY2(model.selectedPaths() == pathsFromRows(model), when);
+        };
+        check("nothing selected");
+        model.select(10); model.select(1999, DirectoryEntryModel::Toggle); model.select(1500, DirectoryEntryModel::Toggle);
+        QCOMPARE(model.selectedCount(), 3);
+        check("three selected");
+        model.setFilter("f01", true);
+        QTRY_VERIFY_WITH_TIMEOUT(model.count() > 0 && model.count() < 2000, 10000);
+        check("filtered");
+        model.clearFilter();
+        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 2000, 10000);
+        check("filter cleared");
+        model.selectAll();
+        check("all selected");
+        source->store(1);
+        model.refresh(); // 500 rows go, selected ones among them, without a selection command
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 1500, 10000);
+        QCOMPARE(model.selectedCount(), 1500);
+        check("rows removed");
+        model.setActive(false);
+        check("inactive");
+        source->store(2);
+        model.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(model.count() == 1024 && model.arriving(), 10000);
+        check("arriving");
+        held.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
+        check("arrived");
+        QCOMPARE(stale, 0);
+    }
+    void aTickThatBringsTheCursorsRowNotifiesIt() {
+        CursorStillToArrive f; QVERIFY(f.start(0));
+        DirectoryEntryModel& model = *f.model;
+        int notified = model.cursorRow(), stale = 0;
+        connect(&model, &DirectoryEntryModel::selectionChanged, this, [&] { notified = model.cursorRow(); });
+        connect(&model, &DirectoryEntryModel::countChanged, this, [&] { if (model.arriving() && notified != model.cursorRow()) ++stale; });
+        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1024, 10000);
+        QCOMPARE(model.cursorRow(), -1);
+        f.held.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
+        QCOMPARE(stale, 0);
+        QCOMPARE(model.pathAt(notified), f.path);
+    }
+    void folderTicksBeforeTheCursorArrivesAreNotAnnounced() {
+        CursorStillToArrive f; QVERIFY(f.start(10));
+        DirectoryEntryModel& model = *f.model;
+        int needless = 0;
+        connect(&model, &DirectoryEntryModel::selectionChanged, this, [&] { if (model.count() > 0 && model.cursorRow() < 0) ++needless; });
+        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1024, 10000);
+        QCOMPARE(needless, 0);
+        f.held.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
+        QCOMPARE(model.pathAt(model.cursorRow()), f.path);
     }
     void arrivalsQueueBlocksAtCapacityAndWakesOnStop() {
         directory_scan::Arrivals queue(100);
