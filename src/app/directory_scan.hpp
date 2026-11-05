@@ -36,6 +36,8 @@ struct Tuning {
     int batchRows{2048};      // most rows in one batch
     int flushMs{100};         // a slow source still delivers what it has this often
     int queuedRows{16384};    // the worker waits rather than queue more rows than this
+    std::size_t entryStep{100000};   // what a folder lists at first, and how much each "Show more" adds
+    std::size_t entryLimit{1000000}; // the most a folder ever lists
 };
 
 inline QString displayPath(const fs::path& path) {

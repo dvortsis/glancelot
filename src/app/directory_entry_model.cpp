@@ -20,7 +20,6 @@ using directory_scan::keyFor;
 using directory_scan::Listing;
 using directory_scan::Row;
 constexpr int kMaxConcurrentListings = 2;
-constexpr std::size_t kMaxEntries = 100000;
 // Above this many separate insertion/removal runs a refresh resets instead of merging in place (bounded GUI work).
 constexpr int kMaxMergeRuns = 32;
 // Arrival publication: one delta per tick, so a large folder arriving costs the GUI thread a bounded share of each frame.
@@ -71,6 +70,8 @@ struct DirectoryEntryModel::Private {
     bool arriving{};                   // a first listing whose definitive order is not published yet
     bool provisional{};                // rows are in arrival order, and `index` holds segment positions
     bool refreshAfterArrival{};        // a change arrived mid-listing: finish it, then refresh, rather than start over
+    bool loadingMore{};                // the user asked for the next page, and its listing has not been published yet
+    std::size_t entryLimit{};          // this folder's cap; "Show more" raises it, opening another folder resets it
     int provisionalFolders{};
     directory_scan::Tuning tuning;
     directory_scan::Enumerator enumerator;
@@ -83,6 +84,7 @@ struct DirectoryEntryModel::Private {
 #ifdef GLANCELOT_PERF_ENUM_TESTING
         tuning = directory_scan::testSeam.tuning; enumerator = directory_scan::testSeam.enumerator; beforeProbes = directory_scan::testSeam.beforeProbes;
 #endif
+        entryLimit = tuning.entryStep;
         drainTimer.setInterval(kDrainIntervalMs);
         QObject::connect(&drainTimer, &QTimer::timeout, q, [this] { drain(); });
     }
@@ -96,6 +98,7 @@ struct DirectoryEntryModel::Private {
         if (value < 0 || !provisional) return value;
         return value & kFolderSegment ? value & ~kFolderSegment : provisionalFolders + value;
     }
+    bool canLoadMore() const { return truncated && (loadingMore || entryLimit < tuning.entryLimit); }
     bool passesFilter(const Row& row) const {
         return (!filter.isActive() || filter.matches(row.name)) && (kindWanted < 0 || int(row.kind) == kindWanted);
     }
@@ -157,7 +160,7 @@ struct DirectoryEntryModel::Private {
         setArriving(false);
     }
     void refresh() {
-        if (arrivals) refreshAfterArrival = true; else request();
+        if (arrivals || loadingMore) refreshAfterArrival = true; else request();
     }
     void pump() {
         if (!wanted || inFlight >= kMaxConcurrentListings) return;
@@ -177,7 +180,7 @@ struct DirectoryEntryModel::Private {
             } else { finished = std::move(listing); drain(); }
             pump();
         });
-        directory_scan::Request scan{directory, sort, includeHidden, kMaxEntries, identities, tuning, enumerator, beforeProbes};
+        directory_scan::Request scan{directory, sort, includeHidden, entryLimit, identities, tuning, enumerator, beforeProbes};
         watcher->setFuture(QtConcurrent::run(pool, [scan = std::move(scan), queue = arrivals, cancel = stop.get_token(), token] {
             glancelot::perf::detail::GenerationContext context(token);
             return directory_scan::scan(scan, queue, cancel);
@@ -279,12 +282,14 @@ struct DirectoryEntryModel::Private {
         const int oldCount = int(rows.size());
         // Filtering is a projection: identity matching/pruning uses the full
         // physical listing, never just the visible rows.
-        if (!truncated || provisional || (filtering() ? rawListing.rows.empty() : rows.empty())) {
+        if (!truncated || provisional || loadingMore || (filtering() ? rawListing.rows.empty() : rows.empty())) {
 #ifdef GLANCELOT_FS_WATCH_TESTING
             publicationStats.applied=true;publicationStats.filtered=filtering();
 #endif
             if (!filtering()) {
-                merge(std::move(listing));
+                // A new page lands anywhere in the order, across up to a million rows: hashing them all here to save a
+                // reset would stall the GUI. Selection is by key, and the view restores its anchor after a reset.
+                if (loadingMore) reset(std::move(listing)); else merge(std::move(listing));
 #ifdef GLANCELOT_FS_WATCH_TESTING
                 publicationStats.mergeMs=phase.restart();
 #endif
@@ -305,7 +310,7 @@ struct DirectoryEntryModel::Private {
 #ifdef GLANCELOT_FS_WATCH_TESTING
         QElapsedTimer phase;phase.start();
 #endif
-        const bool wasAccessible = accessible, wasTruncated = truncated;
+        const bool wasAccessible = accessible, wasTruncated = truncated, couldLoadMore = canLoadMore();
         accessible = listing.accessible; truncated = listing.truncated;
         const bool rowsWerePublished = listing.rowsPublished;
         const QSet<QString> selectedBefore = rowsWerePublished ? selected : QSet<QString>{};
@@ -351,9 +356,10 @@ struct DirectoryEntryModel::Private {
             changedRows(QSet<QString>(selectedBefore).unite(selected), {SelectedRole});
             changedRows({cursorBefore, cursorKey}, {CursorRole});
         }
+        loadingMore = false;
         setArriving(false);
         setLoading(false);
-        if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
+        if (wasAccessible != accessible || wasTruncated != truncated || couldLoadMore != canLoadMore()) emit q->directoryChanged();
         emit q->selectionChanged();
         if (!accessible) emit q->listingFailed(QCoreApplication::translate("Grid","This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
     }
@@ -532,6 +538,7 @@ bool DirectoryEntryModel::loading() const { return d->loading; }
 bool DirectoryEntryModel::accessible() const { return d->accessible; }
 bool DirectoryEntryModel::truncated() const { return d->truncated; }
 bool DirectoryEntryModel::arriving() const { return d->arriving; }
+bool DirectoryEntryModel::canLoadMore() const { return d->canLoadMore(); }
 
 void DirectoryEntryModel::setDirectory(const QString& directory) {
     const QString key = keyFor(directory);
@@ -547,6 +554,7 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     d->abandonScan();
     d->directory = directory; d->directoryKey = key;
     d->accessible = true; d->truncated = false;
+    d->loadingMore = false; d->entryLimit = d->tuning.entryStep;
     d->release();
     d->selected.clear(); d->anchorKey.clear(); d->cursorKey.clear();
     // Going up a level puts the cursor on the folder that was just left, as file managers do.
@@ -558,11 +566,20 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     if (d->active && !directory.isEmpty()) d->request(); else d->setLoading(false);
 }
 void DirectoryEntryModel::refresh() { d->refresh(); }
+void DirectoryEntryModel::loadMore() {
+    if (!d->active || d->arriving || d->loadingMore || !d->canLoadMore()) return;
+    d->entryLimit = std::min(d->entryLimit + d->tuning.entryStep, d->tuning.entryLimit);
+    d->loadingMore = true;
+    d->request();
+}
 void DirectoryEntryModel::setActive(bool active) {
     if (active == d->active) return;
     d->active = active;
     if (active) { d->request(); return; }
     d->abandonScan();
+    const bool couldLoadMore = d->canLoadMore();
+    d->loadingMore = false;
+    if (couldLoadMore != d->canLoadMore()) emit directoryChanged();
     d->setLoading(false);
     d->release(); // keys (selection/cursor) are kept and re-filtered against the next listing
 }

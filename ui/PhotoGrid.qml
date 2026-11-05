@@ -23,6 +23,8 @@ Rectangle {
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
+    property bool moreRequested: false // "Show more" was pressed and its listing has not landed
+    property bool moreHadFocus: false
     property string searchQuery: ""
     property int preSearchRow: -1
     property bool filterExpanded: false
@@ -149,6 +151,12 @@ Rectangle {
         else grid.positionViewAtIndex(fileGrid.cursorRow, GridView.Contain)
     }
     function showNotice(text) { noticeText = text; noticeTimer.restart() }
+    // Keyboard focus was on "Show more" when it was pressed; if the button goes when the listing lands, focus goes to the grid.
+    function settleShowMore() {
+        if (moreRequested) return // pressed again before this ran; the next listing's end settles it
+        if (moreHadFocus && !showMore.visible) focusGrid()
+        moreHadFocus = false
+    }
     function rememberViewport() {
         // A failed or empty relisting of the same folder keeps the viewport saved before it, so a transient error
         // followed by recovery returns to the browsed position.
@@ -247,7 +255,10 @@ Rectangle {
     }
     Connections {
         target: fileGrid
-        function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
+        function onLoadingChanged() {
+            if (!fileGrid.loading && panel.moreRequested) { panel.moreRequested = false; Qt.callLater(panel.settleShowMore) }
+            if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal)
+        }
         function onArrivingChanged() { if (panel.visible && !fileGrid.arriving) Qt.callLater(panel.reveal) }
         function onCountChanged() { if (panel.visible && fileGrid.arriving && panel.placeCursor && panel.revealPath.length) Qt.callLater(panel.reveal) }
         function onModelAboutToBeReset() { panel.rememberViewport() }
@@ -492,22 +503,47 @@ Rectangle {
     Rectangle {
         id: truncatedBanner
         objectName: "gridTruncated"
-        visible: fileGrid.truncated && fileGrid.count > 0
+        visible: fileGrid.truncated && (fileGrid.count > 0 || fileGrid.hasFilter) // a filter hiding every listed row may have matches further on
         anchors { left: parent.left; right: parent.right; top: header.bottom; leftMargin: Theme.gapMd; rightMargin: Theme.gapMd }
-        height: visible ? truncatedText.implicitHeight + 2 * Theme.gapSm : 0
+        height: visible ? Math.max(truncatedText.implicitHeight, showMore.visible ? showMore.implicitHeight : 0) + 2 * Theme.gapSm : 0
         radius: Theme.radiusControl
         color: Theme.surface
         border.width: Theme.borderWidth
         border.color: Theme.border
         Label {
             id: truncatedText
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Theme.gapMd }
+            objectName: "gridTruncatedText"
+            anchors { left: parent.left; right: showMore.visible ? showMore.left : parent.right; verticalCenter: parent.verticalCenter; leftMargin: Theme.gapMd; rightMargin: Theme.gapMd }
             // The limit keeps enumeration order, not display order, so this must not claim "the first" items.
-            text: qsTr("Showing 100,000 items. This folder has more that are not listed here.")
+            // A filtered count is not how much of the folder is listed, so a filter gets no number.
+            text: {
+                if (panel.moreRequested) return qsTr("Listing more items…")
+                const n = fileGrid.count.toLocaleString(Qt.locale(), "f", 0)
+                if (fileGrid.canLoadMore) return fileGrid.hasFilter ? qsTr("This folder has more items that are not listed here, so some matches may be missing.")
+                                                                    : qsTr("Showing %1 items. This folder has more that are not listed here.").arg(n)
+                return fileGrid.hasFilter ? qsTr("Glancelot has reached the most items it can list in a folder, so some matches may be missing.")
+                                          : qsTr("Showing %1 items, the most Glancelot can list in a folder. This one has more that are not listed here.").arg(n)
+            }
             wrapMode: Text.Wrap
             color: Theme.text
             font.pixelSize: Theme.textSmall
             Accessible.role: Accessible.AlertMessage
+        }
+        UiButton {
+            id: showMore
+            objectName: "gridShowMore"
+            visible: fileGrid.canLoadMore
+            anchors { right: parent.right; rightMargin: Theme.gapSm; verticalCenter: parent.verticalCenter }
+            variant: "outline"
+            text: qsTr("Show more")
+            Accessible.name: qsTr("Show more items in this folder")
+            enabled: panel.inputEnabled
+            // Stays enabled while listing, so it keeps keyboard focus; a second press does nothing in the model.
+            onClicked: {
+                panel.moreHadFocus = activeFocus
+                fileGrid.loadMore()
+                panel.moreRequested = fileGrid.loading
+            }
         }
     }
     GridView {
