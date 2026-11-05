@@ -3,13 +3,14 @@
 PR 1 of 2 for A1 (PERF-ENUM + F016). The continuation beyond the 100k cap ("Show more") is the stacked PR 2, as the lead approved. It has its own section in this file on its branch.
 
 - **Branch:** `claude/a1-perf-enum`
-- **Code tip:** `2810c5c`, after the first review's fixes, the merge of `main` and the menu selection fix. The commit after it changes only this file and `docs/verification/A1/`. The last local full suite was at `902a765`. By the lead's decision the PR's hosted `viewer` job is now the full suite.
-- **Exact base:** `7c0da34`, the `main` commit merged in (`2876dbf`). Not stacked. The first review was against `3a14044`.
+- **Code tip:** `bc7b33e`, after the second review's fixes. The commit after it changes only this file and `docs/verification/A1/`. No local full suite ran after `902a765`. By the lead's decision the PR's hosted `viewer` job is the full suite.
+- **Exact base:** `20f1210`, the `main` commit merged in `c353d26`, so the head the reviewer approves can be the head the gate runs on. Not stacked. The second review was against `ac49031`, the first against `3a14044`.
 - **PR:** https://github.com/dvortsis/glancelot/pull/7
 
 ## What a user sees
 
-- A 10k folder shows rows at about 50 ms instead of about 530 to 920 ms. A 100k folder shows them at about 140 ms. The count reads "N items so far" until the order is final.
+- A 10k folder shows rows at about 50 ms instead of about 530 to 920 ms. A 100k folder shows them at about 140 ms. The count reads "N items so far" until the order is final, and so does the footer: "3 of 1,024 so far", or "1,024 selected of 1,024 so far".
+- Selecting a row in a 100,000-row folder no longer costs about 50 ms of GUI time for every selection signal. It is now about 15 µs.
 - Time to `loading` false barely moves at 10k, about 550 ms to about 460 ms. Nearly all of that wait is identity probes, which now run after the rows are showing.
 - The order is published once. Delegates stay in place, the row at the top stays at the top, and a row clicked during arrival stays selected.
 - A folder that lists within 120 ms, or has too few rows, publishes once with no provisional rows, as before.
@@ -67,9 +68,38 @@ The "after" lines are in `docs/verification/A1/traces-after.txt` (`902a765`, gat
 - **N4** (a slot that changes folder synchronously in `countChanged`). No caller does this today, and I could not build a test that fails reliably without a further seam.
 - **N6** (`fs_watch` log line shows zeros). No oracle reads it.
 
+## Second review: CHANGES REQUIRED, and what changed
+
+`docs/verification/A1-REVIEW-R2.md` on `claude/review-a1` (`8c92a68`), against `ac49031`. Fail-before evidence is in `docs/verification/A1/mutations-review2.txt`.
+
+| Finding | Fix | Tests |
+| --- | --- | --- |
+| **R2-B1.** The grid's Clear and Invert buttons lost to the placement | `panel.settleByUser()` first in both. Auditing every other selection path found one more, a screen reader's press on a row, fixed the same way | `gridButtonsDuringArrivalAreNotReplaced` (clear, invert), `accessiblePressDuringArrivalIsNotReplaced` |
+| **R2-B2.** The first frame after the definitive order showed the old position | `onLayoutChanged` restores at once instead of through `Qt.callLater` | `theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder`, three listings. It reads the view inside the `arrivingChanged` slot, which comes before any frame, so it cannot pass with no frame drawn. It also checks every frame swapped after the definitive order, and that the order really moved the rows |
+| **R2-B3.** Escape from type-ahead returned to a row number | `preSearchPath` replaces `preSearchRow`, looked up on Escape | `escapeFromTypeAheadReturnsToTheSameFile` |
+| **N1.** Two stale `cursorRow` cases | One `selectionChanged` after both of a tick's inserts, only when the cursor's row changed | `aTickThatBringsTheCursorsRowNotifiesIt`, `folderTicksBeforeTheCursorArrivesAreNotAnnounced` |
+| **N2.** The "does not settle" half of the menu rule | Nothing to fix. The menu test now drives `window.invoke`, the path menu items take | `otherCommandsDuringArrivalKeepThePlacement` (`fit`, `toggle-metadata`, `grid-zoom-in`, `filter`), `menuSelectionDuringArrivalIsNotReplaced` |
+| **The lead's question 2.** The footer said "3 of 1,024" during arrival | The one edit granted in `ui/Main.qml`, at the footer count | `theFooterSaysSoFarWhileRowsArrive` |
+| **The cost of the first review's N2 fix** | Measured directly, and it was real. Fixed by keeping the selection totals: see below | `selectionTotalsFollowEveryChange`, `traceSelectionChangedCost` (opt-in) |
+
+The selection controls I audited: the delegate's click and double-click (`clickRow` settles), keys, Ctrl+A, the scrollbar, the wheel, right click, the menu key, type-ahead, the menu commands, the grid's Clear and Invert buttons, and the accessible press. `ui/Main.qml`'s own selection calls are the menu commands and `openGridMenu`, which runs only after a right click or the menu key. The lead's answer 1 keeps Select all on the rows that have arrived, which the tests already pin.
+
+**What one `selectionChanged` costs, measured.** A settled 100,000-row grid in the shipped QML, under the gate lock, 41 runs per case, three rounds. Each signal makes QML read the count, the bytes and the summary several times, and before the fix each read walked every row.
+
+| Case | Before, median (worst), ms | After, median (worst) |
+| --- | --- | --- |
+| No selection | 0.01 (0.04) | 0.01 (0.02) |
+| One row selected | 49 to 53 (63) | 0.014 to 0.015 (0.039) |
+| Selecting the next row | 48 to 59 (73) | 0.036 to 0.040 (0.158) |
+| Every row selected | 139 to 159 (231) | 17.8 to 18.3 (20.3) |
+
+The totals now come from the selected keys, once, and are kept until the rows or the selection change. They are forgotten at every change signal, through connections made before anything outside the model can connect. Inside a merge or a tick's inserts the index lags the rows: a merge emits `rowsRemoved` before it rebuilds the index, which is also true on `main`. So a reader woken from inside one walks the rows as before, and nothing is kept. `selectionTotalsFollowEveryChange` found that by reading the totals at every change signal. With every row selected it still costs 18 ms, against the 6 ms drain budget. That is one explicit command away, and arrival now emits only when the cursor's row moves. At a million rows the same case is about ten times that, which PR 2's review raises as its N0 and N1.
+
+**Not done, from the non-blocking list:** N3 (any non-modifier key settles, Tab included), which follows the first review's suggestion, and N4 (a fixed 200 ms wait in `aFinishedScanIsNotLostAtTheDefinitiveBatch`), which cannot fail falsely.
+
 ## Files changed
 
-Grant check, `git diff --name-only 7c0da34..2810c5c`, with `docs/` left out of the list:
+Grant check, `git diff --name-only 20f1210..bc7b33e`, with `docs/` left out of the list:
 
 ```text
 CMakeLists.txt
@@ -97,18 +127,64 @@ Everything is in the brief's grant except these, which it allows or the lead gra
   +    void directoryChanged(); void countChanged(); void loadingChanged(); void selectionChanged(); void arrivingChanged();
   ```
 
+- `ui/Main.qml`, one edit at the footer count. The lead's grant: "You're granted one edit in `ui/Main.qml` at the footer count (line 2152 at the reviewed head), for example "3 of 1,024 so far" while loading. Keep it to that expression, and put the string in `qsTr` with the catalog regenerated." The edit adds two branches to that expression and nothing else.
 - `ui/PhotoGrid.qml`, thin call-site changes the brief allows:
   - `settleByUser()`, so a click or scroll during arrival wins over the waiting placement.
   - `reveal()` and four Connections handlers react to `arriving`, the count and layout changes.
   - The key handler, the scrollbar and the right-click handler settle the placement, and Try again keeps the browsed position (first review).
+  - The grid's Clear and Invert buttons and the accessible press settle the placement, `onLayoutChanged` restores at once, and type-ahead remembers a path (second review).
   - The grid's existing `viewCommand` connection settles the placement for `select-all`, `grid-select-all`, `clear-selection` and `invert-selection` (the lead's answer on menu selections).
   - The count label says "so far".
   - The thumbnail binding also depends on `cell.path`, so a delegate kept in place rebinds.
-- `translations/glancelot_en_XA.ts`: four new strings, added by hand because `lupdate` is not available on Windows here.
+- `translations/glancelot_en_XA.ts`: six new strings, added by hand because `lupdate` is not available on Windows here.
 
-`ui/Main.qml` and `src/core/*` are untouched. `pr_guard` reports 0 errors and the notice `2310 changed lines; aim for about 1500`. About 1,300 of those lines are tests. I did not split further because the arrival code and its tests only make sense together.
+`src/core/*` is untouched. `pr_guard` reports 0 errors and the notice `2757 changed lines; aim for about 1500`. Most of the growth since the last round is tests. I did not split further because the arrival code and its tests only make sense together.
 
 ## Tests
+
+**After the second review, at `bc7b33e`, with `main` at `20f1210` merged in.** The first 19 ran in a build slot. `folder_grid`, `input_ui` and `fs_watch_budget` ran under the gate lock, and the traces after them. Everything passed on its first run. No budget oracle changed.
+
+```text
+ 1/19 Test  #4: directory_listing ................   Passed   16.74 sec
+ 2/19 Test  #7: viewer_acceptance ................   Passed   12.26 sec
+ 3/19 Test #16: directory_model ..................   Passed   43.65 sec
+ 4/19 Test #20: grid_search ......................   Passed    0.36 sec
+ 5/19 Test #21: grid_density .....................   Passed    0.26 sec
+ 6/19 Test #23: fs_watch .........................   Passed   92.27 sec
+ 7/19 Test #26: fs_watch_ui ......................   Passed    4.80 sec
+ 8/19 Test #30: filter ...........................   Passed    6.78 sec
+ 9/19 Test #31: cache ............................   Passed   11.86 sec
+10/19 Test #40: recovery .........................   Passed   14.66 sec
+11/19 Test #41: recovery_startup .................   Passed    0.69 sec
+12/19 Test #42: recovery_controller ..............   Passed   15.79 sec
+13/19 Test #43: recovery_process .................   Passed   32.37 sec
+14/19 Test #44: tabs_recovery ....................   Passed   69.47 sec
+15/19 Test #48: translation_coverage_ui ..........   Passed   32.08 sec
+16/19 Test #51: perf_enum ........................   Passed   62.72 sec
+17/19 Test #52: perf_enum_ui .....................   Passed   67.07 sec
+18/19 Test #55: export_ui ........................   Passed   37.11 sec
+19/19 Test #56: stack_confirm_ui .................   Passed  176.47 sec
+100% tests passed out of 19
+Total Test time (real) = 698.44 sec
+perf-enum Totals: 32 passed, 0 failed, 0 skipped, 0 blacklisted, 40651ms
+perf-enum-ui Totals: 39 passed, 0 failed, 1 skipped, 0 blacklisted, 66888ms
+1/3 Test #12: folder_grid ......................   Passed  277.80 sec
+2/3 Test #13: input_ui .........................   Passed   81.48 sec
+3/3 Test #24: fs_watch_budget ..................   Passed   88.75 sec
+100% tests passed out of 3
+Total Test time (real) = 448.25 sec
+folder_grid Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 277612ms
+input_ui Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 81325ms
+```
+
+Traces from the same lock, against the earlier figures:
+
+```text
+10k-cold first_row_ms=52 full_count_ms=52 definitive_ms=52 settled_ms=510 worst_gui_gap_ms=12 enumerate_ms=35 
+10k-warm first_row_ms=51 full_count_ms=51 definitive_ms=51 settled_ms=512 worst_gui_gap_ms=12 enumerate_ms=31 
+100k-cold first_row_ms=141 full_count_ms=388 definitive_ms=461 settled_ms=461 worst_gui_gap_ms=13 enumerate_ms
+100k-warm first_row_ms=142 full_count_ms=386 definitive_ms=451 settled_ms=459 worst_gui_gap_ms=12 enumerate_ms
+```
 
 **After merging `main` (`7c0da34`) and fixing menu selections.** `2876dbf` resolved two conflicts in `ui/PhotoGrid.qml`, keeping both sides as the lead specified. No budget oracle changed. No local full suite ran.
 
@@ -201,6 +277,7 @@ Budget and listing tests from that run, oracles unchanged:
 ## Fail-before evidence
 
 - **Against base:** the public-API tests were written first and four failed on `main`: `trace100k` (no partial rows), `arrivedRowsDoNotMoveUntilTheDefinitiveOrder` (nothing arrived, since renamed `arrivedRowsKeepTheirOrderUntilTheDefinitiveOrder`), `newerFolderOpenedDuringArrivalWins` and `closingDuringArrivalIsBounded` (no arrival to catch). The output is at the end of `docs/verification/A1/traces-before.txt`: `Totals: 3 passed, 4 failed`. The seam and `arriving` tests do not compile on base, so they are covered by mutations.
+- **Second review's fixes:** `docs/verification/A1/mutations-review2.txt`. 23 mutations, all of which fail their named tests. My first accessible-press test used an image row, so pressing it opened the photo and the test failed for that reason, with or without the fix. It now uses a non-photo row, and the mutation was rerun. `totals-never-cached` fails only because its readings change, since caching is a speed change. The measure above is its real evidence.
 - **First review's fixes and menu selections:** `docs/verification/A1/mutations-review.txt`. 21 mutations, all of which fail their named tests. Without the fix, `menuSelectionDuringArrivalIsNotReplaced` fails for all four commands. One survived its first run (`b3-failing-again-forgets`), because its test failed before any row arrived. The test now fails with rows showing.
 - **Mutations:** `docs/verification/A1/mutations.txt`. 32 mutations, one per behaviour; all 32 fail their named tests. One is an abort (`queue-unbounded`) and one a hang (`wait-ignores-stop`), both of which are what those mutations should cause.
 - **What the first mutation run found:** four mutations survived, so these tests could not fail. `902a765` fixes them.
@@ -219,6 +296,8 @@ Budget and listing tests from that run, oracles unchanged:
 - Rename on disk and delete during the probe window: paths stay right and a row that cannot be proven goes rather than guesses.
 - Stale probes cannot change a newer listing.
 - Refresh during arrival finishes, then refreshes. A sort change restarts. A filter projects each batch.
+- A screen reader's press, and the grid's own buttons, during arrival keep what they chose.
+- A reader inside a merge gets totals from the rows, not from an index that lags them.
 
 ## Decisions taken
 
@@ -234,17 +313,20 @@ Budget and listing tests from that run, oracles unchanged:
 - **A key or click with no rows yet settles nothing.** Pressing the grid key and then an arrow straight away would otherwise cancel the placement on the photo, with nothing to show for it. The review's suggestion did not cover this.
 - **A modifier alone settles nothing,** because pressing Ctrl on its way to Ctrl+A has not chosen anything.
 - **Menu selections settle in `ui/PhotoGrid.qml`, not `ui/Main.qml`.** Every menu item and shortcut for these commands goes through `viewer.trigger` and the `viewCommand` signal, and the grid already listens to it. The lead's grant for a small `ui/Main.qml` edit was not needed, so EN-07 has nothing to work around. `Clear selection` counts as a choice too: it stays clear when the listing lands. Before any row has arrived, these commands settle nothing, like a key.
+- **Footer wording during arrival:** "3 of 1,024 so far" for one row, and "1,024 selected of 1,024 so far" for several. Saying "so far" only in the single-row case would leave Select all looking complete.
+- **Totals from the selected keys, cached, rather than a running count.** A count kept as each selection command runs would need every path that adds or removes rows to adjust it. Forgetting on every change signal needs one place. With every row selected, a read is still one pass over the keys.
 
 ## Open questions for the lead
 
-- **Sorting or toggling hidden files in a truncated folder looks like it does nothing.** The lead has answered: it is fixed in PR 2. `publishRows` skips a truncated listing while rows are showing, so the new order would not appear. `main` has the same condition (`if (!truncated || (filtering() ? rawListing.rows.empty() : rows.empty()))`), so A1 did not cause it. I read this from the code and did not reproduce it. It is outside this packet, so I left it. It should be a small fix once you decide where it goes.
+None. The lead answered the review's two product questions: Select all stays on the rows that have arrived, and the footer says so.
 
 ## Not verified
 
 - A slow or dead network share. The patience, floor and flush paths are covered through the seam only.
-- Physical hardware and a real display. All UI evidence is offscreen with the software backend.
+- Physical hardware and a real display. All UI evidence is offscreen with the software backend. The first-frame check reads the view at the definitive order itself, but how a threaded render loop schedules that frame is not verified.
+- Selection cost at 1,000,000 rows. Measured at 100,000 only. With every row selected it is about 18 ms there, so about ten times that at a million.
 - `docker build` was not part of my run, and no local full suite ran after `902a765`, so `main`'s merge has only the targeted runs above. The hosted `viewer` job and the lead's tester cover the head.
 
 ## UI skills
 
-`application-interface-design` was read before the QML edits. The only visible change in this PR is the "so far" wording in the existing count label, with no new control or layout. `layout-spacing`, `component-geometry`, `responsive-layout` and `typography-ui` were read for the banner in PR 2.
+`application-interface-design` was read before the QML edits. The visible changes in this PR are the "so far" wording in the existing count label and in the footer, with no new control or layout. `layout-spacing`, `component-geometry`, `responsive-layout` and `typography-ui` were read for the banner in PR 2.
