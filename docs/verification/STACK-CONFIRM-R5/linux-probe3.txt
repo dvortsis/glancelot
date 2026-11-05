@@ -1,0 +1,42 @@
+[3/3] Linking CXX executable stack_confirm_ui_tests
+--- F: last detach right after QProcess::start
+QINFO  : StackConfirmUiTests::reviewProbeForkRace() PROBE forkrace: 0 of 300 segments survived the last detach
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 802ms
+new segments: 0
+--- G: rate runs with real decoders, 3 side by side, 8 passes each, pace 0/20/40
+PatternRateRun() RESULT pace 0: 632 steps in 90989 ms, undecoded 0, max GUI gap 607 ms, mapped at the end 0
+PatternRateRun() RESULT pace 20: 632 steps in 104083 ms, undecoded 0, max GUI gap 553 ms, mapped at the end 0
+PatternRateRun() RESULT pace 40: 632 steps in 114737 ms, undecoded 0, max GUI gap 577 ms, mapped at the end 0
+new segments after rate: 0
+--- H: the 64 MiB function, 4 side by side, 6 rounds
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2344ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2387ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2440ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2493ms
+round 1: new segments 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2901ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2900ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2925ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2953ms
+round 2: new segments 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2392ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2460ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2633ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2776ms
+round 3: new segments 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2922ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2924ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 3084ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 3725ms
+round 4: new segments 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4612ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4652ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4661ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4713ms
+round 5: new segments 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2591ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2609ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2633ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2708ms
+round 6: new segments 0
+qipc tmp files: 0

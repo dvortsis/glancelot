@@ -1,0 +1,147 @@
+A1 second review's fixes: fail-before evidence. Each mutation removes one fix, rebuilds where needed, and runs the named tests.
+A non-zero exit means the tests caught it. QTest's exit code is the number of failed functions.
+23 mutations, all caught. totals-never-cached is a speed change: its test fails because the readings change, and traceSelectionChangedCost is its real evidence.
+
+### r2b1-clear-button [ui/PhotoGrid.qml] -> perf_enum_ui_tests gridButtonsDuringArrivalAreNotReplaced
+exit 1
+  FAIL!  : PerfEnumUiTests::gridButtonsDuringArrivalAreNotReplaced(clear) '!grid->property("placeCursor").toBool()' returned FALSE. ()
+  Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 7677ms
+### r2b1-invert-button [ui/PhotoGrid.qml] -> perf_enum_ui_tests gridButtonsDuringArrivalAreNotReplaced
+exit 1
+  FAIL!  : PerfEnumUiTests::gridButtonsDuringArrivalAreNotReplaced(invert) '!grid->property("placeCursor").toBool()' returned FALSE. ()
+  Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 12180ms
+### r2b2-restore-deferred [ui/PhotoGrid.qml] -> perf_enum_ui_tests theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder
+exit 3
+  FAIL!  : PerfEnumUiTests::theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder(files only) 'linesOff < 1' returned FALSE. (297 lines from the anchor at the definitive order)
+  FAIL!  : PerfEnumUiTests::theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder(every 10th a folder) 'linesOff < 1' returned FALSE. (287 lines from the anchor at the definitive order)
+  FAIL!  : PerfEnumUiTests::theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder(every 7th a folder) 'linesOff < 1' returned FALSE. (273 lines from the anchor at the definitive order)
+  Totals: 2 passed, 3 failed, 0 skipped, 0 blacklisted, 20422ms
+### r2b3-row-number [ui/PhotoGrid.qml] -> perf_enum_ui_tests escapeFromTypeAheadReturnsToTheSameFile
+exit 1
+  FAIL!  : PerfEnumUiTests::escapeFromTypeAheadReturnsToTheSameFile() Compared lists differ at index 0.
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4410ms
+### footer-one-row-not-so-far [ui/Main.qml] -> perf_enum_ui_tests theFooterSaysSoFarWhileRowsArrive
+exit 1
+  FAIL!  : PerfEnumUiTests::theFooterSaysSoFarWhileRowsArrive() 'footerShows(f.h->window, QString("%1 of %2 so far").arg(cursor).arg(arrived))' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 34145ms
+### footer-many-not-so-far [ui/Main.qml] -> perf_enum_ui_tests theFooterSaysSoFarWhileRowsArrive
+exit 1
+  FAIL!  : PerfEnumUiTests::theFooterSaysSoFarWhileRowsArrive() 'footerShows(f.h->window, QString("%1 selected of %2 so far").arg(arrived, arrived))' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 35519ms
+### footer-so-far-after-landing [ui/Main.qml] -> perf_enum_ui_tests theFooterSaysSoFarWhileRowsArrive
+exit 1
+  FAIL!  : PerfEnumUiTests::theFooterSaysSoFarWhileRowsArrive() 'footerShows(f.h->window, QString("%1 selected").arg(kHeldAfter))' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 41033ms
+### settles-on-every-command [ui/PhotoGrid.qml] -> perf_enum_ui_tests otherCommandsDuringArrivalKeepThePlacement
+exit 4
+  FAIL!  : PerfEnumUiTests::otherCommandsDuringArrivalKeepThePlacement(fit) 'f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::otherCommandsDuringArrivalKeepThePlacement(toggle-metadata) 'f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::otherCommandsDuringArrivalKeepThePlacement(grid-zoom-in) 'f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::otherCommandsDuringArrivalKeepThePlacement(filter) 'f.placing()' returned FALSE. ()
+  Totals: 2 passed, 4 failed, 0 skipped, 0 blacklisted, 12787ms
+### p1-menu-selection-does-not-settle [ui/PhotoGrid.qml] -> perf_enum_ui_tests menuSelectionDuringArrivalIsNotReplaced
+exit 4
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(select all) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(grid menu select all) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(invert) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(clear) '!f.placing()' returned FALSE. ()
+  Totals: 2 passed, 4 failed, 0 skipped, 0 blacklisted, 12600ms
+### cursor-tick-silent [src/app/directory_entry_model.cpp] -> perf_enum_tests aTickThatBringsTheCursorsRowNotifiesIt
+exit 1
+  FAIL!  : PerfEnumTests::aTickThatBringsTheCursorsRowNotifiesIt() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 135ms
+### every-folder-tick-announced [src/app/directory_entry_model.cpp] -> perf_enum_tests folderTicksBeforeTheCursorArrivesAreNotAnnounced
+exit 1
+  FAIL!  : PerfEnumTests::folderTicksBeforeTheCursorArrivesAreNotAnnounced() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 86ms
+### nothing-announced-in-arrival [src/app/directory_entry_model.cpp] -> perf_enum_tests cursorRowIsNotifiedWhenRowsMoveAroundIt aTickThatBringsTheCursorsRowNotifiesIt
+exit 2
+  FAIL!  : PerfEnumTests::cursorRowIsNotifiedWhenRowsMoveAroundIt() Compared values are not the same
+  FAIL!  : PerfEnumTests::aTickThatBringsTheCursorsRowNotifiesIt() Compared values are not the same
+  Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 263ms
+
+# r2b1-accessible-press, rerun after its test moved to a non-photo row (the first run pressed an image, which left the grid):
+### r2b1-accessible-press [ui/PhotoGrid.qml] -> perf_enum_ui_tests accessiblePressDuringArrivalIsNotReplaced
+exit 1
+  FAIL!  : PerfEnumUiTests::accessiblePressDuringArrivalIsNotReplaced() '!f.placing()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2918ms
+
+# The selection totals:
+### totals-kept-past-selectionChanged [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 254ms
+### totals-kept-past-countChanged [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 244ms
+### totals-kept-past-rowsInserted [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 306ms
+### totals-kept-past-rowsRemoved [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 259ms
+### totals-kept-past-modelReset [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 251ms
+### totals-kept-past-layoutChanged [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 249ms
+### totals-kept-past-dataChanged [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 253ms
+### paths-not-in-listing-order [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() 'model.selectedPaths() == pathsFromRows(model)' returned FALSE. (all selected)
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() '!model.loading() && model.count() == 1500' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 85ms
+### totals-never-cached [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 232ms
+
+# After the guard for a merge's lagging index:
+### totals-kept-past-rowsInserted [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 231ms
+### totals-kept-past-rowsRemoved [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 244ms
+### merge-trusts-a-lagging-index [src/app/directory_entry_model.cpp] -> perf_enum_tests selectionTotalsFollowEveryChange
+exit 1
+  FAIL!  : PerfEnumTests::selectionTotalsFollowEveryChange() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 237ms
+
+# selectionChanged cost, 100,000 rows, under the gate lock. Before the totals change:
+round 1 emit-no-selection runs=41 median_us=10 worst_us=38
+round 1 emit-one-selected runs=41 median_us=51244 worst_us=57715
+round 1 select-next-row runs=41 median_us=48493 worst_us=52398
+round 1 emit-all-selected runs=41 median_us=139261 worst_us=227851
+round 2 emit-no-selection runs=41 median_us=10 worst_us=27
+round 2 emit-one-selected runs=41 median_us=53338 worst_us=62746
+round 2 select-next-row runs=41 median_us=59102 worst_us=72836
+round 2 emit-all-selected runs=41 median_us=158716 worst_us=231368
+round 3 emit-no-selection runs=41 median_us=10 worst_us=27
+round 3 emit-one-selected runs=41 median_us=49432 worst_us=54320
+round 3 select-next-row runs=41 median_us=49281 worst_us=53046
+round 3 emit-all-selected runs=41 median_us=140725 worst_us=207323
+# After, at bc7b33e:
+emit-no-selection runs=41 median_us=9 worst_us=20
+emit-one-selected runs=41 median_us=14 worst_us=25
+select-next-row runs=41 median_us=36 worst_us=145
+emit-all-selected runs=41 median_us=17926 worst_us=19026
+emit-no-selection runs=41 median_us=10 worst_us=19
+emit-one-selected runs=41 median_us=15 worst_us=25
+select-next-row runs=41 median_us=40 worst_us=144
+emit-all-selected runs=41 median_us=18262 worst_us=20344
+emit-no-selection runs=41 median_us=10 worst_us=18
+emit-one-selected runs=41 median_us=15 worst_us=39
+select-next-row runs=41 median_us=39 worst_us=158
+emit-all-selected runs=41 median_us=17848 worst_us=19320

@@ -1,0 +1,480 @@
+[
+ {
+  "mutation": "no-exception-containment",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "engineExceptionsBecomeResults",
+  "exit": "-1073740791",
+  "verdict": "KILLED",
+  "failed": [],
+  "on_target": null,
+  "totals": "",
+  "lines": []
+ },
+ {
+  "mutation": "no-unrepresentable-precheck",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "loneSurrogateNameIsLeftOutNotFatal",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "loneSurrogateNameIsLeftOutNotFatal"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 101ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::loneSurrogateNameIsLeftOutNotFatal() Compared values are not the same",
+   "   Actual   (summary[\"files\"].toInt()): 4",
+   "   Expected (3)                       : 3"
+  ]
+ },
+ {
+  "mutation": "cancel-does-nothing",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "cancelMidExportLeavesNothing",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "cancelMidExportLeavesNothing"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 37337ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::cancelMidExportLeavesNothing() Compared values are not the same",
+   "   Actual   (finished.size()): 0",
+   "   Expected (1)              : 1"
+  ]
+ },
+ {
+  "mutation": "stale-result-delivered",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "newerPrepareDropsTheOlderResult",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "newerPrepareDropsTheOlderResult"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 181ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::newerPrepareDropsTheOlderResult() Compared values are not the same",
+   "   Actual   (finished.size()): 1",
+   "   Expected (0)              : 0"
+  ]
+ },
+ {
+  "mutation": "progress-not-coalesced",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "progressUpdatesAreCoalesced",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "progressUpdatesAreCoalesced"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 202ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::progressUpdatesAreCoalesced() Compared values are not the same",
+   "   Actual   (updates.size()): 200000",
+   "   Expected (1)             : 1"
+  ]
+ },
+ {
+  "mutation": "no-destination-refusals",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "refusalsWriteNothing",
+  "exit": "6",
+  "verdict": "KILLED",
+  "failed": [
+   "refusalsWriteNothing",
+   "refusalsWriteNothing",
+   "refusalsWriteNothing",
+   "refusalsWriteNothing",
+   "refusalsWriteNothing",
+   "refusalsWriteNothing"
+  ],
+  "on_target": true,
+  "totals": "Totals: 4 passed, 6 failed, 0 skipped, 0 blacklisted, 439ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::refusalsWriteNothing(empty) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"invalid\"",
+   "   Expected (status)                     : \"destinationEmpty\"",
+   "FAIL!  : ExportUiTests::refusalsWriteNothing(relative) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"written\"",
+   "   Expected (status)                     : \"destinationRelative\"",
+   "FAIL!  : ExportUiTests::refusalsWriteNothing(folder) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"destinationExists\""
+  ]
+ },
+ {
+  "mutation": "max-items-ignored",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "tooManyItemsAreRefusedBeforeAnyWork",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "tooManyItemsAreRefusedBeforeAnyWork"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 94ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::tooManyItemsAreRefusedBeforeAnyWork() Compared values are not the same",
+   "   Actual   (summary[\"status\"].toString()): \"ready\"",
+   "   Expected (QString(\"tooMany\"))          : \"tooMany\""
+  ]
+ },
+ {
+  "mutation": "runs-on-the-gui-thread",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "exportsSnapshotOnWorkerAndLeavesOriginals",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "exportsSnapshotOnWorkerAndLeavesOriginals"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 95ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::exportsSnapshotOnWorkerAndLeavesOriginals() 'held.worker->load() != std::this_thread::get_id()' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "loaded-at-startup",
+  "file": "ui/Main.qml",
+  "tests": "mainLoadsTheDialogOnlyOnFirstUse",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "mainLoadsTheDialogOnlyOnFirstUse"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 3983ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::mainLoadsTheDialogOnlyOnFirstUse() '!flowOf(h)' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "command-unregistered",
+  "file": "src/app/command_registry.cpp",
+  "tests": "mainLoadsTheDialogOnlyOnFirstUse",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "mainLoadsTheDialogOnlyOnFirstUse"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 3862ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::mainLoadsTheDialogOnlyOnFirstUse() 'listed' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "no-empty-selection-notice",
+  "file": "ui/ExportDialog.qml",
+  "tests": "emptySelectionExplainsAndOpensNothing",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "emptySelectionExplainsAndOpensNothing"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 40445ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::emptySelectionExplainsAndOpensNothing() Compared values are not the same",
+   "   Actual   (deleteFlow->property(\"noticeText\").toString())      : \"\"",
+   "   Expected (QString(\"Select items in the grid to export them.\")): \"Select items in the grid to export them.\""
+  ]
+ },
+ {
+  "mutation": "not-modal-for-shortcuts",
+  "file": "ui/Main.qml",
+  "tests": "exportFromTheDialogShowsTheResult",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "exportFromTheDialogShowsTheResult"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4190ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::exportFromTheDialogShowsTheResult() 'd.h.window->property(\"modalOpen\").toBool()' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "escape-does-not-cancel",
+  "file": "ui/ExportDialog.qml",
+  "tests": "guiStaysLiveAndEscapeCancelsARunningExport existingFileIsReplacedOnlyAfterConfirmation",
+  "exit": "2",
+  "verdict": "KILLED",
+  "failed": [
+   "guiStaysLiveAndEscapeCancelsARunningExport",
+   "existingFileIsReplacedOnlyAfterConfirmation"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 78362ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::guiStaysLiveAndEscapeCancelsARunningExport() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportStatus\"))                      : \"\"",
+   "   Expected (QString(\"Export cancelled. Nothing was written.\")): \"Export cancelled. Nothing was written.\"",
+   "FAIL!  : ExportUiTests::existingFileIsReplacedOnlyAfterConfirmation() Compared values are not the same",
+   "   Actual   (phaseOf(d.h))    : \"replace\"",
+   "   Expected (QString(\"ready\")): \"ready\""
+  ]
+ },
+ {
+  "mutation": "overwrites-without-asking",
+  "file": "ui/ExportDialog.qml",
+  "tests": "existingFileIsReplacedOnlyAfterConfirmation",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "existingFileIsReplacedOnlyAfterConfirmation"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 44278ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::existingFileIsReplacedOnlyAfterConfirmation() Compared values are not the same",
+   "   Actual   (phaseOf(d.h))      : \"done\"",
+   "   Expected (QString(\"replace\")): \"replace\""
+  ]
+ },
+ {
+  "mutation": "replace-in-exports-slot",
+  "file": "ui/ExportDialog.qml",
+  "tests": "existingFileIsReplacedOnlyAfterConfirmation",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "existingFileIsReplacedOnlyAfterConfirmation"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4800ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::existingFileIsReplacedOnlyAfterConfirmation() 'spanOf(keep).left() <= exportAt.x() && exportAt.x() <= spanOf(keep).right()' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "replace-ignores-held-key",
+  "file": "ui/ExportDialog.qml",
+  "tests": "existingFileIsReplacedOnlyAfterConfirmation",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "existingFileIsReplacedOnlyAfterConfirmation"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4704ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::existingFileIsReplacedOnlyAfterConfirmation() Compared values are not the same",
+   "   Actual   (phaseOf(d.h))      : \"running\"",
+   "   Expected (QString(\"replace\")): \"replace\""
+  ]
+ },
+ {
+  "mutation": "offers-replace-for-an-item",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "anExportedItemIsNeverOfferedForReplacing",
+  "exit": "0",
+  "verdict": "SURVIVED",
+  "failed": [],
+  "on_target": null,
+  "totals": "Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 6909ms",
+  "lines": [],
+  "note": "Equivalent mutant: it clears the service's refusal, and the engine then refuses the same destination itself (src/core/selection_export.cpp:292), so behaviour is unchanged. Replaced by item-reason-not-reported and unselected-photo-replaceable below."
+ },
+ {
+  "mutation": "selection-move-unnoticed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "selectionChangeBehindTheDialogNeverChangesTheExport selectionEmptiedBehindTheDialogStillExportsTheCapture",
+  "exit": "2",
+  "verdict": "KILLED",
+  "failed": [
+   "selectionChangeBehindTheDialogNeverChangesTheExport",
+   "selectionEmptiedBehindTheDialogStillExportsTheCapture"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 82159ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::selectionChangeBehindTheDialogNeverChangesTheExport() 'visibleItem(d.h, \"exportSelectionChanged\")' returned FALSE. ()",
+   "FAIL!  : ExportUiTests::selectionEmptiedBehindTheDialogStillExportsTheCapture() 'visibleItem(d.h, \"exportSelectionChanged\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "export-follows-the-selection",
+  "file": "ui/ExportDialog.qml",
+  "tests": "selectionChangeBehindTheDialogNeverChangesTheExport",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "selectionChangeBehindTheDialogNeverChangesTheExport"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 43769ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::selectionChangeBehindTheDialogNeverChangesTheExport() 'visibleItem(d.h, \"exportSelectionChanged\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "failure-closes-silently",
+  "file": "ui/ExportDialog.qml",
+  "tests": "engineExceptionBecomesAClearMessage",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "engineExceptionBecomesAClearMessage"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 46015ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::engineExceptionBecomesAClearMessage() 'visibleItem(d.h, \"exportError\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "unwritable-unexplained",
+  "file": "ui/ExportDialog.qml",
+  "tests": "unwritableDestinationBecomesAClearMessage",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "unwritableDestinationBecomesAClearMessage"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 44752ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::unwritableDestinationBecomesAClearMessage() 'visibleItem(d.h, \"exportError\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "skips-not-shown",
+  "file": "ui/ExportDialog.qml",
+  "tests": "itemsLeftOutAreNamedWithTheirReason",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "itemsLeftOutAreNamedWithTheirReason"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 7838ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::itemsLeftOutAreNamedWithTheirReason() 'visibleItem(d.h, \"exportSkipped\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "format-change-ignored",
+  "file": "ui/ExportDialog.qml",
+  "tests": "changingTheFileTypeFollowsThroughToThePathAndOptions",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "changingTheFileTypeFollowsThroughToThePathAndOptions"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 6710ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::changingTheFileTypeFollowsThroughToThePathAndOptions() Compared values are not the same",
+   "   Actual   (item(d.h, \"exportDestination\")->property(\"text\").toString()): \"C:/Users/dvort/AppData/Local/Temp/export_ui_tests-jKZolB/list.csv\"",
+   "   Expected (out.filePath(\"list.txt\"))                                   : \"C:/Users/dvort/AppData/Local/Temp/export_ui_tests-jKZolB/list.txt\""
+  ]
+ },
+ {
+  "mutation": "no-initial-focus",
+  "file": "ui/ExportDialog.qml",
+  "tests": "keyboardOperableWithAccessibleNames",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "keyboardOperableWithAccessibleNames"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 44821ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::keyboardOperableWithAccessibleNames() 'field->hasActiveFocus()' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "export-not-named",
+  "file": "ui/ExportDialog.qml",
+  "tests": "keyboardOperableWithAccessibleNames",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "keyboardOperableWithAccessibleNames"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 7471ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::keyboardOperableWithAccessibleNames() 'accessible && !accessible->text(QAccessible::Name).isEmpty()' returned FALSE. (exportFormat)"
+  ]
+ },
+ {
+  "mutation": "idle-escape-ignored",
+  "file": "ui/ExportDialog.qml",
+  "tests": "escapeClosesAnIdleDialog",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "escapeClosesAnIdleDialog"
+  ],
+  "on_target": true,
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 42131ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::escapeClosesAnIdleDialog() '!d.h.window->property(\"modalOpen\").toBool()' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "too-wide-for-560",
+  "file": "ui/ExportDialog.qml",
+  "tests": "fitsAtNarrowAndWideWindows",
+  "exit": "2",
+  "verdict": "KILLED",
+  "failed": [
+   "fitsAtNarrowAndWideWindows",
+   "fitsAtNarrowAndWideWindows",
+   "fitsAtNarrowAndWideWindows",
+   "fitsAtNarrowAndWideWindows"
+  ],
+  "on_target": true,
+  "totals": "Totals: 3 passed, 2 failed, 0 skipped, 0 blacklisted, 11098ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::fitsAtNarrowAndWideWindows(560) 'frame.left() >= 0 && frame.right() <= width' returned FALSE. (dialog 0..640 of 560)",
+   "FAIL!  : ExportUiTests::fitsAtNarrowAndWideWindows(560) '!QTest::currentTestFailed()' returned FALSE. ()",
+   "FAIL!  : ExportUiTests::fitsAtNarrowAndWideWindows(560 short) 'frame.left() >= 0 && frame.right() <= width' returned FALSE. (dialog 0..640 of 560)",
+   "FAIL!  : ExportUiTests::fitsAtNarrowAndWideWindows(560 short) '!QTest::currentTestFailed()' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "item-reason-not-reported",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "refusalsWriteNothing anExportedItemIsNeverOfferedForReplacing",
+  "exit": "2",
+  "verdict": "KILLED",
+  "failed": [
+   "refusalsWriteNothing(an",
+   "anExportedItemIsNeverOfferedForReplacing()"
+  ],
+  "on_target": true,
+  "totals": "Totals: 9 passed, 2 failed, 0 skipped, 0 blacklisted, 3590ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::refusalsWriteNothing(an exported item) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"destinationProtected\"",
+   "   Expected (status)                     : \"destinationIsItem\"",
+   "FAIL!  : ExportUiTests::anExportedItemIsNeverOfferedForReplacing() 'textOf(d.h, \"exportErrorText\").contains(\"is one of the items being exported\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "unselected-photo-replaceable",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "refusalsWriteNothing anExportedItemIsNeverOfferedForReplacing",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "refusalsWriteNothing(a"
+  ],
+  "on_target": true,
+  "totals": "Totals: 10 passed, 1 failed, 0 skipped, 0 blacklisted, 3064ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::refusalsWriteNothing(a photo not in the selection) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"written\"",
+   "   Expected (status)                     : \"destinationProtected\""
+  ]
+ }
+]

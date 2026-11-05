@@ -137,6 +137,8 @@ static const std::vector<Command> registry {
     {"grid-select-all","Select all items","",false,"grid"},
     {"tree-open-folder","Open the focused folder","",false,"tree"},
     {"focus-path","Edit the folder path","",false,"global"}, {"copy-folder-path","Copy the folder path","",false,"global"},
+    // B3 (F070)
+    {"export-selection", "Export selection as CSV or path list", "Ctrl+Shift+E"},
     {"paste-path","Go to the folder path on the clipboard","",false,"global"},
     {"quit","Quit","Ctrl+Q"}
 };

@@ -1,0 +1,8 @@
+build 0
+round 1 tip with the wait added: 0 of 6 failed
+round 2 tip with the wait added: 0 of 6 failed
+round 3 tip with the wait added: 0 of 6 failed
+round 4 tip with the wait added: 0 of 6 failed
+round 5 tip with the wait added: 0 of 6 failed
+tip latency build 0
+base latency build 0

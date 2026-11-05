@@ -95,6 +95,54 @@ struct DirectoryEntryModel::Private {
         entryLimit = tuning.entryStep;
         drainTimer.setInterval(kDrainIntervalMs);
         QObject::connect(&drainTimer, &QTimer::timeout, q, [this] { drain(); });
+        // Connected before anything outside the model, so the totals are forgotten before any reader hears of a change.
+        const auto forget = [this] { selectionTotals.reset(); };
+        QObject::connect(q, &DirectoryEntryModel::selectionChanged, q, forget);
+        QObject::connect(q, &DirectoryEntryModel::countChanged, q, forget);
+        QObject::connect(q, &DirectoryEntryModel::directoryChanged, q, forget);
+        QObject::connect(q, &QAbstractItemModel::rowsInserted, q, forget);
+        QObject::connect(q, &QAbstractItemModel::rowsRemoved, q, forget);
+        QObject::connect(q, &QAbstractItemModel::modelReset, q, forget);
+        QObject::connect(q, &QAbstractItemModel::layoutChanged, q, forget);
+        QObject::connect(q, &QAbstractItemModel::dataChanged, q, forget);
+    }
+    // Every selectionChanged makes QML read the count, the bytes and the summary several times. Walking 100,000 rows
+    // for each read cost about 50 ms per signal with one row selected, so the totals come from the selected keys,
+    // once, and are kept until the rows or the selection change.
+    struct SelectionTotals { int count{}; qint64 bytes{}; };
+    mutable std::optional<SelectionTotals> selectionTotals;
+    // Inside a merge or a tick's inserts the index lags the rows, so a lookup by key is not yet true there. A reader
+    // woken by a signal from inside one walks the rows instead, and nothing is kept.
+    int changingRows{};
+    struct ChangingRows {
+        int& depth;
+        explicit ChangingRows(int& value) : depth(value) { ++depth; }
+        ~ChangingRows() { --depth; }
+    };
+    SelectionTotals walkRows() const {
+        SelectionTotals result;
+        if (!accessible || selected.isEmpty()) return result;
+        for (const auto& row : rows) {
+            if (!selected.contains(row.key)) continue;
+            ++result.count;
+            if (row.size > 0) result.bytes += row.size;
+        }
+        return result;
+    }
+    SelectionTotals totals() const {
+        if (selectionTotals) return *selectionTotals;
+        if (changingRows) return walkRows();
+        SelectionTotals result;
+        if (accessible) {
+            for (const auto& key : selected) {
+                const int row = rowOfKey(key);
+                if (row < 0 || row >= int(rows.size()) || rows[std::size_t(row)].key != key) continue;
+                ++result.count;
+                if (rows[std::size_t(row)].size > 0) result.bytes += rows[std::size_t(row)].size;
+            }
+        }
+        selectionTotals = result;
+        return result;
     }
     ~Private() {
         stop.request_stop();
@@ -213,6 +261,7 @@ struct DirectoryEntryModel::Private {
         bool dry = false;
         { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, generation);
         std::vector<Row> folders, files;
+        const int cursorBefore = rowOfKey(cursorKey);
         const auto admit = [&](std::vector<Row>& from, std::vector<Row>& to, bool folder) {
             for (auto& row : from) {
                 rawListing.rows.push_back(row);
@@ -235,18 +284,22 @@ struct DirectoryEntryModel::Private {
         // would call again for a finished scan.
         dry = definitive.has_value() || (!batch && budget.elapsed() < kDrainBudgetMs);
         publication.setBytes(folders.size() + files.size());
+        { const ChangingRows changing(changingRows);
         if (!folders.empty()) {
             q->beginInsertRows({}, provisionalFolders, provisionalFolders + int(folders.size()) - 1);
             rows.insert(rows.begin() + provisionalFolders, std::make_move_iterator(folders.begin()), std::make_move_iterator(folders.end()));
             provisionalFolders += int(folders.size());
             q->endInsertRows();
-            if (!cursorKey.isEmpty()) emit q->selectionChanged(); // the rows below moved, the cursor's among them
         }
         if (!files.empty()) {
             q->beginInsertRows({}, int(rows.size()), int(rows.size() + files.size()) - 1);
             rows.insert(rows.end(), std::make_move_iterator(files.begin()), std::make_move_iterator(files.end()));
             q->endInsertRows();
         }
+        }
+        // Every selectionChanged re-reads the selection, so this says only what changed: the cursor's row moved below
+        // inserted folders, or it has just arrived.
+        if (rowOfKey(cursorKey) != cursorBefore) emit q->selectionChanged();
         if (!folders.empty() || !files.empty()) emit q->countChanged();
         if (provisional && !accessible) { accessible = true; emit q->directoryChanged(); } // recovering: rows, not the failure, are showing
         }
@@ -391,6 +444,7 @@ struct DirectoryEntryModel::Private {
     // Same folder relisted: remove vanished rows and insert new ones in place when the surviving order is
     // unchanged, so delegates, scroll position and in-flight previews survive a refresh. Otherwise reset.
     void merge(Listing listing) {
+        const ChangingRows changing(changingRows);
 #ifdef GLANCELOT_FS_WATCH_TESTING
         QElapsedTimer scanClock;scanClock.start();
 #endif
@@ -728,24 +782,8 @@ int DirectoryEntryModel::matchIndex(const QString& query, int row) const {
     }
     return index;
 }
-int DirectoryEntryModel::selectedCount() const {
-    if (!d->accessible || d->selected.isEmpty()) return 0;
-    int count = 0;
-    for (const auto& row : d->rows) {
-        if (d->selected.contains(row.key)) ++count;
-    }
-    return count;
-}
-qint64 DirectoryEntryModel::selectedBytes() const {
-    if (!d->accessible || d->selected.isEmpty()) return 0;
-    qint64 total = 0;
-    for (const auto& row : d->rows) {
-        if (d->selected.contains(row.key) && row.size > 0) {
-            total += row.size;
-        }
-    }
-    return total;
-}
+int DirectoryEntryModel::selectedCount() const { return d->totals().count; }
+qint64 DirectoryEntryModel::selectedBytes() const { return d->totals().bytes; }
 QString DirectoryEntryModel::selectedBytesFormatted() const {
     return QLocale().formattedDataSize(selectedBytes());
 }
@@ -763,7 +801,19 @@ int DirectoryEntryModel::cursorRow() const { return d->rowOfKey(d->cursorKey); }
 QStringList DirectoryEntryModel::selectedPaths() const {
     QStringList paths;
     if (d->selected.isEmpty()) return paths;
-    for (const auto& row : d->rows) if (d->selected.contains(row.key)) paths << row.path;
+    if (d->changingRows) {
+        for (const auto& row : d->rows) if (d->selected.contains(row.key)) paths << row.path;
+        return paths;
+    }
+    std::vector<int> found;
+    found.reserve(std::size_t(d->selected.size()));
+    for (const auto& key : d->selected) {
+        const int row = d->rowOfKey(key);
+        if (row >= 0 && row < int(d->rows.size()) && d->rows[std::size_t(row)].key == key) found.push_back(row);
+    }
+    std::sort(found.begin(), found.end()); // listing order
+    paths.reserve(qsizetype(found.size()));
+    for (const int row : found) paths << d->rows[std::size_t(row)].path;
     return paths;
 }
 int DirectoryEntryModel::rowOf(const QString& path) const { return d->rowOfKey(keyFor(path)); }

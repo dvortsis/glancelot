@@ -1,0 +1,42 @@
+tree: 99af5686 docs: STACK-CONFIRM-FIX round 5 handoff and evidence + review probe
+new segs=0 sems=0 qipc=0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(current worker only) PROBE gap 0 retire 0: closing took 620 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, closed at once) PROBE gap 0 retire 1: closing took 378 ms, orphan segments 1
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 1 ms of event loop) PROBE gap 1 retire 1: closing took 219 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 5 ms of event loop) PROBE gap 5 retire 1: closing took 266 ms, orphan segments -1
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 232 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 100 ms of event loop) PROBE gap 100 retire 1: closing took 265 ms, orphan segments 0
+Totals: 8 passed, 0 failed, 0 skipped, 0 blacklisted, 28125ms
+after run 1: new segs=0 sems=0 qipc=0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(current worker only) PROBE gap 0 retire 0: closing took 227 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, closed at once) PROBE gap 0 retire 1: closing took 250 ms, orphan segments 1
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 1 ms of event loop) PROBE gap 1 retire 1: closing took 190 ms, orphan segments -1
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 5 ms of event loop) PROBE gap 5 retire 1: closing took 383 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 169 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 100 ms of event loop) PROBE gap 100 retire 1: closing took 212 ms, orphan segments 0
+Totals: 8 passed, 0 failed, 0 skipped, 0 blacklisted, 22279ms
+after run 2: new segs=0 sems=0 qipc=0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(current worker only) PROBE gap 0 retire 0: closing took 553 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, closed at once) PROBE gap 0 retire 1: closing took 178 ms, orphan segments 1
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 1 ms of event loop) PROBE gap 1 retire 1: closing took 185 ms, orphan segments -1
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 5 ms of event loop) PROBE gap 5 retire 1: closing took 242 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 165 ms, orphan segments 0
+QINFO  : StackConfirmUiTests::reviewProbeRetiredThenClosed(retired, 100 ms of event loop) PROBE gap 100 retire 1: closing took 143 ms, orphan segments 0
+Totals: 8 passed, 0 failed, 0 skipped, 0 blacklisted, 18620ms
+after run 3: new segs=0 sems=0 qipc=0
+--- after cleanup: new segs=0 sems=0 qipc=0
+--- whole dying test, 2 runs, semaphores and tmp files
+Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 20091ms
+after: new segs=0 sems=0 qipc=0
+Totals: 7 passed, 0 failed, 0 skipped, 0 blacklisted, 16945ms
+after: new segs=0 sems=0 qipc=0
+--- real decoders, rate run 2 passes pace 40
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() RESULT pace 40: 158 steps in 25309 ms, undecoded 0, max GUI gap 199 ms, mapped at the end 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 29328ms
+after: new segs=0 sems=0 qipc=0
+--- viewer killed by SIGKILL mid-transfer (own child only)
+during: new segs=0 sems=0 qipc=0
+/mnt/c/Users/dvort/AppData/Local/Temp/claude/08b59457e92d743b/3964ed69-a862-46ee-810f-014ad601c81c/scratchpad/scr5review/linux-probe1.sh: line 34: kill: (12273) - No such process
+viewer gone, own workers: ; new segs=0 sems=0 qipc=0
+own workers gone: new segs=0 sems=0 qipc=0
+after cleanup: new segs=0 sems=0 qipc=0

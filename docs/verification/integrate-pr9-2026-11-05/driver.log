@@ -1,0 +1,6 @@
+Waiting: 3 build slots held (claude/en-07 pid 90068, claude/a1-perf-enum pid 40320, claude/b1-asset-group pid 45200)
+Waiting: 2 build slots held (claude/en-07 pid 90068, claude/a1-perf-enum pid 40320)
+Waiting: 1 build slots held (claude/a1-perf-enum pid 40320)
+WINDOWS exit 0 2406s
+DOCKER exit 0 1781s
+2821460051

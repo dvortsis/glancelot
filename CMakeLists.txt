@@ -328,6 +328,7 @@ if(GLANCELOT_BUILD_VIEWER)
     include(cmake/PerfEnumTests.cmake) # A1 PERF-ENUM + F016
   endif()
   include(cmake/ReferencePinTests.cmake)
+  include(cmake/ExportUiTests.cmake) # B3 (F070)
   include(cmake/StackConfirmTests.cmake)
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

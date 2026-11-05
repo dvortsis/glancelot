@@ -26,7 +26,7 @@ Rectangle {
     property bool moreRequested: false // "Show more" was pressed and its listing has not landed
     property bool moreHadFocus: false
     property string searchQuery: ""
-    property int preSearchRow: -1
+    property string preSearchPath: "" // the file type-ahead started from: rows move while a listing arrives
     property bool filterExpanded: false
     function openFilter() {
         filterExpanded = true
@@ -283,7 +283,7 @@ Rectangle {
     }
     onVisibleChanged: {
         searchQuery = ""
-        preSearchRow = -1
+        preSearchPath = ""
         searchTimer.stop()
         fileGrid.setActive(visible) // hidden: no listing, no rows, no thumbnail requests
         if (visible) Qt.callLater(enter)
@@ -294,7 +294,7 @@ Rectangle {
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
     onFolderPathChanged: {
         searchQuery = ""
-        preSearchRow = -1
+        preSearchPath = ""
         searchTimer.stop()
         placeCursor = true
     }
@@ -325,12 +325,12 @@ Rectangle {
         function onLayoutAboutToBeChanged() { grid.forceLayout(); panel.rememberViewport() }
         function onLayoutChanged() {
             const saved = panel.resetViewport
-            if (saved && (saved.scroll > 0 || saved.cursorVisible)) Qt.callLater(panel.restoreViewport, saved) // at the top stays at the top
+            if (saved && (saved.scroll > 0 || saved.cursorVisible)) panel.restoreViewport(saved) // now, before a frame can show the old position over the new rows; at the top stays at the top
         }
         function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
-    Timer { id: searchTimer; interval: 3000; onTriggered: { searchQuery = ""; preSearchRow = -1 } }
+    Timer { id: searchTimer; interval: 3000; onTriggered: { searchQuery = ""; preSearchPath = "" } }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
 
     // Location header: parent route, folder name, item count and multi-selection count.
@@ -540,7 +540,7 @@ Rectangle {
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
-                        onClicked: { fileGrid.invertSelection(); panel.focusGrid() }
+                        onClicked: { panel.settleByUser(); fileGrid.invertSelection(); panel.focusGrid() }
                     }
                     UiButton {
                         objectName: "gridClearSelection"
@@ -551,7 +551,7 @@ Rectangle {
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
-                        onClicked: { fileGrid.clearSelection(); panel.focusGrid() }
+                        onClicked: { panel.settleByUser(); fileGrid.clearSelection(); panel.focusGrid() }
                     }
                 }
             }
@@ -695,7 +695,7 @@ Rectangle {
             // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
             if (event.key >= 0x20 && event.key <= 0x7e && !mods && event.text.length > 0) {
                 if (panel.searchQuery.length === 0) {
-                    panel.preSearchRow = fileGrid.cursorRow
+                    panel.preSearchPath = fileGrid.pathAt(fileGrid.cursorRow)
                 }
                 panel.searchQuery += event.text
                 const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
@@ -728,7 +728,7 @@ Rectangle {
             if (event.key === Qt.Key_Backspace && panel.searchQuery.length > 0) {
                 panel.searchQuery = panel.searchQuery.slice(0, -1)
                 if (panel.searchQuery.length === 0) {
-                    panel.preSearchRow = -1
+                    panel.preSearchPath = ""
                     searchTimer.stop()
                 } else {
                     const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
@@ -743,11 +743,10 @@ Rectangle {
 
             // Escape while searching
             if (event.key === Qt.Key_Escape && panel.searchQuery.length > 0) {
-                if (panel.preSearchRow >= 0 && panel.preSearchRow < fileGrid.count) {
-                    panel.select(panel.preSearchRow, panel.modeReplace)
-                }
+                const preSearch = panel.preSearchPath.length ? fileGrid.rowOf(panel.preSearchPath) : -1
+                if (preSearch >= 0) panel.select(preSearch, panel.modeReplace)
                 panel.searchQuery = ""
-                panel.preSearchRow = -1
+                panel.preSearchPath = ""
                 searchTimer.stop()
                 event.accepted = true
                 return
@@ -756,7 +755,7 @@ Rectangle {
             // Return / Enter while searching
             if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && panel.searchQuery.length > 0) {
                 panel.searchQuery = ""
-                panel.preSearchRow = -1
+                panel.preSearchPath = ""
                 searchTimer.stop()
                 panel.activate()
                 event.accepted = true
@@ -843,7 +842,7 @@ Rectangle {
             Accessible.selected: isSelected
             Accessible.focusable: true
             Accessible.focused: isCursor && grid.activeFocus
-            Accessible.onPressAction: { panel.select(index); panel.activate() }
+            Accessible.onPressAction: { panel.settleByUser(); panel.select(index); panel.activate() }
             ToolTip.visible: hovered
             ToolTip.delay: 600
             ToolTip.text: name + (kind === "folder" && isLink ? " (link)" : "") + (kind === "file" ? " (not a supported photo)" : "") + (previewFailed ? " (preview unavailable)" : "")

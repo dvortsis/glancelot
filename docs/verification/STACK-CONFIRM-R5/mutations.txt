@@ -1,0 +1,34 @@
+=== MC1 : stack_confirm_ui_tests aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory
+exit -1073740791, 33 s
+QFATAL : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching) The GUI thread has been blocked for 30000 ms: the viewer is frozen.
+FAIL!  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching) Received a fatal error.
+Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 32730ms
+=== MC1 : stack_confirm_ui_tests closingTheViewerMidTransferLeavesNoMemoryBehind
+exit -1073740791, 90 s
+QFATAL : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind() Test function timed out
+FAIL!  : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind() Received a fatal error.
+Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 90009ms
+MUTATE FAILED N23
+MUTATE FAILED N1
+=== DELAY : input_ui_tests precedenceMatrixForTheSameKey
+exit 0, 14 s
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 13358ms
+=== rebuild clean
+rebuild exit 0
+=== N23 : stack_confirm_ui_tests slideshowShowsAPhotoForTheFullPaceAfterASlowStep
+exit 1, 35 s
+FAIL!  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() 'shownFor[photo] >= paceMs - 200' returned FALSE. (e-1.png was on screen for 277 ms at a 1000 ms pace)
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 35374ms
+=== N23 : stack_confirm_ui_tests slideshowEndsOnAManualOpenDuringItsOwnStep
+exit 3, 19 s
+FAIL!  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder) '!flag(h, "slideshowOn")' returned FALSE. (the manual open was taken for the slideshow's own step)
+FAIL!  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory) '!flag(h, "slideshowOn")' returned FALSE. (the manual open was taken for the slideshow's own step)
+FAIL!  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo) '!flag(h, "slideshowOn")' returned FALSE. (the manual open was taken for the slideshow's own step)
+Totals: 2 passed, 3 failed, 0 skipped, 0 blacklisted, 18489ms
+=== N1 : stack_confirm_ui_tests slideshowWaitsForASlowFolderStep
+exit 2, 131 s
+FAIL!  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) Compared lists have different sizes.
+FAIL!  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) Compared lists have different sizes.
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 130918ms
+=== rebuild clean
+rebuild exit 0

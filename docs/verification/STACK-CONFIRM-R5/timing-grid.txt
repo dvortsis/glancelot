@@ -1,0 +1,30 @@
+[04:28:24] latency base : QINFO  : StackConfirmUiTests::reviewProbeDecodeLatency() PROBE latency n=80 median=247775 us p90=305529 us mean=249423 us PASS   : StackConfirmUiTests::reviewProbeDecodeLatency()
+[04:28:46] latency tip : QINFO  : StackConfirmUiTests::reviewProbeDecodeLatency() PROBE latency n=80 median=247563 us p90=250743 us mean=235864 us PASS   : StackConfirmUiTests::reviewProbeDecodeLatency()
+[04:29:10] latency base : QINFO  : StackConfirmUiTests::reviewProbeDecodeLatency() PROBE latency n=80 median=247835 us p90=304615 us mean=246961 us PASS   : StackConfirmUiTests::reviewProbeDecodeLatency()
+[04:29:33] latency tip : QINFO  : StackConfirmUiTests::reviewProbeDecodeLatency() PROBE latency n=80 median=247614 us p90=258321 us mean=242981 us PASS   : StackConfirmUiTests::reviewProbeDecodeLatency()
+[04:29:56] latency base : QINFO  : StackConfirmUiTests::reviewProbeDecodeLatency() PROBE latency n=80 median=243819 us p90=259282 us mean=233622 us PASS   : StackConfirmUiTests::reviewProbeDecodeLatency()
+[04:30:18] latency tip : QINFO  : StackConfirmUiTests::reviewProbeDecodeLatency() PROBE latency n=80 median=245484 us p90=258310 us mean=227166 us PASS   : StackConfirmUiTests::reviewProbeDecodeLatency()
+[04:30:18] ctest ^input_ui$ on tip
+[04:31:51] 1/1 Test #13: input_ui .........................   Passed   92.46 sec
+[04:31:51] 100% tests passed out of 1
+[04:31:51] Total Test time (real) =  92.53 sec
+[04:31:51] ctest ^input_ui$ on base
+[04:33:16] 1/1 Test #13: input_ui .........................   Passed   84.87 sec
+[04:33:16] 100% tests passed out of 1
+[04:33:16] Total Test time (real) =  84.88 sec
+[04:33:16] ctest ^folder_grid$ on tip
+[04:37:12] 1/1 Test #12: folder_grid ......................   Passed  235.55 sec
+[04:37:12] 100% tests passed out of 1
+[04:37:12] Total Test time (real) = 235.61 sec
+[04:37:12] ctest ^folder_grid$ on base
+[04:41:09] 1/1 Test #12: folder_grid ......................   Passed  236.31 sec
+[04:41:09] 100% tests passed out of 1
+[04:41:09] Total Test time (real) = 236.39 sec
+[04:41:09] ctest ^fs_watch_budget$ on base
+[04:43:03] 1/1 Test #24: fs_watch_budget ..................   Passed  113.73 sec
+[04:43:04] 100% tests passed out of 1
+[04:43:04] Total Test time (real) = 113.80 sec
+[04:43:04] ctest ^fs_watch_budget$ on tip
+[04:44:59] 1/1 Test #24: fs_watch_budget ..................   Passed  114.70 sec
+[04:44:59] 100% tests passed out of 1
+[04:44:59] Total Test time (real) = 114.75 sec

@@ -198,6 +198,269 @@
     </message>
 </context>
 <context>
+    <name>ExportDialog</name>
+    <message>
+        <source>These items couldn&apos;t be read, so nothing can be exported.</source>
+        <translation>[Thésé îtéms çõûldñ&apos;t bé réàd, sõ ñõthîñg çàñ bé éxpõrtéd.]</translation>
+    </message>
+    <message>
+        <source>1 item</source>
+        <translation>[1 îtém]</translation>
+    </message>
+    <message>
+        <source>%1 items</source>
+        <translation>[%1 îtéms]</translation>
+    </message>
+    <message>
+        <source>Select items in the grid to export them.</source>
+        <translation>[Séléçt îtéms îñ thé grîd tõ éxpõrt thém.]</translation>
+    </message>
+    <message>
+        <source>Export cancelled. Nothing was written.</source>
+        <translation>[Éxpõrt çàñçélléd. Ñõthîñg wàs wrîttéñ.]</translation>
+    </message>
+    <message>
+        <source>Enter where to save the file.</source>
+        <translation>[Éñtér whéré tõ sàvé thé fîlé.]</translation>
+    </message>
+    <message>
+        <source>Enter a full path, including the folder.</source>
+        <translation>[Éñtér à fûll pàth, îñçlûdîñg thé fõldér.]</translation>
+    </message>
+    <message>
+        <source>That&apos;s a folder. Add a file name to the end of the path.</source>
+        <translation>[Thàt&apos;s à fõldér. Àdd à fîlé ñàmé tõ thé éñd õf thé pàth.]</translation>
+    </message>
+    <message>
+        <source>That folder doesn&apos;t exist. Choose another location.</source>
+        <translation>[Thàt fõldér dõésñ&apos;t éxîst. Çhõõsé àñõthér lõçàtîõñ.]</translation>
+    </message>
+    <message>
+        <source>“%1” already exists and isn&apos;t a .csv or .txt file, so it can&apos;t be replaced. Choose another name.</source>
+        <translation>[“%1” àlréàdý éxîsts àñd îsñ&apos;t à .çsv õr .txt fîlé, sõ ît çàñ&apos;t bé réplàçéd. Çhõõsé àñõthér ñàmé.]</translation>
+    </message>
+    <message>
+        <source>“%1” is one of the items being exported, so it can&apos;t be replaced. Choose another name.</source>
+        <translation>[“%1” îs õñé õf thé îtéms béîñg éxpõrtéd, sõ ît çàñ&apos;t bé réplàçéd. Çhõõsé àñõthér ñàmé.]</translation>
+    </message>
+    <message>
+        <source>That&apos;s too many items to export at once.</source>
+        <translation>[Thàt&apos;s tõõ màñý îtéms tõ éxpõrt àt õñçé.]</translation>
+    </message>
+    <message>
+        <source>That location can&apos;t be written to, so nothing was saved. Check that you have permission and enough space, or choose another location.</source>
+        <translation>[Thàt lõçàtîõñ çàñ&apos;t bé wrîttéñ tõ, sõ ñõthîñg wàs sàvéd. Çhéçk thàt ýõû hàvé pérmîssîõñ àñd éñõûgh spàçé, õr çhõõsé àñõthér lõçàtîõñ.]</translation>
+    </message>
+    <message>
+        <source>The export stopped because of an unexpected problem. Nothing was written.</source>
+        <translation>[Thé éxpõrt stõppéd béçàûsé õf àñ ûñéxpéçtéd prõblém. Ñõthîñg wàs wrîttéñ.]</translation>
+    </message>
+    <message>
+        <source>It&apos;s missing or can&apos;t be read.</source>
+        <translation>[Ît&apos;s mîssîñg õr çàñ&apos;t bé réàd.]</translation>
+    </message>
+    <message>
+        <source>It changed after the dialog opened.</source>
+        <translation>[Ît çhàñgéd àftér thé dîàlõg õpéñéd.]</translation>
+    </message>
+    <message>
+        <source>It&apos;s already in the list.</source>
+        <translation>[Ît&apos;s àlréàdý îñ thé lîst.]</translation>
+    </message>
+    <message>
+        <source>It&apos;s outside the chosen folder.</source>
+        <translation>[Ît&apos;s õûtsîdé thé çhõséñ fõldér.]</translation>
+    </message>
+    <message>
+        <source>Its name can&apos;t be written as text.</source>
+        <translation>[Îts ñàmé çàñ&apos;t bé wrîttéñ às téxt.]</translation>
+    </message>
+    <message>
+        <source>It couldn&apos;t be included.</source>
+        <translation>[Ît çõûldñ&apos;t bé îñçlûdéd.]</translation>
+    </message>
+    <message>
+        <source>Export finished</source>
+        <translation>[Éxpõrt fîñîshéd]</translation>
+    </message>
+    <message>
+        <source>Export selection</source>
+        <translation>[Éxpõrt séléçtîõñ]</translation>
+    </message>
+    <message>
+        <source>Checking the selected items…</source>
+        <translation>[Çhéçkîñg thé séléçtéd îtéms…]</translation>
+    </message>
+    <message>
+        <source>%1 items is more than can be exported at once. The limit is %2.</source>
+        <translation>[%1 îtéms îs mõré thàñ çàñ bé éxpõrtéd àt õñçé. Thé lîmît îs %2.]</translation>
+    </message>
+    <message>
+        <source>None of the selected items can be exported.</source>
+        <translation>[Ñõñé õf thé séléçtéd îtéms çàñ bé éxpõrtéd.]</translation>
+    </message>
+    <message>
+        <source>1 file to export</source>
+        <translation>[1 fîlé tõ éxpõrt]</translation>
+    </message>
+    <message>
+        <source>%1 files to export</source>
+        <translation>[%1 fîlés tõ éxpõrt]</translation>
+    </message>
+    <message>
+        <source>1 folder to export</source>
+        <translation>[1 fõldér tõ éxpõrt]</translation>
+    </message>
+    <message>
+        <source>%1 folders to export</source>
+        <translation>[%1 fõldérs tõ éxpõrt]</translation>
+    </message>
+    <message>
+        <source>%1 to export</source>
+        <translation>[%1 tõ éxpõrt]</translation>
+    </message>
+    <message>
+        <source>1 selected item can&apos;t be included, because it&apos;s missing or its name can&apos;t be written as text.</source>
+        <translation>[1 séléçtéd îtém çàñ&apos;t bé îñçlûdéd, béçàûsé ît&apos;s mîssîñg õr îts ñàmé çàñ&apos;t bé wrîttéñ às téxt.]</translation>
+    </message>
+    <message>
+        <source>%1 selected items can&apos;t be included, because they&apos;re missing or their names can&apos;t be written as text.</source>
+        <translation>[%1 séléçtéd îtéms çàñ&apos;t bé îñçlûdéd, béçàûsé théý&apos;ré mîssîñg õr théîr ñàmés çàñ&apos;t bé wrîttéñ às téxt.]</translation>
+    </message>
+    <message>
+        <source>The selection is now empty. This export still uses the %1 you started with.</source>
+        <translation>[Thé séléçtîõñ îs ñõw émptý. Thîs éxpõrt stîll ûsés thé %1 ýõû stàrtéd wîth.]</translation>
+    </message>
+    <message>
+        <source>The selection is now %1. This export still uses the %2 you started with.</source>
+        <translation>[Thé séléçtîõñ îs ñõw %1. Thîs éxpõrt stîll ûsés thé %2 ýõû stàrtéd wîth.]</translation>
+    </message>
+    <message>
+        <source>Use the current selection</source>
+        <translation>[Ûsé thé çûrréñt séléçtîõñ]</translation>
+    </message>
+    <message>
+        <source>File type</source>
+        <translation>[Fîlé týpé]</translation>
+    </message>
+    <message>
+        <source>CSV spreadsheet</source>
+        <translation>[ÇSV spréàdshéét]</translation>
+    </message>
+    <message>
+        <source>Plain text path list</source>
+        <translation>[Plàîñ téxt pàth lîst]</translation>
+    </message>
+    <message>
+        <source>Paths</source>
+        <translation>[Pàths]</translation>
+    </message>
+    <message>
+        <source>Full paths</source>
+        <translation>[Fûll pàths]</translation>
+    </message>
+    <message>
+        <source>Relative to “%1”</source>
+        <translation>[Rélàtîvé tõ “%1”]</translation>
+    </message>
+    <message>
+        <source>Save to</source>
+        <translation>[Sàvé tõ]</translation>
+    </message>
+    <message>
+        <source>Browse…</source>
+        <translation>[Brõwsé…]</translation>
+    </message>
+    <message>
+        <source>Protect against spreadsheet formulas</source>
+        <translation>[Prõtéçt àgàîñst spréàdshéét fõrmûlàs]</translation>
+    </message>
+    <message>
+        <source>Adds an apostrophe in front of values that start with =, +, - or @, so a spreadsheet shows them as text and doesn&apos;t run them.</source>
+        <translation>[Àdds àñ àpõstrõphé îñ frõñt õf vàlûés thàt stàrt wîth =, +, - õr @, sõ à spréàdshéét shõws thém às téxt àñd dõésñ&apos;t rûñ thém.]</translation>
+    </message>
+    <message>
+        <source>Exported %1 of %2</source>
+        <translation>[Éxpõrtéd %1 õf %2]</translation>
+    </message>
+    <message>
+        <source>Stopping after the current item…</source>
+        <translation>[Stõppîñg àftér thé çûrréñt îtém…]</translation>
+    </message>
+    <message>
+        <source>“%1” already exists. Replace it with this export?</source>
+        <translation>[“%1” àlréàdý éxîsts. Réplàçé ît wîth thîs éxpõrt?]</translation>
+    </message>
+    <message>
+        <source>Exported %1 to “%2”.</source>
+        <translation>[Éxpõrtéd %1 tõ “%2”.]</translation>
+    </message>
+    <message>
+        <source>Left out (%1):</source>
+        <translation>[Léft õût (%1):]</translation>
+    </message>
+    <message>
+        <source>and %1 more</source>
+        <translation>[àñd %1 mõré]</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>[Shõw îñ fõldér]</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>[Dõñé]</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>[Réplàçé]</translation>
+    </message>
+    <message>
+        <source>Keep the file</source>
+        <translation>[Kéép thé fîlé]</translation>
+    </message>
+    <message>
+        <source>Stopping…</source>
+        <translation>[Stõppîñg…]</translation>
+    </message>
+    <message>
+        <source>Cancel export</source>
+        <translation>[Çàñçél éxpõrt]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çàñçél]</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>[Éxpõrt]</translation>
+    </message>
+    <message>
+        <source>CSV files (%1)</source>
+        <translation>[ÇSV fîlés (%1)]</translation>
+    </message>
+    <message>
+        <source>All files (%1)</source>
+        <translation>[Àll fîlés (%1)]</translation>
+    </message>
+    <message>
+        <source>Text files (%1)</source>
+        <translation>[Téxt fîlés (%1)]</translation>
+    </message>
+    <message>
+        <source>“%1” couldn&apos;t be replaced. It may be open in another app, so close it and try again. The existing file hasn&apos;t changed.</source>
+        <translation>[“%1” çõûldñ&apos;t bé réplàçéd. Ît màý bé õpéñ îñ àñõthér àpp, sõ çlõsé ît àñd trý àgàîñ. Thé éxîstîñg fîlé hàsñ&apos;t çhàñgéd.]</translation>
+    </message>
+    <message>
+        <source>Nothing could be exported, so “%1” was not changed.</source>
+        <translation>[Ñõthîñg çõûld bé éxpõrtéd, sõ “%1” wàs ñõt çhàñgéd.]</translation>
+    </message>
+    <message>
+        <source>Nothing could be exported, so “%1” was not created.</source>
+        <translation>[Ñõthîñg çõûld bé éxpõrtéd, sõ “%1” wàs ñõt çréàtéd.]</translation>
+    </message>
+</context>
+<context>
     <name>FolderTree</name>
     <message>
         <source>Folders</source>
@@ -332,6 +595,14 @@
 </context>
 <context>
     <name>Main</name>
+    <message>
+        <source>%1 of %2 so far</source>
+        <translation>[%1 õf %2 sõ fàr]</translation>
+    </message>
+    <message>
+        <source>%1 selected of %2 so far</source>
+        <translation>[%1 séléçtéd õf %2 sõ fàr]</translation>
+    </message>
     <message>
         <source>%1 of %2</source>
         <translation>[%1 õf %2]</translation>
