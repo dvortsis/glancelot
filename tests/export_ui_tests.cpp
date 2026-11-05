@@ -537,7 +537,7 @@ private slots:
         click(d.h, "exportStart");
         QTRY_VERIFY_WITH_TIMEOUT(visibleItem(d.h, "exportError"), 10000);
         QCOMPARE(phaseOf(d.h), QString("ready"));
-        QVERIFY(textOf(d.h, "exportErrorText").contains("can't be replaced"));
+        QVERIFY(textOf(d.h, "exportErrorText").contains("is one of the items being exported"));
         QVERIFY(!visibleItem(d.h, "exportReplace"));
         QVERIFY2(d.media.changed().isEmpty(), qPrintable(d.media.changed()));
     }
