@@ -220,6 +220,8 @@ std::uint64_t shuffleHash(const fs::path& path, std::uint64_t seed) {
 }
 bool sortBefore(const SortSpec& sort, const fs::path& a, const FileMeta& ma, const fs::path& b, const FileMeta& mb) {
     if (sort.key == SortKey::Name) return sort.descending ? naturalLess(b, a) : naturalLess(a, b);
+    // META-ROLES: until packet A2 supplies keys every value is missing, so ties break by natural name in both directions.
+    if (sort.key == SortKey::Captured || sort.key == SortKey::Dimensions) return naturalLess(a, b);
     int order = 0;
     if (sort.key == SortKey::Shuffle) {
         const auto ha = shuffleHash(a, sort.seed), hb = shuffleHash(b, sort.seed);

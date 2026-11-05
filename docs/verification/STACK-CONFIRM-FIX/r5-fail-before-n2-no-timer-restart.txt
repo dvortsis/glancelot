@@ -1,0 +1,10 @@
+exit code: 1
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+FAIL!  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() 'shownFor[photo] >= paceMs - 200' returned FALSE. (c-1.png was on screen for 378 ms at a 1000 ms pace)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(529) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 28907ms
+********* Finished testing of StackConfirmUiTests *********

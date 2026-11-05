@@ -18,7 +18,6 @@
 #include <QImage>
 #include <QDateTime>
 #include <QJsonDocument>
-#include <QSharedMemory>
 #include <QUuid>
 #include <QBuffer>
 #include <QDataStream>

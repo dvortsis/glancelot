@@ -2,6 +2,6 @@
 
 **Task and handoff:** <!-- queue id, docs/handoff/<TASK>-HANDOFF.md -->
 
-**Tests run:** <!-- targeted ctest, full suite; no fixed sleeps in tests -->
+**Tests run:** <!-- targeted ctest (the hosted viewer job is the full suite); no fixed sleeps in tests -->
 
 **Lead-owned files changed:** <!-- list with the grant, or none -->
