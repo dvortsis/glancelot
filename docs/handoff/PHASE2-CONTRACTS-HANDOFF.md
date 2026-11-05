@@ -1,7 +1,7 @@
 # PHASE2-CONTRACTS handoff
 
 - Branch: `claude/phase2-contracts`
-- Tip: the last commit on the branch. A commit can't name itself, so the PR states its SHA. Code and headers are at `ff5ff5c`; every later commit changes only `docs/`.
+- Tip: the last commit on the branch. A commit can't name itself, so the report to the lead and the PR state its SHA. Code and headers are at `caa6a6a`; every later commit changes only `docs/`.
 - Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `f24f2e7`, which adds only merge-protection tooling and docs: outside `docs/`, `git diff --name-only b1d57cd f24f2e7` lists only `.gitattributes`, `AGENTS.md`, `.github/*` and `scripts/*`. No source, header or CMake file changed, so nothing here needed it Not merged in, because nothing conflicts. Not stacked on anything.
 - Worktree and build: `.claude/worktrees/recursing-bassi-58ba22`, `build-claude-phase2-contracts`.
 - ui-design-skills: not read, because this packet changes no QML. Consumers' UI work (C3, D2, B1, B2) must read them; COMPARE-PANES says so for C3, and AGENTS.md covers the rest.
@@ -27,11 +27,11 @@ Freezes the seven cross-track contracts from section 6 of the lead plan, checked
 
 | Packet | Diffs it applies |
 | --- | --- |
-| A2 | `navigation.hpp`, `directory_listing.hpp`, `directory_entry_model.hpp`; also `settings_policy.cpp:140`, `SettingsDialog.qml:637-638`, `Main.qml:1827` |
-| B1 | `file_operation_service.hpp` |
-| B2 | `file_operations.hpp`, `src/app/copy_safety.hpp` |
+| A2 | `navigation.hpp` (`setDefaultSortKeyReader`), `directory_listing.hpp`, `directory_entry_model.hpp` (roles, `requestMetadata`, `requestAllMetadata`); also `settings_policy.cpp:140`, `SettingsDialog.qml:637-638`, `Main.qml:1827` |
+| B1 | `file_operation_service.hpp`, `copy_move_service.hpp` (`planTransfer`, `confirmTransfer`), `mutation_service.hpp` (`planRename`, `confirmRename`) |
+| B2 | `file_operations.hpp` (`trashToken`, `TrashAvailability`, `probeTrash`), `src/app/copy_safety.hpp`, the Overwrite prompt's QML, Overwrite and asset rename behind B1's entry points, the COPY-SAFETY-01 sweep test |
 | C3 | `pane_layout.hpp`, plus named regions of `viewer_controller.*` and `Main.qml` |
-| D1 | `display_manager.hpp`, `viewer_controller.hpp`, `src/app/decode_cache.hpp` |
+| D1 | `display_manager.hpp`, `viewer_controller.hpp` (`imageTier`, `imageFinal`, `imageColour`), `src/app/decode_cache.hpp` |
 | D2 | `src/app/viewer_context.hpp`, `Main.qml` `reference-pin` handler and `referenceWindow` block |
 | F1 | `Dockerfile` `ENV`: `GLANCELOT_DEPLOYMENT=container` |
 
@@ -44,7 +44,7 @@ Freezes the seven cross-track contracts from section 6 of the lead plan, checked
 
 ### 1. Fail-before evidence
 
-At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the new headers do not exist. Every assertion was also checked by breaking its target, in `docs/verification/PHASE2-CONTRACTS/fail-before.txt` (MSVC, actual output). The results:
+At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the new headers do not exist. Every assertion was also checked by breaking its target, in `docs/verification/PHASE2-CONTRACTS/fail-before.txt` (MSVC, actual output). The review round's new and changed assertions were broken the same way, in `docs/verification/PHASE2-CONTRACTS/fail-before-r2.txt`: all 10 fail, by static assertion, by test exit 1 or by a moc compile error. The first round's results:
 
 | Mutation | Result |
 | --- | --- |
@@ -58,7 +58,7 @@ At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the 
 
 ### 2. Grant check
 
-`git diff --name-only b1d57cd..ff5ff5c`. Commits after `ff5ff5c` touch only `docs/contracts/OPERATION-JOURNAL.md`, `docs/handoff/` and `docs/verification/`.
+`git diff --name-only b1d57cd..caa6a6a`. Commits after `caa6a6a` touch only `docs/`.
 
 ```text
 CMakeLists.txt
@@ -71,6 +71,9 @@ docs/contracts/META-ROLES.md
 docs/contracts/OPERATION-JOURNAL.md
 docs/contracts/RESOURCE-LEDGER.md
 docs/decisions/2026-11-05-phase2-contracts.md
+docs/handoff/PHASE2-CONTRACTS-HANDOFF.md
+docs/verification/PHASE2-CONTRACTS/fail-before.txt
+docs/verification/PHASE2-CONTRACTS/full-suite-tail.txt
 include/glancelot/asset_group.hpp
 include/glancelot/capability_model.hpp
 include/glancelot/compare_panes.hpp
@@ -98,27 +101,28 @@ Base `b1d57cd0ad9cab09a3f9a5483b726921b0c4dbcc`. `git merge-base origin/main HEA
 
 ### 4. Tests
 
-Targeted (Windows, MSVC 2022, Qt 6.8.3, offscreen), on the code commit:
+Targeted (Windows, MSVC 2022, Qt 6.8.3, offscreen), on `caa6a6a`. `fs_watch` is added for review finding B3:
 
 ```text
-ctest -R "^(contract_headers|navigation|directory_listing|directory_model|cache|viewer_acceptance|pane_layout|file_operations|copy_safety|reference_pin)$"
-(tail of the output)
- 4/10 Test  #7: viewer_acceptance ................   Passed   12.28 sec
- 5/10 Test #10: pane_layout ......................   Passed    3.35 sec
- 6/10 Test #16: directory_model ..................   Passed   37.64 sec
- 7/10 Test #31: cache ............................   Passed    6.82 sec
- 8/10 Test #37: copy_safety ......................   Passed    1.19 sec
- 9/10 Test #45: contract_headers .................   Passed    0.09 sec
-10/10 Test #51: reference_pin ....................   Passed   47.23 sec
-
-100% tests passed out of 10
+ 1/11 Test  #3: navigation .......................   Passed    2.96 sec
+ 2/11 Test  #4: directory_listing ................   Passed   19.99 sec
+ 3/11 Test  #5: file_operations ..................   Passed    0.25 sec
+ 4/11 Test  #7: viewer_acceptance ................   Passed   10.60 sec
+ 5/11 Test #10: pane_layout ......................   Passed    1.72 sec
+ 6/11 Test #16: directory_model ..................   Passed   31.34 sec
+ 7/11 Test #23: fs_watch .........................   Passed   87.66 sec
+ 8/11 Test #31: cache ............................   Passed    5.34 sec
+ 9/11 Test #37: copy_safety ......................   Passed    0.91 sec
+10/11 Test #45: contract_headers .................   Passed    0.07 sec
+11/11 Test #51: reference_pin ....................   Passed   40.71 sec
+100% tests passed out of 11
 ```
 
-Full suite, `scripts/build.ps1 -BuildDir build-claude-phase2-contracts -Test` through `scripts/build-slot.ps1`, on the code commit:
+Full suite, `scripts/build.ps1 -BuildDir build-claude-phase2-contracts -Test` through `scripts/build-slot.ps1`, on `caa6a6a`:
 
 ```text
 100% tests passed out of 52
-Total Test time (real) = 1021.36 sec
+Total Test time (real) = 1080.81 sec
 script exit: 0
 No baseline failures: every test passed, so none is named. Budget tests passed on the first run.
 ```
@@ -129,34 +133,62 @@ Other checks:
 
 - `pr_guard.py` from `origin/main`: `pr_guard: code=True, 0 error(s)`.
 - Linux GCC 13.3 (WSL) with the project's flags, on the three `FileMeta{a,b,c}` sites: `navigation.cpp` and `directory_listing.cpp` compile with 0 warnings, so positional initializers stay clean under `-Wextra`.
-- Reference check: a script compared the `file:line` references in the contracts and the decision record against `b1d57cd`. 111 resolve, with the file present and the line in range. The one that doesn't is `CompareView.qml`, which C3 creates. The script does not check what a line says; I read those lines while rewriting, and a reviewer may want to sample them.
+- Reference check: a script compared the `file:line` references in the contracts and the decision record against `b1d57cd`. 119 resolve, with the file present and the line in range. The two that don't are `CompareView.qml`, which C3 creates, and the review document, which lives on `claude/review-phase2-contracts`. The script does not check what a line says; I read those lines while rewriting, and a reviewer may want to sample them.
 
 ### 5. Decisions taken
 
-All in `docs/decisions/2026-11-05-phase2-contracts.md`: 58 rows, each draft question plus each problem found against `main`. Problems the drafts got wrong, beyond stale line numbers:
+All in `docs/decisions/2026-11-05-phase2-contracts.md`: 76 rows, each draft question plus each problem found against `main`. Problems the drafts got wrong, beyond stale line numbers:
 
 - **Pane generations (P6).** Taking a generation from the controller's counter would cancel the current image's decode. The session owns its own counter.
 - **Pane decode path (P7).** `Private::decode` is bound to one worker and the selection, so C3 models its path on `startPrefetch`.
 - **Case-only rename and partials (J7).** The draft's rule, "reconcile deletes partials", would have deleted the user's file at `.tmp_rename_<id>`. Originals now go in `backupPath`, which is never deleted.
 - **Ladder state (D7).** Phase 1 code gates on `imageReady`, `loading` and now `navigating`, so the contract says what each means during a refinement.
 - **`modeValid` (P8).** It is shared with settings load and presets, so widening it would restore compare from a hand-edited file.
-- **PR 3's reaper (R6).** Transfer bytes stay charged until the segment is really gone, and a leaked segment stays charged and visible. E1 must start after PR 3 merges.
+- **Transfer buffers (R6, lead decision).** The contracts state rules for an abstract transfer buffer, because PR 3 round 5 replaces its transfer class. E1, D1 and C3 start after PR 3 merges.
 - **Sort settings (M8).** `settings_policy.cpp:140` would reject a saved new key.
 
 ## Open questions for the lead
 
-None block this packet. I made these two decisions and they change something the user sees or touch data safety, so please confirm them at review:
+None. The lead confirmed J1 and J4 and decided B1, B2 and B3.
 
-1. **J1, unwritable journal.** The draft failed closed for every mutation. On a read-only profile that would remove delete, move and rename, which work today. The contract keeps them working with a notice and no undo, and refuses only sidecar writes, lossless transforms and batch rename. If you prefer fail closed, it is one function: `journal::requiresJournal`.
-2. **J4, replaced files land in the trash.** B2 moves an Overwrite's replaced original to the trash after the atomic replace, which is what gives Overwrite an undo. The queue's COPY-SAFETY-01 note already expects this. The visible effect is that the Recycle Bin gains `<stem> (replaced)<ext>` files.
+For the lead:
 
-Other visible choices are marked "Yes" in the decision record's Visible column.
+- **Plan edges.** Please add **D1 -> D2** (B8: the HUD and `colour.source` read `imageTier` and `imageColour`). If D2 must land first, its brief can grant the `imageColour` property alone, with `tagged` parsed from the worker's two existing strings. E1, D1 and C3 start after PR 3 merges. Asset-scope rename arrives with B2, not B1.
+- **C3 and D1.** I recommend ordering C3 after D1 (CP-N5). Before D1, 4-up holds 16 MP per pane and 2-up holds 32 MP, so typical camera files show `TooLarge` in 4-up. The contract is honest about it either way.
+- **PR 3 round 5.** Not on `origin/claude/stack-confirm-fix` at this push (`9c0c919`), so the transfer wording isn't checked against it yet. Please have it checked when round 5 lands. The contracts name no class, so the check is that the rules hold.
+- **A1** is working in the listing and navigation code. A2's diff no longer changes `listDirectory`'s parameters, which lowers the collision.
+- G-5 is D2's acceptance, and STACK-CONFIRM's carve-out can point at this contract.
 
-Also for the lead:
+## Review fixes
 
-- E1 must start after PR 3 merges (RESOURCE-LEDGER).
-- A1 (`a1-perf-enum`) is working in the listing and navigation code now. This packet only appends there; a note is in the shared notes folder. A2's diff is written so it can follow A1's signatures.
-- G-5 is now D2's acceptance, and STACK-CONFIRM's carve-out can point at this contract.
+Review: `docs/verification/PHASE2-CONTRACTS-REVIEW.md` on `claude/review-phase2-contracts` (`979206a`), CHANGES REQUIRED at `53dab6c`. J1 and J4 were not reopened.
+
+| Finding | Fix |
+| --- | --- |
+| **B1** no-trash volume (lead decision) | OPERATION-JOURNAL: `TrashBackend::probeTrash` in B2's diff, run at the plan step. **B2 builds the Overwrite prompt**; the false claim about an existing confirmation is corrected, citing `pasteTo` (`copy_move_service.cpp:708`). `Unavailable` or `Unknown` says replaced files are permanently deleted and needs explicit consent (`permanentReplaceConsent`, recorded in `OperationHeader`). A failed trash move never falls through to removal: the operation stops and reports, and the original stays (`BackupState::TrashFailed`, `heldBackups`). A route that can't keep a backup needs the same consent (`allowNoBackup`). Execution table and tests added |
+| **B2** transfer class (lead decision) | RESOURCE-LEDGER, DECODE-TIER and COMPARE-PANES state rules for an abstract transfer buffer and name no class. No leak is charged. The acceptance test now holds teardown open through a hook. E1, D1 and C3 start after PR 3 |
+| **B3** EN-11 refresh (lead decision) | DECODE-TIER: `DecodeRequest::refresh` may replace an equal tier. **Differs from the review's proposal in one way:** a refresh never starts below what's shown, so the view never drops in quality and `DisplayManager` needs nothing more. A higher rank under a new token just applies, because one generation's decodes are sequential, so no restart and no loop bound are needed. Citation corrected, site added to the table, `fs_watch` named in the acceptance tests and run here |
+| **B4** read items | `OperationJournal::items`, paged, and `ItemRecord` |
+| **B5** preimage order | `ItemIntent::preimagePath`, `Operation::preimagePathFor`, `Operation::sealPreimage`; `ItemOutcome::preimagePath` removed; reconcile table for in-place writes; kill tests |
+| **B6** share key | `Reservation::commit(actualBytes, shareKey = 0)`, plus a compile check |
+| **B7** key pass | `requestAllMetadata`, `metadataPending`, `metadataPartial` in A2's diff; consumers, M5 and tests updated |
+| **B8** colour path | `imageColour` in D1's diff; CAPABILITY reads it on `imageChanged`. D1 -> D2 recorded above |
+| OJ-N1 | Header comments corrected; `OperationJournal::probe()` at the plan step; a `begin` failure returns to the prompt once |
+| OJ-N2 | `kMaxOperationFileBytes` 256 MiB, `kMaxJournalBytes` 1 GiB, `totalPathBytes` for `begin`; `LimitExceeded` follows the failure policy; relation asserted at compile time |
+| OJ-N4 | `OperationSummary::reconciled`, durable `reconciled` record |
+| RL-N1 | `kMaxForegroundHeadroomBytes` 1 GiB; fallback raised by the reserve so today's largest decode still fits; both asserted |
+| AG-N1 | `kMaxExpandedItems` (asserted equal to the journal's limit), `kMaxExcludedListed`, `excludedNotListed` |
+| AG-N2 | `kMaxProbesPerTarget` removed. A current hint's members are statted; otherwise one directory read per parent, within `kExpandBudgetMs`; `companionsIncomplete` |
+| CP-N1 | `setSurface`, and the ledger owner in the constructor |
+| MR-N1 | `setDefaultSortKeyReader`, process-wide. `listDirectory` needs no new parameter |
+| OJ-N3, N5 to N10 | Reconcile tables by kind; asset rename journaled and `Kind::BatchRename`; sweep kept only when the journal is unavailable, with an age bound; a case-only rename restores the old spelling; `replacedPath` on both platforms; POSIX directory fsync; D7's cap noted |
+| AG-N3 to N6 | Two files of one family collide; `truncated` argument; frozen `planTransfer` and `planRename` diffs; `expand` for SidecarWrite returns the request |
+| RL-N2 to N7 | `IoScheduler` keeps its byte check until M2; retired owners; public constructor for tests; `GpuTextures` out of the charge order, and a move may exceed a ceiling; `Quality` never swaps shown pixels; tier priorities in DECODE-TIER |
+| DT-N1 to N4 | `kFitMaxSourceBytes` per format class; re-publishes keep their tier; a Fit insert evicts other buckets; dimensions compared only under one non-empty token |
+| CP-N2 to N6 | No file access in `begin`; comment corrected; reclaim only when not exposed; `TooLarge` names the limit and settles at probe; 256 MiB quota; `deliver` uses the apply rule. C3-after-D1 is for the lead, above |
+| MR-N2 to N5 | Admission wait counted in the budget, with one thumbnail slot kept; time budget on anything not known to be an SSD; landing rule; one pass per folder and revision; overlay only when ratings are wanted |
+| CA-N1 to N4 | `serverPaths` a process fact; one builder per section and scope; runtime `Unsupported` survives a rebuild; D6 owns the bit-depth parser; Docker text until F1; populators in the viewer sources |
+| Section 10, cmake comment | "Stay unreachable" dropped, since nothing asserts it |
 
 ## Failure and cancellation cases
 
@@ -171,15 +203,15 @@ This packet has no runtime paths beyond the two natural-order lines, which the t
 
 ## Exact `include/` diff
 
-`git diff b1d57cd ff5ff5c -- include/`
+`git diff b1d57cd caa6a6a -- include/`
 
 ```diff
 diff --git a/include/glancelot/asset_group.hpp b/include/glancelot/asset_group.hpp
 new file mode 100644
-index 0000000..41094bb
+index 0000000..fdc6e1b
 --- /dev/null
 +++ b/include/glancelot/asset_group.hpp
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,83 @@
 +#pragma once
 +#include "file_operations.hpp" // FileIdentity
 +#include <cstddef>
@@ -196,7 +228,9 @@ index 0000000..41094bb
 +// that re-probes exact companion names. Never called from UI or render code. Never mutates anything.
 +namespace glancelot::assets {
 +inline constexpr std::size_t kMaxMembers = 16;          // per group; extra candidates set Collision
-+inline constexpr std::size_t kMaxProbesPerTarget = 48;  // exact-name stats during expansion
++inline constexpr std::size_t kMaxExpandedItems = 100000;  // per expansion, equal to journal::kMaxItemsPerOperation
++inline constexpr std::size_t kMaxExcludedListed = 256;    // Expansion::excluded entries kept; more are counted
++inline constexpr int kExpandBudgetMs = 2000;              // per plan, spent on companion lookups; see Expansion
 +
 +// Raw: a camera RAW. Rendered: the camera-native companion formats (JPEG, HEIF, AVIF, JPEG XL). Derived: an exported or edited
 +// format (TIFF, PNG, WebP), a member only when it is the stem's sole image, so a RAW's asset never pulls in an edited master.
@@ -205,7 +239,8 @@ index 0000000..41094bb
 +enum class Match : std::uint8_t { Stem, ContentId };    // ContentId: reserved for a confirmed Apple content identifier (ADV-09)
 +enum class GroupFlag : std::uint32_t {
 +    None = 0,
-+    Collision = 1u << 0,        // more than one Raw, more than one Rendered family, case variants, or > kMaxMembers
++    Collision = 1u << 0,        // more than one Raw, more than one Rendered family or two files of one family, case
++                                // variants, two Derived with nothing else, or > kMaxMembers
 +    AmbiguousSidecar = 1u << 1, // a Stem sidecar that could belong to more than one group
 +    EmbeddedMotion = 1u << 2,   // an Android motion photo payload inside a Rendered member
 +    Incomplete = 1u << 3,       // the listing was truncated or unreadable; expansion re-probes exact names
@@ -233,9 +268,9 @@ index 0000000..41094bb
 +    std::vector<Group> groups;               // only groups with >= 2 members; singletons are implicit
 +};
 +struct ListingInput { std::filesystem::path path; bool regularFile{}; };
-+// Pure, O(n log n), no I/O. Same directory only; folders and links are never grouped.
++// Pure, O(n log n), no I/O. Same directory only; folders and links are never grouped. `truncated` sets Incomplete.
 +GroupingSnapshot groupListing(const std::filesystem::path& directory, const std::vector<ListingInput>& entries,
-+                              bool caseSensitive, std::uint64_t listingGeneration);
++                              bool caseSensitive, std::uint64_t listingGeneration, bool truncated = false);
 +
 +enum class Scope : std::uint8_t { FileOnly, Asset };
 +enum class Operation : std::uint8_t { Trash, Copy, Move, Rename, SidecarWrite, LosslessTransform };
@@ -244,11 +279,14 @@ index 0000000..41094bb
 +struct Excluded { std::filesystem::path path; std::filesystem::path requestedBy; Exclusion reason{Exclusion::NotApplicable}; };
 +struct Expansion {
 +    std::vector<Planned> included;           // deduplicated, requested items first, then companions in role order
-+    std::vector<Excluded> excluded;          // always shown in the confirmation; never mutated
++    std::vector<Excluded> excluded;          // shown in the confirmation; never mutated; at most kMaxExcludedListed
++    std::size_t excludedNotListed{};         // beyond kMaxExcludedListed
++    bool companionsIncomplete{};             // kExpandBudgetMs ended the lookups: unchecked companions stay out, and the confirmation says so
 +    bool cancelled{};                        // no partial plan can be confirmed
 +};
 +// Worker only. FileOnly returns exactly `requested` plus companions as excluded (NotApplicable) so the confirmation can show
-+// them. Asset adds companions per the contract's policy table after stat'ing exact candidate names; the listing is only a hint.
++// them. Asset adds companions per the contract's policy table. With a current hint it stats only the hint's members; without
++// one it reads each parent directory once, so mixed-case names are found. The result is re-checked, so a stale hint adds nothing.
 +Expansion expand(const std::vector<std::filesystem::path>& requested, Scope scope, Operation operation,
 +                 const GroupingSnapshot* hint, std::stop_token cancel = {});
 +
@@ -259,10 +297,10 @@ index 0000000..41094bb
 +}
 diff --git a/include/glancelot/capability_model.hpp b/include/glancelot/capability_model.hpp
 new file mode 100644
-index 0000000..e85a9a2
+index 0000000..c949fa4
 --- /dev/null
 +++ b/include/glancelot/capability_model.hpp
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,97 @@
 +#pragma once
 +#include <QAbstractListModel>
 +#include <QByteArray>
@@ -326,6 +364,7 @@ index 0000000..e85a9a2
 +    Q_PROPERTY(QString displaySummary READ displaySummary NOTIFY sectionChanged)
 +    Q_PROPERTY(QString sourceSummary READ sourceSummary NOTIFY sectionChanged)
 +    // Display-only conveniences for F075 and Track B. Never authorization: services recheck at operation time.
++    // serverPaths is a process fact set once at startup, so it does not drop when the Source section clears.
 +    Q_PROPERTY(QString sourceReadOnly READ sourceReadOnly NOTIFY sectionChanged)   // "unknown" | "yes" | "no"
 +    Q_PROPERTY(bool serverPaths READ serverPaths NOTIFY sectionChanged)
 +    // "unknown" | "unsupported" | "partial" | "supported"; read by the reference-pin command and the reference window.
@@ -361,11 +400,12 @@ index 0000000..e85a9a2
 +}
 diff --git a/include/glancelot/compare_panes.hpp b/include/glancelot/compare_panes.hpp
 new file mode 100644
-index 0000000..6113dbf
+index 0000000..61f7c5a
 --- /dev/null
 +++ b/include/glancelot/compare_panes.hpp
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,90 @@
 +#pragma once
++#include "resource_ledger.hpp"
 +#include <QImage>
 +#include <QObject>
 +#include <QString>
@@ -378,7 +418,7 @@ index 0000000..6113dbf
 +#include <string_view>
 +
 +// Lead-frozen COMPARE-PANES (docs/contracts/COMPARE-PANES.md). Implemented by packet C3. GUI thread only. Compare never decodes
-+// and never touches files: it asks the window's ViewerController to decode through the ordinary path and receives values.
++// and never touches files: it asks the window's ViewerController to decode through the pane decode path and receives values.
 +namespace glancelot {
 +inline constexpr int kMaxComparePanes = 4;
 +// The PaneLayout center content modes. Off is one of the three persisted modes ("preview", "grid", "combined"); the compare
@@ -427,8 +467,10 @@ index 0000000..6113dbf
 +    // Reads the controller's current selection generation, for handing a pane to DisplayManager. It never increments it: that
 +    // would cancel the current image's decode. Pane requests are fenced by the session's own counter.
 +    using GenerationSource = std::function<quint64()>;
-+    explicit CompareSession(GenerationSource generations, QObject* parent = nullptr);
++    // `owner` is this window's compare ledger owner, charged for every pane.
++    CompareSession(GenerationSource generations, resource::OwnerId owner, QObject* parent = nullptr);
 +    ~CompareSession() override;
++    void setSurface(ICompareSurface* surface);   // not owned; null detaches. deliver, swap and removal drive it
 +    int paneCount() const; int activePane() const; bool linked() const; QVariantList candidates() const;
 +    void setActivePane(int pane); void setLinked(bool linked);
 +
@@ -453,7 +495,7 @@ index 0000000..6113dbf
 +};
 +}
 diff --git a/include/glancelot/contracts.hpp b/include/glancelot/contracts.hpp
-index 14e3b70..f7584ec 100644
+index 14e3b70..53e3a6c 100644
 --- a/include/glancelot/contracts.hpp
 +++ b/include/glancelot/contracts.hpp
 @@ -2,7 +2,9 @@
@@ -466,7 +508,7 @@ index 14e3b70..f7584ec 100644
  #include <vector>
  
  namespace glancelot {
-@@ -15,15 +17,47 @@ struct NavigationSnapshot {
+@@ -15,15 +17,48 @@ struct NavigationSnapshot {
      BoundaryMode boundary{BoundaryMode::ContinueTree};
      std::uint64_t generation{};
  };
@@ -499,6 +541,7 @@ index 14e3b70..f7584ec 100644
 +    int sizeBucket{};                    // Fit: bucket long edge in physical pixels; 0 otherwise
 +    DecodeRegion region;                 // Tile only
 +    std::uint64_t generation{};          // the selection (or pane) generation that owns the request
++    bool refresh{};                      // the shown pixels aren't proven current: the result may replace an equal tier
 +};
  enum class PixelFormat { Rgba8, Rgba16Float };
 -struct PixelBufferDescriptor { int width{}, height{}, stride{}; PixelFormat format{PixelFormat::Rgba8}; std::string colorSpace{"sRGB"}; std::uint64_t generation{}; };
@@ -520,7 +563,7 @@ index 14e3b70..f7584ec 100644
 -struct DecoderCapability { std::string format; bool still{}, animated{}, multiPage{}, preview{}, highPrecision{}; };
  }
 diff --git a/include/glancelot/navigation.hpp b/include/glancelot/navigation.hpp
-index 58525ff..d30d0c0 100644
+index 58525ff..6ac8994 100644
 --- a/include/glancelot/navigation.hpp
 +++ b/include/glancelot/navigation.hpp
 @@ -1,5 +1,6 @@
@@ -557,7 +600,7 @@ index 58525ff..d30d0c0 100644
 +// META-ROLES order path. Fills the extended keys for `files` (same length as `meta`) on the calling worker thread. It honours
 +// `cancel`, reads a bounded header per file under IoScheduler Metadata admission, and leaves a *Known flag false for any file
 +// it could not or would not read. Returns false when the folder budget ended the pass early (the result is then partial).
-+// Packet A2 adds the parameters that carry it; core stays Qt-free because the app installs the reader.
++// Packet A2 adds the process-wide install point; core stays Qt-free because the app installs the reader.
 +using SortKeyReader = std::function<bool(const std::vector<std::filesystem::path>& files,
 +                                         std::vector<FileMeta>& meta, std::stop_token cancel)>;
  // The file order itself (exposed so ordering properties, e.g. unreadable metadata last, are testable).
@@ -565,10 +608,10 @@ index 58525ff..d30d0c0 100644
                      const std::filesystem::path& b, const FileMeta& metaB);
 diff --git a/include/glancelot/operation_journal.hpp b/include/glancelot/operation_journal.hpp
 new file mode 100644
-index 0000000..cdd712c
+index 0000000..b6878a5
 --- /dev/null
 +++ b/include/glancelot/operation_journal.hpp
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,176 @@
 +#pragma once
 +#include "file_operations.hpp" // FileIdentity, TargetKind
 +#include <QString>
@@ -586,8 +629,8 @@ index 0000000..cdd712c
 +namespace glancelot::journal {
 +inline constexpr std::size_t kMaxItemsPerOperation = 100000;
 +inline constexpr std::size_t kMaxIntentBatch = 64;        // items made durable per fsync
-+inline constexpr qint64 kMaxOperationFileBytes = 64LL << 20;
-+inline constexpr qint64 kMaxJournalBytes = 256LL << 20;   // records and preimages; completed operations pruned oldest first
++inline constexpr qint64 kMaxOperationFileBytes = 256LL << 20;  // room for kMaxItemsPerOperation at ordinary path lengths
++inline constexpr qint64 kMaxJournalBytes = 1LL << 30;     // records and preimages; completed operations pruned oldest first
 +inline constexpr int kMaxRetainedOperations = 200;
 +inline constexpr int kSchemaVersion = 1;
 +inline constexpr int kMaxBackupFindings = 256;            // per reconcile pass; more are reported as a count
@@ -633,6 +676,10 @@ index 0000000..cdd712c
 +    // original and this is the intermediate ".tmp_rename_<id>". Empty when the item makes no such file.
 +    std::optional<TargetSnapshot> overwritten;
 +    QString backupPath;
++    QString replacedPath;           // Overwrite: "<stem> (replaced)<ext>", the name the original takes on its way to the trash
++    // SidecarWrite, LosslessTransform: Operation::preimagePathFor(index), inside the journal directory. Empty when there is no
++    // prior file (a new sidecar). Operation::sealPreimage fills it before the item may touch the original.
++    QString preimagePath;
 +    QString requestedBy;            // ASSET-GROUP: the requested file that pulled this companion in
 +};
 +struct ItemOutcome {
@@ -641,7 +688,6 @@ index 0000000..cdd712c
 +    glancelot::FileIdentity resultIdentity;   // the created or moved file, for undo revalidation
 +    QString trashToken;             // POSIX: path in the trash; Windows: Recycle Bin item parsing name; empty if none
 +    QString overwrittenTrashToken;  // Overwrite: where the replaced original went; empty when it was not trashed
-+    QString preimagePath;           // RestorePreimage only, inside the journal directory
 +    std::uint32_t undo{};           // UndoCapability bits valid for this item
 +    QString message;
 +};
@@ -650,12 +696,16 @@ index 0000000..cdd712c
 +    QString origin;                 // "grid" | "tree" | "canvas" | "command" | "drop"
 +    QString scope;                  // ASSET-GROUP "file" | "asset"
 +    QString destination;            // copy or move directory, if any
++    bool permanentReplaceConsented{};    // the user confirmed that replaced files are permanently deleted here
++    quint64 totalPathBytes{};       // UTF-8 length of every path in the plan, so begin can refuse an operation that can't fit
 +    std::optional<OperationId> undoOf;   // an undo is itself a journaled operation
 +    quint32 itemCount{};
 +};
 +struct OperationSummary {
 +    OperationId id; OperationHeader header; State state{State::Open};
 +    quint32 done{}, failed{}, unknown{}, notStarted{}, displaced{};
++    quint32 heldBackups{};          // items whose original still sits at backupPath or replacedPath
++    bool reconciled{};              // a reconcile pass has resolved this operation; durable
 +    std::uint32_t undoAvailable{};  // intersection over Done items; None if any Done item has none
 +    quint64 revision{};             // increments on every durable change; UI drops older revisions
 +    qint64 createdMs{}, updatedMs{};
@@ -669,7 +719,8 @@ index 0000000..cdd712c
 +    Restored,        // moved back to the empty target name; reported once for the record
 +    TargetOccupied,  // the target name holds a different file: the backup is an extra copy of the old original
 +    IdentityMismatch,// the file at backupPath is not the recorded original: never moved automatically
-+    RestoreFailed    // the target name is free and the identity matched, but the move back failed; message says why
++    RestoreFailed,   // the target name is free and the identity matched, but the move back failed; message says why
++    TrashFailed      // an Overwrite's replaced original couldn't reach the trash; it stays where the finding says
 +};
 +struct BackupFinding {
 +    OperationId operation; quint32 index{};
@@ -681,14 +732,21 @@ index 0000000..cdd712c
 +class Operation;   // move-only handle; holds the per-operation cross-process FileLock
 +class OperationJournal {
 +public:
-+    // Null with Status when the directory cannot be used. Services then apply requiresJournal(): see the contract.
++    // Null with Status when the directory cannot be used. Callers then apply requiresJournal(): see the contract.
 +    static std::unique_ptr<OperationJournal> open(const QString& directory, Status* status);
 +    ~OperationJournal();
-+    // Durable header (fsync) before any intent. Unwritable or LimitExceeded refuse the operation.
++    // Plan step, before the confirmation: a synced scratch append, so a confirmation can say the journal is unavailable.
++    Status probe();
++    // Durable header (fsync) before any intent. Null with Status on failure; the caller applies requiresJournal().
 +    std::unique_ptr<Operation> begin(const OperationHeader& header, Status* status);
 +    std::vector<OperationSummary> list(std::size_t max = kMaxRetainedOperations) const;
-+    // Interrupted operations whose lock is free (owner process gone), and terminal operations with an OriginalDisplaced item.
-+    // Probes the filesystem with exact stats; never re-executes; resolves Unknown items to done or not started with evidence.
++    struct ItemRecord { ItemIntent intent; std::optional<ItemOutcome> outcome; };
++    // One page, at most min(max, kMaxIntentBatch) records from `first`; empty past the end. Conflict for an unknown id. A Corrupt
++    // operation returns its good prefix with Status Corrupt.
++    std::vector<ItemRecord> items(OperationId operation, quint32 first, std::size_t max, Status* status) const;
++    // Interrupted operations not yet reconciled whose lock is free (owner process gone), and any operation with heldBackups or
++    // displaced items. Probes the filesystem with exact stats; never re-executes; resolves Unknown items to done or not started
++    // with evidence and records the pass durably.
 +    struct Reconciled {
 +        OperationId id;
 +        quint32 resolvedDone{}, notStarted{}, partialsRemoved{}, backupsRestored{}, stillUnknown{};
@@ -702,7 +760,7 @@ index 0000000..cdd712c
 +    // Explicit user actions on a finding. Restore never replaces an existing file; trash goes through TrashBackend.
 +    Status restoreBackup(OperationId operation, quint32 index);
 +    Status trashBackup(OperationId operation, quint32 index);
-+    Status dismiss(OperationId operation);    // completed or reconciled only; pruning never drops Interrupted or displaced items
++    Status dismiss(OperationId operation);    // completed or reconciled only; Conflict while a backup is held; pruning skips those too
 +private:
 +    OperationJournal();
 +    struct Private;
@@ -716,6 +774,10 @@ index 0000000..cdd712c
 +    OperationId id() const;
 +    // Append up to kMaxIntentBatch intents and fsync. Mutate only items whose intent returned Ok.
 +    Status recordIntents(const std::vector<ItemIntent>& intents);
++    QString preimagePathFor(quint32 index) const;
++    // After recordIntents, before the item touches its original: copies the source to the intent's preimagePath, syncs it and
++    // records its checksum. LimitExceeded when it can't fit after pruning; the item then must not run.
++    Status sealPreimage(quint32 index);
 +    // Append outcomes; fsync at the end of each batch and on state changes.
 +    Status recordOutcomes(const std::vector<ItemOutcome>& outcomes);
 +    Status setState(State state);   // Paused, Running, Cancelled, Completed or Failed; terminal states are final
@@ -728,10 +790,10 @@ index 0000000..cdd712c
 +}
 diff --git a/include/glancelot/resource_ledger.hpp b/include/glancelot/resource_ledger.hpp
 new file mode 100644
-index 0000000..1a98784
+index 0000000..fe0e25a
 --- /dev/null
 +++ b/include/glancelot/resource_ledger.hpp
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,137 @@
 +#pragma once
 +#include <QObject>
 +#include <QString>
@@ -756,9 +818,11 @@ index 0000000..1a98784
 +inline constexpr int kMaxLiveReservations = 4096;
 +inline constexpr int kMaxOwners = 64;
 +inline constexpr qint64 kDefaultSafetyReserveBytes = 64LL << 20;
-+inline constexpr qint64 kDefaultFallbackBytes = 1LL << 30;
-+// One foreground decode at the largest validated size: 256 MiB of pixels plus 2x that in worker scratch.
-+inline constexpr qint64 kMaxForegroundHeadroomBytes = 768LL << 20;
++// One foreground decode at the largest validated size, all held at once: 256 MiB of pixels, the same again in transfer,
++// and 2x that in worker scratch.
++inline constexpr qint64 kMaxForegroundHeadroomBytes = 1LL << 30;
++// With every source unknown, that decode still fits once the safety reserve is taken off.
++inline constexpr qint64 kDefaultFallbackBytes = kMaxForegroundHeadroomBytes + kDefaultSafetyReserveBytes;
 +
 +struct LimitSources {
 +    qint64 userCapBytes{kUnknown};      // Settings or power profile (E3)
@@ -811,8 +875,10 @@ index 0000000..1a98784
 +    Ledger ledger() const noexcept;
 +    Refusal refusal() const noexcept;                 // the reason when empty after tryReserve
 +    // Publication. actualBytes <= bytes(); the difference returns at once. Growing needs a new reservation.
-+    // False and no change when empty, released or already owned.
-+    bool commit(qint64 actualBytes);
++    // A nonzero shareKey publishes the buffer for share hits (a QImage has no cacheKey until it exists, so a reservation
++    // made before the allocation can't name it). If an owned entry with that key already exists, this handle becomes a
++    // share and its charge returns at once. False and no change when empty, released or already owned.
++    bool commit(qint64 actualBytes, quint64 shareKey = 0);
 +    void release() noexcept;
 +private:
 +    friend class ResourceLedger;
@@ -822,9 +888,12 @@ index 0000000..1a98784
 +class ResourceLedger final : public QObject {
 +    Q_OBJECT
 +public:
++    ResourceLedger();                                 // tests own theirs; production uses instance()
++    ~ResourceLedger() override;
 +    static ResourceLedger& instance();                // created on the GUI thread before any window
++    // Owners and setters: any thread, under the same lock as tryReserve.
 +    OwnerId registerOwner(const QString& diagnosticName);  // an empty OwnerId when kMaxOwners is reached
-+    void unregisterOwner(OwnerId owner);              // the owner must have no live reservations
++    void unregisterOwner(OwnerId owner);              // retired: no new reservations; freed when its last handle releases
 +    void setOwnerQuota(OwnerId owner, Ledger ledger, qint64 bytes);  // kUnknown = no per-owner quota
 +    void setLedgerCeiling(Ledger ledger, qint64 bytes);              // kUnknown = aggregate only
 +    void setAggregateMember(Ledger ledger, bool counts);             // GpuTextures: false in M1, see the contract
@@ -858,8 +927,6 @@ index 0000000..1a98784
 +    void pressureChanged(glancelot::resource::Pressure level);   // queued, hysteresis applied
 +    void capacityAvailable(glancelot::resource::Ledger ledger);  // coalesced, emitted outside the lock
 +private:
-+    ResourceLedger();
-+    ~ResourceLedger() override;
 +    struct Private;
 +    std::unique_ptr<Private> d;
 +};

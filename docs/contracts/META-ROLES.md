@@ -52,7 +52,7 @@ Until A2 lands both keys are unreachable, and they give natural order: `sortKeyN
 +    bool sortPartial_{};
 ```
 
-`include/glancelot/directory_listing.hpp`: `DirectoryListing` gains `bool sortPartial{false}`. If A1 has changed these signatures by then, A2 appends to A1's form. `Navigator` is value-constructed at many controller sites (`viewer_controller.cpp:921`, `:1154`, `:1195`, `:1197`, `:1212`, `:1341`, `:1831`), which is why the reader is process-wide: a per-instance setter would silently give natural order at any site it missed.
+`include/glancelot/directory_listing.hpp`: `DirectoryListing` gains `bool sortPartial{false}`. If A1 has changed these signatures by then, A2 appends to A1's form. `Navigator` is constructed fresh at several controller sites (`viewer_controller.cpp:1197`, `:1341`, `:1838`, `:1953`, `:1966`), which is why the reader is process-wide: a per-instance setter would silently give natural order at any site it missed.
 
 `include/glancelot/directory_entry_model.hpp`:
 
