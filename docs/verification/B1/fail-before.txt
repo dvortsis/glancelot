@@ -1,0 +1,748 @@
+# B1 fail-before evidence
+# Each block: one mutation of the production code, built and run alone with the targeted test (asset_group or asset_group_ui).
+# "was" and "now" are the edit. FAIL lines are the tests that caught it; Totals is the QTest summary.
+# scripts: run on Windows, MSVC, Qt 6.8.3, November 5, 2026, in .worktrees/claude-b1-asset-group, before main was merged in, on the part 3 code as it then stood.
+
+=== no-grouping
+  file: src/app/asset_group.cpp
+  was:  snapshot.groups = analyse(directory, entries, caseSensitive, truncated).groups;
+  now:  (void)entries; (void)truncated;
+  note: the run stopped early: sidecarStylesAreTold calls .at(0) on an empty list, an exception QTest treats as fatal
+  FAIL rawAndRenderedPair(raw+jpeg)
+  FAIL rawAndRenderedPair(raw+heic)
+  FAIL rawAndRenderedPair(jpeg+xmp stem)
+  FAIL rawAndRenderedPair(cr2+full name)
+  FAIL rawAndRenderedPair(both sidecars)
+  FAIL rawAndRenderedPair(live photo)
+  FAIL rawAndRenderedPair(png+xmp)
+  FAIL rawAndRenderedPair(several dots)
+  FAIL sidecarStylesAreTold() Caught unhandled exception
+  Totals: 1 passed, 9 failed, 5ms
+
+=== no-companions
+  file: src/app/asset_group.cpp
+  was:  if (!collision) owner = requested.front();
+  now:  if (false) owner = requested.front();
+  FAIL assetAddsExactlyTheTablesMembers(trash)
+  FAIL assetAddsExactlyTheTablesMembers(copy)
+  FAIL assetAddsExactlyTheTablesMembers(move)
+  FAIL assetAddsExactlyTheTablesMembers(rename)
+  FAIL requestedCompanionExpandsTheSameWay()
+  FAIL twoRequestedMembersOfOneGroupAreDeduplicated()
+  FAIL requestedLeftOutExportIsNotListedAsLeftOut()
+  FAIL companionsStopAtTheCapAndExcludedAreCounted()
+  FAIL withAHintOnlyItsMembersAreProbed()
+  FAIL aHintForAnotherDirectoryIsIgnored()
+  FAIL withoutAHintOneReadPerParentFindsMixedCase()
+  FAIL aReadThatEndsInTime()
+  FAIL aTruncatedHintStillFindsCompanionsInTheParent()
+  FAIL aStaleHintGivesMissingNotIncluded()
+  FAIL renameAssetPreservesExtensions()
+  FAIL renameAssetWithSeveralDots()
+  Totals: 42 passed, 16 failed, 3198ms
+
+=== keep-members-in-collision
+  file: src/app/asset_group.cpp
+  was:  if (!collision) owner = requested.front();
+  now:  if (true) owner = requested.front();
+  FAIL seventeenthIsLimitReachedNeverDropped()
+  FAIL collisionMembersAreExcludedWithReasons()
+  FAIL collisionMemberCanStillBeRequestedExplicitly()
+  FAIL renameFallsBackToFileOnlyInACollisionGroup()
+  Totals: 54 passed, 4 failed, 4759ms
+
+=== no-folding
+  file: src/app/asset_group.cpp
+  was:  return (caseSensitive ? text : text.toCaseFolded()).toUtf8().toStdString();
+  now:  (void)caseSensitive; return text.toUtf8().toStdString();
+  FAIL caseVariants()
+  FAIL caseVariantsOnThisVolume()
+  FAIL seventeenthIsLimitReachedNeverDropped()
+  FAIL unicodeStemsMatchAfterCaseFolding()
+  Totals: 54 passed, 4 failed, 2690ms
+
+=== derived-joins
+  file: src/app/asset_group.cpp
+  was:  leftOut.push_back(entry); // 
+  now:  members.push_back(entry); // 
+  FAIL derivedStaysOutBesideRawOrRendered()
+  FAIL assetAddsExactlyTheTablesMembers(trash)
+  FAIL assetAddsExactlyTheTablesMembers(copy)
+  FAIL assetAddsExactlyTheTablesMembers(move)
+  FAIL assetAddsExactlyTheTablesMembers(rename)
+  Totals: 53 passed, 5 failed, 3304ms
+
+=== no-budget
+  file: src/app/asset_group.cpp
+  was:  const auto outOfBudget = [&] { return lookup.now() >= deadline; };
+  now:  (void)deadline; const auto outOfBudget = [&] { return false; };
+  FAIL aSlowVolumeEndsAtTheBudget()
+  FAIL aReadThatEndsInTime()
+  Totals: 56 passed, 2 failed, 5765ms
+
+=== hint-ignored
+  file: src/app/asset_group.cpp
+  was:  const bool hintUsable = hint && !hint->groups.empty()
+  now:  const bool hintUsable = false && hint && !hint->groups.empty()
+  FAIL withAHintOnlyItsMembersAreProbed()
+  FAIL aStaleHintGivesMissingNotIncluded()
+  Totals: 56 passed, 2 failed, 3776ms
+
+=== hint-trusted
+  file: src/app/asset_group.cpp
+  was:  if (!now || now->kind != TargetKind::File || now->link) missing.push_back(member.path);
+  now:  (void)now;
+  FAIL aStaleHintGivesMissingNotIncluded()
+  Totals: 57 passed, 1 failed, 5903ms
+
+=== truncated-hint-used
+  file: src/app/asset_group.cpp
+  was:  return (g.flags & std::uint32_t(GroupFlag::Incomplete)) || g.members.size() >= kMaxMembers; });
+  now:  return false && g.flags; });
+  FAIL aTruncatedHintStillFindsCompanionsInTheParent()
+  Totals: 57 passed, 1 failed, 4516ms
+
+=== no-cancel
+  file: src/app/asset_group.cpp
+  was:  if (!cancel.stop_requested()) return false;
+  now:  return false;
+  FAIL cancellationDuringLookupsLeavesNothing()
+  Totals: 57 passed, 1 failed, 4064ms
+
+=== no-cap
+  file: src/app/asset_group.cpp
+  was:  if (companions.size() < room) companions.push_back({member, owner->path, true});
+  now:  if (true) companions.push_back({member, owner->path, true});
+  FAIL companionsStopAtTheCapAndExcludedAreCounted()
+  Totals: 57 passed, 1 failed, 4156ms
+
+=== no-list-cap
+  file: src/app/asset_group.cpp
+  was:  if (out_.excluded.size() < kMaxExcludedListed) out_.excluded.push_back({path, requestedBy, reason});
+  now:  if (true) out_.excluded.push_back({path, requestedBy, reason});
+  FAIL companionsStopAtTheCapAndExcludedAreCounted()
+  FAIL fileOnlyCompanionsAreCountedPastTheListedLimit()
+  Totals: 56 passed, 2 failed, 3475ms
+
+=== rename-no-fallback
+  file: src/app/asset_group.cpp
+  was:  else if (operation_ != Operation::Rename) {
+  now:  else {
+  FAIL renameFallsBackToFileOnlyInACollisionGroup()
+  Totals: 57 passed, 1 failed, 4071ms
+
+=== lossless-honours-asset
+  file: src/app/asset_group.cpp
+  was:  if (operation == Operation::LosslessTransform) scope = Scope::FileOnly;
+  now:  (removed)
+  FAIL losslessIgnoresAsset()
+  Totals: 57 passed, 1 failed, 4030ms
+
+=== sidecar-expands
+  file: src/app/asset_group.cpp
+  was:  if (operation == Operation::SidecarWrite) return finish({});
+  now:  (removed)
+  FAIL sidecarWriteIsNotAnExpansion()
+  Totals: 57 passed, 1 failed, 4641ms
+
+=== fullname-as-stem
+  file: src/app/asset_group.cpp
+  was:  if (entry.kind.role == Role::Sidecar && imagesByName.contains(entry.stemKey)) {
+  now:  if (false) {
+  note: the run stopped early for the same reason
+  FAIL rawAndRenderedPair(cr2+full name)
+  FAIL rawAndRenderedPair(both sidecars)
+  FAIL sidecarStylesAreTold()
+  FAIL seventeenthIsLimitReachedNeverDropped()
+  FAIL assetAddsExactlyTheTablesMembers(trash)
+  FAIL assetAddsExactlyTheTablesMembers(copy)
+  FAIL assetAddsExactlyTheTablesMembers(move)
+  FAIL assetAddsExactlyTheTablesMembers(rename)
+  FAIL collisionMembersAreExcludedWithReasons()
+  FAIL renameFallsBackToFileOnlyInACollisionGroup() Caught unhandled exception
+  Totals: 28 passed, 10 failed, 15ms
+
+=== rename-drops-inner-ext
+  file: src/app/asset_group.cpp
+  was:  parts = {inner.stem, inner.suffix + parts.suffix};
+  now:  parts = {inner.stem, parts.suffix};
+  FAIL renameAssetPreservesExtensions()
+  FAIL renameAssetWithSeveralDots()
+  Totals: 56 passed, 2 failed, 3259ms
+
+=== rename-no-suffix-check
+  file: src/app/asset_group.cpp
+  was:  if (!MutationService::isValidFileName(name, &error)) return {}; //         renames.emplace_back
+  now:  renames.emplace_back
+  FAIL renameAssetRefusesAnInvalidStem()
+  Totals: 57 passed, 1 failed, 3464ms
+
+=== no-requested-dedupe
+  file: src/app/asset_group.cpp
+  was:  if (!seen.insert(request.path.native()).second) continue;
+  now:  (removed)
+  FAIL anUnreadableParentIsReportedNotGuessed()
+  Totals: 57 passed, 1 failed, 2773ms
+
+=== motion-unflagged
+  file: src/app/asset_group.cpp
+  was:  if (namedAsEmbeddedMotion(entry->name)) flags |= std::uint32_t(GroupFlag::EmbeddedMotion);
+  now:  (removed)
+  FAIL embeddedMotionIsAFlagNeverAMember()
+  Totals: 57 passed, 1 failed, 2724ms
+
+=== partial-read-groups
+  file: src/app/asset_group.cpp
+  was:  if (stopped || !readable) { out.companionsIncomplete = true; continue; }
+  now:  if (stopped) out.companionsIncomplete = true;
+  FAIL anUnreadableParentIsReportedNotGuessed()
+  Totals: 57 passed, 1 failed, 3239ms
+
+=== probe-says-sensitive
+  file: src/app/asset_group.cpp
+  was:  return !(other && same->identity == other->identity);
+  now:  return true;
+  FAIL caseVariantsOnThisVolume()
+  Totals: 57 passed, 1 failed, 3909ms
+
+=== no-collision-flag
+  file: src/app/asset_group.cpp
+  was:  if (tooMany) flags |= std::uint32_t(GroupFlag::Collision);
+  now:  (removed)
+  FAIL rawCollisionMakesTheSidecarAmbiguous()
+  FAIL fullNameSidecarIsNeverAmbiguous()
+  FAIL caseVariants()
+  FAIL repeatedFamilies()
+  FAIL seventeenCandidates()
+  FAIL seventeenthIsLimitReachedNeverDropped()
+  FAIL collisionMembersAreExcludedWithReasons()
+  FAIL collisionMemberCanStillBeRequestedExplicitly()
+  FAIL renameFallsBackToFileOnlyInACollisionGroup()
+  Totals: 49 passed, 9 failed, 2521ms
+
+=== always-ambiguous
+  file: src/app/asset_group.cpp
+  was:  if (tooMany && !sidecars.empty()) flags |= std::uint32_t(GroupFlag::AmbiguousSidecar);
+  now:  if (tooMany) flags |= std::uint32_t(GroupFlag::AmbiguousSidecar);
+  FAIL fullNameSidecarIsNeverAmbiguous()
+  Totals: 57 passed, 1 failed, 2671ms
+
+=== never-ambiguous
+  file: src/app/asset_group.cpp
+  was:  if (tooMany && !sidecars.empty()) flags |= std::uint32_t(GroupFlag::AmbiguousSidecar);
+  now:  (removed)
+  FAIL rawCollisionMakesTheSidecarAmbiguous()
+  FAIL caseVariants()
+  FAIL repeatedFamilies()
+  FAIL collisionMembersAreExcludedWithReasons()
+  FAIL collisionMemberCanStillBeRequestedExplicitly()
+  Totals: 53 passed, 5 failed, 2789ms
+
+=== no-member-cap
+  file: src/app/asset_group.cpp
+  was:  (i < kMaxMembers ? group.members : overflow).push_back(memberOf(*members[i]));
+  now:  group.members.push_back(memberOf(*members[i]));
+  FAIL seventeenCandidates()
+  FAIL seventeenthIsLimitReachedNeverDropped()
+  Totals: 56 passed, 2 failed, 5685ms
+
+=== folders-grouped
+  file: src/app/asset_group.cpp
+  was:  if (!item.regularFile) continue; // folders and links are never grouped
+  now:  (removed)
+  FAIL neverGrouped()
+  FAIL folderAndLinkRequestsNeverGainCompanions()
+  Totals: 56 passed, 2 failed, 3540ms
+
+=== other-directory-grouped
+  file: src/app/asset_group.cpp
+  was:  if (!sameDirectory(path.parent_path())) continue;
+  now:  (void)sameDirectory;
+  FAIL neverGrouped()
+  Totals: 57 passed, 1 failed, 3129ms
+
+=== video-alone-groups
+  file: src/app/asset_group.cpp
+  was:  if (!anchored && derived.empty()) continue; // a sidecar or a video alone is never grouped
+  now:  if (!anchored && derived.empty() && motion.empty()) continue;
+  note: equivalent: the line is an early exit; a lone video still forms no group, because video joins only an anchored stem
+  Totals: 58 passed, 0 failed, 4635ms
+
+=== fileonly-takes-companions
+  file: src/app/asset_group.cpp
+  was:  if (scope_ == Scope::FileOnly) { exclude(member.path, first, Exclusion::NotApplicable); continue; }
+  now:  (removed)
+  FAIL fileOnlyReturnsExactlyTheRequest(trash)
+  FAIL fileOnlyReturnsExactlyTheRequest(copy)
+  FAIL fileOnlyReturnsExactlyTheRequest(move)
+  FAIL fileOnlyReturnsExactlyTheRequest(rename)
+  FAIL fileOnlyReturnsExactlyTheRequest(lossless)
+  FAIL losslessIgnoresAsset()
+  FAIL fileOnlyCompanionsAreCountedPastTheListedLimit()
+  Totals: 51 passed, 7 failed, 4303ms
+
+=== no-request-cap
+  file: src/app/asset_group.cpp
+  was:  if (out.included.size() >= kMaxExpandedItems) {
+  now:  if (false) {
+  FAIL requestsStopAtTheCapWithTheRestLimitReached()
+  Totals: 57 passed, 1 failed, 2331ms
+
+=== truncated-unflagged
+  file: src/app/asset_group.cpp
+  was:  group.flags = flags | (truncated ? std::uint32_t(GroupFlag::Incomplete) : 0u);
+  now:  group.flags = flags;
+  FAIL truncatedListingSetsIncomplete()
+  FAIL aTruncatedHintStillFindsCompanionsInTheParent()
+  Totals: 56 passed, 2 failed, 2479ms
+
+=== generation-unfenced
+  file: src/app/asset_group_internal.hpp
+  was:  return snapshot && snapshot->listingGeneration == currentListingGeneration ? snapshot : nullptr;
+  now:  (void)currentListingGeneration; return snapshot;
+  FAIL hintsAreFencedByGeneration()
+  Totals: 57 passed, 1 failed, 2173ms
+
+=== rename-no-stem-check
+  file: src/app/asset_group.cpp
+  was:  if (!MutationService::isValidFileName(stem, &error)) return {};
+  now:  (removed)
+  FAIL renameAssetRefusesAnInvalidStem()
+  Totals: 57 passed, 1 failed, 2571ms
+
+=== members-unsorted
+  file: src/app/asset_group.cpp
+  was:  std::sort(members.begin(), members.end(), byRoleThenName);
+  now:  (removed)
+  FAIL groupIdsAndOrderAreStable()
+  Totals: 57 passed, 1 failed, 2849ms
+
+=== motion-any-partner
+  file: src/app/asset_group.cpp
+  was:  if (anchored) { //             members.insert(members.end(), motion.begin(), motion.end());
+  now:  members.insert(members.end(), motion.begin(), motion.end()); //         if (anchored) {
+  FAIL neverGrouped()
+  Totals: 57 passed, 1 failed, 3405ms
+
+=== group-ids-equal
+  file: src/app/asset_group.cpp
+  was:  group.id = result.groups.size() + 1;
+  now:  group.id = 1;
+  FAIL groupIdsAndOrderAreStable()
+  Totals: 57 passed, 1 failed, 2337ms
+
+=== trash-file-scope-only
+  file: src/app/file_operation_service.cpp
+  was:  result.plan = planDeletion(included, cancel);
+  now:  result.plan = planDeletion(requested, cancel);
+  FAIL planScopedAssetListsAndTrashesTheIncludedList()
+  FAIL partialFailureIsReportedPerMember()
+  FAIL aCompanionReplacedBeforeConfirmIsChangedAtExecution()
+  Totals: 78 passed, 3 failed, 12840ms
+
+=== plan-implicit-companions
+  file: src/app/file_operation_service.cpp
+  was:  if (assetScope == assets::Scope::FileOnly) {
+  now:  if (false) {
+  note: equivalent: under file scope `included` is the request, so both branches plan the same list
+  Totals: 81 passed, 0 failed, 8149ms
+
+=== overwrite-allowed
+  file: src/app/copy_move_service.cpp
+  was:  if (collision == CollisionPolicy::Overwrite) return false;
+  now:  (removed)
+  FAIL overwriteIsRefusedUntilB2()
+  Totals: 80 passed, 1 failed, 12110ms
+
+=== no-revalidate
+  file: src/app/copy_move_service.cpp
+  was:  if (item.snapshot) {
+  now:  if (false) {
+  FAIL aReplacedCompanionIsReportedAndTheOthersProceed()
+  Totals: 80 passed, 1 failed, 9439ms
+
+=== stale-transfer-plan
+  file: src/app/copy_move_service.cpp
+  was:  if (id != d->planningId) return; // superseded: nothing stale reaches the confirmation
+  now:  (removed)
+  note: not observable alone: the stop token ends the older plan first. See stale-transfer-and-cancelled
+  Totals: 81 passed, 0 failed, 10086ms
+
+=== one-confirm-twice
+  file: src/app/copy_move_service.cpp
+  was:  d->ready.reset(); //     d->readyId = 0; // one confirmation per plan //     d->startBatch
+  now:  d->startBatch
+  FAIL transferPlanListsCompanionsAndExecutesTheSnapshot()
+  Totals: 80 passed, 1 failed, 10623ms
+
+=== skip-member-only
+  file: src/app/copy_move_service.cpp
+  was:  plan.items.push_back({{source, chosen, member.snapshot}, collides});
+  now:  plan.items.push_back({{source, chosen, member.snapshot}, occupied(member.name)});
+  FAIL skipLeavesACollidingAssetWhole()
+  Totals: 80 passed, 1 failed, 9004ms
+
+=== rename-per-member
+  file: src/app/copy_move_service.cpp
+  was:  const QString chosen = shared ? renamed(member, shared) : member.name;
+  now:  const QString chosen = shared && occupied(member.name) ? renamed(member, shared) : member.name;
+  FAIL keepBothKeepsAnAssetTogether()
+  Totals: 80 passed, 1 failed, 10844ms
+
+=== same-folder-move
+  file: src/app/copy_move_service.cpp
+  was:  if (mode == CopyMoveService::TransferMode::Move && transferKey(parent) == transferKey(destinationDir)) {
+  now:  if (false) {
+  FAIL movingIntoTheSameFolderIsRejected()
+  Totals: 80 passed, 1 failed, 8768ms
+
+=== no-destination-check
+  file: src/app/copy_move_service.cpp
+  was:  if (!QFileInfo(destinationDir).isDir()) summary.insert(QStringLiteral("error"), QStringLiteral("destinationMissing"));
+  now:  (removed)
+  FAIL transferToAMissingDestinationCannotRun()
+  Totals: 80 passed, 1 failed, 8573ms
+
+=== asset-rename-runs
+  file: src/app/mutation_service.cpp
+  was:  plan.executable = error.isEmpty() && newName != sourceInfo.fileName(); //     }
+  now:  plan.executable = error.isEmpty() && newName != sourceInfo.fileName(); //     } //     plan.executable = true;
+  FAIL planRenamePreviewsEveryMemberAndAssetIsRefused()
+  Totals: 80 passed, 1 failed, 8081ms
+
+=== rename-no-revalidate
+  file: src/app/mutation_service.cpp
+  was:  const auto state = plan.snapshot ? assets::detail::compareToSnapshot(*plan.snapshot) : assets::detail::SnapshotState::Missing;
+  now:  const auto state = assets::detail::SnapshotState::Same;
+  FAIL aChangedSourceIsNotRenamed()
+  Totals: 80 passed, 1 failed, 8999ms
+
+=== rename-no-collisions
+  file: src/app/mutation_service.cpp
+  was:  if (repeated || (!froms.contains(key) && (QFileInfo::exists(target) || QFileInfo(target).isSymLink()))) {
+  now:  if (false) {
+  FAIL planRenameFindsTargetCollisionsInAssetScope()
+  Totals: 80 passed, 1 failed, 13027ms
+
+=== stale-rename-plan
+  file: src/app/mutation_service.cpp
+  was:  if (id != d->planningId) return; // superseded: an older name can't replace a newer preview
+  now:  (removed)
+  note: not observable alone: the stop token ends the older preview first. See stale-rename-and-cancelled
+  Totals: 81 passed, 0 failed, 10667ms
+
+=== summary-unbounded
+  file: src/app/asset_group.cpp
+  was:  if (companions.size() < qsizetype(kMaxExcludedListed)) companions.append(row(item.member.path,
+  now:  if (true) companions.append(row(item.member.path,
+  FAIL companionSummaryIsBounded()
+  Totals: 80 passed, 1 failed, 11038ms
+
+=== scope-any-is-asset
+  file: src/app/asset_group.cpp
+  was:  return name == QLatin1String("asset") ? Scope::Asset : Scope::FileOnly;
+  now:  return name == QLatin1String("file") ? Scope::FileOnly : Scope::Asset;
+  FAIL anUnknownScopeIsFileOnly()
+  Totals: 80 passed, 1 failed, 9026ms
+
+=== stale-transfer-and-cancelled
+  file: src/app/copy_move_service.cpp
+  was:  if (id != d->planningId) return; // superseded: nothing stale reaches the confirmation
+  now:  (removed)
+  file: src/app/copy_move_service.cpp
+  was:  if (plan.cancelled) return; //         QVariantMap summary = plan.summary;
+  now:  QVariantMap summary = plan.summary;
+  FAIL aSupersededTransferPlanCannotBeConfirmed()
+  Totals: 80 passed, 1 failed, 44658ms
+
+=== stale-rename-and-cancelled
+  file: src/app/mutation_service.cpp
+  was:  if (id != d->planningId) return; // superseded: an older name can't replace a newer preview
+  now:  (removed)
+  file: src/app/mutation_service.cpp
+  was:  if (plan.cancelled) return; //         QVariantMap summary = plan.summary;
+  now:  QVariantMap summary = plan.summary;
+  FAIL anOlderRenamePreviewCannotReplaceANewerOne()
+  Totals: 80 passed, 1 failed, 11851ms
+
+=== stale-trash-and-uncancelled
+  file: src/app/file_operation_service.cpp
+  was:  if (id != d->planningId) return; // superseded or cancelled
+  now:  (removed)
+  file: src/app/asset_group.cpp
+  was:  if (!cancel.stop_requested()) return false;
+  now:  return false;
+  file: src/app/file_operation_service.cpp
+  was:  if (result.plan.cancelled) timing.setFlags(glancelot::perf::Cancelled);
+  now:  result.plan.cancelled = false;
+  FAIL cancellationDuringLookupsLeavesNothing()
+  FAIL cancelDuringLookupsLeavesNoConfirmablePlan()
+  FAIL aScopeSwitchSupersedesThePlanBeingBuilt()
+  Totals: 78 passed, 3 failed, 81833ms
+
+=== summary-no-scope
+  file: src/app/asset_group.cpp
+  was:  summary.insert(QStringLiteral("scope"), scopeName(scope));
+  now:  (removed)
+  FAIL planRenamePreviewsEveryMemberAndAssetIsRefused()
+  FAIL transferPlanListsCompanionsAndExecutesTheSnapshot()
+  FAIL planScopedAssetListsAndTrashesTheIncludedList()
+  FAIL planOutputOnlyGainsTheCompanionKeys()
+  FAIL anUnknownScopeIsFileOnly()
+  FAIL aScopeSwitchSupersedesThePlanBeingBuilt()
+  Totals: 75 passed, 6 failed, 11036ms
+
+=== summary-not-incomplete
+  file: src/app/asset_group.cpp
+  was:  summary.insert(QStringLiteral("companionsIncomplete"), expansion.companionsIncomplete);
+  now:  summary.insert(QStringLiteral("companionsIncomplete"), false);
+  FAIL theBudgetReachesTheSummary()
+  Totals: 80 passed, 1 failed, 10571ms
+
+=== transfer-always-asset
+  file: src/app/copy_move_service.cpp
+  was:  scope = assets::detail::scopeFromName(scope), cancel = d->planStop.get_token()] {
+  now:  scope = assets::Scope::Asset, cancel = d->planStop.get_token()] {
+  FAIL transferFileScopeMovesOnlyTheFile()
+  Totals: 80 passed, 1 failed, 16670ms
+
+=== transfer-always-file
+  file: src/app/copy_move_service.cpp
+  was:  scope = assets::detail::scopeFromName(scope), cancel = d->planStop.get_token()] {
+  now:  scope = assets::Scope::FileOnly, cancel = d->planStop.get_token()] {
+  FAIL transferPlanListsCompanionsAndExecutesTheSnapshot()
+  FAIL keepBothKeepsAnAssetTogether()
+  FAIL skipLeavesACollidingAssetWhole()
+  FAIL aReplacedCompanionIsReportedAndTheOthersProceed()
+  Totals: 77 passed, 4 failed, 13571ms
+
+=== rename-signal-missing
+  file: src/app/mutation_service.cpp
+  was:  if (success && !result.value(QStringLiteral("unchanged")).toBool()) emit pathRenamed(from, to);
+  now:  (removed)
+  FAIL fileScopeRenameRunsThroughThePlan()
+  Totals: 80 passed, 1 failed, 19825ms
+
+=== rename-confirm-twice
+  file: src/app/mutation_service.cpp
+  was:  d->ready.reset(); //     d->readyId = 0; // one confirmation per plan //     d->runningId = id;
+  now:  d->runningId = id;
+  FAIL fileScopeRenameRunsThroughThePlan()
+  Totals: 80 passed, 1 failed, 14527ms
+
+=== ui-scope-remembered
+  file: ui/DeleteFlow.qml
+  was:  scope = "file"; replanning = false // 
+  now:  replanning = false // 
+  FAIL choosingAssetTrashesWhatItShowsAndIsNotRemembered()
+  Totals: 14 passed, 1 failed, 100428ms
+
+=== ui-confirm-during-replan
+  file: ui/DeleteFlow.qml
+  was:  if (phase !== "confirm" || replanning || targets.length === 0 || summary.id !== planId) return
+  now:  if (phase !== "confirm" || targets.length === 0) return
+  FAIL confirmWaitsForTheNewPlan()
+  Totals: 14 passed, 1 failed, 99113ms
+
+=== ui-confirm-enabled-during-replan
+  file: ui/DeleteFlow.qml
+  was:  enabled: flow.phase === "confirm" && !flow.replanning && flow.targets.length > 0
+  now:  enabled: flow.phase === "confirm" && flow.targets.length > 0
+  FAIL confirmWaitsForTheNewPlan()
+  Totals: 14 passed, 1 failed, 80580ms
+
+=== ui-delete-starts-asset
+  file: ui/DeleteFlow.qml
+  was:  scope = "file"; replanning = false // 
+  now:  scope = "asset"; replanning = false // 
+  FAIL deleteShowsCompanionsAndIsFileOnlyByDefault()
+  FAIL choosingAssetTrashesWhatItShowsAndIsNotRemembered()
+  FAIL confirmWaitsForTheNewPlan()
+  Totals: 12 passed, 3 failed, 153310ms
+
+=== ui-scope-choice-ignored
+  file: ui/DeleteFlow.qml
+  was:  onScopeRequested: next => flow.setScope(next)
+  now:  onScopeRequested: next => {}
+  FAIL choosingAssetTrashesWhatItShowsAndIsNotRemembered()
+  FAIL confirmWaitsForTheNewPlan()
+  FAIL aCollisionIsExplainedInTheConfirmation()
+  Totals: 12 passed, 3 failed, 185857ms
+
+=== ui-companions-hidden
+  file: ui/AssetCompanions.qml
+  was:  visible: hasCompanions || incomplete // 
+  now:  visible: false // 
+  FAIL pasteAsksFirstAndRunsNothingUntilConfirmed()
+  FAIL pasteOfAWholeAsset()
+  FAIL aCollisionTakesOneDecisionAndShowsTheNewNames()
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 11 passed, 4 failed, 172296ms
+
+=== ui-state-unlabelled
+  file: ui/AssetCompanions.qml
+  was:  text: modelData.included ? qsTr("Included") : root.excludedLabel // 
+  now:  text: "" // 
+  FAIL deleteShowsCompanionsAndIsFileOnlyByDefault()
+  FAIL choosingAssetTrashesWhatItShowsAndIsNotRemembered()
+  FAIL pasteOfAWholeAsset()
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 11 passed, 4 failed, 221023ms
+
+=== ui-reason-blank
+  file: ui/AssetCompanions.qml
+  was:  text: preview.length ? qsTr("Would become %1").arg(preview) : reason
+  now:  text: ""
+  FAIL choosingAssetTrashesWhatItShowsAndIsNotRemembered()
+  FAIL aCollisionIsExplainedInTheConfirmation()
+  FAIL aCollisionTakesOneDecisionAndShowsTheNewNames()
+  Totals: 12 passed, 3 failed, 140313ms
+
+=== ui-incomplete-silent
+  file: ui/AssetCompanions.qml
+  was:  visible: root.incomplete // 
+  now:  visible: false // 
+  FAIL companionsThatCouldNotBeCheckedAreSaid()
+  Totals: 14 passed, 1 failed, 49360ms
+
+=== ui-radio-binding-lost
+  file: ui/AssetCompanions.qml
+  was:  Binding on checked { value: root.scope !== "asset" } // survives the click, and follows a new operation's reset
+  now:  checked: root.scope !== "asset"
+  file: ui/AssetCompanions.qml
+  was:  Binding on checked { value: root.scope === "asset" }
+  now:  checked: root.scope === "asset"
+  note: equivalent: a click sets checked from C++, which keeps a QML binding. It showed Binding on checked was unnecessary, so the code now uses a plain binding
+  Totals: 15 passed, 0 failed, 100658ms
+
+=== ui-default-focus-on-choice
+  file: ui/DeleteFlow.qml
+  was:  onOpened: secondary.forceActiveFocus(Qt.TabFocusReason)
+  now:  onOpened: {}
+  FAIL deleteShowsCompanionsAndIsFileOnlyByDefault()
+  Totals: 14 passed, 1 failed, 78722ms
+
+=== ui-note-always-generic
+  file: ui/DeleteFlow.qml
+  was:  text: assetCompanions.hasCompanions // 
+  now:  text: true // 
+  FAIL noCompanionsLeaveTheConfirmationAsItWas()
+  Totals: 14 passed, 1 failed, 33019ms
+
+=== ui-paste-runs-at-once
+  file: ui/TransferFlow.qml
+  was:  phase = "planning" //         plan() //         confirmDialog.open()
+  now:  service.pasteTo(destination)
+  note: the run stopped early: a null item once the confirmation never opened
+  FAIL pasteAsksFirstAndRunsNothingUntilConfirmed()
+  FAIL pasteAsksFirstAndRunsNothingUntilConfirmed()
+  FAIL pasteOfAWholeAsset()
+
+=== ui-keep-both-always
+  file: ui/TransferFlow.qml
+  was:  service.confirmTransfer(planId, keepBoth ? 2 : 0)
+  now:  service.confirmTransfer(planId, 2)
+  FAIL aCollisionTakesOneDecisionAndShowsTheNewNames()
+  Totals: 14 passed, 1 failed, 87363ms
+
+=== ui-collisions-hidden
+  file: ui/TransferFlow.qml
+  was:  visible: flow.phase === "confirm" && flow.collisions.length > 0
+  now:  visible: false
+  FAIL aCollisionTakesOneDecisionAndShowsTheNewNames()
+  Totals: 14 passed, 1 failed, 64925ms
+
+=== ui-new-name-hidden
+  file: ui/TransferFlow.qml
+  was:  previews: flow.renamed // 
+  now:  (removed)
+  FAIL aCollisionTakesOneDecisionAndShowsTheNewNames()
+  Totals: 14 passed, 1 failed, 62574ms
+
+=== ui-cut-stays
+  file: ui/TransferFlow.qml
+  was:  if (wasMove) { service.clearClipboard(); clipboardPaths = [] }
+  now:  (removed)
+  FAIL pasteOfAWholeAsset()
+  Totals: 14 passed, 1 failed, 24362ms
+
+=== ui-results-silent
+  file: ui/TransferFlow.qml
+  was:  if (flow.failures.length > 0) resultsDialog.open()
+  now:  (removed)
+  FAIL aMemberChangedAfterConfirmationIsReported()
+  Totals: 14 passed, 1 failed, 71704ms
+
+=== ui-transfer-focus
+  file: ui/TransferFlow.qml
+  was:  if (first && flow.canConfirm) confirmAction.forceActiveFocus(Qt.TabFocusReason)
+  now:  (removed)
+  FAIL pasteAsksFirstAndRunsNothingUntilConfirmed()
+  Totals: 14 passed, 1 failed, 59493ms
+
+=== ui-modal-forgotten
+  file: ui/Main.qml
+  was:   || transferFlow.modal
+  now:  (removed)
+  FAIL thePasteCommandGoesThroughTheConfirmation()
+  Totals: 14 passed, 1 failed, 23800ms
+
+=== ui-paste-command-direct
+  file: ui/Main.qml
+  was:  transferFlow.paste(dest)
+  now:  viewer.copyMoveService.pasteTo(dest)
+  FAIL thePasteCommandGoesThroughTheConfirmation()
+  Totals: 14 passed, 1 failed, 60057ms
+
+=== ui-rename-asset-allowed
+  file: ui/RenameFlow.qml
+  was:  renameField.text !== renameInitialName && !(renameScope === "asset")
+  now:  renameField.text !== renameInitialName
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 14 passed, 1 failed, 96351ms
+
+=== ui-rename-refusal-hidden
+  file: ui/RenameFlow.qml
+  was:  visible: root.renameRefused // 
+  now:  visible: false // 
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 14 passed, 1 failed, 61047ms
+
+=== ui-rename-scope-remembered
+  file: ui/RenameFlow.qml
+  was:  renameScope = "file" //         renamePlan = null
+  now:  renamePlan = null
+  FAIL pasteOfAWholeAsset()
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 13 passed, 2 failed, 173063ms
+
+=== ui-rename-keeps-unlabelled
+  file: ui/RenameFlow.qml
+  was:  excludedLabel: qsTr("Keeps its name") // 
+  now:  (removed)
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 14 passed, 1 failed, 59999ms
+
+=== ui-rename-no-preview
+  file: ui/RenameFlow.qml
+  was:  planPreview() //         renameDialog.open()
+  now:  renameDialog.open()
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 14 passed, 1 failed, 112782ms
+
+=== ui-rename-executes-asset
+  file: ui/RenameFlow.qml
+  was:  renameField.text !== renameInitialName && !(renameScope === "asset")
+  now:  renameField.text !== renameInitialName
+  file: ui/RenameFlow.qml
+  was:  if (renameScope === "asset") return // refused, with the reason on screen, until the operation journal lands
+  now:  (removed)
+  FAIL renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason()
+  Totals: 14 passed, 1 failed, 95328ms
+
+=== ui-companions-always
+  file: ui/AssetCompanions.qml
+  was:  visible: hasCompanions || incomplete // 
+  now:  visible: true // 
+  FAIL renameWithNoCompanionsLooksAsItDid()
+  Totals: 14 passed, 1 failed, 59681ms
