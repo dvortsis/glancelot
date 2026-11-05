@@ -1,0 +1,10 @@
+Test project C:/src/Github/Glancelot/.claude/worktrees/recursing-bassi-58ba22/build-claude-phase2-contracts
+    Start 45: contract_headers
+1/1 Test #45: contract_headers .................   Passed    0.08 sec
+
+100% tests passed out of 1
+
+Label Time Summary:
+fast    =   0.08 sec*proc (1 test)
+
+Total Test time (real) =   0.13 sec

@@ -1,0 +1,66 @@
+PHASE2-CONTRACTS review round: fail-before evidence for each new or changed assertion. Each section breaks one thing, builds the target and records the result; the file is then restored.
+=== headroom back to 768 MiB
+mutation: include/glancelot/resource_ledger.hpp : 'kMaxForegroundHeadroomBytes = 1LL << 30;' -> 'kMaxForegroundHeadroomBytes = 768LL << 20;'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(42): error C2607: static assertion failed
+
+=== fallback no longer fits the largest decode
+mutation: include/glancelot/resource_ledger.hpp : 'kDefaultFallbackBytes = kMaxForegroundHeadroomBytes + kDefaultSafetyReserveBytes;' -> 'kDefaultFallbackBytes = kMaxForegroundHeadroomBytes;'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(44): error C2607: static assertion failed
+
+=== commit loses its share key (B6)
+mutation: include/glancelot/resource_ledger.hpp : 'bool commit(qint64 actualBytes, quint64 shareKey = 0);' -> 'bool commit(qint64 actualBytes);'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(46): error C2607: static assertion failed
+
+=== expansion bound differs from the journal limit (AG-N1)
+mutation: include/glancelot/asset_group.hpp : 'kMaxExpandedItems = 100000;' -> 'kMaxExpandedItems = 50000;'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(53): error C2607: static assertion failed
+
+=== journal file cap back to 64 MiB (OJ-N2)
+mutation: include/glancelot/operation_journal.hpp : 'kMaxOperationFileBytes = 256LL << 20;' -> 'kMaxOperationFileBytes = 64LL << 20;'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(64): error C2607: static assertion failed
+
+=== journal total below one operation (OJ-N2)
+mutation: include/glancelot/operation_journal.hpp : 'kMaxJournalBytes = 1LL << 30;' -> 'kMaxJournalBytes = 128LL << 20;'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(65): error C2607: static assertion failed
+
+=== a default request is a refresh (B3)
+mutation: include/glancelot/contracts.hpp : 'bool refresh{};' -> 'bool refresh{true};'
+build exit code: 0
+test exit code: 1
+FAIL a default request is an ordinary Full decode
+1 failed
+
+=== a new operation reads as reconciled (OJ-N4)
+mutation: include/glancelot/operation_journal.hpp : 'bool reconciled{};' -> 'bool reconciled{true};'
+build exit code: 0
+test exit code: 1
+FAIL an operation starts unreconciled and holds no backup
+1 failed
+
+=== consent is the default (B1)
+mutation: include/glancelot/operation_journal.hpp : 'bool permanentReplaceConsented{};' -> 'bool permanentReplaceConsented{true};'
+build exit code: 0
+test exit code: 1
+FAIL no preimage and no consent unless stated
+1 failed
+
+=== moc: CompareSession signal with an undeclared type
+mutation: include/glancelot/compare_panes.hpp : 'void cancelRequested(int pane, quint64 generation);' -> 'void cancelRequested(int pane, UndeclaredType generation);'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_moc.dir/include/glancelot/moc_compare_panes.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\build-claude-phase2-contracts\include\glancelot\../../../include/glancelot/compare_panes.hpp(85): error C2061: syntax error: identifier 'UndeclaredType'
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\build-claude-phase2-contracts\include\glancelot\moc_compare_panes.cpp(146): error C2065: 'UndeclaredType': undeclared identifier
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\build-claude-phase2-contracts\include\glancelot\moc_compare_panes.cpp(146): error C2923: 'QtPrivate::TypeAndForceComplete': 'UndeclaredType' is not a valid template type argument for parameter 'T'
+
