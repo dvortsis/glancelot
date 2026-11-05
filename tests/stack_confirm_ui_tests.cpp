@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QRandomGenerator>
 #include <QUuid>
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -418,6 +419,16 @@ private slots:
     void slideshowPatternRateRun() {
         const int passes = qEnvironmentVariableIntValue("GL_STACK_RATE_PASSES"), paceMs = qEnvironmentVariableIntValue("GL_STACK_RATE_PACE_MS");
         if (passes <= 0) QSKIP("set GL_STACK_RATE_PASSES to run it");
+        {
+            // The GUI thread's part of a teardown at the largest admitted size, with every page touched.
+            const qint64 largest = 256LL * 1024 * 1024;
+            auto segment = std::make_unique<glancelot::detail::TransferSegment>(glancelot::detail::newTransferKey());
+            QVERIFY(segment->create(largest));
+            std::fill_n(static_cast<char*>(segment->data()), largest, char(1));
+            QElapsedTimer teardown; teardown.start();
+            segment.reset();
+            qInfo("tearing down a full 256 MiB transfer took %lld us", teardown.nsecsElapsed() / 1000);
+        }
         const QSize photo(640, 480); const qint64 bytes = qint64(photo.width()) * photo.height() * 4;
         QTemporaryDir root; QVERIFY(root.isValid());
         QStringList folders;
