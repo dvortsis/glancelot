@@ -49,10 +49,10 @@ struct ArrivalFixture {
 void runPlacements() { QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall); }
 // A folder browsed to row 1500, whose listing can then fail, succeed, or succeed and hold partway.
 struct RetryFixture {
-    enum Source { Lists, Fails, ListsAndHolds };
+    enum Source { Lists, Fails, FailsPartway, ListsAndHolds };
     Media media{1, QSize(64, 48)};
     std::shared_ptr<std::atomic_int> source = std::make_shared<std::atomic_int>(Lists);
-    FakeFolder listing, failing, holding;
+    FakeFolder listing, failing, failingPartway, holding;
     SeamScope seam{nullptr};
     std::unique_ptr<Harness> h;
     QString anchor;
@@ -62,12 +62,12 @@ struct RetryFixture {
             if (i == (orderMoves ? 2500 : kRows - 1)) return QString("p1.png");
             return QString("f%1.txt").arg(orderMoves ? kRows - i : i, 5, 10, QChar('0'));
         };
-        listing.total = holding.total = failing.total = kRows;
-        listing.name = holding.name = names;
-        failing.failAfter = 0; holding.heldAfter = kHeldAfter;
-        const auto lists = listing.enumerator(), fails = failing.enumerator(), holds = holding.enumerator();
+        listing.total = holding.total = failing.total = failingPartway.total = kRows;
+        listing.name = holding.name = failingPartway.name = names;
+        failing.failAfter = 0; failingPartway.failAfter = kHeldAfter; holding.heldAfter = kHeldAfter;
+        const auto lists = listing.enumerator(), fails = failing.enumerator(), failsPartway = failingPartway.enumerator(), holds = holding.enumerator();
         directory_scan::testSeam.enumerator = [=, which = source](const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
-            const auto& chosen = which->load() == Fails ? fails : which->load() == ListsAndHolds ? holds : lists;
+            const auto& chosen = which->load() == Fails ? fails : which->load() == FailsPartway ? failsPartway : which->load() == ListsAndHolds ? holds : lists;
             return chosen(d, hidden, cancel, limit, sink);
         };
         h = std::make_unique<Harness>();
@@ -83,8 +83,8 @@ struct RetryFixture {
         anchor = h->fileGrid.pathAt(top());
         return true;
     }
-    bool fail() {
-        source->store(Fails);
+    bool fail(Source how = Fails) {
+        source->store(how);
         h->fileGrid.refresh();
         const bool failed = QTest::qWaitFor([&] { return !h->fileGrid.loading() && !h->fileGrid.accessible() && h->fileGrid.count() == 0; }, 10000);
         runPlacements();
@@ -338,10 +338,11 @@ private slots:
         QCOMPARE(layouts.count(), 0);
         QTRY_VERIFY_WITH_TIMEOUT(f.anchoredOn(f.anchor), 10000);
     }
+    // Partway, so rows were showing when it failed again: their position is not the one to return to.
     void failingAgainKeepsTheBrowsedPositionForTheNextTry() {
         RetryFixture f; QVERIFY(f.start(true));
         QVERIFY(f.fail());
-        QVERIFY(f.fail());
+        QVERIFY(f.fail(RetryFixture::FailsPartway));
         f.source->store(RetryFixture::Lists);
         f.h->fileGrid.refresh();
         QVERIFY(f.recovered());
