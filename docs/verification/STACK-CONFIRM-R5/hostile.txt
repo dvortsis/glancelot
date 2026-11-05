@@ -1,0 +1,32 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(decodedBeforeProbe) PROBE decodedBeforeProbe: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(decodedBeforeProbe)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(probeBytes) PROBE probeBytes: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder requested an invalid pixel allocation.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(probeBytes)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(probeHuge) PROBE probeHuge: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder requested an invalid pixel allocation.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(probeHuge)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(probeNegative) PROBE probeNegative: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder requested an invalid pixel allocation.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(probeNegative)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(secondProbe) PROBE secondProbe: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder requested an invalid pixel allocation.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(secondProbe)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(halfWrite) PROBE halfWrite: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder failed; the previous valid image is preserved.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(halfWrite)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(geometryWide) PROBE geometryWide: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(geometryWide)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(geometryTall) PROBE geometryTall: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(geometryTall)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(geometryStride) PROBE geometryStride: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(geometryStride)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(geometryHuge) PROBE geometryHuge: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(geometryHuge)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(geometryOverflow) PROBE geometryOverflow: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(geometryOverflow)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(geometrySmall) PROBE geometrySmall: imageReady 0, image 800x600, pixel #ffff0000 (healthy #ffff0000), status: Decoder returned invalid image geometry.
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(geometrySmall)
+QINFO  : StackConfirmUiTests::reviewProbeHostileWorker(noWrite) PROBE noWrite: imageReady 1, image 800x600, pixel #00000000 (healthy #ffff0000), status: sRGB fixture ? display profile not yet managed
+PASS   : StackConfirmUiTests::reviewProbeHostileWorker(noWrite)
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 19023ms
+********* Finished testing of StackConfirmUiTests *********

@@ -1,0 +1,10 @@
+********* Start testing of InputUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+SKIP   : InputUiTests::reviewCaptures() Set GLANCELOT_REVIEW_CAPTURE to write captures.
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\input_ui_tests.cpp(1279) : failure location
+Totals: 32 passed, 1 failed, 1 skipped, 0 blacklisted, 177143ms
+********* Finished testing of InputUiTests *********

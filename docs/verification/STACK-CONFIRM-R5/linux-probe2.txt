@@ -1,0 +1,59 @@
+[3/3] Linking CXX executable stack_confirm_ui_tests
+--- A: process exits right after the retire, nothing runs the event loop. 5 runs
+retired, closed at once) PROBE gap 0 retire 1: closing took 104 ms, orphan segments 1
+run 1, after the process exited:
+0x51404d4b 0          dvort      600        10400000   0                       
+retired, closed at once) PROBE gap 0 retire 1: closing took 131 ms, orphan segments 1
+run 2, after the process exited:
+0x51404d4b 0          dvort      600        10400000   0                       
+0x514011d9 1          dvort      600        10400000   0                       
+retired, closed at once) PROBE gap 0 retire 1: closing took 102 ms, orphan segments 1
+run 3, after the process exited:
+0x51404d4b 0          dvort      600        10400000   0                       
+0x514011d9 1          dvort      600        10400000   0                       
+0x514011f9 2          dvort      600        10400000   0                       
+retired, closed at once) PROBE gap 0 retire 1: closing took 101 ms, orphan segments 1
+run 4, after the process exited:
+0x51404d4b 0          dvort      600        10400000   0                       
+0x514011d9 1          dvort      600        10400000   0                       
+0x514011f9 2          dvort      600        10400000   0                       
+0x51401202 3          dvort      600        10400000   0                       
+retired, closed at once) PROBE gap 0 retire 1: closing took 172 ms, orphan segments 1
+run 5, after the process exited:
+0x51404d4b 0          dvort      600        10400000   0                       
+0x514011d9 1          dvort      600        10400000   0                       
+0x514011f9 2          dvort      600        10400000   0                       
+0x51401202 3          dvort      600        10400000   0                       
+0x51401218 4          dvort      600        10400000   0                       
+--- B: 20 ms gap, then process exits. 5 runs
+retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 137 ms, orphan segments 0
+run 1: new segments 0
+retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 78 ms, orphan segments 0
+run 2: new segments 0
+retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 201 ms, orphan segments 0
+run 3: new segments 0
+retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 105 ms, orphan segments 0
+run 4: new segments 0
+retired, 20 ms of event loop) PROBE gap 20 retire 1: closing took 128 ms, orphan segments 0
+run 5: new segments 0
+--- C: current worker only, process exits. 5 runs
+current worker only) PROBE gap 0 retire 0: closing took 95 ms, orphan segments 0
+run 1: new segments 0
+current worker only) PROBE gap 0 retire 0: closing took 86 ms, orphan segments 0
+run 2: new segments 0
+current worker only) PROBE gap 0 retire 0: closing took 114 ms, orphan segments 0
+run 3: new segments 0
+current worker only) PROBE gap 0 retire 0: closing took 95 ms, orphan segments 0
+run 4: new segments 0
+current worker only) PROBE gap 0 retire 0: closing took 102 ms, orphan segments 0
+run 5: new segments 0
+--- D: viewer SIGKILLed mid-transfer
+attached:
+0x51401224 16         dvort      600        9600000    2                       
+viewer gone; own workers [11233] running; segments:
+0x51401224 16         dvort      600        9600000    1                       
+own workers gone; segments:
+0x51401224 16         dvort      600        9600000    0                       
+after cleanup: new segments 0
+--- E: private IPC namespace (as a container has)
+unshare from util-linux 2.39.3

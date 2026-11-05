@@ -1,0 +1,6 @@
+Mutation: in ui/Main.qml slideshowObserve, 'if (!slideshowStepFrom.length)' replaced by 'if (true)' (every directory change ends the slideshow, including its own step across a folder boundary):
+PASS   : StackConfirmUiTests::initTestCase()
+FAIL!  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() 'flag(h, "slideshowOn")' returned FALSE. (the slideshow's own step into the next folder ended it)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(106) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 6982ms

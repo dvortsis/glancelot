@@ -119,6 +119,7 @@ private slots:
         QCOMPARE(h.viewer.currentIndex(), 1);
         // Canvas scope: Right steps to the next photo.
         QTest::keyClick(h.window, Qt::Key_Right); QTRY_COMPARE(h.viewer.currentIndex(), 2);
+        QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading() && !h.viewer.navigating(), 15000); // a landing photo resets the rotation
         // Text editing outranks every pane: the same key is the field's.
         h.viewer.setTreeVisible(true);
         auto* tree = named(h.window, "folderTree"); QVERIFY(tree); QTRY_VERIFY(tree->isVisible());

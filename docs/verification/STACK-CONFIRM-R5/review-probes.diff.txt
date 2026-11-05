@@ -1,0 +1,117 @@
+diff --git a/tests/fs_watch_decoder_fixture.cpp b/tests/fs_watch_decoder_fixture.cpp
+index 9a132d3..cfc58c0 100644
+--- a/tests/fs_watch_decoder_fixture.cpp
++++ b/tests/fs_watch_decoder_fixture.cpp
+@@ -46,6 +46,11 @@ int main(int argc,char** argv) {
+         return send(reply)?0:3;
+     }
+     const int width=config.value("width").toInt(32),height=config.value("height").toInt(24);
++    const QString lie=config.value("lie").toString(); // REVIEW PROBE R5
++    if(lie=="decodedBeforeProbe"){send({{"phase","decoded"},{"width",width},{"height",height},{"stride",width*4},{"sourceToken",token}});QThread::msleep(5000);return 0;}
++    if(lie=="probeBytes"){send({{"phase","probe"},{"width",width},{"height",height},{"bytes",width*height*4+4}});QThread::msleep(5000);return 0;}
++    if(lie=="probeHuge"){send({{"phase","probe"},{"width",32768},{"height",32768},{"bytes",4294967296.0}});QThread::msleep(5000);return 0;}
++    if(lie=="probeNegative"){send({{"phase","probe"},{"width",-1},{"height",-1},{"bytes",4}});QThread::msleep(5000);return 0;}
+     if(!send({{"phase","probe"},{"width",width},{"height",height},{"bytes",width*height*4}}))return 3;
+     const auto key=receive().value("key").toString();if(key.isEmpty())return 3;
+     // STACK-CONFIRM R4-B1: "dieAt" ends this process abruptly, as a kill or a crash would, at one point of the transfer. It first
+@@ -63,13 +68,21 @@ int main(int argc,char** argv) {
+     }
+     dieAt("attached");
+     if(config.value("holdLock").toBool())holdLegacyLock();
++    if(lie=="secondProbe"){send({{"phase","probe"},{"width",width},{"height",height},{"bytes",width*height*4}});QThread::msleep(5000);return 0;}
++    if(lie=="halfWrite"){std::memset(memory.data(),0x7f,size_t(width*height*2));std::_Exit(9);}
+     pause("decodeDelayMs");
+     QImage image(width,height,QImage::Format_RGBA8888);
+     image.fill(QColor(config.value("color").toString("red")));
+     if(memory.size()<image.sizeInBytes())return 3;
+     // Parent owns admission and reads only after this completion frame.
+-    std::memcpy(memory.data(),image.constBits(),size_t(image.sizeInBytes()));
++    if(lie!="noWrite")std::memcpy(memory.data(),image.constBits(),size_t(image.sizeInBytes()));
+     QJsonObject reply{{"phase","decoded"},{"width",width},{"height",height},{"stride",width*4},{"color","sRGB fixture"}};
++    if(lie=="geometryWide")reply["width"]=width*2;
++    if(lie=="geometryTall")reply["height"]=height*1000;
++    if(lie=="geometryStride")reply["stride"]=width*4+4;
++    if(lie=="geometryHuge"){reply["width"]=65535;reply["stride"]=65535*4;}
++    if(lie=="geometryOverflow"){reply["width"]=32768;reply["height"]=32768;reply["stride"]=131072;}
++    if(lie=="geometrySmall"){reply["width"]=width/2;reply["stride"]=width*2;}
+     if(!config.value("omitSourceToken").toBool())reply["sourceToken"]=token;
+     if(!send(reply))return 3;
+     char ack[16]{};const bool acknowledged=std::fgets(ack,sizeof(ack),stdin);
+diff --git a/tests/stack_confirm_ui_tests.cpp b/tests/stack_confirm_ui_tests.cpp
+index d238473..0672cad 100644
+--- a/tests/stack_confirm_ui_tests.cpp
++++ b/tests/stack_confirm_ui_tests.cpp
+@@ -406,7 +406,7 @@ private slots:
+             Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+             h.viewer.open(media.path(0));
+             QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(h.viewer.filePath()), 15000);
+-            QVERIFY(mappedTransfers(bytes) > 0);
++            QTRY_VERIFY_WITH_TIMEOUT(mappedTransfers(bytes) > 0, 15000);
+         }
+         const QStringList keys = fixture.keys(); QVERIFY(!keys.isEmpty());
+ #ifdef Q_OS_WIN
+@@ -479,6 +479,64 @@ private slots:
+         qInfo("RESULT pace %d: %d steps in %lld ms, undecoded %d, max GUI gap %lld ms, mapped at the end %d", paceMs, steps, total.elapsed(), undecoded, beat.maxGap, mappedTransfers(bytes) - mappedBefore);
+     }
+     // R3-B1: `navigating` is true from the request of a step until it has settled, and false again afterwards.
++    // REVIEW PROBE R5 (not for merge): open-to-ready latency with real decoders; same source on tip and base.
++    void reviewProbeDecodeLatency() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        QStringList photos;
++        QImage image(2000, 1500, QImage::Format_RGB32);
++        for (int i = 0; i < 40; ++i) {
++            image.fill(QColor::fromHsv(i * 9, 120, 180));
++            const QString file = QDir(root.path()).filePath(QString("p%1.png").arg(i, 2, 10, QLatin1Char('0')));
++            QVERIFY(image.save(file)); photos << file;
++        }
++        ViewerController viewer;
++        viewer.open(photos[0]); QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady(), 15000);
++        QList<qint64> times;
++        for (int round = 0; round < 4; ++round) for (int i = 0; i < 20; ++i) {
++            const QString file = photos[(i * 7 + round * 11 + 20) % 40];
++            if (file == viewer.filePath()) continue;
++            QElapsedTimer clock; clock.start();
++            viewer.open(file);
++            QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath() == file && viewer.imageReady() && !viewer.loading(), 15000);
++            times << clock.nsecsElapsed() / 1000;
++        }
++        std::sort(times.begin(), times.end());
++        qint64 total = 0; for (qint64 t : times) total += t;
++        qInfo("PROBE latency n=%lld median=%lld us p90=%lld us mean=%lld us", qint64(times.size()), times[times.size() / 2], times[times.size() * 9 / 10], total / times.size());
++    }
++    // REVIEW PROBE R5 (not for merge): a broken or hostile worker's messages, through the real viewer path.
++    void reviewProbeHostileWorker_data() {
++        QTest::addColumn<QString>("lie"); QTest::addColumn<bool>("shown");
++        for (const char* lie : {"decodedBeforeProbe", "probeBytes", "probeHuge", "probeNegative", "secondProbe", "halfWrite", "geometryWide", "geometryTall", "geometryStride", "geometryHuge", "geometryOverflow", "geometrySmall"})
++            QTest::newRow(lie) << QString(lie) << false;
++        QTest::newRow("noWrite") << QString("noWrite") << true;
++    }
++    void reviewProbeHostileWorker() {
++        QFETCH(QString, lie); QFETCH(bool, shown);
++        const int width = 800, height = 600; const qint64 bytes = qint64(width) * height * 4;
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QString folder = makeFolder(root.path(), "h", 3); QVERIFY(!folder.isEmpty());
++        DecoderFixture fixture;
++        QVERIFY(fixture.configure({{"width", width}, {"height", height}}));
++        const int mappedBefore = mappedTransfers(bytes);
++        {
++            ViewerController viewer;
++            viewer.open(QDir(folder).filePath("h-1.png"));
++            QTRY_VERIFY_WITH_TIMEOUT(viewer.imageReady() && !viewer.loading(), 15000);
++            const QColor good = viewer.image().pixelColor(0, 0);
++            QVERIFY(fixture.configure({{"width", width}, {"height", height}, {"lie", lie}}));
++            viewer.open(QDir(folder).filePath("h-3.png"));
++            QTRY_VERIFY_WITH_TIMEOUT(!viewer.loading(), 15000);
++            QString pixel = viewer.image().isNull() ? "null" : viewer.image().pixelColor(0, 0).name(QColor::HexArgb);
++            qInfo("PROBE %s: imageReady %d, image %dx%d, pixel %s (healthy %s), status: %s", qPrintable(lie), int(viewer.imageReady()), viewer.image().width(), viewer.image().height(), qPrintable(pixel), qPrintable(good.name(QColor::HexArgb)), qPrintable(viewer.status()));
++            QCOMPARE(viewer.imageReady(), shown);
++            // A healthy decode still works afterwards, and nothing piles up.
++            QVERIFY(fixture.configure({{"width", width}, {"height", height}}));
++            viewer.open(QDir(folder).filePath("h-2.png"));
++            QTRY_VERIFY_WITH_TIMEOUT(viewer.filePath().endsWith("h-2.png") && viewer.imageReady() && !viewer.loading(), 15000);
++        }
++        QTRY_COMPARE_WITH_TIMEOUT(mappedTransfers(bytes) - mappedBefore, 0, 15000);
++    }
+     void navigatingSpansAStep() {
+         Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+         QVERIFY(openFolder(h, media)); QVERIFY(activate(h));

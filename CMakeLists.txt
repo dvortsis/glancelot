@@ -328,6 +328,7 @@ if(GLANCELOT_BUILD_VIEWER)
   endif()
   include(cmake/ReferencePinTests.cmake)
   include(cmake/AssetGroupTests.cmake) # B1; also adds src/app/asset_group.cpp to glancelot_platform
+  include(cmake/StackConfirmTests.cmake)
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)

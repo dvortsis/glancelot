@@ -1,0 +1,14 @@
+0B ENTRYPOINT ["/usr/bin/tini" "--" "python3" "ΓÇª
+0B HEALTHCHECK {Test:[CMD-SHELL python3 -c "impΓÇª
+0B EXPOSE [6080/tcp]
+4.1kB WORKDIR /photos
+0B USER viewer
+4.1kB RUN /bin/sh -c for format in qwebp qtiff qtgΓÇª
+4.1kB RUN /bin/sh -c ! LD_LIBRARY_PATH=/opt/Qt/libΓÇª
+0B ENV PATH=/opt/Qt/bin:/usr/local/sbin:/usr/loΓÇª
+45.1kB RUN /bin/sh -c printf '[Paths]\nPrefix=/opt/ΓÇª
+20.5kB COPY assets/fonts/geist/OFL.txt /opt/glancelΓÇª
+61.4kB COPY LICENSE THIRD_PARTY_NOTICES.md README.mΓÇª
+16.4kB COPY docker/start.py /opt/glancelot/start.pyΓÇª
+11.2MB COPY /build/glancelot /build/glancelot-decodΓÇª
+1.46GB COPY /opt/Qt/6.8.3/gcc_64 /opt/Qt # buildkit

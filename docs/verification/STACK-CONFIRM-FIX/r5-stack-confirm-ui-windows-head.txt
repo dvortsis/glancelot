@@ -1,0 +1,36 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+PASS   : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto()
+PASS   : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun()
+PASS   : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary()
+PASS   : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace()
+PASS   : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder()
+PASS   : StackConfirmUiTests::slideshowSurvivesClosingAnotherTab()
+PASS   : StackConfirmUiTests::aTransferSegmentLivesUntilItsLastHandleCloses()
+PASS   : StackConfirmUiTests::aTransferSegmentRefusesAKeyInUse()
+PASS   : StackConfirmUiTests::aTransferSegmentReportsFailures()
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching)
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok)
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(killed by the viewer while holding the lock)
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too)
+PASS   : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind()
+SKIP   : StackConfirmUiTests::slideshowPatternRateRun() set GL_STACK_RATE_PASSES to run it
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(424) : failure location
+PASS   : StackConfirmUiTests::navigatingSpansAStep()
+PASS   : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace)
+PASS   : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace)
+PASS   : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep()
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder)
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory)
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo)
+PASS   : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto()
+PASS   : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen()
+PASS   : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor()
+PASS   : StackConfirmUiTests::typeChipsWorkFromTheKeyboard()
+PASS   : StackConfirmUiTests::typeChipsMoveWithTheArrowKeys()
+PASS   : StackConfirmUiTests::tabStripWheelRespectsTheMargin()
+PASS   : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView()
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 30 passed, 0 failed, 1 skipped, 0 blacklisted, 323075ms
+********* Finished testing of StackConfirmUiTests *********
