@@ -4,7 +4,7 @@ Written for: the repository owner setting up the lead's Windows machine, and age
 
 When the lead runs locally on this PC, its local tester runs the full gates directly and this runner is the backup (AGENTS.md, local lead topology). When the lead runs in the cloud, this runner is the gate.
 
-Cloud sessions cannot run `scripts/build.ps1 -Test` themselves. To get a real Windows gate, they push a branch named `gate/<name>`. The `windows-gate` workflow (`.github/workflows/windows-gate.yml`) then runs on this machine as a self-hosted runner:
+Cloud sessions cannot run `scripts/build.ps1 -Test` themselves. To get a real Windows gate, the lead pushes a branch named `gate/<name>`. The `windows-gate` workflow (`.github/workflows/windows-gate.yml`) then runs on this machine as a self-hosted runner:
 
 1. It creates a temporary worktree of `C:\src\Github\Glancelot` at the pushed commit.
 2. Under the machine gate lock, it runs the full Windows gate and then the Docker gate.
@@ -57,6 +57,24 @@ The repository is public, so these steps are done by hand.
    It should appear as a run, take the gate lock (check it with `scripts/gate-lock.ps1 -Status`) and finish with a summary.
 
 While a gate runs, avoid starting other full gates or heavy builds on this machine. Several tests have wall-clock budgets.
+
+## Branch protection on main
+
+`main` is protected, for administrators too:
+
+- every change needs a pull request;
+- the `ci-ok` check from `.github/workflows/build.yml` must pass (it is not required to be up to date with `main`);
+- force pushes and deletion are off.
+
+The rules around it are in AGENTS.md, "Pull requests and merging". `.github/workflows/build.yml` uses hosted runners only. This self-hosted runner still takes only `gate/**` pushes and manual runs, and `scripts/ci/pr_guard.py` fails any workflow that pull requests can start and that names a runner other than a hosted one. That lint is a backstop, since a pull request runs its own copy of it. The real barrier is the approval policy for forks in the setup above.
+
+To read or lift the protection, use *Settings → Branches* in GitHub, or:
+
+```powershell
+gh api repos/dvortsis/glancelot/branches/main/protection
+gh api -X DELETE repos/dvortsis/glancelot/branches/main/protection
+```
+
 
 ## Requesting a gate (agents)
 

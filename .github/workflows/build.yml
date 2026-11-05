@@ -1,11 +1,45 @@
 name: Build and test
+# Hosted runners only. ci-ok is the check that branch protection requires on main (AGENTS.md, "Pull requests and
+# merging"); it always runs, so docs-only pull requests get it without the builds.
 on:
   push:
-    # gate/* pushes are full gates in windows-gate.yml; running these jobs there too only duplicates work.
-    branches-ignore: ['gate/**']
+    branches: [main]
   pull_request:
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.check.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 -m pip install --disable-pip-version-check pyyaml==6.0.2
+      - run: python3 scripts/ci/test_pr_guard.py
+      - id: check
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Read live, because labelling or retitling starts no run and a rerun replays the old event.
+          if [ -n "$PR" ]; then
+            PR_LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(" ")')"
+            PR_TITLE="$(gh pr view "$PR" --json title --jq .title)"
+            PR_BODY="$(gh pr view "$PR" --json body --jq .body)"
+            export PR_LABELS PR_TITLE PR_BODY
+          fi
+          python3 scripts/ci/pr_guard.py
   core:
+    needs: guard
+    # A guard failure still builds, so a draft PR gets compile feedback; ci-ok fails on the guard either way.
+    if: ${{ !cancelled() && needs.guard.outputs.code == 'true' }}
     strategy:
       matrix:
         os: [ubuntu-24.04, windows-2022]
@@ -16,6 +50,8 @@ jobs:
       - run: cmake --build build --config Release --parallel 4
       - run: ctest --test-dir build -C Release --output-on-failure
   viewer:
+    needs: guard
+    if: ${{ !cancelled() && needs.guard.outputs.code == 'true' }}
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -27,4 +63,39 @@ jobs:
           cache: true
       - run: cmake -S . -B build -DBUILD_TESTING=ON
       - run: cmake --build build --config Release --parallel 4
-      - run: ctest --test-dir build -C Release --output-on-failure
+      # Shared 4-vCPU runner: one retry for timing noise. Budget tests are advisory here; the local full gate enforces them.
+      - run: ctest --test-dir build -C Release --output-on-failure -LE budget --repeat until-pass:2
+      - name: Budget tests (advisory on hosted runners)
+        continue-on-error: true
+        run: ctest --test-dir build -C Release --output-on-failure -L budget
+  ci-ok:
+    needs: [guard, core, viewer]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Decide
+        env:
+          GUARD: ${{ needs.guard.result }}
+          CORE: ${{ needs.core.result }}
+          VIEWER: ${{ needs.viewer.result }}
+          CODE: ${{ needs.guard.outputs.code }}
+          PR: ${{ github.event.pull_request.number }}
+          ATTEMPT: ${{ github.run_attempt }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          echo "guard=$GUARD core=$CORE viewer=$VIEWER code=$CODE"
+          if [ "$GUARD" != success ]; then echo "::error::guard did not pass"; exit 1; fi
+          if [ "$CODE" != true ] && [ "$CORE" = skipped ] && [ "$VIEWER" = skipped ]; then exit 0; fi
+          if [ "$CORE" = success ] && [ "$VIEWER" = success ]; then exit 0; fi
+          # A failure the lead has shown is also red on main, or a known flake with a fix PR open, in code this
+          # pull request does not touch. The lead labels the PR, says so in a comment and reruns the failed jobs,
+          # so the label counts only on a rerun: a new push has to fail again and be looked at again. A cancelled
+          # build is never accepted. Labels are read here, not from the event, because a rerun replays the old event.
+          case "$CORE $VIEWER" in *cancelled*|*skipped*) echo "::error::core=$CORE viewer=$VIEWER"; exit 1;; esac
+          if [ -n "$PR" ] && [ "$ATTEMPT" -gt 1 ] && gh pr view "$PR" --json labels --jq '.labels[].name' | grep -qx ci-known-red; then
+            echo "::warning::build failure accepted by the ci-known-red label; see the PR comment"
+            exit 0
+          fi
+          echo "::error::core=$CORE viewer=$VIEWER"
+          exit 1

@@ -1,0 +1,34 @@
+Test project C:/src/Github/Glancelot/.claude/worktrees/recursing-bassi-58ba22/build-claude-phase2-contracts
+      Start  3: navigation
+ 1/11 Test  #3: navigation .......................   Passed    2.96 sec
+      Start  4: directory_listing
+ 2/11 Test  #4: directory_listing ................   Passed   19.99 sec
+      Start  5: file_operations
+ 3/11 Test  #5: file_operations ..................   Passed    0.25 sec
+      Start  7: viewer_acceptance
+ 4/11 Test  #7: viewer_acceptance ................   Passed   10.60 sec
+      Start 10: pane_layout
+ 5/11 Test #10: pane_layout ......................   Passed    1.72 sec
+      Start 16: directory_model
+ 6/11 Test #16: directory_model ..................   Passed   31.34 sec
+      Start 23: fs_watch
+ 7/11 Test #23: fs_watch .........................   Passed   87.66 sec
+      Start 31: cache
+ 8/11 Test #31: cache ............................   Passed    5.34 sec
+      Start 37: copy_safety
+ 9/11 Test #37: copy_safety ......................   Passed    0.91 sec
+      Start 45: contract_headers
+10/11 Test #45: contract_headers .................   Passed    0.07 sec
+      Start 51: reference_pin
+11/11 Test #51: reference_pin ....................   Passed   40.71 sec
+
+100% tests passed out of 11
+
+Label Time Summary:
+budget     =  93.00 sec*proc (2 tests)
+fast       =  46.70 sec*proc (5 tests)
+native     = 108.81 sec*proc (4 tests)
+process    = 165.47 sec*proc (7 tests)
+ui         =  40.71 sec*proc (1 test)
+
+Total Test time (real) = 202.20 sec

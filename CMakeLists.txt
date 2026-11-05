@@ -319,6 +319,7 @@ if(GLANCELOT_BUILD_VIEWER)
     set_tests_properties(monitor_output PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     include(cmake/RecoveryTests.cmake)
     include(cmake/TabsRecoveryTests.cmake)
+    include(cmake/Phase2ContractTests.cmake)
   endif()
   # MONITOR-CUSTOM-01 production wiring is required independently of BUILD_TESTING.
   include(cmake/MonitorCustomization.cmake)

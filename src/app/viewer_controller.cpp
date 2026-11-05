@@ -100,6 +100,8 @@ QString sortKeyName(glancelot::SortKey key) {
     case glancelot::SortKey::Modified: return "modified";
     case glancelot::SortKey::Size: return "size";
     case glancelot::SortKey::Shuffle: return "shuffle";
+    case glancelot::SortKey::Captured: return "captured";
+    case glancelot::SortKey::Dimensions: return "dimensions";
     default: return "name";
     }
 }

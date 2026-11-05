@@ -1,0 +1,5 @@
+WINDOWS exit 0 2048s
+DOCKER exit 1 1s
+DOCKER daemon did not start
+DOCKER rerun exit 0 1558s
+2820942340
