@@ -1,7 +1,7 @@
 # B1 fail-before evidence
-# Each block: one mutation of the production code, built and run alone with the targeted test (asset_group or asset_group_ui).
+# Each block: one mutation of the production code, built and run alone with the targeted test (asset_group or asset_group_ui). QML mutations in the second round ran only the test functions they aim at, so their Totals are smaller.
 # "was" and "now" are the edit. FAIL lines are the tests that caught it; Totals is the QTest summary.
-# scripts: run on Windows, MSVC, Qt 6.8.3, November 5, 2026, in .worktrees/claude-b1-asset-group, before main was merged in, on the part 3 code as it then stood.
+# scripts: run on Windows, MSVC, Qt 6.8.3, November 5, 2026, in .worktrees/claude-b1-asset-group, first round before main was merged in, on the part 3 code as it then stood; the ui-run-*, ui-paste-*, ui-radio-* and similar blocks of the second round on 88b14dc.
 
 === no-grouping
   file: src/app/asset_group.cpp
@@ -746,3 +746,226 @@
   now:  visible: true // 
   FAIL renameWithNoCompanionsLooksAsItDid()
   Totals: 14 passed, 1 failed, 59681ms
+
+=== ui-paste-opens-at-once
+  file: ui/TransferFlow.qml
+  was:  progressDelayTimer.restart()
+  now:  confirmDialog.open()
+  FAIL aPlainPasteRunsWithNoDialog(copy)
+  FAIL aPlainPasteRunsWithNoDialog(move)
+  FAIL thePasteCommandRunsPlainFilesStraightThrough()
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(companion)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(collision)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(couldn't check)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(missing source)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(missing destination)
+  FAIL aSlowPlanShowsProgressThenRunsIfThereIsNothingToAsk()
+  FAIL movingWithinOneFolderIsANoticeNotADialog()
+  FAIL aMoveWithOnlySomeItemsAlreadyHereStillAsks()
+  Totals: 11 passed, 11 failed, 53669ms
+
+=== ui-always-asks
+  file: ui/TransferFlow.qml
+  was:  if (first && flow.nothingToDecide(plan)) { flow.confirmPlan(); return }
+  now:  (removed)
+  FAIL aPlainPasteRunsWithNoDialog(copy)
+  FAIL aPlainPasteRunsWithNoDialog(move)
+  FAIL thePasteCommandRunsPlainFilesStraightThrough()
+  FAIL aSlowPlanShowsProgressThenRunsIfThereIsNothingToAsk()
+  Totals: 18 passed, 4 failed, 191740ms
+
+=== ui-no-progress
+  file: ui/TransferFlow.qml
+  was:  onTriggered: if (flow.phase === "planning") confirmDialog.open()
+  now:  (removed)
+  FAIL aSlowPlanShowsProgressThenRunsIfThereIsNothingToAsk()
+  FAIL aSlowPlanCanBeCancelled()
+  Totals: 20 passed, 2 failed, 144429ms
+
+=== ui-run-with-companions
+  file: ui/TransferFlow.qml
+  was:  && plan.companions.length === 0 && !plan.companionsNotListed
+  now:  && !plan.companionsNotListed
+  FAIL everythingToDecideIsSeen(listed companion)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(companion)
+  Totals: 13 passed, 2 failed, 96682ms
+
+=== ui-run-past-the-list
+  file: ui/TransferFlow.qml
+  was:  && plan.companions.length === 0 && !plan.companionsNotListed
+  now:  && plan.companions.length === 0
+  FAIL everythingToDecideIsSeen(companion past the list)
+  Totals: 9 passed, 1 failed, 39507ms
+
+=== ui-run-with-collisions
+  file: ui/TransferFlow.qml
+  was:  plan.rejected.length === 0 && plan.collisions.length === 0
+  now:  plan.rejected.length === 0
+  FAIL everythingToDecideIsSeen(collision)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(collision)
+  Totals: 13 passed, 2 failed, 97900ms
+
+=== ui-run-with-exclusions
+  file: ui/TransferFlow.qml
+  was:  plan.rejected.length === 0 && plan.collisions.length === 0
+  now:  plan.collisions.length === 0
+  FAIL everythingToDecideIsSeen(exclusion)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(missing source)
+  Totals: 13 passed, 2 failed, 74703ms
+
+=== ui-run-unchecked
+  file: ui/TransferFlow.qml
+  was:  && !plan.companionsIncomplete && !plan.error
+  now:  && !plan.error
+  FAIL everythingToDecideIsSeen(couldn't all be checked)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(couldn't check)
+  Totals: 13 passed, 2 failed, 119352ms
+
+=== ui-run-refused
+  file: ui/TransferFlow.qml
+  was:  && !plan.companionsIncomplete && !plan.error
+  now:  && !plan.companionsIncomplete
+  FAIL everythingToDecideIsSeen(refused)
+  FAIL aRealPlanWithSomethingToDecideShowsTheDialog(missing destination)
+  Totals: 13 passed, 2 failed, 96257ms
+
+=== ui-run-nothing
+  file: ui/TransferFlow.qml
+  was:  return plan.targets.length > 0 && plan.rejected.length === 0
+  now:  return plan.rejected.length === 0
+  FAIL everythingToDecideIsSeen(nothing to run)
+  Totals: 9 passed, 1 failed, 42057ms
+
+=== ui-same-folder-asks
+  file: ui/TransferFlow.qml
+  was:  if (first && flow.alreadyHere(plan)) {
+  now:  if (false) {
+  FAIL movingWithinOneFolderIsANoticeNotADialog()
+  Totals: 2 passed, 1 failed, 43815ms
+
+=== ui-same-folder-spends-the-cut
+  file: ui/TransferFlow.qml
+  was:  flow.discardPlan() // what was cut stays cut, for pasting somewhere else
+  now:  flow.discardPlan(); flow.service.clearClipboard()
+  FAIL movingWithinOneFolderIsANoticeNotADialog()
+  Totals: 2 passed, 1 failed, 7266ms
+
+=== ui-partly-here-is-a-notice
+  file: ui/TransferFlow.qml
+  was:  return plan.targets.length === 0 && plan.rejected.length > 0 && !plan.error && plan.rejected.every(r => r.reason === "sameFolder")
+  now:  return plan.rejected.some(r => r.reason === "sameFolder")
+  FAIL aMoveWithOnlySomeItemsAlreadyHereStillAsks()
+  Totals: 2 passed, 1 failed, 42444ms
+
+=== ui-radio-no-arrows
+  file: ui/UiRadioButton.qml
+  was:  if (!forward && !back) return // 
+  now:  return // 
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  FAIL theKeyboardMakesTheCollisionChoice()
+  Totals: 2 passed, 5 failed, 225949ms
+
+=== ui-radio-every-option-a-stop
+  file: ui/UiRadioButton.qml
+  was:  focusPolicy: checked ? Qt.StrongFocus : Qt.ClickFocus
+  now:  focusPolicy: Qt.StrongFocus
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  Totals: 2 passed, 4 failed, 25193ms
+
+=== ui-radio-held-arrow-churns
+  file: ui/UiRadioButton.qml
+  was:  if (!event.isAutoRepeat) step(forward ? 1 : -1)
+  now:  step(forward ? 1 : -1)
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  Totals: 2 passed, 4 failed, 25091ms
+
+=== ui-radio-no-ring
+  file: ui/UiRadioButton.qml
+  was:  next.forceActiveFocus(Qt.TabFocusReason)
+  now:  next.forceActiveFocus(Qt.MouseFocusReason)
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  Totals: 3 passed, 4 failed, 29438ms
+
+=== ui-radio-no-wrap
+  file: ui/UiRadioButton.qml
+  was:  options[(options.indexOf(control) + delta + options.length) % options.length]
+  now:  options[Math.max(0, Math.min(options.length - 1, options.indexOf(control) + delta))]
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  Totals: 2 passed, 4 failed, 165780ms
+
+=== ui-radio-focus-only
+  file: ui/UiRadioButton.qml
+  was:  if (!next.checked) { next.toggle(); next.clicked() }
+  now:  (removed)
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  FAIL theKeyboardMakesTheCollisionChoice()
+  Totals: 2 passed, 5 failed, 16937ms
+
+=== ui-radio-silent-select
+  file: ui/UiRadioButton.qml
+  was:  next.toggle(); next.clicked()
+  now:  next.toggle()
+  FAIL theKeyboardWalksTheChoices(delete)
+  FAIL theKeyboardWalksTheChoices(copy)
+  FAIL theKeyboardWalksTheChoices(move)
+  FAIL theKeyboardWalksTheChoices(rename)
+  FAIL theKeyboardMakesTheCollisionChoice()
+  Totals: 2 passed, 5 failed, 19206ms
+
+=== ui-radio-out-of-view
+  file: ui/UiRadioButton.qml
+  was:  else if (top + height > view.contentY + view.height) view.contentY = top + height - view.height
+  now:  (removed)
+  FAIL aFocusedChoiceStaysInViewInAShortWindow()
+  Totals: 2 passed, 1 failed, 6632ms
+
+=== ui-list-not-a-stop
+  file: ui/AssetCompanions.qml
+  was:  activeFocusOnTab: contentHeight > height // only when the arrows have something to reveal
+  now:  activeFocusOnTab: false
+  FAIL arrowsScrollALongCompanionList()
+  FAIL arrowsScrollALongCompanionList()
+  Totals: 2 passed, 1 failed, 7720ms
+
+=== ui-cancel-keeps-the-plan
+  file: ui/TransferFlow.qml
+  was:  onClosed: { progressDelayTimer.stop(); flow.discardPlan(); if
+  now:  onClosed: { if
+  FAIL aSlowPlanCanBeCancelled()
+  Totals: 2 passed, 1 failed, 7426ms
+
+=== ui-radio-not-mirrored
+  file: ui/UiRadioButton.qml
+  was:  event.key === (mirrored ? Qt.Key_Left : Qt.Key_Right)
+  now:  event.key === Qt.Key_Right
+  file: ui/UiRadioButton.qml
+  was:  event.key === (mirrored ? Qt.Key_Right : Qt.Key_Left)
+  now:  event.key === Qt.Key_Left
+  FAIL leftAndRightFollowTheLayoutDirection(right to left)
+  Totals: 3 passed, 1 failed, 7394ms
+
+=== ui-radio-group-order
+  file: ui/UiRadioButton.qml
+  was:  options.sort((a, b) => a.mapToItem(null, 0, 0).y - b.mapToItem(null, 0, 0).y) // the group's own order isn't the order on screen
+  now:  (removed)
+  FAIL leftAndRightFollowTheLayoutDirection(left to right)
+  FAIL leftAndRightFollowTheLayoutDirection(right to left)
+  Totals: 2 passed, 2 failed, 6126ms
