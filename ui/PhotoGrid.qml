@@ -1135,6 +1135,8 @@ Rectangle {
             if (id === "filter") {
                 panel.openFilter()
             }
+            // A selection made from a menu is as explicit as one made with a key.
+            if (["select-all", "grid-select-all", "clear-selection", "invert-selection"].indexOf(id) >= 0) panel.settleByUser()
         }
     }
 }
