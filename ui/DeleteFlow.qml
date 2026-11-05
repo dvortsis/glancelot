@@ -19,6 +19,11 @@ Item {
     property int requestedCount: 0
     property string requestFolder: ""
     property var summary: null
+    // ASSET-GROUP: file-only every time, an explicit choice per operation, never remembered.
+    property string scope: "file"
+    property bool replanning: false
+    property var requestPaths: []
+    property string requestOrigin: ""
     property int done: 0
     property int total: 0
     property bool stopping: false
@@ -70,6 +75,12 @@ Item {
     }
     readonly property var targets: summary ? summary.targets : []
     readonly property var rejected: summary ? summary.rejected : []
+    // Companions are named in their own list below, each with its state, so they aren't named twice.
+    readonly property var namedTargets: {
+        const listed = {}
+        for (const row of (summary && summary.companions ? summary.companions : [])) if (row.included) listed[row.path] = true
+        return targets.filter(t => !listed[t.path])
+    }
     readonly property int shownNames: compactHeight ? 3 : 5
     readonly property string title: {
         if (phase === "executing") return "Moving to the " + trashName + "…"
@@ -84,14 +95,23 @@ Item {
         if (!paths || paths.length === 0) return
         if (fileOperations.busy) { showNotice("Wait for the current move to the " + trashName + " to finish."); return }
         summary = null; stopping = false; done = 0; total = 0
+        scope = "file"; replanning = false
+        requestPaths = paths; requestOrigin = origin
         requestedCount = paths.length
         requestFolder = folder || ""
         phase = "planning"
-        planId = fileOperations.plan(paths, origin)
+        planId = fileOperations.planScoped(paths, origin, scope)
         confirmDialog.open()
     }
+    // A new immutable plan, which supersedes the one on screen. Move to the Trash waits for it, so what's confirmed is what's shown.
+    function setScope(next) {
+        if (phase !== "confirm" || next === scope) return
+        scope = next
+        replanning = true
+        planId = fileOperations.planScoped(requestPaths, requestOrigin, scope)
+    }
     function confirmPlan() {
-        if (phase !== "confirm" || targets.length === 0) return
+        if (phase !== "confirm" || replanning || targets.length === 0 || summary.id !== planId) return
         const id = planId
         if (!fileOperations.confirm(id)) { closeConfirm(); showNotice("That list is out of date. Select the items again."); return }
         executionId = id; planId = 0
@@ -117,6 +137,7 @@ Item {
             if (id !== flow.planId) return
             flow.summary = plan
             flow.phase = "confirm"
+            flow.replanning = false
             const rejected = plan.rejected
             if (plan.targets.length === 0 && rejected.length > 0 && rejected.every(r => r.reason === "readOnlyVolume") && flow.requestFolder.length) {
                 const next = Object.assign({}, flow.readOnlyFolders); next[flow.folderKey(flow.requestFolder)] = true; flow.readOnlyFolders = next
@@ -189,7 +210,7 @@ Item {
                     }
                     Rectangle { // the named items: up to five (three in short windows), then "and N more"
                         objectName: "deleteTargets"
-                        visible: flow.phase === "confirm" && flow.targets.length > 0
+                        visible: flow.phase === "confirm" && flow.namedTargets.length > 0
                         Layout.fillWidth: true
                         implicitHeight: names.implicitHeight + 2 * Theme.gapXs
                         radius: Theme.radiusControl
@@ -201,7 +222,7 @@ Item {
                             x: Theme.gapMd; y: Theme.gapXs
                             width: parent.width - 2 * Theme.gapMd
                             Repeater {
-                                model: flow.targets.slice(0, flow.shownNames)
+                                model: flow.namedTargets.slice(0, flow.shownNames)
                                 delegate: RowLayout {
                                     required property var modelData
                                     width: names.width
@@ -221,11 +242,11 @@ Item {
                             }
                             Label {
                                 objectName: "deleteMore"
-                                visible: flow.targets.length > flow.shownNames
+                                visible: flow.namedTargets.length > flow.shownNames
                                 height: Theme.rowHeight
                                 verticalAlignment: Text.AlignVCenter
                                 leftPadding: Theme.iconSize + Theme.gapSm
-                                text: "and " + (flow.targets.length - flow.shownNames).toLocaleString(Qt.locale(), "f", 0) + " more"
+                                text: "and " + (flow.namedTargets.length - flow.shownNames).toLocaleString(Qt.locale(), "f", 0) + " more"
                                 color: Theme.muted
                                 font.pixelSize: Theme.textBody
                             }
@@ -240,6 +261,17 @@ Item {
                         font.features: { "tnum": 1 }
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
+                    }
+                    AssetCompanions {
+                        id: assetCompanions
+                        summary: flow.summary
+                        scope: flow.scope
+                        replanning: flow.replanning
+                        visibleRows: flow.compactHeight ? 3 : 5
+                        // Hidden during a batch: the list is about what the choice would do, and that has been decided.
+                        visible: flow.phase === "confirm" && (hasCompanions || incomplete)
+                        Layout.fillWidth: true
+                        onScopeRequested: next => flow.setScope(next)
                     }
                     ColumnLayout { // items that will not be moved, each with its reason
                         objectName: "deleteRejected"
@@ -269,7 +301,10 @@ Item {
                         objectName: "deleteNote"
                         visible: flow.phase === "confirm" && flow.targets.length > 0
                         // Short windows keep the essentials so the note never ends under the fold.
-                        text: flow.compactHeight ? "Only these items are moved; sidecars and pairs stay. You can restore them from the " + flow.trashName + "."
+                        text: assetCompanions.hasCompanions
+                              ? (flow.scope === "asset" ? qsTr("You can restore moved items from the %1.").arg(flow.trashName)
+                                                        : qsTr("Only the selected items are moved. You can restore them from the %1.").arg(flow.trashName))
+                              : flow.compactHeight ? "Only these items are moved; sidecars and pairs stay. You can restore them from the " + flow.trashName + "."
                               : "Only these items are moved. Files that share their names, such as .xmp sidecars or RAW+JPEG pairs, stay where they are. You can restore moved items from the " + flow.trashName + "."
                     }
                     ColumnLayout { // batch progress
@@ -318,7 +353,7 @@ Item {
                     ignoreKeyRepeat: true
                     iconName: "trash"
                     text: "Move to " + flow.trashName
-                    enabled: flow.phase === "confirm" && flow.targets.length > 0
+                    enabled: flow.phase === "confirm" && !flow.replanning && flow.targets.length > 0
                     Layout.maximumWidth: implicitWidth
                     onClicked: flow.confirmPlan()
                 }

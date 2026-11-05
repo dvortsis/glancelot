@@ -19,6 +19,18 @@ Item {
     property string renameInitialName: ""
     property bool renameIsFolder: false
     property var renameValidation: ({ valid: false, error: "" })
+    // ASSET-GROUP: what the rename leaves behind, from a worker, and the choice. File-only every time, never remembered.
+    property string renameScope: "file"
+    property var renamePlan: null
+    property real renamePlanId: 0
+    readonly property var renamePreviews: {
+        const names = {}
+        if (renameScope === "asset" && renamePlan) for (const row of renamePlan.renames) names[row.from] = row.to.split("/").pop()
+        return names
+    }
+    readonly property bool renameRefused: renameScope === "asset" && !!renamePlan && renamePlan.refused
+    readonly property bool renamePlanCurrent: !!renamePlan && renamePlan.id === renamePlanId
+    readonly property bool renameAllowed: renameValidation.valid && renameField.text !== renameInitialName && !(renameScope === "asset")
 
     // State for New Folder Dialog
     property string newFolderParentDir: ""
@@ -47,8 +59,11 @@ Item {
         const dot = fileName.lastIndexOf(".")
         renameIsFolder = (dot <= 0)
 
+        renameScope = "file"
+        renamePlan = null
         renameField.text = fileName
         renameValidation = mutationService.validateTargetName(renameParentDir, fileName, renameTargetPath)
+        planPreview()
         renameDialog.open()
 
         // Focus and select base name without extension for easy editing
@@ -78,7 +93,15 @@ Item {
         })
     }
 
+    function planPreview() { renamePlanId = mutationService.planRename(renameTargetPath, renameField.text, renameScope) }
+    function setRenameScope(next) {
+        if (next === renameScope) return
+        renameScope = next
+        planPreview()
+    }
+
     function executeRename() {
+        if (renameScope === "asset") return // refused, with the reason on screen, until the operation journal lands
         if (!renameValidation.valid || renameField.text === renameInitialName) {
             renameDialog.close()
             return
@@ -101,6 +124,16 @@ Item {
         }
     }
 
+    Connections {
+        target: root.mutationService
+        function onRenamePlanReady(id, plan) { if (id === root.renamePlanId) root.renamePlan = plan }
+    }
+    Timer { // the worker's preview follows typing without a directory read per key press
+        id: previewDelay
+        interval: 150
+        onTriggered: if (root.renameTargetPath.length > 0) root.planPreview()
+    }
+
     // 1. Rename Dialog
     UiDialog {
         id: renameDialog
@@ -109,6 +142,10 @@ Item {
         anchors.centerIn: parent
 
         onClosed: {
+            previewDelay.stop()
+            root.mutationService.planRename("", "", "file") // withdraws the preview, and stops its lookups
+            root.renamePlanId = 0
+            root.renamePlan = null
             root.renameTargetPath = ""
             root.flowClosed()
         }
@@ -132,16 +169,17 @@ Item {
                 onTextChanged: {
                     if (root.mutationService && root.renameParentDir.length > 0) {
                         root.renameValidation = root.mutationService.validateTargetName(root.renameParentDir, text, root.renameTargetPath)
+                        previewDelay.restart()
                     }
                 }
                 Keys.onReturnPressed: event => {
-                    if (root.renameValidation.valid && text !== root.renameInitialName) {
+                    if (root.renameAllowed) {
                         root.executeRename()
                         event.accepted = true
                     }
                 }
                 Keys.onEnterPressed: event => {
-                    if (root.renameValidation.valid && text !== root.renameInitialName) {
+                    if (root.renameAllowed) {
                         root.executeRename()
                         event.accepted = true
                     }
@@ -159,21 +197,51 @@ Item {
                 Layout.fillWidth: true
             }
 
+            AssetCompanions {
+                summary: root.renamePlan
+                scope: root.renameScope
+                replanning: !root.renamePlanCurrent
+                fileLabel: qsTr("Rename only this file")
+                assetLabel: qsTr("Rename every file in the set")
+                excludedLabel: qsTr("Keeps its name")
+                previews: root.renamePreviews
+                visibleRows: root.host && root.host.height < 480 ? 2 : 4
+                Layout.fillWidth: true
+                onScopeRequested: next => root.setRenameScope(next)
+            }
+
+            RowLayout { // asset scope previews every member and is refused, with the reason, until the operation journal lands
+                objectName: "renameRefusal"
+                visible: root.renameRefused
+                spacing: Theme.gapSm
+                Layout.fillWidth: true
+                UiIcon { name: "alert"; color: Theme.muted; Layout.alignment: Qt.AlignTop }
+                Label {
+                    text: root.renamePlan && root.renamePlan.refusal ? root.renamePlan.refusal : ""
+                    color: Theme.text
+                    font.pixelSize: Theme.textSmall
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+            }
+
             RowLayout {
                 spacing: Theme.gapSm
                 Layout.alignment: Qt.AlignRight
                 Layout.topMargin: Theme.gapSm
 
                 UiButton {
+                    objectName: "renameCancel"
                     text: qsTr("Cancel")
                     variant: "quiet"
                     onClicked: renameDialog.close()
                 }
 
                 UiButton {
+                    objectName: "renameConfirm"
                     text: qsTr("Rename")
                     variant: "primary"
-                    enabled: root.renameValidation.valid && renameField.text !== root.renameInitialName
+                    enabled: root.renameAllowed
                     onClicked: root.executeRename()
                 }
             }

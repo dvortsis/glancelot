@@ -57,6 +57,81 @@
     </message>
 </context>
 <context>
+    <name>AssetCompanions</name>
+    <message>
+        <source>Only the selected files</source>
+        <translation>[Õñlý thé séléçtéd fîlés]</translation>
+    </message>
+    <message>
+        <source>The selected files and the files that belong with them</source>
+        <translation>[Thé séléçtéd fîlés àñd thé fîlés thàt bélõñg wîth thém]</translation>
+    </message>
+    <message>
+        <source>Not included</source>
+        <translation>[Ñõt îñçlûdéd]</translation>
+    </message>
+    <message>
+        <source>It shares its name with another photo, so it isn&apos;t included.</source>
+        <translation>[Ît shàrés îts ñàmé wîth àñõthér phõtõ, sõ ît îsñ&apos;t îñçlûdéd.]</translation>
+    </message>
+    <message>
+        <source>It could belong to more than one photo, so it isn&apos;t included.</source>
+        <translation>[Ît çõûld bélõñg tõ mõré thàñ õñé phõtõ, sõ ît îsñ&apos;t îñçlûdéd.]</translation>
+    </message>
+    <message>
+        <source>It no longer exists.</source>
+        <translation>[Ît ñõ lõñgér éxîsts.]</translation>
+    </message>
+    <message>
+        <source>It&apos;s past the limit for one operation.</source>
+        <translation>[Ît&apos;s pàst thé lîmît fõr õñé õpéràtîõñ.]</translation>
+    </message>
+    <message>
+        <source>An edited copy or export stays out of the set.</source>
+        <translation>[Àñ édîtéd çõpý õr éxpõrt stàýs õût õf thé sét.]</translation>
+    </message>
+    <message>
+        <source>RAW original</source>
+        <translation>[RÀW õrîgîñàl]</translation>
+    </message>
+    <message>
+        <source>Photo</source>
+        <translation>[Phõtõ]</translation>
+    </message>
+    <message>
+        <source>Edited copy or export</source>
+        <translation>[Édîtéd çõpý õr éxpõrt]</translation>
+    </message>
+    <message>
+        <source>Sidecar</source>
+        <translation>[Sîdéçàr]</translation>
+    </message>
+    <message>
+        <source>Motion video</source>
+        <translation>[Mõtîõñ vîdéõ]</translation>
+    </message>
+    <message>
+        <source>Related file</source>
+        <translation>[Rélàtéd fîlé]</translation>
+    </message>
+    <message>
+        <source>and %L1 more</source>
+        <translation>[àñd %L1 mõré]</translation>
+    </message>
+    <message>
+        <source>Included</source>
+        <translation>[Îñçlûdéd]</translation>
+    </message>
+    <message>
+        <source>Would become %1</source>
+        <translation>[Wõûld béçõmé %1]</translation>
+    </message>
+    <message>
+        <source>Companions couldn&apos;t all be checked.</source>
+        <translation>[Çõmpàñîõñs çõûldñ&apos;t àll bé çhéçkéd.]</translation>
+    </message>
+</context>
+<context>
     <name>Delete</name>
     <message>
         <source>the shell file operation is unavailable on this thread</source>
@@ -140,6 +215,14 @@
     <message>
         <source>Close</source>
         <translation>[Çlõsé]</translation>
+    </message>
+    <message>
+        <source>You can restore moved items from the %1.</source>
+        <translation>[Ýõû çàñ réstõré mõvéd îtéms frõm thé %1.]</translation>
+    </message>
+    <message>
+        <source>Only the selected items are moved. You can restore them from the %1.</source>
+        <translation>[Õñlý thé séléçtéd îtéms àré mõvéd. Ýõû çàñ réstõré thém frõm thé %1.]</translation>
     </message>
 </context>
 <context>
@@ -1761,6 +1844,13 @@
     </message>
 </context>
 <context>
+    <name>Rename</name>
+    <message>
+        <source>Renaming a whole set of files together isn&apos;t available yet. If one file failed partway, the others couldn&apos;t be put back automatically.</source>
+        <translation>[Réñàmîñg à whõlé sét õf fîlés tõgéthér îsñ&apos;t àvàîlàblé ýét. Îf õñé fîlé fàîléd pàrtwàý, thé õthérs çõûldñ&apos;t bé pût bàçk àûtõmàtîçàllý.]</translation>
+    </message>
+</context>
+<context>
     <name>RenameFlow</name>
     <message>
         <source>Failed to rename item.</source>
@@ -1817,6 +1907,18 @@
     <message>
         <source>Create</source>
         <translation>[Çréàté]</translation>
+    </message>
+    <message>
+        <source>Rename only this file</source>
+        <translation>[Réñàmé õñlý thîs fîlé]</translation>
+    </message>
+    <message>
+        <source>Rename every file in the set</source>
+        <translation>[Réñàmé évérý fîlé îñ thé sét]</translation>
+    </message>
+    <message>
+        <source>Keeps its name</source>
+        <translation>[Kééps îts ñàmé]</translation>
     </message>
 </context>
 <context>
@@ -2631,6 +2733,149 @@
     <message>
         <source>No palettes match “%1”.</source>
         <translation>[Ñõ pàléttés màtçh “%1”.]</translation>
+    </message>
+</context>
+<context>
+    <name>TransferFlow</name>
+    <message>
+        <source>Wait for the current copy or move to finish.</source>
+        <translation>[Wàît fõr thé çûrréñt çõpý õr mõvé tõ fîñîsh.]</translation>
+    </message>
+    <message>
+        <source>That list is out of date. Paste again.</source>
+        <translation>[Thàt lîst îs õût õf dàté. Pàsté àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>It no longer exists.</source>
+        <translation>[Ît ñõ lõñgér éxîsts.]</translation>
+    </message>
+    <message>
+        <source>It can&apos;t be read.</source>
+        <translation>[Ît çàñ&apos;t bé réàd.]</translation>
+    </message>
+    <message>
+        <source>It&apos;s already in this folder.</source>
+        <translation>[Ît&apos;s àlréàdý îñ thîs fõldér.]</translation>
+    </message>
+    <message>
+        <source>It can&apos;t be moved.</source>
+        <translation>[Ît çàñ&apos;t bé mõvéd.]</translation>
+    </message>
+    <message>
+        <source>It changed after you confirmed, so it was left in place.</source>
+        <translation>[Ît çhàñgéd àftér ýõû çõñfîrméd, sõ ît wàs léft îñ plàçé.]</translation>
+    </message>
+    <message>
+        <source>Nothing can be moved</source>
+        <translation>[Ñõthîñg çàñ bé mõvéd]</translation>
+    </message>
+    <message>
+        <source>Nothing can be copied</source>
+        <translation>[Ñõthîñg çàñ bé çõpîéd]</translation>
+    </message>
+    <message>
+        <source>Move this item here?</source>
+        <translation>[Mõvé thîs îtém héré?]</translation>
+    </message>
+    <message>
+        <source>Move %L1 items here?</source>
+        <translation>[Mõvé %L1 îtéms héré?]</translation>
+    </message>
+    <message>
+        <source>Move these items here?</source>
+        <translation>[Mõvé thésé îtéms héré?]</translation>
+    </message>
+    <message>
+        <source>Copy this item here?</source>
+        <translation>[Çõpý thîs îtém héré?]</translation>
+    </message>
+    <message>
+        <source>Copy %L1 items here?</source>
+        <translation>[Çõpý %L1 îtéms héré?]</translation>
+    </message>
+    <message>
+        <source>Copy these items here?</source>
+        <translation>[Çõpý thésé îtéms héré?]</translation>
+    </message>
+    <message>
+        <source>Checking the selected items…</source>
+        <translation>[Çhéçkîñg thé séléçtéd îtéms…]</translation>
+    </message>
+    <message>
+        <source>as %1</source>
+        <translation>[às %1]</translation>
+    </message>
+    <message>
+        <source>and %L1 more</source>
+        <translation>[àñd %L1 mõré]</translation>
+    </message>
+    <message>
+        <source>This folder no longer exists: %1</source>
+        <translation>[Thîs fõldér ñõ lõñgér éxîsts: %1]</translation>
+    </message>
+    <message>
+        <source>To %1</source>
+        <translation>[Tõ %1]</translation>
+    </message>
+    <message>
+        <source>“%1” is already in this folder.</source>
+        <translation>[“%1” îs àlréàdý îñ thîs fõldér.]</translation>
+    </message>
+    <message>
+        <source>%L1 of these names are already in this folder.</source>
+        <translation>[%L1 õf thésé ñàmés àré àlréàdý îñ thîs fõldér.]</translation>
+    </message>
+    <message>
+        <source>Keep both, renaming what&apos;s copied so each set stays together</source>
+        <translation>[Kéép bõth, réñàmîñg whàt&apos;s çõpîéd sõ éàçh sét stàýs tõgéthér]</translation>
+    </message>
+    <message>
+        <source>Keep both, renaming what&apos;s copied</source>
+        <translation>[Kéép bõth, réñàmîñg whàt&apos;s çõpîéd]</translation>
+    </message>
+    <message>
+        <source>Skip each set with a name already here</source>
+        <translation>[Skîp éàçh sét wîth à ñàmé àlréàdý héré]</translation>
+    </message>
+    <message>
+        <source>Skip these files</source>
+        <translation>[Skîp thésé fîlés]</translation>
+    </message>
+    <message>
+        <source>Not included (%L1):</source>
+        <translation>[Ñõt îñçlûdéd (%L1):]</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>[Çlõsé]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çàñçél]</translation>
+    </message>
+    <message>
+        <source>Move here</source>
+        <translation>[Mõvé héré]</translation>
+    </message>
+    <message>
+        <source>Copy here</source>
+        <translation>[Çõpý héré]</translation>
+    </message>
+    <message>
+        <source>1 item wasn&apos;t transferred</source>
+        <translation>[1 îtém wàsñ&apos;t tràñsférréd]</translation>
+    </message>
+    <message>
+        <source>%L1 items weren&apos;t transferred</source>
+        <translation>[%L1 îtéms wéréñ&apos;t tràñsférréd]</translation>
+    </message>
+    <message>
+        <source>Files that weren&apos;t transferred are still where they were.</source>
+        <translation>[Fîlés thàt wéréñ&apos;t tràñsférréd àré stîll whéré théý wéré.]</translation>
+    </message>
+    <message>
+        <source>These items are already in this folder.</source>
+        <translation>[Thésé îtéms àré àlréàdý îñ thîs fõldér.]</translation>
     </message>
 </context>
 <context>
