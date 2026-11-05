@@ -64,7 +64,7 @@ So I added a review-only hook to the real decoder (`review-probes.diff.txt`): `t
 | Run | Result |
 | --- | --- |
 | Tip, die after `ok`, 30 steps | 30/30 photos shown, **max GUI gap 80 ms**, 16 threads blocked, 19 segments leaked (`probe-dead-decoder-tip.txt`) |
-| Tip, die after `attach`, 30 steps | "Decoder failed; the previous valid image is preserved" each step, **max GUI gap 32 ms**, 31 more segments leaked |
+| Tip, die after `attach`, 30 steps | "Decoder failed; the previous valid image is preserved" each step, **max GUI gap 32 ms**, 31 more segments leaked. This row ran with the process already at the cap from the row above, so its segments took the leak path: it shows the GUI does not block, not that a reaper thread handles a death at attach |
 | Wiring reverted (MC1), die after `ok` | **Frozen in the first step.** `Test function timed out` at 45 s (`probe-dead-decoder-wiring-reverted.txt`) |
 | Tip, no hook, real kills: 33 `Kill()` calls at random moments over 79 steps | No hang. 28 photos undecoded, as expected from killing their decoders. Max GUI gap 440 ms (`external-kills.txt`) |
 | Tip, no hook, normal stepping, 3,792 steps | 5 stuck teardowns, GUI never blocked, max gap 759 ms (below) |
