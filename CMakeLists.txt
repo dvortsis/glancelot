@@ -327,6 +327,7 @@ if(GLANCELOT_BUILD_VIEWER)
     include(cmake/CommandRoutingTests.cmake) # EN-06; needs the monitor-customization helper above
   endif()
   include(cmake/ReferencePinTests.cmake)
+  include(cmake/AssetGroupTests.cmake) # B1; also adds src/app/asset_group.cpp to glancelot_platform
   include(cmake/ExportUiTests.cmake) # B3 (F070)
   include(cmake/StackConfirmTests.cmake)
   glancelot_attach_recovery_consumers()
