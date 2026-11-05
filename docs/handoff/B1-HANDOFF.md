@@ -118,7 +118,7 @@ The contract lists no other "Applied by B1" item.
 
 The test files are new, so against the base they only fail to compile. So each piece of evidence below is one mutation of the production code.
 
-The full record, with each edit and each run's QTest totals, is [docs/verification/B1/fail-before.txt](../verification/B1/fail-before.txt): 90 mutations of the production code, each built and run alone with the targeted test. Every one of the 85 test functions failed under at least one. A selection:
+The full record, with each edit and each run's QTest totals, is [docs/verification/B1/fail-before.txt](../verification/B1/fail-before.txt): 90 mutations of the production code, each built and run alone with the targeted test. Every test function, leaving out the `_data` tables and the fixtures, failed under at least one. A selection:
 
 | Mutation | Tests that caught it |
 | --- | --- |
@@ -162,6 +162,8 @@ Merge conflicts, all resolved as the lead directed or by keeping both sides:
 - `CMakeLists.txt`: every include line kept (`AssetGroupTests`, `ExportUiTests`, `StackConfirmTests`).
 - `ui/Main.qml` in part 3: the `modalOpen` line keeps B3's `exportFlow` clause and adds `transferFlow.modal`.
 
+`main` has since gained `20f1210` (#17), which is docs and evidence only, so it is not merged here.
+
 The hosted `viewer` job now retries once and treats budget tests as advisory (`docs/decisions/2026-11-05-hosted-ci-retries.md`), so a green `viewer` is weaker evidence on those tests than it was. The gate still decides.
 
 ### 4. Targeted ctest
@@ -198,9 +200,15 @@ Total Test time (real) = 176.09 sec
 
 No baseline failures. No existing test file changed, so the `file_operation_service`, `copy_move` and `mutation` results are unchanged assertions on the new code.
 
-`folder_grid` (which holds the existing delete-flow tests) was built but **not run locally**: the machine was under a full gate. The hosted `viewer` job covers it, and the gate decides.
+`folder_grid` holds the existing delete-flow tests and is budget-labelled, so it is only advisory in the hosted job. I ran it under the gate lock on the same code (part 3 before the commit that adds this file):
 
-Hosted `viewer`, full suite: green on #13 and #14 at the tips before the second merge (`3e903af`, `3b967ab`). Results for these tips are on the PRs.
+```text
+1/1 Test #12: folder_grid ......................   Passed  324.31 sec
+100% tests passed out of 1
+Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 324128ms
+```
+
+Hosted `viewer`, full suite: green on #13 and #14 at the tips before the second merge (`3e903af`, `3b967ab`). Results for the final tips are on the PRs.
 
 The full suite was not run on this PC, as the brief says. The PRs' hosted `viewer` job covers it, and the tester gates the merge head.
 
@@ -257,7 +265,6 @@ See below.
 ## Unverified
 
 - **Linux and Docker were not run by me.** The `caseVariantsOnThisVolume` branch for a case-sensitive volume, and the `glancelot_platform` to `glancelot_core` link order under GNU ld, run for the first time at the gate's `docker build`. The hosted `viewer` is Windows only.
-- **`folder_grid` locally**, as above.
 - **The real Recycle Bin with an asset.** The trash is a fake in every asset test. `ShellTrash` is unchanged and sees one target at a time.
 - **A real slow share.** The budget runs on a virtual clock. A read that hangs inside the OS call isn't interrupted, because the budget is checked between entries. The dialog then stays on "Checking…" with Cancel available. `planDeletion` has the same limit today.
 - **Tab and arrow keys through the choices.** The tests assert which control holds the default focus and that the choice is clickable; they don't drive Tab or the arrow keys. A reviewer with a real window should try them.
