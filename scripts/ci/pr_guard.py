@@ -18,7 +18,11 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).parent))
+import commit_lint  # noqa: E402
+
 QUEUE = "docs/WORK-QUEUE.yaml"
+LEGACY_TITLE_LAST_PR = 18
 STATES = {"ready", "implementing", "review", "integration", "done"}
 LEAD_ONLY = (".github/workflows/", "scripts/ci/", "scripts/lead-")
 SHIPPED_DOCS = {"README.md", "THIRD_PARTY_NOTICES.md"}  # Dockerfile and scripts/build.ps1 copy these
@@ -127,10 +131,25 @@ def size_errors(changed_lines, body, head_ref):
     return [f"{changed_lines} changed lines is over {SIZE_LIMIT}: split it, or add a 'Large PR: <reason>' line to the body"]
 
 
-def title_errors(title):
-    if re.match(r"^[A-Z][A-Z0-9-]*: \S", title or ""):
+def is_legacy_pr(number):
+    return number is not None and number <= LEGACY_TITLE_LAST_PR
+
+
+def title_errors(title, number=None):
+    # PRs opened before the Conventional Commits rule keep their '<TASK-ID>: <title>' titles.
+    if is_legacy_pr(number) and commit_lint.LEGACY.match(title or ""):
         return []
-    return [f"PR title {title!r} must be '<TASK-ID>: <title>'"]
+    if commit_lint.REVERT.match(title or ""):  # GitHub's Revert button
+        return []
+    return [f"PR title: {error}" for error in commit_lint.subject_errors(title)]
+
+
+def commit_errors(merge_base, head, number, head_ref):
+    # PRs opened before the rule used several subject styles and can't reword shared history, so their commits
+    # aren't checked; the lead's integration batches carry those commits unchanged. Everything else is.
+    if is_legacy_pr(number) or is_integration_branch(head_ref):
+        return []
+    return commit_lint.range_errors(f"{merge_base}..{head}")
 
 
 def lead_only_errors(paths, head_ref, labels):
@@ -212,6 +231,7 @@ def main():
     parser.add_argument("--base", help="base commit or ref of the pull request")
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--head-ref", default="", help="head branch name")
+    parser.add_argument("--pr", type=int, help="pull request number, for a local run of a PR opened before PR 19")
     args = parser.parse_args()
 
     event = {}
@@ -225,6 +245,7 @@ def main():
     base = args.base or (event.get("base") or {}).get("sha")
     head = (event.get("head") or {}).get("sha") or args.head
     head_ref = args.head_ref or (event.get("head") or {}).get("ref") or ""
+    number = event.get("number") or args.pr
 
     errors = []
     head_queue = show_queue(head)
@@ -248,7 +269,8 @@ def main():
         if size > SIZE_NOTICE:
             print(f"::notice::{size} changed lines; aim for about {SIZE_NOTICE}")
         if event:
-            errors += title_errors(title)
+            errors += title_errors(title, number)
+        errors += commit_errors(merge_base, head, number, head_ref)
         base_queue = show_queue(merge_base)
         if QUEUE in paths and base_queue and head_queue and not errors:
             errors += queue_scope_errors(base_queue, head_queue, head_ref)

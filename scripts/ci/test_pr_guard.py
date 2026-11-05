@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """Unit tests for pr_guard.py. Run from the repository root: python3 scripts/ci/test_pr_guard.py"""
+import contextlib
+import io
+import json
 import os
 import subprocess
 import sys
+from unittest import mock
 import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import commit_lint  # noqa: E402
 import pr_guard  # noqa: E402
 
 QUEUE = """schema: 1
@@ -155,13 +160,119 @@ class Size(unittest.TestCase):
 
 
 class Titles(unittest.TestCase):
-    def test_task_titles_pass(self):
-        for title in ("EN-07: per-component commands", "A1: incremental listing", "LEAD: integrate 7"):
-            self.assertEqual(pr_guard.title_errors(title), [], title)
+    def test_conventional_titles_pass(self):
+        for title in ("refactor(ui): per-component commands (EN-07)", "feat(grid): incremental listing (A1)",
+                      "docs(queue): PR 9 evidence"):
+            self.assertEqual(pr_guard.title_errors(title, 19), [], title)
+
+    def test_old_prs_keep_task_titles(self):
+        self.assertEqual(pr_guard.title_errors("EN-07: per-component commands", 18), [])
+        self.assertTrue(pr_guard.title_errors("EN-07: per-component commands", 19))
+        self.assertTrue(pr_guard.title_errors("EN-07: per-component commands", None))
 
     def test_other_titles_fail(self):
-        for title in ("fix stuff", "en-07: lower", "EN-07 missing colon", "", None):
-            self.assertTrue(pr_guard.title_errors(title), title)
+        for title in ("fix stuff", "en-07: lower", "EN-07 missing colon", "", None, "Feat: capital type"):
+            self.assertTrue(pr_guard.title_errors(title, 19), title)
+
+
+class Commits(unittest.TestCase):
+    def test_conventional_subjects_pass(self):
+        for message in ("feat(grid): show more rows", "fix: keep the selection", "perf(decode)!: drop the copy",
+                        "ci(guard): check commit subjects\n\nBody.\n\nTask: A1\nCo-Authored-By: x <x@y>",
+                        "refactor(ui): move handlers\n\nBREAKING CHANGE: none really"):
+            self.assertEqual(commit_lint.message_errors(message), [], message)
+
+    def test_other_subjects_fail(self):
+        for message in ("A1: show more", "LEAD: PR 9 evidence", "update stuff", "feature(grid): x",
+                        "fix(Grid): x", "fix(grid):x", "fix(grid): x.", "fix: " + "x" * 100,
+                        "fix(grid): x\nno blank line", "", "fixup! fix(grid): x"):
+            self.assertTrue(commit_lint.message_errors(message), message)
+
+    def test_merges_and_local_fixups(self):
+        self.assertTrue(commit_lint.message_errors("Merge the two caches"))  # real merges are skipped, not matched
+        self.assertTrue(commit_lint.message_errors("Merge the two caches", local=True))  # the hook skips via MERGE_HEAD
+        self.assertEqual(commit_lint.message_errors("fixup! fix(grid): x", local=True), [])
+        self.assertEqual(commit_lint.message_errors("# comment\n\nfix(grid): x\n# more", local=True), [])
+
+
+class CommitExemptions(unittest.TestCase):
+    def test_git_revert_subject_passes(self):
+        self.assertEqual(commit_lint.message_errors('Revert "fix(grid): x"\n\nThis reverts commit abc.'), [])
+        self.assertEqual(commit_lint.message_errors('Reapply "fix(grid): x"'), [])
+        self.assertEqual(pr_guard.title_errors('Revert "feat(grid): x (A1)"', 30), [])
+
+    def test_legacy_prs(self):
+        self.assertTrue(commit_lint.message_errors("A1: show more"))
+        self.assertTrue(pr_guard.is_legacy_pr(18))
+        self.assertFalse(pr_guard.is_legacy_pr(19))
+        self.assertFalse(pr_guard.is_legacy_pr(None))
+
+
+class CommitRange(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.directory.name)
+        for args in (("init", "-q"), ("config", "user.email", "test@example.invalid"), ("config", "user.name", "t")):
+            subprocess.run(["git", *args], check=True, capture_output=True)
+
+    def commit(self, subject, date):
+        env = {**os.environ, "GIT_COMMITTER_DATE": date, "GIT_AUTHOR_DATE": date}
+        subprocess.run(["git", "commit", "-q", "--allow-empty", "--no-verify", "-m", subject],
+                       check=True, capture_output=True, env=env)
+
+    def test_only_commits_after_the_cutoff_count(self):
+        self.commit("base", "2026-11-01T00:00:00Z")
+        self.commit("A1: before the rule", "2026-11-05T23:59:59Z")
+        self.commit("feat(grid): after the rule", "2026-11-06T00:00:01Z")
+        self.assertEqual(commit_lint.range_errors("HEAD~2..HEAD"), [])
+        self.commit("A1: after the rule", "2026-11-06T00:00:02Z")
+        errors = commit_lint.range_errors("HEAD~3..HEAD")
+        self.assertEqual(len(errors), 1)
+        self.assertIn("A1: after the rule", errors[0])
+
+    def test_old_prs_and_integration_batches_skip_the_subject_check(self):
+        self.commit("base", "2026-11-01T00:00:00Z")
+        for subject in ("EN-07: after the rule", "test(EN-07): an old style with an uppercase scope", "wip: x"):
+            self.commit(subject, "2026-11-06T00:00:02Z")
+        self.assertEqual(pr_guard.commit_errors("HEAD~3", "HEAD", 18, "claude/en-07"), [])
+        self.assertEqual(pr_guard.commit_errors("HEAD~3", "HEAD", 30, "lead/integrate-9"), [])
+        self.assertEqual(len(pr_guard.commit_errors("HEAD~3", "HEAD", 19, "claude/en-07")), 3)
+        self.assertEqual(len(pr_guard.commit_errors("HEAD~3", "HEAD", None, "claude/en-07")), 3)
+
+    def test_ci_reads_the_pr_number_from_the_event(self):
+        Path("docs").mkdir()
+        Path("docs/WORK-QUEUE.yaml").write_text(QUEUE, encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], check=True, capture_output=True)
+        self.commit("base", "2026-11-01T00:00:00Z")
+        self.commit("test(EN-07): after the rule", "2026-11-06T00:00:02Z")
+        sha = lambda ref: subprocess.run(["git", "rev-parse", ref], check=True, capture_output=True, text=True).stdout.strip()
+        saved = {k: os.environ.pop(k) for k in ("GITHUB_EVENT_PATH", "GITHUB_OUTPUT", "PR_TITLE", "PR_BODY", "PR_LABELS")
+                 if k in os.environ}
+        self.addCleanup(os.environ.update, saved)
+        self.addCleanup(os.environ.pop, "GITHUB_EVENT_PATH", None)
+        for number, expected in ((18, 0), (19, 1)):
+            event = {"pull_request": {"number": number, "title": "refactor(ui): move handlers (EN-07)", "body": "",
+                                      "labels": [], "base": {"sha": sha("HEAD~1")},
+                                      "head": {"sha": sha("HEAD"), "ref": "claude/en-07"}}}
+            Path("event.json").write_text(json.dumps(event), encoding="utf-8")
+            os.environ["GITHUB_EVENT_PATH"] = str(Path("event.json").resolve())
+            with mock.patch.object(sys, "argv", ["pr_guard"]), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(pr_guard.main(), expected, number)
+
+    def test_main_passes_the_pr_number_through(self):
+        Path("docs").mkdir()
+        Path("docs/WORK-QUEUE.yaml").write_text(QUEUE, encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], check=True, capture_output=True)
+        self.commit("base", "2026-11-01T00:00:00Z")
+        self.commit("EN-07: after the rule", "2026-11-06T00:00:02Z")
+        saved = {k: os.environ.pop(k) for k in ("GITHUB_EVENT_PATH", "GITHUB_OUTPUT") if k in os.environ}
+        self.addCleanup(os.environ.update, saved)
+        argv = ["pr_guard", "--base", "HEAD~1", "--head", "HEAD", "--head-ref", "claude/en-07", "--pr"]
+        for number, expected in (("18", 0), ("19", 1)):
+            with mock.patch.object(sys, "argv", argv + [number]), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(pr_guard.main(), expected, number)
 
 
 class LeadOnly(unittest.TestCase):

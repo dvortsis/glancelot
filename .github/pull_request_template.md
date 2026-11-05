@@ -1,4 +1,4 @@
-<!-- Title: <TASK-ID>: <title>. Keep to about 1,500 changed lines; over 3,000 needs a "Large PR: <reason>" line. Only the lead merges. -->
+<!-- Title: type(scope): description (TASK-ID), per docs/RELEASING.md. Keep to about 1,500 changed lines; over 3,000 needs a "Large PR: <reason>" line. Only the lead merges. -->
 
 **Task and handoff:** <!-- queue id, docs/handoff/<TASK>-HANDOFF.md -->
 
