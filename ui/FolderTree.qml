@@ -1044,6 +1044,19 @@ Rectangle {
                 if (typeof folderHistory !== "undefined") folderHistory.navigateBack()
             } else if (command === "navigate-forward") {
                 if (typeof folderHistory !== "undefined") folderHistory.navigateForward()
+            } else if (command === "tree-open-folder") {
+                panel.openCursor()
+            } else if (command === "focus-path") {
+                if (!viewer.treeVisible) viewer.treeVisible = true
+                Qt.callLater(panel.focusAddress)
+            } else if (command === "copy-folder-path") {
+                if (viewer.directory.length > 0) viewer.copyDirectory()
+            } else if (command === "paste-path") {
+                if (!viewer.treeVisible) viewer.treeVisible = true
+                Qt.callLater(panel.pasteAddress)
+            } else if (command === "open-terminal") {
+                const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+                viewer.openTerminal(folder)
             }
         }
     }
