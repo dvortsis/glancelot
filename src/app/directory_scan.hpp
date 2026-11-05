@@ -330,7 +330,7 @@ struct Request {
 };
 #ifdef GLANCELOT_PERF_ENUM_TESTING
 // Copied at model construction; only the perf_enum_tests executable compiles this.
-struct TestSeam { Tuning tuning; Enumerator enumerator; std::function<void(std::stop_token)> beforeProbes; };
+struct TestSeam { Tuning tuning; Enumerator enumerator; std::function<void(std::stop_token)> beforeProbes; std::function<void()> beforeDryCheck; };
 inline thread_local TestSeam testSeam;
 #endif
 // `arrivals` is set for a first listing with no rows on screen: past the patience window, batches go there as they

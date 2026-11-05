@@ -130,16 +130,25 @@ Rectangle {
     // True from entering the grid until its first listing places the cursor: a photo opened meanwhile (the grid
     // restored visible at start-up, before the start-up photo opens) becomes the cursor's target.
     property bool entering: false
-    // Interacting during arrival decides where the view is: the placement waiting for the listing no longer applies.
-    function settleByUser() { if (fileGrid.arriving && placeCursor) { placeCursor = false; entering = false; revealPath = "" } }
+    // Set while rows come back to a folder that failed: where the user was, until the rows have landed.
+    property var recoveryViewport: null
+    // Using the grid before its listing has landed decides where it is: neither the placement waiting for the listing
+    // nor a return to the browsed position applies any more. With no rows yet, a key or click has done nothing.
+    function settleByUser() {
+        if (fileGrid.count === 0) return
+        recoveryViewport = null
+        if (fileGrid.loading && placeCursor) { placeCursor = false; entering = false; revealPath = "" }
+    }
     // Places the cursor once a listing has landed: on the revealed photo, else keeps it, else the first entry.
     // Runs once per grid entry or folder change; an ordinary refresh (external change) never moves the cursor,
     // replaces the selection or scrolls the view.
     function reveal() {
         if (!visible || !placeCursor || folderPath.length === 0) return
         const row = revealPath.length ? fileGrid.rowOf(revealPath) : -1
-        // While rows arrive only the photo itself can be placed, as soon as it is there; "first" is not known yet.
-        if (fileGrid.arriving && row < 0) return
+        // Before the listing has landed only what has a row can be placed: the photo as soon as it arrives, or the cursor
+        // once the order is final. A cursor with no row waits for the baseline, which may carry it across a rename.
+        const cursorHasItsRow = !revealPath.length && !fileGrid.arriving && fileGrid.cursorRow >= 0
+        if (fileGrid.loading && row < 0 && !cursorHasItsRow) return
         placeCursor = false; entering = false
         if (revealPath.length) {
             revealPath = ""
@@ -174,6 +183,11 @@ Rectangle {
         grid.forceLayout() // rows that arrived since the last frame count towards contentHeight
         const offset = row >= 0 ? Math.floor(row / columns) * grid.cellHeight + saved.offset : saved.scroll
         grid.contentY = grid.originY + Math.max(0, Math.min(offset, grid.contentHeight - grid.height))
+    }
+    // Failing again leaves no rows to return to, so the position waits for the next try.
+    function settleRecovery(saved) {
+        if (fileGrid.count === 0) resetViewport = saved
+        else restoreViewport(saved)
     }
     function activate() {
         const row = fileGrid.cursorRow
@@ -249,12 +263,25 @@ Rectangle {
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
-        function onArrivingChanged() { if (panel.visible && !fileGrid.arriving) Qt.callLater(panel.reveal) }
+        function onArrivingChanged() {
+            if (!panel.visible) return
+            if (fileGrid.arriving) {
+                const saved = panel.resetViewport
+                panel.recoveryViewport = fileGrid.count === 0 && saved && saved.directory === panel.folderPath ? saved : null
+                return
+            }
+            Qt.callLater(panel.reveal)
+            const recovery = panel.recoveryViewport
+            panel.recoveryViewport = null
+            if (recovery) Qt.callLater(panel.settleRecovery, recovery) // with or without a layout change
+        }
         function onCountChanged() { if (panel.visible && fileGrid.arriving && panel.placeCursor && panel.revealPath.length) Qt.callLater(panel.reveal) }
         function onModelAboutToBeReset() { panel.rememberViewport() }
         function onModelReset() { Qt.callLater(panel.restoreViewport, panel.resetViewport) }
         // The definitive order of a listing that arrived: same rows, same delegates, same visible item.
-        function onLayoutAboutToBeChanged() { panel.rememberViewport() }
+        // The last rows and this can come in one call, and the view applies rows in a frame: lay them out first, so the
+        // position read here and the rows it is read against agree.
+        function onLayoutAboutToBeChanged() { grid.forceLayout(); panel.rememberViewport() }
         function onLayoutChanged() {
             const saved = panel.resetViewport
             if (saved && (saved.scroll > 0 || saved.cursorVisible)) Qt.callLater(panel.restoreViewport, saved) // at the top stays at the top
@@ -328,7 +355,8 @@ Rectangle {
                 visible: fileGrid.count > 0 && panel.width >= 480
                 text: {
                     const n = fileGrid.count.toLocaleString(Qt.locale(), "f", 0)
-                    if (fileGrid.arriving) return fileGrid.hasFilter ? qsTr("%1 matches so far").arg(n) : qsTr("%1 items so far").arg(n)
+                    if (fileGrid.arriving) return fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match so far") : qsTr("%1 matches so far").arg(n))
+                                                                     : (fileGrid.count === 1 ? qsTr("1 item so far") : qsTr("%1 items so far").arg(n))
                     return fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match") : qsTr("%1 matches").arg(n))
                                               : (fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(n))
                 }
@@ -536,7 +564,7 @@ Rectangle {
         Accessible.role: Accessible.List
         Accessible.name: "Items in " + panel.folderPath
         Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo.")
-        ScrollBar.vertical: UiScrollBar { }
+        ScrollBar.vertical: UiScrollBar { onPressedChanged: if (pressed) panel.settleByUser() }
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier
             onWheel: event => {
@@ -563,6 +591,8 @@ Rectangle {
             if (panel.keyAction(event).length) event.accepted = true
         }
         Keys.onPressed: event => {
+            // A modifier alone has not done anything yet.
+            if ([Qt.Key_Control, Qt.Key_Shift, Qt.Key_Alt, Qt.Key_Meta].indexOf(event.key) < 0) panel.settleByUser()
             if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_F) {
                 panel.openFilter()
                 event.accepted = true
@@ -685,6 +715,7 @@ Rectangle {
         TapHandler {
             acceptedButtons: Qt.RightButton
             onTapped: point => {
+                panel.settleByUser()
                 const row = grid.indexAt(point.position.x + grid.contentX, point.position.y + grid.contentY)
                 const at = grid.mapToItem(panel, point.position.x, point.position.y)
                 panel.contextRequested(at.x, at.y, row)

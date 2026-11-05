@@ -145,8 +145,9 @@ private slots:
         listAndReport("10k-warm", ten.path(), kTenThousand, second);
         if (QTest::currentTestFailed()) return;
         QVERIFY2(std::max(first.worstGapMs, second.worstGapMs) < kGuiGapBudgetMs, "10k listing stalled the GUI thread");
-        // R1: useful content does not wait for per-file identity probes. On base the first row took 1.5 to 1.9 s here.
-        QVERIFY2(second.firstRowMs < 500, qPrintable(QString("10k first row took %1 ms").arg(second.firstRowMs)));
+        // R1: useful content does not wait for per-file identity probes, which are nearly all of the wait. On base, the
+        // first row and the end of loading came together, at about 530 to 920 ms on this machine under one gate lock.
+        QVERIFY2(second.firstRowMs < second.settledMs / 2, qPrintable(QString("10k first row took %1 of %2 ms").arg(second.firstRowMs).arg(second.settledMs)));
         QVERIFY2(second.definitiveMs < 500, qPrintable(QString("10k definitive order took %1 ms").arg(second.definitiveMs)));
         QVERIFY(second.definitiveMs <= second.settledMs);
     }
@@ -715,6 +716,45 @@ private slots:
                 QVERIFY2(fast == reference, qPrintable(QString("order differs for key %1 descending %2").arg(int(key)).arg(descending)));
             }
         }
+    }
+    // The worker ends while rows still drain, so the scan's end waits on the last tick. Crossing the budget in that tick
+    // left nothing to publish it: `loading` stuck, and every refresh waited on it for good.
+    void aFinishedScanIsNotLostAtTheDefinitiveBatch() {
+        QTemporaryDir dir;
+        FakeFolder folder; folder.total = 16000;
+        SeamScope seam(&folder);
+        directory_scan::testSeam.beforeDryCheck = [] { std::this_thread::sleep_for(std::chrono::milliseconds(7)); }; // sleep-ok: past the drain budget, at the one moment that matters
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        // No event loop here, so the scan finishes with its rows still queued.
+        QDeadlineTimer deadline(10000);
+        while (folder.exits->load() < 1 && !deadline.hasExpired()) std::this_thread::yield();
+        QCOMPARE(folder.exits->load(), 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200)); // sleep-ok: the worker's last steps after the enumerator have nothing to wait on
+        QTRY_VERIFY_WITH_TIMEOUT(!model.arriving() && model.count() == 16000, 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
+    }
+    // QML reads cursorRow through selectionChanged, so a row that moves has to say so.
+    void cursorRowIsNotifiedWhenRowsMoveAroundIt() {
+        QTemporaryDir dir;
+        FakeFolder folder; folder.total = 2000; folder.heldAfter = 1024;
+        folder.name = [](int i) { return i % 10 == 0 ? QString("dir%1").arg(2000 - i, 5, 10, QChar('0')) : QString("f%1.png").arg(2000 - i, 5, 10, QChar('0')); };
+        SeamScope seam(&folder);
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1024, 10000);
+        model.select(500);
+        const QString path = model.pathAt(500);
+        int notified = model.cursorRow(), staleAfterInsert = 0;
+        connect(&model, &DirectoryEntryModel::selectionChanged, this, [&] { notified = model.cursorRow(); });
+        connect(&model, &DirectoryEntryModel::countChanged, this, [&] { if (model.arriving() && notified != model.cursorRow()) ++staleAfterInsert; });
+        bool staleAtDefinitive = false;
+        connect(&model, &DirectoryEntryModel::arrivingChanged, this, [&] { if (!model.arriving() && notified != model.cursorRow()) staleAtDefinitive = true; });
+        folder.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
+        QCOMPARE(staleAfterInsert, 0);
+        QVERIFY(!staleAtDefinitive);
+        QCOMPARE(model.pathAt(notified), path);
     }
     void arrivalsQueueBlocksAtCapacityAndWakesOnStop() {
         directory_scan::Arrivals queue(100);
