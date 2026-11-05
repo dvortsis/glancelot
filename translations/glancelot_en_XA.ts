@@ -1441,6 +1441,14 @@
         <translation>[%1 îtéms]</translation>
     </message>
     <message>
+        <source>%1 items so far</source>
+        <translation>[%1 îtéms sô fàr]</translation>
+    </message>
+    <message>
+        <source>%1 matches so far</source>
+        <translation>[%1 màtçhés sô fàr]</translation>
+    </message>
+    <message>
         <source>Invert selection</source>
         <translation>[Îñvért séléçtîõñ]</translation>
     </message>

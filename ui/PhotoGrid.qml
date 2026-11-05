@@ -130,14 +130,18 @@ Rectangle {
     // True from entering the grid until its first listing places the cursor: a photo opened meanwhile (the grid
     // restored visible at start-up, before the start-up photo opens) becomes the cursor's target.
     property bool entering: false
+    // Interacting during arrival decides where the view is: the placement waiting for the listing no longer applies.
+    function settleByUser() { if (fileGrid.arriving && placeCursor) { placeCursor = false; entering = false; revealPath = "" } }
     // Places the cursor once a listing has landed: on the revealed photo, else keeps it, else the first entry.
     // Runs once per grid entry or folder change; an ordinary refresh (external change) never moves the cursor,
     // replaces the selection or scrolls the view.
     function reveal() {
-        if (!visible || fileGrid.loading || !placeCursor || folderPath.length === 0) return
+        if (!visible || !placeCursor || folderPath.length === 0) return
+        const row = revealPath.length ? fileGrid.rowOf(revealPath) : -1
+        // While rows arrive only the photo itself can be placed, as soon as it is there; "first" is not known yet.
+        if (fileGrid.arriving && row < 0) return
         placeCursor = false; entering = false
         if (revealPath.length) {
-            const row = fileGrid.rowOf(revealPath)
             revealPath = ""
             if (row >= 0) { select(row); return }
         }
@@ -190,6 +194,7 @@ Rectangle {
     }
     function goUp() { if (inputEnabled && parentPath.length) { noticeText = ""; viewer.navigateDirectory(parentPath) } }
     function clickRow(row, modifiers) {
+        settleByUser()
         const ctrl = (modifiers & Qt.ControlModifier) !== 0, shift = (modifiers & Qt.ShiftModifier) !== 0
         fileGrid.select(row, ctrl && shift ? panel.modeExtendRange : shift ? panel.modeRange
                         : ctrl ? panel.modeToggle : panel.modeReplace)
@@ -243,8 +248,16 @@ Rectangle {
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
+        function onArrivingChanged() { if (panel.visible && !fileGrid.arriving) Qt.callLater(panel.reveal) }
+        function onCountChanged() { if (panel.visible && fileGrid.arriving && panel.placeCursor && panel.revealPath.length) Qt.callLater(panel.reveal) }
         function onModelAboutToBeReset() { panel.rememberViewport() }
         function onModelReset() { Qt.callLater(panel.restoreViewport, panel.resetViewport) }
+        // The definitive order of a listing that arrived: same rows, same delegates, same visible item.
+        function onLayoutAboutToBeChanged() { panel.rememberViewport() }
+        function onLayoutChanged() {
+            const saved = panel.resetViewport
+            if (saved && (saved.scroll > 0 || saved.cursorVisible)) Qt.callLater(panel.restoreViewport, saved) // at the top stays at the top
+        }
         function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
@@ -312,8 +325,12 @@ Rectangle {
             Label {
                 objectName: "gridItemCount"
                 visible: fileGrid.count > 0 && panel.width >= 480
-                text: fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match") : qsTr("%1 matches").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0)))
-                                         : (fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0)))
+                text: {
+                    const n = fileGrid.count.toLocaleString(Qt.locale(), "f", 0)
+                    if (fileGrid.arriving) return fileGrid.hasFilter ? qsTr("%1 matches so far").arg(n) : qsTr("%1 items so far").arg(n)
+                    return fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match") : qsTr("%1 matches").arg(n))
+                                              : (fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(n))
+                }
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.features: { "tnum": 1 }
@@ -511,6 +528,7 @@ Rectangle {
                                Math.ceil(height / Math.max(1, Math.floor(panel.currentBucketSize / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
+        onMovementStarted: panel.settleByUser()
         keyNavigationEnabled: false
         activeFocusOnTab: true
         enabled: panel.inputEnabled
@@ -739,8 +757,9 @@ Rectangle {
                         objectName: "gridThumb" + cell.index
                         anchors.fill: parent
                         asynchronous: true
-                        // Only image rows have a source; the epoch term re-requests after an on-disk change.
-                        source: cell.image ? (fileGrid.epoch, fileGrid.thumbnailSource(cell.index, panel.thumbEdge)) : ""
+                        // Only image rows have a source; the epoch term re-requests after an on-disk change,
+                        // and the path term after a new order puts another row under this delegate.
+                        source: cell.image ? (fileGrid.epoch, cell.path, fileGrid.thumbnailSource(cell.index, panel.thumbEdge)) : ""
                         sourceSize.width: panel.thumbEdge
                         sourceSize.height: panel.thumbEdge
                         fillMode: Image.PreserveAspectFit

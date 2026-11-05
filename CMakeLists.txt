@@ -324,6 +324,7 @@ if(GLANCELOT_BUILD_VIEWER)
   include(cmake/MonitorCustomization.cmake)
   if(BUILD_TESTING)
     include(cmake/CommandRoutingTests.cmake) # EN-06; needs the monitor-customization helper above
+    include(cmake/PerfEnumTests.cmake) # A1 PERF-ENUM + F016
   endif()
   include(cmake/ReferencePinTests.cmake)
   glancelot_attach_recovery_consumers()
