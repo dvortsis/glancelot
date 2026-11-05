@@ -11,18 +11,20 @@ Give the grid, the filmstrip and traversal one source of capture time, oriented 
 | Consumer | Uses |
 | --- | --- |
 | A2 (F042 core) | Implements both paths below. Owns `MetadataKeyCache` and the reader. |
-| A3 (F013 group headers) | Date and rating roles; `metaState` gives the "unknown" group. |
-| A4 (F042 chips, F014 badges) | Rating and dimensions roles, counts over `metaState == "ready"`. |
-| A6 (F009 columns), A7 (F008 jump to date) | Roles and sort keys. |
+| A3 (F013 group headers) | Date and rating roles; `metaState` gives the "unknown" group. Calls `requestAllMetadata` while grouping by those values. |
+| A4 (F042 chips, F014 badges) | Rating and dimensions roles, counts over `metaState == "ready"`. Calls `requestAllMetadata` while a chip is on; `metadataPartial` says the counts are incomplete. |
+| A6 (F009 columns), A7 (F008 jump to date) | Roles and sort keys. A7 calls `requestAllMetadata` for a date jump. |
 | C1, C2 (F025) | C2 reads the rating role. C1 installs the sidecar rating overlay and invalidates rows after a write. |
-| C5 (F028 bursts) | `captureTime` role and the captured order. |
+| C5 (F028 bursts) | `captureTime` role and the captured order. Calls `requestAllMetadata` while bursts are on. |
 
-## Two paths, deliberately separate
+## Three paths, deliberately separate
 
 1. **Display path (visible window).** `requestMetadata(firstRow, lastRow)` fills roles for the rows on screen. It is bounded by the window, fenced by generation and never changes order.
 2. **Order path (whole folder).** `captured` and `dimensions` need a key for every image, because next/previous crosses the whole listing. The worker that already lists the folder reads the keys: the grid listing worker and the navigation worker. It is cancellable, admitted at `JobPriority::Metadata` and bounded per file and per folder. The order is published once when the keys are in, as A1 requires. Until then the previous order stays and `sortPending` is true. If the folder budget runs out, the unread files count as missing and go last, and `sortPartial` is true.
 
-The two paths share one bounded `MetadataKeyCache`. Rows read for the order arrive with their roles already `ready`, and rows read for display speed up a later sort.
+3. **Key pass (whole folder, no reorder).** `requestAllMetadata()` runs the order path's worker, budget, cancellation and fencing, for features that need every row's value under any sort. Rows become `ready` through the display path's `dataChanged` batching, and the order never changes. A feature calls it only while it is on.
+
+All three share one bounded `MetadataKeyCache`. Rows read for the order arrive with their roles already `ready`, and rows read for display speed up a later sort.
 
 ## Frozen interface
 
@@ -30,27 +32,27 @@ The two paths share one bounded `MetadataKeyCache`. Rows read for the order arri
 
 `SortKey::Captured` and `SortKey::Dimensions` (appended; values are not persisted), the extended `FileMeta` fields (`captured`, `pixelWidth`, `pixelHeight`, `capturedKnown`, `dimensionsKnown`; appended, defaulted) and the `SortKeyReader` alias.
 
-Until A2 lands both keys are unreachable and give natural order: `sortKeyName` knows them (`viewer_controller.cpp:99`), `sortBefore` treats every value as missing (`navigation.cpp:221`), and no string parses to them (`viewer_controller.cpp:591-595`, `:1987-1991`, `directory_entry_model.cpp:64`).
+Until A2 lands both keys are unreachable, and they give natural order: `sortKeyName` knows them (`viewer_controller.cpp:99`), `sortBefore` treats every value as missing (`navigation.cpp:221`), and no string parses to them (`viewer_controller.cpp:591-595`, `:1987-1991`, `directory_entry_model.cpp:64`).
 
 ### Applied by A2 (A2's brief grants these exact diffs)
 
 `include/glancelot/navigation.hpp`:
 
 ```diff
++// Process-wide, installed once by the app before the first worker runs (core stays Qt-free). Every Navigator, sortedImageFiles and
++// listDirectory reads it, so no construction site can miss it. Empty: Captured/Dimensions treat every key as missing, which gives
++// natural-name order, deterministic and identical across traversal, filmstrip and grid. Thread-safe to read.
++void setDefaultSortKeyReader(SortKeyReader reader);
  std::vector<std::filesystem::path> sortedImageFiles(const std::filesystem::path& directory, const SortSpec& sort,
 -    std::stop_token cancel = {}, std::vector<FileMeta>* meta = nullptr);
-+    std::stop_token cancel = {}, std::vector<FileMeta>* meta = nullptr, const SortKeyReader& keys = {});
++    std::stop_token cancel = {}, std::vector<FileMeta>* meta = nullptr, bool* partial = nullptr);
 @@ class Navigator
-+    // Installed once by the app (core stays Qt-free). Empty: Captured/Dimensions treat every key as missing,
-+    // which gives natural-name order, deterministic and identical across traversal, filmstrip and grid.
-+    void setSortKeyReader(SortKeyReader reader) { keys_ = std::move(reader); }
 +    bool sortPartial() const { return sortPartial_; }
  private:
-+    SortKeyReader keys_;
 +    bool sortPartial_{};
 ```
 
-`include/glancelot/directory_listing.hpp` gets the same trailing `const SortKeyReader& keys = {}` parameter on `listDirectory`, and `DirectoryListing` gains `bool sortPartial{false}`. If A1 has changed those signatures by then, A2 appends the same parameter to A1's form.
+`include/glancelot/directory_listing.hpp`: `DirectoryListing` gains `bool sortPartial{false}`. If A1 has changed these signatures by then, A2 appends to A1's form. `Navigator` is value-constructed at many controller sites (`viewer_controller.cpp:921`, `:1154`, `:1195`, `:1197`, `:1212`, `:1341`, `:1831`), which is why the reader is process-wide: a per-instance setter would silently give natural order at any site it missed.
 
 `include/glancelot/directory_entry_model.hpp`:
 
@@ -72,7 +74,12 @@ Until A2 lands both keys are unreachable and give natural order: `sortKeyName` k
 +    // "unavailable" without I/O.
 +    static constexpr int kMaxMetadataWindow = 512;
 +    Q_INVOKABLE void requestMetadata(int firstRow, int lastRow);
-+    bool sortPending() const; bool sortPartial() const;
++    // Whole-folder key pass with no reorder: the order path's worker, budget, cancellation and fencing. Rows become ready through
++    // the same dataChanged batching. Idempotent per listing generation; cleared by setDirectory, setActive(false) and a new listing.
++    Q_INVOKABLE void requestAllMetadata();
++    Q_PROPERTY(bool metadataPending READ metadataPending NOTIFY sortStateChanged)
++    Q_PROPERTY(bool metadataPartial READ metadataPartial NOTIFY sortStateChanged)  // budget ended; unread rows stay unknown
++    bool sortPending() const; bool sortPartial() const; bool metadataPending() const; bool metadataPartial() const;
  signals:
 +    void sortStateChanged();
 ```
@@ -116,7 +123,9 @@ public:
     void clear();                              // E2 "clear disposable caches"
     std::size_t size() const;
 };
-// Sidecar rating (C1). Installed once at startup, called on the reading worker. nullopt keeps the embedded value.
+// Sidecar rating (C1). Installed once at startup, called on the reading worker only when ratings are wanted (the display path and
+// requestAllMetadata, not a captured or dimensions sort), because it does sidecar I/O outside the per-file bound. nullopt keeps the
+// embedded value.
 using RatingOverlay = std::function<std::optional<std::int8_t>(const QString& imagePath)>;
 void setRatingOverlay(RatingOverlay overlay);
 // Worker-thread reader used by both paths and installed as the SortKeyReader.
@@ -130,12 +139,14 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 - `Dimensions`: `dimensionsKnown` first in both directions, then `pixelWidth*pixelHeight` (64-bit), then `pixelWidth`, then natural name.
 - An empty or failing reader makes every key missing, so the result equals ascending natural order in both directions. Shuffle, Name, Modified and Size are unchanged byte for byte.
 - `needMeta` in `sortedImageFiles` (`navigation.cpp:241`) becomes `Modified || Size || Captured || Dimensions`, so the reader receives each file's stat data (size and modified), which it needs as the cache revision. The reader is then called once over the listed files before sorting. Name and Shuffle still skip stat.
+- **One pass per folder and revision.** The grid and navigation workers share a pass: the first spends the budget and records the pass in `MetadataKeyCache`, and the other reads the cache only. So their unread sets, and `sortPartial`, agree, and traversal matches the grid even when partial.
+- **Crossing a folder under these sorts.** There is no previous order to keep, so the landing waits for the pass or its budget, cancellable, with `navigating` showing (PR 3).
 - Capture time orders by the wall-clock value the camera recorded. The offset is shown, never used for ordering.
 
 ## Threading, fencing and bounds
 
 - **GUI thread:** `DirectoryEntryModel` and its role storage. `data()` never reads a file. It returns what is stored for the row, or undefined plus `metaState`.
-- **Workers:** the display path uses a second `QThreadPool` in the model, separate from the listing pool (`kMaxConcurrentListings`, `directory_entry_model.cpp:27`), with at most `IoScheduler::maxConcurrentBackgroundWorkers(directory)` threads and never more than 2. The order path runs inside the existing listing or navigation job. Each file read is admitted through `glancelot::detail::admitIoJob(JobPriority::Metadata, kMaxReadBytes, path)` (`src/app/io_job_lease.hpp`).
+- **Workers:** the display path uses a second `QThreadPool` in the model, separate from the listing pool (`kMaxConcurrentListings`, `directory_entry_model.cpp:27`), with at most `IoScheduler::maxConcurrentBackgroundWorkers(directory)` threads and never more than 2. The order path runs inside the existing listing or navigation job. Each file read is admitted through `glancelot::detail::admitIoJob(JobPriority::Metadata, kMaxReadBytes, path)` (`src/app/io_job_lease.hpp`). `tryAdmit` refuses non-foreground work while the background slots are busy, so a worker pass waits for admission with cancellation, and that wait counts against the folder budget. While the grid is visible on storage with two background slots, one stays free for thumbnails.
 - **Fencing:**
   - each `requestMetadata` call increments `metaGeneration`;
   - `setDirectory`, `setActive(false)`, `setSort`, `setIncludeHidden` and a listing apply all increment it and request a stop;
@@ -144,7 +155,7 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 - **Bounds:**
   - display queue: at most `kMaxMetadataWindow` pending rows, with at most 64 rows per `dataChanged` emission, coalesced on a 16 ms timer so GUI work per tick stays bounded;
   - per-file read: `kMaxReadBytes`;
-  - folder budget for the order path: 20,000 image files, or 4 s of read time on `Network` storage, both named constants that only the lead may change;
+  - folder budget for the order path and the key pass: 20,000 image files, or 4 s of read time on any storage that isn't known to be an SSD (network, rotational or unknown), both named constants that only the lead may change;
   - cache: `kMaxEntries`.
 - **Truncated listings:** sorting covers only the listed subset; `truncated` already says so.
 - **Parser trust:** the reader parses untrusted headers in-process on a worker thread, as `MetadataParser::parse` does. F4 must include it as a fuzz target.
@@ -156,7 +167,7 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 | Admission refused | The row stays `pending` and is retried on `IoScheduler::admissionAvailable` |
 | Read error, unsupported format, truncated or cyclic metadata | `metaState` is `failed` or `unavailable`; the `*Known` flag stays false; the file sorts last; nothing throws across the worker boundary |
 | Cancel during the order pass | Cooperative through `std::stop_token` between files (a blocked OS read cannot be interrupted, the same limit as listing). No order is published and the old order stays |
-| Folder budget exhausted | Publish with unread files last and `sortPartial = true` |
+| Folder budget exhausted | Order path: publish with unread files last and `sortPartial = true`. Key pass: unread rows stay unknown and `metadataPartial = true` |
 | File changed during a read | The stale key is discarded |
 | Listing replaced mid-pass | The stale result is dropped by generation |
 | Reader absent (tests, or a core-only build) | Every key is missing, so natural order |
@@ -171,7 +182,7 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 | `settings_policy.cpp:140` (`sort.key` choice) | Accept both, or a saved new key would fail settings validation. |
 | `directory_entry_model.cpp:64` `sortSpec()` | Accept both. |
 | `ui/SettingsDialog.qml:637-638`, `ui/Main.qml:1827` | Add both names. A2's brief grants these lines. |
-| `Navigator` construction | The app calls `setSortKeyReader(...)` once. Tests without it keep current behaviour. |
+| App startup | The app calls `setDefaultSortKeyReader(...)` once, before any worker runs. Tests without it keep current behaviour. |
 | `FileMeta{a,b,c}` (`directory_listing.cpp:78,114`, `navigation.cpp:102`) | Compile unchanged. `FileMeta` grows from 24 to 48 bytes, about 2.4 MB more at the 100,000-entry cap. |
 | `MetadataParser::parse` and the HUD | Untouched. The HUD keeps its full record; grid keys never go through it. |
 | Roles | Appended after `CurrentRole`; existing role numbers and names unchanged. |
@@ -189,11 +200,20 @@ Generated media only. New `tests/meta_roles_tests.cpp` (core, no display) and `t
   - an empty reader equals ascending natural order;
   - traversal (`Navigator::step`), `sortedImageFiles` and `listDirectory` produce the same image order for the same folder.
 - **Settings:** a saved `captured` key survives `settings_policy` validation and a restart; a build that does not know the key falls back to Name.
+- **Parity across construction sites:** under `captured`, a step that crosses a folder boundary, a lookahead and a folder jump all use the installed reader, with no site falling back to natural order.
 - **Order path:**
   - cancel mid-pass (no publication, old order kept);
   - folder budget exhausted (`sortPartial`, unread files last);
   - a file changed during the pass (stale key discarded);
-  - a listing replaced mid-pass by a newer generation (stale result dropped).
+  - a listing replaced mid-pass by a newer generation (stale result dropped);
+  - admission held busy, then released: the pass waits, then continues, and the wait counts against the budget;
+  - the grid and traversal read one folder at once: one pass, the same unread set and the same order when partial.
+- **Key pass:**
+  - `requestAllMetadata` leaves the order unchanged under every sort and fills off-screen rows;
+  - a second call in one listing generation starts nothing;
+  - `setDirectory` and `setActive(false)` cancel it;
+  - the budget reports `metadataPartial`, and unread rows stay unknown;
+  - a chip filter and a rating group settle once the pass ends.
 - **Display path:**
   - window clamped to 512 rows;
   - scroll storm: 50 windows in a row leave at most 512 queued and only the last window applied;
@@ -203,7 +223,7 @@ Generated media only. New `tests/meta_roles_tests.cpp` (core, no display) and `t
   - admission refused leaves the row `pending`, then fills after release;
   - a non-image row is `unavailable` with no I/O (counted through a reader hook);
   - no `data()` call performs I/O (hook counter stays 0 while delegates scroll).
-- **Overlay:** an installed overlay overrides an embedded rating; a cleared overlay value keeps it; `invalidate` makes the next read see a new sidecar value.
+- **Overlay:** an installed overlay overrides an embedded rating; a cleared overlay value keeps it; `invalidate` makes the next read see a new sidecar value; a `captured` sort pass doesn't call it.
 - **Budget:** 10k generated rows, with `requestMetadata` GUI work per tick under 8 ms (label `budget`).
 
 ## Not covered

@@ -18,7 +18,7 @@ Group the files that users think of as one photo, and make every mutation choose
 
 ## Frozen interface
 
-The header is frozen as committed: `kMaxMembers`, `kMaxProbesPerTarget`, `Role`, `SidecarStyle`, `Match`, `GroupFlag`, `Member`, `Group`, `GroupingSnapshot`, `ListingInput`, `groupListing`, `Scope`, `Operation`, `Exclusion`, `Planned`, `Excluded`, `Expansion`, `expand` and `renameAsset`.
+The header is frozen as committed: `kMaxMembers`, `kMaxExpandedItems`, `kMaxExcludedListed`, `kExpandBudgetMs`, `Role`, `SidecarStyle`, `Match`, `GroupFlag`, `Member`, `Group`, `GroupingSnapshot`, `ListingInput`, `groupListing`, `Scope`, `Operation`, `Exclusion`, `Planned`, `Excluded`, `Expansion`, `expand` and `renameAsset`.
 
 **Where it lives.** B1 implements it in `src/app/asset_group.cpp`, added to `glancelot_platform`. Classification calls `RawPreviewExtractor::isRawExtension` (`raw_preview.hpp:19`) and `renameAsset` applies `MutationService::isValidFileName` (`mutation_service.hpp:34`), both Qt. The header itself stays free of Qt.
 
@@ -32,7 +32,31 @@ The header is frozen as committed: `kMaxMembers`, `kMaxProbesPerTarget`, `Role`,
 +    Q_INVOKABLE quint64 planScoped(const QStringList& paths, const QString& origin, const QString& scope);
 ```
 
-`CopyMoveService::enqueueTransfer` (`copy_move_service.hpp:63`) and `MutationService::renamePath` (`mutation_service.hpp:60`) get matching scoped entry points in B1 and B4, with the same `scope` argument and the same summary shape. They move behind the journal in B2 (see OPERATION-JOURNAL).
+`include/glancelot/copy_move_service.hpp`. `enqueueTransfer` (`:63`) stays for existing callers. B1 adds the plan step, so copy and move get a confirmation. Until B2, `confirmTransfer` accepts only `Skip` and `RenameBoth`. B2 adds Overwrite, the `replaceFate` summary key and the consent argument's effect (OPERATION-JOURNAL):
+
+```diff
++    // scope: "file" | "asset". Summary as planScoped, plus collisions [{path, target, requestedBy}] and, from B2, replaceFate
++    // "trash" | "permanent" per the trash probe. confirmTransfer executes exactly the snapshotted list; one collision policy per plan.
++    Q_INVOKABLE quint64 planTransfer(const QStringList& sourcePaths, const QString& destinationDirectory,
++                                     glancelot::CopyMoveService::TransferMode mode, const QString& scope);
++    Q_INVOKABLE bool confirmTransfer(quint64 id, glancelot::CopyMoveService::CollisionPolicy collision,
++                                     bool permanentReplaceConsent = false);
+@@ signals:
++    void transferPlanReady(quint64 id, const QVariantMap& summary);
+```
+
+`include/glancelot/mutation_service.hpp`. `renamePath` (`:60`) stays for a single-file rename. Asset scope needs a worker for `expand` and the journal for recovery, so B1 adds the plan and preview and B2 enables asset-scope `confirmRename`, as `Kind::BatchRename`. B4 builds batch rename on the same pair:
+
+```diff
++    // scope: "file" | "asset". Summary: renames [{from, to}], collisions, excluded. Asset scope returns a refusal until B2 lands.
++    Q_INVOKABLE quint64 planRename(const QString& sourcePath, const QString& newName, const QString& scope);
++    Q_INVOKABLE bool confirmRename(quint64 id);
+@@ signals:
++    void renamePlanReady(quint64 id, const QVariantMap& summary);
++    void renameFinished(quint64 id, const QVariantList& results);
+```
+
+`FileOperationService`'s summary lists at most `kMaxExcludedListed` companions, with a count for the rest.
 
 ## Rules
 
@@ -43,13 +67,13 @@ The header is frozen as committed: `kMaxMembers`, `kMaxProbesPerTarget`, `Role`,
 | Role | Extensions | Rule |
 | --- | --- | --- |
 | `Raw` | `RawPreviewExtractor::isRawExtension` | Always a member of its stem |
-| `Rendered` | jpg, jpeg, heic, heif, avif, jxl (families: jpeg = jpg+jpeg; heif = heic+heif; avif; jxl) | Always a member of its stem |
+| `Rendered` | jpg, jpeg, heic, heif, avif, jxl (families: jpeg = jpg+jpeg; heif = heic+heif; avif; jxl) | Always a member of its stem. Two files of one family set `Collision` |
 | `Derived` | tif, tiff, png, webp | A member only when the stem has no `Raw` and no `Rendered` file, so a sidecar can attach to it. Beside a `Raw` or `Rendered` file it is left out of the group: exports and edited masters are never pulled into an asset. It appears in the confirmation as excluded (`NotApplicable`) |
 | `Sidecar` | xmp | See below |
 | `MotionVideo` | mov, mp4 | Only when a `Rendered` or `Raw` member shares the stem. Video with no partner is never grouped |
 | `Other` | Everything else | Never grouped |
 
-**Groups.** Two or more members sharing a stem key. Primary = Raw if present, else Rendered, else Derived. More than one Raw, more than one Rendered family, two Derived with no Raw or Rendered, case variants or more than `kMaxMembers` candidates set `Collision`. A Stem sidecar in a directory where the stem key maps to a Collision group sets `AmbiguousSidecar`. A FullName sidecar always attaches to its exact file.
+**Groups.** Two or more members sharing a stem key. Primary = Raw if present, else Rendered, else Derived. More than one Raw, more than one Rendered family or two files of one family (`IMG.jpg`+`IMG.jpeg`), two Derived with no Raw or Rendered, case variants or more than `kMaxMembers` candidates set `Collision`. `groupListing` sets `Incomplete` from its `truncated` argument. A Stem sidecar in a directory where the stem key maps to a Collision group sets `AmbiguousSidecar`. A FullName sidecar always attaches to its exact file.
 
 **Motion pairs** match by stem only for B1. Every companion is listed by name in the confirmation before anything happens, so a coincidental stem match cannot act silently. `Match::ContentId` is reserved for ADV-09.
 
@@ -59,7 +83,7 @@ The header is frozen as committed: `kMaxMembers`, `kMaxProbesPerTarget`, `Role`,
 | --- | --- | --- |
 | Trash, Copy, Move | All members of the requested file's group | Members of a `Collision` group other than the requested one (shown as `Collision`); `AmbiguousSidecar` (shown as `Ambiguous`) |
 | Rename | All members, renamed by `renameAsset`; every target is checked for collisions (case folding included) before anything runs | Same as above. A Collision group falls back to FileOnly with an explanation |
-| SidecarWrite (C1) | Not an expansion. It resolves *which* sidecar a group writes (C1 owns the naming profile) | Writes never touch image members |
+| SidecarWrite (C1) | Not an expansion: `expand` returns the request unchanged, and C1 resolves *which* sidecar a group writes (C1 owns the naming profile) | Writes never touch image members |
 | LosslessTransform (D7) | None: always FileOnly | Sidecar orientation fields are C1 and D7 scope |
 
 Collision members are excluded and the operation continues with the rest, with each exclusion and its reason in the confirmation. The user can still select them explicitly in file-only scope.
@@ -72,38 +96,45 @@ When a requested file is itself a companion (the user selected the `.xmp`), Asse
 
 **Generation fencing.** A `GroupingSnapshot` carries its listing generation. Grid badges and confirmation previews drop snapshots older than the current listing generation. `expand` never trusts the snapshot for existence (it re-probes), so a stale hint can only cost probes, never add a wrong file.
 
-**Bounds.** At most `kMaxMembers` per group and `kMaxProbesPerTarget` stats per target. Requests are capped by the plan's existing limit (100,000 entries). Grouping is pure and runs on the listing worker. Badges consume the snapshot on the UI thread as values.
+**Companion lookup.** A `plan()` for 10,000 files on a network share must stay usable, and it lists companions too. With a current hint, `expand` stats only the hint's members. Without one, it reads each parent directory once, which also finds mixed-case names that guessing can't. `kExpandBudgetMs` bounds the lookups per plan. When it runs out, `companionsIncomplete` is set: unchecked companions stay out, and the confirmation says "Companions couldn't all be checked."
+
+**Bounds.** At most `kMaxMembers` per group and `kMaxExpandedItems` included per expansion, past which entries are `LimitReached`. `excluded` keeps at most `kMaxExcludedListed`, with the rest counted in `excludedNotListed`. Requests are capped by the plan's existing limit (100,000 entries). Grouping is pure and runs on the listing worker. Badges consume the snapshot on the UI thread as values.
 
 ## Failure and cancellation
 
 | Case | Result |
 | --- | --- |
-| Cancel during probing | `Expansion::cancelled`; no partial plan can be confirmed |
+| Cancel during lookups | `Expansion::cancelled`; no partial plan can be confirmed |
 | Companion deleted after grouping (stale hint) | `Missing` in `excluded`, not included |
-| Probes exhausted, or `kMaxMembers` exceeded | `LimitReached` in `excluded`; never silently dropped |
+| `kMaxExpandedItems` or `kMaxMembers` exceeded | `LimitReached` in `excluded`; never silently dropped |
+| `kExpandBudgetMs` exhausted | `companionsIncomplete`; the confirmation says so, and unchecked companions stay out |
 | Companion replaced or vanished between confirmation and execution | Reported `Changed` or `Missing`, never substituted; the other members proceed |
 | Partial failure on Trash, Copy or Move | Per-member results, as today; assets are not transactional |
 | `renameAsset` target collision | Blocks the whole asset rename before any mutation |
-| Asset rename fails partway | Stops, reverses the members already renamed and reports each member's final name. If a reversal also fails, the report says exactly which names remain changed |
+| Asset rename fails partway | Stops, reverses the members already renamed as a new operation with `undoOf`, and reports each member's final name. If a reversal also fails, the report says exactly which names remain changed. Asset rename is `Kind::BatchRename`, so it requires the journal, and a crash partway reconciles as a split asset (OPERATION-JOURNAL) |
 | Invalid new stem | `renameAsset` returns empty; nothing runs |
-| Unreadable or truncated listing | `Incomplete`; expansion still finds companions by exact-name probes |
+| Unreadable or truncated listing | `Incomplete`; expansion still finds companions by reading the parent directory |
 
 ## Migration without behaviour change
 
 - `planDeletion`, `executeDeletion` and `FileOperationService::plan` stay as they are. `plan()` is `planScoped(..., "file")`. The only visible change in B1 is the *preview*: companions appear in the confirmation as "not included", plus the new choice.
 - `DirectoryEntryModel` gains no role in this contract. B1 adds a grouping proxy or role later through the lead (META-ROLES is the precedent).
-- `CopyMoveService` today moves exactly the given paths, and that stays its default.
+- `CopyMoveService` today moves exactly the given paths, and `enqueueTransfer` keeps doing so.
+- Asset-scope rename arrives with B2, because it needs the journal. Until then B1's preview shows companions and asset scope is refused with the reason.
 
 ## Acceptance tests B1 must pass
 
 `tests/asset_group_tests.cpp`; generated media only.
 
 - **Grouping:** RAW+JPEG, RAW+HEIC, JPEG+XMP (stem), CR2+CR2.xmp (full name), both sidecar styles on one RAW, HEIC+MOV, MOV alone (not grouped), JPEG with an embedded motion payload (flag only), PNG+XMP (Derived primary), CR2+JPG+TIF (the TIF excluded, not a member).
-- **Same-stem collisions:** `IMG.CR2`+`IMG.NEF`+`IMG.xmp` (Collision plus AmbiguousSidecar; the sidecar is excluded with reason); `a.JPG`+`a.jpg` on case-sensitive (Linux/tmpfs) versus case-insensitive (NTFS) fixtures; `IMG.jpg`+`IMG.jpeg` are one family (Collision by case or duplicate family rule, asserted); `IMG.png`+`IMG.tif`+`IMG.xmp` (Collision plus AmbiguousSidecar); 17 same-stem files (`kMaxMembers`); Unicode stems that only match after case folding; names with several dots.
+- **Same-stem collisions:** `IMG.CR2`+`IMG.NEF`+`IMG.xmp` (Collision plus AmbiguousSidecar; the sidecar is excluded with reason); `a.JPG`+`a.jpg` on case-sensitive (Linux/tmpfs) versus case-insensitive (NTFS) fixtures; `IMG.jpg`+`IMG.jpeg` are two files of one family (Collision); `IMG.png`+`IMG.tif`+`IMG.xmp` (Collision plus AmbiguousSidecar); 17 same-stem files (`kMaxMembers`); Unicode stems that only match after case folding; names with several dots.
 - **File-only versus asset:** for each operation, FileOnly returns exactly the request and lists companions as excluded; Asset adds exactly the table's members; LosslessTransform ignores Asset.
-- **Expansion robustness:** a truncated listing (companion beyond the limit is still found by probing); a stale hint (companion deleted after grouping gives `Missing`, not included); a companion replaced between confirmation and execution gives `Changed` at execution; cancellation during probing gives `cancelled`, and no partial plan is confirmable.
-- **Rename:** `renameAsset` preserves extensions and the darktable double extension; a target collision with an existing file (case-folded) blocks the whole asset rename before any mutation; a failure on the second member reverses the first and reports it; a fault that blocks the reversal reports the exact state.
+- **Bounds:** 100,000 requests with companions stop at `kMaxExpandedItems`, with the rest `LimitReached`; excluded entries stop at `kMaxExcludedListed`, with the count right; `groupListing` with `truncated` sets `Incomplete`.
+- **Lookup cost:** with a hint, the backend is asked only for the hint's members (counted through a hook); without one, one directory read per parent, and a mixed-case companion is found on a case-sensitive volume; an injected slow volume ends at `kExpandBudgetMs` with `companionsIncomplete` and the confirmation's wording.
+- **Expansion robustness:** a truncated listing (companion beyond the limit is still found by reading the parent); a stale hint (companion deleted after grouping gives `Missing`, not included); a companion replaced between confirmation and execution gives `Changed` at execution; cancellation during lookups gives `cancelled`, and no partial plan is confirmable.
+- **Rename:** `renameAsset` preserves extensions and the darktable double extension; a target collision with an existing file (case-folded) blocks the whole asset rename before any mutation; a failure on the second member reverses the first and reports it; a fault that blocks the reversal reports the exact state; B1's asset-scope rename is refused until the journal lands.
 - **Overwrite:** an asset Copy onto a folder where two members collide asks once, and an injected replace fault on one member keeps that member's target byte-identical while the report names it.
+- **Transfer plan:** `planTransfer` lists collisions and companions before anything runs, and `confirmTransfer` executes exactly the snapshot.
 - **Service:** `planScoped("asset")` summary lists companions; `confirm` trashes exactly the included list via a fake `TrashBackend`; a partial failure is reported per member; `plan()` output is unchanged from today apart from the added `companions` and `scope` keys.
 
 ## Not covered

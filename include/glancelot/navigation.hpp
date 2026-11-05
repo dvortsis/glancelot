@@ -36,7 +36,7 @@ struct FileMeta {
 // META-ROLES order path. Fills the extended keys for `files` (same length as `meta`) on the calling worker thread. It honours
 // `cancel`, reads a bounded header per file under IoScheduler Metadata admission, and leaves a *Known flag false for any file
 // it could not or would not read. Returns false when the folder budget ended the pass early (the result is then partial).
-// Packet A2 adds the parameters that carry it; core stays Qt-free because the app installs the reader.
+// Packet A2 adds the process-wide install point; core stays Qt-free because the app installs the reader.
 using SortKeyReader = std::function<bool(const std::vector<std::filesystem::path>& files,
                                          std::vector<FileMeta>& meta, std::stop_token cancel)>;
 // The file order itself (exposed so ordering properties, e.g. unreadable metadata last, are testable).

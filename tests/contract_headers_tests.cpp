@@ -39,13 +39,18 @@ static_assert(std::is_same_v<decltype(DecodeRequest::tier), DecodeTier> && std::
 
 // RESOURCE-LEDGER: the ledgers and bounds consumers size against.
 static_assert(int(resource::Ledger::GpuTextures) + 1 == resource::kLedgerCount);
-static_assert(resource::kUnknown < 0 && resource::kMaxForegroundHeadroomBytes == 768LL << 20);
+static_assert(resource::kUnknown < 0 && resource::kMaxForegroundHeadroomBytes == 1LL << 30);
+// With every source unknown, the largest validated decode still fits.
+static_assert(resource::kDefaultFallbackBytes - resource::kDefaultSafetyReserveBytes >= resource::kMaxForegroundHeadroomBytes);
+// A reservation made before the allocation names its share key when it commits.
+static_assert(std::is_same_v<decltype(&resource::Reservation::commit), bool (resource::Reservation::*)(qint64, quint64)>);
 static_assert(!std::is_copy_constructible_v<resource::Reservation> && std::is_nothrow_move_constructible_v<resource::Reservation>);
 static_assert(!resource::OwnerId{});
 
 // ASSET-GROUP: nothing is implicit, so the scope enum has exactly the explicit choices and file-only comes first.
 static_assert(int(assets::Scope::FileOnly) == 0);
-static_assert(assets::kMaxMembers == 16 && assets::kMaxProbesPerTarget == 48);
+static_assert(assets::kMaxMembers == 16 && assets::kExpandBudgetMs > 0 && assets::kMaxExcludedListed > 0);
+static_assert(assets::kMaxExpandedItems == journal::kMaxItemsPerOperation);
 
 // OPERATION-JOURNAL: what may run without a journal, and a displaced original is never treated as merely interrupted.
 static_assert(!journal::requiresJournal(journal::Kind::Trash) && !journal::requiresJournal(journal::Kind::Copy)
@@ -55,6 +60,9 @@ static_assert(journal::requiresJournal(journal::Kind::SidecarWrite) && journal::
               && journal::requiresJournal(journal::Kind::BatchRename));
 static_assert(journal::Outcome::OriginalDisplaced != journal::Outcome::Unknown);
 static_assert(journal::kMaxIntentBatch == 64 && journal::kSchemaVersion == 1);
+// The limits agree: a full-size operation fits at ordinary path lengths, and one operation fits in the journal.
+static_assert(journal::kMaxOperationFileBytes / qint64(journal::kMaxItemsPerOperation) >= 2048);
+static_assert(journal::kMaxJournalBytes >= journal::kMaxOperationFileBytes);
 
 // COMPARE-PANES: the content modes and pane counts.
 static_assert(parseCompareContentMode("compare2") == CompareLayout::Two && parseCompareContentMode("compare4") == CompareLayout::Four);
@@ -90,6 +98,10 @@ void writeFile(const fs::path& path, std::size_t bytes) { std::ofstream(path, st
 }
 
 int main() {
+    check(!DecodeRequest{}.refresh && DecodeRequest{}.tier == DecodeTier::Full, "a default request is an ordinary Full decode");
+    // The journal's records exist for undo and retry, so they must carry what those read.
+    check(!journal::OperationSummary{}.reconciled && journal::OperationSummary{}.heldBackups == 0, "an operation starts unreconciled and holds no backup");
+    check(journal::ItemIntent{}.preimagePath.isEmpty() && !journal::OperationHeader{}.permanentReplaceConsented, "no preimage and no consent unless stated");
     // CapabilityItem holds QStrings, so this default can't be a static_assert.
     check(CapabilityItem{}.support == Support::Unknown && CapabilityItem{}.evidence == Evidence::None, "a capability is unknown until something establishes it");
     // The new keys carry no values yet, so they must not fall into another key's comparison: the sizes below disagree with the

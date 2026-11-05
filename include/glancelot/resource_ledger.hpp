@@ -22,9 +22,11 @@ inline constexpr qint64 kUnknown = -1;               // an unreadable or unlimit
 inline constexpr int kMaxLiveReservations = 4096;
 inline constexpr int kMaxOwners = 64;
 inline constexpr qint64 kDefaultSafetyReserveBytes = 64LL << 20;
-inline constexpr qint64 kDefaultFallbackBytes = 1LL << 30;
-// One foreground decode at the largest validated size: 256 MiB of pixels plus 2x that in worker scratch.
-inline constexpr qint64 kMaxForegroundHeadroomBytes = 768LL << 20;
+// One foreground decode at the largest validated size, all held at once: 256 MiB of pixels, the same again in transfer,
+// and 2x that in worker scratch.
+inline constexpr qint64 kMaxForegroundHeadroomBytes = 1LL << 30;
+// With every source unknown, that decode still fits once the safety reserve is taken off.
+inline constexpr qint64 kDefaultFallbackBytes = kMaxForegroundHeadroomBytes + kDefaultSafetyReserveBytes;
 
 struct LimitSources {
     qint64 userCapBytes{kUnknown};      // Settings or power profile (E3)
@@ -77,8 +79,10 @@ public:
     Ledger ledger() const noexcept;
     Refusal refusal() const noexcept;                 // the reason when empty after tryReserve
     // Publication. actualBytes <= bytes(); the difference returns at once. Growing needs a new reservation.
-    // False and no change when empty, released or already owned.
-    bool commit(qint64 actualBytes);
+    // A nonzero shareKey publishes the buffer for share hits (a QImage has no cacheKey until it exists, so a reservation
+    // made before the allocation can't name it). If an owned entry with that key already exists, this handle becomes a
+    // share and its charge returns at once. False and no change when empty, released or already owned.
+    bool commit(qint64 actualBytes, quint64 shareKey = 0);
     void release() noexcept;
 private:
     friend class ResourceLedger;
@@ -88,9 +92,12 @@ private:
 class ResourceLedger final : public QObject {
     Q_OBJECT
 public:
+    ResourceLedger();                                 // tests own theirs; production uses instance()
+    ~ResourceLedger() override;
     static ResourceLedger& instance();                // created on the GUI thread before any window
+    // Owners and setters: any thread, under the same lock as tryReserve.
     OwnerId registerOwner(const QString& diagnosticName);  // an empty OwnerId when kMaxOwners is reached
-    void unregisterOwner(OwnerId owner);              // the owner must have no live reservations
+    void unregisterOwner(OwnerId owner);              // retired: no new reservations; freed when its last handle releases
     void setOwnerQuota(OwnerId owner, Ledger ledger, qint64 bytes);  // kUnknown = no per-owner quota
     void setLedgerCeiling(Ledger ledger, qint64 bytes);              // kUnknown = aggregate only
     void setAggregateMember(Ledger ledger, bool counts);             // GpuTextures: false in M1, see the contract
@@ -124,8 +131,6 @@ signals:
     void pressureChanged(glancelot::resource::Pressure level);   // queued, hysteresis applied
     void capacityAvailable(glancelot::resource::Ledger ledger);  // coalesced, emitted outside the lock
 private:
-    ResourceLedger();
-    ~ResourceLedger() override;
     struct Private;
     std::unique_ptr<Private> d;
 };

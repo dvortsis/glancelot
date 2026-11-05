@@ -1,4 +1,5 @@
 #pragma once
+#include "resource_ledger.hpp"
 #include <QImage>
 #include <QObject>
 #include <QString>
@@ -11,7 +12,7 @@
 #include <string_view>
 
 // Lead-frozen COMPARE-PANES (docs/contracts/COMPARE-PANES.md). Implemented by packet C3. GUI thread only. Compare never decodes
-// and never touches files: it asks the window's ViewerController to decode through the ordinary path and receives values.
+// and never touches files: it asks the window's ViewerController to decode through the pane decode path and receives values.
 namespace glancelot {
 inline constexpr int kMaxComparePanes = 4;
 // The PaneLayout center content modes. Off is one of the three persisted modes ("preview", "grid", "combined"); the compare
@@ -60,8 +61,10 @@ public:
     // Reads the controller's current selection generation, for handing a pane to DisplayManager. It never increments it: that
     // would cancel the current image's decode. Pane requests are fenced by the session's own counter.
     using GenerationSource = std::function<quint64()>;
-    explicit CompareSession(GenerationSource generations, QObject* parent = nullptr);
+    // `owner` is this window's compare ledger owner, charged for every pane.
+    CompareSession(GenerationSource generations, resource::OwnerId owner, QObject* parent = nullptr);
     ~CompareSession() override;
+    void setSurface(ICompareSurface* surface);   // not owned; null detaches. deliver, swap and removal drive it
     int paneCount() const; int activePane() const; bool linked() const; QVariantList candidates() const;
     void setActivePane(int pane); void setLinked(bool linked);
 

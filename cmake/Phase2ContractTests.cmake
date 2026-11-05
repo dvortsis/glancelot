@@ -1,6 +1,6 @@
 # PHASE2-CONTRACTS: the frozen headers have no implementation yet, so nothing else would compile them.
 # - One generated source per header, including that header first, proves each is self-contained.
-# - contract_headers_tests checks the frozen values and that the new SortKey values stay unreachable and harmless.
+# - contract_headers_tests checks the frozen values and that the new SortKey values give natural order.
 # - contract_headers_moc runs moc over the QObject headers and compiles the result without linking it, because the
 #   classes have no definitions until packets C3, D2 and E1. It belongs to the "all" target, so a bad Q_PROPERTY fails the build.
 # A packet that implements a header removes it from these lists if it starts compiling the header itself.

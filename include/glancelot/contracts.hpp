@@ -45,6 +45,7 @@ struct DecodeRequest {
     int sizeBucket{};                    // Fit: bucket long edge in physical pixels; 0 otherwise
     DecodeRegion region;                 // Tile only
     std::uint64_t generation{};          // the selection (or pane) generation that owns the request
+    bool refresh{};                      // the shown pixels aren't proven current: the result may replace an equal tier
 };
 enum class PixelFormat { Rgba8, Rgba16Float };
 struct PixelBufferDescriptor {

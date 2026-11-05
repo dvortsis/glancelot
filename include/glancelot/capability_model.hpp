@@ -61,6 +61,7 @@ class CapabilityModel : public QAbstractListModel {
     Q_PROPERTY(QString displaySummary READ displaySummary NOTIFY sectionChanged)
     Q_PROPERTY(QString sourceSummary READ sourceSummary NOTIFY sectionChanged)
     // Display-only conveniences for F075 and Track B. Never authorization: services recheck at operation time.
+    // serverPaths is a process fact set once at startup, so it does not drop when the Source section clears.
     Q_PROPERTY(QString sourceReadOnly READ sourceReadOnly NOTIFY sectionChanged)   // "unknown" | "yes" | "no"
     Q_PROPERTY(bool serverPaths READ serverPaths NOTIFY sectionChanged)
     // "unknown" | "unsupported" | "partial" | "supported"; read by the reference-pin command and the reference window.

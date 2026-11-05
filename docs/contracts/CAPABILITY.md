@@ -10,14 +10,14 @@ Give one place that states what this build, this machine and this source can act
 
 | Consumer | Uses |
 | --- | --- |
-| D2 (F043) | Implements the model and all four populators; adds the Settings section and the HUD lines; removes the fixed strings below; wires the reference-window check (G-5). |
+| D2 (F043), after D1 | Implements the model and all four populators; adds the Settings section and the HUD lines; removes the fixed strings below; wires the reference-window check (G-5). |
 | D4 (F044 per-monitor ICC) | Writes the main-canvas output-transform item when it lands; reads display ICC availability. |
 | E4 (F061 recovery) | Missing codec (`decoder.<format>` unsupported), unreachable source (`source.reachable`), for retry, skip and open-folder messages. |
 | F2 (F073, F075) | `source.serverPath` and `source.readOnly` indicators; remote status. Reads the model; does not populate it. |
 | Track B (delete, rename, copy, move) | Disable mutation controls with the read-only reason. **Display only:** services still recheck at operation time. |
 | E2 (F058 diagnostics) | Includes the capability text in the redacted diagnostics export. |
 | A7 (offline-mount marking) | Optional reader of `source.reachable`. |
-| F1 (F079) | Sets `GLANCELOT_DEPLOYMENT=container` in the `Dockerfile` runtime `ENV` (line 35). |
+| F1 (F079) | Sets `GLANCELOT_DEPLOYMENT=container` in the `Dockerfile` runtime `ENV` (line 35). F1 depends on E1, so until it lands, a Docker session reports `serverPaths` false and `display.referenceWindow` `Supported`, today's implicit behaviour. |
 
 **Boundary with DECODE-TIER:** per-image facts (tier, preview size, source dimensions, final or not) come from `PixelBufferDescriptor` and the controller's `imageTier`. This model holds **system and source** facts only, plus per-image *colour source* facts that the worker already reports.
 
@@ -44,16 +44,16 @@ Give one place that states what this build, this machine and this source can act
 
 ## Who populates each section, and when
 
-All populators are D2 library classes under `src/app/capability_*.{hpp,cpp}`.
+All populators are D2 library classes under `src/app/capability_*.{hpp,cpp}`, in the viewer sources (`cmake/ViewerSources.cmake`), because `glancelot_platform` doesn't link `Qt6::GuiPrivate`. One builder owns each (section, scope) and resends the whole section on any change, so a per-image update keeps `colour.output.*`.
 
 | Section | Items (examples) | Source | When | Evidence |
 | --- | --- | --- | --- | --- |
 | Decoder | `decoder.<fmt>.still` for every allow-listed format; `.animated`, `.multiPage`, `.highPrecision`; `decoder.raw` = Partial "embedded preview only"; `decoder.qt` version | New worker mode `glancelot-decoder --capabilities`: `QImageReader::supportedImageFormats()` ∩ the single allowlist (DECODE-TIER), plus a static sub-feature table | Once per process, deferred until after the first image is shown or 3 s after start (off the PERF-02 path); 5 s deadline | RuntimeProbe (still), BuildFact (sub-features) |
 | Colour | `colour.working` "sRGB 8-bit"; `colour.embeddedProfiles` Supported; `colour.output.main` Unsupported "no monitor transform on the main canvas" until D4; `colour.output.presentation` from `output_color::build` status; `colour.hdr` Unsupported; `colour.physical` Unknown "needs calibrated measurement" | Build facts; `DisplayManager::outputColorStatusChanged`; D4 later | Startup; on output status change; on screen change (scope = screen id) | BuildFact, RuntimeProbe |
-| Colour, current image | `colour.source` "Embedded profile converted to sRGB" or Assumed "Untagged source assumed sRGB"; `colour.sourceBitDepth` Unknown until parsed | Worker `decoded.color` field (`src/worker/main.cpp:216`, `:265`), structured by D1 (`tagged`, profile description) | Per applied image, fenced by selection generation (a stale generation is dropped before `apply`) | RuntimeProbe or Assumed |
+| Colour, current image | `colour.source` "Embedded profile converted to sRGB" or Assumed "Untagged source assumed sRGB"; `colour.sourceBitDepth` Unknown until parsed | `viewer.imageColour` (DECODE-TIER): D1 structures the worker's `decoded.color` field (`src/worker/main.cpp:216`, `:265`) into `tagged` and a description | Read on `imageChanged`, so the controller's apply rule has already fenced it | RuntimeProbe or Assumed |
 | Display | `display.<id>.dpr`, `.refresh`, `.colorDepth`, `.colorSpace` (Unknown when the platform says "Unknown"), `.icc` (Windows `output_color::systemProfile` result; Linux Unknown); `display.renderer` (graphics API; Partial "software rendering" for WARP or `LIBGL_ALWAYS_SOFTWARE`); `display.referenceWindow` (below) | `DisplayManager::displays()`, `QQuickWindow::rendererInterface()`, ICC probe on the existing single output-colour worker permit | Startup, `displaysChanged`, window `screenChanged` | RuntimeProbe |
 | Source | `source.readOnly` (`FILE_READ_ONLY_VOLUME` / `ST_RDONLY`, reusing the probe in `src/core/file_operations.cpp:121`, `:167`); `source.storage` (`IoScheduler::effectiveStorageType`); `source.reachable`; `source.serverPath` | Worker job admitted at `JobPriority::Metadata` (0 bytes); 2 s deadline | Each directory change, per volume root (cached by root key, at most 64 roots) | RuntimeProbe |
-| Source, deployment | `source.serverPath` Supported "Paths are on the server, not this computer" | `GLANCELOT_DEPLOYMENT=container`, set by the Dockerfile; absent means local, Unsupported | Startup | BuildFact |
+| Source, deployment | `source.serverPath` Supported "Paths are on the server, not this computer" | `GLANCELOT_DEPLOYMENT=container`, set by the Dockerfile; absent means local, Unsupported. `serverPaths()` reads this process fact, set once, so it doesn't drop when `setSourceScope` clears the section | Startup | BuildFact |
 
 Rules:
 
@@ -67,7 +67,7 @@ Rules:
 The check is `referenceWindowSupport(SecondaryWindowFacts)` over three facts, read once at startup and again on `displaysChanged`:
 
 - `multipleWindows`: `QGuiApplicationPrivate::platformIntegration()->hasCapability(QPlatformIntegration::MultipleWindows)`. `Qt6::GuiPrivate` is already linked by the app and the UI test targets. D2's populator file is the only new user;
-- `canPosition`: `!QGuiApplication::platformName().startsWith("wayland")`, the same rule as `DisplayManager::displaysVariant` (`display_manager.cpp:350`). D2 moves that rule into one helper both use;
+- `canPosition`: `!QGuiApplication::platformName().startsWith("wayland")`, the same rule as `DisplayManager::displaysVariant` (`display_manager.cpp:350`). D2 moves that rule into one helper both use (it lives in the viewer sources, with the populator);
 - `containerDeployment`: `GLANCELOT_DEPLOYMENT=container`. The Docker session is one TigerVNC desktop under `openbox` (`docker/start.py:58`) and is recorded as unsupported for multi-output (`LEAD-WRAPUP-2026-10-22.md`).
 
 | Result | Item `display.referenceWindow` | What the user sees |
@@ -78,7 +78,7 @@ The check is `referenceWindowSupport(SecondaryWindowFacts)` over three facts, re
 | `Supported` | detail empty, evidence `RuntimeProbe` | As today. This never claims physical multi-monitor qualification, which stays a RUNBOOK item |
 | `Unknown` (the model isn't populated yet) | | As today; the runtime check below still applies |
 
-**Runtime check.** A platform can claim the capability and still fail to show the window. After a pin, if the window's `visibility` is still `Window.Hidden` once `kReferenceWindowExposeDeadlineMs` has passed, `Main.qml` calls `viewer.clearReference()` and shows "The reference window couldn't open on this display system." The model's item becomes `Unsupported` with evidence `RuntimeProbe` for the rest of the process. Clearing releases the retained frame and the canvas's texture reservation through the existing path.
+**Runtime check.** A platform can claim the capability and still fail to show the window. After a pin, if the window's `visibility` is still `Window.Hidden` once `kReferenceWindowExposeDeadlineMs` has passed, `Main.qml` calls `viewer.clearReference()` and shows "The reference window couldn't open on this display system." The model's item becomes `Unsupported` with evidence `RuntimeProbe` for the rest of the process, and a later `displaysChanged` rebuild keeps it. Clearing releases the retained frame and the canvas's texture reservation through the existing path.
 
 D2's brief grants the `reference-pin` handler (`Main.qml:755`) and the `referenceWindow` block (`Main.qml:2112-2190`) for this. The strings go through `qsTr` and into `translations/glancelot_en_XA.ts`.
 
@@ -142,17 +142,19 @@ New `tests/capability_tests.cpp` (model, no display) and `tests/capability_ui_te
   - a read-only mount is gated by `GLANCELOT_READONLY_FILE`, like `file_operations_tests`, and reported **UNVERIFIED** when absent;
   - a slow probe (injected delay) past the deadline gives Unknown;
   - folder A's probe arriving after navigation to folder B is dropped;
-  - the env variable set gives `serverPaths` true, and unset gives false.
+  - the env variable set gives `serverPaths` true, and unset gives false, and it stays true across a folder change and a probe timeout.
 - **Display and colour:**
   - an injected `DisplayInfo` with colorSpace "Unknown" yields an Unknown item;
   - an output status change updates `colour.output.presentation`;
-  - the per-image `colour.source` for generation N arriving after N+1 is dropped;
+  - `colour.source` follows `viewer.imageColour`, so a result the controller dropped for generation N after N+1 changes nothing;
+  - a per-image update keeps `colour.output.*`;
   - generated tagged (P3) and untagged images give Supported and Assumed.
 - **Reference window (G-5):**
   - `referenceWindowSupport` for each row of the table (already asserted in `tests/contract_headers_tests.cpp`; D2 keeps those);
   - the real probe reports `multipleWindows` true on `windows`, `xcb` and `offscreen`, so no gate platform regresses (`wayland` is a RUNBOOK item);
   - a fake `Unsupported` makes `reference-pin` show the notice with no window opened, no `setReferenceImage` call and the current image, output mode and retained bytes unchanged;
   - a test hook that keeps the window hidden past the deadline clears the reference, shows the notice, returns retained bytes to their prior value and marks the item `Unsupported`;
+  - a runtime `Unsupported` survives a `displaysChanged` rebuild;
   - the existing `reference_pin` and `reference_pin_native` tests pass unchanged.
 - **UI:**
   - Settings lists all four sections;
@@ -164,7 +166,7 @@ New `tests/capability_tests.cpp` (model, no display) and `tests/capability_ui_te
 ## Not covered
 
 - Authorization: read-only status never gates a service; `FileOperationService` and the other services recheck.
-- Per-image tier and dimension facts (DECODE-TIER); metadata parsing of bit depth and profile names (a later parser packet).
+- Per-image tier and dimension facts (DECODE-TIER); metadata parsing of bit depth and profile names (D6 needs bit depth for clipping and owns that parser; D2 shows it as unknown until then).
 - Applying monitor colour transforms (D4); HDR output (COLOR-04); physical qualification (RUNBOOK packets only).
 - Multi-monitor placement of the reference window and restoring it after restart (`docs/F040-PLAN.md`, "Not done").
 - Remote quality presets and connection timing (F2 itself); power profiles (E3).
