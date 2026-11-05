@@ -364,6 +364,8 @@ private slots:
             const QString from = h.viewer.filePath();
             if (killed) QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(from), 15000); // it holds the lock now
             else QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading(), 15000);
+            // A prefetch starts only some time after a photo lands, and stepping on cancels it: let the first few really run.
+            if (boundary == "continue" && fixture.prefetches < 3) QTRY_VERIFY2_WITH_TIMEOUT(fixture.prefetches > step, "no prefetch started", 10000);
             if (boundary == "stop") h.viewer.open(photos[step + 1]); else h.viewer.next();
             QTRY_VERIFY_WITH_TIMEOUT(h.viewer.filePath() != from, 15000);
             QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 15000);
@@ -372,7 +374,6 @@ private slots:
             QCOMPARE(h.viewer.imageReady(), shown);
         }
         if (killed) QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(h.viewer.filePath()), 15000);
-        if (boundary == "continue") { QVERIFY2(fixture.prefetches > 0, "no prefetch ran, so this row tests nothing"); }
         const int beatsBefore = beat.beats;
         QVERIFY(fixture.configure({})); // a last, small, healthy decode retires whatever still runs, as moving on does
         h.viewer.open(photos.last());
