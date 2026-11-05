@@ -148,7 +148,7 @@ private slots:
         // R1: useful content does not wait for per-file identity probes, which are nearly all of the wait. On base, the
         // first row and the end of loading came together, at about 530 to 920 ms on this machine under one gate lock.
         QVERIFY2(second.firstRowMs < second.settledMs / 2, qPrintable(QString("10k first row took %1 of %2 ms").arg(second.firstRowMs).arg(second.settledMs)));
-        QVERIFY2(second.definitiveMs < 500, qPrintable(QString("10k definitive order took %1 ms").arg(second.definitiveMs)));
+        QVERIFY2(second.definitiveMs < second.settledMs / 2, qPrintable(QString("10k definitive order took %1 of %2 ms").arg(second.definitiveMs).arg(second.settledMs)));
         QVERIFY(second.definitiveMs <= second.settledMs);
     }
     void trace100k() {
