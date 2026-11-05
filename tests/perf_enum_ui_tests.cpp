@@ -388,6 +388,28 @@ private slots:
         runPlacements();
         QCOMPARE(f.h->fileGrid.selectedCount(), kHeldAfter);
     }
+    void menuSelectionDuringArrivalIsNotReplaced_data() {
+        QTest::addColumn<QString>("command");
+        QTest::addColumn<int>("selected");
+        QTest::newRow("select all") << "select-all" << kHeldAfter;
+        QTest::newRow("grid menu select all") << "grid-select-all" << kHeldAfter;
+        QTest::newRow("invert") << "invert-selection" << kHeldAfter;
+        QTest::newRow("clear") << "clear-selection" << 0;
+    }
+    void menuSelectionDuringArrivalIsNotReplaced() {
+        QFETCH(QString, command);
+        QFETCH(int, selected);
+        ArrivalFixture f; QVERIFY(f.start());
+        QCOMPARE(f.h->fileGrid.selectedCount(), 0);
+        QVERIFY(f.placing());
+        f.h->viewer.trigger(command); // what a menu item does
+        QCOMPARE(f.h->fileGrid.selectedCount(), selected);
+        QVERIFY(!f.placing());
+        f.folder.release();
+        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
+        runPlacements();
+        QCOMPARE(f.h->fileGrid.selectedCount(), selected);
+    }
     void aKeyBeforeAnyRowKeepsThePlacement() {
         ArrivalFixture f; f.heldAfter = 0; QVERIFY(f.start()); QVERIFY(f.readyForInput());
         f.view()->forceActiveFocus();

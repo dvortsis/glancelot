@@ -1,6 +1,6 @@
 A1 first review's fixes: fail-before evidence. Each mutation below removes one fix, rebuilds where needed, and runs the named tests.
 A non-zero exit means the tests caught it. QTest's exit code is the number of failed functions.
-20 mutations, all caught. b3-failing-again-forgets survived its first run and was tightened.
+21 mutations, all caught. b3-failing-again-forgets survived its first run and was tightened. p1-menu-selection-does-not-settle came after the review, from the lead's answer.
 b2-layout-not-forced-first and b2-restore-not-forced each fail only their own test, so both forceLayout calls are needed.
 definitiveOrderBeforeAnyFrameKeepsTheVisibleRow passes if either call remains, and fails with neither (b2-neither-forced).
 
@@ -87,3 +87,10 @@ exit 1
 exit 1
   FAIL!  : PerfEnumTests::trace10k() 'second.firstRowMs < second.settledMs / 2' returned FALSE. (10k first row took 2387 of 3397 ms)
   Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 10020ms
+### p1-menu-selection-does-not-settle [ui/PhotoGrid.qml] -> perf_enum_ui_tests menuSelectionDuringArrivalIsNotReplaced
+exit 4
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(select all) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(grid menu select all) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(invert) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(clear) '!f.placing()' returned FALSE. ()
+  Totals: 2 passed, 4 failed, 0 skipped, 0 blacklisted, 19399ms

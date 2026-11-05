@@ -1,0 +1,7 @@
+PHASE2-CONTRACTS review round 2: fail-before evidence for the one new assertion. The section breaks it, builds the target and records the result; the file is then restored.
+=== journal open loses its injected trash (N2)
+mutation: include/glancelot/operation_journal.hpp : 'open(const QString& directory, Status* status, glancelot::TrashBackend* trash = nullptr);' -> 'open(const QString& directory, Status* status);'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(67): error C2607: static assertion failed
+

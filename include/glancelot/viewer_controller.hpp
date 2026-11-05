@@ -24,6 +24,10 @@ class ViewerController : public QObject {
     Q_PROPERTY(QString directoryError READ directoryError NOTIFY stateChanged)
     Q_PROPERTY(bool directoryPending READ directoryPending NOTIFY stateChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY stateChanged)
+    // True from the moment a navigation step (next, previous, a folder step, an open) is requested until it has settled: its job has run,
+    // the destination (if any) has been handed to open(), and no further step is queued. A step that ends with this false and the same
+    // filePath went nowhere (a boundary). stateChanged is emitted when it falls back to false.
+    Q_PROPERTY(bool navigating READ navigating NOTIFY stateChanged)
     Q_PROPERTY(bool imageReady READ imageReady NOTIFY stateChanged)
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY stateChanged)
     Q_PROPERTY(int fileCount READ fileCount NOTIFY stateChanged)
@@ -81,7 +85,7 @@ public:
     Q_INVOKABLE void clearReference();
     QString filePath() const; QString fileName() const; QString directory() const; QString status() const;
     // True only when the currently requested file decoded successfully; a retained old image is not a success.
-    bool imageReady() const;
+    bool imageReady() const; bool navigating() const;
     // Pure path comparison, including Windows separators/case; never stats the filesystem.
     Q_INVOKABLE bool isCurrentImage(const QString& path) const;
     bool loading() const; int currentIndex() const; int fileCount() const;

@@ -3,8 +3,8 @@
 PR 1 of 2 for A1 (PERF-ENUM + F016). The continuation beyond the 100k cap ("Show more") is the stacked PR 2, as the lead approved. It has its own section in this file on its branch.
 
 - **Branch:** `claude/a1-perf-enum`
-- **Code tip:** `88f995d`, after the first review's fixes. The commit after it adds only this file and `docs/verification/A1/`. The last local full suite was at `902a765`. By the lead's decision the PR's hosted `viewer` job is now the full suite.
-- **Exact base:** `3a14044` (`origin/main`, not stacked). `main` had not moved when this was written.
+- **Code tip:** `2810c5c`, after the first review's fixes, the merge of `main` and the menu selection fix. The commit after it changes only this file and `docs/verification/A1/`. The last local full suite was at `902a765`. By the lead's decision the PR's hosted `viewer` job is now the full suite.
+- **Exact base:** `7c0da34`, the `main` commit merged in (`2876dbf`). Not stacked. The first review was against `3a14044`.
 - **PR:** https://github.com/dvortsis/glancelot/pull/7
 
 ## What a user sees
@@ -69,7 +69,7 @@ The "after" lines are in `docs/verification/A1/traces-after.txt` (`902a765`, gat
 
 ## Files changed
 
-Grant check, `git diff --name-only 3a14044..88f995d`:
+Grant check, `git diff --name-only 7c0da34..2810c5c`, with `docs/` left out of the list:
 
 ```text
 CMakeLists.txt
@@ -101,15 +101,40 @@ Everything is in the brief's grant except these, which it allows or the lead gra
   - `settleByUser()`, so a click or scroll during arrival wins over the waiting placement.
   - `reveal()` and four Connections handlers react to `arriving`, the count and layout changes.
   - The key handler, the scrollbar and the right-click handler settle the placement, and Try again keeps the browsed position (first review).
+  - The grid's existing `viewCommand` connection settles the placement for `select-all`, `grid-select-all`, `clear-selection` and `invert-selection` (the lead's answer on menu selections).
   - The count label says "so far".
   - The thumbnail binding also depends on `cell.path`, so a delegate kept in place rebinds.
 - `translations/glancelot_en_XA.ts`: four new strings, added by hand because `lupdate` is not available on Windows here.
 
-`ui/Main.qml` and `src/core/*` are untouched. `pr_guard` reports 0 errors and the notice `2286 changed lines; aim for about 1500`. About 1,300 of those lines are tests. I did not split further because the arrival code and its tests only make sense together.
+`ui/Main.qml` and `src/core/*` are untouched. `pr_guard` reports 0 errors and the notice `2310 changed lines; aim for about 1500`. About 1,300 of those lines are tests. I did not split further because the arrival code and its tests only make sense together.
 
 ## Tests
 
-**After the first review, at `88f995d`, in build slots.** No budget oracle changed, and by the lead's decision no local full suite ran. Three runs, because the first two were on a heavily loaded machine (`perf_enum` took 228 s against 63 s on a quieter one):
+**After merging `main` (`7c0da34`) and fixing menu selections.** `2876dbf` resolved two conflicts in `ui/PhotoGrid.qml`, keeping both sides as the lead specified. No budget oracle changed. No local full suite ran.
+
+```text
+At 2876dbf, the merge, 21 suites in a build slot, with the claude/b3-export-ui gate holding the lock for part of the run:
+ 3/21 Test #12: folder_grid ......................***Timeout 400.16 sec
+95% tests passed, 1 tests failed out of 21    (the other 20 passed)
+  input_ui 179.40 sec, perf_enum 54.54 sec, perf_enum_ui 40.70 sec, stack_confirm_ui 174.04 sec
+
+At 2810c5c, the menu fix, the four suites it could affect, in a build slot:
+1/4 Test #13: input_ui .........................***Timeout 239.99 sec
+2/4 Test #48: translation_coverage_ui ..........   Passed   34.67 sec
+3/4 Test #51: perf_enum ........................   Passed  154.67 sec
+4/4 Test #52: perf_enum_ui .....................   Passed  138.06 sec
+
+At 2810c5c, the two that timed out, rerun once under the gate lock:
+1/2 Test #12: folder_grid ......................   Passed  253.52 sec
+2/2 Test #13: input_ui .........................   Passed   93.39 sec
+100% tests passed out of 2
+folder_grid Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 253365ms
+input_ui Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 93261ms
+```
+
+The 21 are the 19 listed below plus `input_ui` and `stack_confirm_ui`, which `main` brought or changed and which drive the grid's keys. `folder_grid` had got through 42 functions with no failures when it timed out. I ran it in a build slot while a gate held the lock, which `AGENTS.md` does not allow, and that probably contributed. `input_ui` took 93 s under the lock and timed out at 240 s beside other builds. Those timeouts look like load, but neither run identified a specific cause. The other 16 of the 21 did not rerun after `2810c5c`, which changes only the grid's QML and adds one test.
+
+**After the first review, at `88f995d`, before merging `main`, in build slots.** No budget oracle changed, and by the lead's decision no local full suite ran. Three runs, because the first two were on a heavily loaded machine (`perf_enum` took 228 s against 63 s on a quieter one):
 
 ```text
 Run 1, all 19 targeted, at 2b7c197:
@@ -176,7 +201,7 @@ Budget and listing tests from that run, oracles unchanged:
 ## Fail-before evidence
 
 - **Against base:** the public-API tests were written first and four failed on `main`: `trace100k` (no partial rows), `arrivedRowsDoNotMoveUntilTheDefinitiveOrder` (nothing arrived, since renamed `arrivedRowsKeepTheirOrderUntilTheDefinitiveOrder`), `newerFolderOpenedDuringArrivalWins` and `closingDuringArrivalIsBounded` (no arrival to catch). The output is at the end of `docs/verification/A1/traces-before.txt`: `Totals: 3 passed, 4 failed`. The seam and `arriving` tests do not compile on base, so they are covered by mutations.
-- **First review's fixes:** `docs/verification/A1/mutations-review.txt`. 20 mutations, all of which fail their named tests. One survived its first run (`b3-failing-again-forgets`), because its test failed before any row arrived. The test now fails with rows showing.
+- **First review's fixes and menu selections:** `docs/verification/A1/mutations-review.txt`. 21 mutations, all of which fail their named tests. Without the fix, `menuSelectionDuringArrivalIsNotReplaced` fails for all four commands. One survived its first run (`b3-failing-again-forgets`), because its test failed before any row arrived. The test now fails with rows showing.
 - **Mutations:** `docs/verification/A1/mutations.txt`. 32 mutations, one per behaviour; all 32 fail their named tests. One is an abort (`queue-unbounded`) and one a hang (`wait-ignores-stop`), both of which are what those mutations should cause.
 - **What the first mutation run found:** four mutations survived, so these tests could not fail. `902a765` fixes them.
   - `definitiveOrderDoesNotWaitForIdentityProbes` read `loading` inside the call that clears it just afterwards.
@@ -208,18 +233,17 @@ Budget and listing tests from that run, oracles unchanged:
 - **Going further than the review's B4 suggestion.** It suggested `if (fileGrid.loading && row < 0) return`. That also holds back a cursor that already has its row, so re-entering a 10k folder would leave the view at the top for about 400 ms and then jump. Only a cursor with no row waits now.
 - **A key or click with no rows yet settles nothing.** Pressing the grid key and then an arrow straight away would otherwise cancel the placement on the photo, with nothing to show for it. The review's suggestion did not cover this.
 - **A modifier alone settles nothing,** because pressing Ctrl on its way to Ctrl+A has not chosen anything.
+- **Menu selections settle in `ui/PhotoGrid.qml`, not `ui/Main.qml`.** Every menu item and shortcut for these commands goes through `viewer.trigger` and the `viewCommand` signal, and the grid already listens to it. The lead's grant for a small `ui/Main.qml` edit was not needed, so EN-07 has nothing to work around. `Clear selection` counts as a choice too: it stays clear when the listing lands. Before any row has arrived, these commands settle nothing, like a key.
 
 ## Open questions for the lead
 
-- **Selections made from the app menu during arrival** still lose to the placement, because settling them needs a change in `ui/Main.qml`. Do you want that grant, or is it fine as a follow-up? The window is short except on a slow share.
-- **Sorting or toggling hidden files in a truncated folder looks like it does nothing.** `publishRows` skips a truncated listing while rows are showing, so the new order would not appear. `main` has the same condition (`if (!truncated || (filtering() ? rawListing.rows.empty() : rows.empty()))`), so A1 did not cause it. I read this from the code and did not reproduce it. It is outside this packet, so I left it. It should be a small fix once you decide where it goes.
+- **Sorting or toggling hidden files in a truncated folder looks like it does nothing.** The lead has answered: it is fixed in PR 2. `publishRows` skips a truncated listing while rows are showing, so the new order would not appear. `main` has the same condition (`if (!truncated || (filtering() ? rawListing.rows.empty() : rows.empty()))`), so A1 did not cause it. I read this from the code and did not reproduce it. It is outside this packet, so I left it. It should be a small fix once you decide where it goes.
 
 ## Not verified
 
-- **A selection made from the app menu during arrival.** `select-all`, `clear-selection` and `invert-selection` in `ui/Main.qml` do not settle the placement, so the placement can still replace them. `ui/Main.qml` is outside this packet's grant. The keyboard shortcuts and the grid's right-click are covered.
 - A slow or dead network share. The patience, floor and flush paths are covered through the seam only.
 - Physical hardware and a real display. All UI evidence is offscreen with the software backend.
-- `docker build` was not part of my run, and no local full suite ran after `902a765`. The hosted `viewer` job and the lead's tester cover the head.
+- `docker build` was not part of my run, and no local full suite ran after `902a765`, so `main`'s merge has only the targeted runs above. The hosted `viewer` job and the lead's tester cover the head.
 
 ## UI skills
 

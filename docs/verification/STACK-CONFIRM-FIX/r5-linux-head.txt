@@ -1,0 +1,23 @@
+tree: 16a251e1 STACK-CONFIRM-FIX: the prefetch row expects one prefetch per folder
+Linux 6.18.33.2-microsoft-standard-WSL2
+[3/3] Linking CXX executable stack_confirm_ui_tests
+segments before: 0
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 15383ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 20780ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 16377ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 26203ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 33966ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 32320ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 24027ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 23836ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 23971ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 21544ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 15065ms
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 13932ms
+SKIP   : StackConfirmUiTests::slideshowPatternRateRun() set GL_STACK_RATE_PASSES to run it
+Totals: 30 passed, 0 failed, 1 skipped, 0 blacklisted, 135581ms
+stack_confirm_ui done
+Totals: 83 passed, 0 failed, 0 skipped, 0 blacklisted, 73876ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 35392ms
+segments after: 0
+
