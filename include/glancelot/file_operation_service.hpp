@@ -29,7 +29,10 @@ public:
     ~FileOperationService() override;
     bool busy() const;
     // origin: "grid" | "tree" | "canvas" | "command" (diagnostics and wording only). Returns the plan id, 0 if busy.
-    Q_INVOKABLE quint64 plan(const QStringList& paths, const QString& origin);
+    Q_INVOKABLE quint64 plan(const QStringList& paths, const QString& origin);   // == scope "file"
+    // scope: "file" | "asset". The summary gains companions [{path, role, requestedBy, included,
+    // exclusion}] and scope; confirm() executes exactly the snapshotted included list.
+    Q_INVOKABLE quint64 planScoped(const QStringList& paths, const QString& origin, const QString& scope);
     Q_INVOKABLE bool confirm(quint64 id);   // false when id is stale, superseded, cancelled or empty
     Q_INVOKABLE void cancel(quint64 id);    // planning: discard; executing: stop before the next item
 signals:

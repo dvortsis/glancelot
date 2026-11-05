@@ -1,9 +1,12 @@
 #include "glancelot/copy_move_service.hpp"
+#include "asset_group_internal.hpp"
 #include "copy_safety.hpp"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFutureWatcher>
 #include <QThreadPool>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QRunnable>
 #include <QPointer>
 #include <QMutex>
@@ -13,7 +16,12 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSet>
+#include <algorithm>
 #include <atomic>
+#include <map>
+#include <utility>
+#include <optional>
+#include <stop_token>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -542,6 +550,133 @@ struct TransferTask {
     CopyMoveService::CollisionPolicy collisionPolicy;
 };
 
+namespace {
+// One top-level source of a batch. A planned item carries the name the confirmation showed and its snapshot, checked right
+// before the item starts, so what runs is what was confirmed. enqueueTransfer's items carry neither.
+struct BatchItem {
+    QString source;
+    QString targetName;
+    std::optional<MutationTarget> snapshot;
+};
+struct PlannedItem {
+    BatchItem item;
+    bool skippedBySkip{}; // it collides, or under asset scope another member of its asset does
+};
+struct TransferPlan {
+    CopyMoveService::TransferMode mode{CopyMoveService::TransferMode::Copy};
+    std::vector<PlannedItem> items;
+    QVariantMap summary;
+    bool cancelled{};
+};
+QString transferKey(const QString& path) {
+#ifdef Q_OS_WIN
+    return clean(path).toCaseFolded();
+#else
+    return clean(path);
+#endif
+}
+QVariantMap rejection(const std::filesystem::path& path, const QString& reason) {
+    const QString shown = assets::detail::displayPath(path);
+    return {{"path", shown}, {"name", QFileInfo(shown).fileName()}, {"reason", reason}};
+}
+
+// Worker: the immutable snapshot a transfer confirmation shows. Reads only. One asset keeps one name: when any of its
+// members collide, every member takes the same " (n)" under keep-both and none is copied under skip, because a sidecar that
+// lands beside a different photo of the same name would describe the wrong picture.
+TransferPlan buildTransferPlan(const std::vector<std::filesystem::path>& requested, const QString& destination,
+                               CopyMoveService::TransferMode mode, assets::Scope scope, std::stop_token cancel) {
+    namespace fs = std::filesystem;
+    TransferPlan plan;
+    plan.mode = mode;
+    const auto expansion = assets::expand(requested, scope,
+        mode == CopyMoveService::TransferMode::Move ? assets::Operation::Move : assets::Operation::Copy, nullptr, cancel);
+    if (expansion.cancelled) { plan.cancelled = true; return plan; }
+    QVariantMap summary;
+    assets::detail::addCompanionSummary(summary, expansion, scope);
+    const QString destinationDir = clean(destination);
+    QVariantList rejected, targets, collisions;
+    if (!QFileInfo(destinationDir).isDir()) summary.insert(QStringLiteral("error"), QStringLiteral("destinationMissing"));
+
+    struct Candidate { assets::Planned planned; MutationTarget snapshot; QString name; };
+    std::vector<std::vector<Candidate>> assetsInOrder;
+    std::map<QString, std::size_t> assetOfKey;
+    int files = 0, folders = 0;
+    double bytes = 0;
+    for (const auto& planned : expansion.included) {
+        if (cancel.stop_requested()) { plan.cancelled = true; return plan; }
+        std::error_code error;
+        const auto snapshot = snapshotTarget(planned.member.path, error);
+        if (error) { rejected.append(rejection(planned.member.path, QStringLiteral("inaccessible"))); continue; }
+        if (!snapshot) { rejected.append(rejection(planned.member.path, QStringLiteral("missing"))); continue; }
+        const QString name = assets::detail::displayPath(planned.member.path.filename());
+        const QString parent = assets::detail::displayPath(planned.member.path.parent_path());
+        if (mode == CopyMoveService::TransferMode::Move && transferKey(parent) == transferKey(destinationDir)) {
+            rejected.append(rejection(planned.member.path, QStringLiteral("sameFolder")));
+            continue;
+        }
+        (snapshot->kind == TargetKind::Folder ? folders : files) += 1;
+        bytes += double(snapshot->bytes);
+        QString assetKey = transferKey(parent + QLatin1Char('/') + name);
+        if (scope == assets::Scope::Asset && snapshot->kind == TargetKind::File) {
+            assetKey = transferKey(parent + QLatin1Char('/') + assets::detail::splitAssetName(name, planned.member.sidecar).stem) + QLatin1String("/asset");
+        }
+        const auto [slot, added] = assetOfKey.try_emplace(assetKey, assetsInOrder.size());
+        if (added) assetsInOrder.emplace_back();
+        assetsInOrder[slot->second].push_back({planned, *snapshot, name});
+    }
+
+    QSet<QString> taken; // names this plan already gave out, so two sources can't aim at one target
+    const QDir target(destinationDir);
+    const auto occupied = [&](const QString& name) {
+        const QString path = clean(target.filePath(name));
+        const QFileInfo info(path);
+        return info.exists() || info.isSymLink() || taken.contains(transferKey(path));
+    };
+    for (const auto& asset : assetsInOrder) {
+        bool collides = false;
+        for (const auto& member : asset) collides = occupied(member.name) || collides;
+        const auto splitOf = [&](const Candidate& member) {
+            if (asset.size() > 1) return assets::detail::splitAssetName(member.name, member.planned.member.sidecar);
+            const QFileInfo info(member.name); // a single item keeps enqueueTransfer's naming
+            return assets::detail::AssetName{info.completeBaseName(), info.suffix().isEmpty() ? QString() : QLatin1Char('.') + info.suffix()};
+        };
+        const auto renamed = [&](const Candidate& member, int n) {
+            const auto parts = splitOf(member);
+            return QStringLiteral("%1 (%2)%3").arg(parts.stem).arg(n).arg(parts.suffix);
+        };
+        int shared = 0;
+        if (collides) {
+            for (int n = 2; n < 10000 && !shared; ++n) {
+                const bool free = std::none_of(asset.begin(), asset.end(), [&](const Candidate& member) { return occupied(renamed(member, n)); });
+                if (free) shared = n;
+            }
+        }
+        for (const auto& member : asset) {
+            const QString chosen = shared ? renamed(member, shared) : member.name;
+            const QString source = assets::detail::displayPath(member.planned.member.path);
+            if (occupied(member.name)) {
+                collisions.append(QVariantMap{{"path", source}, {"target", clean(target.filePath(member.name))},
+                                              {"requestedBy", assets::detail::displayPath(member.planned.requestedBy)}, {"name", member.name}});
+            }
+            targets.append(QVariantMap{{"path", source}, {"name", member.name}, {"kind", member.snapshot.kind == TargetKind::Folder ? "folder" : "file"},
+                                       {"link", member.snapshot.link}, {"bytes", double(member.snapshot.bytes)}, {"renamedTo", chosen == member.name ? QString() : chosen}});
+            plan.items.push_back({{source, chosen, member.snapshot}, collides});
+        }
+        for (const auto& member : asset) taken.insert(transferKey(target.filePath(shared ? renamed(member, shared) : member.name)));
+    }
+    summary.insert(QStringLiteral("mode"), mode == CopyMoveService::TransferMode::Move ? QStringLiteral("move") : QStringLiteral("copy"));
+    summary.insert(QStringLiteral("destination"), destinationDir);
+    summary.insert(QStringLiteral("targets"), targets);
+    summary.insert(QStringLiteral("rejected"), rejected);
+    summary.insert(QStringLiteral("collisions"), collisions);
+    summary.insert(QStringLiteral("fileCount"), files);
+    summary.insert(QStringLiteral("folderCount"), folders);
+    summary.insert(QStringLiteral("totalBytes"), bytes);
+    plan.summary = std::move(summary);
+    return plan;
+}
+}
+
 struct CopyMoveService::Private {
     CopyMoveService* q;
     std::atomic<bool> active{false};
@@ -563,7 +698,19 @@ struct CopyMoveService::Private {
 
     quint64 nextBatchId{1};
 
-    explicit Private(CopyMoveService* parent) : q(parent) {}
+    // Transfer plans. One newest plan: a later request supersedes it, and it can be confirmed once.
+    QThreadPool* planPool = new QThreadPool; // heap-allocated so a worker wedged on a dead share can be abandoned at teardown
+    std::stop_source planStop;
+    quint64 nextPlanId{}, planningId{}, readyId{};
+    std::optional<TransferPlan> ready;
+
+    explicit Private(CopyMoveService* parent) : q(parent) { planPool->setMaxThreadCount(1); }
+    ~Private() {
+        planStop.request_stop();
+        if (planPool->waitForDone(5000)) delete planPool;
+    }
+
+    quint64 startBatch(const QList<BatchItem>& items, const QString& destinationDirectory, TransferMode mode, CollisionPolicy collision);
 
     void resetProgress(int items, qint64 bytes) {
         totalItems = items;
@@ -726,24 +873,80 @@ quint64 CopyMoveService::enqueueTransfer(const QStringList& sourcePaths,
                                        TransferMode mode,
                                        CollisionPolicy collision) {
     if (sourcePaths.isEmpty() || destinationDirectory.isEmpty()) return 0;
+    QList<BatchItem> items;
+    items.reserve(sourcePaths.size());
+    for (const auto& path : sourcePaths) items.append({path, {}, std::nullopt});
+    return d->startBatch(items, destinationDirectory, mode, collision);
+}
 
-    const quint64 batchId = d->nextBatchId++;
-    d->active.store(true);
-    d->paused.store(false);
-    d->cancelled.store(false);
-    emit activeChanged();
-    emit pausedChanged();
+quint64 CopyMoveService::planTransfer(const QStringList& sourcePaths, const QString& destinationDirectory, TransferMode mode, const QString& scope) {
+    // A newer request supersedes the plan being built and the one waiting for confirmation.
+    d->planStop.request_stop();
+    d->planStop = std::stop_source{};
+    d->ready.reset();
+    d->readyId = d->planningId = 0;
+    if (sourcePaths.isEmpty() || destinationDirectory.isEmpty()) return 0; // an empty request only withdraws
+    const quint64 id = ++d->nextPlanId;
+    d->planningId = id;
+    std::vector<std::filesystem::path> requested;
+    requested.reserve(std::size_t(sourcePaths.size()));
+    for (const auto& path : sourcePaths) requested.push_back(assets::detail::nativePath(path));
+    auto* watcher = new QFutureWatcher<TransferPlan>(this);
+    connect(watcher, &QFutureWatcher<TransferPlan>::finished, this, [this, watcher, id] {
+        TransferPlan plan = watcher->result();
+        watcher->deleteLater();
+        if (id != d->planningId) return; // superseded: nothing stale reaches the confirmation
+        d->planningId = 0;
+        if (plan.cancelled) return;
+        QVariantMap summary = plan.summary;
+        summary.insert(QStringLiteral("id"), id);
+        d->ready = std::move(plan);
+        d->readyId = id;
+        emit transferPlanReady(id, summary);
+    });
+    watcher->setFuture(QtConcurrent::run(d->planPool, [requested = std::move(requested), destinationDirectory, mode,
+                                                       scope = assets::detail::scopeFromName(scope), cancel = d->planStop.get_token()] {
+        return buildTransferPlan(requested, destinationDirectory, mode, scope, cancel);
+    }));
+    return id;
+}
 
-    QPointer<CopyMoveService> self(this);
+bool CopyMoveService::confirmTransfer(quint64 id, CollisionPolicy collision, bool permanentReplaceConsent) {
+    Q_UNUSED(permanentReplaceConsent) // takes effect with B2's Overwrite
+    if (collision == CollisionPolicy::Overwrite) return false; // needs B2's journal and trash probe; the plan stays confirmable
+    if (id == 0 || id != d->readyId || !d->ready || d->ready->items.empty() || d->active.load()) return false;
+    if (d->ready->summary.contains(QStringLiteral("error"))) return false;
+    const QString destination = d->ready->summary.value(QStringLiteral("destination")).toString();
+    const TransferMode mode = d->ready->mode;
+    QList<BatchItem> items;
+    for (const auto& planned : d->ready->items) {
+        if (collision == CollisionPolicy::Skip && planned.skippedBySkip) continue;
+        items.append(planned.item);
+    }
+    d->ready.reset();
+    d->readyId = 0; // one confirmation per plan
+    d->startBatch(items, destination, mode, collision);
+    return true;
+}
 
-    QThreadPool::globalInstance()->start([self, batchId, sourcePaths, destinationDirectory, mode, collision]() {
+quint64 CopyMoveService::Private::startBatch(const QList<BatchItem>& items, const QString& destinationDirectory, TransferMode mode, CollisionPolicy collision) {
+    const quint64 batchId = nextBatchId++;
+    active.store(true);
+    paused.store(false);
+    cancelled.store(false);
+    emit q->activeChanged();
+    emit q->pausedChanged();
+
+    QPointer<CopyMoveService> self(q);
+
+    QThreadPool::globalInstance()->start([self, batchId, items, destinationDirectory, mode, collision]() {
         if (!self) return;
 
         // 1. Collect statistics (items and total bytes)
         int totalItemsCount = 0;
         qint64 totalBytesCount = 0;
-        for (const auto& path : sourcePaths) {
-            collectStats(path, totalItemsCount, totalBytesCount);
+        for (const auto& item : items) {
+            collectStats(item.source, totalItemsCount, totalBytesCount);
         }
 
         self->d->resetProgress(totalItemsCount, totalBytesCount);
@@ -756,6 +959,7 @@ quint64 CopyMoveService::enqueueTransfer(const QStringList& sourcePaths,
         QStringList mutatedSources;
         QStringList mutatedDestinations;
         QSet<QString> sweptDirectories; // target folders already cleared of crash leftovers (COPY-SAFETY-01)
+        QString plannedName; // the confirmed name of the top-level item about to start
 
         // Helper: recursive copy/move
         std::function<bool(const QString&, const QString&)> processItem;
@@ -773,7 +977,7 @@ quint64 CopyMoveService::enqueueTransfer(const QStringList& sourcePaths,
                 return false;
             }
 
-            const QString targetName = srcInfo.fileName();
+            const QString targetName = plannedName.isEmpty() ? srcInfo.fileName() : std::exchange(plannedName, QString());
             QString destPath = clean(QDir(dstDir).filePath(targetName));
 
             // Collision check
@@ -1054,9 +1258,27 @@ quint64 CopyMoveService::enqueueTransfer(const QStringList& sourcePaths,
             return true;
         };
 
-        for (const auto& path : sourcePaths) {
+        for (const auto& item : items) {
             if (self->d->cancelled.load()) break;
-            processItem(path, destinationDirectory);
+            if (item.snapshot) {
+                // Reported, never substituted; the other members proceed (ASSET-GROUP, failure table).
+                const auto state = assets::detail::compareToSnapshot(*item.snapshot);
+                if (state != assets::detail::SnapshotState::Same) {
+                    const QString dest = clean(QDir(destinationDirectory).filePath(item.targetName));
+                    const QString why = state == assets::detail::SnapshotState::Missing
+                        ? QStringLiteral("Missing: it no longer exists.")
+                        : QStringLiteral("Changed: it changed after you confirmed, so it was left in place.");
+                    ++failedCount;
+                    self->d->completedItems.fetch_add(1);
+                    QMetaObject::invokeMethod(self, [self, source = item.source, dest, why]() {
+                        if (self) emit self->itemFinished(source, dest, false, why);
+                    }, Qt::QueuedConnection);
+                    continue;
+                }
+            }
+            plannedName = item.targetName;
+            processItem(item.source, destinationDirectory);
+            plannedName.clear();
         }
 
         if (self) {

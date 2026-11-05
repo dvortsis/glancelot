@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include "glancelot/file_operation_service.hpp"
 #include "glancelot/file_operations.hpp"
+#include "asset_group_internal.hpp"
 #include "platform_trash.hpp"
 #include <QDir>
 #include <QFile>
@@ -208,6 +209,7 @@ QString reasonName(PlanRejection reason) {
     default: return "inaccessible";
     }
 }
+struct ScopedPlan { DeletionPlan plan; QVariantMap companions; };
 QString leafName(const fs::path& path) {
     const QString leaf = displayPath(path.filename());
     return leaf.isEmpty() ? displayPath(path) : leaf;
@@ -243,7 +245,6 @@ struct FileOperationService::Private {
     quint64 planningId{}, readyId{}, executingId{};
     std::stop_source planStop, executeStop;
     std::optional<DeletionPlan> ready;
-    QString readyOrigin;
     bool busy{};
 
     Private(FileOperationService* owner, std::unique_ptr<TrashBackend> trash) : q(owner), backend(std::move(trash)) {
@@ -285,6 +286,10 @@ FileOperationService::~FileOperationService() = default;
 bool FileOperationService::busy() const { return d->busy; }
 
 quint64 FileOperationService::plan(const QStringList& paths, const QString& origin) {
+    return planScoped(paths, origin, QStringLiteral("file"));
+}
+
+quint64 FileOperationService::planScoped(const QStringList& paths, const QString& origin, const QString& scope) {
     if (d->busy) return 0;
     // A newer request supersedes whatever was being planned or waiting for confirmation.
     d->planStop.request_stop(); d->planStop = std::stop_source{};
@@ -299,20 +304,34 @@ quint64 FileOperationService::plan(const QStringList& paths, const QString& orig
     std::vector<fs::path> requested;
     requested.reserve(std::size_t(paths.size()));
     for (const auto& path : paths) requested.push_back(nativePath(path));
-    auto* watcher = new QFutureWatcher<DeletionPlan>(this);
-    connect(watcher, &QFutureWatcher<DeletionPlan>::finished, this, [this, watcher, id, origin] {
-        auto plan = watcher->result(); watcher->deleteLater();
+    const assets::Scope assetScope = assets::detail::scopeFromName(scope);
+    auto* watcher = new QFutureWatcher<ScopedPlan>(this);
+    connect(watcher, &QFutureWatcher<ScopedPlan>::finished, this, [this, watcher, id, origin] {
+        auto scoped = watcher->result(); watcher->deleteLater();
         if (id != d->planningId) return; // superseded or cancelled
         d->planningId = 0;
-        if (plan.cancelled) { emit planFailed(id, QStringLiteral("Checking the items was stopped.")); return; }
-        d->ready = std::move(plan); d->readyId = id; d->readyOrigin = origin;
-        emit planReady(id, d->summary(id, origin, *d->ready));
+        if (scoped.plan.cancelled) { emit planFailed(id, QStringLiteral("Checking the items was stopped.")); return; }
+        d->ready = std::move(scoped.plan); d->readyId = id;
+        QVariantMap summary = d->summary(id, origin, *d->ready);
+        summary.insert(scoped.companions);
+        emit planReady(id, summary);
     });
-    watcher->setFuture(QtConcurrent::run(d->pool, [requested = std::move(requested), cancel = d->planStop.get_token(), id] {
+    watcher->setFuture(QtConcurrent::run(d->pool, [requested = std::move(requested), assetScope, cancel = d->planStop.get_token(), id] {
         glancelot::perf::ScopedSpan timing(glancelot::perf::Stage::Mutation,id);
-        auto result = planDeletion(requested, cancel);
-        timing.setBytes(result.targets.size());
-        if (result.cancelled) timing.setFlags(glancelot::perf::Cancelled);
+        ScopedPlan result;
+        const auto expansion = assets::expand(requested, assetScope, assets::Operation::Trash, nullptr, cancel);
+        if (expansion.cancelled) { result.plan.cancelled = true; timing.setFlags(glancelot::perf::Cancelled); return result; }
+        assets::detail::addCompanionSummary(result.companions, expansion, assetScope);
+        if (assetScope == assets::Scope::FileOnly) {
+            result.plan = planDeletion(requested, cancel); // exactly the named items, whatever the lookups found
+        } else {
+            std::vector<fs::path> included;
+            included.reserve(expansion.included.size());
+            for (const auto& item : expansion.included) included.push_back(item.member.path);
+            result.plan = planDeletion(included, cancel);
+        }
+        timing.setBytes(result.plan.targets.size());
+        if (result.plan.cancelled) timing.setFlags(glancelot::perf::Cancelled);
         return result;
     }));
     return id;

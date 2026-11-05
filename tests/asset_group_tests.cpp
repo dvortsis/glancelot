@@ -1,20 +1,28 @@
 #include "asset_group_internal.hpp"
 #include "glancelot/asset_group.hpp"
+#include "glancelot/copy_move_service.hpp"
+#include "glancelot/file_operation_service.hpp"
+#include "glancelot/mutation_service.hpp"
 #include <QDir>
 #include <QFile>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
+#include <atomic>
+#include <condition_variable>
 #include <map>
+#include <mutex>
 #include <set>
 
 Q_DECLARE_METATYPE(glancelot::assets::Operation)
 
 // ASSET-GROUP acceptance tests (docs/contracts/ASSET-GROUP.md). Generated names and media only: pure grouping runs on
-// name lists, the lookup tests on a fake volume with a virtual clock.
+// name lists, the lookup tests on a fake volume with a virtual clock, and the services on files under a QTemporaryDir.
 namespace fs = std::filesystem;
 using namespace glancelot;
 using namespace glancelot::assets;
 namespace {
+constexpr int kWait = 10000;
 fs::path root() { return fs::path("/fixture"); }
 QString name(const fs::path& path) { return detail::displayPath(path.filename()); }
 std::vector<ListingInput> listing(const QStringList& names, const fs::path& directory = root()) {
@@ -78,11 +86,48 @@ struct InstallVolume {
     explicit InstallVolume(detail::LookupBackend& backend) { detail::setLookupBackendForTests(&backend); }
     ~InstallVolume() { detail::setLookupBackendForTests(nullptr); }
 };
+// Holds a lookup open until the test lets it go, so cancellation and supersession are deterministic.
+struct GatedVolume final : detail::LookupBackend {
+    std::mutex mutex;
+    std::condition_variable wake;
+    bool open{false};
+    std::atomic_int entered{0};
+    void release() { { std::lock_guard lock(mutex); open = true; } wake.notify_all(); }
+    bool readDirectory(const fs::path&, const std::function<bool(const ListingInput&)>&) override {
+        ++entered;
+        std::unique_lock lock(mutex);
+        wake.wait(lock, [this] { return open; });
+        return true;
+    }
+    std::optional<MutationTarget> snapshot(const fs::path&) override { return std::nullopt; }
+    bool caseSensitive(const fs::path&, const fs::path&) override { return false; }
+    std::chrono::steady_clock::time_point now() override { return std::chrono::steady_clock::now(); }
+};
 fs::path nativeOf(const QString& path) { return detail::nativePath(path); }
 QString touch(const QTemporaryDir& dir, const QString& fileName, const QByteArray& bytes = "generated") {
     QFile file(dir.filePath(fileName));
     if (file.open(QIODevice::WriteOnly)) file.write(bytes);
     return dir.filePath(fileName);
+}
+struct FakeTrash final : TrashBackend {
+    fs::path bin;
+    QStringList failNames;
+    QStringList asked;
+    explicit FakeTrash(fs::path folder) : bin(std::move(folder)) {}
+    DeleteResult moveToTrash(const MutationTarget& target) override {
+        const QString leaf = name(target.path);
+        asked << leaf;
+        if (failNames.contains(leaf)) return {target.path, DeleteOutcome::InUse, "generated failure"};
+        std::error_code error;
+        fs::rename(target.path, bin / target.path.filename(), error);
+        return {target.path, error ? DeleteOutcome::Failed : DeleteOutcome::Trashed, error ? error.message() : std::string{}};
+    }
+};
+QStringList namesIn(const QVariantList& rows, const char* key = "name") {
+    QStringList out;
+    for (const auto& row : rows) out << row.toMap().value(key).toString();
+    out.sort();
+    return out;
 }
 }
 
@@ -564,6 +609,440 @@ private slots:
         QVERIFY(renameAsset(e, "a/b").empty());
         QVERIFY(renameAsset(e, "CON").empty());
         QVERIFY(renameAsset(e, std::string(252, 'x')).empty()); // the stem alone fits; with its extension a member wouldn't
+    }
+    void planRenamePreviewsEveryMemberAndAssetIsRefused() {
+        QTemporaryDir dir;
+        const QString cr2 = touch(dir, "IMG.CR2");
+        touch(dir, "IMG.jpg");
+        touch(dir, "IMG.CR2.xmp");
+        MutationService service;
+        QSignalSpy ready(&service, &MutationService::renamePlanReady);
+        const quint64 id = service.planRename(cr2, "Holiday.CR2", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QCOMPARE(ready[0][0].toULongLong(), id);
+        const QVariantMap summary = ready[0][1].toMap();
+        QCOMPARE(summary["scope"].toString(), QString("asset"));
+        QVERIFY(summary["refused"].toBool());
+        QVERIFY(!summary["refusal"].toString().isEmpty());
+        QCOMPARE(namesIn(summary["renames"].toList(), "to").size(), 3);
+        QVERIFY(namesIn(summary["renames"].toList(), "to").join('|').contains("Holiday.CR2.xmp"));
+        QVERIFY(summary["collisions"].toList().isEmpty());
+        QVERIFY(!service.confirmRename(id)); // refused until the journal lands
+        QVERIFY(QFile::exists(cr2) && QFile::exists(dir.filePath("IMG.jpg")) && QFile::exists(dir.filePath("IMG.CR2.xmp")));
+        QVERIFY(!QFile::exists(dir.filePath("Holiday.CR2")));
+    }
+    void planRenameFindsTargetCollisionsInAssetScope() {
+        QTemporaryDir dir;
+        const QString cr2 = touch(dir, "IMG.CR2");
+        touch(dir, "IMG.xmp");
+        touch(dir, "HOLIDAY.XMP"); // a case variant of a target
+        MutationService service;
+        QSignalSpy ready(&service, &MutationService::renamePlanReady);
+        service.planRename(cr2, "Holiday.CR2", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantList collisions = ready[0][1].toMap()["collisions"].toList();
+#ifdef Q_OS_WIN
+        QCOMPARE(collisions.size(), 1);
+        QVERIFY(collisions[0].toMap()["target"].toString().endsWith("Holiday.xmp"));
+#else
+        QVERIFY(collisions.isEmpty()); // case-sensitive: Holiday.xmp is free. Real-volume check only.
+#endif
+    }
+    void fileScopeRenameRunsThroughThePlan() {
+        QTemporaryDir dir;
+        const QString cr2 = touch(dir, "IMG.CR2");
+        touch(dir, "IMG.xmp");
+        MutationService service;
+        QSignalSpy ready(&service, &MutationService::renamePlanReady), finished(&service, &MutationService::renameFinished), renamed(&service, &MutationService::pathRenamed);
+        const quint64 id = service.planRename(cr2, "Holiday.CR2", "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        QVERIFY(!summary["refused"].toBool());
+        QCOMPARE(summary["renames"].toList().size(), 1);
+        QCOMPARE(namesIn(summary["excluded"].toList()), QStringList{"IMG.xmp"}); // shown: it keeps its name
+        QVERIFY(service.confirmRename(id));
+        QVERIFY(!service.confirmRename(id)); // one confirmation per plan
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, kWait);
+        QVERIFY(!service.confirmRename(id)); // and not once it has finished either
+        QVERIFY(finished[0][1].toList()[0].toMap()["success"].toBool());
+        QCOMPARE(renamed.count(), 1);
+        QVERIFY(QFile::exists(dir.filePath("Holiday.CR2")) && QFile::exists(dir.filePath("IMG.xmp")));
+    }
+    void aChangedSourceIsNotRenamed() {
+        QTemporaryDir dir;
+        const QString cr2 = touch(dir, "IMG.CR2");
+        MutationService service;
+        QSignalSpy ready(&service, &MutationService::renamePlanReady), finished(&service, &MutationService::renameFinished);
+        const quint64 id = service.planRename(cr2, "Holiday.CR2", "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(QFile::remove(cr2));
+        touch(dir, "IMG.CR2", "a different file with different bytes");
+        QVERIFY(service.confirmRename(id));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, kWait);
+        const QVariantMap result = finished[0][1].toList()[0].toMap();
+        QVERIFY(!result["success"].toBool());
+        QVERIFY(result["error"].toString().startsWith("Changed"));
+        QVERIFY(QFile::exists(cr2) && !QFile::exists(dir.filePath("Holiday.CR2")));
+    }
+    void anOlderRenamePreviewCannotReplaceANewerOne() {
+        QTemporaryDir dir;
+        const QString cr2 = touch(dir, "IMG.CR2");
+        MutationService service;
+        QSignalSpy ready(&service, &MutationService::renamePlanReady);
+        const quint64 first = service.planRename(cr2, "One.CR2", "file");
+        const quint64 second = service.planRename(cr2, "Two.CR2", "file");
+        QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), kWait);
+        const quint64 third = service.planRename(cr2, "Three.CR2", "file"); // third barrier: its result proves the first is gone
+        QTRY_VERIFY_WITH_TIMEOUT(ready.last()[0].toULongLong() == third, kWait);
+        for (const auto& call : ready) QVERIFY(call[0].toULongLong() != first);
+        QVERIFY(!service.confirmRename(first));
+        QVERIFY(!service.confirmRename(second));
+    }
+
+    // --- Transfer plan
+    void transferPlanListsCompanionsAndExecutesTheSnapshot() {
+        QTemporaryDir source, target;
+        const QString cr2 = touch(source, "IMG.CR2");
+        touch(source, "IMG.jpg");
+        touch(source, "IMG.xmp");
+        touch(source, "other.jpg");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady), batch(&service, &CopyMoveService::batchFinished);
+        const quint64 id = service.planTransfer({cr2}, target.path(), CopyMoveService::TransferMode::Copy, "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(batch.isEmpty());
+        QVERIFY(QDir(target.path()).isEmpty()); // nothing ran
+        const QVariantMap summary = ready[0][1].toMap();
+        QCOMPARE(summary["id"].toULongLong(), id);
+        QCOMPARE(summary["scope"].toString(), QString("asset"));
+        QCOMPARE(namesIn(summary["targets"].toList()), (QStringList{"IMG.CR2", "IMG.jpg", "IMG.xmp"}));
+        QCOMPARE(namesIn(summary["companions"].toList()), (QStringList{"IMG.jpg", "IMG.xmp"}));
+        QVERIFY(service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth));
+        QVERIFY(!service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth)); // once
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        QCOMPARE(batch[0][1].toInt(), 3);
+        QCOMPARE(QDir(target.path()).entryList(QDir::Files).size(), 3);
+        QVERIFY(QFile::exists(cr2)); // copy
+        QVERIFY(!service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth)); // and not once it has finished either
+    }
+    void transferFileScopeMovesOnlyTheFile() {
+        QTemporaryDir source, target;
+        const QString cr2 = touch(source, "IMG.CR2");
+        const QString xmp = touch(source, "IMG.xmp");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady), batch(&service, &CopyMoveService::batchFinished);
+        const quint64 id = service.planTransfer({cr2}, target.path(), CopyMoveService::TransferMode::Move, "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        QCOMPARE(namesIn(summary["targets"].toList()), QStringList{"IMG.CR2"});
+        QCOMPARE(summary["companions"].toList().size(), 1);
+        const QVariantMap companion = summary["companions"].toList().at(0).toMap();
+        QCOMPARE(companion["name"].toString(), QString("IMG.xmp"));
+        QVERIFY(!companion["included"].toBool());
+        QCOMPARE(companion["exclusion"].toString(), QString("notApplicable"));
+        QVERIFY(service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth));
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        QVERIFY(!QFile::exists(cr2) && QFile::exists(xmp));
+        QVERIFY(QFile::exists(QDir(target.path()).filePath("IMG.CR2")));
+    }
+    void overwriteIsRefusedUntilB2() {
+        QTemporaryDir source, target;
+        const QString file = touch(source, "IMG.jpg", "new");
+        touch(target, "IMG.jpg", "old");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady), batch(&service, &CopyMoveService::batchFinished), started(&service, &CopyMoveService::itemStarted);
+        const quint64 id = service.planTransfer({file}, target.path(), CopyMoveService::TransferMode::Copy, "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(!service.confirmTransfer(id, CopyMoveService::CollisionPolicy::Overwrite));
+        QVERIFY(!service.confirmTransfer(id, CopyMoveService::CollisionPolicy::Overwrite, true)); // consent has no effect yet
+        QVERIFY(!service.active());
+        QVERIFY(started.isEmpty());
+        QFile existing(QDir(target.path()).filePath("IMG.jpg"));
+        QVERIFY(existing.open(QIODevice::ReadOnly));
+        QCOMPARE(existing.readAll(), QByteArray("old"));
+        // The refusal left the plan confirmable with an allowed policy.
+        QVERIFY(service.confirmTransfer(id, CopyMoveService::CollisionPolicy::Skip));
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+    }
+    void keepBothKeepsAnAssetTogether() {
+        QTemporaryDir source, target;
+        const QString cr2 = touch(source, "IMG.CR2");
+        touch(source, "IMG.CR2.xmp");
+        touch(source, "IMG.xmp");
+        touch(target, "IMG.xmp", "another photo's sidecar");
+        touch(target, "IMG (2).CR2", "another photo");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady), batch(&service, &CopyMoveService::batchFinished);
+        const quint64 id = service.planTransfer({cr2}, target.path(), CopyMoveService::TransferMode::Copy, "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        const QVariantList collisions = summary["collisions"].toList();
+        QCOMPARE(collisions.size(), 1);
+        QCOMPARE(collisions[0].toMap()["name"].toString(), QString("IMG.xmp"));
+        QCOMPARE(collisions[0].toMap()["requestedBy"].toString(), cr2);
+        QCOMPARE(namesIn(summary["targets"].toList(), "renamedTo"), (QStringList{"IMG (3).CR2", "IMG (3).CR2.xmp", "IMG (3).xmp"}));
+        QVERIFY(service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth));
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        const QDir out(target.path());
+        QVERIFY(out.exists("IMG (3).CR2") && out.exists("IMG (3).CR2.xmp") && out.exists("IMG (3).xmp"));
+        QCOMPARE(out.entryList(QDir::Files).size(), 5);
+    }
+    void skipLeavesACollidingAssetWhole() {
+        QTemporaryDir source, target;
+        const QString cr2 = touch(source, "IMG.CR2");
+        touch(source, "IMG.xmp");
+        const QString free = touch(source, "free.jpg");
+        touch(target, "IMG.xmp", "another photo's sidecar");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady), batch(&service, &CopyMoveService::batchFinished);
+        const quint64 id = service.planTransfer({cr2, free}, target.path(), CopyMoveService::TransferMode::Copy, "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(service.confirmTransfer(id, CopyMoveService::CollisionPolicy::Skip));
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        const QDir out(target.path());
+        QVERIFY(out.exists("free.jpg") && !out.exists("IMG.CR2"));
+        QCOMPARE(out.entryList(QDir::Files).size(), 2); // free.jpg and the sidecar that was there, nothing under another name
+        QFile kept(out.filePath("IMG.xmp"));
+        QVERIFY(kept.open(QIODevice::ReadOnly));
+        QCOMPARE(kept.readAll(), QByteArray("another photo's sidecar"));
+    }
+    void aReplacedCompanionIsReportedAndTheOthersProceed() {
+        QTemporaryDir source, target;
+        const QString cr2 = touch(source, "IMG.CR2");
+        const QString jpg = touch(source, "IMG.jpg");
+        const QString xmp = touch(source, "IMG.xmp");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady), batch(&service, &CopyMoveService::batchFinished), item(&service, &CopyMoveService::itemFinished);
+        const quint64 id = service.planTransfer({cr2}, target.path(), CopyMoveService::TransferMode::Copy, "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(QFile::remove(xmp));
+        touch(source, "IMG.xmp", "replaced after the confirmation showed it");
+        QVERIFY(QFile::remove(jpg));
+        QVERIFY(service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth));
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        QCOMPARE(batch[0][1].toInt(), 1);
+        QCOMPARE(batch[0][2].toInt(), 2);
+        QStringList errors;
+        for (const auto& call : item) if (!call[2].toBool()) errors << call[3].toString();
+        errors.sort();
+        QCOMPARE(errors.size(), 2);
+        QVERIFY(errors[0].startsWith("Changed"));
+        QVERIFY(errors[1].startsWith("Missing"));
+        QVERIFY(!QDir(target.path()).exists("IMG.xmp"));
+        QVERIFY(QDir(target.path()).exists("IMG.CR2"));
+    }
+    void aSupersededTransferPlanCannotBeConfirmed() {
+        QTemporaryDir source, target;
+        const QString file = touch(source, "IMG.jpg");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady);
+        const quint64 first = service.planTransfer({file}, target.path(), CopyMoveService::TransferMode::Copy, "file");
+        const quint64 second = service.planTransfer({file}, target.path(), CopyMoveService::TransferMode::Copy, "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QCOMPARE(ready[0][0].toULongLong(), second);
+        QVERIFY(!service.confirmTransfer(first, CopyMoveService::CollisionPolicy::RenameBoth));
+        QCOMPARE(service.planTransfer({}, target.path(), CopyMoveService::TransferMode::Copy, "file"), quint64(0)); // withdraws
+        QVERIFY(!service.confirmTransfer(second, CopyMoveService::CollisionPolicy::RenameBoth));
+        QVERIFY(QDir(target.path()).isEmpty());
+    }
+    void transferToAMissingDestinationCannotRun() {
+        QTemporaryDir source, target;
+        const QString file = touch(source, "IMG.jpg");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady);
+        const quint64 id = service.planTransfer({file}, target.filePath("gone"), CopyMoveService::TransferMode::Copy, "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QCOMPARE(ready[0][1].toMap()["error"].toString(), QString("destinationMissing"));
+        QVERIFY(!service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth));
+    }
+    void movingIntoTheSameFolderIsRejected() {
+        QTemporaryDir source;
+        const QString file = touch(source, "IMG.jpg");
+        CopyMoveService service;
+        QSignalSpy ready(&service, &CopyMoveService::transferPlanReady);
+        const quint64 id = service.planTransfer({file}, source.path(), CopyMoveService::TransferMode::Move, "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        QCOMPARE(summary["rejected"].toList().size(), 1);
+        QCOMPARE(summary["rejected"].toList().at(0).toMap()["reason"].toString(), QString("sameFolder"));
+        QVERIFY(summary["targets"].toList().isEmpty());
+        QVERIFY(!service.confirmTransfer(id, CopyMoveService::CollisionPolicy::RenameBoth));
+    }
+
+    // --- FileOperationService
+    void planScopedAssetListsAndTrashesTheIncludedList() {
+        QTemporaryDir media, bin;
+        const QString cr2 = touch(media, "IMG.CR2");
+        const QString jpg = touch(media, "IMG.jpg");
+        const QString xmp = touch(media, "IMG.xmp");
+        const QString tif = touch(media, "IMG.tif");
+        const QString other = touch(media, "other.jpg");
+        auto backend = std::make_unique<FakeTrash>(nativeOf(bin.path()));
+        FakeTrash* trash = backend.get();
+        FileOperationService service(std::move(backend));
+        QSignalSpy ready(&service, &FileOperationService::planReady), finished(&service, &FileOperationService::finished);
+        const quint64 id = service.planScoped({cr2}, "grid", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        QCOMPARE(summary["scope"].toString(), QString("asset"));
+        QCOMPARE(namesIn(summary["targets"].toList()), (QStringList{"IMG.CR2", "IMG.jpg", "IMG.xmp"}));
+        QCOMPARE(namesIn(summary["companions"].toList()), (QStringList{"IMG.jpg", "IMG.tif", "IMG.xmp"}));
+        for (const auto& row : summary["companions"].toList()) {
+            const QVariantMap companion = row.toMap();
+            const bool isTif = companion["name"].toString() == "IMG.tif";
+            QCOMPARE(companion["included"].toBool(), !isTif);
+            QCOMPARE(companion["exclusion"].toString(), isTif ? QString("notApplicable") : QString());
+            QCOMPARE(companion["requestedBy"].toString(), cr2);
+        }
+        QVERIFY(service.confirm(id));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, kWait);
+        QStringList asked = trash->asked;
+        asked.sort();
+        QCOMPARE(asked, (QStringList{"IMG.CR2", "IMG.jpg", "IMG.xmp"}));
+        QVERIFY(!QFile::exists(cr2) && !QFile::exists(jpg) && !QFile::exists(xmp));
+        QVERIFY(QFile::exists(tif) && QFile::exists(other));
+    }
+    void partialFailureIsReportedPerMember() {
+        QTemporaryDir media, bin;
+        const QString cr2 = touch(media, "IMG.CR2");
+        const QString jpg = touch(media, "IMG.jpg");
+        auto backend = std::make_unique<FakeTrash>(nativeOf(bin.path()));
+        backend->failNames = {"IMG.jpg"};
+        FileOperationService service(std::move(backend));
+        QSignalSpy ready(&service, &FileOperationService::planReady), finished(&service, &FileOperationService::finished), removed(&service, &FileOperationService::pathsRemoved);
+        const quint64 id = service.planScoped({cr2}, "grid", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(service.confirm(id));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, kWait);
+        const QVariantList results = finished[0][1].toList();
+        QCOMPARE(results.size(), 2);
+        QCOMPARE(results[0].toMap()["outcome"].toString(), QString("trashed"));
+        QCOMPARE(results[1].toMap()["outcome"].toString(), QString("inUse"));
+        QCOMPARE(removed.count(), 1);
+        QCOMPARE(removed[0][0].toStringList().size(), 1);
+        QVERIFY(!QFile::exists(cr2) && QFile::exists(jpg));
+    }
+    void aCompanionReplacedBeforeConfirmIsChangedAtExecution() {
+        QTemporaryDir media, bin;
+        const QString cr2 = touch(media, "IMG.CR2");
+        const QString xmp = touch(media, "IMG.xmp");
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady), finished(&service, &FileOperationService::finished);
+        const quint64 id = service.planScoped({cr2}, "grid", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(QFile::remove(xmp));
+        touch(media, "IMG.xmp", "someone else wrote this sidecar");
+        QVERIFY(service.confirm(id));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, kWait);
+        QCOMPARE(finished[0][1].toList().size(), 2);
+        QCOMPARE(finished[0][1].toList()[1].toMap()["outcome"].toString(), QString("changed"));
+        QVERIFY(QFile::exists(xmp) && !QFile::exists(cr2));
+    }
+    void planOutputOnlyGainsTheCompanionKeys() {
+        QTemporaryDir media, bin;
+        const QString jpg = touch(media, "IMG.jpg");
+        touch(media, "IMG.xmp");
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady);
+        service.plan({jpg}, "grid");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        QStringList keys = summary.keys();
+        keys.sort();
+        // Today's keys, plus scope and companions and the two the contract's confirmation needs (a count, and the budget notice).
+        QCOMPARE(keys, (QStringList{"companions", "companionsIncomplete", "companionsNotListed", "contentCountComplete", "contentFiles", "contentFolders",
+                                    "fileCount", "folderCount", "id", "origin", "rejected", "scope", "targets", "trashName"}));
+        QCOMPARE(summary["scope"].toString(), QString("file"));
+        QCOMPARE(namesIn(summary["targets"].toList()), QStringList{"IMG.jpg"}); // never implicit
+        QCOMPARE(namesIn(summary["companions"].toList()), QStringList{"IMG.xmp"});
+        QVERIFY(!summary["companions"].toList()[0].toMap()["included"].toBool());
+    }
+    void anUnknownScopeIsFileOnly() {
+        QTemporaryDir media, bin;
+        const QString jpg = touch(media, "IMG.jpg");
+        touch(media, "IMG.xmp");
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady);
+        service.planScoped({jpg}, "grid", "whole-folder");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QCOMPARE(ready[0][1].toMap()["scope"].toString(), QString("file"));
+        QCOMPARE(namesIn(ready[0][1].toMap()["targets"].toList()), QStringList{"IMG.jpg"});
+    }
+    void theBudgetReachesTheSummary() {
+        QTemporaryDir media, bin;
+        const QString jpg = touch(media, "IMG.jpg");
+        FakeVolume volume;
+        volume.costPerRead = std::chrono::milliseconds(kExpandBudgetMs);
+        volume.directories[nativeOf(media.path())] = {"IMG.jpg"};
+        InstallVolume install(volume);
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady);
+        service.planScoped({jpg}, "grid", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QVERIFY(ready[0][1].toMap()["companionsIncomplete"].toBool());
+        QCOMPARE(ready[0][1].toMap()["targets"].toList().size(), 1);
+    }
+    void companionSummaryIsBounded() {
+        QTemporaryDir media, bin;
+        FakeVolume volume;
+        InstallVolume install(volume);
+        const fs::path dir = nativeOf(media.path());
+        QStringList files, requested;
+        for (int i = 0; i < 400; ++i) {
+            files << QString("IMG_%1.CR2").arg(i) << QString("IMG_%1.JPG").arg(i);
+            requested << touch(media, QString("IMG_%1.CR2").arg(i));
+        }
+        volume.directories[dir] = files;
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady);
+        service.plan(requested, "grid");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        const QVariantMap summary = ready[0][1].toMap();
+        QCOMPARE(summary["companions"].toList().size(), int(kMaxExcludedListed));
+        QCOMPARE(summary["companionsNotListed"].toInt(), 400 - int(kMaxExcludedListed));
+        service.planScoped(requested, "grid", "asset");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 2, kWait);
+        const QVariantMap asset = ready[1][1].toMap();
+        QCOMPARE(asset["companions"].toList().size(), int(kMaxExcludedListed));
+        QCOMPARE(asset["companionsNotListed"].toInt(), 400 - int(kMaxExcludedListed));
+        QVERIFY(asset["companions"].toList()[0].toMap()["included"].toBool());
+    }
+    void cancelDuringLookupsLeavesNoConfirmablePlan() {
+        QTemporaryDir media, bin;
+        const QString jpg = touch(media, "IMG.jpg");
+        GatedVolume volume;
+        InstallVolume install(volume);
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady);
+        const quint64 id = service.planScoped({jpg}, "grid", "asset");
+        QTRY_VERIFY_WITH_TIMEOUT(volume.entered.load() == 1, kWait);
+        service.cancel(id);
+        QVERIFY(!service.confirm(id));
+        volume.release();
+        // A later plan's result is the barrier that proves the cancelled one reported nothing.
+        const quint64 next = service.planScoped({jpg}, "grid", "file");
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QCOMPARE(ready[0][0].toULongLong(), next);
+        QVERIFY(!service.confirm(id));
+        QVERIFY(QFile::exists(jpg));
+    }
+    void aScopeSwitchSupersedesThePlanBeingBuilt() {
+        QTemporaryDir media, bin;
+        const QString jpg = touch(media, "IMG.jpg");
+        touch(media, "IMG.xmp");
+        GatedVolume volume;
+        detail::setLookupBackendForTests(&volume);
+        FileOperationService service(std::make_unique<FakeTrash>(nativeOf(bin.path())));
+        QSignalSpy ready(&service, &FileOperationService::planReady);
+        const quint64 fileScope = service.plan({jpg}, "grid");
+        QTRY_VERIFY_WITH_TIMEOUT(volume.entered.load() == 1, kWait);
+        const quint64 assetScope = service.planScoped({jpg}, "grid", "asset");
+        volume.release();
+        detail::setLookupBackendForTests(nullptr); // the second plan's lookups run on the real volume
+        QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, kWait);
+        QCOMPARE(ready[0][0].toULongLong(), assetScope);
+        QCOMPARE(ready[0][1].toMap()["scope"].toString(), QString("asset"));
+        QVERIFY(!service.confirm(fileScope));
     }
 };
 
