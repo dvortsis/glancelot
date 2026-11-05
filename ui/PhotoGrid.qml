@@ -171,6 +171,7 @@ Rectangle {
         // Mouse-wheel browsing need not move the keyboard cursor. Preserve the visible item when a
         // scattered refresh resets the model, rather than pulling the viewport back to that cursor.
         const row = fileGrid.rowOf(saved.path)
+        grid.forceLayout() // rows that arrived since the last frame count towards contentHeight
         const offset = row >= 0 ? Math.floor(row / columns) * grid.cellHeight + saved.offset : saved.scroll
         grid.contentY = grid.originY + Math.max(0, Math.min(offset, grid.contentHeight - grid.height))
     }
