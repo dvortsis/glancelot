@@ -1,0 +1,35 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-phase1-followups/build-claude-phase1-followups
+Test project C:/src/Github/Glancelot/.worktrees/claude-phase1-followups/build-claude-phase1-followups
+      Start 11: window_slots
+ 1/11 Test #11: window_slots .....................   Passed   30.65 sec
+      Start 39: monitor_output
+ 2/11 Test #39: monitor_output ...................   Passed    2.58 sec
+      Start 40: recovery
+ 3/11 Test #40: recovery .........................   Passed   14.23 sec
+      Start 41: recovery_startup
+ 4/11 Test #41: recovery_startup .................   Passed    0.58 sec
+      Start 42: recovery_controller
+ 5/11 Test #42: recovery_controller ..............   Passed   14.93 sec
+      Start 43: recovery_process
+ 6/11 Test #43: recovery_process .................   Passed   29.97 sec
+      Start 44: tabs_recovery
+ 7/11 Test #44: tabs_recovery ....................   Passed   64.31 sec
+      Start 45: monitor_customization
+ 8/11 Test #45: monitor_customization ............   Passed    8.93 sec
+      Start 46: monitor_customization_ui
+ 9/11 Test #46: monitor_customization_ui .........   Passed   26.97 sec
+      Start 47: translation_coverage_ui
+10/11 Test #47: translation_coverage_ui ..........   Passed   24.65 sec
+      Start 48: layout_presets_ui
+11/11 Test #48: layout_presets_ui ................   Passed   35.24 sec
+
+100% tests passed, 0 tests failed out of 11
+
+Label Time Summary:
+budget     =  45.58 sec*proc (2 tests)
+fast       =  90.63 sec*proc (5 tests)
+native     =  60.62 sec*proc (2 tests)
+process    = 241.53 sec*proc (9 tests)
+ui         =  86.86 sec*proc (3 tests)
+
+Total Test time (real) = 253.07 sec
