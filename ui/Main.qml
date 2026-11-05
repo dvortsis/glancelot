@@ -434,7 +434,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: inputFocusItem !== null && typeof inputFocusItem.selectAll === "function" && typeof inputFocusItem.text === "string"
-    property bool modalOpen: monitorSettings.opened || monitorSettings.visible || settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible || (renameFlow && renameFlow.modal)
+    property bool modalOpen: monitorSettings.opened || monitorSettings.visible || settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible || (renameFlow && renameFlow.modal) || (exportFlow.status === Loader.Ready && exportFlow.item.modal)
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -910,6 +910,7 @@ ApplicationWindow {
                 viewer.copyMoveService.markCopy([viewer.filePath])
             }
         }
+        else if (id === "export-selection") exportFlow.request()
         else if (id === "paste") {
             let dest = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
             const treeFolder = treePanel.currentSelectedFolder()
@@ -2314,6 +2315,28 @@ ApplicationWindow {
         nameFilters: [qsTr("Photographs (%1)").arg("*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG"), qsTr("All files (%1)").arg("*")]
         onAccepted: { viewer.open(selectedFile.toString()); app.showCanvas() }
         onRejected: app.focusContent()
+    }
+    Loader { // B3 (F070): the export dialog and its worker load on first use, by URL, so startup never pays for them
+        id: exportFlow
+        objectName: "exportFlow"
+        active: false
+        source: "ExportDialog.qml"
+        anchors.fill: parent
+        z: 27
+        function targets() {
+            const selected = photoGrid.deletionTargets()
+            return selected.length ? selected : (viewer.filePath.length ? [viewer.filePath] : [])
+        }
+        function request() {
+            active = true
+            if (item) item.request(targets(), fileGrid.directory.length ? fileGrid.directory : viewer.directory)
+        }
+        onLoaded: { item.host = app; item.targetsProvider = targets }
+        Connections {
+            target: exportFlow.item
+            function onNotice(text) { deleteFlow.showNotice(text) }
+            function onFlowClosed() { if (!app.modalOpen) Qt.callLater(app.focusContent) }
+        }
     }
     SettingsDialog {
         id: settingsDialog
