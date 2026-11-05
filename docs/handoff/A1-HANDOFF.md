@@ -254,7 +254,7 @@ Budget and listing tests from that run, oracles unchanged:
 # PR 2: Show more for folders beyond the first 100,000 entries
 
 - **Branch:** `claude/a1-load-more`
-- **Code tip:** `e057520`. The commit after it changes only this file and `docs/verification/A1/`.
+- **Code tip:** `9a9482e`, which changes one test after `e057520`. The commit after it changes only this file and `docs/verification/A1/`.
 - **Exact base:** `ac49031`, the tip of `claude/a1-perf-enum` (PR 1), merged in `f734041`. The PR targets that branch, and stays a draft until PR 1 merges.
 - **PR:** the pull request from this branch into `claude/a1-perf-enum`.
 
@@ -293,7 +293,7 @@ Budget and listing tests from that run, oracles unchanged:
 Before a page starts, `loadMore()` estimates the page's peak and compares it with free memory. `GlobalMemoryStatusEx` gives free memory on Windows. On Linux it is `MemAvailable`, or what the process's cgroup has left if that is less.
 
 - **Estimate:** the average of `directory_scan::rowBytes` over up to about 1,024 evenly spaced rows of this folder, times the page's row count, times 2.
-- **Why 2:** the new listing exists beside the rows on screen until it is published, with its rows, their copy for the filter, the index, the identity baseline and the sort keys. These short names average 450 bytes, so the last page is estimated at 858 MB. The worst I measured was 767 MB on real files (1,563 MB peak against 796 MB before the page), and 372 MB in today's synthetic run (1,673 MB against 1,301 MB), so the factor leaves about 12% over the worst case.
+- **Why 2:** the new listing exists beside the rows on screen until it is published, with its rows, their copy for the filter, the index, the identity baseline and the sort keys. These short names average 450 bytes, so the last page is estimated at 858 MB. The worst I measured was 767 MB on real files (1,563 MB peak against 796 MB before the page), and 372 MB in today's synthetic run at the current code (1,673 MB against 1,301 MB). The factor leaves about 12% over the real-file figure, but that run was at `24d5238`, before the page moved off the GUI thread, and I did not repeat it at the current code.
 - **Headroom:** the page must also leave 512 MB free, so the last page of this folder needs about 1.37 GB free.
 - **A cheap way to lower the peak:** I did not find one. The old rows are on screen until the new ones are published, so they cannot go earlier. Dropping the filter's copy of them would save about 96 bytes a row, but a filter set during the page needs it back, which is a rework. The peak is unchanged: 1,673 MB against 1.65 GB before.
 
@@ -360,7 +360,9 @@ Lead's grant for the refusal: "You're granted one added property or signal for t
 
 ## Tests
 
-**At `e057520`.** The first 18 ran in a build slot, and the last 3 under the gate lock, once a review's gate had finished. All pass on their first run. No local full suite ran.
+**At `9a9482e`.** One test changed, to drive the real `sort-reverse` command instead of calling the model. `perf_enum_ui` passes in a build slot: 35 passed, 0 failed, 77.69 sec. Its first version failed `tryAgainWithTheOrderUnchangedReturnsToTheBrowsedPosition` (`layouts.count()` 1, expected 0), because the command saves the sort and the next test started from it. That test passed alone and failed straight after the sort test. The sort test now has its own config folder. The saved settings were in the run's temporary folder, never the user's.
+
+**At `e057520`,** every other suite. The first 18 ran in a build slot, and the last 3 under the gate lock, once a review's gate had finished. All pass on their first run. No local full suite ran.
 
 ```text
  1/18 Test  #4: directory_listing ................   Passed   27.88 sec
@@ -457,7 +459,7 @@ No budget oracle changed.
 - **The banner stays when a filter hides every listed row,** because that is when further pages matter most.
 - **A sort change restarts the scan and publishes with the same reset as a page.** The folder's first rows are read again, so a folder that changed meanwhile can list slightly different rows, which is what a whole-folder relist would show. The alternative, sorting the rows held in memory, would miss a hidden-files change and need a second code path.
 - **A selected hidden file that leaves the list stays in the selection keys** and comes back if hidden files are shown again. Selection counts and delete targets read the listed rows, so an unlisted row is never acted on.
-- **Refused means the button goes, rather than staying greyed out.** This is what the limit already does, and it uses the same focus handling, so keyboard users land on the grid. The lead asked for it to be disabled, and hiding meets that. To restore a visible disabled button, change one binding.
+- **Refused means the button goes, rather than staying greyed out.** This is what the limit already does, and it uses the same focus handling, so keyboard users land on the grid. The lead's words were "disable Show more", so this is my reading, and the lead can overrule it. A visible disabled button would need its own focus handling.
 - **A refusal lasts until the folder is opened again** or the grid is left and re-entered. A file-watch refresh does not clear it, because a folder that changes is not the user asking again. Otherwise the button would flicker back in a busy folder.
 - **512 MB headroom, not the viewer's 40% of free memory.** 40% would refuse the last page on a machine with 2 GB free, even though about 1.1 GB would remain. A fixed figure ties the check to the question asked: can this page start the machine paging?
 
@@ -472,6 +474,8 @@ None. The lead answered the sort and memory questions, and both are fixed here.
 - Physical hardware and a real display. All UI evidence is offscreen with the software backend.
 - `docker build`, and the full suite locally (see "Tests").
 - A real low-memory machine. The refusal is driven through the test seam, and this PC only proved that a reading comes back.
+- A hidden-files change from the app. Nothing in the app calls `setIncludeHidden` today, so that half of the fix is tested on the model and users cannot reach it yet. The sort half is: `sort` and `sort-reverse` reach `grid.setSort` through `file_grid_wiring::followViewer`, and `aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner` drives `sort-reverse`.
+- The comment on `canLoadMore` in the header still says it is true when `truncated` is set and the limit is not reached. It is now also false after a refusal. The line is outside the lead's grant, so I left it.
 - A real cgroup. The Linux parser is tested with sample text on every platform, and `thisMachineReportsFreeMemory` runs on Linux only in the hosted jobs. The reader takes the process's own group and cgroup v1's root, not the tightest ancestor.
 - The pseudo-locale on screen. `translation_coverage_ui` passes, but I edited the `.ts` file by hand and did not look at the result.
 

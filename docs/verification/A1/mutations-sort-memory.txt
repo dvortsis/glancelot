@@ -136,3 +136,9 @@ sort-change-merges rerun with the hidden-files test as well, where a merge inser
 exit 1
   FAIL!  : PerfEnumTests::aHiddenFilesToggleRepublishesATruncatedFolderOnce() Compared values are not the same
   Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 265ms
+
+sort-not-asked-ui rerun after its test moved to the sort-reverse command:
+### sort-not-asked-ui [src/app/directory_entry_model.cpp] -> perf_enum_ui_tests aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner
+exit 1
+  FAIL!  : PerfEnumUiTests::aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner() '!f.h->fileGrid.loading() && f.h->fileGrid.rowOf(anchor) != rowBefore' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 40247ms
