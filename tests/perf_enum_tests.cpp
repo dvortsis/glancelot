@@ -846,6 +846,34 @@ private slots:
         model.loadMore();
         QVERIFY(!model.loading()); QCOMPARE(paged.folder.starts->load(), starts);
     }
+    void aHardLimitBetweenStepsIsStillTheLimit() {
+        QTemporaryDir dir; PagedFolder paged(5000); paged.install();
+        directory_scan::testSeam.tuning.entryLimit = kPage + kPage / 2;
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        model.loadMore();
+        QVERIFY(listed(model, kPage + kPage / 2));
+        QVERIFY(model.truncated()); QVERIFY(!model.canLoadMore());
+    }
+    // A page replaces the rows behind an unfiltered view, so a later filter has to project the new rows, and clearing it
+    // has to bring back their index.
+    void aFilterAfterLoadMoreSeesTheNewPageAndClearingItRestoresTheIndex() {
+        QTemporaryDir dir; PagedFolder paged(5000); paged.install();
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        model.loadMore();
+        QVERIFY(listed(model, 2000));
+        model.setFilter("f0003500", true); // i == 1500: only on the second page
+        QCOMPARE(model.count(), 1);
+        const QString path = model.pathAt(0);
+        model.clearFilter();
+        QCOMPARE(model.count(), 2000);
+        const int row = model.rowOf(path);
+        QVERIFY(row >= 0);
+        QCOMPARE(model.pathAt(row), path);
+    }
     void anOrdinaryRefreshKeepsATruncatedFoldersRows() {
         QTemporaryDir dir; PagedFolder paged(2500); paged.install();
         DirectoryEntryModel model; model.setActive(true);
@@ -884,6 +912,19 @@ private slots:
         QVERIFY(!model.truncated());
         model.clearFilter();
         QCOMPARE(model.count(), 2500);
+    }
+    // The listing is still truncated here, so only the page itself can bring the match in.
+    void aFilteredPageThatIsStillTruncatedShowsItsMatches() {
+        QTemporaryDir dir; PagedFolder paged(5000); paged.install();
+        DirectoryEntryModel model; model.setActive(true);
+        model.setFilter("f0003500", true); // i == 1500: on the second page, with more of the folder after it
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, 0));
+        model.loadMore();
+        QVERIFY(listed(model, 1));
+        QVERIFY(model.truncated()); QVERIFY(model.canLoadMore());
+        model.clearFilter();
+        QCOMPARE(model.count(), 2000);
     }
     void goingInactiveDuringLoadMoreKeepsTheRaisedCap() {
         QTemporaryDir dir; PagedFolder paged(5000); paged.folder.heldAfter = 1500; paged.install();
