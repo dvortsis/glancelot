@@ -19,10 +19,9 @@ SUBJECT = re.compile(r"^(?P<type>[A-Za-z]+)(?:\((?P<scope>[^()]*)\))?(?P<bang>!)
 SCOPE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_SUBJECT = 100
 CUTOFF = datetime(2026, 11, 6, tzinfo=timezone.utc)
-# Subjects git writes itself. Real merge commits are skipped in a range; locally a merge subject and fixups are
-# allowed until they are pushed.
-LOCAL_ONLY = ("Merge ", "fixup! ", "squash! ", "amend! ")
-REVERT = re.compile(r'^Revert ".+"$')  # git's and GitHub's own revert subject
+# Real merge commits are skipped in a range, and the hook skips merges (MERGE_HEAD). Fixups pass only locally.
+LOCAL_ONLY = ("fixup! ", "squash! ", "amend! ")
+REVERT = re.compile(r'^(Revert|Reapply) ".+"$')  # git's and GitHub's own revert subjects
 LEGACY = re.compile(r"^[A-Z][A-Z0-9-]*: \S")  # '<TASK-ID>: <title>', allowed only in PRs opened before the rule
 FORMAT = "use 'type(scope): description', for example 'fix(grid): keep the selection during arrival' (docs/RELEASING.md)"
 

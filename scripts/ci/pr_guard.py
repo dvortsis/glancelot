@@ -139,7 +139,16 @@ def title_errors(title, number=None):
     # PRs opened before the Conventional Commits rule keep their '<TASK-ID>: <title>' titles.
     if is_legacy_pr(number) and commit_lint.LEGACY.match(title or ""):
         return []
+    if commit_lint.REVERT.match(title or ""):  # GitHub's Revert button
+        return []
     return [f"PR title: {error}" for error in commit_lint.subject_errors(title)]
+
+
+def commit_errors(merge_base, head, number, head_ref):
+    # PRs opened before the rule may keep adding '<TASK-ID>: ' commits, since shared branches are never reworded,
+    # and the lead's integration batches carry those commits unchanged.
+    legacy = is_legacy_pr(number) or is_integration_branch(head_ref)
+    return commit_lint.range_errors(f"{merge_base}..{head}", legacy=legacy)
 
 
 def lead_only_errors(paths, head_ref, labels):
@@ -221,6 +230,7 @@ def main():
     parser.add_argument("--base", help="base commit or ref of the pull request")
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--head-ref", default="", help="head branch name")
+    parser.add_argument("--pr", type=int, help="pull request number, for a local run of a PR opened before PR 19")
     args = parser.parse_args()
 
     event = {}
@@ -234,6 +244,7 @@ def main():
     base = args.base or (event.get("base") or {}).get("sha")
     head = (event.get("head") or {}).get("sha") or args.head
     head_ref = args.head_ref or (event.get("head") or {}).get("ref") or ""
+    number = event.get("number") or args.pr
 
     errors = []
     head_queue = show_queue(head)
@@ -257,9 +268,8 @@ def main():
         if size > SIZE_NOTICE:
             print(f"::notice::{size} changed lines; aim for about {SIZE_NOTICE}")
         if event:
-            errors += title_errors(title, event.get("number"))
-        # PRs opened before the rule may keep adding '<TASK-ID>: ' commits, since shared branches are never reworded.
-        errors += commit_lint.range_errors(f"{merge_base}..{head}", legacy=is_legacy_pr(event.get("number")))
+            errors += title_errors(title, number)
+        errors += commit_errors(merge_base, head, number, head_ref)
         base_queue = show_queue(merge_base)
         if QUEUE in paths and base_queue and head_queue and not errors:
             errors += queue_scope_errors(base_queue, head_queue, head_ref)

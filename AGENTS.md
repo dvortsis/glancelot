@@ -101,7 +101,7 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 
 **Before pushing**
 
-- `python scripts/ci/pr_guard.py --base origin/main --head-ref <branch>` (needs PyYAML). It also checks commit subjects. The opt-in `commit-msg` hook (`git config core.hooksPath scripts/hooks`) checks them as you commit.
+- `python scripts/ci/pr_guard.py --base origin/main --head-ref <branch>` (needs PyYAML; add `--pr <n>` for a PR numbered 18 or below). It also checks commit subjects. The opt-in `commit-msg` hook (`git config core.hooksPath scripts/hooks`) checks them as you commit.
 - Versions and releases follow docs/RELEASING.md. The only version is `project(... VERSION)` in root `CMakeLists.txt`, and only the lead prepares a release, after the user approves it.
 - The `ctest` runs from the pre-handoff checklist.
 - `translations/glancelot_en_XA.ts` regenerated if UI strings changed.
