@@ -1,0 +1,51 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-r5/build-claude-stack-confirm-r5
+Test project C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-r5/build-claude-stack-confirm-r5
+      Start  7: viewer_acceptance
+ 1/14 Test  #7: viewer_acceptance ................   Passed   15.98 sec
+      Start  8: thumbnails
+ 2/14 Test  #8: thumbnails .......................   Passed    9.16 sec
+      Start 12: folder_grid
+ 3/14 Test #12: folder_grid ......................***Timeout 400.53 sec
+
+      Start 13: input_ui
+ 4/14 Test #13: input_ui .........................***Timeout 240.11 sec
+
+      Start 23: fs_watch
+ 5/14 Test #23: fs_watch .........................   Passed  124.02 sec
+      Start 24: fs_watch_budget
+ 6/14 Test #24: fs_watch_budget ..................***Timeout 180.10 sec
+
+      Start 25: late_baseline
+ 7/14 Test #25: late_baseline ....................   Passed    5.34 sec
+      Start 26: fs_watch_ui
+ 8/14 Test #26: fs_watch_ui ......................   Passed   14.83 sec
+      Start 31: cache
+ 9/14 Test #31: cache ............................   Passed   10.80 sec
+      Start 34: animation
+10/14 Test #34: animation ........................   Passed    0.64 sec
+      Start 44: tabs_recovery
+11/14 Test #44: tabs_recovery ....................   Passed   84.05 sec
+      Start 47: translation_coverage_ui
+12/14 Test #47: translation_coverage_ui ..........   Passed   37.06 sec
+      Start 49: command_routing
+13/14 Test #49: command_routing ..................   Passed   15.90 sec
+      Start 52: stack_confirm_ui
+14/14 Test #52: stack_confirm_ui .................   Passed  273.63 sec
+
+79% tests passed, 3 tests failed out of 14
+
+Label Time Summary:
+budget       = 955.56 sec*proc (5 tests)
+clipboard    = 640.63 sec*proc (2 tests)
+fast         = 115.17 sec*proc (5 tests)
+native       = 524.55 sec*proc (2 tests)
+process      = 1396.68 sec*proc (12 tests)
+ui           = 982.05 sec*proc (6 tests)
+
+Total Test time (real) = 1412.22 sec
+
+The following tests FAILED:
+	 12 - folder_grid (Timeout)                             budget clipboard native process ui
+	 13 - input_ui (Timeout)                                budget clipboard process ui
+	 24 - fs_watch_budget (Timeout)                         budget process
+Errors while running CTest

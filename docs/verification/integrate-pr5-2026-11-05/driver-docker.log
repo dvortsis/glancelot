@@ -1,0 +1,5 @@
+Waiting: 3 build slots held (claude/stack-confirm-fix pid 50856, review-a1 pid 51332, claude/stack-confirm-fix pid 97688)
+Waiting: 2 build slots held (claude/stack-confirm-fix pid 50856, review-a1 pid 51332)
+Waiting: 1 build slots held (review-a1 pid 51332)
+DOCKER rerun exit 0 1558s
+2820942340

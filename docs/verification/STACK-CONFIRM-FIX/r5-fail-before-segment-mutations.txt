@@ -1,0 +1,11 @@
+exit code: 2
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+FAIL!  : StackConfirmUiTests::aTransferSegmentRefusesAKeyInUse() '!second.create(4096)' returned FALSE. ()
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(311) : failure location
+FAIL!  : StackConfirmUiTests::aTransferSegmentLivesUntilItsLastHandleCloses() '!transferStillExists(key)' returned FALSE. (the memory outlived its last handle)
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(303) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 11ms
+********* Finished testing of StackConfirmUiTests *********

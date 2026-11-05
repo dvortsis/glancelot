@@ -1,0 +1,26 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() tearing down a full 256 MiB transfer took 57887 us
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 0: 79 steps, 23420 ms, mapped 0, private 187 MiB, handles 384, undecoded 0, max GUI gap 63 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 1: 158 steps, 41899 ms, mapped 0, private 187 MiB, handles 358, undecoded 0, max GUI gap 91 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 2: 237 steps, 69531 ms, mapped 0, private 187 MiB, handles 358, undecoded 0, max GUI gap 145 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 3: 316 steps, 107016 ms, mapped 0, private 188 MiB, handles 358, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 4: 395 steps, 144399 ms, mapped 0, private 188 MiB, handles 363, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 5: 474 steps, 183111 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 6: 553 steps, 211353 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 7: 632 steps, 238513 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 8: 711 steps, 262563 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 9: 790 steps, 287953 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 10: 869 steps, 317624 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 11: 948 steps, 344681 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 435 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 12: 1027 steps, 403726 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 718 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 13: 1106 steps, 485287 ms, mapped 0, private 188 MiB, handles 356, undecoded 0, max GUI gap 864 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 14: 1185 steps, 551320 ms, mapped 0, private 156 MiB, handles 356, undecoded 0, max GUI gap 864 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 15: 1264 steps, 583522 ms, mapped 0, private 189 MiB, handles 357, undecoded 0, max GUI gap 864 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() RESULT pace 40: 1264 steps in 583528 ms, undecoded 0, max GUI gap 864 ms, mapped at the end 0
+PASS   : StackConfirmUiTests::slideshowPatternRateRun()
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 589094ms
+********* Finished testing of StackConfirmUiTests *********

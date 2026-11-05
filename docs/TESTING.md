@@ -55,7 +55,7 @@ ctest -N -L budget                       # list the tests a label selects, witho
 `-L` and `-LE` take a regular expression; use `-L '^ui$'` if a future label could contain `ui`.
 
 - **Tests with labels can run in parallel.** Budget tests hold `RESOURCE_LOCK budget` and clipboard tests hold `RESOURCE_LOCK clipboard`, so `ctest -j N` never runs two of either kind at once. Budget tests still compete with everything else running on the machine, so run them serially, or with nothing heavy alongside, when timing matters.
-- **These subsets do not replace the full suite.** Before a handoff, run the full suite (`ctest` with no label), then `scripts/build.ps1 -Test` on Windows. The authoritative gate always runs everything.
+- **These subsets do not replace the full suite.** The PR's hosted `viewer` job and the full gate on the merge head run everything; AGENTS.md (pre-handoff checklist) says who runs what.
 - **When a packet adds a test,** label it in the packet's own `cmake/<Feature>Tests.cmake`, right after its `add_test`. Do not edit `cmake/TestLabels.cmake`.
 
   ```cmake

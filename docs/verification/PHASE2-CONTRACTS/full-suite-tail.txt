@@ -1,0 +1,32 @@
+scripts/build.ps1 -BuildDir build-claude-phase2-contracts -Test, through scripts/build-slot.ps1, on caa6a6a
+Windows 11, MSVC 2022, Qt 6.8.3. Tail of the output, from test 45:
+
+      Start 45: contract_headers
+45/52 Test #45: contract_headers .................   Passed    0.07 sec
+      Start 46: monitor_customization
+46/52 Test #46: monitor_customization ............   Passed    9.16 sec
+      Start 47: monitor_customization_ui
+47/52 Test #47: monitor_customization_ui .........   Passed   32.13 sec
+      Start 48: translation_coverage_ui
+48/52 Test #48: translation_coverage_ui ..........   Passed   25.57 sec
+      Start 49: layout_presets_ui
+49/52 Test #49: layout_presets_ui ................   Passed   40.38 sec
+      Start 50: command_routing
+50/52 Test #50: command_routing ..................   Passed   10.42 sec
+      Start 51: reference_pin
+51/52 Test #51: reference_pin ....................   Passed   42.27 sec
+      Start 52: reference_pin_native
+52/52 Test #52: reference_pin_native .............   Passed   55.09 sec
+
+100% tests passed out of 52
+
+Label Time Summary:
+budget       = 626.29 sec*proc (7 tests)
+clipboard    = 353.87 sec*proc (3 tests)
+fast         = 177.85 sec*proc (30 tests)
+native       = 496.22 sec*proc (11 tests)
+process      = 1013.32 sec*proc (31 tests)
+ui           = 570.43 sec*proc (10 tests)
+
+Total Test time (real) = 1080.81 sec
+script exit: 0

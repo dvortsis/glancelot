@@ -35,12 +35,10 @@
 #include <QKeySequence>
 #include <QProcess>
 #include <QSaveFile>
-#include <QSharedMemory>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QThreadPool>
 #include <QUrl>
-#include <QUuid>
 #include <QCoreApplication>
 #include <algorithm>
 #include <functional>
@@ -54,6 +52,7 @@
 #endif
 #include <windows.h>
 #endif
+#include "transfer_segment.hpp"
 
 using namespace glancelot;
 namespace {
@@ -101,6 +100,8 @@ QString sortKeyName(glancelot::SortKey key) {
     case glancelot::SortKey::Modified: return "modified";
     case glancelot::SortKey::Size: return "size";
     case glancelot::SortKey::Shuffle: return "shuffle";
+    case glancelot::SortKey::Captured: return "captured";
+    case glancelot::SortKey::Dimensions: return "dimensions";
     default: return "name";
     }
 }
@@ -153,7 +154,7 @@ struct ViewerController::Private {
     std::optional<fs_watch::ControllerTestHooks> testHooks=fs_watch::controllerTestHooks?
         std::optional{*fs_watch::controllerTestHooks}:std::nullopt;
 #endif
-    std::unique_ptr<QSharedMemory> transfer;
+    std::unique_ptr<glancelot::detail::TransferSegment> transfer;
     qint64 admittedPixelBytes{};
     QByteArray output;
     glancelot::detail::DecodeCache cache;
@@ -166,6 +167,7 @@ struct ViewerController::Private {
     std::stop_source completionStop;
     quint64 completionGeneration{};
     bool navigationBusy{}, navigationReady{};
+    bool navigationSettling{}; // a finished job's result is being applied (its destination is handed to open() before this clears)
     std::deque<std::pair<int,bool>> navigationIntents;
     bool navigationOpen{},cacheReuseAllowed{};
     std::optional<NavigationJob> pendingNavigation;
@@ -270,7 +272,7 @@ struct ViewerController::Private {
     quint64 lookaheadGeneration{};
     QString lookaheadCandidate;
     QProcess* prefetchWorker{nullptr};
-    std::unique_ptr<QSharedMemory> prefetchTransfer;
+    std::unique_ptr<glancelot::detail::TransferSegment> prefetchTransfer;
     qint64 prefetchAdmittedBytes{};
     QByteArray prefetchOutput;
     QTimer prefetchDeadline;
@@ -489,7 +491,17 @@ struct ViewerController::Private {
         QObject::connect(q,&ViewerController::stateChanged,q,[this]{ if(tabList.size()>1) emit q->tabsChanged(); });
     }
     ~Private() {
-        monitor.reset();writePosition(true);navigationStop.request_stop();cancel();
+        monitor.reset();writePosition(true);navigationStop.request_stop();
+#ifndef Q_OS_WIN
+        // A killed worker's segment is released when it has stopped (retireIoProcess). The event loop that would see that is
+        // ending, so wait a moment here: a segment nobody removes outlives every process. Windows needs no wait: closing the
+        // last handle is enough, and the system does that for both processes.
+        const QPointer<QProcess> retiring[]{worker,prefetchWorker};
+        cancel();
+        for(const auto& process:retiring)if(process)process->waitForFinished(1000);
+#else
+        cancel();
+#endif
         // A blocked filesystem call cannot honor cancellation. Jobs own only by-value
         // captures, so a stalled thread can be abandoned rather than freezing window close.
         if(navigationPool->waitForDone(1000))delete navigationPool;
@@ -659,7 +671,8 @@ struct ViewerController::Private {
         pendingLookahead.reset();prefetchDeadline.stop();
         lookaheadCandidate.clear();
         if (prefetchWorker) {
-            glancelot::detail::retireIoProcess(std::exchange(prefetchWorker,nullptr),std::move(prefetchLease),q,[this]{notifyIoStatsChanged();});
+            glancelot::detail::retireIoProcess(std::exchange(prefetchWorker,nullptr),std::move(prefetchLease),q,[this]{notifyIoStatsChanged();},
+                std::shared_ptr<glancelot::detail::TransferSegment>(std::move(prefetchTransfer)));
         }
         else prefetchLease.reset();
         prefetchTransfer.reset();
@@ -680,7 +693,7 @@ struct ViewerController::Private {
             glancelot::detail::retireIoProcess(std::exchange(worker,nullptr),std::move(decodeLease),q,[this,retiredGeneration]{
                 notifyIoStatsChanged();
                 if(retiredGeneration==generation&&!loading&&imageReady&&navigationReady)scheduleLookahead();
-            });
+            },std::shared_ptr<glancelot::detail::TransferSegment>(std::move(transfer)));
         }
         else decodeLease.reset();
         transfer.reset(); admittedPixelBytes=0; output.clear();
@@ -733,7 +746,7 @@ struct ViewerController::Private {
                         cancelLookahead(); return;
                     }
                     prefetchLease=std::move(admission);notifyIoStatsChanged();
-                    prefetchTransfer = std::make_unique<QSharedMemory>("Glancelot-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
+                    prefetchTransfer = std::make_unique<glancelot::detail::TransferSegment>(glancelot::detail::newTransferKey());
                     if (!prefetchTransfer->create(bytes)) { cancelLookahead(); return; }
                     prefetchAdmittedBytes = bytes;
                     process->write(QJsonDocument(QJsonObject{{"key", prefetchTransfer->key()}}).toJson(QJsonDocument::Compact) + '\n');
@@ -746,10 +759,9 @@ struct ViewerController::Private {
                     if (!prefetchTransfer || width <= 0 || height <= 0 || width > 32768 || height > 32768 || stride != width * 4 || qint64(stride) * height != prefetchAdmittedBytes || prefetchAdmittedBytes > prefetchTransfer->size()) {
                         cancelLookahead(); return;
                     }
-                    if (!prefetchTransfer->lock()) { cancelLookahead(); return; }
+                    // The worker finished writing before it sent this message, so there is nothing to lock (see transfer_segment.hpp).
                     QImage result(static_cast<const uchar*>(prefetchTransfer->constData()), width, height, stride, QImage::Format_RGBA8888);
                     QImage owned = result.copy();
-                    prefetchTransfer->unlock();
                     if (!owned.isNull()) {
                         owned.setColorSpace(QColorSpace::SRgb);
                         if (cache.insert(key, std::move(owned), *source)) notifyCacheChanged();
@@ -1025,7 +1037,7 @@ struct ViewerController::Private {
                         fail("Storage admission limit exceeded."); return;
                     }
                     decodeLease=std::move(admission);notifyIoStatsChanged();
-                    transfer=std::make_unique<QSharedMemory>("Glancelot-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+                    transfer=std::make_unique<glancelot::detail::TransferSegment>(glancelot::detail::newTransferKey());
                     if (!transfer->create(bytes)) { fail("Cannot reserve the image transfer buffer: "+transfer->errorString()); return; }
                     admittedPixelBytes=bytes;
                     process->write(QJsonDocument(QJsonObject{{"key",transfer->key()}}).toJson(QJsonDocument::Compact)+'\n');
@@ -1034,9 +1046,9 @@ struct ViewerController::Private {
                     if(!source){fail("Invalid decoded source revision.");return;}
                     const int width=message.value("width").toInt(),height=message.value("height").toInt(),stride=message.value("stride").toInt();
                     if (!transfer || width<=0 || height<=0 || width>32768 || height>32768 || stride!=width*4 || qint64(stride)*height!=admittedPixelBytes || admittedPixelBytes>transfer->size()) { fail("Decoder returned invalid image geometry."); return; }
-                    if (!transfer->lock()) { fail("Cannot read decoded pixels."); return; }
+                    // The worker finished writing before it sent this message, so there is nothing to lock (see transfer_segment.hpp).
                     QImage result(static_cast<const uchar*>(transfer->constData()),width,height,stride,QImage::Format_RGBA8888);
-                    QImage owned=result.copy(); transfer->unlock();
+                    QImage owned=result.copy();
                     if (owned.isNull()) { fail("Cannot allocate the current image."); return; }
                     image=std::move(owned);
                     image.setColorSpace(QColorSpace::SRgb);
@@ -1085,7 +1097,7 @@ struct ViewerController::Private {
         const QString emptyMessage=job.emptyMessage;
         QObject::connect(future,&QFutureWatcher<NavigationResult>::finished,q,[this,future,token,sequence,scanJob,emptyMessage]{
             trace("navigation:finished");
-            auto result=future->result(); future->deleteLater(); navigationBusy=false;
+            auto result=future->result(); future->deleteLater(); navigationBusy=false; navigationSettling=true;
             if (token==generation && sequence==navigationGeneration) {
                 if(result.directoryVisit) {
                     directoryPending=false;
@@ -1137,6 +1149,7 @@ struct ViewerController::Private {
             }
             if(!navigationBusy && pendingNavigation) { auto pending=std::move(*pendingNavigation); pendingNavigation.reset(); submitNavigation(std::move(pending)); }
             if(!navigationBusy)reconcileObservation();
+            navigationSettling=false; emit q->stateChanged(); // the step has settled (R3-B1): the UI may now read a boundary from an unchanged filePath
         });
         future->setFuture(QtConcurrent::run(navigationPool,[work=std::move(job.work),sequence]() mutable { glancelot::perf::detail::GenerationContext context(sequence); return work(); }));
     }
@@ -1536,6 +1549,7 @@ bool ViewerController::openTerminal(const QString& directory) {
 QString ViewerController::status() const{return d->safeMode?QStringLiteral("Safe mode · ")+d->status:d->status;}
 bool ViewerController::loading() const{return d->loading;}
 bool ViewerController::imageReady() const{return d->imageReady;}
+bool ViewerController::navigating() const{return d->navigationBusy||d->navigationSettling||d->pendingNavigation.has_value()||!d->navigationIntents.empty();}
 bool ViewerController::isCurrentImage(const QString& path) const {
     auto key=[](const QString& value){
         auto clean=QDir::cleanPath(QDir::fromNativeSeparators(value));
@@ -1692,6 +1706,7 @@ void ViewerController::open(const QString& value){
         const QString oldDir = directory();
         const QString newDir = QFileInfo(path).absolutePath();
         if (!oldDir.isEmpty() && !newDir.isEmpty() && QDir(oldDir) != QDir(newDir)) {
+            emit viewCommand(QStringLiteral("explicit-navigation")); // R4-N3, see the slideshow block in Main.qml
             if (!d->filter.isPersistent() && d->filter.isActive()) {
                 d->filter.clear();
                 emit filterChanged();
@@ -1825,6 +1840,7 @@ void ViewerController::cancelDirectoryNavigation() {
 }
 void ViewerController::navigateDirectory(const QString& value) {
     d->explicitPositionIntent=true;d->restorePending=false;d->noteUserMove();
+    emit viewCommand(QStringLiteral("explicit-navigation")); // R4-N3, see the slideshow block in Main.qml
     d->navigationIntents.clear();
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     const auto cancellation=d->navigationStop.get_token();
@@ -1880,6 +1896,7 @@ void ViewerController::openFolder(const QString& value){
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(value.trimmed().isEmpty()||folder.isEmpty())return;
+    emit viewCommand(QStringLiteral("explicit-navigation")); // R4-N3, see the slideshow block in Main.qml
     d->navigationIntents.clear();
     // Newest folder request wins: stop whatever search or step is still running and start from a fresh token.
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};

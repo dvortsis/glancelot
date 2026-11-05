@@ -1,0 +1,53 @@
+PHASE2-CONTRACTS fail-before evidence. Each section breaks one thing, builds the named target and records the result; the file is then restored.
+=== natural-order branch removed from sortBefore (the only behaviour line in this packet)
+mutation: src/core/navigation.cpp : 'if (sort.key == SortKey::Captured || sort.key == SortKey::Dimensions) return naturalLess(a, b);' -> ''
+build exit code: 0
+test exit code: 1
+FAIL captured ascending: natural name wins over a smaller size
+FAIL captured ascending: the comparison is antisymmetric
+FAIL captured descending: natural, not lexical
+FAIL dimensions ascending: natural name wins over a smaller size
+FAIL dimensions ascending: the comparison is antisymmetric
+FAIL dimensions descending: natural, not lexical
+FAIL listDirectory keeps natural order
+FAIL listDirectory keeps natural order
+
+=== SortKey renumbered
+mutation: include/glancelot/navigation.hpp : 'Shuffle, Captured, Dimensions };' -> 'Captured, Shuffle, Dimensions };'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(22): error C2607: static assertion failed
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(23): error C2607: static assertion failed
+
+=== tier ladder reversed
+mutation: include/glancelot/contracts.hpp : 'tier == DecodeTier::Preview ? 1 : tier == DecodeTier::Fit ? 2' -> 'tier == DecodeTier::Preview ? 2 : tier == DecodeTier::Fit ? 1'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(29): error C2607: static assertion failed
+
+=== G-5: a container session claims full support
+mutation: include/glancelot/capability_model.hpp : 'if (facts.containerDeployment || !facts.canPosition) return Support::Partial;' -> 'if (!facts.canPosition) return Support::Partial;'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(69): error C2607: static assertion failed
+
+=== journal: batch rename may run without a journal
+mutation: include/glancelot/operation_journal.hpp : ' || kind == Kind::BatchRename;' -> ';'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/tests/contract_headers_tests.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\tests\contract_headers_tests.cpp(55): error C2607: static assertion failed
+
+=== header no longer self-contained
+mutation: include/glancelot/operation_journal.hpp : '#include "file_operations.hpp" // FileIdentity, TargetKind' -> ''
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_tests.dir/contract_headers/operation_journal_selfcontained.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\include\glancelot/operation_journal.hpp(49): error C2039: 'TargetKind': is not a member of 'glancelot'
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\include\glancelot/operation_journal.hpp(49): error C3646: 'kind': unknown override specifier
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\include\glancelot/operation_journal.hpp(49): error C2059: syntax error: '{'
+
+=== moc: a property with a READ function that does not exist
+mutation: include/glancelot/capability_model.hpp : 'Q_PROPERTY(QString referenceWindow READ referenceWindow NOTIFY sectionChanged)' -> 'Q_PROPERTY(QString referenceWindow READ referenceWindowMissing NOTIFY sectionChanged)'
+build exit code: 2
+FAILED: [code=2] CMakeFiles/contract_headers_moc.dir/include/glancelot/moc_capability_model.cpp.obj
+C:\src\Github\Glancelot\.claude\worktrees\recursing-bassi-58ba22\build-claude-phase2-contracts\include\glancelot\moc_capability_model.cpp(184): error C2039: 'referenceWindowMissing': is not a member of 'glancelot::CapabilityModel'
+

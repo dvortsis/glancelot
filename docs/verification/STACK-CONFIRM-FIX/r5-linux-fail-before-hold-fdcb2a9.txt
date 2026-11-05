@@ -1,0 +1,30 @@
+4
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+PASS   : StackConfirmUiTests::initTestCase()
+PASS   : StackConfirmUiTests::aTransferSegmentLivesUntilItsLastHandleCloses()
+PASS   : StackConfirmUiTests::aTransferSegmentRefusesAKeyInUse()
+PASS   : StackConfirmUiTests::aTransferSegmentReportsFailures()
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching)
+FAIL!  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) Compared values are not the same
+   Actual   (systemSegments(bytes) - systemBefore): 13
+   Expected (0)                                   : 0
+   Loc: [/home/dvort/gl-cs/tests/stack_confirm_ui_tests.cpp(389)]
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(killed by the viewer while holding the lock)
+FAIL!  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) Compared values are not the same
+   Actual   (systemSegments(bytes) - systemBefore): 3
+   Expected (0)                                   : 0
+   Loc: [/home/dvort/gl-cs/tests/stack_confirm_ui_tests.cpp(389)]
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 7 passed, 2 failed, 0 skipped, 0 blacklisted, 115743ms
+********* Finished testing of StackConfirmUiTests *********
+0x51404d30 33         dvort      600        12000000   0                       
+0x5140d700 34         dvort      600        12000000   0                       
+0x51404e18 35         dvort      600        12000000   0                       
+0x51404e67 36         dvort      600        12000000   0                       
+0x51404d4e 37         dvort      600        12000000   0                       
+0x51404e90 38         dvort      600        12000000   0                       
+0x5140a70b 39         dvort      600        12000000   0                       
+
+
+[exited with code 0]

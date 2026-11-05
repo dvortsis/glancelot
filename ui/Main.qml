@@ -642,24 +642,88 @@ ApplicationWindow {
     // folder boundary mode (a stop boundary ends it) and ends on any manual navigation, Escape, a modal or focus loss.
     property bool slideshowOn: false
     property int slideshowSeconds: 5
-    property int slideshowLastIndex: -1
+    property int slideshowTabs: 1
+    // A photo that cannot be shown (undecodable, or gone since the listing) counts as shown: its failure stays in the
+    // status bar for a moment and the slideshow steps on. After this many such photos in a row (or a whole pass of a
+    // short folder) nothing is playable, so it stops with a notice instead of cycling through errors forever. Five is
+    // enough to ride out a run of damaged files without making a hopeless folder spin for minutes at slow paces.
+    readonly property int slideshowFailureLimit: 5
+    property int slideshowFailures: 0
+    // Manual navigation ends the slideshow: another tab, or another folder that its own step did not cross into.
+    property string slideshowDirectory: ""
+    property int slideshowTab: 0
+    property string slideshowStepFrom: "" // the photo a step left; non-empty from the request until the step has settled
+    property bool slideshowLanding: false // a step landed and its photo has not shown yet; the pace counts from when it does
     function startSlideshow() {
         if (viewer.fileCount < 2 || gridMode) return
-        slideshowLastIndex = -1; slideshowOn = true; slideshowTimer.restart(); wakeHud()
+        slideshowFailures = 0; slideshowStepFrom = ""; slideshowLanding = false
+        slideshowDirectory = viewer.directory; slideshowTab = viewer.activeTab; slideshowTabs = Math.max(1, viewer.tabs.length)
+        slideshowOn = true; slideshowTimer.restart(); wakeHud()
     }
-    function stopSlideshow() { slideshowOn = false; slideshowTimer.stop() }
+    function stopSlideshow() { slideshowOn = false; slideshowTimer.stop(); slideshowSkipTimer.stop() }
     function setSlideshowSeconds(seconds) { slideshowSeconds = Math.max(1, Math.min(60, seconds)); if (slideshowOn) slideshowTimer.restart() }
+    function slideshowStep() {
+        // A step of its own that is still running (listing a big folder, walking many folders) is not a dead end: wait for it.
+        if (!slideshowOn || viewer.loading || viewer.navigating || app.modalOpen) return
+        // No folder-size check here: under "continue" the slideshow legitimately passes through folders with one photo.
+        // The failure bound is flat under "continue" and "stop" (it must not depend on the folder the step landed in) and
+        // is one full pass of a short folder only when the slideshow loops that folder.
+        const failureBound = viewer.boundaryMode === "loop" ? Math.max(2, Math.min(slideshowFailureLimit, viewer.fileCount)) : slideshowFailureLimit
+        if (viewer.imageReady) slideshowFailures = 0
+        else if (++slideshowFailures >= failureBound) {
+            stopSlideshow()
+            deleteFlow.showNotice(qsTr("Slideshow stopped: the last %1 photos could not be opened.").arg(slideshowFailures))
+            return
+        }
+        const from = viewer.filePath
+        viewer.next()
+        slideshowStepFrom = from // set once the step is requested, so no observation in between reads it as settled
+    }
+    function slideshowObserve() {
+        if (!slideshowOn) return
+        // A change of the active tab is navigation; closing some other tab only renumbers it (the tab count drops).
+        const tabs = Math.max(1, viewer.tabs.length)
+        if (viewer.activeTab !== slideshowTab) {
+            if (tabs < slideshowTabs) slideshowTab = viewer.activeTab
+            else { stopSlideshow(); return }
+        }
+        slideshowTabs = tabs
+        if (viewer.directory !== slideshowDirectory) {
+            if (!slideshowStepFrom.length) { stopSlideshow(); return } // not the slideshow's own step across a folder boundary
+            slideshowDirectory = viewer.directory
+        }
+        // The step has settled (the controller says so): if the photo is still the one it left, it went nowhere, a true
+        // boundary, and the slideshow ends. By path, not index: a step from the only photo of one folder to the only photo of
+        // the next lands on the same index. Otherwise the step landed and the next one may follow.
+        if (slideshowStepFrom.length && !viewer.navigating) {
+            if (viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }
+            slideshowStepFrom = ""; slideshowLanding = true
+        }
+        // Each photo gets the full pace, counted from when it shows (or failed), however long its step took.
+        if (slideshowLanding && !viewer.loading && !viewer.navigating) { slideshowLanding = false; slideshowTimer.restart() }
+        // A settled failure is not waiting for anything: step on shortly instead of holding the error for a whole interval.
+        if (!viewer.loading && !viewer.navigating && !viewer.imageReady && slideshowStepFrom.length === 0) slideshowSkipTimer.start()
+    }
+    Connections {
+        target: viewer
+        function onStateChanged() { app.slideshowObserve() }
+        function onTabsChanged() { app.slideshowObserve() }
+        // The controller announces a folder opened by hand. Only needed while the slideshow's own step runs: then the directory
+        // change that follows cannot be told from that step's own. At any other time slideshowObserve sees it.
+        function onViewCommand(id) { if (id === "explicit-navigation" && app.slideshowStepFrom.length) app.stopSlideshow() }
+    }
     Timer {
         id: slideshowTimer
         objectName: "slideshowTimer"
         interval: app.slideshowSeconds * 1000
         repeat: true
-        onTriggered: {
-            if (!viewer.imageReady || viewer.loading || app.modalOpen) return
-            if (app.slideshowLastIndex === viewer.currentIndex) { app.stopSlideshow(); return } // the last step went nowhere: a boundary
-            app.slideshowLastIndex = viewer.currentIndex
-            viewer.next()
-        }
+        onTriggered: if (!slideshowSkipTimer.running) app.slideshowStep()
+    }
+    Timer {
+        id: slideshowSkipTimer
+        objectName: "slideshowSkipTimer"
+        interval: Math.min(app.slideshowSeconds * 1000, 1200)
+        onTriggered: { app.slideshowStep(); if (app.slideshowOn) slideshowTimer.restart() }
     }
     function fuzzyMatch(text, query) {
         text = text.toLowerCase(); query = query.toLowerCase()
@@ -1674,7 +1738,8 @@ ApplicationWindow {
         // controls and a minimum title (the frameless drag target) always keep their room. Yield order: the lock
         // label first, then "Show frame", then Sort. Implicit widths do not depend on visibility, so no binding loop.
         readonly property bool horizontalBar: barGridtopbar.columns !== 1
-        readonly property real titleMinimum: 72
+        // With folder tabs the strip needs room for one elided tab, its close button and New tab (N-5), so Sort yields sooner.
+        readonly property real titleMinimum: viewer.tabs.length > 1 ? Theme.controlHeight * 5 + 2 * barGridtopbar.columnSpacing : 72
         readonly property real modeSpace: {
             const gap = barGridtopbar.columnSpacing
             let need = 2 * Theme.gapMd + brandMark.Layout.preferredWidth + brandMark.Layout.rightMargin + gap
@@ -1836,31 +1901,83 @@ ApplicationWindow {
                 visible: viewer.tabs.length > 1
                 Layout.fillWidth: visible
                 Layout.preferredHeight: Theme.controlHeight
+                Layout.preferredWidth: Theme.controlHeight * 5 // the strip takes the room left over; its content never sets the bar's width
                 Layout.minimumWidth: 0
                 clip: true
                 contentWidth: tabRow.childrenRect.width
+                rightMargin: interactive ? tabCap + Theme.controlHeight : 0 // room to end on a tab boundary
                 interactive: contentWidth > width
                 boundsBehavior: Flickable.StopAtBounds
                 flickableDirection: Flickable.HorizontalFlick
                 Accessible.role: Accessible.PageTabList
                 Accessible.name: qsTr("Folder tabs")
+                // N-5: a tab never takes more than this much of the strip (long folder names elide, the full name is the
+                // tooltip and accessible name), the strip scrolls when the tabs still do not fit, and the active tab with
+                // its close button is always scrolled into view. The New tab button sits outside the scrolling part.
+                // A tab plus its close button always fits the strip, down to the narrowest window (R3-N1).
+                readonly property real tabCap: Math.max(Theme.controlHeight * 1.5, Math.min(Math.max(Theme.controlHeight * 3, Math.min(Theme.controlHeight * 6, Math.floor(width / 2) - Theme.controlHeight)), width - Theme.controlHeight))
+                function reveal(item) {
+                    if (!item || width <= 0) return
+                    const left = item.x, right = item.x + item.width
+                    if (left < contentX) contentX = Math.max(0, left)
+                    else if (right > contentX + width) {
+                        // Scroll no further than needed, then on to the next tab boundary so no tab shows as a clipped sliver
+                        // at the left edge (the margin below leaves room for that last step).
+                        let target = right - width
+                        for (let i = 0; i < tabRepeater.count; ++i) {
+                            const tab = tabRepeater.itemAt(i)
+                            if (tab && tab.x >= target - 0.5) { target = tab.x; break }
+                        }
+                        target = Math.min(target, item.x) // never past the active tab itself (a row wider than the strip starts at its own left edge)
+                        contentX = Math.min(Math.max(0, target), Math.max(0, contentWidth + rightMargin - width))
+                    }
+                }
+                function revealActive() { reveal(tabRepeater.itemAt(viewer.activeTab)) }
+                onWidthChanged: Qt.callLater(revealActive)
+                onContentWidthChanged: Qt.callLater(revealActive)
+                Connections { target: viewer; function onTabsChanged() { Qt.callLater(tabStrip.revealActive) } }
+                WheelHandler { // a wheel over the strip scrolls it sideways
+                    target: null
+                    enabled: tabStrip.interactive
+                    onWheel: event => tabStrip.contentX = Math.max(0, Math.min(tabStrip.contentWidth + tabStrip.rightMargin - tabStrip.width, tabStrip.contentX - (event.angleDelta.x || event.angleDelta.y)))
+                }
                 Row {
                     id: tabRow
                     spacing: Theme.gapXxs
                     Repeater {
+                        id: tabRepeater
                         model: viewer.tabs
                         delegate: Row {
                             required property var modelData
                             required property int index
                             spacing: 0
                             UiButton {
+                                id: tabButton
                                 objectName: "tab-" + index
                                 text: modelData.title
+                                width: Math.min(implicitWidth, tabStrip.tabCap)
+                                // The label elides inside the capped width (a layout would not shrink it); the natural width
+                                // still comes from the text, so a short name keeps a short tab.
+                                contentItem: Item {
+                                    implicitWidth: tabLabel.implicitWidth
+                                    implicitHeight: tabLabel.implicitHeight
+                                    Label {
+                                        id: tabLabel
+                                        anchors.fill: parent
+                                        text: tabButton.text
+                                        font: tabButton.font
+                                        color: tabButton.foreground
+                                        elide: Text.ElideRight
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
                                 selected: modelData.active
                                 tip: modelData.folder
                                 Accessible.role: Accessible.PageTab
                                 Accessible.name: modelData.active ? qsTr("%1, selected").arg(modelData.title) : modelData.title
                                 onClicked: viewer.activateTab(index)
+                                onActiveFocusChanged: if (activeFocus) tabStrip.reveal(parent)
                             }
                             UiButton {
                                 objectName: "tabClose-" + index
@@ -1868,11 +1985,19 @@ ApplicationWindow {
                                 iconOnly: true
                                 text: qsTr("Close tab %1").arg(modelData.title)
                                 onClicked: viewer.closeTab(index)
+                                onActiveFocusChanged: if (activeFocus) tabStrip.reveal(parent)
                             }
                         }
                     }
-                    UiButton { objectName: "tabNew"; iconOnly: true; iconName: "folder-open"; text: qsTr("New tab"); onClicked: viewer.newTab() }
                 }
+            }
+            UiButton { // outside the scrolling strip so it is never pushed out of view
+                objectName: "tabNew"
+                visible: viewer.tabs.length > 1
+                iconOnly: true
+                iconName: "folder-open"
+                text: qsTr("New tab")
+                onClicked: viewer.newTab()
             }
             Label {
                 objectName: "topBarTitle"
