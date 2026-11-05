@@ -29,6 +29,7 @@ The three-lane model (Claude, Codex, Gemini) is retired; docs/AGENT-LANES-PLAN.m
 
 - The lead names, per integration cycle, which packet may edit `ui/Main.qml` and `src/app/viewer_controller.{cpp,hpp}`, and which region of them (the current cycle's grants are in its cycle document under docs/handoff/). Everyone else adds a component file or a library class under `src/app/` with a thin call site, and the lead resolves the include or instantiation line.
 - New commands go in a per-task block of `src/app/command_registry.cpp`; edit only your own block.
+- A command is handled in the component that owns it, in that component's `Connections { target: viewer }` handler (EN-07). `ui/Main.qml` keeps `invoke`, scope routing and canvas and window commands. Main's own `viewCommand` connection is declared last so the loupe ends before a component's handler runs (`loupeEndsBeforeAMovedHandlerActs`). A handler in a `Loader` item or a dynamically created object connects later and would run before the loupe ends, so a command whose owner loads lazily is handled on the `Loader` in `Main.qml`, as `export-selection` is.
 - New UI tests go in a new per-feature test file (`tests/<feature>_ui_tests.cpp`), never `tests/grid_ui_tests.cpp`. New test targets go in a lead-provided `cmake/<Feature>Tests.cmake`.
 - Track ownership of other files is in docs/handoff/LEAD-PLAN-2026-10-22.md, section 2.
 
@@ -80,6 +81,7 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 **Keeping PRs from colliding**
 
 - Keep PRs to about 1,500 changed lines where practical (docs and generated catalogs do not count). The lead splits a packet estimated over about 3,000 lines before it starts. `guard` fails a larger PR unless its body has a `Large PR: <reason>` line.
+- An integration batch carries only PRs whose own `guard` passed, and the lead's own commits on a batch branch use the Conventional Commits format, because `guard` doesn't check a batch's commit subjects (docs/RELEASING.md).
 - Integration is serial, because the full gate is. The lead batches 2-4 approved packets into `lead/integrate-<n>` (or merges `main` into one reviewed branch), opens a PR, has the tester gate that exact head, posts `fresh-review` naming the packet reviews, and merges. A packet PR whose commits land this way closes as merged. A failing packet is pulled from the batch and returned. Evidence, queue updates and the review documents from `claude/review-*` follow in a `lead/` bookkeeping PR; review branches are never merged themselves.
 - A reviewed PR that keeps needing `main` goes into the lead's landing lane: the lead merges `main` into it and lands it next.
 - Push once per round of fixes. Each push cancels and restarts that PR's CI.
