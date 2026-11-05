@@ -53,6 +53,10 @@ Only one full `scripts/build.ps1 -Test` or `docker build` runs on this machine a
 - Run Docker and any older worktree's build through the main checkout's script, in one PowerShell process: `& C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch <branch> -Run { <command> }`. Check it with `-Status`.
 - Targeted `ctest -R` runs need only a build slot, not the gate lock, except budget tests and measurements that need a quiet machine, which take the gate lock. Do not run `folder_grid`, `fs_watch_budget` or clipboard UI tests while a gate holds the lock. Run nothing heavy on this machine while the runner is gating.
 
+## Commit messages (user decision, November 5, 2026)
+
+Every commit subject is a Conventional Commit: `type(scope): imperative description` (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`; `!` or a `BREAKING CHANGE:` footer for breaking changes). Put the task or role in the scope (`fix(b3-export): ...`, `docs(lead): ...`), not as a prefix (`B3:`, `LEAD:`). Enable the hook once per clone: `git config core.hooksPath .githooks`. Past commits are not rewritten. Details: docs/decisions/2026-11-05-conventional-commits.md.
+
 ## Pull requests and merging (user decision, November 4, 2026)
 
 Branch protection on `main` enforces the first rule and the `ci-ok` check for everyone, administrators included. The rest are rules for every session. Background: docs/decisions/2026-11-04-merge-protections.md.
