@@ -269,6 +269,23 @@ private slots:
         QCOMPARE(resets.count(), 0);
         QCOMPARE(f.h->fileGrid.cursorRow(), -1); // browsing with the wheel did not grow a cursor
     }
+    // The view learns its new height in a frame. On a busy machine no frame runs between the last rows and the definitive
+    // order, and placing the anchor against the old height left the view far above it. A hidden window has no frames.
+    void definitiveOrderBeforeAnyFrameKeepsTheVisibleRow() {
+        ArrivalFixture f; QVERIFY(f.start());
+        QMetaObject::invokeMethod(f.view(), "movementStarted");
+        const int columns = f.h->window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
+        f.view()->setProperty("contentY", f.view()->property("originY").toReal() + f.view()->property("cellHeight").toReal() * (900 / columns));
+        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
+        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
+        f.h->window->hide();
+        f.folder.release();
+        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall); // the placement waiting behind the definitive order
+        f.h->window->show();
+        const auto anchored = [&] { const int top = f.rowAtViewTop(), row = f.h->fileGrid.rowOf(anchor); return top >= 0 && row / columns == top / columns; };
+        QTRY_VERIFY_WITH_TIMEOUT(anchored(), 10000);
+    }
 };
 QTEST_MAIN(PerfEnumUiTests)
 #include "perf_enum_ui_tests.moc"
