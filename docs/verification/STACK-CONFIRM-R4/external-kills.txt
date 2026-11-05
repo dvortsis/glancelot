@@ -1,0 +1,9 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QINFO  : probeRealRaceRate() pass 0: 79 steps, 33111 ms, stuck 0, leaked 0, undecoded 28, max GUI gap 440 ms
+QINFO  : probeRealRaceRate() RESULT pace 100: 79 steps in 34779 ms, stuck teardowns 0, leaked 0, undecoded 28, max GUI gap 440 ms
+PASS   : probeRealRaceRate()
+PASS   : cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 35025ms
+********* Finished testing of StackConfirmUiTests *********
+--- killer: killed 33 decoder processes

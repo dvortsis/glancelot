@@ -1,0 +1,7 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QINFO  : probeManualFolderChangeDuringOwnStep() RESULT after a manual folder open during its own step: dir C:/Users/dvort/AppData/Local/Temp/stack_confirm_ui_tests-uLjZZV/z slideshowOn 1
+PASS   : probeManualFolderChangeDuringOwnStep()
+PASS   : cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 3675ms
+********* Finished testing of StackConfirmUiTests *********

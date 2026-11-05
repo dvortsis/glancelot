@@ -1,0 +1,14 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QINFO  : probeRealRaceRate(fast) 250 steps, 131334 ms, stuck 0, leaked 0, failed 0, max GUI gap 41 ms
+QINFO  : probeRealRaceRate(fast) 500 steps, 250356 ms, stuck 0, leaked 0, failed 0, max GUI gap 41 ms
+QINFO  : probeRealRaceRate(fast) 750 steps, 377657 ms, stuck 0, leaked 0, failed 0, max GUI gap 41 ms
+QINFO  : probeRealRaceRate(fast) 1000 steps, 498402 ms, stuck 0, leaked 0, failed 0, max GUI gap 92 ms
+QINFO  : probeRealRaceRate(fast) 1250 steps, 618430 ms, stuck 0, leaked 0, failed 0, max GUI gap 92 ms
+QINFO  : probeRealRaceRate(fast) 1500 steps, 733366 ms, stuck 0, leaked 0, failed 0, max GUI gap 92 ms
+QINFO  : probeRealRaceRate(fast) 1750 steps, 850117 ms, stuck 0, leaked 0, failed 0, max GUI gap 92 ms
+WARNING: probeRealRaceRate(fast) Maximum amount of warnings exceeded. Use -maxwarnings to override.
+QFATAL : probeRealRaceRate(fast) Test function timed out
+FAIL!  : probeRealRaceRate(fast) Received a fatal error.
+Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 1500012ms
+********* Finished testing of StackConfirmUiTests *********

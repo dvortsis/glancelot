@@ -1,0 +1,27 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+PASS   : slideshowSkipsAnUndecodablePhoto()
+PASS   : slideshowStopsAfterAnUnplayableRun()
+PASS   : slideshowKeepsGoingAcrossAFolderBoundary()
+PASS   : slideshowPassesABadPhotoPromptlyAtASlowPace()
+PASS   : slideshowPassesThroughAOnePhotoFolder()
+PASS   : slideshowSurvivesClosingAnotherTab()
+PASS   : destroyingASegmentWaitsForTheLockOfADeadWorker()
+PASS   : theReaperNeverBlocksTheCallerOnAHeldLock()
+QWARN  : blockedTeardownsAreBounded() Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : blockedTeardownsAreBounded() Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : blockedTeardownsAreBounded() Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+PASS   : blockedTeardownsAreBounded()
+PASS   : navigatingSpansAStep()
+PASS   : slideshowWaitsForASlowFolderStep(1 s pace)
+PASS   : slideshowWaitsForASlowFolderStep(5 s pace)
+PASS   : slideshowPassesAnUndecodableLoneFolderPhoto()
+PASS   : slideshowEndsOnTabSwitchAndFolderOpen()
+PASS   : detailsToggleKeepsTheVisibleAnchor()
+PASS   : typeChipsWorkFromTheKeyboard()
+PASS   : typeChipsMoveWithTheArrowKeys()
+PASS   : tabStripWheelRespectsTheMargin()
+PASS   : longTabNamesKeepTheActiveTabInView()
+PASS   : cleanupTestCase()
+Totals: 21 passed, 0 failed, 0 skipped, 0 blacklisted, 124390ms
+********* Finished testing of StackConfirmUiTests *********

@@ -1,0 +1,24 @@
+legacy default key type 81 (0x51 SystemV, 0x100 Posix)
+native key "/tmp/qipc_sharedmemory_Glancelotrdcafdaebaefa4cfdf8eb6d05d3ca2ca8a259ff2de6c02b3d1367"
+child exit QProcess::CrashExit 9
+destructor returned: true after ms 10
+exit 0
+legacy default key type 81 (0x51 SystemV, 0x100 Posix)
+native key "/tmp/qipc_sharedmemory_Glancelotrcfbffbadbf9165832dcb33fffce2eb62ccfb36a042dbe9c102"
+child exit QProcess::CrashExit 9
+destructor returned: true after ms 10
+exit 0
+legacy default key type 81 (0x51 SystemV, 0x100 Posix)
+native key "/tmp/qipc_sharedmemory_Glancelotrbfbeeabfaafdfdff5ff9212c1ac232703463cf3d70fbb6fb106b7"
+child exit QProcess::CrashExit 9
+destructor returned: true after ms 10
+exit 0
+--- ipcs after runs
+
+------ Shared Memory Segments --------
+key        shmid      owner      perms      bytes      nattch     status      
+
+
+------ Semaphore Arrays --------
+key        semid      owner      perms      nsems     
+

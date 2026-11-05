@@ -1,0 +1,9 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QWARN  : probeNavigatingFallsAfterAnyOperationMix() QUnifiedTimer::stopAnimationDriver: driver is not running
+QWARN  : probeNavigatingFallsAfterAnyOperationMix() QUnifiedTimer::stopAnimationDriver: driver is not running
+QINFO  : probeNavigatingFallsAfterAnyOperationMix() RESULT 800 rounds, worst settle 843 ms
+PASS   : probeNavigatingFallsAfterAnyOperationMix()
+PASS   : cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 84587ms
+********* Finished testing of StackConfirmUiTests *********

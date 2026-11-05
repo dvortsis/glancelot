@@ -1,0 +1,35 @@
+=== p5-shown-tip-1s
+QINFO  : probeShownTimeAfterASlowStep() t=1185 a-2.png ready; previous a-1.png was on screen 1185 ms
+QINFO  : probeShownTimeAfterASlowStep() t=10133 c-1.png ready; previous a-2.png was on screen 8948 ms
+QINFO  : probeShownTimeAfterASlowStep() t=11182 c-2.png ready; previous c-1.png was on screen 1049 ms
+QINFO  : probeShownTimeAfterASlowStep() t=12179 c-3.png ready; previous c-2.png was on screen 997 ms
+QINFO  : probeShownTimeAfterASlowStep() t=13065 stopped at c-3.png
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 15727ms
+=== p5-shown-40
+QINFO  : probeShownTimeAfterASlowStep() t=3159 a-2.png ready; previous a-1.png was on screen 3159 ms
+QINFO  : probeShownTimeAfterASlowStep() t=6283 c-1.png ready; previous a-2.png was on screen 3124 ms
+QINFO  : probeShownTimeAfterASlowStep() t=9169 c-2.png ready; previous c-1.png was on screen 2886 ms
+QINFO  : probeShownTimeAfterASlowStep() t=12208 c-3.png ready; previous c-2.png was on screen 3039 ms
+QINFO  : probeShownTimeAfterASlowStep() t=15043 stopped at c-3.png
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 17086ms
+=== p5-shown-80
+QINFO  : probeShownTimeAfterASlowStep() t=3145 a-2.png ready; previous a-1.png was on screen 3145 ms
+QINFO  : probeShownTimeAfterASlowStep() t=6697 c-1.png ready; previous a-2.png was on screen 3552 ms
+QINFO  : probeShownTimeAfterASlowStep() t=9158 c-2.png ready; previous c-1.png was on screen 2461 ms
+QINFO  : probeShownTimeAfterASlowStep() t=12179 c-3.png ready; previous c-2.png was on screen 3021 ms
+QINFO  : probeShownTimeAfterASlowStep() t=15053 stopped at c-3.png
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 17225ms
+=== p5-shown-120
+QINFO  : probeShownTimeAfterASlowStep() t=3198 a-2.png ready; previous a-1.png was on screen 3198 ms
+QINFO  : probeShownTimeAfterASlowStep() t=7347 c-1.png ready; previous a-2.png was on screen 4149 ms
+QINFO  : probeShownTimeAfterASlowStep() t=9201 c-2.png ready; previous c-1.png was on screen 1854 ms
+QINFO  : probeShownTimeAfterASlowStep() t=12193 c-3.png ready; previous c-2.png was on screen 2992 ms
+QINFO  : probeShownTimeAfterASlowStep() t=15050 stopped at c-3.png
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 17551ms
+=== p5-shown
+QINFO  : probeShownTimeAfterASlowStep() t=5260 a-2.png ready; previous a-1.png was on screen 5260 ms
+QINFO  : probeShownTimeAfterASlowStep() t=21256 c-1.png ready; previous a-2.png was on screen 15996 ms
+QINFO  : probeShownTimeAfterASlowStep() t=25218 c-2.png ready; previous c-1.png was on screen 3962 ms
+QINFO  : probeShownTimeAfterASlowStep() t=30183 c-3.png ready; previous c-2.png was on screen 4965 ms
+QINFO  : probeShownTimeAfterASlowStep() t=35074 stopped at c-3.png
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 38260ms

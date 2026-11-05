@@ -1,0 +1,6 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QFATAL : probeRealDecoderDiesHoldingTheLock(after ok) Test function timed out
+FAIL!  : probeRealDecoderDiesHoldingTheLock(after ok) Received a fatal error.
+Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 45043ms
+********* Finished testing of StackConfirmUiTests *********

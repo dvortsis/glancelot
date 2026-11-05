@@ -1,0 +1,35 @@
+// R4 review: does a Qt 6.8.3 QSharedMemory on Linux survive a holder killed with the system semaphore held?
+#include <QCoreApplication>
+#include <QProcess>
+#include <QSharedMemory>
+#include <QUuid>
+#include <QElapsedTimer>
+#include <QDebug>
+#include <atomic>
+#include <thread>
+#include <csignal>
+#include <unistd.h>
+int main(int argc, char** argv) {
+    QCoreApplication app(argc, argv);
+    if (argc == 3 && QByteArray(argv[1]) == "child") {
+        QSharedMemory m{QString::fromUtf8(argv[2])};
+        if (!m.attach()) return 3;
+        if (!m.lock()) return 4;
+        raise(SIGKILL);
+        return 5;
+    }
+    qInfo() << "legacy default key type" << int(QNativeIpcKey::legacyDefaultTypeForOs()) << "(0x51 SystemV, 0x100 Posix)";
+    const QString key = "Glancelot-r4-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    auto* seg = new QSharedMemory(key);
+    if (!seg->create(4096)) { qInfo() << "create failed" << seg->errorString(); return 1; }
+    qInfo() << "native key" << seg->nativeKey();
+    QProcess p; p.start(app.applicationFilePath(), {"child", key}); p.waitForFinished(5000);
+    qInfo() << "child exit" << p.exitStatus() << p.exitCode();
+    std::atomic<bool> done{false};
+    QElapsedTimer t; t.start();
+    std::thread th([&]{ delete seg; done = true; });
+    while (!done && t.elapsed() < 5000) usleep(10000);
+    qInfo() << "destructor returned:" << bool(done) << "after ms" << t.elapsed();
+    if (done) th.join(); else th.detach();
+    return done ? 0 : 2;
+}

@@ -1,0 +1,7 @@
+param([int]$Seconds=120,[string]$Flag)
+Start-Sleep -Seconds 20; $end=(Get-Date).AddSeconds($Seconds); $n=0
+while((Get-Date) -lt $end -and -not (Test-Path $Flag)){
+  foreach($p in [Diagnostics.Process]::GetProcessesByName('glancelot-decoder')){ try{ if($p.MainModule.FileName -like '*review-stack-confirm-r4*'){ $p.Kill(); $n++ } }catch{} }
+  Start-Sleep -Milliseconds (Get-Random -Minimum 0 -Maximum 250)
+}
+"killed $n decoder processes"

@@ -1,0 +1,24 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QINFO  : probeRealRaceRate() pass 0: 79 steps, 28002 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 1: 158 steps, 49519 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 2: 237 steps, 70569 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 3: 316 steps, 90711 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 4: 395 steps, 109857 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 5: 474 steps, 128543 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 6: 553 steps, 147114 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 7: 632 steps, 165016 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 8: 711 steps, 191439 ms, stuck 1, leaked 0, undecoded 0, max GUI gap 101 ms
+QINFO  : probeRealRaceRate() pass 9: 790 steps, 220217 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 164 ms
+QINFO  : probeRealRaceRate() pass 10: 869 steps, 260755 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 224 ms
+QINFO  : probeRealRaceRate() pass 11: 948 steps, 301855 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 224 ms
+QINFO  : probeRealRaceRate() pass 12: 1027 steps, 327879 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 224 ms
+QINFO  : probeRealRaceRate() pass 13: 1106 steps, 360302 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 224 ms
+QWARN  : probeRealRaceRate() QUnifiedTimer::stopAnimationDriver: driver is not running
+QINFO  : probeRealRaceRate() pass 14: 1185 steps, 396745 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 300 ms
+QINFO  : probeRealRaceRate() pass 15: 1264 steps, 429944 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 300 ms
+QINFO  : probeRealRaceRate() RESULT pace 40: 1264 steps in 431584 ms, stuck teardowns 0, leaked 0, undecoded 0, max GUI gap 300 ms
+PASS   : probeRealRaceRate()
+PASS   : cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 432003ms
+********* Finished testing of StackConfirmUiTests *********

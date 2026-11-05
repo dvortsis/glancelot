@@ -1,0 +1,2 @@
+idle sequential: runs=60 hung=0 failed=0 in 00:05:01.8733877
+parallel 4x15 (runs,hung,failed per thread): 15,0,0 | 15,0,0 | 15,0,0 | 15,0,0 in 00:01:23.0835339

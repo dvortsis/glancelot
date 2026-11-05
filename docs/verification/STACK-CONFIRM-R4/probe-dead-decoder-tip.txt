@@ -1,0 +1,122 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 0 p2.png ready=1 pending=1 leaked=0 commitDrop=818 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 1 p3.png ready=1 pending=2 leaked=0 commitDrop=844 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 2 p4.png ready=1 pending=3 leaked=0 commitDrop=950 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 3 p5.png ready=1 pending=4 leaked=0 commitDrop=945 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 4 p6.png ready=1 pending=5 leaked=0 commitDrop=967 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 5 p7.png ready=1 pending=6 leaked=0 commitDrop=987 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 6 p8.png ready=1 pending=7 leaked=0 commitDrop=1085 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 7 p9.png ready=1 pending=8 leaked=0 commitDrop=1048 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 8 p10.png ready=1 pending=9 leaked=0 commitDrop=1088 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 9 p11.png ready=1 pending=10 leaked=0 commitDrop=1104 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 10 p12.png ready=1 pending=11 leaked=0 commitDrop=1091 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 11 p13.png ready=1 pending=12 leaked=0 commitDrop=1081 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 12 p14.png ready=1 pending=13 leaked=0 commitDrop=1149 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 13 p15.png ready=1 pending=14 leaked=0 commitDrop=1094 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 14 p16.png ready=1 pending=15 leaked=0 commitDrop=1052 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 15 p17.png ready=1 pending=16 leaked=0 commitDrop=1208 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 16 p18.png ready=1 pending=16 leaked=1 commitDrop=1150 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 17 p19.png ready=1 pending=16 leaked=3 commitDrop=1135 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 18 p20.png ready=1 pending=16 leaked=5 commitDrop=1221 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 19 p21.png ready=1 pending=16 leaked=6 commitDrop=1241 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 20 p22.png ready=1 pending=16 leaked=8 commitDrop=1214 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 21 p23.png ready=1 pending=16 leaked=9 commitDrop=1294 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 22 p24.png ready=1 pending=16 leaked=11 commitDrop=1256 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 23 p25.png ready=1 pending=16 leaked=12 commitDrop=1283 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 24 p26.png ready=1 pending=16 leaked=13 commitDrop=1206 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 25 p27.png ready=1 pending=16 leaked=14 commitDrop=1214 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 26 p28.png ready=1 pending=16 leaked=15 commitDrop=1288 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 27 p29.png ready=1 pending=16 leaked=17 commitDrop=1298 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 28 p30.png ready=1 pending=16 leaked=18 commitDrop=1279 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) step 29 p31.png ready=1 pending=16 leaked=19 commitDrop=1264 MiB status=Untagged source assumed sRGB ? display profile not yet manag
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) mode exit: 30 steps, 30 ready, max GUI gap 80 ms, pending 16 (was 0), leaked 19, commit drop 1264 MiB
+QWARN  : probeRealDecoderDiesHoldingTheLock(after ok) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after ok) harness closed; pending 16
+PASS   : probeRealDecoderDiesHoldingTheLock(after ok)
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 0 p2.png ready=0 pending=16 leaked=2 commitDrop=111 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 1 p3.png ready=0 pending=16 leaked=3 commitDrop=132 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 2 p4.png ready=0 pending=16 leaked=4 commitDrop=152 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 3 p5.png ready=0 pending=16 leaked=5 commitDrop=230 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 4 p6.png ready=0 pending=16 leaked=6 commitDrop=258 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 5 p7.png ready=0 pending=16 leaked=7 commitDrop=226 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 6 p8.png ready=0 pending=16 leaked=8 commitDrop=250 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 7 p9.png ready=0 pending=16 leaked=9 commitDrop=272 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 8 p10.png ready=0 pending=16 leaked=10 commitDrop=292 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 9 p11.png ready=0 pending=16 leaked=11 commitDrop=331 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 10 p12.png ready=0 pending=16 leaked=12 commitDrop=357 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 11 p13.png ready=0 pending=16 leaked=13 commitDrop=400 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 12 p14.png ready=0 pending=16 leaked=14 commitDrop=528 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 13 p15.png ready=0 pending=16 leaked=15 commitDrop=485 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 14 p16.png ready=0 pending=16 leaked=16 commitDrop=574 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 15 p17.png ready=0 pending=16 leaked=17 commitDrop=509 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 16 p18.png ready=0 pending=16 leaked=18 commitDrop=520 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 17 p19.png ready=0 pending=16 leaked=19 commitDrop=516 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 18 p20.png ready=0 pending=16 leaked=20 commitDrop=548 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 19 p21.png ready=0 pending=16 leaked=21 commitDrop=570 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 20 p22.png ready=0 pending=16 leaked=22 commitDrop=534 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 21 p23.png ready=0 pending=16 leaked=23 commitDrop=605 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 22 p24.png ready=0 pending=16 leaked=24 commitDrop=621 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 23 p25.png ready=0 pending=16 leaked=25 commitDrop=677 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 24 p26.png ready=0 pending=16 leaked=26 commitDrop=684 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 25 p27.png ready=0 pending=16 leaked=27 commitDrop=743 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 26 p28.png ready=0 pending=16 leaked=28 commitDrop=758 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 27 p29.png ready=0 pending=16 leaked=29 commitDrop=807 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 28 p30.png ready=0 pending=16 leaked=30 commitDrop=829 MiB status=Decoder failed; the previous valid image is preserved.
+QWARN  : probeRealDecoderDiesHoldingTheLock(after attach) Decoder transfer segment leaked: 16 teardown threads are already blocked on dead workers.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) step 29 p31.png ready=0 pending=16 leaked=31 commitDrop=897 MiB status=Decoder failed; the previous valid image is preserved.
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) mode attach: 30 steps, 0 ready, max GUI gap 32 ms, pending 16 (was 16), leaked 31, commit drop 897 MiB
+QINFO  : probeRealDecoderDiesHoldingTheLock(after attach) harness closed; pending 16
+PASS   : probeRealDecoderDiesHoldingTheLock(after attach)
+PASS   : cleanupTestCase()
+Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 48611ms
+********* Finished testing of StackConfirmUiTests *********

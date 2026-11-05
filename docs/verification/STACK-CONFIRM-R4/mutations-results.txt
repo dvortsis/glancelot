@@ -1,0 +1,69 @@
+Mutations: each hunk reverted locally, run, then restored. QML loads from the source tree in these tests, so MQ* need no rebuild.
+
+=== MC1 viewer_controller.cpp: TransferPtr -> std::unique_ptr<QSharedMemory>, makeTransfer -> std::make_unique (the lock removal kept)
+--- mc1-destroyingASegmentWaitsForTheLockOfADeadWorker.txt
+PASS   : destroyingASegmentWaitsForTheLockOfADeadWorker()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 721ms
+--- mc1-theReaperNeverBlocksTheCallerOnAHeldLock.txt
+PASS   : theReaperNeverBlocksTheCallerOnAHeldLock()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 278ms
+--- mc1-blockedTeardownsAreBounded.txt
+PASS   : blockedTeardownsAreBounded()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 78ms
+--- mc1-navigatingSpansAStep.txt
+PASS   : navigatingSpansAStep()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 9885ms
+--- mc1-slideshowKeepsGoingAcrossAFolderBoundary.txt
+PASS   : slideshowKeepsGoingAcrossAFolderBoundary()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 11915ms
+--- mc1-probe-exit.txt
+QFATAL : probeRealDecoderDiesHoldingTheLock(after ok) Test function timed out
+FAIL!  : probeRealDecoderDiesHoldingTheLock(after ok) Received a fatal error.
+Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 45043ms
+
+=== MQ1 Main.qml:666 viewer.navigating removed from the step guard
+--- mut-MQ1-slideshowWaitsForASlowFolderStep.txt
+PASS   : slideshowWaitsForASlowFolderStep(1 s pace)
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 13343ms
+
+=== MQ2 Main.qml:697 !viewer.navigating removed from the settle check
+--- mut-MQ2-slideshowKeepsGoingAcrossAFolderBoundary.txt
+FAIL!  : slideshowKeepsGoingAcrossAFolderBoundary() 'QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/b")' returned FALSE. ()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 39403ms
+
+=== MQ3 Main.qml:698 dead-end stop removed (input_ui_tests)
+--- mut-MQ3-slideshowAdvancesAndEndsCleanly.txt
+FAIL!  : slideshowAdvancesAndEndsCleanly() '!flag(h, "slideshowOn")' returned FALSE. ()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 17231ms
+
+=== MQ4 Main.qml:1936 wheel clamp without rightMargin
+--- mut-MQ4-tabStripWheelRespectsTheMargin.txt
+FAIL!  : tabStripWheelRespectsTheMargin() 'strip->property("contentX").toReal() >= before - 0.5' returned FALSE. (contentX 226 -> 210)
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2984ms
+
+=== MQ5 Main.qml:1925 Math.min(target, item.x) removed
+--- mut-MQ5-longTabNamesKeepTheActiveTabInView.txt
+PASS   : longTabNamesKeepTheActiveTabInView()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 5381ms
+
+=== MQ6 Main.qml:1912 tabCap back to its form at b7ca003
+--- mut-MQ6-longTabNamesKeepTheActiveTabInView.txt
+FAIL!  : longTabNamesKeepTheActiveTabInView() 'fullyInside(strip, close)' returned FALSE. (width 540, active tab 2: its close button is out of view)
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4497ms
+
+=== MQ7 Main.qml failure bound Math.max(1, min(5, fileCount)) in every mode
+--- mut-MQ7-slideshowPassesAnUndecodableLoneFolderPhoto.txt
+FAIL!  : slideshowPassesAnUndecodableLoneFolderPhoto() Compared values are not the same
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 75557ms
+
+=== MQ1 probe (GL_REVIEW_GAP=300, pace 1 s): photos seen with the guard removed
+QINFO  : probeShownTimeAfterASlowStep() t=1167 a-2.png ready; previous a-1.png was on screen 1167 ms
+QINFO  : probeShownTimeAfterASlowStep() t=9942 c-3.png ready; previous a-2.png was on screen 8775 ms
+QINFO  : probeShownTimeAfterASlowStep() t=10097 stopped at c-3.png
+=== same probe at the tip
+QINFO  : probeShownTimeAfterASlowStep() t=1185 a-2.png ready; previous a-1.png was on screen 1185 ms
+QINFO  : probeShownTimeAfterASlowStep() t=10133 c-1.png ready; previous a-2.png was on screen 8948 ms
+QINFO  : probeShownTimeAfterASlowStep() t=11182 c-2.png ready; previous c-1.png was on screen 1049 ms
+QINFO  : probeShownTimeAfterASlowStep() t=12179 c-3.png ready; previous c-2.png was on screen 997 ms
+QINFO  : probeShownTimeAfterASlowStep() t=13065 stopped at c-3.png
+

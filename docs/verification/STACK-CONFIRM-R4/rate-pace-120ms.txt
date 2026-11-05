@@ -1,0 +1,23 @@
+********* Start testing of StackConfirmUiTests *********
+PASS   : initTestCase()
+QINFO  : probeRealRaceRate() pass 0: 79 steps, 33207 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 1: 158 steps, 59189 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 2: 237 steps, 84346 ms, stuck 0, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 3: 316 steps, 108854 ms, stuck 1, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 4: 395 steps, 133173 ms, stuck 2, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 5: 474 steps, 157315 ms, stuck 3, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 6: 553 steps, 186923 ms, stuck 3, leaked 0, undecoded 0, max GUI gap 78 ms
+QINFO  : probeRealRaceRate() pass 7: 632 steps, 223279 ms, stuck 3, leaked 0, undecoded 0, max GUI gap 245 ms
+QINFO  : probeRealRaceRate() pass 8: 711 steps, 269119 ms, stuck 3, leaked 0, undecoded 0, max GUI gap 245 ms
+QINFO  : probeRealRaceRate() pass 9: 790 steps, 315171 ms, stuck 3, leaked 0, undecoded 0, max GUI gap 291 ms
+QINFO  : probeRealRaceRate() pass 10: 869 steps, 347053 ms, stuck 4, leaked 0, undecoded 0, max GUI gap 291 ms
+QINFO  : probeRealRaceRate() pass 11: 948 steps, 391271 ms, stuck 4, leaked 0, undecoded 0, max GUI gap 759 ms
+QINFO  : probeRealRaceRate() pass 12: 1027 steps, 430235 ms, stuck 4, leaked 0, undecoded 0, max GUI gap 759 ms
+QINFO  : probeRealRaceRate() pass 13: 1106 steps, 469892 ms, stuck 4, leaked 0, undecoded 0, max GUI gap 759 ms
+QINFO  : probeRealRaceRate() pass 14: 1185 steps, 509564 ms, stuck 4, leaked 0, undecoded 0, max GUI gap 759 ms
+QINFO  : probeRealRaceRate() pass 15: 1264 steps, 543225 ms, stuck 4, leaked 0, undecoded 0, max GUI gap 759 ms
+QINFO  : probeRealRaceRate() RESULT pace 120: 1264 steps in 544805 ms, stuck teardowns 4, leaked 0, undecoded 0, max GUI gap 759 ms
+PASS   : probeRealRaceRate()
+PASS   : cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 545059ms
+********* Finished testing of StackConfirmUiTests *********

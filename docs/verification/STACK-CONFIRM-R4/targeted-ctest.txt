@@ -1,0 +1,32 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/review-stack-confirm-r4/build-review-stack-confirm-r4
+Test project C:/src/Github/Glancelot/.worktrees/review-stack-confirm-r4/build-review-stack-confirm-r4
+    Start  7: viewer_acceptance
+1/9 Test  #7: viewer_acceptance ................   Passed   17.70 sec
+    Start  8: thumbnails
+2/9 Test  #8: thumbnails .......................   Passed    7.24 sec
+    Start 12: folder_grid
+3/9 Test #12: folder_grid ......................   Passed  290.97 sec
+    Start 13: input_ui
+4/9 Test #13: input_ui .........................   Passed   93.99 sec
+    Start 31: cache
+5/9 Test #31: cache ............................   Passed    5.84 sec
+    Start 34: animation
+6/9 Test #34: animation ........................   Passed    0.53 sec
+    Start 44: tabs_recovery
+7/9 Test #44: tabs_recovery ....................   Passed   72.13 sec
+    Start 47: translation_coverage_ui
+8/9 Test #47: translation_coverage_ui ..........   Passed   25.40 sec
+    Start 52: stack_confirm_ui
+9/9 Test #52: stack_confirm_ui .................   Passed  124.62 sec
+
+100% tests passed, 0 tests failed out of 9
+
+Label Time Summary:
+budget       = 390.80 sec*proc (3 tests)
+clipboard    = 384.96 sec*proc (2 tests)
+fast         =  97.60 sec*proc (4 tests)
+native       = 290.97 sec*proc (1 test)
+process      = 637.89 sec*proc (8 tests)
+ui           = 534.98 sec*proc (4 tests)
+
+Total Test time (real) = 638.47 sec

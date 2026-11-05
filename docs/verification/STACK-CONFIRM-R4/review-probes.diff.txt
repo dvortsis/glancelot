@@ -1,0 +1,225 @@
+diff --git a/src/worker/main.cpp b/src/worker/main.cpp
+index 08f84c7..41c9368 100644
+--- a/src/worker/main.cpp
++++ b/src/worker/main.cpp
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ #include <QCoreApplication>
+ #include <QColorSpace>
+ #include <QFile>
+@@ -242,6 +243,7 @@ int main(int argc, char** argv) {
+     if (parseError.error != QJsonParseError::NoError || configuration.value("key").toString().isEmpty()) return fail("Invalid shared-memory admission request.");
+     QSharedMemory transfer(configuration.value("key").toString());
+     if (!transfer.attach(QSharedMemory::ReadWrite) || transfer.size() < capacity) return fail("Cannot attach admitted pixel transfer buffer.");
++    if (qgetenv("GL_REVIEW_DIE") == "attach") { transfer.lock(); std::_Exit(9); } // REVIEW PROBE
+     QImage image = reader.read();
+     source.close();
+     if (image.isNull()) return fail("Image decode failed: " + reader.errorString());
+@@ -265,5 +267,6 @@ int main(int argc, char** argv) {
+           {"color", tagged ? "Embedded profile converted to sRGB" : "Untagged source assumed sRGB"}, {"sourceToken",verifiedToken}});
+     // Parent copies the immutable pixels before acknowledging. No original file handle is held here.
+     if (!std::fgets(request, sizeof(request), stdin)) return 1;
++    if (qgetenv("GL_REVIEW_DIE") == "exit") { transfer.lock(); std::_Exit(9); } // REVIEW PROBE
+     return 0;
+ }
+diff --git a/tests/stack_confirm_ui_tests.cpp b/tests/stack_confirm_ui_tests.cpp
+index 920bf92..4f41e50 100644
+--- a/tests/stack_confirm_ui_tests.cpp
++++ b/tests/stack_confirm_ui_tests.cpp
+@@ -8,6 +8,10 @@
+ #include <QAccessibleInterface>
+ #include <QSharedMemory>
+ #include <QUuid>
++#include <QRandomGenerator>
++#include <windows.h>
++#undef min
++#undef max
+ #include <atomic>
+ #include <thread>
+ #include "../src/app/shared_memory_reaper.hpp"
+@@ -54,6 +58,11 @@ bool fullyInside(QQuickItem* strip, QQuickItem* item) {
+     const QRectF r = inStrip(strip, item);
+     return r.left() >= -0.5 && r.right() <= strip->width() + 0.5 && r.top() >= -0.5 && r.bottom() <= strip->height() + 0.5;
+ }
++    struct Beat {
++        QElapsedTimer sinceLast; qint64 maxGap{0}; QTimer timer;
++        Beat() { sinceLast.start(); QObject::connect(&timer, &QTimer::timeout, [this] { maxGap = std::max(maxGap, sinceLast.restart()); }); timer.start(10); }
++    };
++    qint64 commitAvailMiB() { MEMORYSTATUSEX m{}; m.dwLength = sizeof m; GlobalMemoryStatusEx(&m); return qint64(m.ullAvailPageFile / (1024 * 1024)); }
+ } // namespace
+ 
+ class StackConfirmUiTests final : public QObject {
+@@ -309,6 +318,173 @@ private slots:
+         QVERIFY2(noticeText(h).isEmpty(), qPrintable(noticeText(h)));
+         settleSlideshow(h);
+     }
++    // ===== REVIEW R4 PROBES (never committed to a product branch) =====
++    // Worker hook: GL_REVIEW_DIE=exit makes the real decoder take the segment's system semaphore after the parent's "ok" and die
++    // without giving it back; GL_REVIEW_DIE=attach does so right after attach (no pixels, no "decoded").
++    void probeRealDecoderDiesHoldingTheLock_data() {
++        QTest::addColumn<QByteArray>("mode"); QTest::addColumn<int>("steps");
++        QTest::newRow("after ok") << QByteArray("exit") << 30;
++        QTest::newRow("after attach") << QByteArray("attach") << 30;
++    }
++    void probeRealDecoderDiesHoldingTheLock() {
++        namespace d = glancelot::detail;
++        QFETCH(QByteArray, mode); QFETCH(int, steps);
++        Media media(steps + 2, QSize(3000, 2000));
++        const int pendingBefore = d::pendingSharedMemoryReaps().load(), leakedBefore = d::leakedSharedMemorySegments().load();
++        const qint64 commitBefore = commitAvailMiB();
++        qputenv("GL_REVIEW_DIE", mode);
++        {
++            Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++            h.viewer.setFilmstripVisible(false);
++            Beat beat;
++            h.viewer.open(media.path(0));
++            QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading() && !h.viewer.navigating(), 15000);
++            h.viewer.setBoundaryMode("loop");
++            int ready = 0;
++            for (int i = 0; i < steps; ++i) {
++                const QString from = h.viewer.filePath();
++                h.viewer.next();
++                QTRY_VERIFY_WITH_TIMEOUT(h.viewer.filePath() != from && !h.viewer.loading() && !h.viewer.navigating(), 15000);
++                ready += h.viewer.imageReady() ? 1 : 0;
++                qInfo("step %d %s ready=%d pending=%d leaked=%d commitDrop=%lld MiB status=%s", i, qPrintable(h.viewer.fileName()), h.viewer.imageReady(),
++                      d::pendingSharedMemoryReaps().load(), d::leakedSharedMemorySegments().load() - leakedBefore, commitBefore - commitAvailMiB(), qPrintable(h.viewer.status().left(60)));
++            }
++            qInfo("mode %s: %d steps, %d ready, max GUI gap %lld ms, pending %d (was %d), leaked %d, commit drop %lld MiB",
++                  mode.constData(), steps, ready, beat.maxGap, d::pendingSharedMemoryReaps().load(), pendingBefore, d::leakedSharedMemorySegments().load() - leakedBefore, commitBefore - commitAvailMiB());
++            QVERIFY2(beat.maxGap < 3000, qPrintable(QString::number(beat.maxGap)));
++        }
++        qunsetenv("GL_REVIEW_DIE");
++        QElapsedTimer closing; closing.start();
++        qInfo("harness closed; pending %d", d::pendingSharedMemoryReaps().load());
++    }
++    // Real race, no hook: how many teardowns really block on a dead worker in the slideshow's own pattern: small folders under
++    // "continue", so every step has a prefetch that ends in "ok" + kill (lookahead runs only near a folder's edge).
++    void probeRealRaceRate() {
++        namespace d = glancelot::detail;
++        const int passes = qEnvironmentVariableIntValue("GL_REVIEW_PASSES"), paceMs = qEnvironmentVariableIntValue("GL_REVIEW_PACE_MS");
++        if (passes <= 0) QSKIP("set GL_REVIEW_PASSES");
++        QTemporaryDir root; QVERIFY(root.isValid());
++        QStringList folders;
++        for (int i = 0; i < 40; ++i) { folders << makeFolder(root.path(), QString("f%1").arg(i, 2, 10, QLatin1Char('0')), 2); QVERIFY(!folders.last().isEmpty()); }
++        QElapsedTimer total; total.start();
++        int steps = 0, undecoded = 0; qint64 maxGap = 0;
++        for (int pass = 0; pass < passes; ++pass) {
++            Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++            h.viewer.setFilmstripVisible(false);
++            Beat beat;
++            h.viewer.open(QDir(folders[0]).filePath("f-1.png"));
++            QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && !h.viewer.navigating(), 15000);
++            QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++            h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
++            h.viewer.setBoundaryMode("continue");
++            for (;;) {
++                QTest::qWait(paceMs + QRandomGenerator::global()->bounded(20));
++                const QString from = h.viewer.filePath();
++                h.viewer.next();
++                QVERIFY(QTest::qWaitFor([&] { return !h.viewer.navigating() && !h.viewer.loading(); }, 30000));
++                if (h.viewer.filePath() == from) break;
++                ++steps; if (!h.viewer.imageReady()) ++undecoded;
++            }
++            maxGap = std::max(maxGap, beat.maxGap);
++            qInfo("pass %d: %d steps, %lld ms, stuck %d, leaked %d, undecoded %d, max GUI gap %lld ms", pass, steps, total.elapsed(), d::pendingSharedMemoryReaps().load(), d::leakedSharedMemorySegments().load(), undecoded, maxGap);
++        }
++        QTest::qWait(1500);
++        qInfo("RESULT pace %d: %d steps in %lld ms, stuck teardowns %d, leaked %d, undecoded %d, max GUI gap %lld ms",
++              paceMs, steps, total.elapsed(), d::pendingSharedMemoryReaps().load(), d::leakedSharedMemorySegments().load(), undecoded, maxGap);
++    }
++    // `navigating` must always fall again, whatever is thrown at it.
++    void probeNavigatingFallsAfterAnyOperationMix() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QString a = makeFolder(root.path(), "a", 6), b = makeFolder(root.path(), "b", 3), c = makeFolder(root.path(), "c", 1);
++        QVERIFY(!a.isEmpty() && !b.isEmpty() && !c.isEmpty());
++        for (int i = 0; i < 40; ++i) QVERIFY(QDir(root.path()).mkpath(QString("empty%1").arg(i)));
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(a).filePath("a-1.png"));
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && !h.viewer.navigating(), 15000);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++        h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
++        auto* rng = QRandomGenerator::global();
++        const QString ghost = QDir(root.path()).filePath("no-such-folder");
++        int worst = 0; int rounds = qEnvironmentVariableIntValue("GL_REVIEW_FUZZ"); if (rounds <= 0) rounds = 150;
++        for (int round = 0; round < rounds; ++round) {
++            const int burst = 1 + rng->bounded(8);
++            QStringList ops;
++            for (int i = 0; i < burst; ++i) {
++                const int op = rng->bounded(15); ops << QString::number(op);
++                switch (op) {
++                case 0: case 1: case 2: h.viewer.next(); break;
++                case 3: h.viewer.previous(); break;
++                case 4: h.viewer.nextFolder(); break;
++                case 5: h.viewer.previousFolder(); break;
++                case 6: h.viewer.open(QDir(b).filePath("b-1.png")); break;
++                case 7: h.viewer.openFolder(rng->bounded(2) ? a : c); break;
++                case 8: h.viewer.navigateDirectory(rng->bounded(2) ? ghost : b); break;
++                case 9: h.viewer.cancelDirectoryNavigation(); break;
++                case 10: h.viewer.setBoundaryMode(rng->bounded(3) == 0 ? "stop" : rng->bounded(2) ? "loop" : "continue"); break;
++                case 11: h.viewer.setSortKey(rng->bounded(2) ? "name" : "size"); break;
++                case 12: h.viewer.setFilter(rng->bounded(2) ? "*-1*" : "zzz"); break;
++                case 13: h.viewer.clearFilter(); break;
++                case 14: h.viewer.open(QDir(a).filePath("does-not-exist.png")); break;
++                }
++                if (rng->bounded(2)) QTest::qWait(rng->bounded(15));
++            }
++            QElapsedTimer settle; settle.start();
++            const bool fell = QTest::qWaitFor([&] { return !h.viewer.navigating(); }, 15000);
++            worst = std::max(worst, int(settle.elapsed()));
++            QVERIFY2(fell, qPrintable(QString("round %1, ops %2: navigating stuck true").arg(round).arg(ops.join(','))));
++        }
++        qInfo("RESULT %d rounds, worst settle %d ms", rounds, worst);
++    }
++    // Photo display time after a slow step, and a manual folder change while the slideshow's own step is in flight.
++    void probeShownTimeAfterASlowStep() {
++        QTemporaryDir root; QVERIFY(root.isValid());
++        const QString a = makeFolder(root.path(), "a", 2);
++        for (int i = 0; i < qEnvironmentVariableIntValue("GL_REVIEW_GAP"); ++i) QVERIFY(QDir(root.path()).mkpath(QString("b%1").arg(i, 4, 10, QLatin1Char('0'))));
++        const QString c = makeFolder(root.path(), "c", 3);
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(a).filePath("a-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h)); focusCanvas(h);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++        h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
++        h.viewer.setBoundaryMode("continue");
++        const int seconds = qEnvironmentVariableIntValue("GL_REVIEW_PACE");
++        setSlideshowSeconds(h, seconds);
++        h.viewer.trigger("slideshow");
++        QTRY_VERIFY(flag(h, "slideshowOn"));
++        QElapsedTimer t; t.start(); QString last = h.viewer.fileName(); qint64 lastAt = 0; bool lastReady = true;
++        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.viewer, [&] {
++            if (h.viewer.imageReady() && (h.viewer.fileName() != last || !lastReady)) {
++                qInfo("t=%lld %s ready; previous %s was on screen %lld ms", t.elapsed(), qPrintable(h.viewer.fileName()), qPrintable(last), t.elapsed() - lastAt);
++                last = h.viewer.fileName(); lastAt = t.elapsed(); lastReady = true;
++            }
++        });
++        QTest::qWaitFor([&] { return !flag(h, "slideshowOn"); }, 90000);
++        qInfo("t=%lld stopped at %s", t.elapsed(), qPrintable(h.viewer.fileName()));
++    }
++    void probeManualFolderChangeDuringOwnStep() {
++        QTemporaryDir root, other; QVERIFY(root.isValid() && other.isValid());
++        const QString a = makeFolder(root.path(), "a", 2), z = makeFolder(other.path(), "z", 3);
++        for (int i = 0; i < 300; ++i) QVERIFY(QDir(root.path()).mkpath(QString("b%1").arg(i, 4, 10, QLatin1Char('0'))));
++        const QString c = makeFolder(root.path(), "c", 2);
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(QDir(a).filePath("a-2.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        QVERIFY(activate(h)); focusCanvas(h);
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
++        h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
++        h.viewer.setBoundaryMode("continue");
++        setSlideshowSeconds(h, 1);
++        h.viewer.trigger("slideshow");
++        QTRY_VERIFY(flag(h, "slideshowOn"));
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.navigating(), 10000); // its own step across the empties is in flight
++        h.viewer.openFolder(z);
++        QTest::qWaitFor([&] { return QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/z") && !h.viewer.navigating() && !h.viewer.loading(); }, 15000);
++        QTest::qWait(100);
++        qInfo("RESULT after a manual folder open during its own step: dir %s slideshowOn %d", qPrintable(h.viewer.directory()), flag(h, "slideshowOn"));
++    }
++    // ===== END REVIEW R4 PROBES =====
+     // N-2: another tab, or another folder opened by hand, ends the slideshow (and its indicator).
+     void slideshowEndsOnTabSwitchAndFolderOpen() {
+         QTemporaryDir other; QVERIFY(other.isValid());
