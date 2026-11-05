@@ -1,0 +1,392 @@
+diff --git a/tests/perf_enum_tests.cpp b/tests/perf_enum_tests.cpp
+index bebb36f..b9b1e1a 100644
+--- a/tests/perf_enum_tests.cpp
++++ b/tests/perf_enum_tests.cpp
+@@ -756,6 +756,18 @@ private slots:
+         QVERIFY(!staleAtDefinitive);
+         QCOMPARE(model.pathAt(notified), path);
+     }
++    // ---- reviewer scratch, not committed ----
++    void rFinishedScanIsNotLostAtTheDefinitiveBatch() {
++        QTemporaryDir dir;
++        FakeFolder folder; folder.total = 16000;
++        SeamScope seam(&folder);
++        DirectoryEntryModel model; model.setActive(true);
++        model.setDirectory(dir.path());
++        QDeadlineTimer deadline(10000); while (folder.exits->load() < 1 && !deadline.hasExpired()) std::this_thread::yield();
++        std::this_thread::sleep_for(std::chrono::milliseconds(200));
++        QTRY_VERIFY_WITH_TIMEOUT(!model.arriving() && model.count() == 16000, 20000);
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 5000);
++    }
+     void arrivalsQueueBlocksAtCapacityAndWakesOnStop() {
+         directory_scan::Arrivals queue(100);
+         std::atomic_int pushed{}; std::atomic_bool refused{};
+diff --git a/tests/perf_enum_ui_tests.cpp b/tests/perf_enum_ui_tests.cpp
+index 814281c..516fbd0 100644
+--- a/tests/perf_enum_ui_tests.cpp
++++ b/tests/perf_enum_ui_tests.cpp
+@@ -2,6 +2,9 @@
+ #include "perf_enum_test_support.hpp"
+ #include <QSignalSpy>
+ #include <QTest>
++#include <QWheelEvent>
++#include <QTimer>
++#include <QElapsedTimer>
+ 
+ // A1 F016 in the shipped ui/Main.qml. The folder holds one real photo so the viewer can open it; the seam supplies the
+ // grid's rows, arriving backwards so the definitive order really moves every row.
+@@ -481,6 +484,354 @@ private slots:
+         f.h->fileGrid.setFilter("f02000", true); // i == 1000: already here
+         QTRY_COMPARE_WITH_TIMEOUT(f.countText(), QString("1 match so far"), 10000);
+     }
++    // ---- reviewer scratch, not committed ----
++    void rKeyboardDuringArrivalIsNotReplaced() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        f.view()->forceActiveFocus();
++        for (int i = 0; i < 3; ++i) QTest::keyClick(f.h->window, Qt::Key_Right);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.cursorRow(), 2, 10000);
++        const QString chosen = f.h->fileGrid.pathAt(2);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "keyboard chose" << chosen << "selection now" << f.h->fileGrid.selectedPaths();
++        QCOMPARE(f.h->fileGrid.selectedPaths(), QStringList{chosen});
++    }
++    void rSelectAllDuringArrivalIsNotReplaced() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        f.view()->forceActiveFocus();
++        QTest::keyClick(f.h->window, Qt::Key_A, Qt::ControlModifier);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.selectedCount(), kHeldAfter, 10000);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "ctrl+a selected" << kHeldAfter << "selection now" << f.h->fileGrid.selectedCount();
++        QCOMPARE(f.h->fileGrid.selectedCount(), kHeldAfter);
++    }
++    void rScrollbarDuringArrivalKeepsTheView() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        QQuickItem* v = f.view();
++        const QPoint at = v->mapToScene(QPointF(v->width() - 3, v->height() * 0.6)).toPoint();
++        const qreal y0 = f.contentY();
++        QTest::mousePress(f.h->window, Qt::LeftButton, Qt::NoModifier, at);
++        QTest::mouseRelease(f.h->window, Qt::LeftButton, Qt::NoModifier, at);
++        QTRY_VERIFY_WITH_TIMEOUT(f.contentY() > y0 + 100, 10000);
++        qInfo() << "placeCursor after the scrollbar press" << f.h->window->findChild<QQuickItem*>("photoGrid")->property("placeCursor");
++        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
++        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
++        const int columns = f.h->window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "anchor row" << f.h->fileGrid.rowOf(anchor) << "top row" << f.rowAtViewTop() << "selection" << f.h->fileGrid.selectedPaths();
++        QCOMPARE(f.h->fileGrid.rowOf(anchor) / columns, f.rowAtViewTop() / columns);
++    }
++    void rRealWheelSettles() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        QQuickItem* v = f.view();
++        const QPointF at = v->mapToScene(QPointF(v->width() / 2, v->height() / 2));
++        QWheelEvent wheel(at, f.h->window->mapToGlobal(at), QPoint(), QPoint(0, -240), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
++        QCoreApplication::sendEvent(f.h->window, &wheel);
++        QTRY_VERIFY_WITH_TIMEOUT(f.contentY() > 0, 10000);
++        QCOMPARE(f.h->window->findChild<QQuickItem*>("photoGrid")->property("placeCursor").toBool(), false);
++    }
++    void rFolderInsertsKeepTheAnchor() {
++        ArrivalFixture f;
++        f.customName = [](int i) { return i == 2500 ? QString("p1.png") : i % 10 == 0 ? QString("dir%1").arg(kRows - i, 5, 10, QChar('0')) : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        QVERIFY(f.start());
++        QMetaObject::invokeMethod(f.view(), "movementStarted");
++        const int columns = f.h->window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
++        f.view()->setProperty("contentY", f.view()->property("originY").toReal() + f.view()->property("cellHeight").toReal() * (600 / columns));
++        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
++        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
++        int worst = 0;
++        QTimer sampler; sampler.setInterval(4);
++        QObject::connect(&sampler, &QTimer::timeout, &sampler, [&] {
++            if (!f.h->fileGrid.arriving()) return;
++            worst = std::max(worst, std::abs(f.h->fileGrid.rowOf(anchor) / columns - f.rowAtViewTop() / columns));
++        });
++        sampler.start();
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "columns" << columns << "worst line drift during arrival" << worst << "final anchor row" << f.h->fileGrid.rowOf(anchor) << "top" << f.rowAtViewTop();
++        QCOMPARE(f.h->fileGrid.rowOf(anchor) / columns, f.rowAtViewTop() / columns);
++        // worst is informational: the sampler can fire between an insert and polish.
++    }
++    void retryRestores(bool arrival) {
++        Media media{1, QSize(64, 48)};
++        auto failing = std::make_shared<std::atomic_bool>(false);
++        FakeFolder good; good.total = kRows;
++        good.name = [](int i) { return i == 2500 ? QString("p1.png") : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        FakeFolder bad; bad.total = kRows; bad.failAfter = 0;
++        const auto g = good.enumerator(), b = bad.enumerator();
++        SeamScope seam(nullptr);
++        if (!arrival) { directory_scan::testSeam.tuning.patienceMs = 600000; directory_scan::testSeam.tuning.slowFloorMs = 600000; }
++        directory_scan::testSeam.enumerator = [=](const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
++            return failing->load() ? b(d, hidden, cancel, limit, sink) : g(d, hidden, cancel, limit, sink);
++        };
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == kRows && h.viewer.imageReady(), 15000);
++        QTest::qWait(300); // sleep-ok: scratch
++        auto* v = h.window->findChild<QQuickItem*>("photoGridView");
++        const auto top = [&] { int row = -1; QMetaObject::invokeMethod(v, "indexAt", Q_RETURN_ARG(int, row), Q_ARG(qreal, v->property("contentX").toReal() + 4), Q_ARG(qreal, v->property("contentY").toReal() + 4)); return row; };
++        QMetaObject::invokeMethod(v, "positionViewAtIndex", Q_ARG(int, 1500), Q_ARG(int, 1));
++        QTest::qWait(300); // sleep-ok: scratch
++        const QString anchor = h.fileGrid.pathAt(top());
++        const int columns = h.window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
++        failing->store(true);
++        h.fileGrid.refresh();
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && !h.fileGrid.accessible(), 10000);
++        QTest::qWait(150); // sleep-ok: scratch
++        failing->store(false);
++        h.fileGrid.refresh();
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.accessible() && h.fileGrid.count() == kRows, 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "arrival" << arrival << "anchor row" << h.fileGrid.rowOf(anchor) << "top row after retry" << top();
++        QCOMPARE(h.fileGrid.rowOf(anchor) / columns, top() / columns);
++    }
++    void rRetryQuickPathRestoresViewport() { retryRestores(false); }
++    void rRetryArrivalRestoresViewport() { retryRestores(true); }
++    void rRenameWhileHiddenKeepsTheCursor() {
++        Media media{6, QSize(64, 48)};
++        auto hold = std::make_shared<std::atomic_bool>(false), released = std::make_shared<std::atomic_bool>(false);
++        SeamScope seam(nullptr); directory_scan::testSeam.tuning = {};
++        directory_scan::testSeam.beforeProbes = [=](std::stop_token stop) {
++            if (!hold->load()) return;
++            while (!released->load() && !stop.stop_requested()) std::this_thread::yield();
++        };
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        h.viewer.trigger("grid");
++        auto* grid = h.window->findChild<QQuickItem*>("photoGrid");
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == 6 && grid->isVisible() && !grid->property("placeCursor").toBool(), 15000);
++        h.fileGrid.select(h.fileGrid.rowOf(media.path(3)));
++        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.path(3)});
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(!grid->isVisible() && h.fileGrid.count() == 0, 10000);
++        const QString renamed = media.dir.filePath("renamed.png");
++        QVERIFY(QFile::rename(media.path(3), renamed));
++        hold->store(true);
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(grid->isVisible() && h.fileGrid.count() == 6 && !h.fileGrid.arriving() && h.fileGrid.loading(), 10000);
++        QTest::qWait(150); // sleep-ok: scratch, the probe window
++        qInfo() << "during the probe window" << h.fileGrid.selectedPaths();
++        released->store(true);
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading(), 10000);
++        QTest::qWait(150); // sleep-ok: scratch
++        qInfo() << "after the baseline" << h.fileGrid.selectedPaths();
++        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{renamed});
++    }
++    // ---- second reviewer's scratch, not committed ----
++    // Commands that are not selections must leave the placement armed.
++    void xNonSelectionCommandsKeepThePlacement_data() {
++        QTest::addColumn<QString>("command");
++        for (const char* id : {"fit", "toggle-metadata", "grid-zoom-in", "filter"}) QTest::newRow(id) << QString(id);
++    }
++    void xNonSelectionCommandsKeepThePlacement() {
++        QFETCH(QString, command);
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(f.placing());
++        f.h->viewer.trigger(command);
++        QVERIFY2(f.placing(), qPrintable(command));
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)}, 10000);
++    }
++    // The real path a menu item takes: window.invoke(id), through routeAllows.
++    void xInvokeSelectionDuringArrivalSettles_data() {
++        QTest::addColumn<QString>("command");
++        QTest::addColumn<int>("selected");
++        QTest::newRow("select-all") << "select-all" << kHeldAfter;
++        QTest::newRow("grid-select-all") << "grid-select-all" << kHeldAfter;
++        QTest::newRow("invert-selection") << "invert-selection" << kHeldAfter;
++        QTest::newRow("clear-selection") << "clear-selection" << 0;
++    }
++    void xInvokeSelectionDuringArrivalSettles() {
++        QFETCH(QString, command); QFETCH(int, selected);
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(f.placing());
++        QVERIFY(QMetaObject::invokeMethod(f.h->window, "invoke", Q_ARG(QVariant, command)));
++        qInfo() << "invoke" << command << "selected" << f.h->fileGrid.selectedCount() << "placing" << f.placing();
++        QCOMPARE(f.h->fileGrid.selectedCount(), selected);
++        QVERIFY(!f.placing());
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        runPlacements();
++        QCOMPARE(f.h->fileGrid.selectedCount(), selected);
++    }
++    // Focus survives arrival and the definitive order.
++    void xFocusSurvivesArrival() {
++        ArrivalFixture f; QVERIFY(f.start()); QVERIFY(f.readyForInput());
++        f.view()->forceActiveFocus();
++        QTRY_VERIFY_WITH_TIMEOUT(f.view()->hasActiveFocus(), 10000);
++        QTest::keyClick(f.h->window, Qt::Key_Right);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        runPlacements();
++        QVERIFY(f.view()->hasActiveFocus());
++        const int before = f.h->fileGrid.cursorRow();
++        QTest::keyClick(f.h->window, Qt::Key_Right);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.cursorRow(), before + 1, 10000);
++    }
++    // What the user sees: at each frame during arrival, how far the anchored row is from the top, in lines.
++    void xVisibleRowAtEveryFrame_data() {
++        QTest::addColumn<int>("folderEvery");
++        QTest::newRow("files only") << 0;
++        QTest::newRow("every 10th a folder") << 10;
++        QTest::newRow("every 7th a folder") << 7;
++    }
++    void xVisibleRowAtEveryFrame() {
++        QFETCH(int, folderEvery);
++        ArrivalFixture f;
++        if (folderEvery) f.customName = [folderEvery](int i) { return i == 2500 ? QString("p1.png") : i % folderEvery == 0 ? QString("dir%1").arg(kRows - i, 5, 10, QChar('0')) : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        QVERIFY(f.start());
++        QMetaObject::invokeMethod(f.view(), "movementStarted");
++        f.scrollDown(600);
++        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
++        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
++        const int columns = f.columns();
++        int worst = 0, frames = 0, worstAfter = 0; QList<int> perFrame;
++        bool wasArriving = true;
++        QObject::connect(f.h->window, &QQuickWindow::frameSwapped, f.h->window, [&] {
++            const int row = f.h->fileGrid.rowOf(anchor), top = f.rowAtViewTop();
++            if (row < 0 || top < 0) return;
++            const int drift = std::abs(row / columns - top / columns);
++            ++frames;
++            if (f.h->fileGrid.arriving()) worst = std::max(worst, drift);
++            else { if (wasArriving) wasArriving = false; worstAfter = std::max(worstAfter, drift); perFrame << drift; }
++        }, Qt::DirectConnection);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        runPlacements();
++        QTRY_VERIFY_WITH_TIMEOUT(f.anchoredOn(anchor), 10000);
++        qInfo() << "FRAMES folderEvery" << folderEvery << "columns" << columns << "frames" << frames << "worst lines of drift, arriving" << worst << "after definitive" << worstAfter << "per frame after definitive" << perFrame;
++    }
++    // Type-ahead started during arrival, Escape after the definitive order: where does it go back to?
++    void xEscapeFromSearchAfterTheOrderLands() {
++        ArrivalFixture f; QVERIFY(f.start()); QVERIFY(f.readyForInput());
++        f.view()->forceActiveFocus();
++        QTRY_VERIFY_WITH_TIMEOUT(f.view()->hasActiveFocus(), 10000);
++        for (int i = 0; i < 3; ++i) QTest::keyClick(f.h->window, Qt::Key_Right);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.cursorRow(), 2, 10000);
++        const QString before = f.h->fileGrid.pathAt(2);
++        QTest::keyClick(f.h->window, Qt::Key_2); // search starts from the cursor
++        QTRY_VERIFY_WITH_TIMEOUT(f.photoGrid()->property("searchQuery").toString() == "2", 10000);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        runPlacements();
++        if (f.photoGrid()->property("searchQuery").toString() != "2") QSKIP("the 3 s search timer ran out: this run proves nothing");
++        QTest::keyClick(f.h->window, Qt::Key_Escape);
++        QCOMPARE(f.photoGrid()->property("searchQuery").toString(), QString());
++        qInfo() << "before search" << before << "after escape" << f.h->fileGrid.selectedPaths();
++        QCOMPARE(f.h->fileGrid.selectedPaths(), QStringList{before});
++    }
++    // The grid's own chip buttons, with a multi-selection kept across leaving and re-entering, and a different photo viewed.
++    void xToolbarSelectionDuringArrival_data() {
++        QTest::addColumn<QString>("button");
++        QTest::newRow("clear") << "gridClearSelection";
++        QTest::newRow("invert") << "gridInvertSelection";
++    }
++    void xToolbarSelectionDuringArrival() {
++        QFETCH(QString, button);
++        Media media{2, QSize(64, 48)};
++        const auto names = [](int i) { return i == 2500 ? QString("p1.png") : i == 2600 ? QString("p2.png") : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        FakeFolder plain; plain.total = kRows; plain.name = names;
++        FakeFolder held; held.total = kRows; held.name = names; held.heldAfter = kHeldAfter;
++        auto useHeld = std::make_shared<std::atomic_bool>(false);
++        SeamScope seam(nullptr, 64);
++        const auto a = plain.enumerator(), b = held.enumerator();
++        directory_scan::testSeam.enumerator = [=](const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
++            return useHeld->load() ? b(d, hidden, cancel, limit, sink) : a(d, hidden, cancel, limit, sink);
++        };
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        h.viewer.trigger("grid");
++        auto* grid = h.window->findChild<QQuickItem*>("photoGrid");
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == kRows && h.viewer.imageReady() && !grid->property("placeCursor").toBool(), 15000);
++        runPlacements();
++        // Rows whose names arrive first, so they are among the held rows.
++        h.fileGrid.select(h.fileGrid.rowOf(media.dir.filePath("f03000.txt")));
++        h.fileGrid.select(h.fileGrid.rowOf(media.dir.filePath("f02990.txt")), DirectoryEntryModel::Toggle);
++        h.fileGrid.select(h.fileGrid.rowOf(media.dir.filePath("f02980.txt")), DirectoryEntryModel::Toggle);
++        QCOMPARE(h.fileGrid.selectedCount(), 3);
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(!grid->isVisible() && h.fileGrid.count() == 0, 10000);
++        h.viewer.open(media.path(1)); // a different photo: the placement now has a target
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        useHeld->store(true);
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(grid->isVisible() && h.fileGrid.count() == kHeldAfter && h.fileGrid.arriving(), 10000);
++        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.selectedCount(), 3, 10000);
++        QVERIFY(grid->property("placeCursor").toBool());
++        auto* chip = named(h.window, button);
++        QVERIFY(chip);
++        QTRY_VERIFY_WITH_TIMEOUT(chip->isVisible() && chip->height() > 0, 10000);
++        QVERIFY(QTest::qWaitFor([&] { return h.window->isExposed(); }, 10000));
++        QTest::mouseClick(h.window, Qt::LeftButton, Qt::NoModifier, sceneCenter(chip));
++        const int afterClick = h.fileGrid.selectedCount();
++        qInfo() << button << "selected after the click" << afterClick << "placing" << grid->property("placeCursor").toBool();
++        QVERIFY(afterClick != 3);
++        held.release();
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == kRows, 10000);
++        runPlacements();
++        qInfo() << button << "selected after the listing landed" << h.fileGrid.selectedCount() << h.fileGrid.selectedPaths().mid(0, 2);
++        QCOMPARE(h.fileGrid.selectedCount(), afterClick);
++    }
++    // GUI gap in the real window while a large mixed folder arrives. Selection on or off shows the cost of the
++    // selectionChanged emitted after a folder insert: QML re-reads selectedCount and selectedSummary, each O(rows).
++    void xGuiGapDuringLargeArrival_data() {
++        QTest::addColumn<int>("folderEvery");
++        QTest::addColumn<bool>("withSelection");
++        QTest::newRow("files only, no selection") << 0 << false;
++        QTest::newRow("files only, a selected row") << 0 << true;
++        QTest::newRow("every 10th a folder, no selection") << 10 << false;
++        QTest::newRow("every 10th a folder, a selected row") << 10 << true;
++    }
++    void xGuiGapDuringLargeArrival() {
++        QFETCH(int, folderEvery); QFETCH(bool, withSelection);
++        constexpr int rows = 100000;
++        Media media{1, QSize(64, 48)};
++        FakeFolder folder; folder.total = rows; folder.heldAfter = 2048;
++        folder.name = [folderEvery](int i) {
++            if (i == 2500) return QString("p1.png");
++            if (folderEvery && i % folderEvery == 0) return QString("dir%1").arg(rows - i, 6, 10, QChar('0'));
++            return QString("f%1.txt").arg(rows - i, 6, 10, QChar('0'));
++        };
++        SeamScope seam(&folder, 2048);
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && h.fileGrid.count() == 2048 && h.fileGrid.arriving(), 15000);
++        if (withSelection) h.fileGrid.select(10);
++        qint64 worst = 0, last = 0; int ticks = 0;
++        QElapsedTimer clock; clock.start();
++        QTimer beat; beat.setTimerType(Qt::PreciseTimer); beat.setInterval(1);
++        QObject::connect(&beat, &QTimer::timeout, &beat, [&] { const qint64 now = clock.elapsed(); if (h.fileGrid.arriving()) worst = std::max(worst, now - last); last = now; ++ticks; });
++        last = clock.elapsed();
++        beat.start();
++        QSignalSpy selections(&h.fileGrid, &DirectoryEntryModel::selectionChanged);
++        const qint64 t0 = clock.elapsed();
++        folder.release();
++        qint64 arrived = 0;
++        QTRY_VERIFY_WITH_TIMEOUT((arrived = clock.elapsed(), !h.fileGrid.arriving()) && h.fileGrid.count() == rows, 60000);
++        qInfo() << "GAP folderEvery" << folderEvery << "selection" << withSelection << "worst GUI gap ms" << worst << "arrival ms" << (arrived - t0) << "selectionChanged" << selections.count();
++    }
+ };
+ QTEST_MAIN(PerfEnumUiTests)
+ #include "perf_enum_ui_tests.moc"

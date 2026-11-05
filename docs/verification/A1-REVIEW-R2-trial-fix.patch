@@ -1,0 +1,60 @@
+diff --git a/ui/PhotoGrid.qml b/ui/PhotoGrid.qml
+index 89b9497..1391d6a 100644
+--- a/ui/PhotoGrid.qml
++++ b/ui/PhotoGrid.qml
+@@ -25,6 +25,7 @@ Rectangle {
+     property var resetViewport: null
+     property string searchQuery: ""
+     property int preSearchRow: -1
++    property string preSearchPath: ""
+     property bool filterExpanded: false
+     function openFilter() {
+         filterExpanded = true
+@@ -314,7 +315,7 @@ Rectangle {
+         function onLayoutAboutToBeChanged() { grid.forceLayout(); panel.rememberViewport() }
+         function onLayoutChanged() {
+             const saved = panel.resetViewport
+-            if (saved && (saved.scroll > 0 || saved.cursorVisible)) Qt.callLater(panel.restoreViewport, saved) // at the top stays at the top
++            if (saved && (saved.scroll > 0 || saved.cursorVisible)) panel.restoreViewport(saved) // at the top stays at the top
+         }
+         function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
+     }
+@@ -529,7 +530,7 @@ Rectangle {
+                         focusPolicy: Qt.NoFocus
+                         implicitHeight: Theme.controlHeight - Theme.gapSm
+                         implicitWidth: implicitHeight
+-                        onClicked: { fileGrid.invertSelection(); panel.focusGrid() }
++                        onClicked: { panel.settleByUser(); fileGrid.invertSelection(); panel.focusGrid() }
+                     }
+                     UiButton {
+                         objectName: "gridClearSelection"
+@@ -540,7 +541,7 @@ Rectangle {
+                         focusPolicy: Qt.NoFocus
+                         implicitHeight: Theme.controlHeight - Theme.gapSm
+                         implicitWidth: implicitHeight
+-                        onClicked: { fileGrid.clearSelection(); panel.focusGrid() }
++                        onClicked: { panel.settleByUser(); fileGrid.clearSelection(); panel.focusGrid() }
+                     }
+                 }
+             }
+@@ -656,7 +657,7 @@ Rectangle {
+             // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
+             if (event.key >= 0x20 && event.key <= 0x7e && !mods && event.text.length > 0) {
+                 if (panel.searchQuery.length === 0) {
+-                    panel.preSearchRow = fileGrid.cursorRow
++                    panel.preSearchRow = fileGrid.cursorRow; panel.preSearchPath = fileGrid.pathAt(fileGrid.cursorRow)
+                 }
+                 panel.searchQuery += event.text
+                 const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
+@@ -704,9 +705,8 @@ Rectangle {
+ 
+             // Escape while searching
+             if (event.key === Qt.Key_Escape && panel.searchQuery.length > 0) {
+-                if (panel.preSearchRow >= 0 && panel.preSearchRow < fileGrid.count) {
+-                    panel.select(panel.preSearchRow, panel.modeReplace)
+-                }
++                const preSearch = panel.preSearchRow >= 0 ? fileGrid.rowOf(panel.preSearchPath) : -1
++                if (preSearch >= 0) panel.select(preSearch, panel.modeReplace)
+                 panel.searchQuery = ""
+                 panel.preSearchRow = -1
+                 searchTimer.stop()
