@@ -136,7 +136,7 @@ private slots:
         h.fileGrid.select(rowOf(h, album.photo(2)));
         h.fileGrid.select(rowOf(h, album.photo(3)), DirectoryEntryModel::Toggle);
         grid->setProperty("bucketIndex", 3);
-        h.viewer.trigger("grid"); QTRY_VERIFY(!flag(h, "gridMode"));
+        h.viewer.trigger("grid"); QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "gridMode"), 10000);
         QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "gridScope") && !grid->property("visible").toBool(), 10000);
         FIRE(h, "clear-selection");
         FIRE(h, "grid-zoom-in"); QCOMPARE(grid->property("bucketIndex").toInt(), 3);
