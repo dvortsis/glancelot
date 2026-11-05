@@ -1,0 +1,6 @@
+Waiting: 3 build slots held (review-b3-r2 pid 34544, claude/b1-asset-group pid 61300, claude/a1-load-more pid 64760)
+Waiting: 2 build slots held (claude/b1-asset-group pid 61300, claude/a1-load-more pid 64760)
+Waiting: 1 build slots held (claude/b1-asset-group pid 61300)
+WINDOWS exit 0 2289s
+DOCKER exit 0 1502s
+2821031803
