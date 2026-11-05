@@ -5,6 +5,7 @@
 #include "glancelot/copy_move_service.hpp"
 #include "glancelot/mutation_service.hpp"
 #include "ui_test_support.hpp"
+#include <QQmlComponent>
 #include <QSignalSpy>
 #include <atomic>
 #include <condition_variable>
@@ -524,15 +525,12 @@ private slots:
         click(h, item(h, "transferCancel"));
         QTRY_VERIFY_WITH_TIMEOUT(!dialogOpen(h, "transferConfirmation"), kWait);
         gate.release();
-        // A later plan's result is the barrier that proves the cancelled one ran nothing.
-        assets::detail::setLookupBackendForTests(nullptr);
-        const QString xmp = scene.touch("IMG.xmp");
-        QVERIFY(QMetaObject::invokeMethod(flow, "paste", Q_ARG(QVariant, scene.target.path())));
-        QTRY_COMPARE_WITH_TIMEOUT(planned.count(), 1, kWait);
-        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "transferConfirmation"), kWait);
+        // A withdrawn plan reports nothing, so there is no signal to wait for. Give it the time it would need to run.
+        QTest::qWait(1000); // sleep-ok: asserting that nothing fires
+        QCOMPARE(planned.count(), 0);
         QVERIFY(started.isEmpty());
         QVERIFY(QDir(scene.target.path()).isEmpty());
-        QVERIFY(QFile::exists(xmp));
+        assets::detail::setLookupBackendForTests(nullptr);
     }
     void movingWithinOneFolderIsANoticeNotADialog() {
         Scene scene;
@@ -650,22 +648,51 @@ private slots:
         QVERIFY(!flow->property("keepBoth").toBool());
         QVERIFY(item(h, "transferSkip")->property("checked").toBool());
     }
+    // Three options, since with two every arrow lands on the other one whichever way it steps.
+    void leftAndRightFollowTheLayoutDirection_data() {
+        QTest::addColumn<bool>("mirrored");
+        QTest::newRow("left to right") << false;
+        QTest::newRow("right to left") << true;
+    }
     void leftAndRightFollowTheLayoutDirection() {
-        QGuiApplication::setLayoutDirection(Qt::RightToLeft);
+        QFETCH(bool, mirrored);
         Scene scene;
-        const QString cr2 = scene.touch("IMG.CR2");
-        scene.touch("IMG.xmp");
         Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
         QVERIFY(h.window);
-        h.window->resize(1180, 780);
-        QVERIFY(activate(h));
-        QVERIFY(requestDelete(h, {cr2}, scene.media.path()));
-        waitForPhase(h, "deleteFlow");
-        tabTo(h, "assetScopeFile");
-        QTest::keyClick(h.window, Qt::Key_Left); // forward, when the layout runs right to left
-        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeAsset")->hasActiveFocus(), kWait);
-        QTest::keyClick(h.window, Qt::Key_Right);
-        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeFile")->hasActiveFocus(), kWait);
+        QQmlComponent component(&h.engine); // a window of its own: the arrows mean other things to Main's keys outside a dialog
+        component.setData(QStringLiteral(
+            "import QtQuick\nimport QtQuick.Controls\nimport QtQuick.Layouts\nimport \"%1\"\n"
+            "Window { visible: true; width: 300; height: 200\n"
+            "ColumnLayout { LayoutMirroring.enabled: %2; LayoutMirroring.childrenInherit: true; width: 200\n"
+            "  ButtonGroup { id: options }\n"
+            "  UiRadioButton { objectName: \"first\"; text: \"First\"; checked: true; ButtonGroup.group: options }\n"
+            "  UiRadioButton { objectName: \"second\"; text: \"Second\"; ButtonGroup.group: options }\n"
+            "  UiRadioButton { objectName: \"third\"; text: \"Third\"; ButtonGroup.group: options } } }\n")
+            .arg(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui")).toString(), mirrored ? "true" : "false").toUtf8(), QUrl());
+        QScopedPointer<QObject> created(component.create(h.engine.rootContext()));
+        QVERIFY2(created, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(created.data());
+        QVERIFY(window);
+        window->requestActivate();
+        QTRY_VERIFY_WITH_TIMEOUT(window->isActive(), kWait);
+        auto* first = window->findChild<QQuickItem*>("first");
+        auto* second = window->findChild<QQuickItem*>("second");
+        auto* third = window->findChild<QQuickItem*>("third");
+        QVERIFY(first && second && third);
+        first->forceActiveFocus(Qt::TabFocusReason);
+        QVERIFY(first->hasActiveFocus());
+        const Qt::Key forward = mirrored ? Qt::Key_Left : Qt::Key_Right;
+        const Qt::Key back = mirrored ? Qt::Key_Right : Qt::Key_Left;
+        QTest::keyClick(window, forward);
+        QVERIFY(second->hasActiveFocus() && second->property("checked").toBool());
+        QTest::keyClick(window, forward);
+        QVERIFY(third->hasActiveFocus() && third->property("checked").toBool());
+        QTest::keyClick(window, back);
+        QVERIFY(second->hasActiveFocus());
+        QTest::keyClick(window, Qt::Key_Down); // up and down don't depend on direction
+        QVERIFY(third->hasActiveFocus());
+        QTest::keyClick(window, Qt::Key_Up);
+        QVERIFY(second->hasActiveFocus());
     }
     void aFocusedChoiceStaysInViewInAShortWindow() {
         Scene scene;

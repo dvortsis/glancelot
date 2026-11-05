@@ -20,6 +20,7 @@ RadioButton {
     function step(delta) {
         const options = ButtonGroup.group ? ButtonGroup.group.buttons.filter(b => b.visible && b.enabled) : []
         if (options.length < 2) return
+        options.sort((a, b) => a.mapToItem(null, 0, 0).y - b.mapToItem(null, 0, 0).y) // the group's own order isn't the order on screen
         const next = options[(options.indexOf(control) + delta + options.length) % options.length]
         next.forceActiveFocus(Qt.TabFocusReason)
         if (!next.checked) { next.toggle(); next.clicked() }
