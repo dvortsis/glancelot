@@ -1,0 +1,5 @@
+perf_enum_tests at 902a765, under the gate lock
+PERF_ENUM_TRACE 10k-cold first_row_ms=51 full_count_ms=51 definitive_ms=51 settled_ms=562 worst_gui_gap_ms=12 enumerate_ms=39 sort_ms=3 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_TRACE 10k-warm first_row_ms=52 full_count_ms=52 definitive_ms=52 settled_ms=512 worst_gui_gap_ms=12 enumerate_ms=33 sort_ms=3 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_TRACE 100k-cold first_row_ms=141 full_count_ms=419 definitive_ms=496 settled_ms=522 worst_gui_gap_ms=14 enumerate_ms=413 sort_ms=41 publish_ms=13 resets=0 layouts=1 inserts=20 largest_insert=10427 partial_seen=1
+PERF_ENUM_TRACE 100k-warm first_row_ms=142 full_count_ms=460 definitive_ms=534 settled_ms=562 worst_gui_gap_ms=12 enumerate_ms=447 sort_ms=40 publish_ms=12 resets=0 layouts=1 inserts=22 largest_insert=10443 partial_seen=1

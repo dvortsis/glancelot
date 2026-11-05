@@ -122,20 +122,19 @@ private slots:
     // A delegate that keeps its place through the new order shows its new row's thumbnail, not the old row's.
     void definitiveOrderRebindsDelegatesInPlace() {
         ArrivalFixture f; QVERIFY(f.start());
+        QMetaObject::invokeMethod(f.view(), "movementStarted"); // the user took over, so nothing moves the view off the top
+        QTRY_VERIFY_WITH_TIMEOUT(cellForRow(f.view(), 0) != nullptr, 10000);
         QQuickItem* firstCell = cellForRow(f.view(), 0);
-        QVERIFY(firstCell);
         const QString before = f.h->fileGrid.pathAt(0);
         f.folder.release();
         QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
         QVERIFY(f.h->fileGrid.pathAt(0) != before);
-        // Every visible delegate shows the data of the row it now sits on.
-        QTRY_VERIFY_WITH_TIMEOUT(cellForRow(f.view(), f.h->fileGrid.rowOf(f.media.path(0))) != nullptr, 10000);
-        const int row = f.h->fileGrid.rowOf(f.media.path(0));
-        auto* cell = cellForRow(f.view(), row);
-        QCOMPARE(cell->property("path").toString(), f.h->fileGrid.pathAt(row));
-        QQuickItem* thumbnail = descendant(cell, "gridThumb" + QString::number(row));
+        QCOMPARE(cellForRow(f.view(), 0), firstCell); // the same delegate, on a different file
+        QCOMPARE(firstCell->property("path").toString(), f.h->fileGrid.pathAt(0));
+        QQuickItem* thumbnail = descendant(firstCell, "gridThumb0");
         QVERIFY(thumbnail);
-        QCOMPARE(thumbnail->property("source").toUrl().toString(), f.h->fileGrid.thumbnailSource(row, f.h->window->findChild<QQuickItem*>("photoGrid")->property("thumbEdge").toInt()));
+        const int edge = f.h->window->findChild<QQuickItem*>("photoGrid")->property("thumbEdge").toInt();
+        QTRY_COMPARE_WITH_TIMEOUT(thumbnail->property("source").toUrl().toString(), f.h->fileGrid.thumbnailSource(0, edge), 10000);
     }
     // A row clicked during arrival is the user's choice: the placement that was waiting does not replace it.
     void clickDuringArrivalSurvivesTheDefinitiveOrder() {
