@@ -1276,6 +1276,12 @@ tasks:
     depends: [B3]
     outcome: "An Export item in the grid's context menu (discoverability; needs a ui/Main.qml or PhotoGrid site); ExportDialog listed in translation_coverage_ui's surfaces; selection_export tests for zero rows with the option on and off (B3-REVIEW-R2 finding 1); translations/README.md message count corrected at the next catalog regeneration (B3-REVIEW-R3 R3-N1)"
     acceptance: "Fresh review and a full gate; not started, per the user's November 5 decision to open no new slices"
+  - id: REL-01
+    title: Build provenance for releases
+    owner: lead
+    state: ready
+    outcome: "Version from project() plus GLANCELOT_VERSION_SUFFIX, full and short Git SHA, UTC build time and build kind injected at configure or build time; shown in About and printed by --version; Windows file version; Docker image OCI version, revision and created labels and a sha-<full SHA> tag; a release build fails without a SHA"
+    acceptance: "docs/RELEASING.md 'Build provenance'; no hand-written SHA in source; fresh review and full gate; not started while new slices are paused"
   - id: COPY-SAFETY-01
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
