@@ -6,7 +6,7 @@ Written for: the lead and the fresh EN-07 reviewer.
 
 - Branch: `claude/en-07`
 - Exact base: `20f1210` (`origin/main`, Merge pull request #17). The brief named `7c0da34`; no commit had been made when PR 9 merged, so the branch fast-forwarded and the brief's "if it lands first" step applied. This is not a stacked packet.
-- Code tip: `4e3fa36`. The move is `c785d1b`; `4e3fa36` is a one-line test deadline fix. The final commit updates this handoff; the queue row is in `9b692ed`.
+- Code tip: `c15a0db`. The move is `c785d1b`, `4e3fa36` is a one-line test deadline fix, and `c15a0db` adds the test target and the loupe order test. The final commit updates this handoff; the queue row is in `9b692ed`.
 - Review with `git diff --color-moved=dimmed-zebra 20f1210 4e3fa36 -- ui`. The branch bodies are moved code with identifiers requalified.
 
 ## Summary
@@ -23,7 +23,9 @@ Nothing visible changes, so the ui-design-skills were not needed. No string, lay
 | `ui/PhotoGrid.qml` | Existing end-of-file `Connections` extended, plus `property var host`. All in one block at the end of the file, clear of the PR 7 and PR 12 hunks. |
 | `ui/FolderTree.qml` | Existing `Connections` extended. |
 | `ui/DeleteFlow.qml`, `ui/RenameFlow.qml`, `ui/TransferHud.qml` | New `Connections`, plus `gridPane`/`treePane` properties (and `host` on TransferHud). |
-| `tests/command_handlers_ui_tests.cpp` | New. Not built until the lead adds the cmake include below. |
+| `tests/command_handlers_ui_tests.cpp` | New. |
+| `cmake/CommandHandlersTests.cmake` | New: the `command_handlers_ui` target (lead grant, round 2). |
+| `CMakeLists.txt` | One include line, after `cmake/CommandRoutingTests.cmake` (lead grant, round 2). |
 | `docs/WORK-QUEUE.yaml` | The EN-07 row only. |
 | `docs/handoff/EN-07-HANDOFF.md` | This file. |
 
@@ -68,7 +70,7 @@ An extraction script compared the ids handled in `onViewCommand` and `handleView
   ORDER Main view-details          (slideshow block)
   ```
 
-  The ids in the chain keep "end the loupe, then act". One order did change: `navigate-back`, `navigate-forward`, `add-to-favorites` and `filter` used to run before `endLoupe` and now run after it. None of them reads canvas state, and `endLoupe` touches only canvas zoom, pan, fit and loupe state, never focus. This order is a Qt implementation detail: no test asserts it, and a comment in `Main.qml` records why the block is last.
+  The ids in the chain keep "end the loupe, then act". One order did change: `navigate-back`, `navigate-forward`, `add-to-favorites` and `filter` used to run before `endLoupe` and now run after it. None of them reads canvas state, and `endLoupe` touches only canvas zoom, pan, fit and loupe state, never focus. This order is a Qt implementation detail. A comment in `Main.qml` records why the block is last, and `loupeEndsBeforeAMovedHandlerActs` guards it (see "Loupe order test").
 - **Components that aren't loaded.** PhotoGrid, FolderTree, DeleteFlow, RenameFlow and TransferHud are single, always-instantiated items, and a `Connections` still fires when its item is hidden. `ExportDialog.qml` is the exception: it doesn't exist until the first request. So `export-selection` is handled on the Loader, not in the dialog. It is the only command with this constraint.
 - **Multiple instances.** `Main.qml` loads once per process. The only `createObject` is `DetachedPaneHost`, which reparents the existing panes and instantiates no feature component, so no handler runs twice.
 - **Signal.** Same `viewCommand` signal, using `function onViewCommand` syntax. No property is named `onX`, and icon rendering is untouched.
@@ -120,26 +122,27 @@ Total Test time (real) = 404.41 sec
 ctest exit: 0
 ```
 
-Final run after the last test edit, on the moved QML:
+From a clean configure of the committed tree at `c15a0db` (`git status` empty, `build-claude-en-07` removed first, then Ninja, Release, `BUILD_TESTING=ON`). `ctest -N -R ^command_handlers_ui$` lists `Test #51: command_handlers_ui`, and it is in `-L ui` and `-L clipboard`:
 
 ```text
-1/2 Test #50: command_routing ..................   Passed   42.30 sec
-2/2 Test #51: command_handlers_ui ..............   Passed  149.45 sec
-100% tests passed out of 2
-Total Test time (real) = 191.77 sec
-ctest exit: 0
-```
-
-The same test binary on the unmoved QML (`git checkout 20f1210 -- ui/`, restored afterwards):
-
-```text
-1/1 Test #51: command_handlers_ui ..............   Passed  132.15 sec
+1/1 Test #51: command_handlers_ui ..............   Passed  140.21 sec
 100% tests passed out of 1
-Total Test time (real) = 132.95 sec
+Total Test time (real) = 140.22 sec
 ctest exit: 0
+Totals: 34 passed, 0 failed, 0 skipped, 0 blacklisted, 139964ms
 ```
 
-`command_handlers_ui` is 28 passed, 0 failed (26 cases plus init and cleanup) in both runs. It ran through a local, uncommitted cmake include, which is why it appears in the output above.
+The same binary on the unmoved QML (`git checkout 20f1210 -- ui/`, restored afterwards):
+
+```text
+1/1 Test #51: command_handlers_ui ..............   Passed   76.98 sec
+100% tests passed out of 1
+Total Test time (real) =  76.99 sec
+ctest exit: 0
+Totals: 34 passed, 0 failed, 0 skipped, 0 blacklisted, 76795ms
+```
+
+`command_handlers_ui` is 32 cases plus init and cleanup, and the order test has six rows. `command_routing` last ran with `command_handlers_ui` on the moved QML before round 2 and passed 2/2. Round 2 changed no QML.
 
 Before the move, at `7c0da34`, with no baseline failures:
 
@@ -168,7 +171,7 @@ ctest exit: 0
 
 No baseline failures. No budget test needed a rerun. `input_ui` and `folder_grid` were not run before the move. `export_ui` did not exist at `7c0da34`, so it has no pre-move `ctest` run; its test below shows the handler is live.
 
-The two `command_handlers_ui` runs above are the evidence for "no behaviour change": the same test binary passes on the QML before and after the move.
+The two clean-configure `command_handlers_ui` runs above are the evidence for "no behaviour change": the same test binary passes on the QML before and after the move.
 
 Three non-`ui` suites mention moved ids but do not load `Main.qml`, so the move can't reach them and they were not run: `window_slots` (registry and scope-table checks), `recovery` (a bindings merge) and `tabs_recovery` ("rename" is a data-row tag).
 
@@ -215,11 +218,30 @@ The move changes no behaviour, so a new assertion can't fail against the base. I
 
 The first round showed `gridCommandsKeepTheirPaneGuard` could not fail when the `clear-selection` guard was removed: entering the grid selects the viewed photo, which hid a cleared one-item selection. The test now selects two items, and the row above is the re-run after that fix. The two existing-suite rows (`stack_confirm_ui`, `export_ui`) show existing tests also catch a removed handler.
 
+## Loupe order test
+
+`loupeEndsBeforeAMovedHandlerActs` has one row per component that owns moved ids. Each row starts a loupe on the open photo and fires the command. It then reads `canvas.loupeActive` when that component's handler first changes something: `PhotoGrid.detailsChanged`, `viewer.stateChanged` (tree shown), `copyMoveService.clipboardChanged`, `DeleteFlow.requestedCountChanged`, `RenameFlow.renameTargetPathChanged` and the export Loader's `activeChanged`. The loupe must already be over by then.
+
+Fail-before: Main's connection moved back to its old place, ahead of the components in `Main.qml`. Every row went red; with the connection last, all six pass.
+
+```text
+connection back in its old place: exit 6
+FAIL!  : CommandHandlersUiTests::loupeEndsBeforeAMovedHandlerActs(PhotoGrid) '!probe.loupeAtFirstHit' returned FALSE. (the handler acted before Main.qml ended the loupe)
+FAIL!  : CommandHandlersUiTests::loupeEndsBeforeAMovedHandlerActs(FolderTree) '!probe.loupeAtFirstHit' returned FALSE. (the handler acted before Main.qml ended the loupe)
+FAIL!  : CommandHandlersUiTests::loupeEndsBeforeAMovedHandlerActs(TransferHud) '!probe.loupeAtFirstHit' returned FALSE. (the handler acted before Main.qml ended the loupe
+FAIL!  : CommandHandlersUiTests::loupeEndsBeforeAMovedHandlerActs(DeleteFlow) '!probe.loupeAtFirstHit' returned FALSE. (the handler acted before Main.qml ended the loupe)
+FAIL!  : CommandHandlersUiTests::loupeEndsBeforeAMovedHandlerActs(RenameFlow) '!probe.loupeAtFirstHit' returned FALSE. (the handler acted before Main.qml ended the loupe)
+FAIL!  : CommandHandlersUiTests::loupeEndsBeforeAMovedHandlerActs(exportFlow) '!probe.loupeAtFirstHit' returned FALSE. (the handler acted before Main.qml ended the loupe)
+Totals: 2 passed, 6 failed, 0 skipped, 0 blacklisted, 13502ms
+```
+
 ## Grant check
 
 `git diff --name-only 20f1210..<tip>`:
 
 ```text
+CMakeLists.txt
+cmake/CommandHandlersTests.cmake
 docs/WORK-QUEUE.yaml
 docs/handoff/EN-07-HANDOFF.md
 tests/command_handlers_ui_tests.cpp
@@ -231,7 +253,7 @@ ui/RenameFlow.qml
 ui/TransferHud.qml
 ```
 
-All are granted. No root CMake, shared header, C++ source or `AGENTS.md` change, and no new QML file.
+All are granted. The lead granted the cmake file and the one root `CMakeLists.txt` include line in round 2; that line is the only change there. No shared header, C++ source or `AGENTS.md` change, and no new QML file.
 
 ## Failure and cancellation cases covered
 
@@ -251,39 +273,12 @@ The new test covers these failure and refusal paths:
 5. **Main's connection is declared last,** so moved commands keep their order after `endLoupe`. The alternative was leaving it in place and arguing the order can't be observed, which would have flipped about 30 commands instead of 4.
 6. **`export-selection` lives on the Loader.** A handler inside `ExportDialog.qml` would miss the request that first creates it.
 7. **`host` is declared at the end of `PhotoGrid.qml`,** beside the block that uses it, to stay clear of PR 12's hunk near line 23.
+8. **Loupe order is tested through each handler's first effect.** Reading the canvas from a C++ slot on a signal that effect emits needs no hook in product QML. The alternative, a test-only signal in `Main.qml`, would add code to the hot file for a test.
 
 ## Open questions for the lead
 
-1. **Add the test target.** Please add `cmake/CommandHandlersTests.cmake` as below and include it after `cmake/CommandRoutingTests.cmake`, inside `if(BUILD_TESTING)`, because it needs the monitor-customization helper. Until then the hosted job and the gate do not build or run this test.
-
-   ```cmake
-   # EN-07: each view command a feature component handles, through the shipped Main.qml. Sources and environment mirror command_routing.
-qt_add_executable(command_handlers_ui_tests tests/command_handlers_ui_tests.cpp
-  ${GLANCELOT_VIEWER_SOURCES}
-  ${GLANCELOT_VIEWER_CONTEXT_SOURCES}
-  src/app/pane_layout.cpp include/glancelot/pane_layout.hpp
-  src/app/directory_entry_model.cpp include/glancelot/directory_entry_model.hpp
-  src/app/theme_manager.cpp include/glancelot/theme_manager.hpp
-  src/app/filmstrip_model.cpp include/glancelot/filmstrip_model.hpp
-  src/app/folder_tree_model.cpp include/glancelot/folder_tree_model.hpp
-  src/app/file_operation_service.cpp include/glancelot/file_operation_service.hpp
-  src/render/image_canvas.cpp src/render/image_canvas.hpp)
-target_include_directories(command_handlers_ui_tests PRIVATE include src/render)
-target_compile_definitions(command_handlers_ui_tests PRIVATE GLANCELOT_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(command_handlers_ui_tests PRIVATE glancelot_core glancelot_platform Qt6::Quick Qt6::QuickControls2 Qt6::GuiPrivate Qt6::Test Qt6::Concurrent)
-qt_add_resources(command_handlers_ui_tests command_handlers_theme_catalog PREFIX "/" BASE assets FILES assets/themes/catalog.json ${ui_fonts})
-qt_add_resources(command_handlers_ui_tests command_handlers_brand_assets PREFIX "/" BASE assets FILES
-  assets/brand/icons/app/dark/glancelot-64.png assets/brand/icons/app/light/glancelot-64.png
-  assets/brand/mascots/transparent/01_mascot_standing.png)
-qt_add_shaders(command_handlers_ui_tests "command_handlers_canvas_shaders" PREFIX "/shaders" FILES src/render/image.vert src/render/image.frag)
-glancelot_attach_monitor_customization(command_handlers_ui_tests)
-add_dependencies(command_handlers_ui_tests glancelot-decoder)
-add_test(NAME command_handlers_ui COMMAND command_handlers_ui_tests -o "${CMAKE_CURRENT_BINARY_DIR}/command_handlers_ui-results.txt,txt" -o -,txt)
-set_tests_properties(command_handlers_ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 600)
-glancelot_test_labels(command_handlers_ui LABELS ui process clipboard)
-   ```
-
-2. **Add the AGENTS.md rule.** Proposed wording for "Hot files":
+1. **Test target:** answered. The lead granted the cmake file and include line, now committed in `c15a0db`.
+2. **AGENTS.md rule:** answered. The lead adds it in bookkeeping after merge. The proposed wording for "Hot files":
 
    > New view commands are handled in the owning component: a `Connections { target: viewer; function onViewCommand(id) { ... } }` in that component's file, not a new branch in `ui/Main.qml`. `handleViewCommand` keeps canvas, window and layout ids, and ends the loupe for every id. A command that creates its component (a `Loader` item) goes on the Loader. A message moved out of `Main.qml` keeps its catalog context with `qsTranslate("Main", ...)` or is regenerated.
 
