@@ -389,6 +389,29 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(systemSegments(bytes) - systemBefore, 0, 15000); // none left behind for the whole machine
 #endif
     }
+    // Closing the viewer while a decoder holds a transfer leaves nothing behind either.
+    void closingTheViewerMidTransferLeavesNoMemoryBehind() {
+        const int width = 2000, height = 1400;
+        const qint64 bytes = qint64(width) * height * 4;
+        Media media(2, QSize(64, 48));
+        DecoderFixture fixture;
+        QVERIFY(fixture.configure({{"width", width}, {"height", height}, {"holdLock", true}, {"decodeDelayMs", 60000}}));
+#ifndef Q_OS_WIN
+        const int systemBefore = systemSegments(bytes);
+#endif
+        {
+            Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+            h.viewer.open(media.path(0));
+            QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(h.viewer.filePath()), 15000);
+            QVERIFY(mappedTransfers(bytes) > 0);
+        }
+        const QStringList keys = fixture.keys(); QVERIFY(!keys.isEmpty());
+#ifdef Q_OS_WIN
+        for (const QString& key : keys) QTRY_VERIFY2_WITH_TIMEOUT(!transferStillExists(key), qPrintable("still alive: " + key), 15000);
+#else
+        QTRY_COMPARE_WITH_TIMEOUT(systemSegments(bytes) - systemBefore, 0, 15000);
+#endif
+    }
     // The slideshow's own walk with real decoders, for the rate acceptance (R4-B2): run by hand, with GL_STACK_RATE_PASSES and
     // GL_STACK_RATE_PACE_MS. No test hook: real decoders, retired by the viewer at real moments. Every pass walks 40 folders of
     // 2 photos under "continue", so every step has a prefetch that ends in "ok" and a kill, the race that used to hang.

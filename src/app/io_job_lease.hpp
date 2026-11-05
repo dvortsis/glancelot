@@ -18,17 +18,20 @@ inline std::shared_ptr<IoJobLease> admitIoJob(JobPriority priority,qint64 bytes,
     if(!IoScheduler::instance().tryAdmit(id,priority,bytes,path))return {};
     lease->id=id;return lease;
 }
-// Keep the reservation until the killed process has actually stopped. The
-// release connections belong to the process and survive its UI owner's exit.
+// Keep the reservation, and whatever the process shares with this one (`shared`), until the
+// killed process has actually stopped. System V removes a segment only if the last detach
+// finds nobody attached, so a segment let go while a killed worker is still on its way out
+// would outlive both processes. The release connections belong to the process and survive
+// its UI owner's exit.
 inline void retireIoProcess(QProcess* process,std::shared_ptr<IoJobLease> lease,QObject* owner,
-                            std::function<void()> released={}) {
+                            std::function<void()> released={},std::shared_ptr<void> shared={}) {
     if(!process){lease.reset();if(released)QTimer::singleShot(0,owner,std::move(released));return;}
     process->disconnect(owner);process->setParent(nullptr);
-    struct Retirement {std::shared_ptr<IoJobLease> lease;bool disposed{};};
-    auto retirement=std::make_shared<Retirement>();retirement->lease=std::move(lease);
+    struct Retirement {std::shared_ptr<IoJobLease> lease;std::shared_ptr<void> shared;bool disposed{};};
+    auto retirement=std::make_shared<Retirement>();retirement->lease=std::move(lease);retirement->shared=std::move(shared);
     auto dispose=[process,retirement,guard=QPointer<QObject>(owner),released=std::move(released)]() mutable {
         if(std::exchange(retirement->disposed,true))return;
-        retirement->lease.reset();process->deleteLater();
+        retirement->lease.reset();retirement->shared.reset();process->deleteLater();
         if(guard&&released)QTimer::singleShot(0,guard,std::move(released));
     };
     if(process->state()==QProcess::NotRunning) {

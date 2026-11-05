@@ -489,7 +489,17 @@ struct ViewerController::Private {
         QObject::connect(q,&ViewerController::stateChanged,q,[this]{ if(tabList.size()>1) emit q->tabsChanged(); });
     }
     ~Private() {
-        monitor.reset();writePosition(true);navigationStop.request_stop();cancel();
+        monitor.reset();writePosition(true);navigationStop.request_stop();
+#ifndef Q_OS_WIN
+        // A killed worker's segment is released when it has stopped (retireIoProcess). The event loop that would see that is
+        // ending, so wait a moment here: a segment nobody removes outlives every process. Windows needs no wait: closing the
+        // last handle is enough, and the system does that for both processes.
+        const QPointer<QProcess> retiring[]{worker,prefetchWorker};
+        cancel();
+        for(const auto& process:retiring)if(process)process->waitForFinished(1000);
+#else
+        cancel();
+#endif
         // A blocked filesystem call cannot honor cancellation. Jobs own only by-value
         // captures, so a stalled thread can be abandoned rather than freezing window close.
         if(navigationPool->waitForDone(1000))delete navigationPool;
@@ -659,7 +669,8 @@ struct ViewerController::Private {
         pendingLookahead.reset();prefetchDeadline.stop();
         lookaheadCandidate.clear();
         if (prefetchWorker) {
-            glancelot::detail::retireIoProcess(std::exchange(prefetchWorker,nullptr),std::move(prefetchLease),q,[this]{notifyIoStatsChanged();});
+            glancelot::detail::retireIoProcess(std::exchange(prefetchWorker,nullptr),std::move(prefetchLease),q,[this]{notifyIoStatsChanged();},
+                std::shared_ptr<glancelot::detail::TransferSegment>(std::move(prefetchTransfer)));
         }
         else prefetchLease.reset();
         prefetchTransfer.reset();
@@ -680,7 +691,7 @@ struct ViewerController::Private {
             glancelot::detail::retireIoProcess(std::exchange(worker,nullptr),std::move(decodeLease),q,[this,retiredGeneration]{
                 notifyIoStatsChanged();
                 if(retiredGeneration==generation&&!loading&&imageReady&&navigationReady)scheduleLookahead();
-            });
+            },std::shared_ptr<glancelot::detail::TransferSegment>(std::move(transfer)));
         }
         else decodeLease.reset();
         transfer.reset(); admittedPixelBytes=0; output.clear();
