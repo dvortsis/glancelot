@@ -1,0 +1,17 @@
+[03:58:45] ctest ^input_ui$ on base
+[04:00:31] 1/1 Test #13: input_ui .........................   Passed  104.62 sec
+[04:00:31] 100% tests passed out of 1
+[04:00:31] Total Test time (real) = 104.69 sec
+[04:00:31] ctest ^input_ui$ on tip
+[04:02:32] 1/1 Test #13: input_ui .........................***Failed  119.19 sec
+[04:02:32] 0% tests passed, 1 tests failed out of 1
+[04:02:32] Total Test time (real) = 119.35 sec
+[04:02:32] direct input_ui_tests on tip2
+[04:03:54] direct input_ui_tests on tip2 exit 0 in 82.5 s
+[04:03:54] Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 82352ms
+[04:03:54] direct input_ui_tests on base2
+[04:05:15] direct input_ui_tests on base2 exit 0 in 80.6 s
+[04:05:15] Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 80547ms
+[04:05:15] direct stack_confirm_ui_tests on tip
+[04:08:07] direct stack_confirm_ui_tests on tip exit 0 in 171.7 s
+[04:08:07] Totals: 30 passed, 0 failed, 1 skipped, 0 blacklisted, 171455ms

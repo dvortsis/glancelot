@@ -1,0 +1,331 @@
+[
+ {
+  "mutation": "engine-ignores-the-option",
+  "file": "src/core/selection_export.cpp",
+  "tests": "nothingToExportLeavesTheTargetAlone nothingToExportCreatesNoNewFile confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "exit": "8",
+  "verdict": "KILLED",
+  "failed": [
+   "nothingToExportLeavesTheTargetAlone(all vanished)",
+   "nothingToExportLeavesTheTargetAlone(all changed)",
+   "nothingToExportLeavesTheTargetAlone(all outside the root)",
+   "nothingToExportLeavesTheTargetAlone(all vanished, path list)",
+   "nothingToExportLeavesTheTargetAlone(all outside the root, path list)",
+   "nothingToExportCreatesNoNewFile()",
+   "confirmedReplaceWithNothingToExportKeepsTheEarlierFile()",
+   "nothingToExportSaysNoFileWasCreated()"
+  ],
+  "totals": "Totals: 2 passed, 8 failed, 0 skipped, 0 blacklisted, 13069ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished) Compared values are not the same",
+   "   Actual   (readAll(destination))        : \"\\xEF\\xBB\\xBFpath,name,kind,bytes,modified\\r\\n\"",
+   "   Expected (QByteArray(\"earlier export\")): \"earlier export\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all changed) Compared values are not the same",
+   "   Actual   (readAll(destination))        : \"\\xEF\\xBB\\xBFpath,name,kind,bytes,modified\\r\\n\"",
+   "   Expected (QByteArray(\"earlier export\")): \"earlier export\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all outside the root) Compared values are not the same",
+   "   Actual   (readAll(destination))        : \"\\xEF\\xBB\\xBFpath,name,kind,bytes,modified\\r\\n\"",
+   "   Expected (QByteArray(\"earlier export\")): \"earlier export\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished, path list) Compared values are not the same"
+  ]
+ },
+ {
+  "mutation": "service-does-not-ask",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "nothingToExportLeavesTheTargetAlone nothingToExportCreatesNoNewFile confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "exit": "8",
+  "verdict": "KILLED",
+  "failed": [
+   "nothingToExportLeavesTheTargetAlone(all vanished)",
+   "nothingToExportLeavesTheTargetAlone(all changed)",
+   "nothingToExportLeavesTheTargetAlone(all outside the root)",
+   "nothingToExportLeavesTheTargetAlone(all vanished, path list)",
+   "nothingToExportLeavesTheTargetAlone(all outside the root, path list)",
+   "nothingToExportCreatesNoNewFile()",
+   "confirmedReplaceWithNothingToExportKeepsTheEarlierFile()",
+   "nothingToExportSaysNoFileWasCreated()"
+  ],
+  "totals": "Totals: 2 passed, 8 failed, 0 skipped, 0 blacklisted, 12987ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished) Compared values are not the same",
+   "   Actual   (readAll(destination))        : \"\\xEF\\xBB\\xBFpath,name,kind,bytes,modified\\r\\n\"",
+   "   Expected (QByteArray(\"earlier export\")): \"earlier export\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all changed) Compared values are not the same",
+   "   Actual   (readAll(destination))        : \"\\xEF\\xBB\\xBFpath,name,kind,bytes,modified\\r\\n\"",
+   "   Expected (QByteArray(\"earlier export\")): \"earlier export\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all outside the root) Compared values are not the same",
+   "   Actual   (readAll(destination))        : \"\\xEF\\xBB\\xBFpath,name,kind,bytes,modified\\r\\n\"",
+   "   Expected (QByteArray(\"earlier export\")): \"earlier export\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished, path list) Compared values are not the same"
+  ]
+ },
+ {
+  "mutation": "empty-guard-too-wide",
+  "file": "src/core/selection_export.cpp",
+  "tests": "oneSurvivingItemStillReplaces",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "oneSurvivingItemStillReplaces()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 77ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::oneSurvivingItemStillReplaces() 'readAll(destination).contains(\"img3.png\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "zero-rows-reported-as-written",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "nothingToExportLeavesTheTargetAlone nothingToExportCreatesNoNewFile confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "exit": "8",
+  "verdict": "KILLED",
+  "failed": [
+   "nothingToExportLeavesTheTargetAlone(all vanished)",
+   "nothingToExportLeavesTheTargetAlone(all changed)",
+   "nothingToExportLeavesTheTargetAlone(all outside the root)",
+   "nothingToExportLeavesTheTargetAlone(all vanished, path list)",
+   "nothingToExportLeavesTheTargetAlone(all outside the root, path list)",
+   "nothingToExportCreatesNoNewFile()",
+   "confirmedReplaceWithNothingToExportKeepsTheEarlierFile()",
+   "nothingToExportSaysNoFileWasCreated()"
+  ],
+  "totals": "Totals: 2 passed, 8 failed, 0 skipped, 0 blacklisted, 7087ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"written\"",
+   "   Expected (QString(\"nothingToExport\")) : \"nothingToExport\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all changed) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"written\"",
+   "   Expected (QString(\"nothingToExport\")) : \"nothingToExport\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all outside the root) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"written\"",
+   "   Expected (QString(\"nothingToExport\")) : \"nothingToExport\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished, path list) Compared values are not the same"
+  ]
+ },
+ {
+  "mutation": "blocked-replace-not-detected",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "aBlockedReplaceIsToldApartFromOtherFailures lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "exit": "3",
+  "verdict": "KILLED",
+  "failed": [
+   "aBlockedReplaceIsToldApartFromOtherFailures(error 5)",
+   "aBlockedReplaceIsToldApartFromOtherFailures(error 32)",
+   "lockedDestinationSaysToCloseItAndKeepsTheFile()"
+  ],
+  "totals": "Totals: 4 passed, 3 failed, 0 skipped, 0 blacklisted, 3144ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::aBlockedReplaceIsToldApartFromOtherFailures(error 5) Compared values are not the same",
+   "   Actual   (runOn(service, csvOptions(out.filePath(\"list.csv\"), overwrite))[\"status\"].toString()): \"failed\"",
+   "   Expected (status)                                                                              : \"destinationLocked\"",
+   "FAIL!  : ExportUiTests::aBlockedReplaceIsToldApartFromOtherFailures(error 32) Compared values are not the same",
+   "   Actual   (runOn(service, csvOptions(out.filePath(\"list.csv\"), overwrite))[\"status\"].toString()): \"failed\"",
+   "   Expected (status)                                                                              : \"destinationLocked\"",
+   "FAIL!  : ExportUiTests::lockedDestinationSaysToCloseItAndKeepsTheFile() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportErrorText\"))                                                                                                             : \"That location can't be written to, so nothing was saved. Check t",
+   "   Expected (QString(\"“list.csv” couldn't be replaced. It may be open in another app, so close it and try again. The existing file hasn't changed.\")): \"\\u201Clist.csv\\u201D couldn't be replaced. It may be open in another"
+  ]
+ },
+ {
+  "mutation": "any-failure-called-locked",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "aBlockedReplaceIsToldApartFromOtherFailures",
+  "exit": "2",
+  "verdict": "KILLED",
+  "failed": [
+   "aBlockedReplaceIsToldApartFromOtherFailures(another error)",
+   "aBlockedReplaceIsToldApartFromOtherFailures(not a replace)"
+  ],
+  "totals": "Totals: 4 passed, 2 failed, 0 skipped, 0 blacklisted, 227ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::aBlockedReplaceIsToldApartFromOtherFailures(another error) Compared values are not the same",
+   "   Actual   (runOn(service, csvOptions(out.filePath(\"list.csv\"), overwrite))[\"status\"].toString()): \"destinationLocked\"",
+   "   Expected (status)                                                                              : \"failed\"",
+   "FAIL!  : ExportUiTests::aBlockedReplaceIsToldApartFromOtherFailures(not a replace) Compared values are not the same",
+   "   Actual   (runOn(service, csvOptions(out.filePath(\"list.csv\"), overwrite))[\"status\"].toString()): \"destinationLocked\"",
+   "   Expected (status)                                                                              : \"failed\""
+  ]
+ },
+ {
+  "mutation": "engine-text-drifts",
+  "file": "src/core/selection_export.cpp",
+  "tests": "lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "lockedDestinationSaysToCloseItAndKeepsTheFile()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2122ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::lockedDestinationSaysToCloseItAndKeepsTheFile() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportErrorText\"))                                                                                                             : \"That location can't be written to, so nothing was saved. Check t",
+   "   Expected (QString(\"“list.csv” couldn't be replaced. It may be open in another app, so close it and try again. The existing file hasn't changed.\")): \"\\u201Clist.csv\\u201D couldn't be replaced. It may be open in another"
+  ]
+ },
+ {
+  "mutation": "changed-reported-as-missing",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "itemChangedAfterSnapshotIsSkipped changedItemIsNamedWithItsReason nothingToExportLeavesTheTargetAlone",
+  "exit": "3",
+  "verdict": "KILLED",
+  "failed": [
+   "itemChangedAfterSnapshotIsSkipped()",
+   "changedItemIsNamedWithItsReason()",
+   "nothingToExportLeavesTheTargetAlone(all changed)"
+  ],
+  "totals": "Totals: 6 passed, 3 failed, 0 skipped, 0 blacklisted, 2370ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::itemChangedAfterSnapshotIsSkipped() Compared values are not the same",
+   "   Actual   (first[\"reason\"].toString()): \"missing\"",
+   "   Expected (QString(\"changed\"))        : \"changed\"",
+   "FAIL!  : ExportUiTests::changedItemIsNamedWithItsReason() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportSkipReason\"))               : \"It's missing or can't be read.\"",
+   "   Expected (QString(\"It changed after the dialog opened.\")): \"It changed after the dialog opened.\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all changed) Compared values are not the same",
+   "   Actual   (result[\"skipped\"].toList().first().toMap()[\"reason\"].toString()): \"missing\"",
+   "   Expected (reason)                                                         : \"changed\""
+  ]
+ },
+ {
+  "mutation": "no-revalidation",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "itemChangedAfterSnapshotIsSkipped changedItemIsNamedWithItsReason nothingToExportLeavesTheTargetAlone",
+  "exit": "5",
+  "verdict": "KILLED",
+  "failed": [
+   "itemChangedAfterSnapshotIsSkipped()",
+   "changedItemIsNamedWithItsReason()",
+   "nothingToExportLeavesTheTargetAlone(all vanished)",
+   "nothingToExportLeavesTheTargetAlone(all changed)",
+   "nothingToExportLeavesTheTargetAlone(all vanished, path list)"
+  ],
+  "totals": "Totals: 4 passed, 5 failed, 0 skipped, 0 blacklisted, 2591ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::itemChangedAfterSnapshotIsSkipped() Compared values are not the same",
+   "   Actual   (result[\"written\"].toInt()): 3",
+   "   Expected (2)                        : 2",
+   "FAIL!  : ExportUiTests::changedItemIsNamedWithItsReason() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))              : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Exported 1 item to “list.csv”.\")): \"Exported 1 item to \\u201Clist.csv\\u201D.\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all vanished) Compared values are not the same",
+   "   Actual   (result[\"status\"].toString()): \"written\"",
+   "   Expected (QString(\"nothingToExport\")) : \"nothingToExport\"",
+   "FAIL!  : ExportUiTests::nothingToExportLeavesTheTargetAlone(all changed) Compared values are not the same"
+  ]
+ },
+ {
+  "mutation": "locked-case-removed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "lockedDestinationSaysToCloseItAndKeepsTheFile()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1986ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::lockedDestinationSaysToCloseItAndKeepsTheFile() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportErrorText\"))                                                                                                             : \"The export stopped because of an unexpected problem. Nothing was",
+   "   Expected (QString(\"“list.csv” couldn't be replaced. It may be open in another app, so close it and try again. The existing file hasn't changed.\")): \"\\u201Clist.csv\\u201D couldn't be replaced. It may be open in another"
+  ]
+ },
+ {
+  "mutation": "raw-error-shown-as-detail",
+  "file": "ui/ExportDialog.qml",
+  "tests": "lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "lockedDestinationSaysToCloseItAndKeepsTheFile()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2186ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::lockedDestinationSaysToCloseItAndKeepsTheFile() '!visibleItem(d.h, \"exportErrorDetail\")' returned FALSE. ()"
+  ]
+ },
+ {
+  "mutation": "nothing-case-removed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "exit": "2",
+  "verdict": "KILLED",
+  "failed": [
+   "confirmedReplaceWithNothingToExportKeepsTheEarlierFile()",
+   "nothingToExportSaysNoFileWasCreated()"
+  ],
+  "totals": "Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 3744ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::confirmedReplaceWithNothingToExportKeepsTheEarlierFile() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))                                         : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Nothing could be exported, so “list.csv” was not changed.\")): \"Nothing could be exported, so \\u201Clist.csv\\u201D was not changed.\"",
+   "FAIL!  : ExportUiTests::nothingToExportSaysNoFileWasCreated() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))                                         : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Nothing could be exported, so “list.csv” was not created.\")): \"Nothing could be exported, so \\u201Clist.csv\\u201D was not created.\""
+  ]
+ },
+ {
+  "mutation": "always-says-not-changed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "nothingToExportSaysNoFileWasCreated",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "nothingToExportSaysNoFileWasCreated()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1876ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::nothingToExportSaysNoFileWasCreated() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))                                         : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Nothing could be exported, so “list.csv” was not created.\")): \"Nothing could be exported, so \\u201Clist.csv\\u201D was not created.\""
+  ]
+ },
+ {
+  "mutation": "reveal-offered-for-nothing",
+  "file": "ui/ExportDialog.qml",
+  "tests": "confirmedReplaceWithNothingToExportKeepsTheEarlierFile",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "confirmedReplaceWithNothingToExportKeepsTheEarlierFile()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1910ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::confirmedReplaceWithNothingToExportKeepsTheEarlierFile() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))                                         : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Nothing could be exported, so “list.csv” was not changed.\")): \"Nothing could be exported, so \\u201Clist.csv\\u201D was not changed.\""
+  ]
+ },
+ {
+  "mutation": "path-shown-for-nothing",
+  "file": "ui/ExportDialog.qml",
+  "tests": "confirmedReplaceWithNothingToExportKeepsTheEarlierFile",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "confirmedReplaceWithNothingToExportKeepsTheEarlierFile()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2036ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::confirmedReplaceWithNothingToExportKeepsTheEarlierFile() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))                                         : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Nothing could be exported, so “list.csv” was not changed.\")): \"Nothing could be exported, so \\u201Clist.csv\\u201D was not changed.\""
+  ]
+ },
+ {
+  "mutation": "changed-reason-text-wrong",
+  "file": "ui/ExportDialog.qml",
+  "tests": "changedItemIsNamedWithItsReason",
+  "exit": "1",
+  "verdict": "KILLED",
+  "failed": [
+   "changedItemIsNamedWithItsReason()"
+  ],
+  "totals": "Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1819ms",
+  "lines": [
+   "FAIL!  : ExportUiTests::changedItemIsNamedWithItsReason() Compared values are not the same",
+   "   Actual   (textOf(d.h, \"exportResultText\"))              : \"Exported 2 items to \\u201Clist.csv\\u201D.\"",
+   "   Expected (QString(\"Exported 1 item to “list.csv”.\")): \"Exported 1 item to \\u201Clist.csv\\u201D.\""
+  ]
+ }
+]

@@ -54,6 +54,7 @@ struct ExportRequest {
     bool utf8Bom{true};              // CSV only; for spreadsheet applications
     bool revalidate{true};           // re-snapshot each item; Missing/Changed items are skipped and reported
     bool overwrite{false};           // replace an existing destination that is not an exported item
+    bool keepDestinationWhenEmpty{false};  // no row to write -> commit nothing, destination untouched; Written, written == 0
     std::size_t maxItems{1000000};   // more items -> ExportStatus::TooMany, nothing written
 };
 enum class ExportSkip { Missing, Changed, Duplicate, OutsideRoot, Unrepresentable };

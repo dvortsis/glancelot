@@ -1,0 +1,167 @@
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() QFontDatabase: Cannot find font directory C:/src/Github/Glancelot/.tools/Qt/6.8.3/msvc2022_64/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x246a5499790, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x246a5499790, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x246a5499790, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto() No QRhi found for window 0x246a5499790, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto()
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun() No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun()
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x246a5d80380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x246a5d80380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x246a5d80380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary() No QRhi found for window 0x246a5d80380, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary()
+QWARN  : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace() No QRhi found for window 0x246a5d7fb80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace() No QRhi found for window 0x246a5d7fb80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace()
+QWARN  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() No QRhi found for window 0x246a5d7d880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() No QRhi found for window 0x246a5d7d880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() No QRhi found for window 0x246a5d7d880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() No QRhi found for window 0x246a5d7d880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() No QRhi found for window 0x246a5d7d880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder() No QRhi found for window 0x246a5d7d880, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder()
+QWARN  : StackConfirmUiTests::slideshowSurvivesClosingAnotherTab() No QRhi found for window 0x246a5d7cf80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowSurvivesClosingAnotherTab() No QRhi found for window 0x246a5d7cf80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowSurvivesClosingAnotherTab()
+PASS   : StackConfirmUiTests::aTransferSegmentLivesUntilItsLastHandleCloses()
+PASS   : StackConfirmUiTests::aTransferSegmentRefusesAKeyInUse()
+PASS   : StackConfirmUiTests::aTransferSegmentReportsFailures()
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching) No QRhi found for window 0x246a5d7d980, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching) No QRhi found for window 0x246a5d7d980, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching)
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok) No QRhi found for window 0x246a5d7f880, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok)
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(killed by the viewer while holding the lock) No QRhi found for window 0x246a5d7e980, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(killed by the viewer while holding the lock) No QRhi found for window 0x246a5d7e980, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(killed by the viewer while holding the lock)
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) No QRhi found for window 0x246a5d80b80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too)
+QWARN  : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind() No QRhi found for window 0x246a5d7f280, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind()
+SKIP   : StackConfirmUiTests::slideshowPatternRateRun() set GL_STACK_RATE_PASSES to run it
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(424) : failure location
+QWARN  : StackConfirmUiTests::navigatingSpansAStep() No QRhi found for window 0x246a5d7fb80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::navigatingSpansAStep() No QRhi found for window 0x246a5d7fb80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::navigatingSpansAStep()
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) No QRhi found for window 0x246a5d7d380, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace)
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace)
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep() No QRhi found for window 0x246a5d7e480, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep()
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder)
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory) No QRhi found for window 0x246a5d7fe80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory) No QRhi found for window 0x246a5d7fe80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory) No QRhi found for window 0x246a5d7fe80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory)
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo) No QRhi found for window 0x246a5d80580, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo)
+QWARN  : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto() No QRhi found for window 0x246a5d7ec80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto() No QRhi found for window 0x246a5d7ec80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto() No QRhi found for window 0x246a5d7ec80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto() No QRhi found for window 0x246a5d7ec80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto() No QRhi found for window 0x246a5d7ec80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto()
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x246a5d7eb80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x246a5d7eb80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x246a5d7eb80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen() No QRhi found for window 0x246a5d7eb80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen()
+QWARN  : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor() No QRhi found for window 0x246a6805870, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor()
+QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x246a5d7f980, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::typeChipsWorkFromTheKeyboard() No QRhi found for window 0x246a5d7f980, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::typeChipsWorkFromTheKeyboard()
+QWARN  : StackConfirmUiTests::typeChipsMoveWithTheArrowKeys() No QRhi found for window 0x246a5d80380, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::typeChipsMoveWithTheArrowKeys() No QRhi found for window 0x246a5d80380, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::typeChipsMoveWithTheArrowKeys()
+QWARN  : StackConfirmUiTests::tabStripWheelRespectsTheMargin() No QRhi found for window 0x246a5d80680, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::tabStripWheelRespectsTheMargin() No QRhi found for window 0x246a5d80680, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::tabStripWheelRespectsTheMargin() No QRhi found for window 0x246a5d80680, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::tabStripWheelRespectsTheMargin() No QRhi found for window 0x246a5d80680, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::tabStripWheelRespectsTheMargin()
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+QWARN  : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView() No QRhi found for window 0x246a5d7fa80, QQuickRhiItem will not be functional
+PASS   : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView()
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 30 passed, 0 failed, 1 skipped, 0 blacklisted, 171455ms
+********* Finished testing of StackConfirmUiTests *********

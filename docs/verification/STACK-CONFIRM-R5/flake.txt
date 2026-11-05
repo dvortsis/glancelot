@@ -1,0 +1,166 @@
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+round 1 tip : 6 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+round 1 base : 6 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+round 2 tip : 5 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+round 2 base : 4 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(143) : failure location
+round 3 tip : 4 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+round 3 base : 2 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(139) : failure location
+round 4 tip : 4 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+round 4 base : 5 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5\tests\input_ui_tests.cpp(139) : failure location
+round 5 tip : 1 of 6 failed
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(143) : failure location
+FAIL!  : InputUiTests::precedenceMatrixForTheSameKey() Compared values are not the same
+   Actual   (canvas->rotation()): 0
+   Expected (90)                : 90
+C:\src\Github\Glancelot\.worktrees\review-stack-confirm-r5-base\tests\input_ui_tests.cpp(139) : failure location
+round 5 base : 2 of 6 failed

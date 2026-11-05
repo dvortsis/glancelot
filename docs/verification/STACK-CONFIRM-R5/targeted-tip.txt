@@ -1,0 +1,31 @@
+Test project C:/src/Github/Glancelot/.worktrees/review-stack-confirm-r5/build-review-stack-confirm-r5
+    Start  7: viewer_acceptance
+1/9 Test  #7: viewer_acceptance ................   Passed   27.63 sec
+    Start  8: thumbnails
+2/9 Test  #8: thumbnails .......................   Passed   11.08 sec
+    Start 23: fs_watch
+3/9 Test #23: fs_watch .........................   Passed  129.30 sec
+    Start 31: cache
+4/9 Test #31: cache ............................   Passed   13.37 sec
+    Start 34: animation
+5/9 Test #34: animation ........................   Passed    0.68 sec
+    Start 44: tabs_recovery
+6/9 Test #44: tabs_recovery ....................   Passed   99.91 sec
+    Start 47: translation_coverage_ui
+7/9 Test #47: translation_coverage_ui ..........   Passed   55.32 sec
+    Start 49: command_routing
+8/9 Test #49: command_routing ..................   Passed   27.30 sec
+    Start 52: stack_confirm_ui
+9/9 Test #52: stack_confirm_ui .................   Passed  413.59 sec
+
+100% tests passed out of 9
+
+Label Time Summary:
+budget     = 142.67 sec*proc (2 tests)
+fast       = 139.31 sec*proc (4 tests)
+native     = 129.30 sec*proc (1 test)
+process    = 777.51 sec*proc (8 tests)
+ui         = 496.21 sec*proc (3 tests)
+
+Total Test time (real) = 779.66 sec
+exit 0

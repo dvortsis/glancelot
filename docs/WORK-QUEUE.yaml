@@ -13,8 +13,8 @@ lead_plan_2026_10_22: "User-approved execution plan: enablement phase EN-01..EN-
 operating_model: "AGENTS.md (October 22, 2026): lead plus track and fresh-context review sessions; CI lead-windows-gate decides done. Lanes retired."
 phase0_memory_action: act_mvk70jg4_e555f0e2e57c
 current_cycle: docs/handoff/PHASE0-CYCLE1-2026-10-22.md
-slot_holds:
-  EN-07: "File conflict: both EN-07 and PR 3 (STACK-CONFIRM-FIX) make large edits to ui/Main.qml. Ends when PR 3 merges."
+slot_holds: {}
+new_slices_paused: "User decision (2026-11-05): finish the open slices (A1 PR 7 and PR 12, B1 PR 13, PR 14 and its part 3, EN-07), then stop; open no new ones. This overrides the Slots rule in AGENTS.md until the user lifts it. The hourly slot timer is cancelled."
 resumed: "User decision (2026-11-04): pause lifted; finish Phase 1, then continue the plan into Phase 2 with up to four child sessions at a time. All changes go through pull requests (AGENTS.md, Pull requests and merging; docs/decisions/2026-11-04-merge-protections.md)."
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -744,14 +744,15 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [PATH-BAR-01]
     outcome: Breadcrumbs plus cancellable path completion (F002)
     acceptance: Jump to ancestors and siblings; completion only for the typed scope, cancellable off the GUI thread; clipboard, UNC, Unicode, keyboard and long paths keep exact text semantics
     branch: "claude/f002"
     candidate_commit: "e05614f"
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
-    blocked_by: "STACK-CORRECTION-01 frozen corrections, fresh-context confirmation review and full gates; docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
     evidence: "docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md; original Gemini approvals predate integrated monitor customization"
   - id: VIEW-POLISH-01
     requirements: [VIEW-02, VIEW-03, VIEW-04]
@@ -759,14 +760,15 @@ tasks:
     priority: 6
     owner: lead
     owner_lane: claude
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [CANVAS-UI]
     outcome: Quick loupe, zoom presets, navigator overview and zoom-lock polish (F037)
     acceptance: Predictable zoom anchor; focus-loss and hold cancellation; physical 1:1 under fractional DPI is unverified without hardware
     branch: "claude/f037"
     candidate_commit: "2891250"
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
-    blocked_by: "STACK-CORRECTION-01 frozen corrections, fresh-context confirmation review and full gates; docs/handoff/LEAD-TAKEOVER-2026-10-22.md"
     evidence: "docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md; original Gemini approvals predate integrated monitor customization"
   - id: FS-WATCH-01
     requirements: [META-04, NAV-08, SYS-02]
@@ -929,7 +931,9 @@ tasks:
     priority: 1
     owner: lead
     owner_lane: claude
-    state: ready
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [MONITOR-CUSTOM-01]
     merged_commit: "3b2b0db (user-directed merge of claude/f051 stack onto main d632a53)"
     covers: [F002, F037, F031, F040, F049, F009, F014, F051, F053, F052, F054, F015, F042-chips]
@@ -944,7 +948,9 @@ tasks:
     feature: F031
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "Slideshow with start/stop and per-photo duration (F031)"
     acceptance: "Animation-aware clock and bounded prefetch; user input cancels reliably; missing files skipped with limits; an unplugged presentation monitor recovers"
@@ -953,14 +959,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F031-GEMINI-REVIEW.md APPROVED 319cdf4..26f8a89 (pre-sync pin)"
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F031-PLAN.md; docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md"
   - id: REFERENCE-WINDOW-01
     requirements: [UX-09]
     feature: F040
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01, STACK-F040-PINNED]
     outcome: "Pin a photo in a separate reference window (F040)"
     acceptance: "Platform capability checks with clear unsupported states; always-accessible recovery route; shares aggregate pixel/texture admission and release with MONITOR-OUTPUT pinned output as a distinct command, no duplicate decode, selected image unchanged; parity tests for close, pin replacement and recovery while both are active"
@@ -969,14 +976,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F040-GEMINI-REVIEW.md APPROVED 26f8a89..75dd2d7 (pre-sync pin)"
-    blocked_by: "STACK-F040-PINNED (shared admission with MONITOR-OUTPUT pinned output, parity tests), then STACK-CONFIRM and a passing authoritative gate"
     evidence: "docs/F040-PLAN.md; docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md finding 2"
   - id: LAYOUT-PRESETS-01
     requirements: [UX-14, UX-17]
     feature: F049
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01, STACK-F049-PRESETS]
     outcome: "One-command focus mode (claude/f049) and named layout presets (66dda8e on claude/f051) (F049)"
     acceptance: "Reset/recover hidden panes; per-window scope; no loss of selection when switching layouts; presets obey the canonical layout lock and frozen panes, keep per-slot placement and unknown/newer preference data, and have names and scopes distinct from monitor workspace presets"
@@ -985,14 +993,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F049-GEMINI-REVIEW.md APPROVED 75dd2d7..a1738fa (focus mode); presets inside the F051 review range f7aa764..8c3189c"
-    blocked_by: "STACK-F049-PRESETS (canonical lock/freeze, unknown-data preservation, distinct from monitor workspace presets), then STACK-CONFIRM and a passing authoritative gate"
     evidence: "docs/F049-PLAN.md; feature commits 66dda8e"
   - id: DETAILS-VIEW-01
     requirements: []
     feature: F009
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "Details or thumbnails mode in the folder grid (F009); sortable persisted columns remain packet A6"
     acceptance: "Shared selection and sort with the grid; virtualized rows; changing mode preserves the visible anchor"
@@ -1001,14 +1010,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F009-GEMINI-REVIEW.md APPROVED a1738fa..c266824 (pre-sync pin)"
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F009-PLAN.md"
   - id: GRID-BADGES-01
     requirements: [UX-02, META-05]
     feature: F014
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "File-type and failed-preview badges on grid thumbnails (F014, 67d3f83); rating, dimension and quality badges remain packet A4"
     acceptance: "Badges readable at small sizes, never colour-only, with accessible labels, and do not overlap filenames"
@@ -1017,14 +1027,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F014-GEMINI-REVIEW.md APPROVED c266824..f7aa764 (pre-sync pin)"
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F014-PLAN.md; feature commits 67d3f83"
   - id: SHORTCUT-RECORDER-01
     requirements: [IN-01, IN-04, IN-05]
     feature: F051
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "Shortcut recorder with chords and conflict explanations in Settings (F051)"
     acceptance: "Keyboard-layout/IME and scope tests; unavailable OS shortcuts explained; no destructive command capture leaks"
@@ -1033,14 +1044,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F051-GEMINI-REVIEW.md APPROVED f7aa764..8c3189c; cf40fcc (test key F8 to F7) is after the review"
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F051-PLAN.md; feature commits ed12ebe, cf40fcc"
   - id: A11Y-AUDIT-01
     requirements: [UX-11]
     feature: F052
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "Accessibility audit test for every interactive control (F052, f597012); NVDA/Orca trials remain packet E6 RUNBOOK"
     acceptance: "Logical focus restore, semantic selection, accessible names and restrained live status for path, tree, grid and settings; NVDA/Orca trials by RUNBOOK"
@@ -1049,14 +1061,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F051-GEMINI-REVIEW.md APPROVED f7aa764..8c3189c; review names F052"
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F052-PLAN.md; feature commits f597012"
   - id: CONTRAST-TARGETS-01
     requirements: [UX-11, UX-17]
     feature: F053
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "High-contrast palette and 44 px large targets (F053, e1c1c51); native high-contrast detection remains packet E6"
     acceptance: "200% text, long translated labels, no colour-only state, supported narrow layouts and no hover-only essential actions"
@@ -1065,14 +1078,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F051-GEMINI-REVIEW.md APPROVED f7aa764..8c3189c; review names F053"
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F053-PLAN.md; feature commits e1c1c51"
   - id: I18N-01
     requirements: []
     feature: F054
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01, STACK-F054-COVERAGE]
     outcome: "Pseudo-locale catalog, qsTr wrapping and right-to-left mirroring (F054, 209e703 through 8c3189c)"
     acceptance: "Paths stay exact; traversal comparator policy stays deterministic; bidirectional text and plural counts tested; main's newer strings and detached windows covered with pseudo-locale, clipping and RTL evidence"
@@ -1081,14 +1095,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "docs/verification/F051-GEMINI-REVIEW.md APPROVED f7aa764..8c3189c; review names F054"
-    blocked_by: "STACK-F054-COVERAGE (main's newer strings, detached-window RTL, pseudo-locale/clipping/RTL evidence), then STACK-CONFIRM and a passing authoritative gate"
     evidence: "docs/F054-PLAN.md; docs/verification/F054-pseudo-locale.png; docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md finding 4; feature commits 209e703, 3d771f4, 1482d7e, de95624, 06f09ae, 776fa1e, c054973, 853ab3c, fb05f5f, e32b378, 3e882fb, 4990f0c, 64fe012, 8c3189c"
   - id: TABS-01
     requirements: []
     feature: F015
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01, STACK-F015-RECOVERY]
     outcome: "Tabs as saved locations with a top-bar tab strip (F015, shape A)"
     acceptance: "Closing a tab releases work; restore lazily; reopening does not multiply memory limits; tab state persists through the production recovery checkpoint (at most 8 records plus active index, legacy read, no auto-restore under SAFE/reset)"
@@ -1097,14 +1112,15 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "2566014 lies inside the F051 review range f7aa764..8c3189c, but docs/verification/F051-GEMINI-REVIEW.md does not name F015; fb698c0 is after the review. Treat as unreviewed."
-    blocked_by: "STACK-F015-RECOVERY (tabs through the production recovery checkpoint), then STACK-CONFIRM and a passing authoritative gate"
     evidence: "docs/F015-PLAN.md; docs/handoff/CLAUDE-STACK-SYNC-2026-10-22.md finding 1; feature commits 2566014, fb698c0"
   - id: TYPE-CHIPS-01
     requirements: [NAV-05, NAV-06]
     feature: F042
     milestone: M3
     owner: lead
-    state: integration
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-CORRECTION-01]
     outcome: "File-type filter chips in the grid header (F042 chips only, a504baa); capture-date/dimension sorts and rating/orientation/date chips remain packets A2 and A4"
     acceptance: "No metadata read per QML delegate; chip counts and filtering stay consistent with the grid model; missing data handled by a defined policy"
@@ -1113,7 +1129,6 @@ tasks:
     merged_commit: "3b2b0db (user-directed stack merge, 2026-10-22)"
     gated_commit: "ec05e42 Windows 43/43 722.35s, Docker 43/43 411.23s; docs/verification/lead-integrate-all-2026-10-22/README.md; does not approve STACK-CORRECTION-01"
     review_evidence: "a504baa lies inside the F051 review range f7aa764..8c3189c, but docs/verification/F051-GEMINI-REVIEW.md does not name F042. Treat as unreviewed."
-    blocked_by: "STACK-CONFIRM fresh-context confirmation and a passing authoritative gate"
     evidence: "docs/F013-F042-UI-PLAN.md; feature commits a504baa"
   # Phase 0 cycle 1 (docs/handoff/PHASE0-CYCLE1-2026-10-22.md). Scope and acceptance: docs/handoff/LEAD-PLAN-2026-10-22.md sections 3-4.
   - id: EN-01
@@ -1180,7 +1195,8 @@ tasks:
   - id: EN-07
     title: Per-component command handling
     owner: lead
-    state: ready
+    state: implementing
+    branch: claude/en-07
     depends: [EN-06, STACK-F054-COVERAGE]
     outcome: Feature components handle their own viewCommand ids; Main.qml keeps invoke, scope routing and canvas/window ids
     acceptance: Every UI suite passes unchanged; AGENTS.md rule that new commands are handled in the owning component
@@ -1247,6 +1263,19 @@ tasks:
     state: ready
     depends: [A1, PHASE2-CONTRACTS]
     brief_notes: "See R3-N9 in docs/verification/PHASE2-CONTRACTS-REVIEW-R3.md."
+  - id: B3
+    title: Export dialog over selection_export (F070)
+    owner: lead
+    state: done
+    integrated_commit: 88b14dc
+    integrated_evidence: "docs/verification/integrate-pr9-2026-11-05/README.md; reviews docs/verification/B3-REVIEW.md, B3-REVIEW-R2.md, B3-REVIEW-R3.md"
+  - id: B3-FOLLOWUPS
+    title: Export context-menu item, translation coverage and zero-row engine tests
+    owner: lead
+    state: ready
+    depends: [B3]
+    outcome: "An Export item in the grid's context menu (discoverability; needs a ui/Main.qml or PhotoGrid site); ExportDialog listed in translation_coverage_ui's surfaces; selection_export tests for zero rows with the option on and off (B3-REVIEW-R2 finding 1); translations/README.md message count corrected at the next catalog regeneration (B3-REVIEW-R3 R3-N1)"
+    acceptance: "Fresh review and a full gate; not started, per the user's November 5 decision to open no new slices"
   - id: COPY-SAFETY-01
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
@@ -1308,10 +1337,12 @@ tasks:
   - id: STACK-CONFIRM
     parent: STACK-CORRECTION-01
     owner: lead
-    state: ready
+    state: done
+    integrated_commit: 7c0da34
+    integrated_evidence: "docs/verification/integrate-pr3-2026-11-05/README.md; Windows 53/53 and Docker 52/52 on da2280a; confirmation docs/verification/STACK-CONFIRM-REVIEW-R5.md"
     depends: [STACK-F040-PINNED, STACK-F015-RECOVERY, STACK-F049-PRESETS, STACK-F054-COVERAGE]
     outcome: Fresh whole-stack confirmation on integrated main including the 3b2b0db resolutions and the nine confirm-only items
-    acceptance: docs/verification/STACK-CONFIRM-REVIEW.md APPROVED
+    acceptance: docs/verification/STACK-CONFIRM-REVIEW-R5.md APPROVED
     review: "CHANGES REQUIRED round 1 at e967a0c (claude/review-stack-confirm f441edd, docs/verification/STACK-CONFIRM-REVIEW.md): resolutions, frozen corrections and cheat-sheet fix confirmed; B-1 slideshow stall and B-2 unrecorded clauses"
     fix_packet: "STACK-CONFIRM-FIX on claude/stack-confirm-fix: B-1 slideshow stall on undecodable photo, N-2 navigation ends slideshow, G-1 details-mode anchor, N-1 keyboard-reachable type chips, N-5 tab strip elide and active tab in view"
     lead_decisions: "2026-10-24 carve-outs (B-2), not Phase 1: F031 animation-aware clock, slideshow prefetch and unplugged presentation monitor -> E5 workspace completion; F053 200% text evidence on the stack controls -> E6; F042 chip counts -> E5; F051 keyboard-layout/IME tests and OS-reserved shortcut explanation -> E5; F040 platform capability check and unsupported state -> CAPABILITY contract (Phase 2); N-3 cheat sheet chords, cleared bindings and qsTr -> E5 with E6 strings; N-4 preset list stale after Import/Restore all -> E5; N-6 completion UNC/Unicode/long-path tests -> E5; N-7 C++ refusal strings -> E6"
