@@ -1311,6 +1311,39 @@ private slots:
             const qint64 applied = filtering.restart();
             model.clearFilter();
             qInfo().noquote() << QString("PERF_ENUM_FILTER %1 rows=%2 set_ms=%3 clear_ms=%4").arg(mode).arg(model.count()).arg(applied).arg(filtering.elapsed());
+            // The paths around a page, at the same size: a refresh nothing publishes, leaving the grid, coming back to it
+            // (a first listing at the raised cap) and opening another folder.
+            QVERIFY(step("refresh-truncated", [&] { model.refresh(); }));
+            QElapsedTimer call; call.start();
+            model.setActive(false);
+            const qint64 leaveMs = call.elapsed();
+            QVERIFY(step("reenter-grid", [&] { model.setActive(true); }));
+            QCOMPARE(model.count(), 1000000);
+            QTemporaryDir other;
+            call.restart();
+            model.setDirectory(other.path());
+            const qint64 otherMs = call.elapsed();
+            QVERIFY(QTest::qWaitFor([&] { return !model.loading(); }, 280000));
+            qInfo().noquote() << QString("PERF_ENUM_PATHS %1 leave_grid_ms=%2 open_other_folder_ms=%3").arg(mode).arg(leaveMs).arg(otherMs);
+            worstGap = std::max({worstGap, leaveMs, otherMs});
+            QVERIFY2(worstGap < kGuiGapBudgetMs, qPrintable(QString("a path around a page stalled the GUI for %1 ms").arg(worstGap)));
+        }
+        if (mode != "real") {
+            // A folder of exactly 1,000,000 entries, listed whole, then refreshed: the in-place merge path.
+            FakeFolder whole; whole.total = 1000000;
+            seam = std::make_unique<SeamScope>(&whole, 2048);
+            directory_scan::testSeam.tuning.entryStep = 1000000; directory_scan::testSeam.tuning.entryLimit = 1000000;
+            DirectoryEntryModel model; model.setActive(true);
+            model.setDirectory(dir.path());
+            QVERIFY(QTest::qWaitFor([&] { return !model.loading() && model.count() == 1000000; }, 280000));
+            QVERIFY(!model.truncated());
+            Tracer tracer(model, 1000000);
+            tracer.begin();
+            model.refresh();
+            QVERIFY(QTest::qWaitFor([&] { return !model.loading(); }, 280000));
+            tracer.finish();
+            qInfo().noquote() << describe("refresh-whole", tracer.trace);
+            QVERIFY2(tracer.trace.worstGapMs < kGuiGapBudgetMs, qPrintable(QString("refreshing a whole million stalled the GUI for %1 ms").arg(tracer.trace.worstGapMs)));
         }
         directory_scan::testSeam = {};
     }

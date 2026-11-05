@@ -616,16 +616,18 @@ private slots:
     }
     // Opt-in measure of what one selectionChanged costs in a settled 100k grid, against the 6 ms drain budget.
     void traceSelectionChangedCost() {
-        if (qEnvironmentVariableIsEmpty("GLANCELOT_PERF_ENUM_SELECTION")) QSKIP("set GLANCELOT_PERF_ENUM_SELECTION to measure");
+        if (qEnvironmentVariableIsEmpty("GLANCELOT_PERF_ENUM_SELECTION")) QSKIP("set GLANCELOT_PERF_ENUM_SELECTION to measure, or to a row count");
+        const int total = std::max(100000, qEnvironmentVariableIntValue("GLANCELOT_PERF_ENUM_SELECTION"));
         Media media{1, QSize(64, 48)};
-        FakeFolder folder; folder.total = 100000;
-        folder.name = [](int i) { return i == 99999 ? QString("p1.png") : QString("f%1.txt").arg(100000 - i, 6, 10, QChar('0')); };
+        FakeFolder folder; folder.total = total;
+        folder.name = [total](int i) { return i == total - 1 ? QString("p1.png") : QString("f%1.txt").arg(total - i, 7, 10, QChar('0')); };
         SeamScope seam(&folder);
+        directory_scan::testSeam.tuning.entryStep = std::size_t(total); directory_scan::testSeam.tuning.entryLimit = std::size_t(total);
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         h.viewer.setFilmstripVisible(false);
         h.viewer.open(media.path(0));
         h.viewer.trigger("grid");
-        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == 100000 && h.viewer.imageReady(), 30000);
+        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == total && h.viewer.imageReady(), 240000);
         runPlacements();
         const auto report = [](const char* what, std::vector<qint64> times) {
             std::sort(times.begin(), times.end());
@@ -644,6 +646,18 @@ private slots:
         report("select-next-row", timed(41, [&](int i) { h.fileGrid.select(11 + i % 2); }));
         h.fileGrid.selectAll();
         report("emit-all-selected", timed(41, emission));
+        // The commands themselves, with every binding that reads the selection.
+        std::vector<qint64> all, clear, invert;
+        for (int i = 0; i < 5; ++i) {
+            QElapsedTimer clock;
+            clock.start(); h.fileGrid.clearSelection(); clear.push_back(clock.nsecsElapsed());
+            clock.restart(); h.fileGrid.selectAll(); all.push_back(clock.nsecsElapsed());
+            clock.restart(); h.fileGrid.invertSelection(); invert.push_back(clock.nsecsElapsed());
+            h.fileGrid.selectAll();
+        }
+        report(qPrintable(QString("select-all rows=%1").arg(total)), all);
+        report(qPrintable(QString("clear-all rows=%1").arg(total)), clear);
+        report(qPrintable(QString("invert-all rows=%1").arg(total)), invert);
     }
     void aKeyBeforeAnyRowKeepsThePlacement() {
         ArrivalFixture f; f.heldAfter = 0; QVERIFY(f.start()); QVERIFY(f.readyForInput());
