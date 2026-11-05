@@ -94,6 +94,7 @@ inline Row makeRow(const glancelot::DirectoryEntry& entry, const QString& base) 
 // Built entirely on the worker: strings, keys and the key->row index. The GUI thread only swaps it in.
 struct Listing {
     std::vector<Row> rows;
+    std::vector<Row> rawRows; // a copy of `rows` made on the worker, when the request asks for one
     QHash<QString, int> index;
     bool accessible{true}, cancelled{}, truncated{};
     bool rowsPublished{};   // the rows already went out as the definitive batch; this result carries only identities
@@ -329,6 +330,7 @@ struct Request {
     Tuning tuning;
     Enumerator enumerator;   // empty: the real filesystem
     std::function<void(std::stop_token)> beforeProbes; // empty outside perf_enum tests
+    bool copyRows{};         // the model will need a second copy of the rows: make it here, not on the GUI thread
 };
 #ifdef GLANCELOT_PERF_ENUM_TESTING
 // Copied at model construction; only the perf_enum_tests executable compiles this.
@@ -416,6 +418,7 @@ inline Listing scan(const Request& request, const std::shared_ptr<Arrivals>& arr
         result.rows.push_back(std::move(rows[at]));
     }
     result.rowCount = qsizetype(result.rows.size());
+    if (request.copyRows) result.rawRows = result.rows;
     result.identities.directory = request.directory;
     result.identities.revision = directoryRevision; result.identities.entryRevision = directoryEntryRevision;
     result.identities.complete = outcome.accessible && !outcome.truncated && directoryRevision.known &&

@@ -180,7 +180,7 @@ struct DirectoryEntryModel::Private {
             } else { finished = std::move(listing); drain(); }
             pump();
         });
-        directory_scan::Request scan{directory, sort, includeHidden, entryLimit, identities, tuning, enumerator, beforeProbes};
+        directory_scan::Request scan{directory, sort, includeHidden, entryLimit, identities, tuning, enumerator, beforeProbes, loadingMore && !filtering()};
         watcher->setFuture(QtConcurrent::run(pool, [scan = std::move(scan), queue = arrivals, cancel = stop.get_token(), token] {
             glancelot::perf::detail::GenerationContext context(token);
             return directory_scan::scan(scan, queue, cancel);
@@ -287,18 +287,21 @@ struct DirectoryEntryModel::Private {
             publicationStats.applied=true;publicationStats.filtered=filtering();
 #endif
             if (!filtering()) {
-                // A new page lands anywhere in the order, across up to a million rows: hashing them all here to save a
-                // reset would stall the GUI. Selection is by key, and the view restores its anchor after a reset.
-                if (loadingMore) reset(std::move(listing)); else merge(std::move(listing));
+                if (loadingMore) replaceRows(std::move(listing));
+                else {
+                    merge(std::move(listing));
+                    rawListing.rows = rows;
+                    rawListing.index = index;
+                }
 #ifdef GLANCELOT_FS_WATCH_TESTING
                 publicationStats.mergeMs=phase.restart();
 #endif
-                rawListing.rows = rows;
-                rawListing.index = index;
                 if (int(rows.size()) != oldCount) emit q->countChanged();
             } else {
                 provisional = false; provisionalFolders = 0;
+                if (loadingMore) retire(std::make_shared<Listing>(std::move(rawListing)));
                 rawListing = std::move(listing);
+                rawListing.rawRows = {};
                 applyFilter();
             }
         }
@@ -479,6 +482,22 @@ struct DirectoryEntryModel::Private {
         publicationStats.resetMs+=resetClock.elapsed();
 #endif
     }
+    // A new page lands anywhere in the order, across up to a million rows. Merging would hash them all here, and copying
+    // or freeing that many rows here would stall the GUI, so the worker made the copy and the pool frees the old rows.
+    // Selection is by key, and the view restores its anchor after a reset.
+    void replaceRows(Listing listing) {
+        q->beginResetModel();
+        auto old = std::make_shared<Listing>(std::move(rawListing));
+        old->rawRows = std::move(rows);
+        rows = std::move(listing.rows);
+        index = std::move(listing.index);
+        rawListing = {};
+        rawListing.rows = listing.rawRows.empty() ? rows : std::move(listing.rawRows);
+        rawListing.index = index;
+        q->endResetModel();
+        retire(std::move(old));
+    }
+    template <typename T> void retire(std::shared_ptr<T> old) { pool->start([old = std::move(old)]() mutable { old.reset(); }); }
     void release() {
         provisional = false; provisionalFolders = 0;
         if (!rows.empty() || !rawListing.rows.empty()) {

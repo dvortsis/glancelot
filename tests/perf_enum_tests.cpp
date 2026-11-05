@@ -122,6 +122,8 @@ public:
     void begin() { glancelot::perf::Recorder::instance().drain(); clock.start(); previous = 0; heartbeat.start(); }
     void finish() {
         heartbeat.stop(); trace.settledMs = clock.elapsed();
+        // The last publish ends the wait, so the heartbeat never fires after it: count that stretch too.
+        trace.worstGapMs = std::max(trace.worstGapMs, trace.settledMs - previous);
         for (const auto& span : glancelot::perf::Recorder::instance().drain()) {
             const qint64 ms = (span.endNs - span.startNs) / 1000000;
             if (span.stage == glancelot::perf::Stage::Enumerate) trace.enumerateMs += ms;
@@ -945,6 +947,7 @@ private slots:
         qInfo().noquote() << QString("PERF_ENUM_MEMORY %1 before rows=0 working_set_mb=%2 peak_mb=%3").arg(mode).arg(empty.workingSetMb).arg(empty.peakMb);
         {
             DirectoryEntryModel model; model.setActive(true);
+            qint64 worstGap = 0;
             const auto step = [&](const char* name, auto&& start) {
                 Tracer tracer(model, model.count() + 100000);
                 tracer.begin();
@@ -952,6 +955,7 @@ private slots:
                 const bool done = QTest::qWaitFor([&] { return !model.loading(); }, 280000);
                 tracer.finish();
                 const Memory now = memoryNow();
+                worstGap = std::max(worstGap, tracer.trace.worstGapMs);
                 qInfo().noquote() << describe(name, tracer.trace);
                 qInfo().noquote() << QString("PERF_ENUM_MEMORY %1 %2 rows=%3 settled_ms=%4 working_set_mb=%5 peak_mb=%6")
                     .arg(mode).arg(name).arg(model.count()).arg(tracer.trace.settledMs).arg(now.workingSetMb).arg(now.peakMb);
@@ -962,6 +966,16 @@ private slots:
             while (model.canLoadMore()) QVERIFY(step("show-more", [&] { model.loadMore(); }));
             QCOMPARE(model.count(), 1000000);
             QVERIFY(model.truncated());
+            QVERIFY2(worstGap < kGuiGapBudgetMs, qPrintable(QString("a page stalled the GUI for %1 ms").arg(worstGap)));
+            QTest::qWait(1000); // sleep-ok: the pool frees the previous page after the publish, with nothing to wait on
+            const Memory rested = memoryNow();
+            qInfo().noquote() << QString("PERF_ENUM_MEMORY %1 rested rows=%2 working_set_mb=%3 peak_mb=%4").arg(mode).arg(model.count()).arg(rested.workingSetMb).arg(rested.peakMb);
+            // Typing a filter projects every listed row on the GUI thread, as it always has.
+            QElapsedTimer filtering; filtering.start();
+            model.setFilter("f0000500", true);
+            const qint64 applied = filtering.restart();
+            model.clearFilter();
+            qInfo().noquote() << QString("PERF_ENUM_FILTER %1 rows=%2 set_ms=%3 clear_ms=%4").arg(mode).arg(model.count()).arg(applied).arg(filtering.elapsed());
         }
         directory_scan::testSeam = {};
     }
