@@ -596,6 +596,14 @@
 <context>
     <name>Main</name>
     <message>
+        <source>%1 of %2 so far</source>
+        <translation>[%1 õf %2 sõ fàr]</translation>
+    </message>
+    <message>
+        <source>%1 selected of %2 so far</source>
+        <translation>[%1 séléçtéd õf %2 sõ fàr]</translation>
+    </message>
+    <message>
         <source>%1 of %2</source>
         <translation>[%1 õf %2]</translation>
     </message>
@@ -1706,6 +1714,22 @@
     <message>
         <source>%1 items</source>
         <translation>[%1 îtéms]</translation>
+    </message>
+    <message>
+        <source>1 item so far</source>
+        <translation>[1 îtém sô fàr]</translation>
+    </message>
+    <message>
+        <source>1 match so far</source>
+        <translation>[1 màtçh sô fàr]</translation>
+    </message>
+    <message>
+        <source>%1 items so far</source>
+        <translation>[%1 îtéms sô fàr]</translation>
+    </message>
+    <message>
+        <source>%1 matches so far</source>
+        <translation>[%1 màtçhés sô fàr]</translation>
     </message>
     <message>
         <source>Invert selection</source>

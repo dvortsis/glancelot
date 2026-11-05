@@ -1,0 +1,96 @@
+A1 first review's fixes: fail-before evidence. Each mutation below removes one fix, rebuilds where needed, and runs the named tests.
+A non-zero exit means the tests caught it. QTest's exit code is the number of failed functions.
+21 mutations, all caught. b3-failing-again-forgets survived its first run and was tightened. p1-menu-selection-does-not-settle came after the review, from the lead's answer.
+b2-layout-not-forced-first and b2-restore-not-forced each fail only their own test, so both forceLayout calls are needed.
+definitiveOrderBeforeAnyFrameKeepsTheVisibleRow passes if either call remains, and fails with neither (b2-neither-forced).
+
+### b1-keys-do-not-settle [ui/PhotoGrid.qml] -> perf_enum_ui_tests keyboardDuringArrivalIsNotReplaced selectAllDuringArrivalIsNotReplaced
+exit 2
+  FAIL!  : PerfEnumUiTests::keyboardDuringArrivalIsNotReplaced() '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::selectAllDuringArrivalIsNotReplaced() Compared values are not the same
+  Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 15391ms
+### b1-a-modifier-settles [ui/PhotoGrid.qml] -> perf_enum_ui_tests selectAllDuringArrivalIsNotReplaced
+exit 1
+  FAIL!  : PerfEnumUiTests::selectAllDuringArrivalIsNotReplaced() 'f.placing()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 5114ms
+### b1-scrollbar-does-not-settle [ui/PhotoGrid.qml] -> perf_enum_ui_tests scrollbarDuringArrivalKeepsTheView
+exit 1
+  FAIL!  : PerfEnumUiTests::scrollbarDuringArrivalKeepsTheView() '!f.placing()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 6220ms
+### b1-right-click-does-not-settle [ui/PhotoGrid.qml] -> perf_enum_ui_tests rightClickDuringArrivalIsNotReplaced
+exit 1
+  FAIL!  : PerfEnumUiTests::rightClickDuringArrivalIsNotReplaced() '!f.placing()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 5530ms
+### b1-no-rows-settles [ui/PhotoGrid.qml] -> perf_enum_ui_tests aKeyBeforeAnyRowKeepsThePlacement
+exit 1
+  FAIL!  : PerfEnumUiTests::aKeyBeforeAnyRowKeepsThePlacement() 'f.placing()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 6252ms
+### b2-layout-not-forced-first [ui/PhotoGrid.qml] -> perf_enum_ui_tests foldersInTheLastRowsKeepTheAnchor scrollbarDuringArrivalKeepsTheView definitiveOrderBeforeAnyFrameKeepsTheVisibleRow
+exit 1
+  FAIL!  : PerfEnumUiTests::foldersInTheLastRowsKeepTheAnchor() 'f.anchoredOn(anchor)' returned FALSE. ()
+  Totals: 4 passed, 1 failed, 0 skipped, 0 blacklisted, 57653ms
+### b2-restore-not-forced [ui/PhotoGrid.qml] -> perf_enum_ui_tests tryAgainWithTheOrderUnchangedReturnsToTheBrowsedPosition definitiveOrderBeforeAnyFrameKeepsTheVisibleRow
+exit 1
+  FAIL!  : PerfEnumUiTests::tryAgainWithTheOrderUnchangedReturnsToTheBrowsedPosition() 'f.anchoredOn(f.anchor)' returned FALSE. ()
+  Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 59835ms
+### b3-no-return [ui/PhotoGrid.qml] -> perf_enum_ui_tests tryAgainOnAnArrivingFolderReturnsToTheBrowsedPosition tryAgainWithTheOrderUnchangedReturnsToTheBrowsedPosition
+exit 2
+  FAIL!  : PerfEnumUiTests::tryAgainOnAnArrivingFolderReturnsToTheBrowsedPosition() 'f.anchoredOn(f.anchor)' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::tryAgainWithTheOrderUnchangedReturnsToTheBrowsedPosition() 'f.anchoredOn(f.anchor)' returned FALSE. ()
+  Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 102733ms
+### b3-settling-keeps-the-return [ui/PhotoGrid.qml] -> perf_enum_ui_tests scrollingDuringTryAgainWinsOverTheBrowsedPosition
+exit 1
+  FAIL!  : PerfEnumUiTests::scrollingDuringTryAgainWinsOverTheBrowsedPosition() 'f.anchoredOn(chosen)' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 45928ms
+# First run: exit 0. Its test failed before any row arrived, so nothing overwrote the saved position. Rerun with the failure partway:
+### b3-failing-again-forgets [ui/PhotoGrid.qml] -> perf_enum_ui_tests failingAgainKeepsTheBrowsedPositionForTheNextTry
+exit 1
+  FAIL!  : PerfEnumUiTests::failingAgainKeepsTheBrowsedPositionForTheNextTry() 'f.anchoredOn(f.anchor)' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 44472ms
+### b4-reveal-only-waits-during-arrival [ui/PhotoGrid.qml] -> perf_enum_ui_tests renamedWhileHiddenKeepsTheCursor
+exit 1
+  FAIL!  : PerfEnumUiTests::renamedWhileHiddenKeepsTheCursor() 'grid->property("placeCursor").toBool()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 5233ms
+### b4-settle-only-during-arrival [ui/PhotoGrid.qml] -> perf_enum_ui_tests aClickInTheProbeWindowDecidesThePlacement
+exit 1
+  FAIL!  : PerfEnumUiTests::aClickInTheProbeWindowDecidesThePlacement() '!grid->property("placeCursor").toBool()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4712ms
+### b4-cursor-waits-for-the-baseline [ui/PhotoGrid.qml] -> perf_enum_ui_tests reenteringPlacesTheCursorAtTheDefinitiveOrder
+exit 1
+  FAIL!  : PerfEnumUiTests::reenteringPlacesTheCursorAtTheDefinitiveOrder() 'top() > 1000' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 43154ms
+### b5-definitive-does-not-end-the-drain [src/app/directory_entry_model.cpp] -> perf_enum_tests aFinishedScanIsNotLostAtTheDefinitiveBatch
+exit 1
+  FAIL!  : PerfEnumTests::aFinishedScanIsNotLostAtTheDefinitiveBatch() '!model.loading()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 37612ms
+### n1-item-plural [ui/PhotoGrid.qml] -> perf_enum_ui_tests oneItemSoFarReadsInTheSingular
+exit 1
+  FAIL!  : PerfEnumUiTests::oneItemSoFarReadsInTheSingular() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 36751ms
+### n1-match-plural [ui/PhotoGrid.qml] -> perf_enum_ui_tests oneMatchSoFarReadsInTheSingular
+exit 1
+  FAIL!  : PerfEnumUiTests::oneMatchSoFarReadsInTheSingular() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 42857ms
+### n2-folder-insert-silent [src/app/directory_entry_model.cpp] -> perf_enum_tests cursorRowIsNotifiedWhenRowsMoveAroundIt
+exit 1
+  FAIL!  : PerfEnumTests::cursorRowIsNotifiedWhenRowsMoveAroundIt() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 120ms
+### n2-definitive-silent [src/app/directory_entry_model.cpp] -> perf_enum_tests cursorRowIsNotifiedWhenRowsMoveAroundIt
+exit 1
+  FAIL!  : PerfEnumTests::cursorRowIsNotifiedWhenRowsMoveAroundIt() '!staleAtDefinitive' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 130ms
+### b2-neither-forced [ui/PhotoGrid.qml] -> perf_enum_ui_tests definitiveOrderBeforeAnyFrameKeepsTheVisibleRow
+exit 1
+  FAIL!  : PerfEnumUiTests::definitiveOrderBeforeAnyFrameKeepsTheVisibleRow() 'anchored()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 51807ms
+### n5-probes-before-definitive [src/app/directory_scan.hpp] -> perf_enum_tests trace10k
+exit 1
+  FAIL!  : PerfEnumTests::trace10k() 'second.firstRowMs < second.settledMs / 2' returned FALSE. (10k first row took 2387 of 3397 ms)
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 10020ms
+### p1-menu-selection-does-not-settle [ui/PhotoGrid.qml] -> perf_enum_ui_tests menuSelectionDuringArrivalIsNotReplaced
+exit 4
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(select all) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(grid menu select all) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(invert) '!f.placing()' returned FALSE. ()
+  FAIL!  : PerfEnumUiTests::menuSelectionDuringArrivalIsNotReplaced(clear) '!f.placing()' returned FALSE. ()
+  Totals: 2 passed, 4 failed, 0 skipped, 0 blacklisted, 19399ms

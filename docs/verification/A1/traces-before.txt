@@ -1,0 +1,13 @@
+Superseded for 10k: these "before" runs were not like for like with the "after" run, and overstate the 10k gain about threefold. See "Before and after" in docs/handoff/A1-HANDOFF.md.
+perf_enum_tests against main before A1 (settled_ms is when loading turns false)
+PERF_ENUM_TRACE 10k-cold first_row_ms=1836 full_count_ms=1836 settled_ms=1887 worst_gui_gap_ms=13 enumerate_ms=29 sort_ms=60 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_TRACE 10k-warm first_row_ms=1465 full_count_ms=1465 settled_ms=1482 worst_gui_gap_ms=12 enumerate_ms=23 sort_ms=56 publish_ms=1 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_TRACE 100k-cold first_row_ms=1602 full_count_ms=1602 settled_ms=1621 worst_gui_gap_ms=45 enumerate_ms=219 sort_ms=900 publish_ms=10 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_TRACE 100k-warm first_row_ms=1319 full_count_ms=1319 settled_ms=1328 worst_gui_gap_ms=12 enumerate_ms=267 sort_ms=776 publish_ms=6 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+
+The same run's results on main (test names as they were then):
+FAIL!  : PerfEnumTests::trace100k() 'second.partialSeen' returned FALSE. (no partial rows were visible before the 100k listing finished)
+FAIL!  : PerfEnumTests::arrivedRowsDoNotMoveUntilTheDefinitiveOrder() 'checks > 0' returned FALSE. (nothing arrived before the listing finished)
+FAIL!  : PerfEnumTests::newerFolderOpenedDuringArrivalWins() 'arrivalCaught' returned FALSE. (the listing finished before the first rows, so no arrival was caught)
+FAIL!  : PerfEnumTests::closingDuringArrivalIsBounded() 'arrivalCaught' returned FALSE. ()
+Totals: 3 passed, 4 failed, 0 skipped, 0 blacklisted, 48708ms

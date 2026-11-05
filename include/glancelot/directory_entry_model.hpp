@@ -19,6 +19,8 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(bool accessible READ accessible NOTIFY directoryChanged)
     Q_PROPERTY(bool truncated READ truncated NOTIFY directoryChanged)
+    // True during a folder's first listing until its definitive order is published; rows may reorder once when it clears.
+    Q_PROPERTY(bool arriving READ arriving NOTIFY arrivingChanged)
     Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
     Q_PROPERTY(qint64 selectedBytes READ selectedBytes NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedBytesFormatted READ selectedBytesFormatted NOTIFY selectionChanged)
@@ -42,7 +44,7 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    QString directory() const; int count() const; bool loading() const; bool accessible() const; bool truncated() const;
+    QString directory() const; int count() const; bool loading() const; bool accessible() const; bool truncated() const; bool arriving() const;
     // Lists `directory` asynchronously (newest request wins). Same directory = refresh preserving selection.
     Q_INVOKABLE void setDirectory(const QString& directory);
     Q_INVOKABLE void refresh();
@@ -90,7 +92,7 @@ public:
     // image:// URL; empty for non-image rows so unsupported files never reach the decoder.
     Q_INVOKABLE QString thumbnailSource(int row, int edge) const;
 signals:
-    void directoryChanged(); void countChanged(); void loadingChanged(); void selectionChanged();
+    void directoryChanged(); void countChanged(); void loadingChanged(); void selectionChanged(); void arrivingChanged();
     void currentImageChanged(); void epochChanged(); void filterChanged();
     // Listing failed or the folder became inaccessible; message is user-facing.
     void listingFailed(const QString& message);

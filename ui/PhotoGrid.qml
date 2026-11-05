@@ -24,7 +24,7 @@ Rectangle {
     property string noticeText: ""
     property var resetViewport: null
     property string searchQuery: ""
-    property int preSearchRow: -1
+    property string preSearchPath: "" // the file type-ahead started from: rows move while a listing arrives
     property bool filterExpanded: false
     function openFilter() {
         filterExpanded = true
@@ -159,14 +159,27 @@ Rectangle {
     // True from entering the grid until its first listing places the cursor: a photo opened meanwhile (the grid
     // restored visible at start-up, before the start-up photo opens) becomes the cursor's target.
     property bool entering: false
+    // Set while rows come back to a folder that failed: where the user was, until the rows have landed.
+    property var recoveryViewport: null
+    // Using the grid before its listing has landed decides where it is: neither the placement waiting for the listing
+    // nor a return to the browsed position applies any more. With no rows yet, a key or click has done nothing.
+    function settleByUser() {
+        if (fileGrid.count === 0) return
+        recoveryViewport = null
+        if (fileGrid.loading && placeCursor) { placeCursor = false; entering = false; revealPath = "" }
+    }
     // Places the cursor once a listing has landed: on the revealed photo, else keeps it, else the first entry.
     // Runs once per grid entry or folder change; an ordinary refresh (external change) never moves the cursor,
     // replaces the selection or scrolls the view.
     function reveal() {
-        if (!visible || fileGrid.loading || !placeCursor || folderPath.length === 0) return
+        if (!visible || !placeCursor || folderPath.length === 0) return
+        const row = revealPath.length ? fileGrid.rowOf(revealPath) : -1
+        // Before the listing has landed only what has a row can be placed: the photo as soon as it arrives, or the cursor
+        // once the order is final. A cursor with no row waits for the baseline, which may carry it across a rename.
+        const cursorHasItsRow = !revealPath.length && !fileGrid.arriving && fileGrid.cursorRow >= 0
+        if (fileGrid.loading && row < 0 && !cursorHasItsRow) return
         placeCursor = false; entering = false
         if (revealPath.length) {
-            const row = fileGrid.rowOf(revealPath)
             revealPath = ""
             if (row >= 0) { select(row); return }
         }
@@ -196,8 +209,14 @@ Rectangle {
         // Mouse-wheel browsing need not move the keyboard cursor. Preserve the visible item when a
         // scattered refresh resets the model, rather than pulling the viewport back to that cursor.
         const row = fileGrid.rowOf(saved.path)
+        grid.forceLayout() // rows that arrived since the last frame count towards contentHeight
         const offset = row >= 0 ? Math.floor(row / columns) * grid.cellHeight + saved.offset : saved.scroll
         grid.contentY = grid.originY + Math.max(0, Math.min(offset, grid.contentHeight - grid.height))
+    }
+    // Failing again leaves no rows to return to, so the position waits for the next try.
+    function settleRecovery(saved) {
+        if (fileGrid.count === 0) resetViewport = saved
+        else restoreViewport(saved)
     }
     function activate() {
         const row = fileGrid.cursorRow
@@ -219,6 +238,7 @@ Rectangle {
     }
     function goUp() { if (inputEnabled && parentPath.length) { noticeText = ""; viewer.navigateDirectory(parentPath) } }
     function clickRow(row, modifiers) {
+        settleByUser()
         const ctrl = (modifiers & Qt.ControlModifier) !== 0, shift = (modifiers & Qt.ShiftModifier) !== 0
         fileGrid.select(row, ctrl && shift ? panel.modeExtendRange : shift ? panel.modeRange
                         : ctrl ? panel.modeToggle : panel.modeReplace)
@@ -255,7 +275,7 @@ Rectangle {
     }
     onVisibleChanged: {
         searchQuery = ""
-        preSearchRow = -1
+        preSearchPath = ""
         searchTimer.stop()
         fileGrid.setActive(visible) // hidden: no listing, no rows, no thumbnail requests
         if (visible) Qt.callLater(enter)
@@ -266,19 +286,40 @@ Rectangle {
     onDirectoryErrorChanged: if (visible && directoryError.length) showNotice(directoryError)
     onFolderPathChanged: {
         searchQuery = ""
-        preSearchRow = -1
+        preSearchPath = ""
         searchTimer.stop()
         placeCursor = true
     }
     Connections {
         target: fileGrid
         function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
+        function onArrivingChanged() {
+            if (!panel.visible) return
+            if (fileGrid.arriving) {
+                const saved = panel.resetViewport
+                panel.recoveryViewport = fileGrid.count === 0 && saved && saved.directory === panel.folderPath ? saved : null
+                return
+            }
+            Qt.callLater(panel.reveal)
+            const recovery = panel.recoveryViewport
+            panel.recoveryViewport = null
+            if (recovery) Qt.callLater(panel.settleRecovery, recovery) // with or without a layout change
+        }
+        function onCountChanged() { if (panel.visible && fileGrid.arriving && panel.placeCursor && panel.revealPath.length) Qt.callLater(panel.reveal) }
         function onModelAboutToBeReset() { panel.rememberViewport() }
         function onModelReset() { Qt.callLater(panel.restoreViewport, panel.resetViewport) }
+        // The definitive order of a listing that arrived: same rows, same delegates, same visible item.
+        // The last rows and this can come in one call, and the view applies rows in a frame: lay them out first, so the
+        // position read here and the rows it is read against agree.
+        function onLayoutAboutToBeChanged() { grid.forceLayout(); panel.rememberViewport() }
+        function onLayoutChanged() {
+            const saved = panel.resetViewport
+            if (saved && (saved.scroll > 0 || saved.cursorVisible)) panel.restoreViewport(saved) // now, before a frame can show the old position over the new rows; at the top stays at the top
+        }
         function onCurrentImageChanged() { if (panel.entering && panel.placeCursor) { panel.revealPath = fileGrid.currentImage; panel.entryCurrentPath = fileGrid.currentImage } }
     }
     Timer { id: noticeTimer; interval: 4000; onTriggered: panel.noticeText = "" }
-    Timer { id: searchTimer; interval: 3000; onTriggered: { searchQuery = ""; preSearchRow = -1 } }
+    Timer { id: searchTimer; interval: 3000; onTriggered: { searchQuery = ""; preSearchPath = "" } }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
 
     // Location header: parent route, folder name, item count and multi-selection count.
@@ -359,8 +400,13 @@ Rectangle {
             Label {
                 objectName: "gridItemCount"
                 visible: fileGrid.count > 0 && panel.width >= 480
-                text: fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match") : qsTr("%1 matches").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0)))
-                                         : (fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0)))
+                text: {
+                    const n = fileGrid.count.toLocaleString(Qt.locale(), "f", 0)
+                    if (fileGrid.arriving) return fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match so far") : qsTr("%1 matches so far").arg(n))
+                                                                     : (fileGrid.count === 1 ? qsTr("1 item so far") : qsTr("%1 items so far").arg(n))
+                    return fileGrid.hasFilter ? (fileGrid.count === 1 ? qsTr("1 match") : qsTr("%1 matches").arg(n))
+                                              : (fileGrid.count === 1 ? qsTr("1 item") : qsTr("%1 items").arg(n))
+                }
                 color: Theme.muted
                 font.pixelSize: Theme.textSmall
                 font.features: { "tnum": 1 }
@@ -483,7 +529,7 @@ Rectangle {
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
-                        onClicked: { fileGrid.invertSelection(); panel.focusGrid() }
+                        onClicked: { panel.settleByUser(); fileGrid.invertSelection(); panel.focusGrid() }
                     }
                     UiButton {
                         objectName: "gridClearSelection"
@@ -494,7 +540,7 @@ Rectangle {
                         focusPolicy: Qt.NoFocus
                         implicitHeight: Theme.controlHeight - Theme.gapSm
                         implicitWidth: implicitHeight
-                        onClicked: { fileGrid.clearSelection(); panel.focusGrid() }
+                        onClicked: { panel.settleByUser(); fileGrid.clearSelection(); panel.focusGrid() }
                     }
                 }
             }
@@ -558,13 +604,14 @@ Rectangle {
                                Math.ceil(height / Math.max(1, Math.floor(panel.currentBucketSize / panel.columns) - 4)))
         cacheBuffer: cellHeight // one extra row; requests disappear with delegates and the hidden model
         boundsBehavior: Flickable.StopAtBounds
+        onMovementStarted: panel.settleByUser()
         keyNavigationEnabled: false
         activeFocusOnTab: true
         enabled: panel.inputEnabled
         Accessible.role: Accessible.List
         Accessible.name: "Items in " + panel.folderPath
         Accessible.description: qsTr("Arrow keys move. Shift extends, Ctrl+Space toggles, Ctrl+A selects all. Enter opens a folder or photo. Backspace goes up. Escape clears the selection, then returns to the photo. Ctrl+Shift+F moves to the type filters.")
-        ScrollBar.vertical: UiScrollBar { }
+        ScrollBar.vertical: UiScrollBar { onPressedChanged: if (pressed) panel.settleByUser() }
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier
             onWheel: event => {
@@ -591,6 +638,8 @@ Rectangle {
             if (panel.keyAction(event).length) event.accepted = true
         }
         Keys.onPressed: event => {
+            // A modifier alone has not done anything yet.
+            if ([Qt.Key_Control, Qt.Key_Shift, Qt.Key_Alt, Qt.Key_Meta].indexOf(event.key) < 0) panel.settleByUser()
             if ((event.modifiers & Qt.ControlModifier) && !(event.modifiers & Qt.ShiftModifier) && event.key === Qt.Key_F) {
                 panel.openFilter()
                 event.accepted = true
@@ -607,7 +656,7 @@ Rectangle {
             // Printable character (key >= 0x20 and key <= 0x7e, without Ctrl/Alt/Meta modifiers)
             if (event.key >= 0x20 && event.key <= 0x7e && !mods && event.text.length > 0) {
                 if (panel.searchQuery.length === 0) {
-                    panel.preSearchRow = fileGrid.cursorRow
+                    panel.preSearchPath = fileGrid.pathAt(fileGrid.cursorRow)
                 }
                 panel.searchQuery += event.text
                 const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
@@ -640,7 +689,7 @@ Rectangle {
             if (event.key === Qt.Key_Backspace && panel.searchQuery.length > 0) {
                 panel.searchQuery = panel.searchQuery.slice(0, -1)
                 if (panel.searchQuery.length === 0) {
-                    panel.preSearchRow = -1
+                    panel.preSearchPath = ""
                     searchTimer.stop()
                 } else {
                     const match = fileGrid.findMatch(panel.searchQuery, fileGrid.cursorRow >= 0 ? fileGrid.cursorRow : 0, true)
@@ -655,11 +704,10 @@ Rectangle {
 
             // Escape while searching
             if (event.key === Qt.Key_Escape && panel.searchQuery.length > 0) {
-                if (panel.preSearchRow >= 0 && panel.preSearchRow < fileGrid.count) {
-                    panel.select(panel.preSearchRow, panel.modeReplace)
-                }
+                const preSearch = panel.preSearchPath.length ? fileGrid.rowOf(panel.preSearchPath) : -1
+                if (preSearch >= 0) panel.select(preSearch, panel.modeReplace)
                 panel.searchQuery = ""
-                panel.preSearchRow = -1
+                panel.preSearchPath = ""
                 searchTimer.stop()
                 event.accepted = true
                 return
@@ -668,7 +716,7 @@ Rectangle {
             // Return / Enter while searching
             if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && panel.searchQuery.length > 0) {
                 panel.searchQuery = ""
-                panel.preSearchRow = -1
+                panel.preSearchPath = ""
                 searchTimer.stop()
                 panel.activate()
                 event.accepted = true
@@ -714,6 +762,7 @@ Rectangle {
         TapHandler {
             acceptedButtons: Qt.RightButton
             onTapped: point => {
+                panel.settleByUser()
                 const row = grid.indexAt(point.position.x + grid.contentX, point.position.y + grid.contentY)
                 const at = grid.mapToItem(panel, point.position.x, point.position.y)
                 panel.contextRequested(at.x, at.y, row)
@@ -754,7 +803,7 @@ Rectangle {
             Accessible.selected: isSelected
             Accessible.focusable: true
             Accessible.focused: isCursor && grid.activeFocus
-            Accessible.onPressAction: { panel.select(index); panel.activate() }
+            Accessible.onPressAction: { panel.settleByUser(); panel.select(index); panel.activate() }
             ToolTip.visible: hovered
             ToolTip.delay: 600
             ToolTip.text: name + (kind === "folder" && isLink ? " (link)" : "") + (kind === "file" ? " (not a supported photo)" : "") + (previewFailed ? " (preview unavailable)" : "")
@@ -787,8 +836,9 @@ Rectangle {
                         objectName: "gridThumb" + cell.index
                         anchors.fill: parent
                         asynchronous: true
-                        // Only image rows have a source; the epoch term re-requests after an on-disk change.
-                        source: cell.image ? (fileGrid.epoch, fileGrid.thumbnailSource(cell.index, panel.thumbEdge)) : ""
+                        // Only image rows have a source; the epoch term re-requests after an on-disk change,
+                        // and the path term after a new order puts another row under this delegate.
+                        source: cell.image ? (fileGrid.epoch, cell.path, fileGrid.thumbnailSource(cell.index, panel.thumbEdge)) : ""
                         sourceSize.width: panel.thumbEdge
                         sourceSize.height: panel.thumbEdge
                         fillMode: Image.PreserveAspectFit
@@ -1084,6 +1134,8 @@ Rectangle {
             if (id === "filter") {
                 panel.openFilter()
             }
+            // A selection made from a menu is as explicit as one made with a key.
+            if (["select-all", "grid-select-all", "clear-selection", "invert-selection"].indexOf(id) >= 0) panel.settleByUser()
         }
     }
 }

@@ -1,0 +1,70 @@
+A1 fail-before evidence. Each mutation below breaks one behaviour, rebuilds, and runs the named tests.
+A non-zero exit means the tests caught it. QTest's exit code is the number of failed functions.
+exit 3221226505: the process aborted. exit -999: the tests hung until the 280 s limit (the worker ignored stop).
+The four marked "first run: exit 0" survived the first run. Their tests were tightened in 902a765 and the result shown is the rerun.
+
+### arrival-ignores-patience [src/app/directory_scan.hpp] -> perf_enum_tests arrivalGatesHoldBackQuickAndSmallListings
+exit 1
+### arrival-ignores-min-rows [src/app/directory_scan.hpp] -> perf_enum_tests arrivalGatesHoldBackQuickAndSmallListings
+exit 1
+### slow-floor-ignored [src/app/directory_scan.hpp] -> perf_enum_tests arrivalGatesHoldBackQuickAndSmallListings
+exit 1
+### definitive-as-reset [src/app/directory_entry_model.cpp] -> perf_enum_tests arrivalSortsEachBatchAndPublishesTheDefinitiveOrderOnce
+exit 1
+### no-persistent-remap [src/app/directory_entry_model.cpp] -> perf_enum_tests arrivalSortsEachBatchAndPublishesTheDefinitiveOrderOnce
+exit 1
+### batch-not-sorted [src/app/directory_scan.hpp] -> perf_enum_tests arrivalSortsEachBatchAndPublishesTheDefinitiveOrderOnce
+exit 1
+### arriving-clears-only-at-end [src/app/directory_entry_model.cpp] -> perf_enum_tests definitiveOrderDoesNotWaitForIdentityProbes   (first run: exit 0)
+exit 1
+### probes-before-definitive [src/app/directory_scan.hpp] -> perf_enum_tests trace10k
+exit 1
+### refresh-dropped-in-window [src/app/directory_entry_model.cpp] -> perf_enum_tests renameOnDiskDuringTheProbeWindowKeepsPathsRight deleteDuringTheProbeWindowDropsTheRow
+exit 2
+### stop-not-requested [src/app/directory_entry_model.cpp] -> perf_enum_tests staleProbesCannotChangeANewerListing aHeldOlderFolderCannotPublishIntoANewerOne
+exit 2
+### stale-result-published [src/app/directory_entry_model.cpp] -> perf_enum_tests aFinishedOlderListingCannotPublishIntoANewerOne   (first run: exit 0)
+exit 1
+### arriving-sticks-on-failure [src/app/directory_entry_model.cpp] -> perf_enum_tests arrivingAlwaysClears
+exit 1
+### arriving-sticks-on-cancel [src/app/directory_entry_model.cpp] -> perf_enum_tests arrivingAlwaysClears
+exit 1
+### same-order-still-reorders [src/app/directory_entry_model.cpp] -> perf_enum_tests sortedArrivalPublishesNoSecondOrder
+exit 1
+### folder-index-not-segmented [src/app/directory_entry_model.cpp] -> perf_enum_tests foldersArriveAboveFilesAndTheIndexStaysExact
+exit 1
+### folders-appended-after-files [src/app/directory_entry_model.cpp] -> perf_enum_tests foldersArriveAboveFilesAndTheIndexStaysExact   (first run: exit 0)
+exit 1
+### queue-unbounded [src/app/directory_scan.hpp] -> perf_enum_tests aBusyGuiStopsTheWorkerAtTheQueueBound arrivalsQueueBlocksAtCapacityAndWakesOnStop
+exit 3221226505
+### wait-ignores-stop [src/app/directory_scan.hpp] -> perf_enum_tests arrivalsQueueBlocksAtCapacityAndWakesOnStop aBusyGuiStopsTheWorkerAtTheQueueBound
+exit -999
+  hung (280 s timeout)
+### failure-keeps-partial-rows [src/app/directory_entry_model.cpp] -> perf_enum_tests failureMidListingClearsRowsAndKeepsSelectionForRecovery
+exit 1
+### refresh-restarts-arrival [src/app/directory_entry_model.cpp] -> perf_enum_tests refreshDuringArrivalFinishesThenRefreshes
+exit 1
+### sort-keeps-provisional-rows [src/app/directory_entry_model.cpp] -> perf_enum_tests sortChangeDuringArrivalRestarts
+exit 1
+### filter-ignored-on-arrival [src/app/directory_entry_model.cpp] -> perf_enum_tests filterDuringArrivalProjectsEachBatch
+exit 1
+### enumerator-ignores-hidden [src/app/directory_scan.hpp] -> perf_enum_tests enumeratorMatchesListDirectory
+exit 1
+### key-not-folded [src/app/directory_scan.hpp] -> perf_enum_tests sortKeysMatchTheViewersOrder
+exit 1
+### key-keeps-leading-zeros [src/app/directory_scan.hpp] -> perf_enum_tests sortKeysMatchTheViewersOrder
+exit 1
+### qml-no-so-far-label [ui/PhotoGrid.qml] -> perf_enum_ui_tests untouchedArrivalIsLabelledThenRevealsTheCurrentPhoto
+exit 1
+### qml-reveal-ignores-arrival [ui/PhotoGrid.qml] -> perf_enum_ui_tests untouchedArrivalIsLabelledThenRevealsTheCurrentPhoto
+exit 1
+### qml-no-early-placement [ui/PhotoGrid.qml] -> perf_enum_ui_tests photoArrivingEarlyIsPlacedAndKeptInView
+exit 1
+### qml-thumbnail-not-rebound [ui/PhotoGrid.qml] -> perf_enum_ui_tests definitiveOrderRebindsDelegatesInPlace   (first run: exit 0)
+exit 1
+### qml-click-not-settled [ui/PhotoGrid.qml] -> perf_enum_ui_tests clickDuringArrivalSurvivesTheDefinitiveOrder
+exit 1
+### qml-movement-not-settled [ui/PhotoGrid.qml] -> perf_enum_ui_tests scrollDuringArrivalKeepsTheVisibleRow
+exit 1
+### qml-no-viewport-restore [ui/PhotoGrid.qml] -> perf_enum_ui_tests scrollDuringArrivalKeepsTheVisibleRow
+exit 1
