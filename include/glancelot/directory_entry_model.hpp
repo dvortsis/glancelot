@@ -23,6 +23,8 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(bool arriving READ arriving NOTIFY arrivingChanged)
     // True when `truncated` is set and the hard limit of 1,000,000 entries has not been reached, so loadMore() would list more.
     Q_PROPERTY(bool canLoadMore READ canLoadMore NOTIFY directoryChanged)
+    // True when loadMore() found too little free memory for the next page. Rows stay; opening the folder again clears it.
+    Q_PROPERTY(bool loadMoreRefused READ loadMoreRefused NOTIFY directoryChanged)
     Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
     Q_PROPERTY(qint64 selectedBytes READ selectedBytes NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedBytesFormatted READ selectedBytesFormatted NOTIFY selectionChanged)
@@ -47,7 +49,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     QString directory() const; int count() const; bool loading() const; bool accessible() const; bool truncated() const; bool arriving() const;
-    bool canLoadMore() const;
+    bool canLoadMore() const; bool loadMoreRefused() const;
     // Lists `directory` asynchronously (newest request wins). Same directory = refresh preserving selection.
     Q_INVOKABLE void setDirectory(const QString& directory);
     Q_INVOKABLE void refresh();

@@ -1481,6 +1481,14 @@
         <translation>[Réàd-õñlý drîvé]</translation>
     </message>
     <message>
+        <source>There is not enough free memory to list more items, so some matches may be missing.</source>
+        <translation>[Théré îs ñõt éñõùgh fréé mémõrý tõ lîst mõré îtéms, sõ sõmé màtçhés màý bé mîssîñg.]</translation>
+    </message>
+    <message>
+        <source>Showing %1 items. This folder has more, but there is not enough free memory to list them.</source>
+        <translation>[Shõwîñg %1 îtéms. Thîs fõldér hàs mõré, bùt théré îs ñõt éñõùgh fréé mémõrý tõ lîst thém.]</translation>
+    </message>
+    <message>
         <source>Showing %1 items. This folder has more that are not listed here.</source>
         <translation>[Shõwîñg %1 îtéms. Thîs fõldér hàs mõré thàt àré ñõt lîstéd héré.]</translation>
     </message>

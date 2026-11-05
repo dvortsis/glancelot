@@ -16,6 +16,7 @@ struct ArrivalFixture {
     int photoAt{2500}; // arrival position of the real photo's row
     int heldAfter{kHeldAfter}, batchRows{64};
     std::function<QString(int)> customName;
+    std::optional<std::uint64_t> freeMemory;
     std::unique_ptr<SeamScope> seam;
     std::unique_ptr<Harness> h;
     bool start() {
@@ -38,6 +39,7 @@ struct ArrivalFixture {
         folder.name = [photo = photoAt, total](int i) { return i == photo ? QString("p1.png") : QString("f%1.txt").arg(total - i, 5, 10, QChar('0')); };
         seam = std::make_unique<SeamScope>(&folder);
         directory_scan::testSeam.tuning.entryStep = kPage; directory_scan::testSeam.tuning.entryLimit = 3000;
+        if (freeMemory) directory_scan::testSeam.availableMemory = [spare = *freeMemory]() -> std::optional<std::uint64_t> { return spare; };
         h = std::make_unique<Harness>();
         if (!h->window) return false;
         h->window->resize(1180, 780);
@@ -273,6 +275,39 @@ private slots:
         const auto anchored = [&] { const int top = f.rowAtViewTop(), row = f.h->fileGrid.rowOf(anchor); return top >= 0 && row / columns == top / columns; };
         QTRY_VERIFY_WITH_TIMEOUT(anchored(), 10000);
         QCOMPARE(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)});
+    }
+    void aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner() {
+        ArrivalFixture f; f.photoAt = 300; QVERIFY(f.startPaged(2500));
+        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)}, 10000);
+        const int columns = f.columns();
+        f.scrollDown(600 / columns);
+        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
+        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
+        const int rowBefore = f.h->fileGrid.rowOf(anchor);
+        f.h->fileGrid.setSort("name", true, 0);
+        QVERIFY(f.h->fileGrid.loading());
+        QTRY_VERIFY_WITH_TIMEOUT(!f.h->fileGrid.loading() && f.h->fileGrid.rowOf(anchor) != rowBefore, 10000);
+        QCOMPARE(f.h->fileGrid.count(), kPage);
+        QTRY_VERIFY_WITH_TIMEOUT(f.anchoredOn(anchor), 10000);
+        QCOMPARE(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)});
+        QVERIFY(f.banner()->isVisible());
+        QVERIFY(f.bannerText().contains("This folder has more that are not listed here"));
+        QVERIFY(f.showMore()->isVisible());
+    }
+    void notEnoughMemoryKeepsTheRowsAndSaysWhy() {
+        ArrivalFixture f; f.photoAt = 300; f.freeMemory = 1024; QVERIFY(f.startPaged(2500));
+        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)}, 10000);
+        QVERIFY(f.tabToShowMore());
+        QTest::keyClick(f.h->window, Qt::Key_Return);
+        QTRY_VERIFY_WITH_TIMEOUT(!f.showMore()->isVisible(), 10000);
+        QVERIFY(!f.h->fileGrid.loading());
+        QCOMPARE(f.h->fileGrid.count(), kPage);
+        QVERIFY(f.banner()->isVisible());
+        QVERIFY(f.bannerText().contains("not enough free memory"));
+        QVERIFY(f.bannerText().contains(QLocale().toString(kPage)));
+        QTRY_VERIFY_WITH_TIMEOUT(f.view()->hasActiveFocus(), 10000); // not lost with the button
+        f.h->fileGrid.setFilter("f0", true);
+        QTRY_VERIFY_WITH_TIMEOUT(f.bannerText().contains("not enough free memory") && f.bannerText().contains("some matches may be missing"), 10000);
     }
     void atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid() {
         ArrivalFixture f; f.photoAt = 300; QVERIFY(f.startPaged(5000));
