@@ -1,0 +1,321 @@
+[
+ {
+  "mutation": "no-exception-containment",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "engineExceptionsBecomeResults",
+  "edits": [
+   {
+    "from": "        } catch (const std::exception& failure) {\n            outcome[\"status\"] = \"error\";\n            outcome[\"detail\"] = describe(failure.what());\n            outcome[\"written\"] = 0;\n        } catch (...) {\n            outcome[\"status\"] = \"error\";\n            outcome[\"written\"] = 0;\n        }",
+    "to": "        } catch (const glancelot::ExportStatus&) {\n        }"
+   }
+  ]
+ },
+ {
+  "mutation": "no-unrepresentable-precheck",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "loneSurrogateNameIsLeftOutNotFatal",
+  "edits": [
+   {
+    "from": "if (!representable(path)) { snapshot->skipped.push_back({path, ExportSkip::Unrepresentable}); continue; }",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "cancel-does-nothing",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "cancelMidExportLeavesNothing",
+  "edits": [
+   {
+    "from": "    if (d->running) d->worker.request_stop();\n}",
+    "to": "}"
+   }
+  ]
+ },
+ {
+  "mutation": "stale-result-delivered",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "newerPrepareDropsTheOlderResult",
+  "edits": [
+   {
+    "from": "if (id == d->lastId) emit finished(id, outcome);",
+    "to": "emit finished(id, outcome);"
+   }
+  ]
+ },
+ {
+  "mutation": "progress-not-coalesced",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "progressUpdatesAreCoalesced",
+  "edits": [
+   {
+    "from": "if (reportProgress->posted.exchange(true)) return;",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "no-destination-refusals",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "refusalsWriteNothing",
+  "edits": [
+   {
+    "from": "QString refusal = refuseDestination(destinationText, destination);",
+    "to": "QString refusal;"
+   }
+  ]
+ },
+ {
+  "mutation": "max-items-ignored",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "tooManyItemsAreRefusedBeforeAnyWork",
+  "edits": [
+   {
+    "from": "if (std::size_t(paths.size()) > limit) {",
+    "to": "if (false) {"
+   }
+  ]
+ },
+ {
+  "mutation": "runs-on-the-gui-thread",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "exportsSnapshotOnWorkerAndLeavesOriginals",
+  "edits": [
+   {
+    "from": "    d->running = true;\n    d->worker = std::jthread(std::move(job));\n    emit busyChanged();\n    return id;\n}\n\nvoid SelectionExportService::cancel",
+    "to": "    d->running = true;\n    job(std::stop_token{});\n    emit busyChanged();\n    return id;\n}\n\nvoid SelectionExportService::cancel"
+   }
+  ]
+ },
+ {
+  "mutation": "loaded-at-startup",
+  "file": "ui/Main.qml",
+  "tests": "mainLoadsTheDialogOnlyOnFirstUse",
+  "edits": [
+   {
+    "from": "        active: false\n        source: \"ExportDialog.qml\"",
+    "to": "        active: true\n        source: \"ExportDialog.qml\""
+   }
+  ]
+ },
+ {
+  "mutation": "command-unregistered",
+  "file": "src/app/command_registry.cpp",
+  "tests": "mainLoadsTheDialogOnlyOnFirstUse",
+  "edits": [
+   {
+    "from": "{\"export-selection\", \"Export selection as CSV or path list\", \"Ctrl+Shift+E\"},",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "no-empty-selection-notice",
+  "file": "ui/ExportDialog.qml",
+  "tests": "emptySelectionExplainsAndOpensNothing",
+  "edits": [
+   {
+    "from": "if (!paths || paths.length === 0) { notice(qsTr(\"Select items in the grid to export them.\")); return }",
+    "to": "if (!paths || paths.length === 0) return"
+   }
+  ]
+ },
+ {
+  "mutation": "not-modal-for-shortcuts",
+  "file": "ui/Main.qml",
+  "tests": "exportFromTheDialogShowsTheResult",
+  "edits": [
+   {
+    "from": " || (exportFlow.status === Loader.Ready && exportFlow.item.modal)",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "escape-does-not-cancel",
+  "file": "ui/ExportDialog.qml",
+  "tests": "guiStaysLiveAndEscapeCancelsARunningExport existingFileIsReplacedOnlyAfterConfirmation",
+  "edits": [
+   {
+    "from": "if (flow.phase === \"running\" || flow.phase === \"replace\") { flow.cancelOrBack(); event.accepted = true }",
+    "to": "if (false) { }"
+   }
+  ]
+ },
+ {
+  "mutation": "overwrites-without-asking",
+  "file": "ui/ExportDialog.qml",
+  "tests": "existingFileIsReplacedOnlyAfterConfirmation",
+  "edits": [
+   {
+    "from": "overwrite: overwrite === true })",
+    "to": "overwrite: true })"
+   }
+  ]
+ },
+ {
+  "mutation": "replace-in-exports-slot",
+  "file": "ui/ExportDialog.qml",
+  "tests": "existingFileIsReplacedOnlyAfterConfirmation",
+  "edits": [
+   {
+    "from": "                UiButton {\n                    objectName: \"exportReplace\"\n                    visible: flow.phase === \"replace\"\n                    variant: \"danger\"\n                    ignoreKeyRepeat: true\n                    text: qsTr(\"Replace\")\n                    onClicked: flow.startExport(true)\n                }\n                UiButton {\n                    id: keepButton\n                    objectName: \"exportKeep\"\n                    visible: flow.phase === \"replace\"\n                    variant: \"outline\"\n                    text: qsTr(\"Keep the file\")\n                    onClicked: flow.cancelOrBack()\n                }\n",
+    "to": "                UiButton {\n                    id: keepButton\n                    objectName: \"exportKeep\"\n                    visible: flow.phase === \"replace\"\n                    variant: \"outline\"\n                    text: qsTr(\"Keep the file\")\n                    onClicked: flow.cancelOrBack()\n                }\n                UiButton {\n                    objectName: \"exportReplace\"\n                    visible: flow.phase === \"replace\"\n                    variant: \"danger\"\n                    ignoreKeyRepeat: true\n                    text: qsTr(\"Replace\")\n                    onClicked: flow.startExport(true)\n                }\n"
+   }
+  ]
+ },
+ {
+  "mutation": "replace-ignores-held-key",
+  "file": "ui/ExportDialog.qml",
+  "tests": "existingFileIsReplacedOnlyAfterConfirmation",
+  "edits": [
+   {
+    "from": "                    ignoreKeyRepeat: true\n",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "offers-replace-for-an-item",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "anExportedItemIsNeverOfferedForReplacing",
+  "edits": [
+   {
+    "from": "refusal = QStringLiteral(\"destinationIsItem\"); break;",
+    "to": "refusal = QString(); break;"
+   }
+  ]
+ },
+ {
+  "mutation": "selection-move-unnoticed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "selectionChangeBehindTheDialogNeverChangesTheExport selectionEmptiedBehindTheDialogStillExportsTheCapture",
+  "edits": [
+   {
+    "from": "selectionMoved = !samePaths(currentPaths, capturedPaths)",
+    "to": "selectionMoved = false"
+   }
+  ]
+ },
+ {
+  "mutation": "export-follows-the-selection",
+  "file": "ui/ExportDialog.qml",
+  "tests": "selectionChangeBehindTheDialogNeverChangesTheExport",
+  "edits": [
+   {
+    "from": "        selectionMoved = !samePaths(currentPaths, capturedPaths)\n",
+    "to": "        selectionMoved = !samePaths(currentPaths, capturedPaths)\n        if (selectionMoved && currentPaths.length > 0) useTargets(currentPaths)\n"
+   }
+  ]
+ },
+ {
+  "mutation": "failure-closes-silently",
+  "file": "ui/ExportDialog.qml",
+  "tests": "engineExceptionBecomesAClearMessage",
+  "edits": [
+   {
+    "from": "        default: showError(qsTr(\"The export stopped because of an unexpected problem. Nothing was written.\"), outcome.detail); break\n",
+    "to": "        default: dialog.close(); return\n"
+   }
+  ]
+ },
+ {
+  "mutation": "unwritable-unexplained",
+  "file": "ui/ExportDialog.qml",
+  "tests": "unwritableDestinationBecomesAClearMessage",
+  "edits": [
+   {
+    "from": "case \"failed\": showError(qsTr(\"That location can't be written to, so nothing was saved. Check that you have permission and enough space, or choose another location.\"), outcome.detail); break",
+    "to": "case \"failed\": break"
+   }
+  ]
+ },
+ {
+  "mutation": "skips-not-shown",
+  "file": "ui/ExportDialog.qml",
+  "tests": "itemsLeftOutAreNamedWithTheirReason",
+  "edits": [
+   {
+    "from": "visible: flow.result !== null && flow.result.skippedCount > 0",
+    "to": "visible: false"
+   }
+  ]
+ },
+ {
+  "mutation": "format-change-ignored",
+  "file": "ui/ExportDialog.qml",
+  "tests": "changingTheFileTypeFollowsThroughToThePathAndOptions",
+  "edits": [
+   {
+    "from": "onActivated: index => flow.setFormat(index === 0)",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "no-initial-focus",
+  "file": "ui/ExportDialog.qml",
+  "tests": "keyboardOperableWithAccessibleNames",
+  "edits": [
+   {
+    "from": "onOpened: flow.focusDestination()",
+    "to": ""
+   }
+  ]
+ },
+ {
+  "mutation": "export-not-named",
+  "file": "ui/ExportDialog.qml",
+  "tests": "keyboardOperableWithAccessibleNames",
+  "edits": [
+   {
+    "from": "Accessible.name: qsTr(\"File type\")",
+    "to": "Accessible.name: \"\""
+   }
+  ]
+ },
+ {
+  "mutation": "idle-escape-ignored",
+  "file": "ui/ExportDialog.qml",
+  "tests": "escapeClosesAnIdleDialog",
+  "edits": [
+   {
+    "from": "closePolicy: flow.phase === \"running\" || flow.phase === \"replace\" ? Popup.NoAutoClose : Popup.CloseOnEscape",
+    "to": "closePolicy: Popup.NoAutoClose"
+   }
+  ]
+ },
+ {
+  "mutation": "too-wide-for-560",
+  "file": "ui/ExportDialog.qml",
+  "tests": "fitsAtNarrowAndWideWindows",
+  "edits": [
+   {
+    "from": "width: Math.min(560, (parent ? parent.width : 560) - 2 * Theme.gapLg)",
+    "to": "width: 640"
+   }
+  ]
+ },
+ {
+  "mutation": "item-reason-not-reported",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "refusalsWriteNothing anExportedItemIsNeverOfferedForReplacing",
+  "edits": [
+   {
+    "from": "if (refusal == QLatin1String(\"destinationProtected\")) {",
+    "to": "if (false) {"
+   }
+  ]
+ },
+ {
+  "mutation": "unselected-photo-replaceable",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "refusalsWriteNothing anExportedItemIsNeverOfferedForReplacing",
+  "edits": [
+   {
+    "from": "if (suffix != QLatin1String(\"csv\") && suffix != QLatin1String(\"txt\")) return QStringLiteral(\"destinationProtected\");",
+    "to": ""
+   }
+  ]
+ }
+]
