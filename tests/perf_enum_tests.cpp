@@ -1,6 +1,7 @@
 #include "glancelot/directory_entry_model.hpp"
 #include "glancelot/perf_trace.hpp"
 #include "perf_enum_test_support.hpp"
+#include <QDeadlineTimer>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -13,6 +14,7 @@
 #include <QtTest>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <random>
 #include <thread>
@@ -229,6 +231,24 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 400, 10000);
         QCOMPARE(inserted.count(), 0); QCOMPARE(layouts.count(), 0); QCOMPARE(resets.count(), 1);
     }
+    // Each gate on its own: a listing that is quick, or small, shows no provisional rows; past the floor, any listing does.
+    void arrivalGatesHoldBackQuickAndSmallListings() {
+        QTemporaryDir dir;
+        FakeFolder folder; folder.total = 500;
+        const auto insertsWith = [&](int patienceMs, int minRows, int floorMs) {
+            SeamScope seam(&folder);
+            directory_scan::testSeam.tuning.patienceMs = patienceMs; directory_scan::testSeam.tuning.minArrivalRows = minRows;
+            directory_scan::testSeam.tuning.slowFloorMs = floorMs;
+            DirectoryEntryModel model; model.setActive(true);
+            QSignalSpy inserted(&model, &QAbstractItemModel::rowsInserted);
+            model.setDirectory(dir.path());
+            return QTest::qWaitFor([&] { return !model.loading() && model.count() == 500; }, 10000) ? int(inserted.count()) : -1;
+        };
+        QCOMPARE(insertsWith(600000, 1, 600000), 0);      // within patience
+        QCOMPARE(insertsWith(0, 100000, 600000), 0);      // too few rows
+        QVERIFY(insertsWith(0, 1, 600000) > 0);           // past both
+        QVERIFY(insertsWith(600000, 100000, 0) > 0);      // past the floor, though small and quick
+    }
     void arrivalSortsEachBatchAndPublishesTheDefinitiveOrderOnce() {
         QTemporaryDir dir;
         FakeFolder folder; folder.total = 500; folder.heldAfter = 256;
@@ -268,7 +288,9 @@ private slots:
         bool definitiveWhileLoading = false; int rowsAtDefinitive = -1;
         connect(&model, &DirectoryEntryModel::arrivingChanged, this, [&] {
             if (model.arriving()) return;
-            definitiveWhileLoading = model.loading(); rowsAtDefinitive = model.count();
+            rowsAtDefinitive = model.count();
+            // Next turn of the event loop: the end of a whole listing clears `arriving` and `loading` in one call.
+            QTimer::singleShot(0, &model, [&] { definitiveWhileLoading = model.loading(); });
         });
         model.setDirectory(dir.path());
         QVERIFY(model.arriving());
@@ -415,7 +437,7 @@ private slots:
     // Folders publish above files as they arrive, without rewriting the index, and rowOf stays exact throughout.
     void foldersArriveAboveFilesAndTheIndexStaysExact() {
         QTemporaryDir dir;
-        FakeFolder folder; folder.total = 2000;
+        FakeFolder folder; folder.total = 2000; folder.heldAfter = 1024; // so a later tick has files above its folders to insert around
         folder.name = [](int i) { return i % 10 == 0 ? QString("dir%1").arg(i, 5, 10, QChar('0')) : QString("f%1.png").arg(i, 5, 10, QChar('0')); };
         SeamScope seam(&folder);
         DirectoryEntryModel model; model.setActive(true);
@@ -429,8 +451,12 @@ private slots:
             }
         });
         model.setDirectory(dir.path());
+        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1024, 10000);
+        const int ticksBefore = ticks;
+        QVERIFY(ticksBefore > 0);
+        folder.release();
         QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
-        QVERIFY(ticks > 0); QCOMPARE(mismatches, 0); QCOMPARE(foldersBelowFiles, 0);
+        QVERIFY(ticks > ticksBefore); QCOMPARE(mismatches, 0); QCOMPARE(foldersBelowFiles, 0);
         for (int row = 0; row < 2000; ++row) QCOMPARE(model.rowOf(model.pathAt(row)), row);
     }
     // A worker never queues without bound: with the GUI busy it stops reading, and the stop token still frees it.
@@ -457,6 +483,30 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(exits->load(), 1, 10000);
     }
     // Stale rows: the older folder's queued and in-flight rows never reach the newer folder.
+    // A listing that finished before the newer folder opened was never cancelled: only its generation stops it.
+    void aFinishedOlderListingCannotPublishIntoANewerOne() {
+        QTemporaryDir older, newer;
+        FakeFolder folder; folder.total = 10;
+        SeamScope seam(&folder);
+        directory_scan::testSeam.tuning.patienceMs = 600000; directory_scan::testSeam.tuning.slowFloorMs = 600000; // one publish, with rows
+        DirectoryEntryModel model; model.setActive(true);
+        const QString olderPath = QDir::cleanPath(older.path());
+        bool sawOlder = false;
+        const auto look = [&] { if (model.count() > 0 && model.pathAt(0).startsWith(olderPath)) sawOlder = true; };
+        connect(&model, &QAbstractItemModel::modelReset, this, look);
+        connect(&model, &DirectoryEntryModel::countChanged, this, look);
+        model.setDirectory(older.path());
+        // No event loop here, so the finished listing's signal stays queued until the newer folder has opened.
+        QDeadlineTimer deadline(10000);
+        while (folder.exits->load() < 1 && !deadline.hasExpired()) std::this_thread::yield();
+        QCOMPARE(folder.exits->load(), 1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200)); // sleep-ok: the worker's last steps after the enumerator have nothing to wait on
+        model.setDirectory(newer.path());
+        QVERIFY(model.loading());
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 10, 10000);
+        QVERIFY(!sawOlder);
+        QVERIFY(model.pathAt(0).startsWith(QDir::cleanPath(newer.path())));
+    }
     void aHeldOlderFolderCannotPublishIntoANewerOne() {
         QTemporaryDir older, newer; QVERIFY(generate(newer.path(), 40));
         FakeFolder held; held.total = 5000; held.heldAfter = 128;
