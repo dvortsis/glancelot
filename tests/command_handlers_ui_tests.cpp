@@ -84,6 +84,19 @@ bool focusSubRow(Harness& h, const Album& album) {
 QString normal(const QVariant& path) { return QDir::cleanPath(path.toString()); }
 } // namespace
 
+// Reads the loupe at the moment a watched signal first fires.
+class LoupeProbe final : public QObject {
+    Q_OBJECT
+public:
+    explicit LoupeProbe(ImageCanvas* watched) : canvas(watched) {}
+    int hits{};
+    bool loupeAtFirstHit{};
+public slots:
+    void hit() { if (hits++ == 0) loupeAtFirstHit = canvas->loupeActive(); }
+private:
+    ImageCanvas* canvas;
+};
+
 class CommandHandlersUiTests final : public QObject {
     Q_OBJECT
     QTemporaryDir* config{};
@@ -384,6 +397,39 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(finished.size() == 1, 10000);
         QVERIFY(QFile::exists(album.album() + "/sub/p1.png"));
         QTRY_VERIFY_WITH_TIMEOUT(!service->active(), 10000);
+    }
+
+    // ---- Main.qml ends the loupe before a component's handler acts, as it did when they were one chain. This depends on
+    // Main's viewCommand connection being declared last in Main.qml (QML connects in reverse declaration order). Each row
+    // watches a signal its handler's first effect emits synchronously, and reads the canvas at that moment.
+    void loupeEndsBeforeAMovedHandlerActs_data() {
+        QTest::addColumn<QString>("id");
+        QTest::addColumn<QByteArray>("source"); // an objectName, or "viewer" or "service"
+        QTest::addColumn<QByteArray>("signal");
+        QTest::newRow("PhotoGrid") << QString("view-details") << QByteArray("photoGrid") << QByteArray(SIGNAL(detailsChanged()));
+        QTest::newRow("FolderTree") << QString("focus-path") << QByteArray("viewer") << QByteArray(SIGNAL(stateChanged()));
+        QTest::newRow("TransferHud") << QString("copy-selection") << QByteArray("service") << QByteArray(SIGNAL(clipboardChanged()));
+        QTest::newRow("DeleteFlow") << QString("delete-current-file") << QByteArray("deleteFlow") << QByteArray(SIGNAL(requestedCountChanged()));
+        QTest::newRow("RenameFlow") << QString("rename") << QByteArray("renameFlow") << QByteArray(SIGNAL(renameTargetPathChanged()));
+        QTest::newRow("exportFlow") << QString("export-selection") << QByteArray("exportFlow") << QByteArray(SIGNAL(activeChanged()));
+    }
+    void loupeEndsBeforeAMovedHandlerActs() {
+        QFETCH(QString, id); QFETCH(QByteArray, source); QFETCH(QByteArray, signal);
+        Album album; Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        QVERIFY(openAlbum(h, album));
+        h.viewer.setTreeVisible(false);
+        QObject* sender = source == "viewer" ? static_cast<QObject*>(&h.viewer)
+            : source == "service" ? static_cast<QObject*>(h.viewer.copyMoveService()) : h.object(source.constData());
+        QVERIFY(sender);
+        auto* canvas = h.canvas(); QVERIFY(canvas);
+        canvas->beginLoupe(20, 20);
+        QVERIFY(canvas->loupeActive());
+        LoupeProbe probe(canvas);
+        QVERIFY(QObject::connect(sender, signal.constData(), &probe, SLOT(hit())));
+        QVERIFY(fire(h, id));
+        QVERIFY2(probe.hits > 0, "the handler's effect never fired");
+        QVERIFY2(!probe.loupeAtFirstHit, "the handler acted before Main.qml ended the loupe");
+        QVERIFY(!canvas->loupeActive());
     }
 
     // ---- Main.qml still ends the loupe for a command another component handles.
