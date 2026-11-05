@@ -1,0 +1,138 @@
+A1 PR 2: sort, hidden files and free memory. Fail-before evidence.
+
+The bug reproduced before the fix, at f734041 plus the new tests. aRefreshAfterASortChangeDoesNotPublish passes there because it guards the rule that stays, and its mutations are below.
+
+core exit 4
+PASS   : PerfEnumTests::initTestCase()
+FAIL!  : PerfEnumTests::aSortChangeRepublishesATruncatedFolderOnce() Compared lists differ at index 0.
+FAIL!  : PerfEnumTests::aHiddenFilesToggleRepublishesATruncatedFolderOnce() Compared values are not the same
+FAIL!  : PerfEnumTests::aSortChangeUnderAFilterReachesTheWholeListing() Compared lists differ at index 0.
+PASS   : PerfEnumTests::aRefreshAfterASortChangeDoesNotPublish()
+FAIL!  : PerfEnumTests::aRefreshDuringASortChangeWaitsForIt() Compared values are not the same
+PASS   : PerfEnumTests::cleanupTestCase()
+Totals: 3 passed, 4 failed, 0 skipped, 0 blacklisted, 617ms
+ui exit 1
+PASS   : PerfEnumUiTests::initTestCase()
+FAIL!  : PerfEnumUiTests::aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner() '!f.h->fileGrid.loading() && f.h->fileGrid.rowOf(anchor) != rowBefore' returned FALSE. ()
+PASS   : PerfEnumUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 46364ms
+
+Mutations: each one removes a behaviour, rebuilds where needed, and runs the named tests. A non-zero exit means they caught it.
+27 mutations, 26 caught. no-rows-copy-for-a-sort-change survives: the copy then runs on the GUI thread, about 60 ms at a million rows, under the budget.
+
+### sort-not-asked [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortChangeRepublishesATruncatedFolderOnce aSortChangeUnderAFilterReachesTheWholeListing
+exit 2
+  FAIL!  : PerfEnumTests::aSortChangeRepublishesATruncatedFolderOnce() Compared lists differ at index 0.
+  FAIL!  : PerfEnumTests::aSortChangeUnderAFilterReachesTheWholeListing() Compared lists differ at index 0.
+  Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 175ms
+### sort-not-asked-ui [src/app/directory_entry_model.cpp] -> perf_enum_ui_tests aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner
+exit 1
+  FAIL!  : PerfEnumUiTests::aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner() '!f.h->fileGrid.loading() && f.h->fileGrid.rowOf(anchor) != rowBefore' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 40724ms
+### hidden-not-asked [src/app/directory_entry_model.cpp] -> perf_enum_tests aHiddenFilesToggleRepublishesATruncatedFolderOnce
+exit 1
+  FAIL!  : PerfEnumTests::aHiddenFilesToggleRepublishesATruncatedFolderOnce() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 95ms
+### asked-never-cleared [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefreshAfterASortChangeDoesNotPublish
+exit 1
+  FAIL!  : PerfEnumTests::aRefreshAfterASortChangeDoesNotPublish() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 37308ms
+### refresh-publishes [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefreshAfterASortChangeDoesNotPublish anOrdinaryRefreshKeepsATruncatedFoldersRows
+exit 1
+  FAIL!  : PerfEnumTests::aRefreshAfterASortChangeDoesNotPublish() Compared lists differ at index 999.
+  Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 260ms
+### refresh-restarts-a-sort-change [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefreshDuringASortChangeWaitsForIt
+exit 1
+  FAIL!  : PerfEnumTests::aRefreshDuringASortChangeWaitsForIt() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 172ms
+### no-rows-copy-for-a-sort-change [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortChangeRepublishesATruncatedFolderOnce
+exit 0
+  Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 91ms
+### sort-change-merges [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortChangeRepublishesATruncatedFolderOnce
+exit 0
+  Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 44ms
+### filter-keeps-the-old-listing [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortChangeUnderAFilterReachesTheWholeListing
+exit 1
+  FAIL!  : PerfEnumTests::aSortChangeUnderAFilterReachesTheWholeListing() Compared lists differ at index 0.
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 90ms
+### memory-never-refuses [src/app/directory_entry_model.cpp] -> perf_enum_tests loadMoreChecksFreeMemory
+exit 1
+  FAIL!  : PerfEnumTests::loadMoreChecksFreeMemory(too little free) 'model.loadMoreRefused()' returned FALSE. ()
+  Totals: 4 passed, 1 failed, 0 skipped, 0 blacklisted, 190ms
+### memory-never-refuses-ui [src/app/directory_entry_model.cpp] -> perf_enum_ui_tests notEnoughMemoryKeepsTheRowsAndSaysWhy
+exit 1
+  FAIL!  : PerfEnumUiTests::notEnoughMemoryKeepsTheRowsAndSaysWhy() '!f.showMore()->isVisible()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 43276ms
+### refusal-leaves-the-offer [src/app/directory_entry_model.cpp] -> perf_enum_tests loadMoreChecksFreeMemory
+exit 1
+  FAIL!  : PerfEnumTests::loadMoreChecksFreeMemory(too little free) '!model.canLoadMore()' returned FALSE. ()
+  Totals: 4 passed, 1 failed, 0 skipped, 0 blacklisted, 266ms
+### refusal-not-announced [src/app/directory_entry_model.cpp] -> perf_enum_tests loadMoreChecksFreeMemory
+exit 1
+  FAIL!  : PerfEnumTests::loadMoreChecksFreeMemory(too little free) Compared values are not the same
+  Totals: 4 passed, 1 failed, 0 skipped, 0 blacklisted, 195ms
+### refusal-sticks-on-same-folder [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain
+exit 1
+  FAIL!  : PerfEnumTests::aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain() '!model.loadMoreRefused()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 129ms
+### refusal-sticks-on-another-folder [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain
+exit 1
+  FAIL!  : PerfEnumTests::aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain() '!model.loadMoreRefused()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 186ms
+### refusal-sticks-on-return [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain
+exit 1
+  FAIL!  : PerfEnumTests::aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain() '!model.loadMoreRefused()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 177ms
+### refresh-clears-the-refusal [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain
+exit 1
+  FAIL!  : PerfEnumTests::aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain() 'model.loadMoreRefused()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 86ms
+### failed-reading-refuses [src/app/directory_scan.hpp] -> perf_enum_tests loadMoreChecksFreeMemory pageFitsLeavesTheHeadroomFree
+exit 2
+  FAIL!  : PerfEnumTests::loadMoreChecksFreeMemory(reading failed) 'listed(model, 2000)' returned FALSE. ()
+  FAIL!  : PerfEnumTests::pageFitsLeavesTheHeadroomFree() 'directory_scan::pageFits(std::nullopt, 500, 2000)' returned FALSE. ()
+  Totals: 4 passed, 2 failed, 0 skipped, 0 blacklisted, 10186ms
+### no-headroom [src/app/directory_scan.hpp] -> perf_enum_tests pageFitsLeavesTheHeadroomFree
+exit 1
+  FAIL!  : PerfEnumTests::pageFitsLeavesTheHeadroomFree() '!directory_scan::pageFits(needed - 1, 500, 2000)' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4ms
+### a-constant-instead-of-the-rows [src/app/directory_scan.hpp] -> perf_enum_tests aFolderOfLongNamesNeedsMoreFreeMemory averageRowBytesComesFromTheRows
+exit 2
+  FAIL!  : PerfEnumTests::aFolderOfLongNamesNeedsMoreFreeMemory() 'tryNames(240)' returned FALSE. ()
+  FAIL!  : PerfEnumTests::averageRowBytesComesFromTheRows() 'longNames >= shortNames + (190 * 3) * 2' returned FALSE. ()
+  Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 72ms
+### only-the-first-rows-sampled [src/app/directory_scan.hpp] -> perf_enum_tests averageRowBytesComesFromTheRows
+exit 1
+  FAIL!  : PerfEnumTests::averageRowBytesComesFromTheRows() 'average > shortNames + (longNames - shortNames) / 3 && average < longNames - (longNames - shortNames) / 3' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 18ms
+### cgroup-ignored [src/app/directory_scan.hpp] -> perf_enum_tests linuxFreeMemoryReadsMemAvailableAndTheCgroup
+exit 1
+  FAIL!  : PerfEnumTests::linuxFreeMemoryReadsMemAvailableAndTheCgroup() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 5ms
+### usage-not-subtracted [src/app/directory_scan.hpp] -> perf_enum_tests linuxFreeMemoryReadsMemAvailableAndTheCgroup
+exit 1
+  FAIL!  : PerfEnumTests::linuxFreeMemoryReadsMemAvailableAndTheCgroup() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 5ms
+### meminfo-first-line-only [src/app/directory_scan.hpp] -> perf_enum_tests linuxFreeMemoryReadsMemAvailableAndTheCgroup
+exit 1
+  FAIL!  : PerfEnumTests::linuxFreeMemoryReadsMemAvailableAndTheCgroup() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 5ms
+### banner-has-no-reason [ui/PhotoGrid.qml] -> perf_enum_ui_tests notEnoughMemoryKeepsTheRowsAndSaysWhy
+exit 1
+  FAIL!  : PerfEnumUiTests::notEnoughMemoryKeepsTheRowsAndSaysWhy() '!f.showMore()->isVisible()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 40716ms
+### filtered-banner-gives-a-count [ui/PhotoGrid.qml] -> perf_enum_ui_tests notEnoughMemoryKeepsTheRowsAndSaysWhy
+exit 1
+  FAIL!  : PerfEnumUiTests::notEnoughMemoryKeepsTheRowsAndSaysWhy() '!f.showMore()->isVisible()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 40035ms
+### focus-lost-with-the-button [ui/PhotoGrid.qml] -> perf_enum_ui_tests notEnoughMemoryKeepsTheRowsAndSaysWhy
+exit 1
+  FAIL!  : PerfEnumUiTests::notEnoughMemoryKeepsTheRowsAndSaysWhy() '!f.showMore()->isVisible()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 39726ms
+restored build exit 0
+
+sort-change-merges rerun with the hidden-files test as well, where a merge inserts in place instead of resetting:
+### sort-change-merges [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortChangeRepublishesATruncatedFolderOnce aHiddenFilesToggleRepublishesATruncatedFolderOnce
+exit 1
+  FAIL!  : PerfEnumTests::aHiddenFilesToggleRepublishesATruncatedFolderOnce() Compared values are not the same
+  Totals: 3 passed, 1 failed, 0 skipped, 0 blacklisted, 265ms

@@ -62,3 +62,17 @@ PERF_ENUM_TRACE show-more first_row_ms=2930 full_count_ms=2930 definitive_ms=-1 
 PERF_ENUM_TRACE show-more first_row_ms=3438 full_count_ms=3438 definitive_ms=-1 settled_ms=3438 worst_gui_gap_ms=65 enumerate_ms=0 sort_ms=281 publish_ms=52 r
 PERF_ENUM_TRACE show-more first_row_ms=3787 full_count_ms=3787 definitive_ms=-1 settled_ms=3787 worst_gui_gap_ms=53 enumerate_ms=0 sort_ms=343 publish_ms=52 r
 PERF_ENUM_TRACE show-more first_row_ms=3968 full_count_ms=3968 definitive_ms=-1 settled_ms=3970 worst_gui_gap_ms=63 enumerate_ms=0 sort_ms=370 publish_ms=61 r
+== Synthetic, at e057520, under the gate lock, with the memory estimate. The estimate reads the rows' cost at 1,000,000.
+PERF_ENUM_MEMORY synthetic before rows=0 working_set_mb=15 peak_mb=15
+PERF_ENUM_MEMORY synthetic first-page rows=100000 settled_ms=539 working_set_mb=90 peak_mb=140
+PERF_ENUM_MEMORY synthetic show-more rows=200000 settled_ms=1003 working_set_mb=229 peak_mb=294
+PERF_ENUM_MEMORY synthetic show-more rows=300000 settled_ms=1385 working_set_mb=361 peak_mb=459
+PERF_ENUM_MEMORY synthetic show-more rows=400000 settled_ms=1967 working_set_mb=500 peak_mb=633
+PERF_ENUM_MEMORY synthetic show-more rows=500000 settled_ms=2514 working_set_mb=640 peak_mb=807
+PERF_ENUM_MEMORY synthetic show-more rows=600000 settled_ms=2948 working_set_mb=800 peak_mb=965
+PERF_ENUM_MEMORY synthetic show-more rows=700000 settled_ms=3642 working_set_mb=994 peak_mb=1141
+PERF_ENUM_MEMORY synthetic show-more rows=800000 settled_ms=4091 working_set_mb=1149 peak_mb=1317
+PERF_ENUM_MEMORY synthetic show-more rows=900000 settled_ms=4637 working_set_mb=1301 peak_mb=1490
+PERF_ENUM_MEMORY synthetic show-more rows=1000000 settled_ms=5010 working_set_mb=1463 peak_mb=1673
+PERF_ENUM_MEMORY synthetic estimate rows=1000000 average_row_bytes=450 estimated_page_peak_mb=858
+PERF_ENUM_MEMORY synthetic rested rows=1000000 working_set_mb=944 peak_mb=1673
