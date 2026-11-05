@@ -6,8 +6,8 @@ Written for: the lead and the fresh EN-07 reviewer.
 
 - Branch: `claude/en-07`
 - Exact base: `20f1210` (`origin/main`, Merge pull request #17). The brief named `7c0da34`; no commit had been made when PR 9 merged, so the branch fast-forwarded and the brief's "if it lands first" step applied. This is not a stacked packet.
-- Code tip: `c785d1b`. The commit that adds this handoff and the queue row sits on top of it.
-- Review with `git diff --color-moved=dimmed-zebra 20f1210 c785d1b -- ui`. The branch bodies are moved code with identifiers requalified.
+- Code tip: `4e3fa36`. The move is `c785d1b`; `4e3fa36` is a one-line test deadline fix. The final commit updates this handoff; the queue row is in `9b692ed`.
+- Review with `git diff --color-moved=dimmed-zebra 20f1210 4e3fa36 -- ui`. The branch bodies are moved code with identifiers requalified.
 
 ## Summary
 
@@ -120,17 +120,26 @@ Total Test time (real) = 404.41 sec
 ctest exit: 0
 ```
 
-Final run after the last test edit:
+Final run after the last test edit, on the moved QML:
 
 ```text
-1/2 Test #50: command_routing ..................   Passed   15.10 sec
-2/2 Test #51: command_handlers_ui ..............   Passed   94.98 sec
+1/2 Test #50: command_routing ..................   Passed   42.30 sec
+2/2 Test #51: command_handlers_ui ..............   Passed  149.45 sec
 100% tests passed out of 2
-Total Test time (real) = 110.11 sec
+Total Test time (real) = 191.77 sec
 ctest exit: 0
 ```
 
-`command_handlers_ui` is 28 passed, 0 failed (26 cases plus init and cleanup). It ran through a local, uncommitted cmake include, which is why it appears in the output above.
+The same test binary on the unmoved QML (`git checkout 20f1210 -- ui/`, restored afterwards):
+
+```text
+1/1 Test #51: command_handlers_ui ..............   Passed  132.15 sec
+100% tests passed out of 1
+Total Test time (real) = 132.95 sec
+ctest exit: 0
+```
+
+`command_handlers_ui` is 28 passed, 0 failed (26 cases plus init and cleanup) in both runs. It ran through a local, uncommitted cmake include, which is why it appears in the output above.
 
 Before the move, at `7c0da34`, with no baseline failures:
 
@@ -159,7 +168,9 @@ ctest exit: 0
 
 No baseline failures. No budget test needed a rerun. `input_ui` and `folder_grid` were not run before the move. `export_ui` did not exist at `7c0da34`, so it has no pre-move `ctest` run; its test below shows the handler is live.
 
-`command_handlers_ui` also passed 28 of 28 on the unmoved QML, at both `7c0da34` and `20f1210`. That is the evidence for "no behaviour change": the same assertions pass before and after. One later test edit (below) made the guard case stricter. That edit ran against the moved QML only, not the unmoved QML.
+The two `command_handlers_ui` runs above are the evidence for "no behaviour change": the same test binary passes on the QML before and after the move.
+
+Three non-`ui` suites mention moved ids but do not load `Main.qml`, so the move can't reach them and they were not run: `window_slots` (registry and scope-table checks), `recovery` (a bindings merge) and `tabs_recovery` ("rename" is a data-row tag).
 
 ## Fail-before evidence
 
