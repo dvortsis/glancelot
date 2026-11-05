@@ -1,0 +1,209 @@
+diff --git a/tests/perf_enum_tests.cpp b/tests/perf_enum_tests.cpp
+index 029fe7a..6146714 100644
+--- a/tests/perf_enum_tests.cpp
++++ b/tests/perf_enum_tests.cpp
+@@ -716,6 +716,18 @@ private slots:
+             }
+         }
+     }
++    // ---- reviewer scratch, not committed ----
++    void rFinishedScanIsNotLostAtTheDefinitiveBatch() {
++        QTemporaryDir dir;
++        FakeFolder folder; folder.total = 16000;
++        SeamScope seam(&folder);
++        DirectoryEntryModel model; model.setActive(true);
++        model.setDirectory(dir.path());
++        QDeadlineTimer deadline(10000); while (folder.exits->load() < 1 && !deadline.hasExpired()) std::this_thread::yield();
++        std::this_thread::sleep_for(std::chrono::milliseconds(200));
++        QTRY_VERIFY_WITH_TIMEOUT(!model.arriving() && model.count() == 16000, 20000);
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 5000);
++    }
+     void arrivalsQueueBlocksAtCapacityAndWakesOnStop() {
+         directory_scan::Arrivals queue(100);
+         std::atomic_int pushed{}; std::atomic_bool refused{};
+diff --git a/tests/perf_enum_ui_tests.cpp b/tests/perf_enum_ui_tests.cpp
+index 767282d..e748148 100644
+--- a/tests/perf_enum_ui_tests.cpp
++++ b/tests/perf_enum_ui_tests.cpp
+@@ -2,6 +2,8 @@
+ #include "perf_enum_test_support.hpp"
+ #include <QSignalSpy>
+ #include <QTest>
++#include <QWheelEvent>
++#include <QTimer>
+ 
+ // A1 F016 in the shipped ui/Main.qml. The folder holds one real photo so the viewer can open it; the seam supplies the
+ // grid's rows, arriving backwards so the definitive order really moves every row.
+@@ -11,11 +13,13 @@ struct ArrivalFixture {
+     Media media{1, QSize(64, 48)};
+     FakeFolder folder;
+     int photoAt{2500}; // arrival position of the real photo's row
++    std::function<QString(int)> customName;
+     std::unique_ptr<SeamScope> seam;
+     std::unique_ptr<Harness> h;
+     bool start() {
+         folder.total = kRows; folder.heldAfter = kHeldAfter;
+         folder.name = [photo = photoAt](int i) { return i == photo ? QString("p1.png") : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        if (customName) folder.name = customName;
+         seam = std::make_unique<SeamScope>(&folder);
+         h = std::make_unique<Harness>();
+         if (!h->window) return false;
+@@ -141,6 +145,158 @@ private slots:
+         QCOMPARE(resets.count(), 0);
+         QCOMPARE(f.h->fileGrid.cursorRow(), -1); // browsing with the wheel did not grow a cursor
+     }
++
++    // ---- reviewer scratch, not committed ----
++    void rKeyboardDuringArrivalIsNotReplaced() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        f.view()->forceActiveFocus();
++        for (int i = 0; i < 3; ++i) QTest::keyClick(f.h->window, Qt::Key_Right);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.cursorRow(), 2, 10000);
++        const QString chosen = f.h->fileGrid.pathAt(2);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "keyboard chose" << chosen << "selection now" << f.h->fileGrid.selectedPaths();
++        QCOMPARE(f.h->fileGrid.selectedPaths(), QStringList{chosen});
++    }
++    void rSelectAllDuringArrivalIsNotReplaced() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        f.view()->forceActiveFocus();
++        QTest::keyClick(f.h->window, Qt::Key_A, Qt::ControlModifier);
++        QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.selectedCount(), kHeldAfter, 10000);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "ctrl+a selected" << kHeldAfter << "selection now" << f.h->fileGrid.selectedCount();
++        QCOMPARE(f.h->fileGrid.selectedCount(), kHeldAfter);
++    }
++    void rScrollbarDuringArrivalKeepsTheView() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        QQuickItem* v = f.view();
++        const QPoint at = v->mapToScene(QPointF(v->width() - 3, v->height() * 0.6)).toPoint();
++        const qreal y0 = f.contentY();
++        QTest::mousePress(f.h->window, Qt::LeftButton, Qt::NoModifier, at);
++        QTest::mouseRelease(f.h->window, Qt::LeftButton, Qt::NoModifier, at);
++        QTRY_VERIFY_WITH_TIMEOUT(f.contentY() > y0 + 100, 10000);
++        qInfo() << "placeCursor after the scrollbar press" << f.h->window->findChild<QQuickItem*>("photoGrid")->property("placeCursor");
++        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
++        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
++        const int columns = f.h->window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "anchor row" << f.h->fileGrid.rowOf(anchor) << "top row" << f.rowAtViewTop() << "selection" << f.h->fileGrid.selectedPaths();
++        QCOMPARE(f.h->fileGrid.rowOf(anchor) / columns, f.rowAtViewTop() / columns);
++    }
++    void rRealWheelSettles() {
++        ArrivalFixture f; QVERIFY(f.start());
++        QVERIFY(QTest::qWaitFor([&] { return f.h->window->isExposed(); }, 10000));
++        QVERIFY(activate(*f.h));
++        QQuickItem* v = f.view();
++        const QPointF at = v->mapToScene(QPointF(v->width() / 2, v->height() / 2));
++        QWheelEvent wheel(at, f.h->window->mapToGlobal(at), QPoint(), QPoint(0, -240), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
++        QCoreApplication::sendEvent(f.h->window, &wheel);
++        QTRY_VERIFY_WITH_TIMEOUT(f.contentY() > 0, 10000);
++        QCOMPARE(f.h->window->findChild<QQuickItem*>("photoGrid")->property("placeCursor").toBool(), false);
++    }
++    void rFolderInsertsKeepTheAnchor() {
++        ArrivalFixture f;
++        f.customName = [](int i) { return i == 2500 ? QString("p1.png") : i % 10 == 0 ? QString("dir%1").arg(kRows - i, 5, 10, QChar('0')) : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        QVERIFY(f.start());
++        QMetaObject::invokeMethod(f.view(), "movementStarted");
++        const int columns = f.h->window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
++        f.view()->setProperty("contentY", f.view()->property("originY").toReal() + f.view()->property("cellHeight").toReal() * (600 / columns));
++        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
++        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
++        int worst = 0;
++        QTimer sampler; sampler.setInterval(4);
++        QObject::connect(&sampler, &QTimer::timeout, &sampler, [&] {
++            if (!f.h->fileGrid.arriving()) return;
++            worst = std::max(worst, std::abs(f.h->fileGrid.rowOf(anchor) / columns - f.rowAtViewTop() / columns));
++        });
++        sampler.start();
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(f.settled(), 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "columns" << columns << "worst line drift during arrival" << worst << "final anchor row" << f.h->fileGrid.rowOf(anchor) << "top" << f.rowAtViewTop();
++        QCOMPARE(f.h->fileGrid.rowOf(anchor) / columns, f.rowAtViewTop() / columns);
++        QVERIFY(worst <= 2);
++    }
++    void retryRestores(bool arrival) {
++        Media media{1, QSize(64, 48)};
++        auto failing = std::make_shared<std::atomic_bool>(false);
++        FakeFolder good; good.total = kRows;
++        good.name = [](int i) { return i == 2500 ? QString("p1.png") : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        FakeFolder bad; bad.total = kRows; bad.failAfter = 0;
++        const auto g = good.enumerator(), b = bad.enumerator();
++        SeamScope seam(nullptr);
++        if (!arrival) { directory_scan::testSeam.tuning.patienceMs = 600000; directory_scan::testSeam.tuning.slowFloorMs = 600000; }
++        directory_scan::testSeam.enumerator = [=](const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
++            return failing->load() ? b(d, hidden, cancel, limit, sink) : g(d, hidden, cancel, limit, sink);
++        };
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == kRows && h.viewer.imageReady(), 15000);
++        QTest::qWait(300); // sleep-ok: scratch
++        auto* v = h.window->findChild<QQuickItem*>("photoGridView");
++        const auto top = [&] { int row = -1; QMetaObject::invokeMethod(v, "indexAt", Q_RETURN_ARG(int, row), Q_ARG(qreal, v->property("contentX").toReal() + 4), Q_ARG(qreal, v->property("contentY").toReal() + 4)); return row; };
++        QMetaObject::invokeMethod(v, "positionViewAtIndex", Q_ARG(int, 1500), Q_ARG(int, 1));
++        QTest::qWait(300); // sleep-ok: scratch
++        const QString anchor = h.fileGrid.pathAt(top());
++        const int columns = h.window->findChild<QQuickItem*>("photoGrid")->property("columns").toInt();
++        failing->store(true);
++        h.fileGrid.refresh();
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && !h.fileGrid.accessible(), 10000);
++        QTest::qWait(150); // sleep-ok: scratch
++        failing->store(false);
++        h.fileGrid.refresh();
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.accessible() && h.fileGrid.count() == kRows, 10000);
++        QTest::qWait(300); // sleep-ok: scratch
++        qInfo() << "arrival" << arrival << "anchor row" << h.fileGrid.rowOf(anchor) << "top row after retry" << top();
++        QCOMPARE(h.fileGrid.rowOf(anchor) / columns, top() / columns);
++    }
++    void rRetryQuickPathRestoresViewport() { retryRestores(false); }
++    void rRetryArrivalRestoresViewport() { retryRestores(true); }
++    void rRenameWhileHiddenKeepsTheCursor() {
++        Media media{6, QSize(64, 48)};
++        auto hold = std::make_shared<std::atomic_bool>(false), released = std::make_shared<std::atomic_bool>(false);
++        SeamScope seam(nullptr); directory_scan::testSeam.tuning = {};
++        directory_scan::testSeam.beforeProbes = [=](std::stop_token stop) {
++            if (!hold->load()) return;
++            while (!released->load() && !stop.stop_requested()) std::this_thread::yield();
++        };
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        h.viewer.trigger("grid");
++        auto* grid = h.window->findChild<QQuickItem*>("photoGrid");
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == 6 && grid->isVisible() && !grid->property("placeCursor").toBool(), 15000);
++        h.fileGrid.select(h.fileGrid.rowOf(media.path(3)));
++        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{media.path(3)});
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(!grid->isVisible() && h.fileGrid.count() == 0, 10000);
++        const QString renamed = media.dir.filePath("renamed.png");
++        QVERIFY(QFile::rename(media.path(3), renamed));
++        hold->store(true);
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(grid->isVisible() && h.fileGrid.count() == 6 && !h.fileGrid.arriving() && h.fileGrid.loading(), 10000);
++        QTest::qWait(150); // sleep-ok: scratch, the probe window
++        qInfo() << "during the probe window" << h.fileGrid.selectedPaths();
++        released->store(true);
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading(), 10000);
++        QTest::qWait(150); // sleep-ok: scratch
++        qInfo() << "after the baseline" << h.fileGrid.selectedPaths();
++        QCOMPARE(h.fileGrid.selectedPaths(), QStringList{renamed});
++    }
+ };
+ QTEST_MAIN(PerfEnumUiTests)
+ #include "perf_enum_ui_tests.moc"
