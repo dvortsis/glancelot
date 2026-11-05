@@ -1,0 +1,23 @@
+build 0
+hostile exit 0
+dying run 1 exit 0 : Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 51646ms
+dying run 2 exit 1 : FAIL!  : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind() 'mappedTransfers(bytes) > 0' returned FALSE. () | Totals: 9 passed, 1 failed, 0 skipped, 0 blacklisted, 39457ms
+dying run 3 exit 0 : Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 38534ms
+dying run 4 exit 0 : Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 43131ms
+dying run 5 exit 0 : Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 52083ms
+dying run 6 exit 0 : Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 40047ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() tearing down a full 256 MiB transfer took 130931 us
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 0: 79 steps, 32415 ms, mapped 0, private 185 MiB, handles 356, undecoded 0, max GUI gap 243 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 3: 316 steps, 104038 ms, mapped 0, private 187 MiB, handles 356, undecoded 0, max GUI gap 428 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() RESULT pace 40: 316 steps in 104044 ms, undecoded 0, max GUI gap 428 ms, mapped at the end 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 113393ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() tearing down a full 256 MiB transfer took 154329 us
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 0: 79 steps, 37581 ms, mapped 0, private 186 MiB, handles 356, undecoded 0, max GUI gap 403 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 3: 316 steps, 117017 ms, mapped 0, private 187 MiB, handles 356, undecoded 0, max GUI gap 931 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() RESULT pace 80: 316 steps in 117092 ms, undecoded 0, max GUI gap 931 ms, mapped at the end 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 126647ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() tearing down a full 256 MiB transfer took 166959 us
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 0: 79 steps, 40330 ms, mapped 0, private 185 MiB, handles 356, undecoded 0, max GUI gap 284 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 3: 316 steps, 129406 ms, mapped 0, private 187 MiB, handles 354, undecoded 0, max GUI gap 315 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() RESULT pace 120: 316 steps in 129413 ms, undecoded 0, max GUI gap 315 ms, mapped at the end 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 139248ms
