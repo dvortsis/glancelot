@@ -581,6 +581,13 @@ ExportResult exportSelection(const ExportRequest& request, std::stop_token cance
         return result;
     }
 
+    // Decided here, after the last revalidation, so an item lost at any point can't swap the target for an empty file.
+    if (request.keepDestinationWhenEmpty && result.written == 0) {
+        cleanupTemp();
+        result.status = ExportStatus::Written;
+        return result;
+    }
+
     // Atomic move into final destination
     std::error_code renameEc;
     if (!request.overwrite && fs::exists(normalDest, renameEc)) {
