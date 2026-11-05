@@ -6,11 +6,20 @@
 #include "ui_test_support.hpp"
 #include <QAccessible>
 #include <QAccessibleInterface>
-#include <QSharedMemory>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QRandomGenerator>
 #include <QUuid>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
-#include "../src/app/shared_memory_reaper.hpp"
+#include "../src/app/fs_monitor.hpp"
+#include "../src/app/transfer_segment.hpp"
+#ifdef Q_OS_WIN
+#include <psapi.h>
+#endif
 
 namespace {
 QQuickItem* noticeItem(Harness& h) { return named(h.window, "deleteNotice"); }
@@ -18,7 +27,6 @@ QString noticeText(Harness& h) { auto* item = noticeItem(h); return item ? item-
 void setSlideshowSeconds(Harness& h, int seconds) {
     QVERIFY(QMetaObject::invokeMethod(h.window, "setSlideshowSeconds", Q_ARG(QVariant, seconds)));
 }
-// Ends a slideshow and lets any step it had in flight land before the harness and its folders are torn down.
 // Lets the window render a few frames (layout and polish settle) by waiting on a condition, never on a fixed sleep.
 void frames(Harness& h, int count = 3) {
     int seen = 0;
@@ -28,6 +36,7 @@ void frames(Harness& h, int count = 3) {
     QTRY_VERIFY_WITH_TIMEOUT([&] { h.window->requestUpdate(); return seen >= count; }(), 10000);
     QObject::disconnect(c1); QObject::disconnect(c2); QObject::disconnect(c3);
 }
+// Ends a slideshow and lets any step it had in flight land before the harness and its folders are torn down.
 void settleSlideshow(Harness& h) {
     QMetaObject::invokeMethod(h.window, "stopSlideshow");
     QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
@@ -54,6 +63,92 @@ bool fullyInside(QQuickItem* strip, QQuickItem* item) {
     const QRectF r = inStrip(strip, item);
     return r.left() >= -0.5 && r.right() <= strip->width() + 0.5 && r.top() >= -0.5 && r.bottom() <= strip->height() + 0.5;
 }
+// Proves the event loop keeps running while decoders die around it. A blocked GUI thread stops the beat, and the watchdog then
+// ends the run with a clear message (the old freeze never returned, so no assertion after it would ever run).
+struct Heartbeat {
+    QTimer timer; QElapsedTimer sinceLast; qint64 maxGap{}; int beats{};
+    std::atomic<qint64> lastBeatMs{};
+    std::mutex mutex; std::condition_variable stopping; bool stop{};
+    std::thread watchdog;
+    QElapsedTimer clock;
+    explicit Heartbeat(int blockedMs = 30000) {
+        clock.start(); sinceLast.start();
+        QObject::connect(&timer, &QTimer::timeout, [this] { maxGap = std::max(maxGap, sinceLast.restart()); ++beats; lastBeatMs = clock.elapsed(); });
+        timer.start(10);
+        watchdog = std::thread([this, blockedMs] {
+            std::unique_lock lock(mutex);
+            while (!stopping.wait_for(lock, std::chrono::milliseconds(250), [this] { return stop; }))
+                if (clock.elapsed() - lastBeatMs.load() > blockedMs) qFatal("The GUI thread has been blocked for %d ms: the viewer is frozen.", blockedMs);
+        });
+    }
+    ~Heartbeat() { { std::lock_guard lock(mutex); stop = true; } stopping.notify_all(); watchdog.join(); }
+};
+// How many mappings of exactly one transfer's size this process holds: the memory the viewer has not given back.
+int mappedTransfers(qint64 bytes) {
+    const qint64 rounded = (bytes + 4095) / 4096 * 4096;
+    int count = 0;
+#ifdef Q_OS_WIN
+    MEMORY_BASIC_INFORMATION region{};
+    for (const char* at = nullptr; VirtualQuery(at, &region, sizeof(region)) == sizeof(region); at = static_cast<const char*>(region.BaseAddress) + region.RegionSize)
+        if (region.Type == MEM_MAPPED && region.State == MEM_COMMIT && qint64(region.RegionSize) == rounded) ++count;
+#else
+    QFile maps("/proc/self/maps");
+    if (!maps.open(QIODevice::ReadOnly)) return -1;
+    for (const QByteArray& line : maps.readAll().split('\n')) {
+        if (!line.contains("/SYSV")) continue;
+        const auto range = line.left(line.indexOf(' ')).split('-');
+        if (range.size() == 2 && range[1].toLongLong(nullptr, 16) - range[0].toLongLong(nullptr, 16) == rounded) ++count;
+    }
+#endif
+    return count;
+}
+// The fixture decoder (tests/fs_watch_decoder_fixture.cpp) in place of the real one, for one viewer.
+struct DecoderFixture {
+    QTemporaryDir control, markers;
+    fs_watch::ControllerTestHooks hooks;
+    int prefetches{};
+    bool configure(QJsonObject config) {
+        config["markerDir"] = markers.path();
+        QFile file(control.filePath("worker.json"));
+        return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(QJsonDocument(config).toJson(QJsonDocument::Compact)) > 0;
+    }
+    DecoderFixture() {
+#ifdef Q_OS_WIN
+        hooks.decoderProgram = QCoreApplication::applicationDirPath() + "/fs_watch_decoder_fixture.exe";
+#else
+        hooks.decoderProgram = QCoreApplication::applicationDirPath() + "/fs_watch_decoder_fixture";
+#endif
+        hooks.decoderArguments = {"--fixture-config", control.filePath("worker.json")};
+        hooks.workerStarted = [this](QProcess*, const QString& kind, const QString&) { if (kind == "prefetch") ++prefetches; };
+        fs_watch::controllerTestHooks = &hooks; // copied when the viewer is constructed
+    }
+    ~DecoderFixture() { fs_watch::controllerTestHooks = nullptr; }
+    QStringList keys() const { return QDir(markers.path()).entryList(QDir::Files); }
+    bool attached(const QString& path) const {
+        for (const QString& key : keys()) {
+            QFile marker(QDir(markers.path()).filePath(key));
+            if (marker.open(QIODevice::ReadOnly) && QDir::fromNativeSeparators(QString::fromUtf8(marker.readAll())) == QDir::fromNativeSeparators(path)) return true;
+        }
+        return false;
+    }
+};
+// Whether any process still holds the transfer with this key. Attaching succeeds only if something kept the memory alive. (Not
+// for polling on System V, where the last detach removes a segment: a probe would clean up the very orphan it should report.)
+bool transferStillExists(const QString& key) { glancelot::detail::TransferSegment probe(key); return probe.attach(); }
+#ifndef Q_OS_WIN
+// System V segments of exactly this size on the whole machine: one nobody removed outlives every process.
+int systemSegments(qint64 bytes) {
+    QFile list("/proc/sysvipc/shm");
+    if (!list.open(QIODevice::ReadOnly)) return -1;
+    int count = 0;
+    const auto lines = list.readAll().split('\n');
+    for (qsizetype i = 1; i < lines.size(); ++i) {
+        const auto columns = lines[i].simplified().split(' ');
+        if (columns.size() > 3 && columns[3].toLongLong() == bytes) ++count;
+    }
+    return count;
+}
+#endif
 } // namespace
 
 class StackConfirmUiTests final : public QObject {
@@ -76,11 +171,11 @@ private slots:
         overwriteWithText(media.path(1));
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
-        QTRY_COMPARE(h.viewer.currentIndex(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 1, 10000);
         h.viewer.setBoundaryMode("loop");
         setSlideshowSeconds(h, 1);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 3, 10000); // past the undecodable second photo
         QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
         QVERIFY(flag(h, "slideshowOn"));
@@ -95,11 +190,11 @@ private slots:
         for (int i = 1; i < 8; ++i) overwriteWithText(media.path(i));
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
-        QTRY_COMPARE(h.viewer.currentIndex(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 1, 10000);
         h.viewer.setBoundaryMode("loop");
         setSlideshowSeconds(h, 1);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 20000);
         QVERIFY2(noticeText(h).contains("Slideshow stopped"), qPrintable(noticeText(h)));
         QCOMPARE(h.viewer.currentIndex(), 6); // five failed photos in a row (2 to 6), then it stopped
@@ -120,9 +215,9 @@ private slots:
         h.viewer.setBoundaryMode("continue");
         setSlideshowSeconds(h, 1);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QTRY_VERIFY_WITH_TIMEOUT(QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/b"), 10000);
-        QTest::qWait(300); // sleep-ok: a closing of an inactive tab must not end it: asserting nothing fires
+        QTest::qWait(300); // sleep-ok: asserting the slideshow does not end just after its own step crossed the folder boundary
         QVERIFY2(flag(h, "slideshowOn"), "the slideshow's own step into the next folder ended it");
         settleSlideshow(h);
     }
@@ -132,11 +227,11 @@ private slots:
         overwriteWithText(media.path(1));
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
-        QTRY_COMPARE(h.viewer.currentIndex(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 1, 10000);
         h.viewer.setBoundaryMode("loop");
         setSlideshowSeconds(h, 6);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 2, 10000); // the bad photo is reached on the 6 s tick
         QElapsedTimer sinceBad; sinceBad.start();
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.currentIndex(), 3, 10000); // long before the next 6 s tick
@@ -158,7 +253,7 @@ private slots:
         h.viewer.setBoundaryMode("continue");
         setSlideshowSeconds(h, 1);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("c-2.png"), 15000);
         QVERIFY2(flag(h, "slideshowOn"), "the slideshow stopped on its way through the one-photo folder");
         QVERIFY2(noticeText(h).isEmpty(), qPrintable(noticeText(h)));
@@ -168,82 +263,189 @@ private slots:
     void slideshowSurvivesClosingAnotherTab() {
         Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h)); focusCanvas(h);
-        h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), 2);
-        QTRY_COMPARE(h.viewer.activeTab(), 1);
+        h.viewer.trigger("tab-new"); QTRY_COMPARE_WITH_TIMEOUT(int(h.viewer.tabs().size()), 2, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.activeTab(), 1, 10000);
         QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
         setSlideshowSeconds(h, 5);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QVERIFY(h.viewer.closeTab(0)); // the active tab becomes number 0
-        QTRY_COMPARE(h.viewer.activeTab(), 0);
+        QTRY_COMPARE_WITH_TIMEOUT(h.viewer.activeTab(), 0, 10000);
         frames(h);
         QVERIFY2(flag(h, "slideshowOn"), "closing an inactive tab ended the slideshow");
         settleSlideshow(h);
     }
-    // R3-B2: the mechanism of the old permanent freeze, reproduced deterministically. A worker killed while it holds the segment's
-    // system semaphore never gives it back; "holder" stands for that dead worker (it locks and never unlocks until the test
-    // does). Destroying an attached segment, as the viewer used to do on the GUI thread after killing a worker, then blocks.
-    void destroyingASegmentWaitsForTheLockOfADeadWorker() {
-        const QString key = "Glancelot-test-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-        auto* segment = new QSharedMemory(key);
-        QVERIFY(segment->create(4096));
-        QSharedMemory holder(key);
-        QVERIFY(holder.attach());
-        QVERIFY(holder.lock()); // the "dead worker": holds the semaphore
-        std::atomic<bool> done{false};
-        std::thread destroyer([&] { delete segment; done = true; });
-        QTest::qWait(700); // sleep-ok: asserting the destructor stays blocked while a dead worker holds the lock
-        QVERIFY2(!done.load(), "the destructor returned although a dead worker holds the lock: the old hang is not reproduced");
-        QVERIFY(holder.unlock());
-        destroyer.join();
-        QVERIFY(done.load());
-    }
-    // R3-B2: with the reaper the GUI thread hands the segment off and never waits, even while the lock is held.
-    // (Fail-before: the code it replaces is exactly the blocking call in the test above.)
-    void theReaperNeverBlocksTheCallerOnAHeldLock() {
+    // R4-B2: a segment lives until its last handle closes, whoever opened it, and not a moment longer.
+    void aTransferSegmentLivesUntilItsLastHandleCloses() {
         namespace d = glancelot::detail;
-        const QString key = "Glancelot-test-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-        d::TransferPtr segment = d::makeTransfer(key);
-        QVERIFY(segment->create(4096));
-        QSharedMemory holder(key);
-        QVERIFY(holder.attach());
-        QVERIFY(holder.lock());
-        int heartbeats = 0;
-        QTimer beat; QObject::connect(&beat, &QTimer::timeout, [&] { ++heartbeats; }); beat.start(20);
-        QElapsedTimer elapsed; elapsed.start();
-        segment.reset(); // what cancel() does after killing the worker
-        QVERIFY2(elapsed.elapsed() < 150, qPrintable(QString::number(elapsed.elapsed())));
-        QCOMPARE(d::pendingSharedMemoryReaps().load(), 1);
-        QTRY_VERIFY_WITH_TIMEOUT(heartbeats >= 10, 10000);
-        QVERIFY(heartbeats >= 10); // the event loop kept running while the teardown waited
-        QCOMPARE(d::pendingSharedMemoryReaps().load(), 1); // still waiting on the dead worker, off the GUI thread
-        QVERIFY(holder.unlock());
-        QTRY_COMPARE_WITH_TIMEOUT(d::pendingSharedMemoryReaps().load(), 0, 10000);
+        const QString key = d::newTransferKey();
+        auto creator = std::make_unique<d::TransferSegment>(key);
+        QVERIFY(!transferStillExists(key));
+        QVERIFY2(creator->create(4096), qPrintable(creator->errorString()));
+        QVERIFY(creator->size() >= 4096);
+        *static_cast<unsigned char*>(creator->data()) = 0xA5;
+        auto worker = std::make_unique<d::TransferSegment>(key);
+        QVERIFY2(worker->attach(), qPrintable(worker->errorString()));
+        QVERIFY(worker->size() >= 4096);
+        QCOMPARE(*static_cast<const unsigned char*>(worker->constData()), (unsigned char)0xA5);
+#ifdef Q_OS_WIN
+        // The creator's share is closed first, as when the viewer cancels: the worker's mapping stays valid. (System V keeps the
+        // attached segment too, but a later attach by key finds it only until the last detach, so this holds on Windows alone.)
+        creator.reset();
+        QVERIFY(transferStillExists(key));
+        QCOMPARE(*static_cast<const unsigned char*>(worker->constData()), (unsigned char)0xA5);
+        worker.reset();
+#else
+        worker.reset();
+        creator.reset();
+#endif
+        QVERIFY2(!transferStillExists(key), "the memory outlived its last handle");
     }
-    // R3-B2: the number of teardown threads stuck on dead workers is capped; past the cap the segment is leaked, not waited for.
-    void blockedTeardownsAreBounded() {
+    // A key belongs to one transfer: a second creator is refused, never handed the first one's memory.
+    void aTransferSegmentRefusesAKeyInUse() {
         namespace d = glancelot::detail;
-        std::vector<std::unique_ptr<QSharedMemory>> holders;
-        const int total = d::MaxPendingSharedMemoryReaps + 3;
-        const int leakedBefore = d::leakedSharedMemorySegments().load();
-        for (int i = 0; i < total; ++i) {
-            const QString key = "Glancelot-test-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-            d::TransferPtr segment = d::makeTransfer(key);
-            QVERIFY(segment->create(1024));
-            holders.push_back(std::make_unique<QSharedMemory>(key));
-            QVERIFY(holders.back()->attach()); QVERIFY(holders.back()->lock());
-            segment.reset();
+        const QString key = d::newTransferKey();
+        d::TransferSegment first(key), second(key);
+        QVERIFY(first.create(4096));
+        QVERIFY(!second.create(4096));
+        QVERIFY(!second.errorString().isEmpty());
+    }
+    void aTransferSegmentReportsFailures() {
+        namespace d = glancelot::detail;
+        d::TransferSegment missing(d::newTransferKey()), empty(d::newTransferKey());
+        QVERIFY(!missing.attach());
+        QVERIFY(!missing.errorString().isEmpty());
+        QVERIFY(!empty.create(0));
+        QVERIFY(!empty.errorString().isEmpty());
+    }
+    // R4-B1, R4-B2: a decoder that dies or is killed mid-transfer costs the viewer nothing. It answers the probe, attaches, then
+    // ends at each point of the transfer while holding the lock of the old QSharedMemory transport (see the fixture). The window
+    // keeps running, and none of the memory stays: not in this process, and not anywhere (the key no longer opens).
+    void aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory_data() {
+        QTest::addColumn<QString>("dieAt"); QTest::addColumn<bool>("killed"); QTest::addColumn<bool>("shown"); QTest::addColumn<QString>("boundary");
+        QTest::newRow("dies right after attaching") << "attached" << false << false << "stop";
+        QTest::newRow("dies after the viewer's ok") << "acknowledged" << false << true << "stop";
+        QTest::newRow("killed by the viewer while holding the lock") << "" << true << false << "stop";
+        QTest::newRow("prefetch decoders die after the ok too") << "acknowledged" << false << true << "continue";
+    }
+    void aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory() {
+        QFETCH(QString, dieAt); QFETCH(bool, killed); QFETCH(bool, shown); QFETCH(QString, boundary);
+        const int width = 2000, height = 1500, steps = 18;
+        const qint64 bytes = qint64(width) * height * 4;
+        QTemporaryDir root; QVERIFY(root.isValid());
+        QStringList photos;
+        // Two photos a folder keeps every step at a folder's edge, which is where the viewer prefetches.
+        for (int i = 0; i <= steps / 2; ++i) {
+            const QString name = QString("f%1").arg(i, 2, 10, QLatin1Char('0'));
+            const QString folder = makeFolder(root.path(), name, 2); QVERIFY(!folder.isEmpty());
+            photos << QDir(folder).filePath("f-1.png") << QDir(folder).filePath("f-2.png");
         }
-        QCOMPARE(d::pendingSharedMemoryReaps().load(), d::MaxPendingSharedMemoryReaps);
-        QCOMPARE(d::leakedSharedMemorySegments().load() - leakedBefore, 3);
-        for (auto& holder : holders) QVERIFY(holder->unlock());
-        QTRY_COMPARE_WITH_TIMEOUT(d::pendingSharedMemoryReaps().load(), 0, 10000);
+        DecoderFixture fixture;
+        QJsonObject config{{"width", width}, {"height", height}};
+        if (!dieAt.isEmpty()) config["dieAt"] = dieAt;
+        if (killed) { config["holdLock"] = true; config["decodeDelayMs"] = 60000; }
+        QVERIFY(fixture.configure(config));
+        const int mappedBefore = mappedTransfers(bytes);
+#ifndef Q_OS_WIN
+        const int systemBefore = systemSegments(bytes);
+#endif
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.setFilmstripVisible(false);
+        Heartbeat beat;
+        int peak = 0;
+        const auto observed = [&] { peak = std::max(peak, mappedTransfers(bytes) - mappedBefore); };
+        QTimer watch; QObject::connect(&watch, &QTimer::timeout, observed); watch.start(50);
+        h.viewer.setBoundaryMode(boundary);
+        h.viewer.open(photos[0]);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.fileName() == QString("f-1.png") && !h.viewer.navigating(), 15000);
+        if (boundary == "continue") { QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000); h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000); }
+        for (int step = 0; step < steps; ++step) {
+            const QString from = h.viewer.filePath();
+            if (killed) QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(from), 15000); // it holds the lock now
+            else QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading(), 15000);
+            if (boundary == "stop") h.viewer.open(photos[step + 1]); else h.viewer.next();
+            QTRY_VERIFY_WITH_TIMEOUT(h.viewer.filePath() != from, 15000);
+            QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 15000);
+            if (killed) continue; // this one is killed in its turn
+            QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading(), 15000);
+            QCOMPARE(h.viewer.imageReady(), shown);
+        }
+        if (killed) QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(h.viewer.filePath()), 15000);
+        if (boundary == "continue") { QVERIFY2(fixture.prefetches > 0, "no prefetch ran, so this row tests nothing"); }
+        const int beatsBefore = beat.beats;
+        QVERIFY(fixture.configure({})); // a last, small, healthy decode retires whatever still runs, as moving on does
+        h.viewer.open(photos.last());
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && !h.viewer.navigating(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(beat.beats > beatsBefore + 10, 10000); // the event loop runs on after all of those deaths
+        QVERIFY2(beat.maxGap < 15000, qPrintable(QString("the GUI thread stalled for %1 ms").arg(beat.maxGap)));
+        const QStringList keys = fixture.keys();
+        QVERIFY2(keys.size() >= steps, qPrintable(QString::number(keys.size()))); // that many decoders really attached
+        // At most the foreground and a prefetch at a time, plus any whose process is still on its way out.
+        QVERIFY2(peak <= 6, qPrintable(QString("%1 segments mapped at once: deaths are piling up").arg(peak)));
+        QTRY_COMPARE_WITH_TIMEOUT(mappedTransfers(bytes) - mappedBefore, 0, 15000);
+#ifdef Q_OS_WIN
+        for (const QString& key : keys) QTRY_VERIFY2_WITH_TIMEOUT(!transferStillExists(key), qPrintable("still alive: " + key), 15000);
+#else
+        QTRY_COMPARE_WITH_TIMEOUT(systemSegments(bytes) - systemBefore, 0, 15000); // none left behind for the whole machine
+#endif
+    }
+    // The slideshow's own walk with real decoders, for the rate acceptance (R4-B2): run by hand, with GL_STACK_RATE_PASSES and
+    // GL_STACK_RATE_PACE_MS. No test hook: real decoders, retired by the viewer at real moments. Every pass walks 40 folders of
+    // 2 photos under "continue", so every step has a prefetch that ends in "ok" and a kill, the race that used to hang.
+    void slideshowPatternRateRun() {
+        const int passes = qEnvironmentVariableIntValue("GL_STACK_RATE_PASSES"), paceMs = qEnvironmentVariableIntValue("GL_STACK_RATE_PACE_MS");
+        if (passes <= 0) QSKIP("set GL_STACK_RATE_PASSES to run it");
+        const QSize photo(640, 480); const qint64 bytes = qint64(photo.width()) * photo.height() * 4;
+        QTemporaryDir root; QVERIFY(root.isValid());
+        QStringList folders;
+        for (int i = 0; i < 40; ++i) {
+            const QString folder = QDir(root.path()).filePath(QString("f%1").arg(i, 2, 10, QLatin1Char('0')));
+            QVERIFY(QDir().mkpath(folder));
+            QImage image(photo, QImage::Format_RGB32); image.fill(QColor::fromHsv(i * 9, 120, 180));
+            QVERIFY(image.save(QDir(folder).filePath("f-1.png"))); QVERIFY(image.save(QDir(folder).filePath("f-2.png")));
+            folders << folder;
+        }
+        const int mappedBefore = mappedTransfers(bytes);
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.setFilmstripVisible(false);
+        Heartbeat beat;
+        h.viewer.setBoundaryMode("continue");
+        h.viewer.open(QDir(folders[0]).filePath("f-1.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady() && !h.viewer.navigating(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
+        h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
+        QElapsedTimer total; total.start();
+        int steps = 0, undecoded = 0;
+        for (int pass = 0; pass < passes; ++pass) {
+            h.viewer.open(QDir(folders[0]).filePath("f-1.png"));
+            QVERIFY(QTest::qWaitFor([&] { return !h.viewer.navigating() && !h.viewer.loading(); }, 30000));
+            const int stepsBefore = steps;
+            for (;;) {
+                QTest::qWait(paceMs + QRandomGenerator::global()->bounded(20)); // sleep-ok: the pace between steps is what this run varies
+                const QString from = h.viewer.filePath();
+                h.viewer.next();
+                QVERIFY(QTest::qWaitFor([&] { return !h.viewer.navigating() && !h.viewer.loading(); }, 30000));
+                if (h.viewer.filePath() == from) break;
+                ++steps; if (!h.viewer.imageReady()) ++undecoded;
+            }
+            QVERIFY2(steps > stepsBefore + 70, qPrintable(QString("pass %1 walked %2 steps").arg(pass).arg(steps - stepsBefore)));
+            qint64 privateBytes = 0, handles = 0;
+#ifdef Q_OS_WIN
+            PROCESS_MEMORY_COUNTERS_EX counters{}; counters.cb = sizeof(counters);
+            if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters), sizeof(counters))) privateBytes = qint64(counters.PrivateUsage);
+            DWORD handleCount = 0; if (GetProcessHandleCount(GetCurrentProcess(), &handleCount)) handles = handleCount;
+#endif
+            QVERIFY(QTest::qWaitFor([&] { return mappedTransfers(bytes) == mappedBefore; }, 10000));
+            qInfo("pass %d: %d steps, %lld ms, mapped %d, private %lld MiB, handles %lld, undecoded %d, max GUI gap %lld ms", pass, steps, total.elapsed(),
+                  mappedTransfers(bytes) - mappedBefore, privateBytes / (1024 * 1024), handles, undecoded, beat.maxGap);
+        }
+        qInfo("RESULT pace %d: %d steps in %lld ms, undecoded %d, max GUI gap %lld ms, mapped at the end %d", paceMs, steps, total.elapsed(), undecoded, beat.maxGap, mappedTransfers(bytes) - mappedBefore);
     }
     // R3-B1: `navigating` is true from the request of a step until it has settled, and false again afterwards.
     void navigatingSpansAStep() {
         Media media(3, QSize(64, 48)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
-        QTRY_VERIFY(!h.viewer.navigating());
+        QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
         const QString first = h.viewer.filePath();
         h.viewer.next();
         QVERIFY(h.viewer.navigating());
@@ -269,7 +471,11 @@ private slots:
         h.viewer.setBoundaryMode("continue");
         setSlideshowSeconds(h, seconds);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
+        QStringList shown{h.viewer.fileName()}; // R4-N1: extra ticks during the step would queue steps and skip photos
+        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.viewer, [&] {
+            if (h.viewer.imageReady() && h.viewer.fileName() != shown.last()) shown << h.viewer.fileName();
+        });
         bool leftOnWhileLanding = false;
         QElapsedTimer total; total.start();
         QTRY_VERIFY_WITH_TIMEOUT([&] {
@@ -285,6 +491,75 @@ private slots:
         QTest::qWait(1500); // sleep-ok: asserting nothing lands after the slideshow ended
         QCOMPARE(h.viewer.fileName(), at);
         QVERIFY(!h.viewer.navigating());
+        QCOMPARE(shown, QStringList({"a-1.png", "a-2.png", "c-1.png", "c-2.png"}));
+        settleSlideshow(h);
+    }
+    // R4-N2: each photo gets the full pace, counted from when it shows, however long the step to it took. Three slow steps, because
+    // one could land just after a tick by chance.
+    void slideshowShowsAPhotoForTheFullPaceAfterASlowStep() {
+        const int emptyFolders = 150, paceMs = 1000;
+        QTemporaryDir root; QVERIFY(root.isValid());
+        QStringList names{"a", "c", "e", "g"};
+        for (const QString& name : names) QVERIFY(!makeFolder(root.path(), name, 2).isEmpty());
+        for (const char* gap : {"b", "d", "f"})
+            for (int i = 0; i < emptyFolders; ++i) QVERIFY(QDir(root.path()).mkpath(QString("%1%2").arg(gap).arg(i, 4, 10, QLatin1Char('0'))));
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.setFilmstripVisible(false);
+        h.viewer.open(QDir(root.path()).filePath("a/a-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QVERIFY(activate(h)); focusCanvas(h);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
+        h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
+        h.viewer.setBoundaryMode("continue");
+        setSlideshowSeconds(h, paceMs / 1000);
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
+        QElapsedTimer clock; clock.start();
+        QHash<QString, qint64> shownAt, shownFor;
+        QString current = h.viewer.fileName();
+        shownAt[current] = clock.elapsed();
+        QObject::connect(&h.viewer, &ViewerController::stateChanged, &h.viewer, [&] {
+            const QString name = h.viewer.fileName();
+            if (name != current) { if (shownAt.contains(current)) shownFor[current] = clock.elapsed() - shownAt[current]; current = name; }
+            if (h.viewer.imageReady() && !shownAt.contains(name)) shownAt[name] = clock.elapsed();
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 120000); // the true end, after g-2
+        QCOMPARE(h.viewer.fileName(), QString("g-2.png"));
+        for (const char* photo : {"c-1.png", "e-1.png", "g-1.png"}) {
+            QVERIFY2(shownFor.contains(photo), photo);
+            QVERIFY2(shownFor[photo] >= paceMs - 200, qPrintable(QString("%1 was on screen for %2 ms at a %3 ms pace").arg(photo).arg(shownFor[photo]).arg(paceMs)));
+        }
+        settleSlideshow(h);
+    }
+    // R4-N3: a folder opened by hand while the slideshow's own step is running ends the slideshow. Its directory change arrives
+    // while a step is in flight, so without the controller's notice it was taken for that step's own.
+    void slideshowEndsOnAManualOpenDuringItsOwnStep_data() {
+        QTest::addColumn<QString>("route");
+        QTest::newRow("openFolder") << "openFolder"; QTest::newRow("navigateDirectory") << "navigateDirectory"; QTest::newRow("open a photo") << "open";
+    }
+    void slideshowEndsOnAManualOpenDuringItsOwnStep() {
+        QFETCH(QString, route);
+        QTemporaryDir root, other; QVERIFY(root.isValid() && other.isValid());
+        const QString a = makeFolder(root.path(), "a", 2), z = makeFolder(other.path(), "z", 3);
+        QVERIFY(!a.isEmpty() && !z.isEmpty());
+        for (int i = 0; i < 300; ++i) QVERIFY(QDir(root.path()).mkpath(QString("b%1").arg(i, 4, 10, QLatin1Char('0'))));
+        QVERIFY(!makeFolder(root.path(), "c", 2).isEmpty());
+        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
+        h.viewer.setFilmstripVisible(false);
+        h.viewer.open(QDir(a).filePath("a-2.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QVERIFY(activate(h)); focusCanvas(h);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.canRaiseRoot(), 10000);
+        h.viewer.raiseRoot(); QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 10000);
+        h.viewer.setBoundaryMode("continue");
+        setSlideshowSeconds(h, 1);
+        h.viewer.trigger("slideshow");
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.navigating(), 10000); // its own step across the empty folders is in flight
+        QVERIFY(!h.window->property("slideshowStepFrom").toString().isEmpty());
+        if (route == "openFolder") h.viewer.openFolder(z);
+        else if (route == "navigateDirectory") h.viewer.navigateDirectory(z);
+        else h.viewer.open(QDir(z).filePath("z-2.png"));
+        QTRY_VERIFY_WITH_TIMEOUT(QDir::fromNativeSeparators(h.viewer.directory()).endsWith("/z") && !h.viewer.navigating() && !h.viewer.loading(), 15000);
+        QVERIFY2(!flag(h, "slideshowOn"), "the manual open was taken for the slideshow's own step");
         settleSlideshow(h);
     }
     // R3-N3: the failure bound does not depend on the folder a step lands in: an undecodable photo alone in a folder, between
@@ -303,7 +578,7 @@ private slots:
         h.viewer.setBoundaryMode("continue");
         setSlideshowSeconds(h, 1);
         h.viewer.trigger("slideshow");
-        QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         QTRY_COMPARE_WITH_TIMEOUT(h.viewer.fileName(), QString("c-2.png"), 20000);
         QVERIFY2(flag(h, "slideshowOn"), "the slideshow stopped at the undecodable lone photo");
         QVERIFY2(noticeText(h).isEmpty(), qPrintable(noticeText(h)));
@@ -318,27 +593,27 @@ private slots:
         setSlideshowSeconds(h, 5);
         auto invoke = [&](const char* id) { QVERIFY(QMetaObject::invokeMethod(h.window, "invoke", Q_ARG(QVariant, QString(id)))); };
         auto indicatorShown = [&] { auto* i = named(h.window, "slideshowIndicator"); return i && i->isVisible(); };
-        invoke("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn")); QTRY_VERIFY(indicatorShown());
+        invoke("slideshow"); QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000); QTRY_VERIFY_WITH_TIMEOUT(indicatorShown(), 10000);
         invoke("tab-new");
-        QTRY_VERIFY(!flag(h, "slideshowOn")); QTRY_VERIFY(!indicatorShown());
+        QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 10000); QTRY_VERIFY_WITH_TIMEOUT(!indicatorShown(), 10000);
         // Opening another folder in the same tab (tree, breadcrumbs and the path field all end here).
         h.viewer.openFolder(folder);
         QTRY_VERIFY_WITH_TIMEOUT(QDir::fromNativeSeparators(h.viewer.directory()) == QDir::fromNativeSeparators(folder) && h.viewer.imageReady(), 10000);
-        invoke("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        invoke("slideshow"); QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         h.viewer.openFolder(media.dir.path()); QTRY_VERIFY_WITH_TIMEOUT(QDir::fromNativeSeparators(h.viewer.directory()) == QDir::fromNativeSeparators(media.dir.path()), 10000);
-        QTRY_VERIFY(!flag(h, "slideshowOn")); QTRY_VERIFY(!indicatorShown());
+        QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 10000); QTRY_VERIFY_WITH_TIMEOUT(!indicatorShown(), 10000);
         // Switching back to the first tab ends it too.
-        QTRY_VERIFY(h.viewer.imageReady());
-        invoke("slideshow"); QTRY_VERIFY(flag(h, "slideshowOn"));
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
+        invoke("slideshow"); QTRY_VERIFY_WITH_TIMEOUT(flag(h, "slideshowOn"), 10000);
         invoke("tab-previous");
-        QTRY_VERIFY(!flag(h, "slideshowOn")); QTRY_VERIFY(!indicatorShown());
+        QTRY_VERIFY_WITH_TIMEOUT(!flag(h, "slideshowOn"), 10000); QTRY_VERIFY_WITH_TIMEOUT(!indicatorShown(), 10000);
     }
 
     // G-1: changing the grid mode keeps the item that was first in view in view, at any column count.
     void detailsToggleKeepsTheVisibleAnchor() {
         Media media(120, QSize(32, 24)); Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         QVERIFY(openFolder(h, media)); QVERIFY(activate(h));
-        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 120);
+        h.viewer.trigger("grid"); QTRY_VERIFY_WITH_TIMEOUT(flag(h, "gridMode"), 10000); QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 120, 10000);
         auto* view = named(h.window, "photoGridView"); QVERIFY(view);
         QObject* grid = h.object("photoGrid"); QVERIFY(grid);
         auto firstVisible = [&] {
@@ -348,7 +623,7 @@ private slots:
         };
         auto details = [&](bool on) {
             h.viewer.trigger("view-details");
-            QTRY_COMPARE(grid->property("details").toBool(), on);
+            QTRY_COMPARE_WITH_TIMEOUT(grid->property("details").toBool(), on, 10000);
             frames(h);
         };
         frames(h);
@@ -392,12 +667,12 @@ private slots:
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         h.viewer.open(dir.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
         QVERIFY(activate(h));
-        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode"));
-        QTRY_COMPARE(h.fileGrid.count(), 7);
+        h.viewer.trigger("grid"); QTRY_VERIFY_WITH_TIMEOUT(flag(h, "gridMode"), 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 7, 10000);
         auto chip = [&](const char* id) { return named(h.window, QString("gridKind-") + id); };
         auto* view = named(h.window, "photoGridView"); QVERIFY(view);
-        QTRY_VERIFY(view->hasActiveFocus());
-        for (const char* id : {"folder", "image", "file"}) { QVERIFY(chip(id)); QTRY_VERIFY(chip(id)->isVisible()); }
+        QTRY_VERIFY_WITH_TIMEOUT(view->hasActiveFocus(), 10000);
+        for (const char* id : {"folder", "image", "file"}) { QVERIFY(chip(id)); QTRY_VERIFY_WITH_TIMEOUT(chip(id)->isVisible(), 10000); }
         // Names and roles for assistive technology.
         for (auto [id, name] : {std::pair{"folder", "Show only Folders"}, {"image", "Show only Photos"}, {"file", "Show only Other files"}}) {
             auto* iface = QAccessible::queryAccessibleInterface(chip(id));
@@ -407,36 +682,36 @@ private slots:
         }
         // Ctrl+Shift+F from the grid moves to the chips, and the focus ring is the keyboard one.
         QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier);
-        QTRY_VERIFY(chip("folder")->hasActiveFocus());
+        QTRY_VERIFY_WITH_TIMEOUT(chip("folder")->hasActiveFocus(), 10000);
         QVERIFY(chip("folder")->property("visualFocus").toBool());
         QVERIFY(!view->hasActiveFocus());
         QTest::keyClick(h.window, Qt::Key_Space);
-        QTRY_COMPARE(h.fileGrid.count(), 2); QCOMPARE(h.fileGrid.kindFilter(), QString("folder"));
+        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 2, 10000); QCOMPARE(h.fileGrid.kindFilter(), QString("folder"));
         QVERIFY(chip("folder")->hasActiveFocus()); // still there, ready for the next key
         auto* folderIface = QAccessible::queryAccessibleInterface(chip("folder"));
         QVERIFY(folderIface->state().checked);
         // Tab walks to the next chip; Enter switches it.
         QTest::keyClick(h.window, Qt::Key_Tab);
-        QTRY_VERIFY(chip("image")->hasActiveFocus());
+        QTRY_VERIFY_WITH_TIMEOUT(chip("image")->hasActiveFocus(), 10000);
         QTest::keyClick(h.window, Qt::Key_Return);
-        QTRY_COMPARE(h.fileGrid.count(), 3); QCOMPARE(h.fileGrid.kindFilter(), QString("image"));
+        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 3, 10000); QCOMPARE(h.fileGrid.kindFilter(), QString("image"));
         // Space again on the active chip clears the type filter.
         QTest::keyClick(h.window, Qt::Key_Space);
-        QTRY_COMPARE(h.fileGrid.count(), 7); QVERIFY(!h.fileGrid.hasFilter());
+        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 7, 10000); QVERIFY(!h.fileGrid.hasFilter());
         // Escape gives the keyboard back to the items and does not leave the grid.
         QTest::keyClick(h.window, Qt::Key_Escape);
-        QTRY_VERIFY(view->hasActiveFocus());
+        QTRY_VERIFY_WITH_TIMEOUT(view->hasActiveFocus(), 10000);
         QVERIFY(flag(h, "gridMode"));
         // The shortcut reaches the active chip when a filter is on.
-        h.fileGrid.setKindFilter("file"); QTRY_COMPARE(h.fileGrid.count(), 2);
+        h.fileGrid.setKindFilter("file"); QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 2, 10000);
         QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier);
-        QTRY_VERIFY(chip("file")->hasActiveFocus());
+        QTRY_VERIFY_WITH_TIMEOUT(chip("file")->hasActiveFocus(), 10000);
         // A pointer click on a chip leaves the keyboard on the items.
         auto* photos = chip("image");
         QTest::mouseMove(h.window, sceneCenter(photos)); frames(h);
         QTest::mouseClick(h.window, Qt::LeftButton, {}, sceneCenter(photos), 60);
-        QTRY_COMPARE(h.fileGrid.count(), 3);
-        QTRY_VERIFY(view->hasActiveFocus());
+        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 3, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(view->hasActiveFocus(), 10000);
     }
 
     // R2-N5: Left and Right move between the type chips and stop at the ends; the grid's cursor is not touched.
@@ -448,23 +723,23 @@ private slots:
         Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
         h.viewer.open(dir.filePath("a.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
         QVERIFY(activate(h));
-        h.viewer.trigger("grid"); QTRY_VERIFY(flag(h, "gridMode")); QTRY_COMPARE(h.fileGrid.count(), 3);
+        h.viewer.trigger("grid"); QTRY_VERIFY_WITH_TIMEOUT(flag(h, "gridMode"), 10000); QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.count(), 3, 10000);
         auto chip = [&](const char* id) { return named(h.window, QString("gridKind-") + id); };
-        auto* view = named(h.window, "photoGridView"); QTRY_VERIFY(view && view->hasActiveFocus());
+        auto* view = named(h.window, "photoGridView"); QTRY_VERIFY_WITH_TIMEOUT(view && view->hasActiveFocus(), 10000);
         QTest::keyClick(h.window, Qt::Key_F, Qt::ControlModifier | Qt::ShiftModifier);
-        QTRY_VERIFY(chip("folder")->hasActiveFocus());
+        QTRY_VERIFY_WITH_TIMEOUT(chip("folder")->hasActiveFocus(), 10000);
         QTest::keyClick(h.window, Qt::Key_Left); QTest::qWait(100); // sleep-ok: asserting focus stays put at the first chip
         QVERIFY(chip("folder")->hasActiveFocus()); // stops at the first
-        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(chip("image")->hasActiveFocus());
-        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY(chip("file")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY_WITH_TIMEOUT(chip("image")->hasActiveFocus(), 10000);
+        QTest::keyClick(h.window, Qt::Key_Right); QTRY_VERIFY_WITH_TIMEOUT(chip("file")->hasActiveFocus(), 10000);
         QTest::keyClick(h.window, Qt::Key_Right); QTest::qWait(100); // sleep-ok: asserting focus stays put at the last chip
         QVERIFY(chip("file")->hasActiveFocus()); // and at the last
-        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY(chip("image")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Left); QTRY_VERIFY_WITH_TIMEOUT(chip("image")->hasActiveFocus(), 10000);
         QVERIFY(chip("image")->property("visualFocus").toBool());
         QTest::keyClick(h.window, Qt::Key_Space);
-        QTRY_COMPARE(h.fileGrid.kindFilter(), QString("image"));
+        QTRY_COMPARE_WITH_TIMEOUT(h.fileGrid.kindFilter(), QString("image"), 10000);
         QTest::keyClick(h.window, Qt::Key_Escape);
-        QTRY_VERIFY(view->hasActiveFocus());
+        QTRY_VERIFY_WITH_TIMEOUT(view->hasActiveFocus(), 10000);
         QVERIFY(flag(h, "gridMode"));
         QCOMPARE(h.viewer.fileName(), QString("a.png"));
     }
@@ -480,12 +755,12 @@ private slots:
         h.viewer.open(QDir(folders[0]).filePath("A-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
         QVERIFY(activate(h));
         for (int i = 1; i < 3; ++i) {
-            h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), i + 1);
+            h.viewer.trigger("tab-new"); QTRY_COMPARE_WITH_TIMEOUT(int(h.viewer.tabs().size()), i + 1, 10000);
             h.viewer.open(QDir(folders[i]).filePath(QString("%1-1.png").arg(names[i].left(1)))); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
         }
-        auto* strip = named(h.window, "tabStrip"); QVERIFY(strip); QTRY_VERIFY(strip->isVisible());
+        auto* strip = named(h.window, "tabStrip"); QVERIFY(strip); QTRY_VERIFY_WITH_TIMEOUT(strip->isVisible(), 10000);
         QMetaObject::invokeMethod(h.window, "wakeHud"); frames(h);
-        QTRY_VERIFY(strip->property("contentX").toReal() > 0); // the active third tab was scrolled into view, into the margin
+        QTRY_VERIFY_WITH_TIMEOUT(strip->property("contentX").toReal() > 0, 10000); // the active third tab was scrolled into view, into the margin
         const qreal before = strip->property("contentX").toReal();
         const QPoint at = sceneCenter(strip);
         sendWheel(h, at, QPoint(), QPoint(0, -120), Qt::NoModifier); // toward the end
@@ -507,14 +782,14 @@ private slots:
         h.viewer.open(QDir(folders[0]).filePath("A-1.png")); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
         QVERIFY(activate(h));
         for (int i = 1; i < 3; ++i) {
-            h.viewer.trigger("tab-new"); QTRY_COMPARE(int(h.viewer.tabs().size()), i + 1);
+            h.viewer.trigger("tab-new"); QTRY_COMPARE_WITH_TIMEOUT(int(h.viewer.tabs().size()), i + 1, 10000);
             h.viewer.open(QDir(folders[i]).filePath(QString("%1-1.png").arg(names[i].left(1)))); QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
-            QTRY_COMPARE(h.viewer.activeTab(), i);
+            QTRY_COMPARE_WITH_TIMEOUT(h.viewer.activeTab(), i, 10000);
         }
-        auto* strip = named(h.window, "tabStrip"); QVERIFY(strip); QTRY_VERIFY(strip->isVisible());
+        auto* strip = named(h.window, "tabStrip"); QVERIFY(strip); QTRY_VERIFY_WITH_TIMEOUT(strip->isVisible(), 10000);
         if (!grabDir.isEmpty()) { // evidence first, so a failing run still leaves its pictures
             for (const int width : {1180, 560}) {
-                h.window->resize(width, 780); h.viewer.activateTab(2); QTRY_COMPARE(h.viewer.activeTab(), 2);
+                h.window->resize(width, 780); h.viewer.activateTab(2); QTRY_COMPARE_WITH_TIMEOUT(h.viewer.activeTab(), 2, 10000);
                 QMetaObject::invokeMethod(h.window, "wakeHud"); frames(h);
                 QVERIFY(h.window->grabWindow().save(QDir(grabDir).filePath(QString("tabs-%1.png").arg(width))));
             }
@@ -523,7 +798,7 @@ private slots:
             h.window->resize(width, 780); frames(h);
             for (int active : {2, 0, 1, 2}) {
                 h.viewer.activateTab(active);
-                QTRY_COMPARE(h.viewer.activeTab(), active);
+                QTRY_COMPARE_WITH_TIMEOUT(h.viewer.activeTab(), active, 10000);
                 QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 10000);
                 QMetaObject::invokeMethod(h.window, "wakeHud"); frames(h); // the bars auto-hide in photo mode; measure them shown
                 auto* tab = named(h.window, QString("tab-%1").arg(active));

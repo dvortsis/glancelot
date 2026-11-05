@@ -4,7 +4,6 @@
 #include <QPointer>
 #include "fs_source_token.hpp"
 #include "io_job_lease.hpp"
-#include "shared_memory_reaper.hpp"
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -36,12 +35,10 @@
 #include <QKeySequence>
 #include <QProcess>
 #include <QSaveFile>
-#include <QSharedMemory>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QThreadPool>
 #include <QUrl>
-#include <QUuid>
 #include <QCoreApplication>
 #include <algorithm>
 #include <functional>
@@ -55,6 +52,7 @@
 #endif
 #include <windows.h>
 #endif
+#include "transfer_segment.hpp"
 
 using namespace glancelot;
 namespace {
@@ -154,7 +152,7 @@ struct ViewerController::Private {
     std::optional<fs_watch::ControllerTestHooks> testHooks=fs_watch::controllerTestHooks?
         std::optional{*fs_watch::controllerTestHooks}:std::nullopt;
 #endif
-    glancelot::detail::TransferPtr transfer;
+    std::unique_ptr<glancelot::detail::TransferSegment> transfer;
     qint64 admittedPixelBytes{};
     QByteArray output;
     glancelot::detail::DecodeCache cache;
@@ -272,7 +270,7 @@ struct ViewerController::Private {
     quint64 lookaheadGeneration{};
     QString lookaheadCandidate;
     QProcess* prefetchWorker{nullptr};
-    glancelot::detail::TransferPtr prefetchTransfer;
+    std::unique_ptr<glancelot::detail::TransferSegment> prefetchTransfer;
     qint64 prefetchAdmittedBytes{};
     QByteArray prefetchOutput;
     QTimer prefetchDeadline;
@@ -735,7 +733,7 @@ struct ViewerController::Private {
                         cancelLookahead(); return;
                     }
                     prefetchLease=std::move(admission);notifyIoStatsChanged();
-                    prefetchTransfer = glancelot::detail::makeTransfer("Glancelot-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
+                    prefetchTransfer = std::make_unique<glancelot::detail::TransferSegment>(glancelot::detail::newTransferKey());
                     if (!prefetchTransfer->create(bytes)) { cancelLookahead(); return; }
                     prefetchAdmittedBytes = bytes;
                     process->write(QJsonDocument(QJsonObject{{"key", prefetchTransfer->key()}}).toJson(QJsonDocument::Compact) + '\n');
@@ -748,8 +746,7 @@ struct ViewerController::Private {
                     if (!prefetchTransfer || width <= 0 || height <= 0 || width > 32768 || height > 32768 || stride != width * 4 || qint64(stride) * height != prefetchAdmittedBytes || prefetchAdmittedBytes > prefetchTransfer->size()) {
                         cancelLookahead(); return;
                     }
-                    // No lock: the worker finished writing before it sent this message, and the GUI thread must never wait on a
-                    // system semaphore that a dying worker can hold (see shared_memory_reaper.hpp).
+                    // The worker finished writing before it sent this message, so there is nothing to lock (see transfer_segment.hpp).
                     QImage result(static_cast<const uchar*>(prefetchTransfer->constData()), width, height, stride, QImage::Format_RGBA8888);
                     QImage owned = result.copy();
                     if (!owned.isNull()) {
@@ -1027,7 +1024,7 @@ struct ViewerController::Private {
                         fail("Storage admission limit exceeded."); return;
                     }
                     decodeLease=std::move(admission);notifyIoStatsChanged();
-                    transfer=glancelot::detail::makeTransfer("Glancelot-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+                    transfer=std::make_unique<glancelot::detail::TransferSegment>(glancelot::detail::newTransferKey());
                     if (!transfer->create(bytes)) { fail("Cannot reserve the image transfer buffer: "+transfer->errorString()); return; }
                     admittedPixelBytes=bytes;
                     process->write(QJsonDocument(QJsonObject{{"key",transfer->key()}}).toJson(QJsonDocument::Compact)+'\n');
@@ -1036,7 +1033,7 @@ struct ViewerController::Private {
                     if(!source){fail("Invalid decoded source revision.");return;}
                     const int width=message.value("width").toInt(),height=message.value("height").toInt(),stride=message.value("stride").toInt();
                     if (!transfer || width<=0 || height<=0 || width>32768 || height>32768 || stride!=width*4 || qint64(stride)*height!=admittedPixelBytes || admittedPixelBytes>transfer->size()) { fail("Decoder returned invalid image geometry."); return; }
-                    // No lock: the worker finished writing before it sent this message (see shared_memory_reaper.hpp).
+                    // The worker finished writing before it sent this message, so there is nothing to lock (see transfer_segment.hpp).
                     QImage result(static_cast<const uchar*>(transfer->constData()),width,height,stride,QImage::Format_RGBA8888);
                     QImage owned=result.copy();
                     if (owned.isNull()) { fail("Cannot allocate the current image."); return; }
@@ -1696,6 +1693,7 @@ void ViewerController::open(const QString& value){
         const QString oldDir = directory();
         const QString newDir = QFileInfo(path).absolutePath();
         if (!oldDir.isEmpty() && !newDir.isEmpty() && QDir(oldDir) != QDir(newDir)) {
+            emit viewCommand(QStringLiteral("explicit-navigation")); // R4-N3, see the slideshow block in Main.qml
             if (!d->filter.isPersistent() && d->filter.isActive()) {
                 d->filter.clear();
                 emit filterChanged();
@@ -1829,6 +1827,7 @@ void ViewerController::cancelDirectoryNavigation() {
 }
 void ViewerController::navigateDirectory(const QString& value) {
     d->explicitPositionIntent=true;d->restorePending=false;d->noteUserMove();
+    emit viewCommand(QStringLiteral("explicit-navigation")); // R4-N3, see the slideshow block in Main.qml
     d->navigationIntents.clear();
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};
     const auto cancellation=d->navigationStop.get_token();
@@ -1884,6 +1883,7 @@ void ViewerController::openFolder(const QString& value){
     d->directoryPending=false;d->directoryError.clear();
     const QUrl url(value);const QString folder=QFileInfo(url.isLocalFile()?url.toLocalFile():value).absoluteFilePath();
     if(value.trimmed().isEmpty()||folder.isEmpty())return;
+    emit viewCommand(QStringLiteral("explicit-navigation")); // R4-N3, see the slideshow block in Main.qml
     d->navigationIntents.clear();
     // Newest folder request wins: stop whatever search or step is still running and start from a fresh token.
     d->navigationStop.request_stop(); d->navigationStop=std::stop_source{};

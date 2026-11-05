@@ -653,9 +653,10 @@ ApplicationWindow {
     property string slideshowDirectory: ""
     property int slideshowTab: 0
     property string slideshowStepFrom: "" // the photo a step left; non-empty from the request until the step has settled
+    property bool slideshowLanding: false // a step landed and its photo has not shown yet; the pace counts from when it does
     function startSlideshow() {
         if (viewer.fileCount < 2 || gridMode) return
-        slideshowFailures = 0; slideshowStepFrom = ""
+        slideshowFailures = 0; slideshowStepFrom = ""; slideshowLanding = false
         slideshowDirectory = viewer.directory; slideshowTab = viewer.activeTab; slideshowTabs = Math.max(1, viewer.tabs.length)
         slideshowOn = true; slideshowTimer.restart(); wakeHud()
     }
@@ -696,8 +697,10 @@ ApplicationWindow {
         // the next lands on the same index. Otherwise the step landed and the next one may follow.
         if (slideshowStepFrom.length && !viewer.navigating) {
             if (viewer.filePath === slideshowStepFrom) { stopSlideshow(); return }
-            slideshowStepFrom = ""
+            slideshowStepFrom = ""; slideshowLanding = true
         }
+        // Each photo gets the full pace, counted from when it shows (or failed), however long its step took.
+        if (slideshowLanding && !viewer.loading && !viewer.navigating) { slideshowLanding = false; slideshowTimer.restart() }
         // A settled failure is not waiting for anything: step on shortly instead of holding the error for a whole interval.
         if (!viewer.loading && !viewer.navigating && !viewer.imageReady && slideshowStepFrom.length === 0) slideshowSkipTimer.start()
     }
@@ -705,6 +708,9 @@ ApplicationWindow {
         target: viewer
         function onStateChanged() { app.slideshowObserve() }
         function onTabsChanged() { app.slideshowObserve() }
+        // The controller announces a folder opened by hand. Only needed while the slideshow's own step runs: then the directory
+        // change that follows cannot be told from that step's own. At any other time slideshowObserve sees it.
+        function onViewCommand(id) { if (id === "explicit-navigation" && app.slideshowStepFrom.length) app.stopSlideshow() }
     }
     Timer {
         id: slideshowTimer
