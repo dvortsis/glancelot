@@ -2873,6 +2873,10 @@
         <source>Files that weren&apos;t transferred are still where they were.</source>
         <translation>[Fîlés thàt wéréñ&apos;t tràñsférréd àré stîll whéré théý wéré.]</translation>
     </message>
+    <message>
+        <source>These items are already in this folder.</source>
+        <translation>[Thésé îtéms àré àlréàdý îñ thîs fõldér.]</translation>
+    </message>
 </context>
 <context>
     <name>TransferHud</name>

@@ -10,7 +10,10 @@ RadioButton {
     id: control
     Layout.fillWidth: true
     implicitHeight: Math.max(Theme.controlHeight, labelText.implicitHeight + Theme.gapXs)
+    // Inset like the rows of the lists beside it, so the circles line up with their text and the focus outline has room.
     padding: 0
+    leftPadding: Theme.gapMd
+    rightPadding: Theme.gapMd
     spacing: Theme.gapSm
     hoverEnabled: true
     font.pixelSize: Theme.textBody
@@ -42,8 +45,15 @@ RadioButton {
             break
         }
     }
+    // Keyboard focus outlines the whole option, label included, not just the small circle.
+    background: Rectangle {
+        color: "transparent"
+        radius: Theme.radiusControl
+        border.width: control.visualFocus ? Theme.focusWidth : 0
+        border.color: Theme.focusRing
+    }
     indicator: Rectangle {
-        x: control.mirrored ? control.width - width : 0
+        x: control.mirrored ? control.width - width - control.rightPadding : control.leftPadding
         y: (control.height - height) / 2
         implicitWidth: Theme.iconSize
         implicitHeight: Theme.iconSize
