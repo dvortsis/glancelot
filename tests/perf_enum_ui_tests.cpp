@@ -277,6 +277,10 @@ private slots:
         QCOMPARE(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)});
     }
     void aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner() {
+        // The sort command saves the order, and the tests after this one must not start from it.
+        QTemporaryDir ownConfig; QVERIFY(ownConfig.isValid());
+        qputenv("GLANCELOT_CONFIG_DIR", ownConfig.path().toUtf8());
+        const auto sharedConfig = qScopeGuard([this] { qputenv("GLANCELOT_CONFIG_DIR", config.path().toUtf8()); });
         ArrivalFixture f; f.photoAt = 300; QVERIFY(f.startPaged(2500));
         QTRY_COMPARE_WITH_TIMEOUT(f.h->fileGrid.selectedPaths(), QStringList{f.media.path(0)}, 10000);
         const int columns = f.columns();
@@ -284,8 +288,7 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
         const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
         const int rowBefore = f.h->fileGrid.rowOf(anchor);
-        f.h->fileGrid.setSort("name", true, 0);
-        QVERIFY(f.h->fileGrid.loading());
+        f.h->viewer.trigger("sort-reverse"); // what the menu item and the shortcut do
         QTRY_VERIFY_WITH_TIMEOUT(!f.h->fileGrid.loading() && f.h->fileGrid.rowOf(anchor) != rowBefore, 10000);
         QCOMPARE(f.h->fileGrid.count(), kPage);
         QTRY_VERIFY_WITH_TIMEOUT(f.anchoredOn(anchor), 10000);
