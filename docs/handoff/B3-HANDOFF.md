@@ -101,6 +101,18 @@ Notes:
 3. The first 27 mutations ran on `ea37573`, and the last two on the tightened test in `5486ecf`. Only one assertion and the `export_ui` limit differ between the two.
 4. An earlier mutation run was discarded and is not in this evidence: its builds timed out behind other sessions' gates, and it recorded the wrong exit code.
 
+**Not mutation-checked.** This is a representative set, as the lead allowed, so checklist item 1 isn't fully met. 23 of the 28 test functions are named by a mutation. These 5 pass on the clean build, but **I never saw them fail**:
+
+| Test | What it would take to check | Why it matters |
+| --- | --- | --- |
+| `destroyingTheServiceStopsTheWorker` | Drop `request_stop` from the service destructor | **Highest priority.** Closing mid-export must stop the worker and leave no file behind |
+| `missingItemIsReportedWithoutStoppingTheRest` | Stop recording the Missing skip in `prepare` | The rest of the export must still complete |
+| `itemChangedAfterSnapshotIsSkipped` | Hard to mutate from the service, because the engine does this check | Confirms the engine's check is reachable through the service |
+| `pathListAndRelativeRootOptionsReachTheEngine` | Ignore the options when building the request | Path-list and relative-root options |
+| `aFileChosenInTheSaveDialogFillsTheField` | Empty `applyChosenFile` in the QML | The save dialog's result reaches the field |
+
+I left these out because another gate request was queued and a build slot could have meant another long wait. A reviewer who wants more certainty should start with the destructor.
+
 ## Grant check
 
 `git diff --name-only f24f2e7..<tip>`, with the 15 `docs/verification/B3/export-*.png` captures collapsed:
