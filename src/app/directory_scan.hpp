@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <memory>
@@ -36,6 +37,8 @@ struct Tuning {
     int batchRows{2048};      // most rows in one batch
     int flushMs{100};         // a slow source still delivers what it has this often
     int queuedRows{16384};    // the worker waits rather than queue more rows than this
+    std::size_t entryStep{100000};   // what a folder lists at first, and how much each "Show more" adds
+    std::size_t entryLimit{1000000}; // the most a folder ever lists
 };
 
 inline QString displayPath(const fs::path& path) {
@@ -78,6 +81,72 @@ struct Row {
     qint64 size{-1}, modified{-1};
     bool operator==(const Row&) const = default;
 };
+// What the next page of a folder will cost, estimated from the rows it has now, because names vary.
+// A QString is a 24-byte handle in Row, plus a 16-byte header and UTF-16 text on the heap.
+inline std::uint64_t rowBytes(const Row& row) {
+    const auto text = [](const QString& s) { return std::uint64_t(16) + std::uint64_t(s.capacity() + 1) * 2; };
+    return sizeof(Row) + text(row.path) + text(row.name) + text(row.key);
+}
+// Evenly spaced, so pressing "Show more" costs the GUI thread the same at any row count.
+inline std::uint64_t averageRowBytes(const std::vector<Row>& rows) {
+    if (rows.empty()) return 0;
+    const std::size_t step = std::max<std::size_t>(1, rows.size() / 1024);
+    std::uint64_t total = 0, sampled = 0;
+    for (std::size_t i = 0; i < rows.size(); i += step, ++sampled) total += rowBytes(rows[i]);
+    return total / sampled;
+}
+// The whole new listing exists beside the rows on screen until it is published: its rows, their copy for the filter,
+// the index, the identity baseline and the sort keys. Twice the rows' own cost covers that: see "Memory" in the handoff.
+inline constexpr std::uint64_t kPagePeakFactor = 2;
+// Free memory a page must leave, so that it cannot be what starts a machine paging.
+inline constexpr std::uint64_t kMemoryHeadroomBytes = std::uint64_t(512) * 1024 * 1024;
+// A reading that failed allows the page: the entry limit still holds.
+inline bool pageFits(std::optional<std::uint64_t> available, std::uint64_t averageBytes, std::size_t pageRows) {
+    return !available || averageBytes * pageRows * kPagePeakFactor + kMemoryHeadroomBytes <= *available;
+}
+// `limit` and `usage` are a cgroup's memory limit and use, as its files read, empty when there are none.
+inline std::optional<std::uint64_t> linuxAvailableBytes(const QByteArray& meminfo, const QByteArray& limit, const QByteArray& usage) {
+    std::optional<std::uint64_t> available;
+    for (const QByteArray& line : meminfo.split('\n')) {
+        if (!line.startsWith("MemAvailable:")) continue;
+        const QList<QByteArray> parts = line.simplified().split(' ');
+        bool ok = false;
+        const quint64 kilobytes = parts.size() >= 2 ? parts[1].toULongLong(&ok) : 0;
+        if (ok) available = std::uint64_t(kilobytes) * 1024;
+        break;
+    }
+    bool hasLimit = false, hasUsage = false; // "max" reads as no limit
+    const quint64 most = limit.trimmed().toULongLong(&hasLimit), used = usage.trimmed().toULongLong(&hasUsage);
+    if (hasLimit && hasUsage) {
+        const std::uint64_t left = most > used ? most - used : 0;
+        available = available ? std::min(*available, left) : left;
+    }
+    return available;
+}
+inline std::optional<std::uint64_t> availableMemoryBytes() {
+#ifdef _WIN32
+    MEMORYSTATUSEX memory{};
+    memory.dwLength = sizeof(memory);
+    if (!GlobalMemoryStatusEx(&memory)) return std::nullopt;
+    return std::uint64_t(memory.ullAvailPhys);
+#else
+    const auto read = [](const QString& path) {
+        QFile file(path);
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
+    };
+    // cgroup v2 names this process's group on a "0::" line; a container usually sees its own group as the root.
+    QString group;
+    for (const QByteArray& line : read(QStringLiteral("/proc/self/cgroup")).split('\n'))
+        if (line.startsWith("0::")) group = QString::fromUtf8(line.mid(3)).trimmed();
+    QByteArray limit = read(QStringLiteral("/sys/fs/cgroup") + group + QStringLiteral("/memory.max"));
+    QByteArray usage = read(QStringLiteral("/sys/fs/cgroup") + group + QStringLiteral("/memory.current"));
+    if (limit.isEmpty()) { // cgroup v1
+        limit = read(QStringLiteral("/sys/fs/cgroup/memory/memory.limit_in_bytes"));
+        usage = read(QStringLiteral("/sys/fs/cgroup/memory/memory.usage_in_bytes"));
+    }
+    return linuxAvailableBytes(read(QStringLiteral("/proc/meminfo")), limit, usage);
+#endif
+}
 inline Row makeRow(const glancelot::DirectoryEntry& entry, const QString& base) {
     Row row;
     row.name = displayPath(entry.path.filename());
@@ -92,6 +161,7 @@ inline Row makeRow(const glancelot::DirectoryEntry& entry, const QString& base) 
 // Built entirely on the worker: strings, keys and the key->row index. The GUI thread only swaps it in.
 struct Listing {
     std::vector<Row> rows;
+    std::vector<Row> rawRows; // a copy of `rows` made on the worker, when the request asks for one
     QHash<QString, int> index;
     bool accessible{true}, cancelled{}, truncated{};
     bool rowsPublished{};   // the rows already went out as the definitive batch; this result carries only identities
@@ -327,10 +397,11 @@ struct Request {
     Tuning tuning;
     Enumerator enumerator;   // empty: the real filesystem
     std::function<void(std::stop_token)> beforeProbes; // empty outside perf_enum tests
+    bool copyRows{};         // the model will need a second copy of the rows: make it here, not on the GUI thread
 };
 #ifdef GLANCELOT_PERF_ENUM_TESTING
 // Copied at model construction; only the perf_enum_tests executable compiles this.
-struct TestSeam { Tuning tuning; Enumerator enumerator; std::function<void(std::stop_token)> beforeProbes; std::function<void()> beforeDryCheck; };
+struct TestSeam { Tuning tuning; Enumerator enumerator; std::function<void(std::stop_token)> beforeProbes; std::function<void()> beforeDryCheck; std::function<std::optional<std::uint64_t>()> availableMemory; };
 inline thread_local TestSeam testSeam;
 #endif
 // `arrivals` is set for a first listing with no rows on screen: past the patience window, batches go there as they
@@ -414,6 +485,7 @@ inline Listing scan(const Request& request, const std::shared_ptr<Arrivals>& arr
         result.rows.push_back(std::move(rows[at]));
     }
     result.rowCount = qsizetype(result.rows.size());
+    if (request.copyRows) result.rawRows = result.rows;
     result.identities.directory = request.directory;
     result.identities.revision = directoryRevision; result.identities.entryRevision = directoryEntryRevision;
     result.identities.complete = outcome.accessible && !outcome.truncated && directoryRevision.known &&

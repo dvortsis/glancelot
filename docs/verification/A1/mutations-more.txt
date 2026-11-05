@@ -1,0 +1,99 @@
+A1 PR 2 fail-before evidence. Each mutation below breaks one behaviour, rebuilds, and runs the named tests.
+A non-zero exit means the tests caught it. QTest's exit code is the number of failed functions.
+QML mutations need no rebuild. old-rows-freed-on-gui and rows-copied-on-gui need GLANCELOT_PERF_ENUM_MILLION=synthetic, which the script sets.
+
+29 mutations. 24 failed on the first run. Four survived it and fail now, against tests added in ac4e040 (marked below).
+rows-copied-on-gui still survives. See its note.
+
+The first run recorded exit codes only, because QTest writes nothing to a captured stdout here. The rerun of the five asked QTest for a file.
+
+### truncated-page-not-published [src/app/directory_entry_model.cpp] -> perf_enum_tests loadMoreListsTheNextPageAndPublishesOnce
+exit 1
+### page-merged-not-replaced [src/app/directory_entry_model.cpp] -> perf_enum_tests loadMoreListsTheNextPageAndPublishesOnce
+exit 1
+# First run: exit 0 against selectionCursorAndAnchorSurviveLoadMore filteredLoadMoreFindsMatchesFurtherOn loadMoreListsTheNextPageAndPublishesOnce. Rerun against the new test:
+### raw-rows-not-updated [src/app/directory_entry_model.cpp] -> perf_enum_tests aFilterAfterLoadMoreSeesTheNewPageAndClearingItRestoresTheIndex
+exit 1
+  FAIL!  : PerfEnumTests::aFilterAfterLoadMoreSeesTheNewPageAndClearingItRestoresTheIndex() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 43ms
+# First run: exit 0 against selectionCursorAndAnchorSurviveLoadMore loadMoreListsTheNextPageAndPublishesOnce. Rerun against the new test:
+### raw-index-not-updated [src/app/directory_entry_model.cpp] -> perf_enum_tests aFilterAfterLoadMoreSeesTheNewPageAndClearingItRestoresTheIndex
+exit 1
+  FAIL!  : PerfEnumTests::aFilterAfterLoadMoreSeesTheNewPageAndClearingItRestoresTheIndex() 'row >= 0' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 39ms
+### second-press-counts [src/app/directory_entry_model.cpp] -> perf_enum_tests aSecondPressWhileListingDoesNothing
+exit 1
+### refresh-restarts-the-page [src/app/directory_entry_model.cpp] -> perf_enum_tests aSecondPressWhileListingDoesNothing
+exit 1
+### new-folder-keeps-the-cap [src/app/directory_entry_model.cpp] -> perf_enum_tests aNewerFolderCancelsLoadMoreAndStartsAtTheFirstCap
+exit 1
+# First run: exit 0 against theHardLimitStopsOffering. Rerun against the new test:
+### no-hard-limit [src/app/directory_entry_model.cpp] -> perf_enum_tests aHardLimitBetweenStepsIsStillTheLimit
+exit 1
+  FAIL!  : PerfEnumTests::aHardLimitBetweenStepsIsStillTheLimit() 'listed(model, kPage + kPage / 2)' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 10031ms
+### limit-not-notified [src/app/directory_entry_model.cpp] -> perf_enum_tests theHardLimitStopsOffering
+exit 1
+### abandoned-last-page-not-notified [src/app/directory_entry_model.cpp] -> perf_enum_tests abandoningTheLastPageNotifiesThatTheOfferEnded
+exit 1
+### page-state-sticks [src/app/directory_entry_model.cpp] -> perf_enum_tests theHardLimitStopsOffering
+exit 1
+### inactive-ignored-by-loadmore [src/app/directory_entry_model.cpp] -> perf_enum_tests goingInactiveDuringLoadMoreKeepsTheRaisedCap
+exit 1
+# First run: exit 0 against filteredLoadMoreFindsMatchesFurtherOn. Rerun against the new test:
+### filter-not-fed-the-page [src/app/directory_entry_model.cpp] -> perf_enum_tests aFilteredPageThatIsStillTruncatedShowsItsMatches
+exit 1
+  FAIL!  : PerfEnumTests::aFilteredPageThatIsStillTruncatedShowsItsMatches() 'listed(model, 1)' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 10023ms
+### shipped-step-changed [src/app/directory_scan.hpp] -> perf_enum_tests shippedContinuationSteps
+exit 1
+### shipped-limit-changed [src/app/directory_scan.hpp] -> perf_enum_tests shippedContinuationSteps
+exit 1
+### old-rows-freed-on-gui [src/app/directory_entry_model.cpp] -> perf_enum_tests traceOneMillion
+exit 1
+# Survives. Copying a million rows on the GUI thread costs about 60 ms, under the 250 ms budget, so this oracle cannot see it.
+# The trace shows the cost: publish_ms 61 and worst_gui_gap_ms 63 at 1,000,000 rows, against 0 and 12 without the mutation (million-traces.txt).
+### rows-copied-on-gui [src/app/directory_entry_model.cpp] -> perf_enum_tests traceOneMillion
+exit 0
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=838 full_count_ms=838 definitive_ms=-1 settled_ms=838 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=55 publish_ms=10 reset
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1032 full_count_ms=1032 definitive_ms=-1 settled_ms=1032 worst_gui_gap_ms=17 enumerate_ms=0 sort_ms=80 publish_ms=16 re
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1482 full_count_ms=1482 definitive_ms=-1 settled_ms=1482 worst_gui_gap_ms=22 enumerate_ms=0 sort_ms=116 publish_ms=21 r
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1744 full_count_ms=1744 definitive_ms=-1 settled_ms=1745 worst_gui_gap_ms=27 enumerate_ms=0 sort_ms=169 publish_ms=25 r
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=2164 full_count_ms=2164 definitive_ms=-1 settled_ms=2165 worst_gui_gap_ms=35 enumerate_ms=0 sort_ms=193 publish_ms=34 r
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=2930 full_count_ms=2930 definitive_ms=-1 settled_ms=2930 worst_gui_gap_ms=43 enumerate_ms=0 sort_ms=254 publish_ms=43 r
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=3438 full_count_ms=3438 definitive_ms=-1 settled_ms=3438 worst_gui_gap_ms=65 enumerate_ms=0 sort_ms=281 publish_ms=52 r
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=3787 full_count_ms=3787 definitive_ms=-1 settled_ms=3787 worst_gui_gap_ms=53 enumerate_ms=0 sort_ms=343 publish_ms=52 r
+  QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=3968 full_count_ms=3968 definitive_ms=-1 settled_ms=3970 worst_gui_gap_ms=63 enumerate_ms=0 sort_ms=370 publish_ms=61 r
+  Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 23630ms
+### qml-no-working-message [ui/PhotoGrid.qml] -> perf_enum_ui_tests showMoreFromTheKeyboardKeepsThePhotoInView
+exit 1
+### qml-no-accessible-name [ui/PhotoGrid.qml] -> perf_enum_ui_tests showMoreFromTheKeyboardKeepsThePhotoInView
+exit 1
+### qml-not-keyboard-reachable [ui/PhotoGrid.qml] -> perf_enum_ui_tests showMoreFromTheKeyboardKeepsThePhotoInView
+exit 1
+### qml-reset-does-not-restore [ui/PhotoGrid.qml] -> perf_enum_ui_tests showMoreFromTheKeyboardKeepsThePhotoInView showMoreKeepsTheVisibleRowWhileBrowsing
+exit 2
+### qml-button-at-the-limit [ui/PhotoGrid.qml] -> perf_enum_ui_tests atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid
+exit 1
+### qml-limit-message-missing [ui/PhotoGrid.qml] -> perf_enum_ui_tests atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid
+exit 1
+### qml-limit-text-always-offers [ui/PhotoGrid.qml] -> perf_enum_ui_tests atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid
+exit 1
+### qml-focus-lost-with-the-button [ui/PhotoGrid.qml] -> perf_enum_ui_tests everythingListedRemovesTheBannerAndFocusGoesToTheGrid atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid
+exit 2
+### qml-early-settle-drops-focus [ui/PhotoGrid.qml] -> perf_enum_ui_tests atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid
+exit 1
+### qml-banner-needs-rows [ui/PhotoGrid.qml] -> perf_enum_ui_tests aFilterHidingEveryListedRowKeepsTheOffer
+exit 1
+### qml-text-under-the-button [ui/PhotoGrid.qml] -> perf_enum_ui_tests bannerFitsAtNarrowAndWideWidths
+exit 1
+### qml-button-outside-the-banner [ui/PhotoGrid.qml] -> perf_enum_ui_tests bannerFitsAtNarrowAndWideWidths
+exit 1
+
+### restoreViewport without forceLayout [ui/PhotoGrid.qml] -> perf_enum_ui_tests definitiveOrderBeforeAnyFrameKeepsTheVisibleRow
+# Not a scripted mutation: the test was run before the fix went in, then after it.
+before: exit 1
+  FAIL!  : PerfEnumUiTests::definitiveOrderBeforeAnyFrameKeepsTheVisibleRow() 'anchored()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 44844ms
+after: exit 0
+  Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 7167ms
