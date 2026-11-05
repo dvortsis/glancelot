@@ -1,0 +1,2 @@
+IMAGE                       ID             DISK USAGE   CONTENT SIZE   EXTRA
+glancelot-gate-pr9:latest   dfdfaa7f367c       2.82GB          548MB        

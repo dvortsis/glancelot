@@ -14,6 +14,7 @@ operating_model: "AGENTS.md (October 22, 2026): lead plus track and fresh-contex
 phase0_memory_action: act_mvk70jg4_e555f0e2e57c
 current_cycle: docs/handoff/PHASE0-CYCLE1-2026-10-22.md
 slot_holds: {}
+new_slices_paused: "User decision (2026-11-05): finish the open slices (A1 PR 7 and PR 12, B1 PR 13, PR 14 and its part 3, EN-07), then stop; open no new ones. This overrides the Slots rule in AGENTS.md until the user lifts it. The hourly slot timer is cancelled."
 resumed: "User decision (2026-11-04): pause lifted; finish Phase 1, then continue the plan into Phase 2 with up to four child sessions at a time. All changes go through pull requests (AGENTS.md, Pull requests and merging; docs/decisions/2026-11-04-merge-protections.md)."
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -1262,6 +1263,19 @@ tasks:
     state: ready
     depends: [A1, PHASE2-CONTRACTS]
     brief_notes: "See R3-N9 in docs/verification/PHASE2-CONTRACTS-REVIEW-R3.md."
+  - id: B3
+    title: Export dialog over selection_export (F070)
+    owner: lead
+    state: done
+    integrated_commit: 88b14dc
+    integrated_evidence: "docs/verification/integrate-pr9-2026-11-05/README.md; reviews docs/verification/B3-REVIEW.md, B3-REVIEW-R2.md, B3-REVIEW-R3.md"
+  - id: B3-FOLLOWUPS
+    title: Export context-menu item, translation coverage and zero-row engine tests
+    owner: lead
+    state: ready
+    depends: [B3]
+    outcome: "An Export item in the grid's context menu (discoverability; needs a ui/Main.qml or PhotoGrid site); ExportDialog listed in translation_coverage_ui's surfaces; selection_export tests for zero rows with the option on and off (B3-REVIEW-R2 finding 1); translations/README.md message count corrected at the next catalog regeneration (B3-REVIEW-R3 R3-N1)"
+    acceptance: "Fresh review and a full gate; not started, per the user's November 5 decision to open no new slices"
   - id: COPY-SAFETY-01
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
