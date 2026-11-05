@@ -3,10 +3,11 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Glancelot
 
-// ASSET-GROUP (F022): the copy and move confirmation behind Paste. CopyMoveService owns the work; this file presents one
-// captured plan, so nothing that changes behind the dialog can change what is confirmed. Nothing runs until Copy or Move is
-// pressed, and a held key can't press it. This file also remembers what was cut or copied, because the service's clipboard
-// list isn't readable from QML.
+// ASSET-GROUP (F022): what stands behind Paste. CopyMoveService owns the work; this file presents one captured plan, so nothing
+// that changes behind the dialog can change what is confirmed. Plain files with nothing to decide run straight through, with no
+// dialog, as Paste always has. Anything else (a companion, a collision, an exclusion, a check that couldn't finish) waits for
+// Copy or Move to be pressed, and a held key can't press it. This file also remembers what was cut or copied, because the
+// service's clipboard list isn't readable from QML.
 Item {
     id: flow
     property var host
@@ -24,6 +25,8 @@ Item {
     property var failures: []
     property int transferredCount: 0
     property bool awaitingBatch: false
+    // How long a plan may take before anything appears, so the usual paste shows nothing at all. Only a slow share gets this far.
+    property int progressDelay: 400
     readonly property bool isMove: request ? request.move : false
     readonly property bool compactHeight: host ? host.height < 480 : false
     readonly property var targets: summary ? summary.targets : []
@@ -59,7 +62,17 @@ Item {
         request = { paths: clipboardPaths, destination: destination, move: service.clipboardMode === "cut" }
         phase = "planning"
         plan()
-        confirmDialog.open()
+        progressDelayTimer.interval = progressDelay
+        progressDelayTimer.restart()
+    }
+    // Nothing to show and nothing to choose. File-only is the default, so no companion can be carried along by this.
+    function nothingToDecide(plan) {
+        return plan.targets.length > 0 && plan.rejected.length === 0 && plan.collisions.length === 0
+            && plan.companions.length === 0 && !plan.companionsNotListed && !plan.companionsIncomplete && !plan.error
+    }
+    // A cut pasted where it already is: nothing would change, so it isn't a failure and doesn't need a dialog.
+    function alreadyHere(plan) {
+        return plan.targets.length === 0 && plan.rejected.length > 0 && !plan.error && plan.rejected.every(r => r.reason === "sameFolder")
     }
     function plan() { planId = service.planTransfer(request.paths, request.destination, request.move ? 1 : 0, scope) }
     function setScope(next) {
@@ -107,10 +120,19 @@ Item {
         target: flow.service
         function onTransferPlanReady(id, plan) {
             if (id !== flow.planId) return
+            progressDelayTimer.stop()
             const first = flow.phase === "planning"
             flow.summary = plan
             flow.phase = "confirm"
             flow.replanning = false
+            if (first && flow.alreadyHere(plan)) {
+                flow.noticeRequested(plan.rejected.length === 1 ? qsTr("It's already in this folder.") : qsTr("These items are already in this folder."))
+                flow.discardPlan() // what was cut stays cut, for pasting somewhere else
+                confirmDialog.close()
+                return
+            }
+            if (first && flow.nothingToDecide(plan)) { flow.confirmPlan(); return }
+            if (!confirmDialog.visible) { confirmDialog.open(); return }
             // Not destructive, so the action holds the focus once it can act; a scope change leaves focus on the choice.
             if (first && flow.canConfirm) confirmAction.forceActiveFocus(Qt.TabFocusReason)
         }
@@ -124,6 +146,11 @@ Item {
             flow.awaitingBatch = false
             if (flow.failures.length > 0) resultsDialog.open()
         }
+    }
+
+    Timer { // a slow plan: quiet progress, with Cancel, in the dialog that may then have nothing to ask
+        id: progressDelayTimer
+        onTriggered: if (flow.phase === "planning") confirmDialog.open()
     }
 
     component Caption: Label {
@@ -149,7 +176,7 @@ Item {
         }
         closePolicy: Popup.CloseOnEscape
         onOpened: (flow.canConfirm ? confirmAction : cancelAction).forceActiveFocus(Qt.TabFocusReason)
-        onClosed: { flow.discardPlan(); if (!resultsDialog.visible) flow.flowClosed() }
+        onClosed: { progressDelayTimer.stop(); flow.discardPlan(); if (!resultsDialog.visible) flow.flowClosed() }
         ColumnLayout {
             anchors.fill: parent
             spacing: Theme.gapLg

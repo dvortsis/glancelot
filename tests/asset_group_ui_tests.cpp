@@ -32,12 +32,13 @@ struct GatedLookup final : assets::detail::LookupBackend {
     std::condition_variable wake;
     bool open{false};
     std::atomic_int entered{0};
+    bool readable{false}; // once released: an empty folder, or one that can't be read
     void release() { { std::lock_guard lock(mutex); open = true; } wake.notify_all(); }
     bool readDirectory(const fs::path&, const std::function<bool(const assets::ListingInput&)>&) override {
         ++entered;
         std::unique_lock lock(mutex);
         wake.wait(lock, [this] { return open; });
-        return false;
+        return readable;
     }
     std::optional<MutationTarget> snapshot(const fs::path&) override { return std::nullopt; }
     bool caseSensitive(const fs::path&, const fs::path&) override { return false; }
@@ -121,6 +122,18 @@ class AssetGroupUiTests final : public QObject {
             QVERIFY(h.window->grabWindow().save(QDir(folder).filePath(QString("%1-%2.png").arg(name).arg(size.width()))));
         }
     }
+    // Paste with the slow-plan progress out of the way, so "no dialog" can't depend on how busy the machine is.
+    void startPaste(Harness& h, const QStringList& paths, const QString& destination, const char* mark = "markCopy") {
+        QObject* flow = h.object("transferFlow");
+        flow->setProperty("progressDelay", 3600000);
+        QVERIFY(QMetaObject::invokeMethod(flow, mark, Q_ARG(QVariant, paths)));
+        QVERIFY(QMetaObject::invokeMethod(flow, "paste", Q_ARG(QVariant, destination)));
+    }
+    // The Tab key until `name` holds the focus. Each option group is one stop.
+    void tabTo(Harness& h, const QString& name) {
+        for (int i = 0; i < 16 && !item(h, name)->hasActiveFocus(); ++i) QTest::keyClick(h.window, Qt::Key_Tab);
+        QVERIFY2(item(h, name)->hasActiveFocus(), qPrintable(name));
+    }
     void paste(Harness& h, const QStringList& paths, const QString& destination, const char* mark = "markCopy") {
         QObject* flow = h.object("transferFlow");
         QVERIFY(QMetaObject::invokeMethod(flow, mark, Q_ARG(QVariant, paths)));
@@ -137,7 +150,12 @@ private slots:
         qmlRegisterSingletonType(QUrl::fromLocalFile(QStringLiteral(GLANCELOT_TEST_SOURCE_DIR "/ui/Theme.qml")), "Glancelot", 1, 0, "Theme");
     }
     void init() { config = std::make_unique<QTemporaryDir>(); qputenv("GLANCELOT_CONFIG_DIR", config->path().toUtf8()); }
-    void cleanup() { qunsetenv("GLANCELOT_CONFIG_DIR"); config.reset(); assets::detail::setLookupBackendForTests(nullptr); }
+    void cleanup() {
+        qunsetenv("GLANCELOT_CONFIG_DIR");
+        config.reset();
+        assets::detail::setLookupBackendForTests(nullptr);
+        QGuiApplication::setLayoutDirection(Qt::LeftToRight);
+    }
 
     void deleteShowsCompanionsAndIsFileOnlyByDefault() {
         Scene scene;
@@ -334,6 +352,7 @@ private slots:
     void aMemberChangedAfterConfirmationIsReported() {
         Scene scene;
         const QString cr2 = scene.touch("IMG.CR2");
+        scene.touch("IMG.xmp"); // something to show, so the confirmation waits
         Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
         QVERIFY(h.window);
         auto* service = h.viewer.copyMoveService();
@@ -364,6 +383,329 @@ private slots:
         QVERIFY(h.window->property("modalOpen").toBool());
         waitForPhase(h, "transferFlow");
         QCOMPARE(h.object("transferFlow")->property("summary").toMap()["targets"].toList().at(0).toMap()["name"].toString(), QString("p.png"));
+    }
+
+    void aPlainPasteRunsWithNoDialog_data() {
+        QTest::addColumn<QString>("mark");
+        QTest::newRow("copy") << QString("markCopy");
+        QTest::newRow("move") << QString("markCut");
+    }
+    void aPlainPasteRunsWithNoDialog() {
+        QFETCH(QString, mark);
+        Scene scene;
+        const QString jpg = scene.touch("IMG.jpg");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        auto* service = h.viewer.copyMoveService();
+        QSignalSpy batch(service, &CopyMoveService::batchFinished);
+        QObject* dialog = h.window->findChild<QObject*>("transferConfirmation");
+        QSignalSpy shown(dialog, SIGNAL(visibleChanged()));
+        startPaste(h, {jpg}, scene.target.path(), mark.toUtf8().constData());
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        QCOMPARE(shown.count(), 0); // not even a flash
+        QVERIFY(QFile::exists(QDir(scene.target.path()).filePath("IMG.jpg")));
+        QCOMPARE(QFile::exists(jpg), mark == "markCopy");
+        QCOMPARE(service->hasClipboardTargets(), mark == "markCopy"); // a finished cut is spent, a copy can be pasted again
+        QVERIFY(!h.window->property("modalOpen").toBool());
+    }
+    void thePasteCommandRunsPlainFilesStraightThrough() {
+        Scene scene;
+        const QString viewed = scene.touch("p.png");
+        QImage image(64, 64, QImage::Format_RGB32);
+        image.fill(Qt::darkCyan);
+        QVERIFY(image.save(viewed));
+        QFile other(scene.target.filePath("other.jpg"));
+        QVERIFY(other.open(QIODevice::WriteOnly));
+        other.close();
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        h.viewer.open(viewed);
+        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
+        QObject* flow = h.object("transferFlow");
+        flow->setProperty("progressDelay", 3600000);
+        QSignalSpy batch(h.viewer.copyMoveService(), &CopyMoveService::batchFinished);
+        QSignalSpy shown(h.window->findChild<QObject*>("transferConfirmation"), SIGNAL(visibleChanged()));
+        QVERIFY(QMetaObject::invokeMethod(flow, "markCopy", Q_ARG(QVariant, QStringList{other.fileName()})));
+        QVERIFY(QMetaObject::invokeMethod(h.window, "invoke", Q_ARG(QVariant, QString("paste"))));
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        QCOMPARE(shown.count(), 0);
+        QVERIFY(QFile::exists(scene.media.filePath("other.jpg")));
+    }
+    void everythingToDecideIsSeen_data() {
+        QTest::addColumn<QVariantMap>("change");
+        QTest::addColumn<bool>("runs");
+        const QVariantList one{QVariantMap{{"path", "x"}}};
+        QTest::newRow("plain") << QVariantMap{} << true;
+        QTest::newRow("listed companion") << QVariantMap{{"companions", one}} << false;
+        QTest::newRow("companion past the list") << QVariantMap{{"companionsNotListed", 3}} << false;
+        QTest::newRow("collision") << QVariantMap{{"collisions", one}} << false;
+        QTest::newRow("exclusion") << QVariantMap{{"rejected", one}} << false;
+        QTest::newRow("couldn't all be checked") << QVariantMap{{"companionsIncomplete", true}} << false;
+        QTest::newRow("refused") << QVariantMap{{"error", "destinationMissing"}} << false;
+        QTest::newRow("nothing to run") << QVariantMap{{"targets", QVariantList{}}} << false;
+    }
+    void everythingToDecideIsSeen() {
+        QFETCH(QVariantMap, change);
+        QFETCH(bool, runs);
+        Scene scene;
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        QVariantMap plan{{"targets", QVariantList{QVariantMap{{"path", "a"}}}}, {"rejected", QVariantList{}}, {"collisions", QVariantList{}},
+                         {"companions", QVariantList{}}, {"companionsNotListed", 0}, {"companionsIncomplete", false}};
+        plan.insert(change);
+        QVariant result;
+        QVERIFY(QMetaObject::invokeMethod(h.object("transferFlow"), "nothingToDecide", Q_RETURN_ARG(QVariant, result), Q_ARG(QVariant, plan)));
+        QCOMPARE(result.toBool(), runs);
+    }
+    void aRealPlanWithSomethingToDecideShowsTheDialog_data() {
+        QTest::addColumn<QString>("condition");
+        for (const char* row : {"companion", "collision", "couldn't check", "missing source", "missing destination"}) QTest::newRow(row) << QString(row);
+    }
+    void aRealPlanWithSomethingToDecideShowsTheDialog() {
+        QFETCH(QString, condition);
+        Scene scene;
+        const QString jpg = scene.touch("IMG.jpg");
+        QStringList paths{jpg};
+        QString destination = scene.target.path();
+        if (condition == "companion") scene.touch("IMG.xmp");
+        if (condition == "collision") scene.touchTarget("IMG.jpg");
+        if (condition == "missing source") paths << scene.media.filePath("gone.jpg");
+        if (condition == "missing destination") destination = scene.target.filePath("gone");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        SpentBudgetLookup slow;
+        if (condition == "couldn't check") assets::detail::setLookupBackendForTests(&slow);
+        auto* service = h.viewer.copyMoveService();
+        QSignalSpy started(service, &CopyMoveService::itemStarted);
+        startPaste(h, paths, destination);
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "transferConfirmation"), kWait);
+        QCOMPARE(flowPhase(h, "transferFlow"), QString("confirm"));
+        QVERIFY(started.isEmpty());
+        QVERIFY(!QFile::exists(QDir(scene.target.path()).filePath("IMG.jpg")) || condition == "collision");
+    }
+    void aSlowPlanShowsProgressThenRunsIfThereIsNothingToAsk() {
+        Scene scene;
+        const QString jpg = scene.touch("IMG.jpg");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        GatedLookup gate;
+        gate.readable = true;
+        assets::detail::setLookupBackendForTests(&gate);
+        QSignalSpy batch(h.viewer.copyMoveService(), &CopyMoveService::batchFinished);
+        QObject* flow = h.object("transferFlow");
+        flow->setProperty("progressDelay", 50);
+        QVERIFY(QMetaObject::invokeMethod(flow, "markCopy", Q_ARG(QVariant, QStringList{jpg})));
+        QVERIFY(QMetaObject::invokeMethod(flow, "paste", Q_ARG(QVariant, scene.target.path())));
+        QVERIFY(!dialogOpen(h, "transferConfirmation")); // nothing yet
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "transferConfirmation"), kWait);
+        QVERIFY(item(h, "transferPlanning")->isVisible());
+        QVERIFY(item(h, "transferCancel")->isVisible());
+        gate.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!dialogOpen(h, "transferConfirmation"), kWait);
+        QTRY_COMPARE_WITH_TIMEOUT(batch.count(), 1, kWait);
+        QVERIFY(QFile::exists(QDir(scene.target.path()).filePath("IMG.jpg")));
+        assets::detail::setLookupBackendForTests(nullptr);
+    }
+    void aSlowPlanCanBeCancelled() {
+        Scene scene;
+        const QString jpg = scene.touch("IMG.jpg");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        GatedLookup gate;
+        gate.readable = true;
+        assets::detail::setLookupBackendForTests(&gate);
+        QSignalSpy started(h.viewer.copyMoveService(), &CopyMoveService::itemStarted);
+        QSignalSpy planned(h.viewer.copyMoveService(), &CopyMoveService::transferPlanReady);
+        QObject* flow = h.object("transferFlow");
+        flow->setProperty("progressDelay", 50);
+        QVERIFY(QMetaObject::invokeMethod(flow, "markCopy", Q_ARG(QVariant, QStringList{jpg})));
+        QVERIFY(QMetaObject::invokeMethod(flow, "paste", Q_ARG(QVariant, scene.target.path())));
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "transferConfirmation"), kWait);
+        click(h, item(h, "transferCancel"));
+        QTRY_VERIFY_WITH_TIMEOUT(!dialogOpen(h, "transferConfirmation"), kWait);
+        gate.release();
+        // A later plan's result is the barrier that proves the cancelled one ran nothing.
+        assets::detail::setLookupBackendForTests(nullptr);
+        const QString xmp = scene.touch("IMG.xmp");
+        QVERIFY(QMetaObject::invokeMethod(flow, "paste", Q_ARG(QVariant, scene.target.path())));
+        QTRY_COMPARE_WITH_TIMEOUT(planned.count(), 1, kWait);
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "transferConfirmation"), kWait);
+        QVERIFY(started.isEmpty());
+        QVERIFY(QDir(scene.target.path()).isEmpty());
+        QVERIFY(QFile::exists(xmp));
+    }
+    void movingWithinOneFolderIsANoticeNotADialog() {
+        Scene scene;
+        const QString jpg = scene.touch("IMG.jpg");
+        scene.touch("IMG.xmp"); // a companion doesn't turn "nothing would change" into a question
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        auto* service = h.viewer.copyMoveService();
+        QSignalSpy started(service, &CopyMoveService::itemStarted);
+        QSignalSpy planned(service, &CopyMoveService::transferPlanReady);
+        QSignalSpy shown(h.window->findChild<QObject*>("transferConfirmation"), SIGNAL(visibleChanged()));
+        startPaste(h, {jpg}, scene.media.path(), "markCut");
+        QTRY_COMPARE_WITH_TIMEOUT(planned.count(), 1, kWait);
+        QTRY_COMPARE_WITH_TIMEOUT(item(h, "deleteNotice")->property("text").toString(), QString("It's already in this folder."), kWait);
+        QCOMPARE(shown.count(), 0);
+        QVERIFY(started.isEmpty());
+        QVERIFY(QFile::exists(jpg));
+        QVERIFY(service->hasClipboardTargets()); // still cut: it can be pasted somewhere else
+    }
+    void aMoveWithOnlySomeItemsAlreadyHereStillAsks() {
+        Scene scene;
+        const QString here = scene.touch("here.jpg");
+        QFile away(scene.target.filePath("away.jpg"));
+        QVERIFY(away.open(QIODevice::WriteOnly));
+        away.close();
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        startPaste(h, {here, away.fileName()}, scene.media.path(), "markCut");
+        QTRY_VERIFY_WITH_TIMEOUT(dialogOpen(h, "transferConfirmation"), kWait);
+        QVERIFY(textIn(item(h, "transferRejected")).contains("already in this folder"));
+    }
+
+    // Tab reaches a group once, on its checked option, with a visible ring, and the arrows move and select within it.
+    void theKeyboardWalksTheChoices_data() {
+        QTest::addColumn<QString>("kind");
+        for (const char* row : {"delete", "copy", "move", "rename"}) QTest::newRow(row) << QString(row);
+    }
+    void theKeyboardWalksTheChoices() {
+        QFETCH(QString, kind);
+        Scene scene;
+        const QString cr2 = scene.touch("IMG.CR2");
+        scene.touch("IMG.xmp");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        h.window->resize(1180, 780);
+        QVERIFY(activate(h));
+        QObject* flow = nullptr;
+        const char* scopeProperty = "scope";
+        if (kind == "delete") {
+            flow = h.object("deleteFlow");
+            QVERIFY(requestDelete(h, {cr2}, scene.media.path()));
+            waitForPhase(h, "deleteFlow");
+        } else if (kind == "rename") {
+            flow = h.object("renameFlow");
+            scopeProperty = "renameScope";
+            QVERIFY(QMetaObject::invokeMethod(flow, "openRename", Q_ARG(QVariant, cr2)));
+            QTRY_VERIFY_WITH_TIMEOUT(textIn(item(h, "assetCompanions")).contains("Keeps its name"), kWait);
+        } else {
+            flow = h.object("transferFlow");
+            paste(h, {cr2}, scene.target.path(), kind == "move" ? "markCut" : "markCopy");
+        }
+        const auto scope = [&] { return flow->property(scopeProperty).toString(); };
+        tabTo(h, "assetScopeFile");
+        QVERIFY(item(h, "assetScopeFile")->property("visualFocus").toBool()); // the ring
+        QVERIFY(!item(h, "assetScopeAsset")->activeFocusOnTab()); // one stop per group
+        QTest::keyClick(h.window, Qt::Key_Down);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeAsset")->hasActiveFocus(), kWait);
+        QVERIFY(item(h, "assetScopeAsset")->property("checked").toBool());
+        QVERIFY(item(h, "assetScopeAsset")->property("visualFocus").toBool());
+        QCOMPARE(scope(), QString("asset"));
+        if (kind == "rename") QTRY_VERIFY_WITH_TIMEOUT(item(h, "renameRefusal")->isVisible(), kWait);
+        else QTRY_VERIFY_WITH_TIMEOUT(!flow->property("replanning").toBool(), kWait);
+        capture(h, kind + "-keyboard");
+        QVERIFY(item(h, "assetScopeAsset")->hasActiveFocus()); // a new plan leaves the focus on the choice
+        // The other arrows, wrapping at both ends.
+        QTest::keyClick(h.window, Qt::Key_Down);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeFile")->hasActiveFocus(), kWait);
+        QCOMPARE(scope(), QString("file"));
+        QTest::keyClick(h.window, Qt::Key_Up);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeAsset")->hasActiveFocus(), kWait);
+        QCOMPARE(scope(), QString("asset"));
+        QTest::keyClick(h.window, Qt::Key_Left);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeFile")->hasActiveFocus(), kWait);
+        QCOMPARE(scope(), QString("file"));
+        QTest::keyClick(h.window, Qt::Key_Right);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeAsset")->hasActiveFocus(), kWait);
+        QCOMPARE(scope(), QString("asset"));
+        // Tab leaves the group and Shift+Tab comes back to the option now checked.
+        QTest::keyClick(h.window, Qt::Key_Tab);
+        QVERIFY(!item(h, "assetScopeAsset")->hasActiveFocus() && !item(h, "assetScopeFile")->hasActiveFocus());
+        QTest::keyClick(h.window, Qt::Key_Backtab, Qt::ShiftModifier);
+        QVERIFY(item(h, "assetScopeAsset")->hasActiveFocus());
+        // A held arrow moves once.
+        QTest::keyPress(h.window, Qt::Key_Down, Qt::NoModifier);
+        QKeyEvent repeat(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier, QString(), true);
+        QCoreApplication::sendEvent(h.window, &repeat);
+        QTest::keyRelease(h.window, Qt::Key_Down, Qt::NoModifier);
+        QVERIFY(item(h, "assetScopeFile")->hasActiveFocus());
+        QCOMPARE(scope(), QString("file"));
+    }
+    void theKeyboardMakesTheCollisionChoice() {
+        Scene scene;
+        const QString jpg = scene.touch("IMG.jpg");
+        scene.touchTarget("IMG.jpg");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        h.window->resize(1180, 780);
+        QVERIFY(activate(h));
+        paste(h, {jpg}, scene.target.path());
+        QObject* flow = h.object("transferFlow");
+        tabTo(h, "transferKeepBoth");
+        QVERIFY(item(h, "transferKeepBoth")->property("visualFocus").toBool());
+        QTest::keyClick(h.window, Qt::Key_Down);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "transferSkip")->hasActiveFocus(), kWait);
+        QVERIFY(!flow->property("keepBoth").toBool());
+        QVERIFY(item(h, "transferSkip")->property("checked").toBool());
+    }
+    void leftAndRightFollowTheLayoutDirection() {
+        QGuiApplication::setLayoutDirection(Qt::RightToLeft);
+        Scene scene;
+        const QString cr2 = scene.touch("IMG.CR2");
+        scene.touch("IMG.xmp");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        h.window->resize(1180, 780);
+        QVERIFY(activate(h));
+        QVERIFY(requestDelete(h, {cr2}, scene.media.path()));
+        waitForPhase(h, "deleteFlow");
+        tabTo(h, "assetScopeFile");
+        QTest::keyClick(h.window, Qt::Key_Left); // forward, when the layout runs right to left
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeAsset")->hasActiveFocus(), kWait);
+        QTest::keyClick(h.window, Qt::Key_Right);
+        QTRY_VERIFY_WITH_TIMEOUT(item(h, "assetScopeFile")->hasActiveFocus(), kWait);
+    }
+    void aFocusedChoiceStaysInViewInAShortWindow() {
+        Scene scene;
+        QStringList paths;
+        for (int i = 0; i < 5; ++i) paths << scene.touch(QString("IMG_%1.CR2").arg(i));
+        scene.touch("IMG_0.xmp");
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        h.window->resize(560, 320);
+        QTRY_COMPARE_WITH_TIMEOUT(h.window->height(), 320, kWait);
+        QVERIFY(activate(h));
+        QVERIFY(requestDelete(h, paths, scene.media.path()));
+        waitForPhase(h, "deleteFlow");
+        (void)h.window->grabWindow();
+        tabTo(h, "assetScopeFile");
+        QQuickItem* choice = item(h, "assetScopeFile");
+        QQuickItem* view = choice->parentItem();
+        while (view && !view->inherits("QQuickFlickable")) view = view->parentItem();
+        QVERIFY(view);
+        QVERIFY2(view->property("contentHeight").toReal() > view->height(), "the body must overflow for this to mean anything");
+        const QPointF top = choice->mapToItem(view, QPointF(0, 0));
+        QVERIFY(top.y() >= 0 && top.y() + choice->height() <= view->height());
+    }
+    void arrowsScrollALongCompanionList() {
+        Scene scene;
+        const QString cr2 = scene.touch("IMG.CR2");
+        for (const char* name : {"IMG.jpg", "IMG.mov", "IMG.mp4", "IMG.xmp", "IMG.tif", "IMG.png", "IMG.webp"}) scene.touch(name);
+        Harness h(std::make_unique<FakeTrash>(nativeOf(scene.bin.path())));
+        QVERIFY(h.window);
+        h.window->resize(1180, 780);
+        QVERIFY(activate(h));
+        QVERIFY(requestDelete(h, {cr2}, scene.media.path()));
+        waitForPhase(h, "deleteFlow");
+        QTRY_VERIFY_WITH_TIMEOUT(rowsOf(item(h, "assetCompanionList")).size() >= 5, kWait);
+        (void)h.window->grabWindow();
+        QQuickItem* list = item(h, "assetCompanionList");
+        QVERIFY(list->property("contentHeight").toReal() > list->height());
+        tabTo(h, "assetCompanionList");
+        for (int i = 0; i < 6; ++i) QTest::keyClick(h.window, Qt::Key_Down);
+        QTRY_VERIFY_WITH_TIMEOUT(list->property("contentY").toReal() > 0, kWait);
     }
 
     void renameShowsWhatKeepsItsNameAndRefusesTheSetWithAReason() {
