@@ -1229,6 +1229,24 @@ tasks:
     evidence_of_problem: "Runner gates 39870526245 (c4e0829) and 39874250713 (f033070) both failed folder_tree :427, folder_grid auditReadyCurrentPhotoDoesNotReopen :947 and auditFailedCurrentPhotoCanBeRetriedFromGrid :958, fs_watch :298 and :1023 (generated PNG atomic commit failed: Access is denied). Local full gate on afeac1a outside the runner: 42/43 760.36s, only folder_tree failed (at :430), and it passed 29/29 alone. Hosted windows-2022 43/43."
     suspected_causes: "Late first file-watcher scan bumps the controller generation (viewer_controller.cpp around :331-351) after the 100 ms wait, and the navigation finish handler (:1011) silently drops the in-flight folder-open result, so no status is set; QSaveFile rename over a PNG another reader holds without delete sharing (in-process QImageReader/QFile readers or Defender)."
     acceptance: Root cause shown by a deterministic test that fails before the fix; the late-scan race no longer drops a newer user request; three consecutive full gates pass under the runner with these suites; no timeout or oracle weakened
+  - id: PHASE2-CONTRACTS
+    title: Seven cross-track contracts frozen
+    owner: lead
+    state: done
+    integrated_commit: ec1202d
+    integrated_evidence: "docs/verification/integrate-pr5-2026-11-05/README.md; contracts in docs/contracts/; decisions in docs/decisions/2026-11-05-phase2-contracts.md"
+  - id: B2
+    title: OPERATION-JOURNAL + F017 + F062
+    owner: lead
+    state: ready
+    depends: [B1, PHASE2-CONTRACTS]
+    brief_notes: "From docs/verification/PHASE2-CONTRACTS-REVIEW-R3.md. Required acceptance tests: R3-N2 (a same-size Overwrite killed before the replace on a volume with no file index must not read as Done) and R3-N4 (an offline volume at restart is not 'backup vanished', and the only record of an original is never pruned). Also resolve in the contract text with the packet: R3-N1 (what revalidation and undo fall through to on an index-less identity), R3-N3 (permanent consent after a refused trash must take effect), R3-N5 (test migration wording: the service is built at 38 test sites, and the fake must move the file away), R3-N6, R3-N7 (preimage record synced before the mutation), R3-N8."
+  - id: A2
+    title: META-ROLES core (F042 core)
+    owner: lead
+    state: ready
+    depends: [A1, PHASE2-CONTRACTS]
+    brief_notes: "See R3-N9 in docs/verification/PHASE2-CONTRACTS-REVIEW-R3.md."
   - id: COPY-SAFETY-01
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
