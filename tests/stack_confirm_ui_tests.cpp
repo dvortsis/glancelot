@@ -364,8 +364,9 @@ private slots:
             const QString from = h.viewer.filePath();
             if (killed) QTRY_VERIFY_WITH_TIMEOUT(fixture.attached(from), 15000); // it holds the lock now
             else QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.loading(), 15000);
-            // A prefetch starts only some time after a photo lands, and stepping on cancels it: let the first few really run.
-            if (boundary == "continue" && fixture.prefetches < 3) QTRY_VERIFY2_WITH_TIMEOUT(fixture.prefetches > step, "no prefetch started", 10000);
+            // A prefetch starts only some time after a photo lands, and stepping on cancels it: let the first few really run. Each
+            // folder needs one: it fetches the next folder's first photo, which is then cached for the folder's other photo.
+            if (boundary == "continue" && fixture.prefetches < 3) QTRY_VERIFY2_WITH_TIMEOUT(fixture.prefetches > step / 2, "no prefetch started", 10000);
             if (boundary == "stop") h.viewer.open(photos[step + 1]); else h.viewer.next();
             QTRY_VERIFY_WITH_TIMEOUT(h.viewer.filePath() != from, 15000);
             QTRY_VERIFY_WITH_TIMEOUT(!h.viewer.navigating(), 15000);
