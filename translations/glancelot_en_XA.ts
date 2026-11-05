@@ -596,6 +596,14 @@
 <context>
     <name>Main</name>
     <message>
+        <source>%1 of %2 so far</source>
+        <translation>[%1 õf %2 sõ fàr]</translation>
+    </message>
+    <message>
+        <source>%1 selected of %2 so far</source>
+        <translation>[%1 séléçtéd õf %2 sõ fàr]</translation>
+    </message>
+    <message>
         <source>%1 of %2</source>
         <translation>[%1 õf %2]</translation>
     </message>

@@ -32,7 +32,7 @@ struct FakeFolder {
                 glancelot::DirectoryEntry entry;
                 const QString name = self.name(i);
                 entry.path = directory / directory_scan::nativePath(name);
-                entry.kind = name.startsWith("dir") ? glancelot::EntryKind::Folder : glancelot::EntryKind::Image;
+                entry.kind = name.startsWith("dir") ? glancelot::EntryKind::Folder : name.endsWith(".dat") ? glancelot::EntryKind::File : glancelot::EntryKind::Image;
                 entry.meta = {std::int64_t(i), std::uintmax_t(i), true};
                 if (!sink(std::move(entry))) { outcome = {}; outcome.cancelled = true; return outcome; }
                 ++*self.emitted;

@@ -2149,7 +2149,9 @@ ApplicationWindow {
             BarLabel {
                 visible: app.paneAvailable("grid")
                 font.features: { "tnum": 1 }
-                text: photoGrid.selectedCount > 1 ? qsTr("%1 selected").arg(photoGrid.selectedCount)
+                text: fileGrid.arriving && photoGrid.selectedCount > 1 ? qsTr("%1 selected of %2 so far").arg(photoGrid.selectedCount.toLocaleString(Qt.locale(), "f", 0)).arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0))
+                    : fileGrid.arriving && photoGrid.selectedIndex >= 0 ? qsTr("%1 of %2 so far").arg((photoGrid.selectedIndex + 1).toLocaleString(Qt.locale(), "f", 0)).arg(fileGrid.count.toLocaleString(Qt.locale(), "f", 0))
+                    : photoGrid.selectedCount > 1 ? qsTr("%1 selected").arg(photoGrid.selectedCount)
                     : photoGrid.selectedIndex >= 0 ? qsTr("%1 of %2").arg(photoGrid.selectedIndex + 1).arg(fileGrid.count) : qsTr("No selection")
                 Layout.leftMargin: Theme.gapXs
             }
