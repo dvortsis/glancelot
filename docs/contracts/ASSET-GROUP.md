@@ -82,7 +82,7 @@ The header is frozen as committed: `kMaxMembers`, `kMaxExpandedItems`, `kMaxExcl
 | Operation | Companions added | Never added |
 | --- | --- | --- |
 | Trash, Copy, Move | All members of the requested file's group | Members of a `Collision` group other than the requested one (shown as `Collision`); `AmbiguousSidecar` (shown as `Ambiguous`) |
-| Rename | All members, renamed by `renameAsset`; every target is checked for collisions (case folding included) before anything runs | Same as above. A Collision group falls back to FileOnly with an explanation |
+| Rename (with B2) | All members, renamed by `renameAsset`; every target is checked for collisions (case folding included) before anything runs | Same as above. A Collision group falls back to FileOnly with an explanation |
 | SidecarWrite (C1) | Not an expansion: `expand` returns the request unchanged, and C1 resolves *which* sidecar a group writes (C1 owns the naming profile) | Writes never touch image members |
 | LosslessTransform (D7) | None: always FileOnly | Sidecar orientation fields are C1 and D7 scope |
 
@@ -90,7 +90,7 @@ Collision members are excluded and the operation continues with the rest, with e
 
 When a requested file is itself a companion (the user selected the `.xmp`), Asset scope expands to the whole group the same way. Two requested members of one group are deduplicated. `included` order is stable: requested items first, then companions in role order.
 
-**Overwrite.** Copy and Move collisions under asset scope take one decision per asset, not per member, and each overwritten member goes through the COPY-SAFETY-01 path (`copy_safety::replaceFileAtomically`). The decision applies only to members that collide.
+**Overwrite (with B2).** Copy and Move collisions under asset scope take one decision per plan, never per member, and each overwritten member goes through the COPY-SAFETY-01 path (`copy_safety::replaceFileAtomically`). The decision applies only to members that collide.
 
 **Snapshot and revalidation.** `expand` runs inside the existing plan step (worker). Its `included` list becomes the immutable target snapshot (`planDeletion` input, or journal intents), and from there on `executeDeletion`-style identity revalidation applies unchanged.
 
@@ -132,8 +132,8 @@ When a requested file is itself a companion (the user selected the `.xmp`), Asse
 - **Bounds:** 100,000 requests with companions stop at `kMaxExpandedItems`, with the rest `LimitReached`; excluded entries stop at `kMaxExcludedListed`, with the count right; `groupListing` with `truncated` sets `Incomplete`.
 - **Lookup cost:** with a hint, the backend is asked only for the hint's members (counted through a hook); without one, one directory read per parent, and a mixed-case companion is found on a case-sensitive volume; an injected slow volume ends at `kExpandBudgetMs` with `companionsIncomplete` and the confirmation's wording.
 - **Expansion robustness:** a truncated listing (companion beyond the limit is still found by reading the parent); a stale hint (companion deleted after grouping gives `Missing`, not included); a companion replaced between confirmation and execution gives `Changed` at execution; cancellation during lookups gives `cancelled`, and no partial plan is confirmable.
-- **Rename:** `renameAsset` preserves extensions and the darktable double extension; a target collision with an existing file (case-folded) blocks the whole asset rename before any mutation; a failure on the second member reverses the first and reports it; a fault that blocks the reversal reports the exact state; B1's asset-scope rename is refused until the journal lands.
-- **Overwrite:** an asset Copy onto a folder where two members collide asks once, and an injected replace fault on one member keeps that member's target byte-identical while the report names it.
+- **Rename:** `renameAsset` preserves extensions and the darktable double extension; `planRename` with asset scope previews every member and is refused with the reason until the journal lands. B2's acceptance tests cover the rename itself (collisions, reversal).
+- **Overwrite refused until B2:** `confirmTransfer` with Overwrite returns false and nothing runs. B2's acceptance tests cover the asset Overwrite.
 - **Transfer plan:** `planTransfer` lists collisions and companions before anything runs, and `confirmTransfer` executes exactly the snapshot.
 - **Service:** `planScoped("asset")` summary lists companions; `confirm` trashes exactly the included list via a fake `TrashBackend`; a partial failure is reported per member; `plan()` output is unchanged from today apart from the added `companions` and `scope` keys.
 

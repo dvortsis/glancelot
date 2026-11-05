@@ -44,7 +44,20 @@ The header is frozen as committed: the `k*` bounds, `Kind`, `requiresJournal`, `
 +                           bool* originalDisplaced = nullptr, const QString& backupPath = {}, bool allowNoBackup = true);
 ```
 
-`include/glancelot/copy_move_service.hpp`: `planTransfer` and `confirmTransfer` are in ASSET-GROUP's diff (B1 adds them; B2 adds Overwrite, `replaceFate` and consent). `CopyMoveService` gains an injected `TrashBackend`, as `FileOperationService` already has.
+`include/glancelot/copy_move_service.hpp`: `planTransfer` and `confirmTransfer` are in ASSET-GROUP's diff (B1 adds them; B2 adds Overwrite, `replaceFate` and consent). B2 also adds an injected backend, matching `file_operation_service.hpp:28`:
+
+```diff
+     explicit CopyMoveService(QObject* parent = nullptr);
++    // Tests inject a backend; the default is the platform trash (never permanent deletion).
++    explicit CopyMoveService(std::unique_ptr<glancelot::TrashBackend> backend, QObject* parent = nullptr);
+```
+
+**Test migration (B2's brief grants this).** Under the rules below, `enqueueTransfer` with Overwrite behaves as "no consent", so existing tests can't keep the real trash or the fallback route as they are:
+
+- both `runTransfer` helpers (`tests/copy_move_tests.cpp:458`, `tests/copy_safety_test_support.hpp:71`) construct the service with a fake `TrashBackend` reporting `Available`, so no fixture reaches the real trash;
+- the fallback tests, such as `testOverwriteFallbackKeepsAttributes` (`tests/copy_move_tests.cpp:840`), go through `planTransfer` and `confirmTransfer(..., permanentReplaceConsent = true)` with a fake reporting `Unavailable`.
+
+The tests move and none is weakened: every existing assertion on target bytes, attributes and permissions stays.
 
 ## Durable format
 
@@ -63,7 +76,7 @@ The header is frozen as committed: the `k*` bounds, `Kind`, `requiresJournal`, `
 1. Plan (existing snapshot step, ASSET-GROUP expansion), including `probe()` and, for an Overwrite, the trash probe below. The plan's summary decides what the confirmation says.
 2. `begin(header)`. If it fails after the confirmation, nothing has mutated: return to the prompt once, with the journal notice, and go on only if the kind allows it.
 3. For each batch of up to `kMaxIntentBatch` (64) items: `recordIntents`, then `sealPreimage` for items that have one, then mutate exactly those items, then `recordOutcomes`. The batch size is fixed; a storage-aware size would need measurements and the lead.
-4. Copies and sidecar or transform writes go to `partialPath`, the existing COPY-SAFETY-01 temporary `.~gl<8 hex>.tmp` beside the target (`copy_safety::temporaryPathFor`). A verified copy is then renamed or replaced into place. B2 moves non-Overwrite copies onto this path too, replacing the direct write at `copy_move_service.cpp:928` and the `QFile::remove(destPath)` at `:1014`. **A partial is the only file reconcile may delete, and only after the operation's lock is free.** The one other removal is an extra hard link to a file that stays in place, in the table below.
+4. Copies and sidecar or transform writes go to `partialPath`, the existing COPY-SAFETY-01 temporary `.~gl<8 hex>.tmp` beside the target (`copy_safety::temporaryPathFor`). A verified copy is then renamed or replaced into place. B2 moves non-Overwrite copies onto this path too, replacing the direct write at `copy_move_service.cpp:928` and the `QFile::remove(destPath)` at `:1014`. **Reconcile deletes only three things, and only after the operation's lock is free:** a partial; a preimage, where the in-place table says so; and an extra hard link to a file that stays in place, with the proof the backup table requires.
 5. An item that holds an original under another name records that name in `backupPath` **before the step starts**: the Overwrite backup, and the `.tmp_rename_<id>` intermediate of a case-only rename (`mutation_service.cpp:182`). An item with a `backupPath` must not put an original in `partialPath`.
 6. `setState(Completed | Cancelled | Failed)`.
 
@@ -94,22 +107,26 @@ COPY-SAFETY-01 already keeps the original until a complete, verified copy replac
 | `Available` | `"trash"` | "Replaced files go to the <trashName>. You can undo this." | The ordinary confirmation |
 | `Unavailable` or `Unknown` | `"permanent"` | "This location has no <trashName> that Glancelot can use. Replaced files are permanently deleted and can't be undone." | Explicit: a separate, unchecked confirmation that enables a button named "Permanently replace". `confirmTransfer(id, Overwrite, permanentReplaceConsent = true)`, and the header's `permanentReplaceConsented` records it. Without it, `confirmTransfer` returns false and nothing runs |
 
+Consent counts only when the plan said `"permanent"`. On a `"trash"` plan the flag is ignored, because the user never saw that wording.
+
+On POSIX the plan step also tests a hard link in the destination. A volume that can't make one reports `"permanent"`, even with a usable trash. A re-plan after a stop on that volume, or after a trash move refused on a volume whose probe says `Available`, also reports `"permanent"` for that volume for the rest of the process, so the user can always reach the consent the stop message asks for.
+
 **At execution.** Each operation re-probes once per volume before its first replace, because a trash can change after the prompt.
 
 | Situation | Result |
 | --- | --- |
 | Probe `Available` | Replace, keeping a backup (below), then move the replaced original to the trash. Undo `RestoreFromTrash` |
 | Probe `Available`, and the trash move fails for any reason (`TrashUnavailable`, `InUse`, `Denied`, a full bin), whatever the consent | **Never removed.** The new file stays in place, and the old file stays where it is, under `replacedPath` or `backupPath`. The item is `Done` with undo `None` and a message naming that path. A `BackupFinding` with `TrashFailed` is raised, the operation stops, its remaining items are `Cancelled` with the reason, and its state is `Failed` |
-| Probe not `Available`, consent given | Replace, keeping a backup where the volume can, then remove the backup. Undo `None` |
-| Probe not `Available`, no consent (the trash vanished after the prompt) | Stop before replacing. The target is unchanged, the item is `Failed` with "This location no longer has a <trashName>. Run this again to choose what happens to replaced files", and the remaining items are `Cancelled` |
-| The volume can't keep a backup (`ReplaceFileW` unsupported, so the `replaceWithoutMerge` fallback at `copy_move_service.cpp:453`; POSIX without hard links), consent given | The replace takes the fallback. Undo `None`. The consent wording already covers this |
-| The volume can't keep a backup, no consent (`allowNoBackup` false; `link` fails) | Stop before replacing. The target is unchanged, the item is `Failed` with "This location can't keep the replaced file. Run this again and confirm permanent replacement", and the remaining items are `Cancelled` |
+| Probe not `Available`, consent counted | Replace, keeping a backup where the volume can, then remove the backup. Undo `None` |
+| Probe not `Available`, no counted consent (the trash vanished after the prompt) | Stop before replacing. The target is unchanged, the item is `Failed` with "This location no longer has a <trashName>. Run this again to choose what happens to replaced files", and the remaining items are `Cancelled` |
+| The volume can't keep a backup (`ReplaceFileW` unsupported, so the `replaceWithoutMerge` fallback at `copy_move_service.cpp:453`; POSIX without hard links), consent counted | The replace takes the fallback. Undo `None`. The consent wording already covers this |
+| The volume can't keep a backup, no counted consent (`allowNoBackup` false; `link` fails) | Stop before replacing. The target is unchanged, the item is `Failed` with "This location can't keep the replaced file. Run this again and confirm permanent replacement", and the remaining items are `Cancelled` |
 
 **Keeping the backup.**
 
 - Windows: `ReplaceFileW` leaves the original at the `.~gb<8 hex>.tmp` backup name.
 - POSIX: `rename(2)` leaves no backup, so B2 first hard-links the target to `backupPath`, then replaces.
-- Both, on the trash route: B2 renames the backup to `replacedPath` (`<stem> (replaced)<ext>` on the first free name, chosen before the intent is written, so the trash shows something recognisable) and moves it to the trash, instead of the `DeleteFileW` at `copy_move_service.cpp:444`. If the rename fails, it trashes the file under its backup name.
+- Both, on the trash route: B2 renames the backup to `replacedPath` (`<stem> (replaced)<ext>` on the first free name, chosen before the intent is written, so the trash shows something recognisable), using a move that can't replace a name that appeared meanwhile, and moves it to the trash, instead of the `DeleteFileW` at `copy_move_service.cpp:444`. If the rename fails, it trashes the file under its backup name.
 
 ## Failure policy
 
@@ -126,7 +143,9 @@ When the journal cannot be opened or written (read-only profile, full disk, cont
 
 Runs on a worker after window claim, never blocking the UI, once per process start. It takes each operation that is interrupted (lock free, state not terminal) and not yet reconciled, and each operation with `displaced` or `heldBackups` items. A pass appends its outcomes and a `{"type":"state","reconciled":true}` record, which sets `OperationSummary::reconciled`, so the next start or another process finds nothing left to resolve. A `Restored` report is therefore made once. Operations that still hold a backup are revisited each start, only to report it.
 
-**Unknown items**, by kind, with exact stats only. The first matching row wins.
+**Identity.** Throughout this contract, an identity with no file index is no identity: `FileIdentity` is the raw volume and file index (`src/core/file_operations.cpp:106`), some redirectors report no index (`copy_move_service.cpp:388`), and two different files on such a volume would compare equal. It never counts as a match. A row that needs a match then uses size and modified where it says so, and otherwise falls through. The same rule applies to the revalidation at execution and at undo.
+
+**Unknown items**, by kind, with exact stats only, except that the in-place table also reads checksums. The first matching row wins.
 
 *Trash:*
 
@@ -135,26 +154,35 @@ Runs on a worker after window claim, never blocking the UI, once per process sta
 | Source intact with the snapshot identity | Not started |
 | Source gone, trash token recorded | Done, with the token's undo |
 | Source gone, no token | Done, undo `None` |
+| Anything else, such as a source replaced after the crash | Unknown, with evidence |
 
-*Copy, Move, Rename, Overwrite:*
+*Copy, Move, Rename, BatchRename, Overwrite:*
 
 | Evidence | Result |
 | --- | --- |
 | `overwritten` set, and the target still has its identity | Not started. A same-size target that was never replaced is not "done". A partial is removed |
 | Partial present, target not holding the new file | The partial is removed; not started |
 | Source intact and no target | Not started |
-| Target present with the snapshot size, and for a move the source gone | Done. Its result identity is recorded |
+| Target present with the snapshot size, and for a move or rename the source gone | Done. Its result identity is recorded |
 | Anything else | Unknown, with evidence in `message` |
 
-*SidecarWrite, LosslessTransform (`source == target`):*
+*CreateFolder:*
 
 | Evidence | Result |
 | --- | --- |
-| Target identity and size match `source` | Not started; the preimage, if any, is removed |
+| Folder absent | Not started |
+| Folder present | Done, undo `None`; a folder's identity can't prove who made it |
+
+*SidecarWrite, LosslessTransform (`source == target`).* This is decided by content, because the seal records a checksum and a same-size write is ordinary here: a rating going from 3 to 4 keeps its size. Sealed means a `preimage` record exists and the file's checksum matches it. Any partial is removed in the first five rows.
+
+| Evidence | Result |
+| --- | --- |
+| Preimage sealed, and the target's checksum equals it | Not started; the preimage is removed |
+| Preimage sealed, and the target differs | Done, undo `RestorePreimage` |
+| Preimage path recorded but not sealed, and the target matches `source` on size and modified, and on identity where the volume has one | Not started, since the protocol seals before it mutates; the unsealed file is removed |
 | No preimage recorded (a new sidecar), target absent | Not started |
 | No preimage recorded (a new sidecar), target present | Done, undo `TrashCopy` |
-| Target differs, and the preimage is sealed (a `preimage` record exists) with a good checksum | Done, undo `RestorePreimage` |
-| Preimage missing, unsealed or with a bad checksum | Unknown, with evidence |
+| Preimage missing or bad, or unsealed with a target that differs | Unknown, with evidence |
 
 Reconcile never retries. The operation center shows something like "Interrupted: 37 done, 61 not started, 2 unknown", with **Retry remaining** (a new operation over the not-started items, read through `items`, re-planned and re-confirmed, so a Done transform is never applied twice) and **Dismiss**.
 
@@ -169,7 +197,7 @@ For each item whose `backupPath` or `replacedPath` still exists, the recorded or
 | Empty | Identity and size match the recorded original (size and modified when the volume reports no identity) | Moved back with `MoveFileExW` and no replace flag, or `link` then `unlink` on POSIX, so it can never overwrite | `Restored`, once: "<name> was put back after an interrupted replace." The item is then not started, or `OriginalDisplaced` resolved |
 | Empty | Does not match | Nothing moves | `IdentityMismatch` |
 | Empty | Matches, but the move fails | Nothing else changes | `RestoreFailed`, with the reason and the full backup path |
-| Occupied | The same file as the occupant, by identity (POSIX: a crash after the hard link and before the rename) | The extra name is unlinked; no data moves, and the target still holds the file. The item is not started | Nothing to report |
+| Occupied | Proven the same file: `copy_safety::compareFileIdentity(backup, target) == Same`, and on POSIX a link count of at least 2 (a crash after the hard link and before the rename). `Unknown` is not proof and falls through to the rows below | The extra name is unlinked; no data moves, and the target still holds the file. The item is not started | Nothing to report |
 | Occupied | A different file, and the operation recorded a `TrashFailed` | The target is never touched | `TrashFailed`: "The older copy of <name> couldn't go to the <trashName>. It is still in this folder as <file>." |
 | Occupied | A different file | The target is never touched | `TargetOccupied`: "An older copy of <name> is still in this folder as <backup>." |
 
@@ -187,6 +215,7 @@ The operation center lists each non-restored finding with **Show in folder**, **
 | Process death | The record stays Interrupted. The lock is released by the OS; the next start reconciles |
 | Another process still running the operation | Its lock is held, so it is not reconciled |
 | Two processes reconcile at once | `journal.lock` lets one win; the other finds the `reconciled` record and nothing left |
+| Volume with no file index | Identities never match. A held backup is reported, not removed, and an in-place write is decided by checksum |
 | Corrupt operation file | Marked `Corrupt`, shown, never acted on. `items` returns the good prefix, so its backups can be named in the report |
 | Unknown future `v` | Read-only |
 | Limits exceeded | `LimitExceeded` before any mutation, then the failure policy above |
@@ -210,7 +239,10 @@ The operation center lists each non-restored finding with **Show in folder**, **
 - **Overwrite prompt and fate (fake backend):**
   - `Available` gives `replaceFate` `"trash"` before `confirmTransfer`; `Unavailable` and `Unknown` give `"permanent"`, and the UI test finds the permanent wording in the prompt;
   - `confirmTransfer` with `"permanent"` and no consent returns false, and nothing runs;
+  - `confirmTransfer` on a `"trash"` plan with the consent flag set, and the trash vanishing before execution: the flag is ignored, the target is unchanged and the operation stops;
+  - on a volume that refused its trash, and POSIX without hard links, a re-plan reports `"permanent"`, so the consent can be given;
   - with consent on `Unavailable`, the target is replaced, the old copy is gone, undo is `None` and the header records the consent;
+  - `trashBackup` reaches the fake passed to `open`;
   - `Available` at the plan with the trash move failing, for each of `TrashUnavailable`, `InUse` and `Denied`: the old copy still exists, the item is `Done` with undo `None`, a `TrashFailed` finding names the path, the remaining items are `Cancelled`, and the finding survives a restart;
   - `Available` at the plan and `Unavailable` at execution, no consent: the target is unchanged and the operation stops;
   - `FaultPoint::ReplaceUnsupported`: without consent the target is unchanged and the item fails with the wording; with consent the fallback runs;
@@ -222,6 +254,7 @@ The operation center lists each non-restored finding with **Show in folder**, **
   - a kill between the rename to `replacedPath` and the trash move: the file is found under that name and reported;
   - a file at the backup path with another identity: `IdentityMismatch`, nothing moves;
   - POSIX, a kill after the hard link and before the rename: the extra name is removed, the target's bytes and identity are unchanged and nothing is reported;
+  - an injected identity that reports no file index, with a different file at the target, including after a `TrashFailed`: the backup survives and is reported;
   - the backup vanished before start: no finding and no error;
   - the move back denied: `RestoreFailed` with the path, and the original still at the backup path;
   - `dismiss` is refused and pruning skips the operation while the backup exists, and both proceed once it is resolved;
@@ -231,18 +264,22 @@ The operation center lists each non-restored finding with **Show in folder**, **
 - **Preimages (SidecarWrite and LosslessTransform):**
   - kill hooks between the intent and the seal, between the seal and the replace, and between the replace and the outcome give not started, not started with the preimage removed, and Done with `RestorePreimage`;
   - a bad preimage checksum after a replace stays Unknown, and **Retry remaining** does not offer the item;
+  - with an injected identity that reports no file index, a same-size write killed after the replace is Done with `RestorePreimage`: the preimage survives and retry doesn't transform twice;
+  - the same write killed before the replace is not started, and the preimage is removed;
   - retry never transforms a Done item twice;
   - a new sidecar has no preimage, and its undo moves it to the trash;
   - `sealPreimage` over the journal cap returns `LimitExceeded` and the item doesn't run.
 - **Partial failure:** a 10-item move with item 4 denied and item 7 in use. Per-item outcomes are recorded, the summary counts are right, and undo is offered for the Done items only.
+- **Undo availability:** five existing sidecars (`RestorePreimage`) and five new ones (`TrashCopy`) offer undo, as the union; one Done item with `None` offers none.
 - **Undo:** restore from the trash with a fake token; token gone (expired trash) gives Missing and no fallback; renamed back; copy trashed, never removed; the moved file changed after the move gives Changed and is skipped; an Overwrite whose old copy reached the trash restores it after trashing the new one; an Overwrite with permanent consent advertises no undo.
 - **Trash round trip (native):** on each platform, a real trash and restore by token, or a recorded `None` with the reason. `probeTrash` against a real volume returns `Available` on the gate machine's system drive.
-- **Asset rename:** a kill partway reports the split; a kill during a reversal does too; with the journal unavailable an asset rename is refused.
+- **Asset rename:** a kill partway reports the split; a kill during a reversal does too; with the journal unavailable an asset rename is refused; a failure on the second member reverses the first and reports it; a fault that blocks the reversal reports the exact state; a target collision blocks the whole rename before any mutation.
+- **Asset Overwrite:** an asset Copy onto a folder where two members collide asks once, and an injected replace fault on one member keeps that member's target byte-identical while the report names it.
 - **Cancellation:** cancel between batches, so no intent is recorded beyond the batch; cancel during a copy, so the partial is removed and the original target is untouched.
 - **Sweep:** with the journal available, a second process's partial survives; with it unavailable, only names older than 24 hours go.
 - **Bounds and pruning:** the 201st completed operation prunes the oldest; Interrupted operations and those holding a backup are never pruned; the `kMaxJournalBytes` cap holds, including preimages.
 - **Journal unavailable:** a read-only journal directory, a full-disk simulation and a `LimitExceeded`. `probe()` makes the notice appear in the confirmation; trash, copy, move, single-file rename and create folder run with the notice and no undo; sidecar write, lossless transform, batch rename and asset rename are refused with the reason and attempt no mutation. A write failure mid-operation stops before the next batch mutates. A `begin` failure after the confirmation returns to the prompt once.
-- **COPY-SAFETY-01 regression:** every `copy_safety` test passes, with only the sweep change above, and `.~gb` files are still never swept by `removeStaleTemporaries`.
+- **COPY-SAFETY-01 regression:** every `copy_safety` and `copy_move` test passes, changed only by the sweep and the granted test migration, with every assertion on target bytes, attributes and permissions kept. `.~gb` files are still never swept by `removeStaleTemporaries`.
 
 ## Not covered
 

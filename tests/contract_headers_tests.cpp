@@ -63,6 +63,9 @@ static_assert(journal::kMaxIntentBatch == 64 && journal::kSchemaVersion == 1);
 // The limits agree: a full-size operation fits at ordinary path lengths, and one operation fits in the journal.
 static_assert(journal::kMaxOperationFileBytes / qint64(journal::kMaxItemsPerOperation) >= 2048);
 static_assert(journal::kMaxJournalBytes >= journal::kMaxOperationFileBytes);
+// trashBackup can reach a fake backend.
+static_assert(std::is_same_v<decltype(&journal::OperationJournal::open),
+                             std::unique_ptr<journal::OperationJournal> (*)(const QString&, journal::Status*, TrashBackend*)>);
 
 // COMPARE-PANES: the content modes and pane counts.
 static_assert(parseCompareContentMode("compare2") == CompareLayout::Two && parseCompareContentMode("compare4") == CompareLayout::Four);

@@ -92,7 +92,7 @@ struct OperationSummary {
     quint32 done{}, failed{}, unknown{}, notStarted{}, displaced{};
     quint32 heldBackups{};          // items whose original still sits at backupPath or replacedPath
     bool reconciled{};              // a reconcile pass has resolved this operation; durable
-    std::uint32_t undoAvailable{};  // intersection over Done items; None if any Done item has none
+    std::uint32_t undoAvailable{};  // None if any Done item has none; otherwise the union over Done items
     quint64 revision{};             // increments on every durable change; UI drops older revisions
     qint64 createdMs{}, updatedMs{};
 };
@@ -119,7 +119,8 @@ class Operation;   // move-only handle; holds the per-operation cross-process Fi
 class OperationJournal {
 public:
     // Null with Status when the directory cannot be used. Callers then apply requiresJournal(): see the contract.
-    static std::unique_ptr<OperationJournal> open(const QString& directory, Status* status);
+    // `trash` (not owned) serves trashBackup, so tests can pass a fake; null uses the platform trash.
+    static std::unique_ptr<OperationJournal> open(const QString& directory, Status* status, glancelot::TrashBackend* trash = nullptr);
     ~OperationJournal();
     // Plan step, before the confirmation: a synced scratch append, so a confirmation can say the journal is unavailable.
     Status probe();
@@ -146,7 +147,7 @@ public:
     // Explicit user actions on a finding. Restore never replaces an existing file; trash goes through TrashBackend.
     Status restoreBackup(OperationId operation, quint32 index);
     Status trashBackup(OperationId operation, quint32 index);
-    Status dismiss(OperationId operation);    // completed or reconciled only; Conflict while a backup is held; pruning skips those too
+    Status dismiss(OperationId operation);    // terminal or reconciled only; Conflict while a backup is held; pruning skips those too
 private:
     OperationJournal();
     struct Private;

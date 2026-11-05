@@ -40,7 +40,7 @@ Give one place that states what this build, this machine and this source can act
 ### Other shared-file changes
 
 - `contracts.hpp`: `DisplayCapabilities` and `DecoderCapability` deleted (done).
-- `src/app/viewer_context.hpp`: D2 adds `capabilities` to `ViewerContext`, the single wiring point used by `app/main.cpp:269` and `tests/ui_test_support.hpp:82`. `viewer_controller` is not edited. The lead resolves the line.
+- `src/app/viewer_context.hpp`: D2 adds `capabilities` to `ViewerContext`, the single wiring point used by `app/main.cpp:269` and `tests/ui_test_support.hpp:82`. In `viewer_controller.cpp`, D2 edits only the two status lines that drop the suffix (`:1001`, `:1047`); its brief grants them. The lead resolves the line.
 
 ## Who populates each section, and when
 
@@ -95,7 +95,6 @@ D2's brief grants the `reference-pin` handler (`Main.qml:755`) and the `referenc
 - **GUI thread:** `CapabilityModel` and `apply()`. **Workers:** probes. Delivery is by `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`.
 - **Fencing:**
   - each snapshot carries `(section, scope, revision)`, and `apply` drops a snapshot whose scope is no longer current or whose revision is not newer;
-  - the per-image colour item is also checked against the selection generation by its populator before delivery;
   - a directory change calls `setSourceScope` first, so a late probe for the old folder cannot mark the new folder read-only or writable.
 - **Bounds:** `kMaxItems`, `kMaxItemsPerSection`, `kMaxDisplays`, 64 cached volume roots, one probe in flight per section, worker deadlines as stated.
 

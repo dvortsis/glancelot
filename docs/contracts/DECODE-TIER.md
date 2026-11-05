@@ -144,7 +144,7 @@ Tile                               (region of the Full raster; separate channel,
   - A refresh never starts below what's shown, so the view never drops in quality: with Full shown it requests Full; with Fit shown it requests Fit at the shown bucket, then the ladder continues; with a final Preview it requests Preview. So its results reach `DisplayManager` at an equal or higher tier.
   - It cancels any refinement in flight, under the one-in-flight rule. `imageFinal` is false only while a higher tier is pending.
   - A file being rewritten can't loop: each observation starts at most one refresh, as EN-11 does today, and a ladder ends at its last tier.
-- **Priority:** the first tier of a generation runs at `Foreground`, and refinement at `Visible`, so background work competes with a refinement and never with the first paint. Under `Quality` reclaim (RESOURCE-LEDGER) a pending Full doesn't start, which leaves Fit shown with `imageFinal = true` and the honest status; shown pixels are never swapped for lower ones.
+- **Priority:** the first tier of a generation runs at `Foreground`, and refinement at `Visible`, so background work competes with a refinement and never with the first paint. In the ledger, every tier of the current image reserves as `Foreground` whatever its job priority, so a Full that today's limits admit can still use the headroom (RESOURCE-LEDGER). Under `Quality` reclaim (RESOURCE-LEDGER) a pending Full doesn't start, which leaves Fit shown with `imageFinal = true` and the honest status; shown pixels are never swapped for lower ones.
 - **Viewer state during a ladder:** the first applied tier sets `imageReady = true` and `loading = false`, as a decode does today, with `imageFinal = false` until the last tier. Phase 1 code keeps working unchanged: `currentImageRequested` still publishes, and passes the shown tier and source size (`viewer_controller.cpp:481`), so re-published Fit pixels stay labelled; `DisplayManager` keeps them with its pending frame for the timed paths (`display_manager.cpp:138`, `:654`), `navigating` (PR 3) settles when the destination is handed to `open()` and does not wait for a refinement, and the slideshow's clock runs from the first applied tier. `scheduleLookahead` waits for `imageFinal`, so prefetch never competes with a refinement. The status text keeps naming the tier.
 - **Frames held elsewhere:** `pinReference`, `pinCurrentImage` and `setComparisonImage` pin whatever is shown. When Full arrives for the same generation and path, the controller re-offers it to the holder through the same call, so the reference or pinned output refines too. If the budget refuses, the holder keeps its lower tier, labelled. The F040 and pin refusal rules in `DisplayManager` are unchanged.
 - **Ladder policy (D1):** use Fit then Full only when the source has at least 2x the pixels of the Fit bucket. Otherwise go straight to Full. RAW is Preview final until a sensor decoder exists. Both are named constants; changing them needs D1's measurements in its handoff.
@@ -170,7 +170,7 @@ Tile                               (region of the Full raster; separate channel,
 | Foreground decode, `phase=="decoded"` insert (`:1043`) | Full, bucket 0 | Key `encoded()` equals today's string; identical |
 | Revision-only reuse (`:991`) and its remove (`:995`) | Request Full; dominance returns Full only (no other tier is ever stored before D1); remove becomes `removeSource` | Identical |
 | `contains` before revision-only (`:946`) | `contains({key, Full})` | Identical |
-| Baseline proof after registration (`:425`) | `reuse({cacheKey(path), Full}, registered)` | Identical |
+| Baseline proof after registration (`:425`) | `reuse` at the shown tier and bucket, with the `registered` token, so a late baseline with current Fit pixels starts no refresh | Identical while only Full exists |
 | Late baseline refresh (`:428`) | `decode` with `refresh` set; with `cacheReuseAllowed` false it skips the cache and inserts as usual | Identical while only Full exists: the result replaces the shown image, and `controllerLateCoalescedBaselineDecodesOnce` still passes |
 | Prefetch insert (`:755`), `contains` before prefetch (`:832`) | Full (D1 may switch prefetch to Fit later) | Identical |
 | Allowance (`:727`, `:1020`), `clear` (`:471`, `:891`, `:899`, `:1021`, `:1930`, `:2106`, `:2175`) | All tiers | Identical |
@@ -202,7 +202,8 @@ Generated media only. Extend `tests/cache_tests.cpp` through the lead's cmake; a
   - the same refresh with Fit shown goes to Fit, then Full, and ends with `imageFinal` true;
   - Fit under T1 and Full under T2 applies Full and ends with `imageFinal` true, with the old token's cache entries gone;
   - a file with new dimensions between tiers is not an invalid response;
-  - a file rewritten repeatedly starts at most one refresh per observation.
+  - a file rewritten repeatedly starts at most one refresh per observation;
+  - a late baseline with current Fit pixels starts no refresh and leaves the refinement running.
 - **Colour:** `imageColour` is set with the applied tier, and a result dropped by the fence changes nothing; a tagged and an untagged image report differently.
 - **Phase 1 state:**
   - with the ladder on, `imageReady` turns true at the first tier, `imageFinal` at the last, and `navigating` falls without waiting for refinement;
@@ -217,7 +218,7 @@ Generated media only. Extend `tests/cache_tests.cpp` through the lead's cmake; a
   - a truncated JPEG makes Fit fail, then Full also fails with the corrupt-versus-unsupported message;
   - a worker echoes the wrong tier: invalid response;
   - Fit result larger than the bucket: rejected;
-  - source dimensions differ between tiers: rejected.
+  - source dimensions differ between tiers of one non-empty token: rejected.
 - **Cache:**
   - Full key byte-identical to the current key (regression);
   - dominance: Full cached, Fit request reuses it;

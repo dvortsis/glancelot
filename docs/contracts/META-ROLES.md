@@ -125,7 +125,7 @@ public:
 };
 // Sidecar rating (C1). Installed once at startup, called on the reading worker only when ratings are wanted (the display path and
 // requestAllMetadata, not a captured or dimensions sort), because it does sidecar I/O outside the per-file bound. nullopt keeps the
-// embedded value.
+// embedded value. A cache entry read without the overlay counts as a miss for rating, so a later display read still applies it.
 using RatingOverlay = std::function<std::optional<std::int8_t>(const QString& imagePath)>;
 void setRatingOverlay(RatingOverlay overlay);
 // Worker-thread reader used by both paths and installed as the SortKeyReader.
@@ -139,7 +139,7 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 - `Dimensions`: `dimensionsKnown` first in both directions, then `pixelWidth*pixelHeight` (64-bit), then `pixelWidth`, then natural name.
 - An empty or failing reader makes every key missing, so the result equals ascending natural order in both directions. Shuffle, Name, Modified and Size are unchanged byte for byte.
 - `needMeta` in `sortedImageFiles` (`navigation.cpp:241`) becomes `Modified || Size || Captured || Dimensions`, so the reader receives each file's stat data (size and modified), which it needs as the cache revision. The reader is then called once over the listed files before sorting. Name and Shuffle still skip stat.
-- **One pass per folder and revision.** The grid and navigation workers share a pass: the first spends the budget and records the pass in `MetadataKeyCache`, and the other reads the cache only. So their unread sets, and `sortPartial`, agree, and traversal matches the grid even when partial.
+- **One pass per folder and revision.** The grid and navigation workers share a pass: the first spends the budget and records the pass in `MetadataKeyCache` (A2 adds that call), and the other reads the cache only. A new listing's key pass resumes from the cache, so a large folder on slow storage fills in across visits. So their unread sets, and `sortPartial`, agree, and traversal matches the grid even when partial.
 - **Arrival (A1).** While a captured or dimensions sort reads its keys, rows stay in the order they arrived. `arriving` (PR 7) and `sortPending` stay true until the keys are in, and the definitive order is published once.
 - **Crossing a folder under these sorts.** There is no previous order to keep, so the landing waits for the pass or its budget, cancellable, with `navigating` showing (PR 3).
 - Capture time orders by the wall-clock value the camera recorded. The offset is shown, never used for ordering.
@@ -151,7 +151,7 @@ MetaKeys readMetaKeys(const QString& path, std::stop_token cancel);
 - **Fencing:**
   - each `requestMetadata` call increments `metaGeneration`;
   - `setDirectory`, `setActive(false)`, `setSort`, `setIncludeHidden` and a listing apply all increment it and request a stop;
-  - a result is applied only when its `metaGeneration` and listing `generation` both match, and only to the row found by **path key** at apply time, never by the row index captured at request time;
+  - a display-path result is applied only when its `metaGeneration` and listing `generation` both match (a key-pass result needs only the listing `generation`, so scrolling can't discard the pass), and only to the row found by **path key** at apply time, never by the row index captured at request time;
   - a result whose (size, modified) differs from the row's is discarded, and the row returns to `unrequested`.
 - **Bounds:**
   - display queue: at most `kMaxMetadataWindow` pending rows, with at most 64 rows per `dataChanged` emission, coalesced on a 16 ms timer so GUI work per tick stays bounded;
@@ -211,6 +211,8 @@ Generated media only. New `tests/meta_roles_tests.cpp` (core, no display) and `t
   - the grid and traversal read one folder at once: one pass, the same unread set and the same order when partial.
 - **Key pass:**
   - `requestAllMetadata` leaves the order unchanged under every sort and fills off-screen rows;
+  - scrolling during the pass discards nothing;
+  - a new listing resumes from the cache after a partial pass;
   - a second call in one listing generation starts nothing;
   - `setDirectory` and `setActive(false)` cancel it;
   - the budget reports `metadataPartial`, and unread rows stay unknown;
@@ -224,7 +226,7 @@ Generated media only. New `tests/meta_roles_tests.cpp` (core, no display) and `t
   - admission refused leaves the row `pending`, then fills after release;
   - a non-image row is `unavailable` with no I/O (counted through a reader hook);
   - no `data()` call performs I/O (hook counter stays 0 while delegates scroll).
-- **Overlay:** an installed overlay overrides an embedded rating; a cleared overlay value keeps it; `invalidate` makes the next read see a new sidecar value; a `captured` sort pass doesn't call it.
+- **Overlay:** an installed overlay overrides an embedded rating; a cleared overlay value keeps it; `invalidate` makes the next read see a new sidecar value; a `captured` sort pass doesn't call it, and a display read afterwards shows the sidecar's rating, not the embedded one.
 - **Budget:** 10k generated rows, with `requestMetadata` GUI work per tick under 8 ms (label `budget`).
 
 ## Not covered
