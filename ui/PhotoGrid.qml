@@ -1078,11 +1078,52 @@ Rectangle {
         }
     }
 
+    // The window, for the commands below that ask which pane owns keys. Declared here so the block stays one unit.
+    property var host: null
     Connections {
         target: viewer
         function onViewCommand(id) {
             if (id === "filter") {
                 panel.openFilter()
+            }
+            // F009
+            else if (id === "view-details") panel.details = !panel.details
+            // INPUT-02
+            else if (id === "grid-open") panel.activate()
+            else if (id === "grid-up") panel.goUp()
+            else if (id === "grid-select-all") fileGrid.selectAll()
+            else if (id === "select-all") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) fileGrid.selectAll() }
+            else if (id === "clear-selection") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) fileGrid.clearSelection() }
+            else if (id === "invert-selection") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) fileGrid.invertSelection() }
+            else if (id === "grid-zoom-in") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) panel.zoomIn() }
+            else if (id === "grid-zoom-out") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) panel.zoomOut() }
+            else if (id === "grid-zoom-reset") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) panel.resetZoom() }
+            else if (id === "reveal-in-file-manager") {
+                let target = ""
+                const hasGridFocusOrSelection = panel.host.focusWithin(panel) || panel.host.gridScope || panel.selectedCount > 0
+                const targets = panel.deletionTargets()
+                if (hasGridFocusOrSelection && (panel.selectedPath.length > 0 || targets.length > 0)) {
+                    target = panel.selectedPath.length > 0 ? panel.selectedPath : targets[0]
+                } else if (viewer.filePath.length > 0) {
+                    target = viewer.filePath
+                } else {
+                    target = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+                }
+                viewer.revealInFileManager(target)
+            }
+            else if (id === "copy-path" || id === "copy-file") {
+                let targets = []
+                const gridActive = panel.host.focusWithin(panel) || panel.host.gridScope || panel.host.gridMode || (panel.host.paneAvailable("grid") && fileGrid.count > 0) || panel.selectedCount > 0
+                if (gridActive) {
+                    const dt = panel.deletionTargets()
+                    if (dt.length > 0) targets = dt
+                    else if (panel.selectedPath.length > 0) targets = [panel.selectedPath]
+                }
+                if (targets.length === 0 && viewer.filePath.length > 0) {
+                    targets = [viewer.filePath]
+                }
+                if (id === "copy-path") viewer.copyFilePath(targets)
+                else viewer.copyFileUrls(targets)
             }
         }
     }

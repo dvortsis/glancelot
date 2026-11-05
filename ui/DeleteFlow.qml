@@ -10,6 +10,9 @@ import Glancelot
 Item {
     id: flow
     property var host
+    // The panes the delete commands read their targets from.
+    property var gridPane
+    property var treePane
     readonly property string trashName: Qt.platform.os === "windows" ? "Recycle Bin" : "Trash"
     readonly property bool modal: confirmDialog.visible || resultsDialog.visible
     // "" | "planning" | "confirm" | "executing"
@@ -110,6 +113,47 @@ Item {
         if (phase !== "executing") phase = ""
     }
     function showNotice(text) { noticeText = text; noticeTimer.restart() }
+    Connections {
+        target: viewer
+        function onViewCommand(id) {
+            // qsTranslate: these notices stay in the catalog's Main context, where they are already translated.
+            if (id === "delete-selection") {
+                const blocked = flow.host.commandBlockedReason(id)
+                if (blocked.length) { flow.showNotice(blocked); return }
+                const treeFolder = flow.treePane.currentSelectedFolder()
+                if (treeFolder.length > 0) {
+                    flow.request([treeFolder], "tree", "")
+                } else if (flow.host.focusWithin(flow.gridPane) || (flow.host.paneAvailable("grid") && fileGrid.count > 0)) {
+                    if (flow.gridPane.deletionTargets().length > 0) {
+                        flow.request(flow.gridPane.deletionTargets(), "command", fileGrid.directory)
+                    } else if (flow.host.workspace._previewShown && viewer.filePath.length > 0) {
+                        flow.request([viewer.filePath], "command", viewer.directory)
+                    } else {
+                        flow.showNotice(qsTranslate("Main", "Select items in the grid to move them to the %1.").arg(flow.trashName))
+                    }
+                } else if (viewer.filePath.length > 0) {
+                    flow.request([viewer.filePath], "command", viewer.directory)
+                } else {
+                    flow.showNotice(qsTranslate("Main", "Select items in the grid to move them to the %1.").arg(flow.trashName))
+                }
+            }
+            else if (id === "delete-current-file") {
+                if (viewer.filePath.length > 0) {
+                    flow.request([viewer.filePath], "command", viewer.directory)
+                } else {
+                    flow.showNotice(qsTranslate("Main", "No photo is currently open to move to the %1.").arg(flow.trashName))
+                }
+            }
+            else if (id === "delete-current-folder") {
+                const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+                if (folder.length > 0) {
+                    flow.request([folder], "command", "")
+                } else {
+                    flow.showNotice(qsTranslate("Main", "No folder is currently open to move to the %1.").arg(flow.trashName))
+                }
+            }
+        }
+    }
 
     Connections {
         target: fileOperations

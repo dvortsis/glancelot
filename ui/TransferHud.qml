@@ -8,6 +8,40 @@ import Glancelot
 Rectangle {
     id: root
     property var service
+    // The window and panes the cut, copy and paste commands read their targets from.
+    property var host
+    property var gridPane
+    property var treePane
+
+    Connections {
+        target: viewer
+        function onViewCommand(id) {
+            if (id === "cut-selection") {
+                const targets = root.gridPane.deletionTargets()
+                if (targets.length > 0) {
+                    viewer.copyMoveService.markCut(targets)
+                } else if (viewer.filePath.length > 0) {
+                    viewer.copyMoveService.markCut([viewer.filePath])
+                }
+            }
+            else if (id === "copy-selection") {
+                const targets = root.gridPane.deletionTargets()
+                if (targets.length > 0) {
+                    viewer.copyMoveService.markCopy(targets)
+                } else if (viewer.filePath.length > 0) {
+                    viewer.copyMoveService.markCopy([viewer.filePath])
+                }
+            }
+            else if (id === "paste") {
+                let dest = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+                const treeFolder = root.treePane.currentSelectedFolder()
+                if (root.host.focusWithin(root.treePane) && treeFolder.length > 0) dest = treeFolder
+                if (dest.length > 0) {
+                    viewer.copyMoveService.pasteTo(dest)
+                }
+            }
+        }
+    }
 
     visible: service ? service.active : false
     opacity: visible ? 1.0 : 0.0

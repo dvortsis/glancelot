@@ -9,6 +9,9 @@ import Glancelot
 Item {
     id: root
     property var host
+    // The panes the rename and new-folder commands read their targets from.
+    property var gridPane
+    property var treePane
     property var mutationService
 
     readonly property bool modal: renameDialog.visible || newFolderDialog.visible
@@ -25,6 +28,46 @@ Item {
     property var newFolderValidation: ({ valid: false, error: "" })
 
     signal flowClosed()
+
+    Connections {
+        target: viewer
+        function onViewCommand(id) {
+            if (id === "rename") {
+                let target = ""
+                const treeFolder = root.treePane.currentSelectedFolder()
+                if (root.host.focusWithin(root.treePane) && treeFolder.length > 0) {
+                    target = treeFolder
+                } else if (root.host.focusWithin(root.gridPane) || root.host.gridScope || (root.host.paneAvailable("grid") && fileGrid.count > 0)) {
+                    if (root.gridPane.selectedPath && root.gridPane.selectedPath.length > 0) {
+                        target = root.gridPane.selectedPath
+                    } else {
+                        const targets = root.gridPane.deletionTargets()
+                        if (targets.length > 0) target = targets[0]
+                        else if (root.host.workspace._previewShown && viewer.filePath.length > 0) target = viewer.filePath
+                    }
+                } else if (viewer.filePath.length > 0) {
+                    target = viewer.filePath
+                } else if (treeFolder.length > 0) {
+                    target = treeFolder
+                }
+                if (target.length > 0) {
+                    root.openRename(target)
+                }
+            }
+            else if (id === "new-folder") {
+                let folder = ""
+                const treeFolder = root.treePane.currentSelectedFolder()
+                if (root.host.focusWithin(root.treePane) && treeFolder.length > 0) {
+                    folder = treeFolder
+                } else {
+                    folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+                }
+                if (folder.length > 0) {
+                    root.openNewFolder(folder)
+                }
+            }
+        }
+    }
 
     function openRename(targetPath) {
         if (!targetPath || targetPath.length === 0) return
