@@ -18,7 +18,11 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).parent))
+import commit_lint  # noqa: E402
+
 QUEUE = "docs/WORK-QUEUE.yaml"
+LEGACY_TITLE_LAST_PR = 18
 STATES = {"ready", "implementing", "review", "integration", "done"}
 LEAD_ONLY = (".github/workflows/", "scripts/ci/", "scripts/lead-")
 SHIPPED_DOCS = {"README.md", "THIRD_PARTY_NOTICES.md"}  # Dockerfile and scripts/build.ps1 copy these
@@ -127,10 +131,11 @@ def size_errors(changed_lines, body, head_ref):
     return [f"{changed_lines} changed lines is over {SIZE_LIMIT}: split it, or add a 'Large PR: <reason>' line to the body"]
 
 
-def title_errors(title):
-    if re.match(r"^[A-Z][A-Z0-9-]*: \S", title or ""):
+def title_errors(title, number=None):
+    # PRs opened before the Conventional Commits rule keep their '<TASK-ID>: <title>' titles.
+    if number is not None and number <= LEGACY_TITLE_LAST_PR and re.match(r"^[A-Z][A-Z0-9-]*: \S", title or ""):
         return []
-    return [f"PR title {title!r} must be '<TASK-ID>: <title>'"]
+    return [f"PR title: {error}" for error in commit_lint.subject_errors(title)]
 
 
 def lead_only_errors(paths, head_ref, labels):
@@ -248,7 +253,8 @@ def main():
         if size > SIZE_NOTICE:
             print(f"::notice::{size} changed lines; aim for about {SIZE_NOTICE}")
         if event:
-            errors += title_errors(title)
+            errors += title_errors(title, event.get("number"))
+        errors += commit_lint.range_errors(f"{merge_base}..{head}")
         base_queue = show_queue(merge_base)
         if QUEUE in paths and base_queue and head_queue and not errors:
             errors += queue_scope_errors(base_queue, head_queue, head_ref)

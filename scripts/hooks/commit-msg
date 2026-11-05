@@ -1,0 +1,12 @@
+#!/bin/sh
+# Conventional Commits (docs/RELEASING.md). Enable once per clone: git config core.hooksPath scripts/hooks
+# The pull request's guard job checks the same rule, so this hook only catches a bad subject earlier.
+lint="$(git rev-parse --show-toplevel)/scripts/ci/commit_lint.py"
+[ -f "$lint" ] || exit 0  # a branch from before the rule
+for py in python3 python py; do
+    if "$py" -c "" >/dev/null 2>&1; then
+        exec "$py" "$lint" --file "$1"
+    fi
+done
+echo "commit-msg: no Python found, so the subject was not checked; guard checks it on the pull request" >&2
+exit 0

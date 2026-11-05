@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import commit_lint  # noqa: E402
 import pr_guard  # noqa: E402
 
 QUEUE = """schema: 1
@@ -155,13 +156,63 @@ class Size(unittest.TestCase):
 
 
 class Titles(unittest.TestCase):
-    def test_task_titles_pass(self):
-        for title in ("EN-07: per-component commands", "A1: incremental listing", "LEAD: integrate 7"):
-            self.assertEqual(pr_guard.title_errors(title), [], title)
+    def test_conventional_titles_pass(self):
+        for title in ("refactor(ui): per-component commands (EN-07)", "feat(grid): incremental listing (A1)",
+                      "docs(queue): PR 9 evidence"):
+            self.assertEqual(pr_guard.title_errors(title, 19), [], title)
+
+    def test_old_prs_keep_task_titles(self):
+        self.assertEqual(pr_guard.title_errors("EN-07: per-component commands", 18), [])
+        self.assertTrue(pr_guard.title_errors("EN-07: per-component commands", 19))
+        self.assertTrue(pr_guard.title_errors("EN-07: per-component commands", None))
 
     def test_other_titles_fail(self):
-        for title in ("fix stuff", "en-07: lower", "EN-07 missing colon", "", None):
-            self.assertTrue(pr_guard.title_errors(title), title)
+        for title in ("fix stuff", "en-07: lower", "EN-07 missing colon", "", None, "Feat: capital type"):
+            self.assertTrue(pr_guard.title_errors(title, 19), title)
+
+
+class Commits(unittest.TestCase):
+    def test_conventional_subjects_pass(self):
+        for message in ("feat(grid): show more rows", "fix: keep the selection", "perf(decode)!: drop the copy",
+                        "ci(guard): check commit subjects\n\nBody.\n\nTask: A1\nCo-Authored-By: x <x@y>",
+                        "refactor(ui): move handlers\n\nBREAKING CHANGE: none really"):
+            self.assertEqual(commit_lint.message_errors(message), [], message)
+
+    def test_other_subjects_fail(self):
+        for message in ("A1: show more", "LEAD: PR 9 evidence", "update stuff", "feature(grid): x",
+                        "fix(Grid): x", "fix(grid):x", "fix(grid): x.", "fix: " + "x" * 100,
+                        "fix(grid): x\nno blank line", "", "fixup! fix(grid): x"):
+            self.assertTrue(commit_lint.message_errors(message), message)
+
+    def test_merges_and_local_fixups(self):
+        self.assertEqual(commit_lint.message_errors("Merge pull request #9 from x/y"), [])
+        self.assertEqual(commit_lint.message_errors("fixup! fix(grid): x", local=True), [])
+        self.assertEqual(commit_lint.message_errors("# comment\n\nfix(grid): x\n# more", local=True), [])
+
+
+class CommitRange(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.directory.name)
+        for args in (("init", "-q"), ("config", "user.email", "test@example.invalid"), ("config", "user.name", "t")):
+            subprocess.run(["git", *args], check=True, capture_output=True)
+
+    def commit(self, subject, date):
+        env = {**os.environ, "GIT_COMMITTER_DATE": date, "GIT_AUTHOR_DATE": date}
+        subprocess.run(["git", "commit", "-q", "--allow-empty", "--no-verify", "-m", subject],
+                       check=True, capture_output=True, env=env)
+
+    def test_only_commits_after_the_cutoff_count(self):
+        self.commit("base", "2026-11-01T00:00:00Z")
+        self.commit("A1: before the rule", "2026-11-05T23:59:59Z")
+        self.commit("feat(grid): after the rule", "2026-11-06T00:00:01Z")
+        self.assertEqual(commit_lint.range_errors("HEAD~2..HEAD"), [])
+        self.commit("A1: after the rule", "2026-11-06T00:00:02Z")
+        errors = commit_lint.range_errors("HEAD~3..HEAD")
+        self.assertEqual(len(errors), 1)
+        self.assertIn("A1: after the rule", errors[0])
 
 
 class LeadOnly(unittest.TestCase):

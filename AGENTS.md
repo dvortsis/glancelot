@@ -62,7 +62,7 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 - No direct pushes to `main`, docs fixes included. Every change goes through a pull request.
 - One session per branch.
 - Do not rebase a shared branch or force-push it. Merge `main` in only when needed (a conflict, the lead asks, or review needs a fresher head), and never while your own CI is running.
-- Packet branches are `claude/<task>`, lead branches `lead/<name>`, and PR titles `<TASK-ID>: <title>` (lead bookkeeping uses `LEAD: <title>`).
+- Packet branches are `claude/<task>`, lead branches `lead/<name>`, and commit subjects and PR titles follow Conventional Commits, `type(scope): description` (docs/RELEASING.md). A packet PR's title ends with its task, as in `feat(grid): incremental folder listing (A1)`, and packet commits carry a `Task: <TASK-ID>` trailer. Lead bookkeeping uses `docs(queue): ...` or `docs(evidence): ...`. `guard` enforces the format for commits from November 6, 2026 and for titles from PR 19 on.
 - In a shallow clone, run `git fetch origin main` before pushing.
 
 **Merging**
@@ -101,7 +101,8 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 
 **Before pushing**
 
-- `python scripts/ci/pr_guard.py --base origin/main --head-ref <branch>` (needs PyYAML).
+- `python scripts/ci/pr_guard.py --base origin/main --head-ref <branch>` (needs PyYAML). It also checks commit subjects. The `commit-msg` hook checks them as you commit; it is on for the shared clone on this PC, and any other clone enables it with `git config core.hooksPath scripts/hooks`.
+- Versions and releases follow docs/RELEASING.md. The only version is `project(... VERSION)` in root `CMakeLists.txt`, and only the lead prepares a release, after the user approves it.
 - The `ctest` runs from the pre-handoff checklist.
 - `translations/glancelot_en_XA.ts` regenerated if UI strings changed.
 - No fixed sleeps in tests. Wait on a condition with a deadline of at least 10 s, such as `QTRY_VERIFY_WITH_TIMEOUT(condition, 10000)`. A fixed sleep is a blocking review finding, and `guard` fails added `QTest::qWait`, `sleep` calls and shorter explicit deadlines. It is best effort: plain `QTRY_*` (5 s default) and multi-line calls stay with the reviewer. Where the code really must let time pass (asserting that nothing fires, backoff in a fake, a hang loop in a child process), end the line with `// sleep-ok: <reason>`.
