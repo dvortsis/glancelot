@@ -1,0 +1,23 @@
+tree: 2f328dd STACK-CONFIRM-FIX: rate run also reports the teardown time at full size
+Linux 6.18.33.2-microsoft-standard-WSL2
+[3/3] Linking CXX executable stack_confirm_ui_tests
+segments before: 0
+Totals: 30 passed, 0 failed, 1 skipped, 0 blacklisted, 111845ms
+Totals: 83 passed, 0 failed, 0 skipped, 0 blacklisted, 77986ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 38893ms
+segments after targeted suites: 0
+
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() tearing down a full 256 MiB transfer took 146148 us
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() pass 9: 790 steps, 161475 ms, mapped 0, private 0 MiB, handles 0, undecoded 0, max GUI gap 423 ms
+QINFO  : StackConfirmUiTests::slideshowPatternRateRun() RESULT pace 80: 790 steps in 161476 ms, undecoded 0, max GUI gap 423 ms, mapped at the end 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 180713ms
+segments after the rate run: 0
+
+--- fail-before: closingTheViewerMidTransferLeavesNoMemoryBehind with the exit wait removed
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[3/3] Linking CXX executable stack_confirm_ui_tests
+PASS   : StackConfirmUiTests::initTestCase()
+PASS   : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind()
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4233ms
+segments at the end: 0

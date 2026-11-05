@@ -1,0 +1,16 @@
+exit code: 2
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+PASS   : StackConfirmUiTests::initTestCase()
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+FAIL!  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace) Compared lists have different sizes.
+   Actual   (shown) size: 3
+   Expected (QStringList({"a-1.png", "a-2.png", "c-1.png", "c-2.png"})) size: 4
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(494) : failure location
+FAIL!  : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace) Compared lists have different sizes.
+   Actual   (shown) size: 3
+   Expected (QStringList({"a-1.png", "a-2.png", "c-1.png", "c-2.png"})) size: 4
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\stack_confirm_ui_tests.cpp(494) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 76025ms
+********* Finished testing of StackConfirmUiTests *********

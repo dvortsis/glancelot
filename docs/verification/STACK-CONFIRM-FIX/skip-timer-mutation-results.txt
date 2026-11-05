@@ -1,0 +1,6 @@
+Mutation: skip-timer start removed from slideshowObserve:
+PASS   : StackConfirmUiTests::initTestCase()
+FAIL!  : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace() QTestLib: This test case check ("(h.viewer.currentIndex()) == (3)") failed because the requested timeout (4000 ms) was too short, 5100 ms would have been sufficient this time.
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-fix\tests\stack_confirm_ui_tests.cpp(121) : failure location
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 14126ms
