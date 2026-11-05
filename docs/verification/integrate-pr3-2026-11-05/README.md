@@ -17,7 +17,7 @@ Written for: the lead and later reviewers. Records the gate that let STACK-CONFI
 - `docker history` shows the Qt layer alone at 1.46 GB, so 548 MB cannot have been an uncompressed total.
 - Docker now runs the containerd image store (`driver-type io.containerd.snapshotter.v1`), and `docker image ls` lists disk usage and content size separately.
 
-The gate removed its image afterwards, so the content size was not read. Compare `docker image ls` at the next gate.
+The gate removed its image afterwards, so the content size was not read. Settled at the next gate: `docs/verification/integrate-pr9-2026-11-05/README.md`.
 
 ## Files
 
