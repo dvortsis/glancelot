@@ -144,3 +144,5 @@ New tests (`tests/stack_confirm_ui_tests.cpp`): `destroyingASegmentWaitsForTheLo
 Fail-before (same binary, `ui/Main.qml` from `b7ca003`; `fail-before-results-r3.txt`): `slideshowWaitsForASlowFolderStep` fails at both paces (`the slideshow ended at a-2.png (navigating 1)`), `tabStripWheelRespectsTheMargin` fails (`contentX 226 -> 210`), the 540 px case fails (`active tab 2: the active tab is out of view`). The reaper tests have no pre-fix counterpart; `destroyingASegmentWaitsForTheLockOfADeadWorker` shows the replaced call hangs.
 
 Stress: `slideshowKeepsGoingAcrossAFolderBoundary` 200 runs (4 parallel x 50): see `stress-r3.txt`.
+
+Round 3 results: stress 200/200 runs clean (`stress-r3.txt`); full suite on the round 3 code commit: `100% tests passed out of 52`, Total Test time 1146.87 sec (`full-suite-build-log-r3.txt`), including stack_confirm_ui with the new cases.
