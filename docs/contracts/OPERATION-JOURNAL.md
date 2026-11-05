@@ -49,7 +49,7 @@ The header is frozen as committed: the `k*` bounds, `Kind`, `requiresJournal`, `
 
 1. Plan (existing snapshot step, ASSET-GROUP expansion), then `begin(header)`.
 2. For each batch of up to `kMaxIntentBatch` (64) items: `recordIntents`, then mutate exactly those items, then `recordOutcomes`. The batch size is fixed; a storage-aware size would need measurements and the lead.
-3. Copies and sidecar or transform writes go to `partialPath`, the existing COPY-SAFETY-01 temporary `.~gl<8 hex>.tmp` beside the target (`copy_safety::temporaryPathFor`). A verified copy is then renamed or replaced into place. B2 moves non-Overwrite copies onto this path too, replacing the direct write at `copy_move_service.cpp:928` and the `QFile::remove(destPath)` at `:1014`. **A partial is the only thing reconcile may delete, and only after the operation's lock is free.**
+3. Copies and sidecar or transform writes go to `partialPath`, the existing COPY-SAFETY-01 temporary `.~gl<8 hex>.tmp` beside the target (`copy_safety::temporaryPathFor`). A verified copy is then renamed or replaced into place. B2 moves non-Overwrite copies onto this path too, replacing the direct write at `copy_move_service.cpp:928` and the `QFile::remove(destPath)` at `:1014`. **A partial is the only file reconcile may delete, and only after the operation's lock is free.** The one other removal is an extra hard link to a file that stays in place, in the table below.
 4. An item that holds an original under another name records that name in `backupPath` **before the step starts**: the Overwrite backup, and the `.tmp_rename_<id>` intermediate of a case-only rename (`mutation_service.cpp:182`). An item with a `backupPath` must not put an original in `partialPath`.
 5. `setState(Completed | Cancelled | Failed)`.
 
@@ -102,7 +102,8 @@ For each item with a `backupPath` that still exists, with the recorded original 
 | Empty | Identity and size match the recorded original (size and modified when the volume reports no identity) | Moved back with `MoveFileExW` and no replace flag, or `link` then `unlink` on POSIX, so it can never overwrite | `Restored`, once: "<name> was put back after an interrupted replace." The item is then not started, or `OriginalDisplaced` resolved |
 | Empty | Does not match | Nothing moves | `IdentityMismatch` |
 | Empty | Matches, but the move fails | Nothing else changes | `RestoreFailed`, with the reason and the full backup path |
-| Occupied | Any | The target is never touched | `TargetOccupied`: "An older copy of <name> is still in this folder as <backup>." |
+| Occupied | The same file as the target, by identity (POSIX: a crash after the hard link and before the rename) | The extra name is unlinked; no data moves, and the target still holds the file. The item is not started | Nothing to report |
+| Occupied | A different file | The target is never touched | `TargetOccupied`: "An older copy of <name> is still in this folder as <backup>." |
 
 The operation center lists each non-restored finding with **Show in folder**, **Put back** (`restoreBackup`, only when the target name is free; otherwise `Code::Conflict`) and **Move to Trash** (`trashBackup`). Neither can delete permanently. `dismiss` returns `Code::Conflict` while a finding's backup still exists, and pruning never drops such an operation, because its record is the only pointer to the original.
 
@@ -141,6 +142,7 @@ The operation center lists each non-restored finding with **Show in folder**, **
   - `ReplacePartial` plus a failing `RestoreBackup` (a real `OriginalDisplaced`, no crash): the outcome is recorded, and the next start restores it;
   - a kill after the replacement took the target name: the target is untouched and `TargetOccupied` is reported; **Move to Trash** reaches the fake backend, and `restoreBackup` returns `Conflict`;
   - a file at the backup path with another identity: `IdentityMismatch`, nothing moves;
+  - POSIX, a kill after the hard link and before the rename: the extra name is removed, the target's bytes and identity are unchanged and nothing is reported;
   - the backup vanished before start: no finding and no error;
   - the move back denied: `RestoreFailed` with the path, and the original still at the backup path;
   - `dismiss` is refused and pruning skips the operation while the backup exists, and both proceed once it is resolved;

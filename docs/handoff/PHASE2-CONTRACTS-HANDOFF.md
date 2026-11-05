@@ -1,8 +1,8 @@
 # PHASE2-CONTRACTS handoff
 
 - Branch: `claude/phase2-contracts`
-- Tip: the commit that adds this handoff and the evidence, on top of `ff5ff5c`. The commit can't name itself, so the PR states its SHA. Everything else is at `ff5ff5c`.
-- Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `f24f2e7`, which adds only merge-protection tooling and docs, with no change under `include/`, `src/`, `cmake/` or `CMakeLists.txt`. Not merged in, because nothing conflicts. Not stacked on anything.
+- Tip: the last commit on the branch. A commit can't name itself, so the PR states its SHA. Code and headers are at `ff5ff5c`; every later commit changes only `docs/`.
+- Base: `b1d57cd` (`origin/main` when the branch was cut). `origin/main` has since moved to `f24f2e7`, which adds only merge-protection tooling and docs: outside `docs/`, `git diff --name-only b1d57cd f24f2e7` lists only `.gitattributes`, `AGENTS.md`, `.github/*` and `scripts/*`. No source, header or CMake file changed, so nothing here needed it Not merged in, because nothing conflicts. Not stacked on anything.
 - Worktree and build: `.claude/worktrees/recursing-bassi-58ba22`, `build-claude-phase2-contracts`.
 - ui-design-skills: not read, because this packet changes no QML. Consumers' UI work (C3, D2, B1, B2) must read them; COMPARE-PANES says so for C3, and AGENTS.md covers the rest.
 
@@ -57,6 +57,8 @@ At `b1d57cd` the test cannot compile: `SortKey::Captured`, `DecodeTier` and the 
 | `Q_PROPERTY` READ names a missing function | `moc_capability_model.cpp(184)`: `error C2039: 'referenceWindowMissing'`, proving `contract_headers_moc` compiles moc output |
 
 ### 2. Grant check
+
+`git diff --name-only b1d57cd..ff5ff5c`. Commits after `ff5ff5c` touch only `docs/contracts/OPERATION-JOURNAL.md`, `docs/handoff/` and `docs/verification/`.
 
 ```text
 CMakeLists.txt
