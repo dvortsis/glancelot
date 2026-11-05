@@ -434,7 +434,7 @@ ApplicationWindow {
     function paneState(id) { return workspace._state[id] }
 
     readonly property bool editingText: inputFocusItem !== null && typeof inputFocusItem.selectAll === "function" && typeof inputFocusItem.text === "string"
-    property bool modalOpen: monitorSettings.opened || monitorSettings.visible || settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible || (renameFlow && renameFlow.modal)
+    property bool modalOpen: monitorSettings.opened || monitorSettings.visible || settingsDialog.opened || settingsDialog.visible || openDialog.visible || deleteFlow.modal || shortcutsCheatSheet.opened || shortcutsCheatSheet.visible || (renameFlow && renameFlow.modal) || transferFlow.modal
     property real pointerX: width / 2
     property real pointerY: height / 2
     property real wheelRemainder: 0
@@ -833,17 +833,17 @@ ApplicationWindow {
         else if (id === "cut-selection") {
             const targets = photoGrid.deletionTargets()
             if (targets.length > 0) {
-                viewer.copyMoveService.markCut(targets)
+                transferFlow.markCut(targets)
             } else if (viewer.filePath.length > 0) {
-                viewer.copyMoveService.markCut([viewer.filePath])
+                transferFlow.markCut([viewer.filePath])
             }
         }
         else if (id === "copy-selection") {
             const targets = photoGrid.deletionTargets()
             if (targets.length > 0) {
-                viewer.copyMoveService.markCopy(targets)
+                transferFlow.markCopy(targets)
             } else if (viewer.filePath.length > 0) {
-                viewer.copyMoveService.markCopy([viewer.filePath])
+                transferFlow.markCopy([viewer.filePath])
             }
         }
         else if (id === "paste") {
@@ -851,7 +851,7 @@ ApplicationWindow {
             const treeFolder = treePanel.currentSelectedFolder()
             if (focusWithin(treePanel) && treeFolder.length > 0) dest = treeFolder
             if (dest.length > 0) {
-                viewer.copyMoveService.pasteTo(dest)
+                transferFlow.paste(dest)
             }
         }
         else if (id === "reveal-in-file-manager") {
@@ -1977,6 +1977,16 @@ ApplicationWindow {
         anchors.fill: parent
         z: 26
         onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
+    }
+    TransferFlow { // ASSET-GROUP (F022) the copy and move confirmation behind Paste
+        id: transferFlow
+        objectName: "transferFlow"
+        host: app
+        service: viewer.copyMoveService
+        anchors.fill: parent
+        z: 26
+        onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
+        onNoticeRequested: text => deleteFlow.showNotice(text)
     }
     TransferHud { // COPY-MOVE-01 (F020) async file copy and move progress HUD
         id: transferHud
