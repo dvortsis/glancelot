@@ -1195,8 +1195,9 @@ tasks:
   - id: EN-07
     title: Per-component command handling
     owner: lead
-    state: implementing
+    state: review
     branch: claude/en-07
+    evidence: docs/handoff/EN-07-HANDOFF.md
     depends: [EN-06, STACK-F054-COVERAGE]
     outcome: Feature components handle their own viewCommand ids; Main.qml keeps invoke, scope routing and canvas/window ids
     acceptance: Every UI suite passes unchanged; AGENTS.md rule that new commands are handled in the owning component
