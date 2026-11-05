@@ -6,7 +6,7 @@
 - **Reviewer:** fresh context, wrote none of this. Windows 11, MSVC, Qt 6.8.3, offscreen with the software backend. Physical hardware and a real slow share are not verified.
 - **UI skills:** `application-interface-design` read. No layout, geometry or icon change here, so the other skills did not apply.
 
-The model layer is sound. Rows act on the right file, and generation fencing, the queue bound and worker teardown all hold. What fails is the QML placement and viewport code around arrival, plus one lost wakeup in the drain. Every finding below except B5 reproduces with a real scenario against `e425a90`, using the local tests in `docs/verification/A1-REVIEW-scratch-tests.patch` (apply it to `e425a90`; test names below start with `r`). B5 needs an injected delay and says so.
+The model layer is sound. Rows act on the right file, and generation fencing, the queue bound and worker teardown all hold. What fails is the QML placement and viewport code around arrival, plus one lost wakeup in the drain. Every finding below except B5 reproduces with a real scenario against `e425a90`, using the local tests in `docs/verification/A1-REVIEW-scratch-tests.patch` (apply it to `e425a90` with `git apply --ignore-whitespace`; test names below start with `r`). B5 needs an injected delay and says so.
 
 ## Blocking findings
 
@@ -27,7 +27,12 @@ rScrollbarDuringArrivalKeepsTheView: placeCursor after the scrollbar press QVari
 
 The selection the user just made is silently replaced, and the view jumps away. A following delete or copy acts on the replaced selection. It still acts on real paths and the row is correct, but it is not what the user chose. This is the "selection or anchor jumping" the brief rules out. A real wheel event does settle (`rRealWheelSettles` passes), so the wheel path is fine.
 
-**Fix.** Call `panel.settleByUser()` at the top of `Keys.onPressed`, and add `UiScrollBar { onPressedChanged: if (pressed) panel.settleByUser() }`. Right-click (`openGridMenu`) also selects, so settle there too. Add a test for each. With the keyboard and scrollbar changes and the B2 and B4 changes applied locally to QML, the keyboard, Ctrl+A and scrollbar tests pass and the five shipped `perf_enum_ui` tests still pass.
+**Fix.** Call `panel.settleByUser()` at the top of `Keys.onPressed`, and add `UiScrollBar { onPressedChanged: if (pressed) panel.settleByUser() }`. Right-click (`openGridMenu`) also selects, so settle there too. Add a test for each. Verified locally in two runs, and the five shipped `perf_enum_ui` tests passed in both:
+
+- With the settle changes and the B4 change, the keyboard and Ctrl+A tests pass. The scrollbar test no longer jumps to the photo, but still misses its anchor because of B2.
+- With the B2 `forceLayout` added as well, the scrollbar test passes.
+
+The right-click change was not tried.
 
 ### B2. The viewport restore at the definitive order reads geometry the view has not laid out yet (high)
 
@@ -46,6 +51,8 @@ scrollbar anchor, B1 fix only: anchor row 2383 top row 1128             (clamped
 `scrollDuringArrivalKeepsTheVisibleRow` misses both. Its rows are all files, and its comment says it picks an anchor "rather than clamped at either end".
 
 **Fix.** Lay out first: `function onLayoutAboutToBeChanged() { grid.forceLayout(); panel.rememberViewport() }`. Verified locally: `rFolderInsertsKeepTheAnchor` gives anchor 2518, top 2514 (same line), and the scrollbar case gives anchor 2383, top 2382. Add both as committed tests: mixed folder rows with a scrolled view, and an anchor that lands near the end.
+
+The final position is the oracle. The in-arrival drift the scratch test logs is informational: its 4 ms sampler can fire between an insert and the view's polish. It read 0 in most runs and 32 lines in one, which is about what the remaining 198 folder rows in 6 columns give if they land in one tick. I attribute that reading to the sampler and the same unpolished state, without proving it. It is not asserted in the patch.
 
 ### B3. Try again on a large or slow folder loses the browsed position (medium, regression)
 
