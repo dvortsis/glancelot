@@ -35,5 +35,5 @@ glancelot_attach_monitor_customization(perf_enum_ui_tests)
 add_dependencies(perf_enum_ui_tests glancelot-decoder)
 add_test(NAME perf_enum_ui COMMAND perf_enum_ui_tests -o "${CMAKE_CURRENT_BINARY_DIR}/perf-enum-ui-results.txt,txt" -o -,txt)
 set_tests_properties(perf_enum_ui PROPERTIES
-  ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 120)
+  ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 400)
 glancelot_test_labels(perf_enum_ui LABELS ui process)

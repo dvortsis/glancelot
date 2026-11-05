@@ -1441,6 +1441,14 @@
         <translation>[%1 îtéms]</translation>
     </message>
     <message>
+        <source>1 item so far</source>
+        <translation>[1 îtém sô fàr]</translation>
+    </message>
+    <message>
+        <source>1 match so far</source>
+        <translation>[1 màtçh sô fàr]</translation>
+    </message>
+    <message>
         <source>%1 items so far</source>
         <translation>[%1 îtéms sô fàr]</translation>
     </message>

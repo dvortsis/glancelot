@@ -76,6 +76,9 @@ struct DirectoryEntryModel::Private {
     directory_scan::Tuning tuning;
     directory_scan::Enumerator enumerator;
     std::function<void(std::stop_token)> beforeProbes;
+#ifdef GLANCELOT_PERF_ENUM_TESTING
+    std::function<void()> beforeDryCheck;
+#endif
     // Heap-allocated so a listing wedged in the OS (dead network share) can be abandoned at teardown.
     QThreadPool* pool = new QThreadPool;
 
@@ -83,6 +86,7 @@ struct DirectoryEntryModel::Private {
         pool->setMaxThreadCount(kMaxConcurrentListings);
 #ifdef GLANCELOT_PERF_ENUM_TESTING
         tuning = directory_scan::testSeam.tuning; enumerator = directory_scan::testSeam.enumerator; beforeProbes = directory_scan::testSeam.beforeProbes;
+        beforeDryCheck = directory_scan::testSeam.beforeDryCheck;
 #endif
         entryLimit = tuning.entryStep;
         drainTimer.setInterval(kDrainIntervalMs);
@@ -215,13 +219,19 @@ struct DirectoryEntryModel::Private {
             admit(batch->files, files, false);
             batch.reset();
         } while (budget.elapsed() < kDrainBudgetMs && (batch = arrivals->take()));
-        dry = !batch && budget.elapsed() < kDrainBudgetMs;
+#ifdef GLANCELOT_PERF_ENUM_TESTING
+        if (definitive && beforeDryCheck) beforeDryCheck();
+#endif
+        // The definitive batch is the end of the queue, and it stops the timer: whatever the clock says now, nothing
+        // would call again for a finished scan.
+        dry = definitive.has_value() || (!batch && budget.elapsed() < kDrainBudgetMs);
         publication.setBytes(folders.size() + files.size());
         if (!folders.empty()) {
             q->beginInsertRows({}, provisionalFolders, provisionalFolders + int(folders.size()) - 1);
             rows.insert(rows.begin() + provisionalFolders, std::make_move_iterator(folders.begin()), std::make_move_iterator(folders.end()));
             provisionalFolders += int(folders.size());
             q->endInsertRows();
+            if (!cursorKey.isEmpty()) emit q->selectionChanged(); // the rows below moved, the cursor's among them
         }
         if (!files.empty()) {
             q->beginInsertRows({}, int(rows.size()), int(rows.size() + files.size()) - 1);
@@ -245,6 +255,7 @@ struct DirectoryEntryModel::Private {
         const bool wasAccessible = accessible, wasTruncated = truncated;
         accessible = true; truncated = listing.truncated;
         publishRows(std::move(listing));
+        if (!cursorKey.isEmpty()) emit q->selectionChanged(); // the cursor's row moved with the order
         setArriving(false);
         if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
 #ifdef GLANCELOT_FS_WATCH_TESTING
