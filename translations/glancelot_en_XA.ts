@@ -392,10 +392,6 @@
         <translation>[“%1” àlréàdý éxîsts. Réplàçé ît wîth thîs éxpõrt?]</translation>
     </message>
     <message>
-        <source>“%1” was saved, but it lists no items, because none of them could be included.</source>
-        <translation>[“%1” wàs sàvéd, bût ît lîsts ñõ îtéms, béçàûsé ñõñé õf thém çõûld bé îñçlûdéd.]</translation>
-    </message>
-    <message>
         <source>Exported %1 to “%2”.</source>
         <translation>[Éxpõrtéd %1 tõ “%2”.]</translation>
     </message>
@@ -450,6 +446,18 @@
     <message>
         <source>Text files (%1)</source>
         <translation>[Téxt fîlés (%1)]</translation>
+    </message>
+    <message>
+        <source>“%1” couldn&apos;t be replaced. It may be open in another app, so close it and try again. The existing file hasn&apos;t changed.</source>
+        <translation>[“%1” çõûldñ&apos;t bé réplàçéd. Ît màý bé õpéñ îñ àñõthér àpp, sõ çlõsé ît àñd trý àgàîñ. Thé éxîstîñg fîlé hàsñ&apos;t çhàñgéd.]</translation>
+    </message>
+    <message>
+        <source>Nothing could be exported, so “%1” was not changed.</source>
+        <translation>[Ñõthîñg çõûld bé éxpõrtéd, sõ “%1” wàs ñõt çhàñgéd.]</translation>
+    </message>
+    <message>
+        <source>Nothing could be exported, so “%1” was not created.</source>
+        <translation>[Ñõthîñg çõûld bé éxpõrtéd, sõ “%1” wàs ñõt çréàtéd.]</translation>
     </message>
 </context>
 <context>

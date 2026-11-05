@@ -209,7 +209,7 @@ private slots:
         QCOMPARE(first["reason"].toString(), QString("missing"));
         QCOMPARE(first["name"].toString(), QString("gone.png"));
     }
-    void itemChangedAfterSnapshotIsSkipped() {
+    void itemDeletedAfterSnapshotIsReportedMissing() {
         Originals media;
         QTemporaryDir out;
         SelectionExportService service;
@@ -219,6 +219,114 @@ private slots:
         QCOMPARE(result["status"].toString(), QString("written"));
         QCOMPARE(result["written"].toInt(), 2);
         QCOMPARE(result["skippedCount"].toInt(), 1);
+        QCOMPARE(result["skipped"].toList().first().toMap()["reason"].toString(), QString("missing"));
+    }
+    void itemChangedAfterSnapshotIsSkipped() {
+        Originals media;
+        QTemporaryDir out;
+        SelectionExportService service;
+        QVERIFY(prepareOn(service, media.paths));
+        writeText(media.paths[1], "different content"); // still there, under the same name
+        const QString destination = out.filePath("list.csv");
+        const auto result = runOn(service, csvOptions(destination));
+        QCOMPARE(result["status"].toString(), QString("written"));
+        QCOMPARE(result["written"].toInt(), 2);
+        QCOMPARE(result["skippedCount"].toInt(), 1);
+        const auto first = result["skipped"].toList().first().toMap();
+        QCOMPARE(first["reason"].toString(), QString("changed"));
+        QCOMPARE(first["name"].toString(), QString("img2.png"));
+        QVERIFY(!readAll(destination).contains("img2.png"));
+    }
+    // A confirmed Replace never swaps an earlier export for an empty file, however the items were lost.
+    void nothingToExportLeavesTheTargetAlone_data() {
+        QTest::addColumn<QString>("format");
+        QTest::addColumn<QString>("lost");
+        QTest::addColumn<QString>("reason");
+        QTest::newRow("all vanished") << "csv" << "vanished" << "missing";
+        QTest::newRow("all changed") << "csv" << "changed" << "changed";
+        QTest::newRow("all outside the root") << "csv" << "outside" << "outsideRoot";
+        QTest::newRow("all vanished, path list") << "paths" << "vanished" << "missing";
+        QTest::newRow("all outside the root, path list") << "paths" << "outside" << "outsideRoot";
+    }
+    void nothingToExportLeavesTheTargetAlone() {
+        QFETCH(QString, format);
+        QFETCH(QString, lost);
+        QFETCH(QString, reason);
+        Originals media;
+        QTemporaryDir out, elsewhere;
+        const QString destination = out.filePath("list.csv");
+        writeText(destination, "earlier export");
+        const QDateTime before = QFileInfo(destination).lastModified();
+        SelectionExportService service;
+        QVERIFY(prepareOn(service, media.paths));
+        auto options = csvOptions(destination, true);
+        options["format"] = format;
+        if (lost == "vanished") for (const auto& path : media.paths) QVERIFY(QFile::remove(path));
+        if (lost == "changed") for (const auto& path : media.paths) writeText(path, "different content");
+        if (lost == "outside") { options["relative"] = true; options["root"] = elsewhere.path(); }
+        const auto result = runOn(service, options);
+        QCOMPARE(result["status"].toString(), QString("nothingToExport"));
+        QCOMPARE(result["replacing"].toBool(), true);
+        QCOMPARE(result["written"].toInt(), 0);
+        QCOMPARE(result["skippedCount"].toInt(), 3);
+        QCOMPARE(result["skipped"].toList().first().toMap()["reason"].toString(), reason);
+        QCOMPARE(readAll(destination), QByteArray("earlier export"));
+        QCOMPARE(QFileInfo(destination).lastModified(), before);
+        QVERIFY(leftovers(out.path()).isEmpty());
+    }
+    void nothingToExportCreatesNoNewFile() {
+        Originals media;
+        QTemporaryDir out;
+        const QString destination = out.filePath("list.csv");
+        SelectionExportService service;
+        QVERIFY(prepareOn(service, media.paths));
+        for (const auto& path : media.paths) QVERIFY(QFile::remove(path));
+        const auto result = runOn(service, csvOptions(destination));
+        QCOMPARE(result["status"].toString(), QString("nothingToExport"));
+        QCOMPARE(result["replacing"].toBool(), false);
+        QVERIFY(!QFile::exists(destination));
+        QVERIFY(leftovers(out.path()).isEmpty());
+    }
+    // The guard is for zero items only: one surviving item is still a real export, and it replaces the file.
+    void oneSurvivingItemStillReplaces() {
+        Originals media;
+        QTemporaryDir out;
+        const QString destination = out.filePath("list.csv");
+        writeText(destination, "earlier export");
+        SelectionExportService service;
+        QVERIFY(prepareOn(service, media.paths));
+        QVERIFY(QFile::remove(media.paths[0]));
+        QVERIFY(QFile::remove(media.paths[1]));
+        const auto result = runOn(service, csvOptions(destination, true));
+        QCOMPARE(result["status"].toString(), QString("written"));
+        QCOMPARE(result["written"].toInt(), 1);
+        QVERIFY(readAll(destination).contains("img3.png"));
+    }
+    void aBlockedReplaceIsToldApartFromOtherFailures_data() {
+        QTest::addColumn<QString>("message");
+        QTest::addColumn<bool>("overwrite");
+        QTest::addColumn<QString>("status");
+        QTest::newRow("error 5") << "Atomic replacement failed with Windows error 5" << true << "destinationLocked";
+        QTest::newRow("error 32") << "Atomic replacement failed with Windows error 32" << true << "destinationLocked";
+        QTest::newRow("another error") << "Atomic replacement failed with Windows error 87" << true << "failed";
+        QTest::newRow("not a replace") << "Rename failed with Windows error 5" << false << "failed";
+    }
+    void aBlockedReplaceIsToldApartFromOtherFailures() {
+        QFETCH(QString, message);
+        QFETCH(bool, overwrite);
+        QFETCH(QString, status);
+        Originals media;
+        QTemporaryDir out;
+        SelectionExportService service;
+        QVERIFY(prepareOn(service, media.paths));
+        service.setEngine([message](const ExportRequest& request, std::stop_token, const SelectionExportService::Progress&) {
+            ExportResult result;
+            result.generation = request.generation;
+            result.status = ExportStatus::Failed;
+            result.message = message.toStdString();
+            return result;
+        });
+        QCOMPARE(runOn(service, csvOptions(out.filePath("list.csv"), overwrite))["status"].toString(), status);
     }
     // Review O1: a thrown engine failure must stay on the worker and become a result.
     void engineExceptionsBecomeResults() {
@@ -638,6 +746,81 @@ private slots:
         QCOMPARE(textOf(d.h, "exportResultText"), QString("Exported 2 items to “list.csv”."));
         QCOMPARE(textOf(d.h, "exportSkippedTitle"), QString("Left out (1):"));
         QVERIFY(visibleItem(d.h, "exportSkipped"));
+    }
+    void changedItemIsNamedWithItsReason() {
+        OpenedDialog d;
+        QVERIFY(d.open({d.media.paths[1], d.media.paths[2]}));
+        QTemporaryDir out;
+        writeText(d.media.paths[2], "different content");
+        QVERIFY(setDestination(d.h, out.filePath("list.csv")));
+        click(d.h, "exportStart");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("done"), 10000);
+        QCOMPARE(textOf(d.h, "exportResultText"), QString("Exported 1 item to “list.csv”."));
+        QCOMPARE(textOf(d.h, "exportSkipReason"), QString("It changed after the dialog opened."));
+    }
+    void confirmedReplaceWithNothingToExportKeepsTheEarlierFile() {
+        OpenedDialog d;
+        QVERIFY(d.open({d.media.paths[1], d.media.paths[2]}));
+        QTemporaryDir out;
+        const QString destination = out.filePath("list.csv");
+        writeText(destination, "earlier export");
+        QVERIFY(setDestination(d.h, destination));
+        click(d.h, "exportStart");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("replace"), 10000);
+        QVERIFY(QFile::remove(d.media.paths[1])); // lost after the question and before the answer
+        QVERIFY(QFile::remove(d.media.paths[2]));
+        click(d.h, "exportReplace");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("done"), 10000);
+        QCOMPARE(textOf(d.h, "exportResultText"), QString("Nothing could be exported, so “list.csv” was not changed."));
+        QCOMPARE(textOf(d.h, "exportSkippedTitle"), QString("Left out (2):"));
+        QVERIFY(visibleItem(d.h, "exportSkipped"));
+        QVERIFY(!visibleItem(d.h, "exportReveal"));
+        QVERIFY(!visibleItem(d.h, "exportResultPath"));
+        QCOMPARE(readAll(destination), QByteArray("earlier export"));
+        QVERIFY(leftovers(out.path()).isEmpty());
+    }
+    void nothingToExportSaysNoFileWasCreated() {
+        OpenedDialog d;
+        QVERIFY(d.open({d.media.paths[1], d.media.paths[2]}));
+        QTemporaryDir out;
+        const QString destination = out.filePath("list.csv");
+        QVERIFY(QFile::remove(d.media.paths[1]));
+        QVERIFY(QFile::remove(d.media.paths[2]));
+        QVERIFY(setDestination(d.h, destination));
+        click(d.h, "exportStart");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("done"), 10000);
+        QCOMPARE(textOf(d.h, "exportResultText"), QString("Nothing could be exported, so “list.csv” was not created."));
+        QVERIFY(!QFile::exists(destination));
+    }
+    // A real lock, as a spreadsheet holds a CSV: the engine's own error reaches the message, and retrying after closing works.
+    void lockedDestinationSaysToCloseItAndKeepsTheFile() {
+#ifndef Q_OS_WIN
+        QSKIP("Only Windows refuses to replace a file another handle holds open.");
+#else
+        OpenedDialog d;
+        QVERIFY(d.open());
+        QTemporaryDir out;
+        const QString destination = out.filePath("list.csv");
+        writeText(destination, "earlier export");
+        QFile lock(destination);
+        QVERIFY(lock.open(QIODevice::ReadOnly));
+        QVERIFY(setDestination(d.h, destination));
+        click(d.h, "exportStart");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("replace"), 10000);
+        click(d.h, "exportReplace");
+        QTRY_VERIFY_WITH_TIMEOUT(visibleItem(d.h, "exportError"), 10000);
+        QCOMPARE(phaseOf(d.h), QString("ready"));
+        QCOMPARE(textOf(d.h, "exportErrorText"), QString("“list.csv” couldn't be replaced. It may be open in another app, so close it and try again. The existing file hasn't changed."));
+        QVERIFY(!visibleItem(d.h, "exportErrorDetail"));
+        lock.close();
+        QCOMPARE(readAll(destination), QByteArray("earlier export"));
+        QVERIFY(leftovers(out.path()).isEmpty());
+        click(d.h, "exportStart");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("replace"), 10000);
+        click(d.h, "exportReplace");
+        QTRY_COMPARE_WITH_TIMEOUT(phaseOf(d.h), QString("done"), 10000);
+        QVERIFY(readAll(destination).contains("img1.png"));
+#endif
     }
     void changingTheFileTypeFollowsThroughToThePathAndOptions() {
         OpenedDialog d;

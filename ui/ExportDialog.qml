@@ -28,6 +28,7 @@ Item {
     property var result: null
     property string errorText: ""
     property string errorDetail: ""
+    readonly property bool nothingExported: result !== null && result.status === "nothingToExport"
     property string statusText: ""
     property var currentPaths: []
     property bool selectionMoved: false
@@ -122,6 +123,7 @@ Item {
         phase = "ready"
         switch (outcome.status) {
         case "written":
+        case "nothingToExport":
             result = outcome
             phase = "done"
             doneButton.forceActiveFocus(Qt.TabFocusReason)
@@ -141,6 +143,7 @@ Item {
         case "folderMissing": showError(qsTr("That folder doesn't exist. Choose another location.")); break
         case "destinationProtected": showError(qsTr("“%1” already exists and isn't a .csv or .txt file, so it can't be replaced. Choose another name.").arg(name)); break
         case "destinationIsItem": showError(qsTr("“%1” is one of the items being exported, so it can't be replaced. Choose another name.").arg(name)); break
+        case "destinationLocked": showError(qsTr("“%1” couldn't be replaced. It may be open in another app, so close it and try again. The existing file hasn't changed.").arg(name)); break
         case "tooMany": showError(qsTr("That's too many items to export at once.")); break
         case "failed": showError(qsTr("That location can't be written to, so nothing was saved. Check that you have permission and enough space, or choose another location."), outcome.detail); break
         default: showError(qsTr("The export stopped because of an unexpected problem. Nothing was written."), outcome.detail); break
@@ -408,7 +411,9 @@ Item {
                             text: {
                                 if (!flow.result) return ""
                                 const name = flow.leaf(flow.result.destination)
-                                if (flow.result.written === 0) return qsTr("“%1” was saved, but it lists no items, because none of them could be included.").arg(name)
+                                if (flow.result.status === "nothingToExport")
+                                    return flow.result.replacing ? qsTr("Nothing could be exported, so “%1” was not changed.").arg(name)
+                                                                 : qsTr("Nothing could be exported, so “%1” was not created.").arg(name)
                                 return flow.fill(qsTr("Exported %1 to “%2”."), [flow.itemsText(flow.result.written), name])
                             }
                             color: Theme.text
@@ -421,6 +426,7 @@ Item {
                         }
                         Caption {
                             objectName: "exportResultPath"
+                            visible: !flow.nothingExported
                             text: flow.result ? flow.result.destination : ""
                             wrapMode: Text.WrapAnywhere
                         }
@@ -444,7 +450,7 @@ Item {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Label { text: modelData.name; elide: Text.ElideMiddle; color: Theme.text; font.pixelSize: Theme.textBody; Layout.fillWidth: true }
-                                    Caption { text: flow.reasonText(modelData.reason) }
+                                    Caption { objectName: "exportSkipReason"; text: flow.reasonText(modelData.reason) }
                                 }
                             }
                             Caption {
@@ -514,7 +520,7 @@ Item {
                 Item { Layout.fillWidth: true }
                 UiButton {
                     objectName: "exportReveal"
-                    visible: flow.phase === "done"
+                    visible: flow.phase === "done" && !flow.nothingExported
                     variant: "outline"
                     text: qsTr("Show in folder")
                     onClicked: viewer.revealInFileManager(flow.result.destination)

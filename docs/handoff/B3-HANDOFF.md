@@ -6,11 +6,97 @@ Written for: the lead and the fresh-context reviewer. Implementer: a Claude Code
 | --- | --- |
 | Branch | `claude/b3-export-ui` |
 | Base (exact) | `f24f2e7` (`origin/main` when the packet started); not a stacked packet |
-| Commits | `ea37573` (the feature), `5486ecf` (stronger checks, evidence), then the commit that adds this file, which is the tip |
-| Review diff | `git diff f24f2e7 <tip>` |
-| `main` since the base | `3a14044`: docs and queue only (`AGENTS.md`, `docs/WORK-QUEUE.yaml`, one decision), so not merged in |
+| Commits | `ea37573` (the feature), `5486ecf` (stronger checks, evidence), `7d0c8fd` and `1a8be76` (handoff; `1a8be76` is the approved head), then one commit for the review delta below, which is the tip |
+| Review diff | Whole packet: `git diff f24f2e7 <tip>`. Delta only: `git diff 1a8be76 <tip>` |
+| `main` since the base | Moved, including code (PR 5), but `git merge-tree` shows no conflict, so not merged in, as the lead asked |
 
 **Full suite: not run locally, by lead decision** (November 4, 2026: implementers don't run it, because the gate lock is the machine's bottleneck). The hosted `viewer` job runs it on the PR, and the tester gates the exact head before merge. Targeted results are below.
+
+## Review delta (after APPROVED at `1a8be76`)
+
+The lead decided three open points from `docs/verification/B3-REVIEW.md` (`origin/claude/review-b3`, `02b29f7`). Findings 4 to 10 in that review were not part of these decisions and are unchanged.
+
+| # | Decision | What changed | Tests |
+| --- | --- | --- | --- |
+| 1 | A confirmed Replace must not swap an earlier export for a header-only file | With the new engine option, an export with no rows commits nothing. The dialog says "Nothing could be exported, so “list.csv” was not changed." and still lists what was left out | `nothingToExportLeavesTheTargetAlone` (5 rows, including all vanished and all outside the root), `confirmedReplaceWithNothingToExportKeepsTheEarlierFile`, `nothingToExportCreatesNoNewFile`, `nothingToExportSaysNoFileWasCreated`, `oneSurvivingItemStillReplaces` |
+| 2 | A locked destination gets the right advice, not the raw error | A replace refused with Windows error 5 or 32 becomes `destinationLocked`: "“list.csv” couldn't be replaced. It may be open in another app, so close it and try again. The existing file hasn't changed." The raw error is not shown | `lockedDestinationSaysToCloseItAndKeepsTheFile` (a real open handle, then a successful retry after closing), `aBlockedReplaceIsToldApartFromOtherFailures` (4 rows) |
+| 3 | Really exercise the `changed` reason | `itemChangedAfterSnapshotIsSkipped` now rewrites the file and asserts `changed`. The old delete case is kept as `itemDeletedAfterSnapshotIsReportedMissing` | `itemChangedAfterSnapshotIsSkipped`, `changedItemIsNamedWithItsReason` (the dialog's text) |
+
+**The exact header diff** (lead grant, the only change to `include/glancelot/selection_export.hpp`):
+
+```diff
+     bool overwrite{false};           // replace an existing destination that is not an exported item
++    bool keepDestinationWhenEmpty{false};  // no row to write -> commit nothing, destination untouched; Written, written == 0
+     std::size_t maxItems{1000000};   // more items -> ExportStatus::TooMany, nothing written
+```
+
+The default is off, so the engine behaves as before for any other caller. The engine change that goes with it is 7 lines in `src/core/selection_export.cpp`, placed after the last revalidation and the final cancel check and before the commit, so there's no window between the check and the decision.
+
+### Delta: targeted `ctest` (actual output)
+
+```
+1/6 Test  #1: selection_export .................   Passed    0.41 sec
+2/6 Test  #7: viewer_acceptance ................   Passed   11.07 sec
+3/6 Test #29: shortcuts_help ...................   Passed    0.65 sec
+4/6 Test #47: translation_coverage_ui ..........   Passed   24.73 sec
+5/6 Test #49: command_routing ..................   Passed    9.14 sec
+6/6 Test #52: export_ui ........................   Passed   38.47 sec
+
+100% tests passed out of 6
+```
+
+`export_ui` totals: `55 passed, 0 failed, 0 skipped`. These are the same six suites the review ran. The full suite wasn't run locally.
+
+### Delta: fail-before evidence
+
+16 mutations, 16 caught. The exact edits are in `docs/verification/B3/fail-before/delta-mutations.json` and the results in `delta-results.json`.
+
+| Mutation | What it breaks | Failing tests |
+| --- | --- | --- |
+| `engine-ignores-the-option` | **The fix reverted in the engine** | All 5 rows of `nothingToExportLeavesTheTargetAlone`, `nothingToExportCreatesNoNewFile`, `confirmedReplaceWithNothingToExportKeepsTheEarlierFile`, `nothingToExportSaysNoFileWasCreated` |
+| `service-does-not-ask` | **The fix reverted in the service** | The same 8 |
+| `zero-rows-reported-as-written` | Service reports zero rows as written | The same 8 |
+| `empty-guard-too-wide` | One surviving item is also refused | `oneSurvivingItemStillReplaces` |
+| `blocked-replace-not-detected` | **Fix 2 reverted** | `aBlockedReplaceIsToldApartFromOtherFailures` (error 5, error 32), `lockedDestinationSaysToCloseItAndKeepsTheFile` |
+| `any-failure-called-locked` | Every failure gets the "open in another app" advice | `aBlockedReplaceIsToldApartFromOtherFailures` (another error, not a replace) |
+| `engine-text-drifts` | Engine's error wording changes | `lockedDestinationSaysToCloseItAndKeepsTheFile` |
+| `locked-case-removed` | Dialog has no message for the locked case | `lockedDestinationSaysToCloseItAndKeepsTheFile` |
+| `raw-error-shown-as-detail` | Raw Windows error shown again | `lockedDestinationSaysToCloseItAndKeepsTheFile` |
+| `changed-reported-as-missing` | Wrong reason reported | `itemChangedAfterSnapshotIsSkipped`, `changedItemIsNamedWithItsReason`, `nothingToExportLeavesTheTargetAlone(all changed)` |
+| `no-revalidation` | Engine doesn't re-check items | `itemChangedAfterSnapshotIsSkipped`, `changedItemIsNamedWithItsReason`, and 3 rows of `nothingToExportLeavesTheTargetAlone` |
+| `changed-reason-text-wrong` | Dialog shows the wrong reason | `changedItemIsNamedWithItsReason` |
+| `nothing-case-removed` | Dialog has no case for nothing exported | `confirmedReplaceWithNothingToExportKeepsTheEarlierFile`, `nothingToExportSaysNoFileWasCreated` |
+| `always-says-not-changed` | A new file reported as "not changed" | `nothingToExportSaysNoFileWasCreated` |
+| `reveal-offered-for-nothing` | "Show in folder" offered when nothing was written | `confirmedReplaceWithNothingToExportKeepsTheEarlierFile` |
+| `path-shown-for-nothing` | Path shown when nothing was written | `confirmedReplaceWithNothingToExportKeepsTheEarlierFile` |
+
+### Delta: grant check
+
+`git diff --name-only 1a8be76..<tip>`:
+
+| File | Status |
+| --- | --- |
+| `include/glancelot/selection_export.hpp` | Lead grant: the one option, shown above |
+| `src/core/selection_export.cpp` | **Not named in the grant, but the option needs it:** 7 lines |
+| `src/app/selection_export_service.cpp`, `ui/ExportDialog.qml`, `tests/export_ui_tests.cpp` | Granted |
+| `translations/glancelot_en_XA.ts` | Regenerated as the lead asked: 3 added, 1 removed, 654 in total, nothing unrelated |
+| `translations/README.md` | The accepted count line, 652 to 654 |
+| `docs/verification/B3/fail-before/delta-*.json`, `docs/handoff/B3-HANDOFF.md` | Evidence |
+
+### Delta: decisions taken
+
+- **No new engine status.** The grant is one option, so an untouched destination is reported as `Written` with `written == 0`, which the option's comment documents. The service always sets the option, so for it that pair can only mean "nothing committed". Alternatives: a new `ExportStatus` value, which is cleaner but needs a wider grant; or `Failed` with a message, which can't be told apart from a real write failure.
+- **The rule also covers a new file, not only Replace.** The lead's decision was about Replace. I applied it to every export, because a header-only file nobody asked for is no use, and one rule is simpler than two. The dialog says "was not created" in that case. This removes the old "was saved, but it lists no items" message. Alternative: set the option only when replacing, which keeps the old message for new files. It's one line to change if you prefer it.
+- **Errors 5 and 32 both count as locked**, because 32 is literally a sharing violation. Only on a replace: a new file failing with error 5 keeps the permission message, since no existing file can be held open.
+- **Detection matches the engine's exact text**, since the grant rules out a new status. It's a string match by necessity, and `engine-text-drifts` shows the real-lock test fails if the wording changes.
+- **"Show in folder" and the path are hidden when nothing was written.** A new file doesn't exist to show, and the skip list is what matters.
+
+### Delta: unverified
+
+- **The hosted suite on the delta:** pending on this push.
+- **Linux:** `lockedDestinationSaysToCloseItAndKeepsTheFile` is Windows-only, since POSIX rename replaces an open file. The zero-rows tests are portable, but I ran them only on Windows.
+- **Which Windows error the real lock gave:** the test accepts 5 or 32 and doesn't record which.
+- **A real spreadsheet app:** the test holds the file with a plain `QFile` handle, not Excel. The review reproduced the same error 5 with a locked file.
 
 ## What it does
 
@@ -112,6 +198,8 @@ Notes:
 | `aFileChosenInTheSaveDialogFillsTheField` | Empty `applyChosenFile` in the QML | The save dialog's result reaches the field |
 
 I left these out because another gate request was queued and a build slot could have meant another long wait. A reviewer who wants more certainty should start with the destructor.
+
+**Update after review:** the fresh reviewer mutated all five, and each failed (`docs/verification/B3-REVIEW.md`). That also corrects two things in the table above: a detached worker is the right destructor mutation, because dropping only `request_stop` hangs; and `request.revalidate = false` does catch the changed-item test, so "hard to mutate" was wrong. That test has since been rewritten (see the review delta).
 
 ## Grant check
 

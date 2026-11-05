@@ -71,6 +71,12 @@ QString statusName(ExportStatus status) {
     return QStringLiteral("failed");
 }
 
+// The engine's text when the OS refuses to replace the target. Error 5 is what a file held open by another app gives,
+// and 32 is a sharing violation. The engine has no status of its own for this; tests pin the text with a real lock.
+bool replaceWasBlocked(const std::string& message) {
+    return message == "Atomic replacement failed with Windows error 5" || message == "Atomic replacement failed with Windows error 32";
+}
+
 struct Snapshot {
     std::vector<ExportItem> items;
     std::vector<SkippedItem> skipped; // set aside while snapshotting; reported with the export's own skips
@@ -230,6 +236,7 @@ quint64 SelectionExportService::start(const QVariantMap& options) {
                 }
                 request.neutralizeFormulas = options.value("neutralizeFormulas", true).toBool();
                 request.overwrite = options.value("overwrite").toBool();
+                request.keepDestinationWhenEmpty = true; // the check belongs to the engine: only it knows the last item's fate
                 request.maxItems = limit;
                 const Progress onProgress = [this, id, reportProgress](std::size_t done, std::size_t total) {
                     reportProgress->done = done;
@@ -242,6 +249,9 @@ quint64 SelectionExportService::start(const QVariantMap& options) {
                 };
                 ExportResult result = engine(request, cancel, onProgress);
                 outcome["status"] = statusName(result.status);
+                outcome["replacing"] = request.overwrite;
+                if (result.status == ExportStatus::Written && result.written == 0) outcome["status"] = QStringLiteral("nothingToExport");
+                else if (result.status == ExportStatus::Failed && request.overwrite && replaceWasBlocked(result.message)) outcome["status"] = QStringLiteral("destinationLocked");
                 outcome["written"] = qulonglong(result.written);
                 outcome["detail"] = describe(result.message.c_str());
                 skipped.insert(skipped.end(), result.skipped.begin(), result.skipped.end());

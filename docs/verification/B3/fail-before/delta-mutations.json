@@ -1,0 +1,114 @@
+[
+ {
+  "mutation": "engine-ignores-the-option",
+  "file": "src/core/selection_export.cpp",
+  "tests": "nothingToExportLeavesTheTargetAlone nothingToExportCreatesNoNewFile confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "from": "if (request.keepDestinationWhenEmpty && result.written == 0) {",
+  "to": "if (false) {"
+ },
+ {
+  "mutation": "service-does-not-ask",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "nothingToExportLeavesTheTargetAlone nothingToExportCreatesNoNewFile confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "from": "request.keepDestinationWhenEmpty = true;",
+  "to": "request.keepDestinationWhenEmpty = false;"
+ },
+ {
+  "mutation": "empty-guard-too-wide",
+  "file": "src/core/selection_export.cpp",
+  "tests": "oneSurvivingItemStillReplaces",
+  "from": "request.keepDestinationWhenEmpty && result.written == 0",
+  "to": "request.keepDestinationWhenEmpty && result.written <= 1"
+ },
+ {
+  "mutation": "zero-rows-reported-as-written",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "nothingToExportLeavesTheTargetAlone nothingToExportCreatesNoNewFile confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "from": "if (result.status == ExportStatus::Written && result.written == 0) outcome[\"status\"] = QStringLiteral(\"nothingToExport\");\n                else if",
+  "to": "if"
+ },
+ {
+  "mutation": "blocked-replace-not-detected",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "aBlockedReplaceIsToldApartFromOtherFailures lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "from": "request.overwrite && replaceWasBlocked(result.message)",
+  "to": "false"
+ },
+ {
+  "mutation": "any-failure-called-locked",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "aBlockedReplaceIsToldApartFromOtherFailures",
+  "from": " && request.overwrite && replaceWasBlocked(result.message)",
+  "to": ""
+ },
+ {
+  "mutation": "engine-text-drifts",
+  "file": "src/core/selection_export.cpp",
+  "tests": "lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "from": "\"Atomic replacement failed with Windows error \"",
+  "to": "\"Replace failed with Windows error \""
+ },
+ {
+  "mutation": "changed-reported-as-missing",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "itemChangedAfterSnapshotIsSkipped changedItemIsNamedWithItsReason nothingToExportLeavesTheTargetAlone",
+  "from": "case ExportSkip::Changed: return QStringLiteral(\"changed\");",
+  "to": "case ExportSkip::Changed: return QStringLiteral(\"missing\");"
+ },
+ {
+  "mutation": "no-revalidation",
+  "file": "src/app/selection_export_service.cpp",
+  "tests": "itemChangedAfterSnapshotIsSkipped changedItemIsNamedWithItsReason nothingToExportLeavesTheTargetAlone",
+  "from": "request.keepDestinationWhenEmpty = true;",
+  "to": "request.keepDestinationWhenEmpty = true; request.revalidate = false;"
+ },
+ {
+  "mutation": "locked-case-removed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "from": "case \"destinationLocked\": showError(",
+  "to": "case \"destinationLockedOff\": showError("
+ },
+ {
+  "mutation": "raw-error-shown-as-detail",
+  "file": "ui/ExportDialog.qml",
+  "tests": "lockedDestinationSaysToCloseItAndKeepsTheFile",
+  "from": "The existing file hasn't changed.\").arg(name)); break",
+  "to": "The existing file hasn't changed.\").arg(name), outcome.detail); break"
+ },
+ {
+  "mutation": "nothing-case-removed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "confirmedReplaceWithNothingToExportKeepsTheEarlierFile nothingToExportSaysNoFileWasCreated",
+  "from": "        case \"nothingToExport\":\n",
+  "to": ""
+ },
+ {
+  "mutation": "always-says-not-changed",
+  "file": "ui/ExportDialog.qml",
+  "tests": "nothingToExportSaysNoFileWasCreated",
+  "from": "return flow.result.replacing ? qsTr(",
+  "to": "return true ? qsTr("
+ },
+ {
+  "mutation": "reveal-offered-for-nothing",
+  "file": "ui/ExportDialog.qml",
+  "tests": "confirmedReplaceWithNothingToExportKeepsTheEarlierFile",
+  "from": "flow.phase === \"done\" && !flow.nothingExported",
+  "to": "flow.phase === \"done\""
+ },
+ {
+  "mutation": "path-shown-for-nothing",
+  "file": "ui/ExportDialog.qml",
+  "tests": "confirmedReplaceWithNothingToExportKeepsTheEarlierFile",
+  "from": "visible: !flow.nothingExported",
+  "to": "visible: true"
+ },
+ {
+  "mutation": "changed-reason-text-wrong",
+  "file": "ui/ExportDialog.qml",
+  "tests": "changedItemIsNamedWithItsReason",
+  "from": "changed: qsTr(\"It changed after the dialog opened.\"),",
+  "to": "changed: qsTr(\"It's missing or can't be read.\"),"
+ }
+]
