@@ -90,6 +90,11 @@ Collision members are excluded and the operation continues with the rest, with e
 
 When a requested file is itself a companion (the user selected the `.xmp`), Asset scope expands to the whole group the same way. Two requested members of one group are deduplicated. `included` order is stable: requested items first, then companions in role order.
 
+**Lead decisions, November 5, 2026 (B1 round 2; `docs/decisions/2026-11-06-asset-group-confirmations.md`).**
+- *When copy and move confirm.* "Copy and move get a confirmation" applies when there is something to decide or show. A paste or move whose plan has no companions (listed or `companionsNotListed`), no collisions, no exclusions, no `companionsIncomplete` and no refusal runs straight through, file-only, as before B1. Anything else shows the confirmation. A plan slower than 400 ms shows a quiet "Checking…" state with Cancel first.
+- *Collisions under asset scope.* A member's collision moves the whole asset: keep both gives every member the same `stem (n)`, including FullName sidecars (`stem (n).CR2.xmp`), and skip leaves the whole asset behind. A sidecar never lands beside a different photo of the same name. B2's Overwrite keeps its rule below.
+- *Move into the source's own folder.* Nothing to do, so a non-modal notice says "It's already in this folder." and the cut stays on the clipboard. A move where only some items are already there still confirms.
+
 **Overwrite (with B2).** Copy and Move collisions under asset scope take one decision per plan, never per member, and each overwritten member goes through the COPY-SAFETY-01 path (`copy_safety::replaceFileAtomically`). The decision applies only to members that collide.
 
 **Snapshot and revalidation.** `expand` runs inside the existing plan step (worker). Its `included` list becomes the immutable target snapshot (`planDeletion` input, or journal intents), and from there on `executeDeletion`-style identity revalidation applies unchanged.
