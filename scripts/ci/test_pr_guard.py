@@ -185,9 +185,23 @@ class Commits(unittest.TestCase):
             self.assertTrue(commit_lint.message_errors(message), message)
 
     def test_merges_and_local_fixups(self):
-        self.assertEqual(commit_lint.message_errors("Merge pull request #9 from x/y"), [])
+        self.assertEqual(commit_lint.message_errors("Merge pull request #9 from x/y", local=True), [])
+        self.assertTrue(commit_lint.message_errors("Merge the two caches"))  # a real merge is skipped in a range
         self.assertEqual(commit_lint.message_errors("fixup! fix(grid): x", local=True), [])
         self.assertEqual(commit_lint.message_errors("# comment\n\nfix(grid): x\n# more", local=True), [])
+
+
+class CommitExemptions(unittest.TestCase):
+    def test_git_revert_subject_passes(self):
+        self.assertEqual(commit_lint.message_errors('Revert "fix(grid): x"\n\nThis reverts commit abc.'), [])
+
+    def test_legacy_subjects_only_in_old_prs(self):
+        self.assertEqual(commit_lint.message_errors("A1: show more", legacy=True), [])
+        self.assertTrue(commit_lint.message_errors("A1: show more"))
+        self.assertTrue(commit_lint.message_errors("update stuff", legacy=True))
+        self.assertTrue(pr_guard.is_legacy_pr(18))
+        self.assertFalse(pr_guard.is_legacy_pr(19))
+        self.assertFalse(pr_guard.is_legacy_pr(None))
 
 
 class CommitRange(unittest.TestCase):

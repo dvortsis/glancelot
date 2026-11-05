@@ -19,8 +19,11 @@ SUBJECT = re.compile(r"^(?P<type>[A-Za-z]+)(?:\((?P<scope>[^()]*)\))?(?P<bang>!)
 SCOPE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_SUBJECT = 100
 CUTOFF = datetime(2026, 11, 6, tzinfo=timezone.utc)
-# Subjects git writes itself. Merge commits are exempt everywhere; fixups only before they are pushed.
-LOCAL_ONLY = ("fixup! ", "squash! ", "amend! ")
+# Subjects git writes itself. Real merge commits are skipped in a range; locally a merge subject and fixups are
+# allowed until they are pushed.
+LOCAL_ONLY = ("Merge ", "fixup! ", "squash! ", "amend! ")
+REVERT = re.compile(r'^Revert ".+"$')  # git's and GitHub's own revert subject
+LEGACY = re.compile(r"^[A-Z][A-Z0-9-]*: \S")  # '<TASK-ID>: <title>', allowed only in PRs opened before the rule
 FORMAT = "use 'type(scope): description', for example 'fix(grid): keep the selection during arrival' (docs/RELEASING.md)"
 
 
@@ -44,14 +47,14 @@ def subject_errors(subject):
     return errors
 
 
-def message_errors(message, local=False):
+def message_errors(message, local=False, legacy=False):
     lines = [line for line in (message or "").splitlines() if not line.startswith("#")]
     while lines and not lines[0].strip():
         lines.pop(0)
     if not lines:
         return ["empty commit message"]
     subject = lines[0].rstrip()
-    if subject.startswith("Merge ") or (local and subject.startswith(LOCAL_ONLY)):
+    if (local and subject.startswith(LOCAL_ONLY)) or REVERT.match(subject) or (legacy and LEGACY.match(subject)):
         return []
     errors = subject_errors(subject)
     if len(lines) > 1 and lines[1].strip():
@@ -59,7 +62,7 @@ def message_errors(message, local=False):
     return errors
 
 
-def range_errors(rev_range, cutoff=CUTOFF):
+def range_errors(rev_range, cutoff=CUTOFF, legacy=False):
     out = subprocess.run(["git", "log", "--no-merges", "--format=%H%x1f%cI%x1f%B%x1e", rev_range],
                          check=True, capture_output=True, text=True, encoding="utf-8").stdout
     errors = []
@@ -70,7 +73,7 @@ def range_errors(rev_range, cutoff=CUTOFF):
         sha, committed, message = record.split("\x1f", 2)
         if datetime.fromisoformat(committed) < cutoff:
             continue
-        errors += [f"commit {sha[:9]}: {error}" for error in message_errors(message)]
+        errors += [f"commit {sha[:9]}: {error}" for error in message_errors(message, legacy=legacy)]
     return errors
 
 

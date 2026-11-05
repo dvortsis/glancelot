@@ -131,9 +131,13 @@ def size_errors(changed_lines, body, head_ref):
     return [f"{changed_lines} changed lines is over {SIZE_LIMIT}: split it, or add a 'Large PR: <reason>' line to the body"]
 
 
+def is_legacy_pr(number):
+    return number is not None and number <= LEGACY_TITLE_LAST_PR
+
+
 def title_errors(title, number=None):
     # PRs opened before the Conventional Commits rule keep their '<TASK-ID>: <title>' titles.
-    if number is not None and number <= LEGACY_TITLE_LAST_PR and re.match(r"^[A-Z][A-Z0-9-]*: \S", title or ""):
+    if is_legacy_pr(number) and commit_lint.LEGACY.match(title or ""):
         return []
     return [f"PR title: {error}" for error in commit_lint.subject_errors(title)]
 
@@ -254,7 +258,8 @@ def main():
             print(f"::notice::{size} changed lines; aim for about {SIZE_NOTICE}")
         if event:
             errors += title_errors(title, event.get("number"))
-        errors += commit_lint.range_errors(f"{merge_base}..{head}")
+        # PRs opened before the rule may keep adding '<TASK-ID>: ' commits, since shared branches are never reworded.
+        errors += commit_lint.range_errors(f"{merge_base}..{head}", legacy=is_legacy_pr(event.get("number")))
         base_queue = show_queue(merge_base)
         if QUEUE in paths and base_queue and head_queue and not errors:
             errors += queue_scope_errors(base_queue, head_queue, head_ref)

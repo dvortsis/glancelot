@@ -54,13 +54,13 @@ type(scope): imperative description
 
 `guard` checks the scope's form (lowercase words joined by hyphens), not this list. Add a new scope here in the same PR that first uses it.
 
-**Merge commits** keep git's own subject (`Merge pull request #N ...`, `Merge remote-tracking branch ...`) and are exempt. `fixup!` and `squash!` commits are fine locally but must be squashed before pushing.
+**Merge commits** are exempt, whatever their subject. That covers GitHub's `Merge pull request #N ...`, git's `Merge remote-tracking branch ...` and the lead's `merge: origin/main into ... (lead, landing lane)`. A non-merge commit whose subject only starts with "Merge" is not exempt. Git's and GitHub's own `Revert "<subject>"` is accepted; name the reverted SHA in the body. `fixup!` and `squash!` commits are fine locally but must be squashed before pushing.
 
-**Pull request titles** follow the same format, because GitHub's merge commit carries the title. A packet PR ends its title with the task, for example `feat(grid): incremental cancellable folder listing (A1)`, and lead bookkeeping uses `docs(queue): ...` or `docs(evidence): ...`. PRs 1 to 18 were opened before the rule and keep their `<TASK-ID>: <title>` titles.
+**Pull request titles** follow the same format, because GitHub's merge commit carries the title. A packet PR ends its title with the task, for example `feat(grid): incremental cancellable folder listing (A1)`, and lead bookkeeping uses `docs(queue): ...` or `docs(evidence): ...`. PRs 1 to 18 were opened before the rule. They keep their `<TASK-ID>: <title>` titles, and they may still add commits in that form, because their branches are never reworded. Every other format is still refused there.
 
 **Enforcement:**
 - `scripts/ci/pr_guard.py` (the `guard` job, so `ci-ok`) fails a PR whose title, or any non-merge commit committed on or after November 6, 2026, breaks the format. Earlier commits are exempt: shared history is never rewritten to fit this rule (AGENTS.md: no rebasing or force-pushing shared branches).
-- The local hook `scripts/hooks/commit-msg` runs the same check as you commit. It is enabled for the shared clone on the lead's PC. Enable it in any other clone with `git config core.hooksPath scripts/hooks`. To check a branch before pushing: `python scripts/ci/commit_lint.py --range origin/main..HEAD`.
+- The local hook `scripts/hooks/commit-msg` runs the same check as you commit. It is opt-in: enable it once per clone with `git config core.hooksPath scripts/hooks`. It is enabled on the shared clone on the lead's PC only if the user turns it on, because it is persistent configuration. `guard` enforces the rule either way. To check a branch before pushing: `python scripts/ci/commit_lint.py --range origin/main..HEAD`.
 
 Examples:
 
