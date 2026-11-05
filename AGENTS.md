@@ -4,7 +4,7 @@
 
 The three-lane model (Claude, Codex, Gemini) is retired; docs/AGENT-LANES-PLAN.md and the lane rules in docs/handoff/LEAD-TAKEOVER-2026-10-22.md are history. The current plan is docs/handoff/LEAD-PLAN-2026-10-22.md.
 
-- **Lead (parent).** One Claude Code Opus 5.5 session owns every remaining task. It alone edits shared contracts (`include/glancelot/*`), root `CMakeLists.txt`, `cmake/*.cmake`, `AGENTS.md`, `.github/workflows/*`, `scripts/ci/*` and everything in `docs/WORK-QUEUE.yaml` except a packet's own row, freezes contracts, assigns packets and reviews, pushes `gate/*` branches, integrates and is the only session that merges. A packet's queue row or brief may grant a track named lead-owned files; that grant covers only those files.
+- **Lead (parent).** One Claude Code Opus 5.5 session owns every remaining task. It alone edits shared contracts (`include/glancelot/*`), root `CMakeLists.txt`, `cmake/*.cmake`, `AGENTS.md`, `.github/workflows/*`, `scripts/ci/*`, `scripts/lead-*` and everything in `docs/WORK-QUEUE.yaml` except a packet's own row, freezes contracts, assigns packets and reviews, pushes `gate/*` branches, integrates and is the only session that merges. A packet's queue row or brief may grant a track named lead-owned files; that grant covers only those files.
 - **Track sessions.** One session per track or packet set. Each implements only its assigned packets, through subagents if it likes, on branch `claude/<task>` cut from the contract commit the lead names. Locally: worktree `.worktrees/claude-<task>`, build directory `build-claude-<task>`; never edit another session's worktree. A track edits only its own row of the queue (never a top-level key or another row), and never root CMake, shared headers or another track's owned files; it asks the lead in its handoff. Nobody pushes to another session's branch: to change someone else's PR, message that session. The two exceptions: the lead may merge `main` into a branch in the landing lane, and a fix session may take over the branch of a finished cloud session, which cannot be messaged.
 - **Review sessions.** A fresh-context reviewer that never implemented the packet reviews it from a read-only checkout at pinned SHAs (`git diff <contract SHA> <tip SHA>`) and writes `docs/verification/<TASK>-REVIEW.md` with APPROVED or CHANGES REQUIRED. A session never reviews its own packets. Fixes go back to the implementer; a new fresh reviewer re-reviews. Reviewers run on Opus.
 - **Local lead topology (user decision, October 22, 2026).** When the lead runs on the user's Windows PC it spans local and cloud work:
@@ -70,7 +70,7 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 - Only the lead merges, with `scripts/lead-merge.ps1 -Pr <n>`, which pins the merge to the checked head (`-Auto` falls back to GitHub auto-merge for PRs without code, since `main` can move during the wait). Other sessions never merge.
 - The merge gate:
   - `ci-ok` is green. It runs on every PR. Docs-only PRs get it from the `guard` job alone.
-  - A fresh Opus reviewer found nothing blocking and posted `fresh-review` on the head.
+  - A fresh Opus reviewer found nothing blocking and posted `fresh-review` on the head. The lead posts it instead on a head that only merges reviewed work and `main` without conflicts, naming the reviews; a conflict resolution in code needs a reviewer.
   - Code changes passed the full gate (above) on that head, and `main` holds no code that head lacks: if it does, merge `main` in and gate again. The tester posts `local-gate`; when `lead-windows-gate` ran the gate, the lead posts it after checking the run and names the run URL.
   - Docs-only and CI-tooling PRs (`.github/*`, `scripts/ci/*`, `scripts/lead-*`) need no `local-gate`. Deleting or moving root `README.md` or `THIRD_PARTY_NOTICES.md` counts as code, because the packaging copies them.
   - Lead bookkeeping (a `lead/` branch touching only the queue, handoffs, decisions or evidence) needs `ci-ok` only.
@@ -80,7 +80,7 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 **Keeping PRs from colliding**
 
 - Keep PRs to about 1,500 changed lines where practical (docs and generated catalogs do not count). The lead splits a packet estimated over about 3,000 lines before it starts. `guard` fails a larger PR unless its body has a `Large PR: <reason>` line.
-- Integration is serial, because the full gate is. The lead batches 2-4 approved packets into `lead/integrate-<n>` (or merges `main` into one reviewed branch), opens a PR, has the tester gate that exact head, posts `fresh-review` naming the packet reviews, and merges. A packet PR whose commits land this way closes as merged. A failing packet is pulled from the batch and returned. Evidence and queue updates follow in a `lead/` bookkeeping PR.
+- Integration is serial, because the full gate is. The lead batches 2-4 approved packets into `lead/integrate-<n>` (or merges `main` into one reviewed branch), opens a PR, has the tester gate that exact head, posts `fresh-review` naming the packet reviews, and merges. A packet PR whose commits land this way closes as merged. A failing packet is pulled from the batch and returned. Evidence, queue updates and the review documents from `claude/review-*` follow in a `lead/` bookkeeping PR; review branches are never merged themselves.
 - A reviewed PR that keeps needing `main` goes into the lead's landing lane: the lead merges `main` into it and lands it next.
 - Push once per round of fixes. Each push cancels and restarts that PR's CI.
 - A flake in someone else's test gets fixed once. Check for an open fix PR, or tell the lead first.
@@ -90,14 +90,14 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 - A packet PR edits only its own row of `docs/WORK-QUEUE.yaml`; `guard` enforces it. Progress is read from GitHub (`gh pr list`, `scripts/lead-inbox.ps1`), so rows need no routine edits.
 - Machine capacity (gate lock, build slots) lives in the shared git directory, never in a tracked file.
 - Each decision gets its own file under `docs/decisions/`, one per PR.
-- `.github/workflows/*` and `scripts/ci/*` are lead-owned; `guard` and `scripts/lead-merge.ps1` refuse them from `claude/*` without the lead's `lead-grant` label. The merge script's check is the real one, because a pull request runs its own copy of `guard`.
+- `.github/workflows/*`, `scripts/ci/*` and `scripts/lead-*` are lead-owned; `guard` and `scripts/lead-merge.ps1` refuse them from `claude/*` without the lead's `lead-grant` label. The merge script's check is the real one, because a pull request runs its own copy of `guard`.
 
 **Before pushing**
 
 - `python scripts/ci/pr_guard.py --base origin/main --head-ref <branch>` (needs PyYAML).
 - The targeted and full `ctest` runs from the pre-handoff checklist; on Windows use `scripts/build.ps1 -Test`.
 - `translations/glancelot_en_XA.ts` regenerated if UI strings changed.
-- No fixed sleeps in tests. Wait on a condition with a deadline of at least 10 s, such as `QTRY_VERIFY_WITH_TIMEOUT(condition, 10000)`. A fixed sleep is a blocking review finding, and `guard` fails added `QTest::qWait`, `sleep` calls and shorter explicit deadlines. It is best effort: plain `QTRY_*` (5 s default) and multi-line calls stay with the reviewer. Where a test must let time pass (asserting that nothing fires), end the line with `// sleep-ok: <reason>`.
+- No fixed sleeps in tests. Wait on a condition with a deadline of at least 10 s, such as `QTRY_VERIFY_WITH_TIMEOUT(condition, 10000)`. A fixed sleep is a blocking review finding, and `guard` fails added `QTest::qWait`, `sleep` calls and shorter explicit deadlines. It is best effort: plain `QTRY_*` (5 s default) and multi-line calls stay with the reviewer. Where the code really must let time pass (asserting that nothing fires, backoff in a fake, a hang loop in a child process), end the line with `// sleep-ok: <reason>`.
 
 ## Memory
 

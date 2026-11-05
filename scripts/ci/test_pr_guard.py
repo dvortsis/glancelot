@@ -124,6 +124,12 @@ class Waits(unittest.TestCase):
         for line in ("QTest::qWaitFor([&] { return ready(); }, 500);", "QVERIFY(spy.wait(100));"):
             self.assertTrue(pr_guard.wait_errors("tests/a.cpp", [line]), line)
 
+    def test_each_wait_on_a_line_is_read(self):
+        ok = "QTRY_VERIFY_WITH_TIMEOUT(a(),10000);QCOMPARE(b().pixelColor(0,0),QColor(Qt::red));"
+        self.assertEqual(pr_guard.wait_errors("tests/a.cpp", [ok]), [])
+        short = "QTRY_VERIFY_WITH_TIMEOUT(a(),10000);QTRY_VERIFY_WITH_TIMEOUT(b(),100);"
+        self.assertTrue(pr_guard.wait_errors("tests/a.cpp", [short]))
+
     def test_long_deadline_passes(self):
         self.assertEqual(pr_guard.wait_errors("tests/a.cpp", ["QTRY_VERIFY_WITH_TIMEOUT(ready(), 10000);"]), [])
 
@@ -159,10 +165,10 @@ class Titles(unittest.TestCase):
 
 
 class LeadOnly(unittest.TestCase):
-    PATHS = [".github/workflows/build.yml", "scripts/ci/pr_guard.py"]
+    PATHS = [".github/workflows/build.yml", "scripts/ci/pr_guard.py", "scripts/lead-merge.ps1"]
 
     def test_packet_cannot_change_the_gate(self):
-        self.assertEqual(len(pr_guard.lead_only_errors(self.PATHS, "claude/x", set())), 2)
+        self.assertEqual(len(pr_guard.lead_only_errors(self.PATHS, "claude/x", set())), 3)
 
     def test_grant_label_allows_it(self):
         self.assertEqual(pr_guard.lead_only_errors(self.PATHS, "claude/x", {"lead-grant"}), [])

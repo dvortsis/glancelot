@@ -20,7 +20,7 @@ import yaml
 
 QUEUE = "docs/WORK-QUEUE.yaml"
 STATES = {"ready", "implementing", "review", "integration", "done"}
-LEAD_ONLY = (".github/workflows/", "scripts/ci/")
+LEAD_ONLY = (".github/workflows/", "scripts/ci/", "scripts/lead-")
 SHIPPED_DOCS = {"README.md", "THIRD_PARTY_NOTICES.md"}  # Dockerfile and scripts/build.ps1 copy these
 HOSTED_RUNNER = re.compile(r"^(ubuntu|windows|macos)-[\w.-]+$")
 PR_TRIGGERS = {"pull_request", "pull_request_target", "workflow_run"}
@@ -28,7 +28,7 @@ SIZE_NOTICE = 1500
 SIZE_LIMIT = 3000
 MIN_DEADLINE_MS = 10000
 SLEEP = re.compile(r"QTest::qWait\s*\(|\bq?[mu]?[Ss]leep\s*\(|this_thread::sleep_")
-TIMED_WAIT = re.compile(r"QTRY_\w+_WITH_TIMEOUT\s*\(.*,\s*(\d+)\s*\)|qWaitFor\s*\(.*,\s*(\d+)\s*\)|\.wait\s*\(\s*(\d+)\s*\)")
+TIMED_WAIT = re.compile(r"QTRY_\w+_WITH_TIMEOUT\s*\(.*?,\s*(\d+)\s*\)\s*;|qWaitFor\s*\(.*?,\s*(\d+)\s*\)|\.wait\s*\(\s*(\d+)\s*\)")
 
 
 def is_docs_only(path, status="M"):
@@ -114,9 +114,10 @@ def wait_errors(path, added_lines):
             continue
         if SLEEP.search(line):
             errors.append(f"{path}: fixed sleep in a test: {line.strip()}")
-        timed = TIMED_WAIT.search(line)
-        if timed and int(next(g for g in timed.groups() if g)) < MIN_DEADLINE_MS:
-            errors.append(f"{path}: deadline under {MIN_DEADLINE_MS} ms: {line.strip()}")
+        for timed in TIMED_WAIT.finditer(line):
+            if int(next(g for g in timed.groups() if g)) < MIN_DEADLINE_MS:
+                errors.append(f"{path}: deadline under {MIN_DEADLINE_MS} ms: {line.strip()}")
+                break
     return errors
 
 
@@ -156,7 +157,7 @@ def workflow_errors(workflows):
         names = [triggers] if isinstance(triggers, str) else list(triggers)
         if not PR_TRIGGERS & set(names):
             continue
-        if "self-hosted" in text:
+        if "self-hosted" in text or "glancelot-gate" in text:
             errors.append(f"{name}: takes pull requests and can reach the self-hosted runner")
             continue
         for job_name, job in (data.get("jobs") or {}).items():
@@ -167,8 +168,8 @@ def workflow_errors(workflows):
 
 
 def git(*args):
-    return subprocess.run(["git", *args], check=True, capture_output=True, text=True, encoding="utf-8",
-                          errors="replace").stdout
+    return subprocess.run(["git", "-c", "core.quotepath=off", *args], check=True, capture_output=True, text=True,
+                          encoding="utf-8", errors="replace").stdout
 
 
 def changed_files(merge_base, head):

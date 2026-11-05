@@ -6,7 +6,8 @@
 # Needs local-gate unless the PR is only docs or CI tooling, and then main must hold no code the head lacks, so the
 # tree that lands is the tree that was gated. Lead bookkeeping (a lead/ branch that only touches the queue, handoffs,
 # decisions or evidence) needs ci-ok only. -Auto hands the wait for ci-ok to GitHub auto-merge; refused when the PR
-# needs local-gate, because main could move during the wait.
+# needs local-gate, because main could move during the wait. Run it from a Glancelot checkout: the check on main uses
+# local git, because the compare API lists at most 300 files.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][int]$Pr,
@@ -22,7 +23,7 @@ function Test-DocsOnly([string]$Path, [string]$Status = 'modified') {
 }
 function Test-Bookkeeping([string]$Path) { $Path -eq 'docs/WORK-QUEUE.yaml' -or $Path -like 'docs/verification/*' -or $Path -like 'docs/handoff/*' -or $Path -like 'docs/decisions/*' }
 function Test-CiTooling([string]$Path) { $Path -like '.github/*' -or $Path -like 'scripts/ci/*' -or $Path -like 'scripts/lead-*' }
-function Test-LeadOnly([string]$Path) { $Path -like '.github/workflows/*' -or $Path -like 'scripts/ci/*' }
+function Test-LeadOnly([string]$Path) { $Path -like '.github/workflows/*' -or $Path -like 'scripts/ci/*' -or $Path -like 'scripts/lead-*' }
 
 $pull = gh api "repos/$Repo/pulls/$Pr" | ConvertFrom-Json
 if ($pull.state -ne 'open') { throw "PR $Pr is $($pull.state)." }
@@ -56,8 +57,13 @@ if (-not $bookkeeping -and -not (Test-Status 'fresh-review')) { $problems.Add("N
 if ($needsGate) {
     if ($Auto) { $problems.Add('-Auto is for PRs without code: main could move while it waits, and the landed tree would not be the gated one.') }
     if (-not (Test-Status 'local-gate')) { $problems.Add("No local-gate status on $sha.") }
-    $drift = @(gh api --paginate "repos/$Repo/compare/$sha...main" --jq '.files[]|[.status, .filename]|@tsv' | Where-Object {
-        $status, $path = $_ -split "`t"; -not (Test-DocsOnly $path $status) })
+    git fetch --quiet origin main $sha
+    if ($LASTEXITCODE) { throw 'Could not fetch main and the head.' }
+    $diff = @(git -c core.quotepath=off diff --name-status --no-renames "$sha...origin/main")
+    if ($LASTEXITCODE) { throw 'Could not compare the head with main.' }
+    $drift = @($diff | Where-Object {
+        $status, $path = $_ -split "`t"
+        -not (Test-DocsOnly $path $(if ($status -eq 'D') { 'removed' } else { 'modified' })) })
     if ($drift.Count) { $problems.Add("main has code this head lacks ($($drift.Count) files): merge main in and gate the new head.") }
 }
 if ($headRef -like 'claude/*' -and @($pull.labels.name) -notcontains 'lead-grant') {
