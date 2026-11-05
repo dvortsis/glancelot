@@ -54,9 +54,9 @@ every 10th a folder  per frame after definitive QList(287)  QList(287)  QList(28
 every 7th a folder   per frame after definitive QList(273)  QList(273)  QList(273, 0)
 ```
 
-An earlier run in a build slot read worst drifts of 297, 0 and 273, so 11 of 12 runs showed the wrong frame. While rows were arriving the drift was 0 at every sampled frame, so arrival itself holds still. This is offscreen with the basic render loop. How often it shows on a real display with the threaded loop is not verified.
+An earlier run in a build slot read worst drifts of 297, 0 and 273, so 11 of 12 runs showed the wrong frame. That run kept no per-frame data, so its 0 may mean no frame was drawn. While rows were arriving the drift was 0 at every sampled frame, so arrival itself holds still. This is offscreen with the basic render loop. How often it shows on a real display with the threaded loop is not verified.
 
-**Fix.** Call it directly in `onLayoutChanged`: `panel.restoreViewport(saved)`. `restoreViewport` already forces the layout. Tried: the drift read 0 at every frame in six runs, and all 25 committed `perf_enum_ui` cases pass with this and R2-B1's fix applied. Frames are few here, and two of those six runs drew none after the definitive order, so a frame sampler alone can pass without testing anything. A firmer test, which I did not try: connect to `arrivingChanged` and assert the anchor is on the top line inside that slot, since `publishDefinitive` clears `arriving` right after the layout change.
+**Fix.** Call it directly in `onLayoutChanged`: `panel.restoreViewport(saved)`. `restoreViewport` already forces the layout. Tried, in six runs: every sampled frame read 0 in the four runs that drew one, and two drew none after the definitive order. All 25 committed `perf_enum_ui` cases pass with this and R2-B1's fix applied. Because frames can be absent, a frame sampler alone can pass without testing anything. A firmer test, which I did not try: connect to `arrivingChanged` and assert the anchor is on the top line inside that slot, since `publishDefinitive` clears `arriving` right after the layout change.
 
 ### R2-B3. Escape from type-ahead returns to the wrong file (low to medium)
 
@@ -107,7 +107,7 @@ Both are product behaviour, so I did not treat them as findings.
 | Count wording | "N items so far" until the definitive order, with singulars. See question 2 for the footer. |
 | Numbers | 10k is like for like. 100k is labelled as not. My traces agree, allowing for load. |
 
-**Cost of the first review's N2 fix.** I checked this because every `selectionChanged` re-runs `selectedCount` and `selectedSummary`, each over all rows, and going up a folder leaves a selection set. No cost shows. These are a real window, 100k rows, under the gate lock, in two rounds. The selected row came from `select(10)`, not from going up a folder.
+**Cost of the first review's N2 fix.** I checked this because every `selectionChanged` re-runs `selectedCount` and `selectedSummary`, each over all rows, and going up a folder leaves a selection set. It is unresolved, not absent: no effect shows, but the run-to-run spread is too wide to rule one out. These are a real window, 100k rows, under the gate lock, in two rounds. The selected row came from `select(10)`, not from going up a folder.
 
 ```text
                                        worst GUI gap ms   selectionChanged
@@ -117,7 +117,7 @@ every 10th a folder, no selection      106, 88            16, 15
 every 10th a folder, a selected row    98, 73             17, 14
 ```
 
-Gaps here are 55 to 130 ms whatever the selection, against 12 to 32 ms in the model-only trace, so the window's own work with software rendering dominates. I did not compare this with `main`.
+The same case differs by up to 67 ms between rounds, more than any selection effect I could detect, so a cost of tens of milliseconds per emission is not excluded. Gaps here are 55 to 130 ms, against 12 to 32 ms in the model-only trace. That may be the window's own work with software rendering, but I did not prove it, and I did not compare this with `main`. A direct measure, not run: in a settled 100k grid with one row selected, time `fileGrid.select(11)`, against the 6 ms drain budget.
 
 ## Fail-before
 
