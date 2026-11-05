@@ -18,13 +18,13 @@
 #include <QImage>
 #include <QDateTime>
 #include <QJsonDocument>
-#include <QSharedMemory>
 #include <QUuid>
 #include <QBuffer>
 #include <QDataStream>
 #include <QScopeGuard>
 #include <atomic>
 #include <thread>
+#include "../src/app/transfer_segment.hpp"
 
 class FSWatchTests : public QObject {
     Q_OBJECT
@@ -487,7 +487,7 @@ private slots:
         const auto probe=QJsonDocument::fromJson(process.readLine()).object();
         QCOMPARE(probe.value("phase").toString(),QString("probe"));
         QCOMPARE(probe.value("bytes").toInteger(),qint64(32*24*4));
-        QSharedMemory transfer("Glancelot-revision-test-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+        glancelot::detail::TransferSegment transfer("Glancelot-revision-test-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
         QVERIFY(transfer.create(32*24*4));
         // The worker has opened the old source and now waits for admission.
         // Its old size/mtime check alone would accept this in-place edit.
@@ -536,15 +536,15 @@ private slots:
         QCOMPARE(probe.value("bytes").toInteger(),qint64(3072));
         if(changed){QVERIFY(raw(Qt::blue));QCOMPARE(QFileInfo(path).size(),qint64(4096));QCOMPARE(QFileInfo(path).lastModified(),stamp);}
         const auto sourceHash=hash(path);
-        QSharedMemory transfer("Glancelot-raw-test-"+QUuid::createUuid().toString(QUuid::WithoutBraces));QVERIFY(transfer.create(3072));
+        glancelot::detail::TransferSegment transfer("Glancelot-raw-test-"+QUuid::createUuid().toString(QUuid::WithoutBraces));QVERIFY(transfer.create(3072));
         process.write(QJsonDocument(QJsonObject{{"key",transfer.key()}}).toJson(QJsonDocument::Compact)+'\n');
         QTRY_VERIFY_WITH_TIMEOUT(process.canReadLine(),5000);const auto reply=QJsonDocument::fromJson(process.readLine()).object();
         if(changed) {
             QCOMPARE(reply.value("phase").toString(),QString("error"));QVERIFY(reply.value("error").toString().contains("revision"));
         } else {
             QCOMPARE(reply.value("phase").toString(),QString("decoded"));QCOMPARE(reply.value("sourceToken").toString(),initial);
-            QVERIFY(transfer.lock());QImage image(static_cast<const uchar*>(transfer.constData()),32,24,128,QImage::Format_RGBA8888);
-            const auto pixel=image.pixelColor(0,0);transfer.unlock();QVERIFY(pixel.red()>200&&pixel.green()<30&&pixel.blue()<30);
+            QImage image(static_cast<const uchar*>(transfer.constData()),32,24,128,QImage::Format_RGBA8888);
+            const auto pixel=image.pixelColor(0,0);QVERIFY(pixel.red()>200&&pixel.green()<30&&pixel.blue()<30);
             process.write("ok\n");
         }
         QTRY_COMPARE_WITH_TIMEOUT(process.state(),QProcess::NotRunning,5000);QCOMPARE(process.exitCode(),changed?1:0);

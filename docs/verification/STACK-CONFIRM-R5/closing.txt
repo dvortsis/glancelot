@@ -1,0 +1,19 @@
+build as shipped (with a diagnostic message) 0
+as shipped (with a diagnostic message) round 1 : 0 of 6 failed
+as shipped (with a diagnostic message) round 2 : 0 of 6 failed
+as shipped (with a diagnostic message) round 3 : 0 of 6 failed
+as shipped (with a diagnostic message) round 4 : 0 of 6 failed
+as shipped (with a diagnostic message) round 5 : 0 of 6 failed
+FAIL!  : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind() 'mappedTransfers(bytes) > 0' returned FALSE. (markers 1, loading 1, file p1.png, status Opening p1.png�)
+as shipped (with a diagnostic message) round 6 : 1 of 6 failed
+as shipped (with a diagnostic message) round 7 : 0 of 6 failed
+as shipped (with a diagnostic message) round 8 : 0 of 6 failed
+build QTRY on the mapped count 0
+QTRY on the mapped count round 1 : 0 of 6 failed
+QTRY on the mapped count round 2 : 0 of 6 failed
+QTRY on the mapped count round 3 : 0 of 6 failed
+QTRY on the mapped count round 4 : 0 of 6 failed
+QTRY on the mapped count round 5 : 0 of 6 failed
+QTRY on the mapped count round 6 : 0 of 6 failed
+QTRY on the mapped count round 7 : 0 of 6 failed
+QTRY on the mapped count round 8 : 0 of 6 failed

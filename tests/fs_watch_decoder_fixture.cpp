@@ -8,7 +8,9 @@
 #include <QThread>
 #include <QImage>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include "../src/app/transfer_segment.hpp"
 
 static bool send(const QJsonObject& object) {
     const auto bytes=QJsonDocument(object).toJson(QJsonDocument::Compact)+'\n';
@@ -43,17 +45,34 @@ int main(int argc,char** argv) {
         if(!config.value("omitRevisionToken").toBool())reply["sourceToken"]=config.contains("revisionToken")?config.value("revisionToken"):token;
         return send(reply)?0:3;
     }
-    if(!send({{"phase","probe"},{"width",32},{"height",24},{"bytes",3072}}))return 3;
+    const int width=config.value("width").toInt(32),height=config.value("height").toInt(24);
+    if(!send({{"phase","probe"},{"width",width},{"height",height},{"bytes",width*height*4}}))return 3;
     const auto key=receive().value("key").toString();if(key.isEmpty())return 3;
-    QSharedMemory memory(key);if(!memory.attach())return 3;
+    // STACK-CONFIRM R4-B1: "dieAt" ends this process abruptly, as a kill or a crash would, at one point of the transfer. It first
+    // takes the lock the old QSharedMemory transport shared with the viewer and never gives it back, so a viewer that goes back
+    // to that transport freezes in this fixture's tests. A viewer on TransferSegment never looks at that lock. "holdLock" takes
+    // the same lock and carries on, for a process the viewer kills itself. "markerDir" records the key, so a test can check the
+    // memory is really gone, and that this point was reached.
+    QSharedMemory legacy(key);
+    const auto holdLegacyLock=[&]{legacy.attach();legacy.lock();};
+    const auto dieAt=[&](const char* point){if(config.value("dieAt").toString()==QLatin1String(point)){holdLegacyLock();std::_Exit(9);}};
+    glancelot::detail::TransferSegment memory(key);if(!memory.attach())return 3;
+    if(config.contains("markerDir")) {
+        QFile marker(config.value("markerDir").toString()+"/"+key);
+        if(!marker.open(QIODevice::WriteOnly)||marker.write(file.toUtf8())<=0)return 3;
+    }
+    dieAt("attached");
+    if(config.value("holdLock").toBool())holdLegacyLock();
     pause("decodeDelayMs");
-    QImage image(32,24,QImage::Format_RGBA8888);
+    QImage image(width,height,QImage::Format_RGBA8888);
     image.fill(QColor(config.value("color").toString("red")));
     if(memory.size()<image.sizeInBytes())return 3;
     // Parent owns admission and reads only after this completion frame.
     std::memcpy(memory.data(),image.constBits(),size_t(image.sizeInBytes()));
-    QJsonObject reply{{"phase","decoded"},{"width",32},{"height",24},{"stride",128},{"color","sRGB fixture"}};
+    QJsonObject reply{{"phase","decoded"},{"width",width},{"height",height},{"stride",width*4},{"color","sRGB fixture"}};
     if(!config.value("omitSourceToken").toBool())reply["sourceToken"]=token;
     if(!send(reply))return 3;
-    char ack[16]{};return std::fgets(ack,sizeof(ack),stdin)?0:3;
+    char ack[16]{};const bool acknowledged=std::fgets(ack,sizeof(ack),stdin);
+    dieAt("acknowledged");
+    return acknowledged?0:3;
 }
