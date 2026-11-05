@@ -14,13 +14,13 @@ The three-lane model (Claude, Codex, Gemini) is retired; docs/AGENT-LANES-PLAN.m
   - *Local tester* is one subagent that runs every full gate, one at a time, on the exact commit to be merged: `scripts/build.ps1 -Test` and `docker build` in one gate-lock block, in `.worktrees/lead-tester`, with logs and QTest results files recorded under `docs/verification/`.
   - *Capacity:* at most four child sessions or subagents at once (user decision, November 4, 2026), counting implementers, reviewers and the tester. Launch the next ready slice whenever a slot is free, unless the lead records a reason (see "Slots" below). At most three local builds at once, and none while a full gate holds the gate lock (the lead schedules this, because overlapping builds break the timing-budget tests). Long-running sessions run in Auto mode, never Plan, so nothing stalls on an approval nobody is watching.
 - **Gate.** A full Windows `scripts/build.ps1 -Test` plus `docker build` on the user's PC, under the gate lock, on the exact commit to be merged, decides done. It is run by the local tester when the lead is local, or by the CI job `lead-windows-gate (authoritative)` in `.github/workflows/windows-gate.yml` (self-hosted runner) when the lead is in the cloud or the tester is unavailable. Only the lead pushes `gate/<name>`. The `hosted-windows (advisory)` job is an early warning; a failure seen only there is triaged against a full gate. `build.yml` feeds the required `ci-ok` check: its failure blocks a merge unless it is handled as a known red check (see "Pull requests and merging"). Runbook: docs/CI-GATE-RUNNER.md. Never add a `pull_request` trigger to a workflow that can reach the self-hosted runner (public repository).
-- **Handoff.** Every packet ends with `docs/handoff/<TASK>-HANDOFF.md`: branch and tip SHA, files changed, actual `ctest` output (targeted `ctest -R` first, then the full offscreen suite), failure and cancellation cases covered, anything unverified.
+- **Handoff.** Every packet ends with `docs/handoff/<TASK>-HANDOFF.md`: branch and tip SHA, files changed, actual `ctest` output (see the pre-handoff checklist), failure and cancellation cases covered, anything unverified.
 - **Build questions (user decision, October 22, 2026).** Child sessions and subagents do not stop to ask the user build or implementation questions. They choose what gives the best performance and user experience within the packet's contract, record the choice and the alternatives in the handoff under "Decisions taken", and keep going. A question that changes a frozen contract, product behaviour the user sees, or data safety goes to the lead: local agents message the lead; cloud sessions list it under "Open questions for the lead" and finish everything else. The lead answers, and brings the user only real product choices.
 - **Pre-handoff checklist.** Every handoff includes, with actual output:
   1. *Fail-before evidence* for every new or changed assertion: show it fails against the base (or with the fix reverted). A check that cannot fail is a defect.
   2. *Grant check:* `git diff --name-only <base>..<tip>` compared against the files the packet grants; anything outside is listed and justified.
   3. *Exact base:* the base SHA, and for a stacked packet the exact parent commit it sits on (the parent's tip, not an earlier commit).
-  4. Targeted `ctest -R`, then the full offscreen suite, with baseline failures named. Do not push red.
+  4. Targeted `ctest -R`, with baseline failures named. On this PC, do not run the full suite: the PR's hosted `viewer` job covers it, and the tester gates the exact head before merge. A cloud session without local gates still runs the full offscreen suite. Do not push red.
   5. "Decisions taken" and "Open questions for the lead".
 - **Reviews write their document first.** Every review, stage 1 included, commits `docs/verification/<TASK>-REVIEW*.md` on `claude/review-<task>` and pushes it before reporting, comments the verdict on the PR, and on APPROVED posts the `fresh-review` status on the reviewed head (see "Pull requests and merging"). Fix briefs point at that document instead of restating it.
 - **Budget tests** (`fs_watch_budget`, `fs_watch`, `folder_grid`, `cache`, `window_slots`, `recovery_controller`, `input_ui`) can flake under load outside the gate machine: rerun once and record both results. The authoritative gate decides.
@@ -41,7 +41,7 @@ The three-lane model (Claude, Codex, Gemini) is retired; docs/AGENT-LANES-PLAN.m
 - UI/render code never performs image decoding or blocking directory scans. Viewing never writes original media.
 - Use disposable/generated test media. Include failure/cancellation cases and actual command output in handoffs.
 - Task states: ready -> implementing -> review -> integration -> done. A task is done only after independent review and a passing authoritative gate on the integrated commit.
-- Use `scripts/build.ps1 -Test` on Windows; CMake/CTest commands, including Linux, are documented in BUILDING.md. Qt is project-local under .tools/Qt.
+- `scripts/build.ps1 -Test` is the Windows gate command; targeted runs are in the pre-handoff checklist. CMake/CTest commands, including Linux, are documented in BUILDING.md. Qt is project-local under .tools/Qt.
 - No cloud, telemetry, mandatory catalog, automatic updates, publishing or paid infrastructure in the viewer.
 - Report hardware/platform tests as unverified when unavailable. Physical qualification is done by the user from RUNBOOK packets; no headless result is relabeled as physical.
 
@@ -51,7 +51,7 @@ Only one full `scripts/build.ps1 -Test` or `docker build` runs on this machine a
 
 - The lock is machine-local, in the shared git directory, and is never written to the queue. `scripts/build.ps1 -Test` takes it automatically; the CI gate job takes it too.
 - Run Docker and any older worktree's build through the main checkout's script, in one PowerShell process: `& C:\src\Github\Glancelot\scripts\gate-lock.ps1 -Branch <branch> -Run { <command> }`. Check it with `-Status`.
-- Targeted `ctest -R` runs are exempt, except `folder_grid`, `fs_watch_budget` and clipboard UI tests while a CI gate holds the lock. Run nothing heavy on this machine while the runner is gating.
+- Targeted `ctest -R` runs need only a build slot, not the gate lock, except budget tests and measurements that need a quiet machine, which take the gate lock. Do not run `folder_grid`, `fs_watch_budget` or clipboard UI tests while a gate holds the lock. Run nothing heavy on this machine while the runner is gating.
 
 ## Pull requests and merging (user decision, November 4, 2026)
 
@@ -95,13 +95,14 @@ Branch protection on `main` enforces the first rule and the `ci-ok` check for ev
 
 - A packet PR edits only its own row of `docs/WORK-QUEUE.yaml`; `guard` enforces it. Progress is read from GitHub (`gh pr list`, `scripts/lead-inbox.ps1`), so rows need no routine edits.
 - Machine capacity (gate lock, build slots) lives in the shared git directory, never in a tracked file.
+- Never stop processes by name or script name: other sessions run the same tools on this machine. Stop only your own run, by its task ID or your own scratch path.
 - Each decision gets its own file under `docs/decisions/`, one per PR.
 - `.github/workflows/*`, `scripts/ci/*` and `scripts/lead-*` are lead-owned; `guard` and `scripts/lead-merge.ps1` refuse them from `claude/*` without the lead's `lead-grant` label. The merge script's check is the real one, because a pull request runs its own copy of `guard`.
 
 **Before pushing**
 
 - `python scripts/ci/pr_guard.py --base origin/main --head-ref <branch>` (needs PyYAML).
-- The targeted and full `ctest` runs from the pre-handoff checklist; on Windows use `scripts/build.ps1 -Test`.
+- The `ctest` runs from the pre-handoff checklist.
 - `translations/glancelot_en_XA.ts` regenerated if UI strings changed.
 - No fixed sleeps in tests. Wait on a condition with a deadline of at least 10 s, such as `QTRY_VERIFY_WITH_TIMEOUT(condition, 10000)`. A fixed sleep is a blocking review finding, and `guard` fails added `QTest::qWait`, `sleep` calls and shorter explicit deadlines. It is best effort: plain `QTRY_*` (5 s default) and multi-line calls stay with the reviewer. Where the code really must let time pass (asserting that nothing fires, backoff in a fake, a hang loop in a child process), end the line with `// sleep-ok: <reason>`.
 
