@@ -1,0 +1,17 @@
+tree: 32d27aa1 STACK-CONFIRM-FIX: pin the exit wait: check the segment with no event loop running
+[4/4] Linking CXX executable stack_confirm_ui_tests
+--- real code
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4170ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 4917ms
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 5952ms
+--- exit wait removed
+[3/3] Linking CXX executable stack_confirm_ui_tests
+FAIL!  : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind() Compared values are not the same
+   Actual   (systemSegments(bytes) - systemBefore): 1
+   Expected (0)                                   : 0
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2276ms
+[3/3] Linking CXX executable stack_confirm_ui_tests
+--- whole stack_confirm_ui on the real code
+FAIL!  : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too) 'fixture.prefetches > 0' returned FALSE. (no prefetch ran, so this row tests nothing)
+Totals: 29 passed, 1 failed, 1 skipped, 0 blacklisted, 129837ms
+segments at the end: 0

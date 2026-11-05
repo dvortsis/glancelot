@@ -1,0 +1,30 @@
+Internal ctest changing into directory: C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-r5/build-claude-stack-confirm-r5
+Test project C:/src/Github/Glancelot/.worktrees/claude-stack-confirm-r5/build-claude-stack-confirm-r5
+    Start 12: folder_grid
+1/4 Test #12: folder_grid ......................***Timeout 400.10 sec
+
+    Start 13: input_ui
+2/4 Test #13: input_ui .........................***Timeout 240.12 sec
+
+    Start 24: fs_watch_budget
+3/4 Test #24: fs_watch_budget ..................***Timeout 180.11 sec
+
+    Start 52: stack_confirm_ui
+4/4 Test #52: stack_confirm_ui .................   Passed  384.49 sec
+
+25% tests passed, 3 tests failed out of 4
+
+Label Time Summary:
+budget       = 820.33 sec*proc (3 tests)
+clipboard    = 640.22 sec*proc (2 tests)
+native       = 400.10 sec*proc (1 test)
+process      = 1204.82 sec*proc (4 tests)
+ui           = 1024.71 sec*proc (3 tests)
+
+Total Test time (real) = 1204.88 sec
+
+The following tests FAILED:
+	 12 - folder_grid (Timeout)                             budget clipboard native process ui
+	 13 - input_ui (Timeout)                                budget clipboard process ui
+	 24 - fs_watch_budget (Timeout)                         budget process
+Errors while running CTest

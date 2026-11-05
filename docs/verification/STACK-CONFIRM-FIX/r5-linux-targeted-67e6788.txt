@@ -1,0 +1,52 @@
+tree: 67e6788 STACK-CONFIRM-FIX: hold a retired worker's segment until it has stopped
+uname: Linux 6.18.33.2-microsoft-standard-WSL2
+ipcs before:
+1
+********* Start testing of StackConfirmUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 10.3.1 20210422 (Red Hat 10.3.1-1)), ubuntu 24.04
+PASS   : StackConfirmUiTests::initTestCase()
+PASS   : StackConfirmUiTests::slideshowSkipsAnUndecodablePhoto()
+PASS   : StackConfirmUiTests::slideshowStopsAfterAnUnplayableRun()
+PASS   : StackConfirmUiTests::slideshowKeepsGoingAcrossAFolderBoundary()
+PASS   : StackConfirmUiTests::slideshowPassesABadPhotoPromptlyAtASlowPace()
+PASS   : StackConfirmUiTests::slideshowPassesThroughAOnePhotoFolder()
+PASS   : StackConfirmUiTests::slideshowSurvivesClosingAnotherTab()
+PASS   : StackConfirmUiTests::aTransferSegmentLivesUntilItsLastHandleCloses()
+PASS   : StackConfirmUiTests::aTransferSegmentRefusesAKeyInUse()
+PASS   : StackConfirmUiTests::aTransferSegmentReportsFailures()
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies right after attaching)
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(dies after the viewer's ok)
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(killed by the viewer while holding the lock)
+PASS   : StackConfirmUiTests::aDecoderDyingMidTransferNeitherBlocksNorKeepsMemory(prefetch decoders die after the ok too)
+PASS   : StackConfirmUiTests::closingTheViewerMidTransferLeavesNoMemoryBehind()
+SKIP   : StackConfirmUiTests::slideshowPatternRateRun() set GL_STACK_RATE_PASSES to run it
+   Loc: [/home/dvort/gl-cs/tests/stack_confirm_ui_tests.cpp(420)]
+PASS   : StackConfirmUiTests::navigatingSpansAStep()
+PASS   : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(1 s pace)
+PASS   : StackConfirmUiTests::slideshowWaitsForASlowFolderStep(5 s pace)
+PASS   : StackConfirmUiTests::slideshowShowsAPhotoForTheFullPaceAfterASlowStep()
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(openFolder)
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(navigateDirectory)
+PASS   : StackConfirmUiTests::slideshowEndsOnAManualOpenDuringItsOwnStep(open a photo)
+PASS   : StackConfirmUiTests::slideshowPassesAnUndecodableLoneFolderPhoto()
+PASS   : StackConfirmUiTests::slideshowEndsOnTabSwitchAndFolderOpen()
+PASS   : StackConfirmUiTests::detailsToggleKeepsTheVisibleAnchor()
+PASS   : StackConfirmUiTests::typeChipsWorkFromTheKeyboard()
+PASS   : StackConfirmUiTests::typeChipsMoveWithTheArrowKeys()
+PASS   : StackConfirmUiTests::tabStripWheelRespectsTheMargin()
+PASS   : StackConfirmUiTests::longTabNamesKeepTheActiveTabInView()
+PASS   : StackConfirmUiTests::cleanupTestCase()
+Totals: 30 passed, 0 failed, 1 skipped, 0 blacklisted, 118571ms
+********* Finished testing of StackConfirmUiTests *********
+stack_confirm_ui exit: 0
+Totals: 83 passed, 0 failed, 0 skipped, 0 blacklisted, 70201ms
+fs_watch exit: 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 19549ms
+fs_watch_budget exit: 0
+ipcs after (segments left):
+2
+
+------ Shared Memory Segments --------
+key        shmid      owner      perms      bytes      nattch     status      
+0x5140cbd5 98339      dvort      600        67108864   0                       
+

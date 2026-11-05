@@ -1,0 +1,12 @@
+********* Start testing of GridUiTests *********
+Config: Using QtTest library 6.8.3, Qt 6.8.3 (x86_64-little_endian-llp64 shared (dynamic) release build; by MSVC 2022), windows 11
+SKIP   : GridUiTests::topBarReviewCaptures() Set GLANCELOT_REVIEW_CAPTURE to write captures.
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\grid_ui_tests.cpp(611) : failure location
+SKIP   : GridUiTests::reviewCapturesMixedFolder() Set GLANCELOT_REVIEW_CAPTURE to write review captures
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\grid_ui_tests.cpp(1705) : failure location
+SKIP   : GridUiTests::reviewCapturesCombined() Set GLANCELOT_REVIEW_CAPTURE to write review captures
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\grid_ui_tests.cpp(2133) : failure location
+SKIP   : GridUiTests::deleteReviewCaptures() Set GLANCELOT_REVIEW_CAPTURE to write review captures
+C:\src\Github\Glancelot\.worktrees\claude-stack-confirm-r5\tests\grid_ui_tests.cpp(2494) : failure location
+Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 376787ms
+********* Finished testing of GridUiTests *********
