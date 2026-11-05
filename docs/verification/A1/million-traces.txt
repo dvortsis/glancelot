@@ -1,0 +1,64 @@
+A1 PR 2 traces of a folder listed one page at a time up to 1,000,000 rows. traceOneMillion, under the gate lock.
+Run it with GLANCELOT_PERF_ENUM_MILLION=real (generates 1,000,100 empty files, about 10 minutes) or =synthetic (seam folder, no files).
+settled_ms is the wait for that page. worst_gui_gap_ms is the longest the GUI thread went without running. Memory is in MB.
+
+== Real files, before the page moved off the GUI thread (commit 24d5238 plus the test). The tracer's heartbeat stopped when loading cleared,
+== so worst_gui_gap_ms here misses the last publish, about 390 ms at 1,000,000 rows. publish_ms has the true figure.
+
+PERF_ENUM_MEMORY real before rows=0 working_set_mb=15 peak_mb=15
+PERF_ENUM_TRACE first-page first_row_ms=136 full_count_ms=554 definitive_ms=611 settled_ms=622 worst_gui_gap_ms=26 enumerate_ms=530 sort_ms=39 publish_ms=15 resets=0 layouts=1 inserts=27 largest_insert=10240 partial_seen=1
+PERF_ENUM_MEMORY real first-page rows=100000 settled_ms=622 working_set_mb=94 peak_mb=137
+PERF_ENUM_TRACE show-more first_row_ms=1079 full_count_ms=1079 definitive_ms=-1 settled_ms=1113 worst_gui_gap_ms=12 enumerate_ms=917 sort_ms=86 publish_ms=37 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=200000 settled_ms=1113 working_set_mb=174 peak_mb=270
+PERF_ENUM_TRACE show-more first_row_ms=1834 full_count_ms=1834 definitive_ms=-1 settled_ms=1901 worst_gui_gap_ms=14 enumerate_ms=1573 sort_ms=149 publish_ms=73 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=300000 settled_ms=1901 working_set_mb=254 peak_mb=423
+PERF_ENUM_TRACE show-more first_row_ms=2380 full_count_ms=2380 definitive_ms=-1 settled_ms=2511 worst_gui_gap_ms=13 enumerate_ms=1972 sort_ms=227 publish_ms=143 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=400000 settled_ms=2511 working_set_mb=345 peak_mb=586
+PERF_ENUM_TRACE show-more first_row_ms=2817 full_count_ms=2817 definitive_ms=-1 settled_ms=2963 worst_gui_gap_ms=12 enumerate_ms=2337 sort_ms=258 publish_ms=162 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=500000 settled_ms=2963 working_set_mb=418 peak_mb=751
+PERF_ENUM_TRACE show-more first_row_ms=2879 full_count_ms=2879 definitive_ms=-1 settled_ms=3054 worst_gui_gap_ms=12 enumerate_ms=2342 sort_ms=287 publish_ms=195 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=600000 settled_ms=3054 working_set_mb=495 peak_mb=893
+PERF_ENUM_TRACE show-more first_row_ms=3449 full_count_ms=3449 definitive_ms=-1 settled_ms=3668 worst_gui_gap_ms=12 enumerate_ms=2758 sort_ms=357 publish_ms=247 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=700000 settled_ms=3668 working_set_mb=610 peak_mb=1053
+PERF_ENUM_TRACE show-more first_row_ms=4153 full_count_ms=4153 definitive_ms=-1 settled_ms=4416 worst_gui_gap_ms=13 enumerate_ms=3335 sort_ms=439 publish_ms=294 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=800000 settled_ms=4416 working_set_mb=671 peak_mb=1222
+PERF_ENUM_TRACE show-more first_row_ms=4788 full_count_ms=4788 definitive_ms=-1 settled_ms=5108 worst_gui_gap_ms=15 enumerate_ms=3782 sort_ms=534 publish_ms=364 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=900000 settled_ms=5108 working_set_mb=796 peak_mb=1383
+PERF_ENUM_TRACE show-more first_row_ms=5273 full_count_ms=5273 definitive_ms=-1 settled_ms=5614 worst_gui_gap_ms=14 enumerate_ms=4097 sort_ms=639 publish_ms=387 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY real show-more rows=1000000 settled_ms=5614 working_set_mb=989 peak_mb=1563
+
+== Synthetic, the code in this PR (97b4656, under the gate lock). The tracer now counts the last publish.
+PERF_ENUM_MEMORY synthetic before rows=0 working_set_mb=15 peak_mb=15
+PERF_ENUM_TRACE first-page first_row_ms=25 full_count_ms=767 definitive_ms=871 settled_ms=884 worst_gui_gap_ms=58 enumerate_ms=0 sort_ms=39 publish_ms=46 resets=0 layouts=0 inserts=35 largest_insert=6144 partial_seen=1
+PERF_ENUM_MEMORY synthetic first-page rows=100000 settled_ms=884 working_set_mb=90 peak_mb=137
+PERF_ENUM_TRACE show-more first_row_ms=1585 full_count_ms=1585 definitive_ms=-1 settled_ms=1585 worst_gui_gap_ms=15 enumerate_ms=0 sort_ms=60 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=200000 settled_ms=1585 working_set_mb=228 peak_mb=288
+PERF_ENUM_TRACE show-more first_row_ms=1138 full_count_ms=1138 definitive_ms=-1 settled_ms=1138 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=78 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=300000 settled_ms=1138 working_set_mb=360 peak_mb=452
+PERF_ENUM_TRACE show-more first_row_ms=1417 full_count_ms=1417 definitive_ms=-1 settled_ms=1417 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=128 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=400000 settled_ms=1417 working_set_mb=499 peak_mb=622
+PERF_ENUM_TRACE show-more first_row_ms=2866 full_count_ms=2866 definitive_ms=-1 settled_ms=2866 worst_gui_gap_ms=13 enumerate_ms=0 sort_ms=198 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=500000 settled_ms=2866 working_set_mb=641 peak_mb=800
+PERF_ENUM_TRACE show-more first_row_ms=3009 full_count_ms=3009 definitive_ms=-1 settled_ms=3009 worst_gui_gap_ms=14 enumerate_ms=0 sort_ms=253 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=600000 settled_ms=3009 working_set_mb=764 peak_mb=951
+PERF_ENUM_TRACE show-more first_row_ms=2152 full_count_ms=2152 definitive_ms=-1 settled_ms=2152 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=179 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=700000 settled_ms=2152 working_set_mb=945 peak_mb=1123
+PERF_ENUM_TRACE show-more first_row_ms=2569 full_count_ms=2569 definitive_ms=-1 settled_ms=2569 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=239 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=800000 settled_ms=2569 working_set_mb=1153 peak_mb=1303
+PERF_ENUM_TRACE show-more first_row_ms=4106 full_count_ms=4106 definitive_ms=-1 settled_ms=4106 worst_gui_gap_ms=13 enumerate_ms=0 sort_ms=378 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=900000 settled_ms=4106 working_set_mb=1307 peak_mb=1475
+PERF_ENUM_TRACE show-more first_row_ms=3386 full_count_ms=3386 definitive_ms=-1 settled_ms=3386 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=266 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+PERF_ENUM_MEMORY synthetic show-more rows=1000000 settled_ms=3386 working_set_mb=1463 peak_mb=1650
+PERF_ENUM_MEMORY synthetic rested rows=1000000 working_set_mb=944 peak_mb=1650
+PERF_ENUM_FILTER synthetic rows=1000000 set_ms=165 clear_ms=40
+
+== Synthetic with the rows copied on the GUI thread (the rows-copied-on-gui mutation, build slot, not a quiet machine). Worst gap is under budget, so it survives.
+PERF_ENUM_TRACE show-more first_row_ms=838 full_count_ms=838 definitive_ms=-1 settled_ms=838 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=55 publish_ms=10 reset
+PERF_ENUM_TRACE show-more first_row_ms=1032 full_count_ms=1032 definitive_ms=-1 settled_ms=1032 worst_gui_gap_ms=17 enumerate_ms=0 sort_ms=80 publish_ms=16 re
+PERF_ENUM_TRACE show-more first_row_ms=1482 full_count_ms=1482 definitive_ms=-1 settled_ms=1482 worst_gui_gap_ms=22 enumerate_ms=0 sort_ms=116 publish_ms=21 r
+PERF_ENUM_TRACE show-more first_row_ms=1744 full_count_ms=1744 definitive_ms=-1 settled_ms=1745 worst_gui_gap_ms=27 enumerate_ms=0 sort_ms=169 publish_ms=25 r
+PERF_ENUM_TRACE show-more first_row_ms=2164 full_count_ms=2164 definitive_ms=-1 settled_ms=2165 worst_gui_gap_ms=35 enumerate_ms=0 sort_ms=193 publish_ms=34 r
+PERF_ENUM_TRACE show-more first_row_ms=2930 full_count_ms=2930 definitive_ms=-1 settled_ms=2930 worst_gui_gap_ms=43 enumerate_ms=0 sort_ms=254 publish_ms=43 r
+PERF_ENUM_TRACE show-more first_row_ms=3438 full_count_ms=3438 definitive_ms=-1 settled_ms=3438 worst_gui_gap_ms=65 enumerate_ms=0 sort_ms=281 publish_ms=52 r
+PERF_ENUM_TRACE show-more first_row_ms=3787 full_count_ms=3787 definitive_ms=-1 settled_ms=3787 worst_gui_gap_ms=53 enumerate_ms=0 sort_ms=343 publish_ms=52 r
+PERF_ENUM_TRACE show-more first_row_ms=3968 full_count_ms=3968 definitive_ms=-1 settled_ms=3970 worst_gui_gap_ms=63 enumerate_ms=0 sort_ms=370 publish_ms=61 r
