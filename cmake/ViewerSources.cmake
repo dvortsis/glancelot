@@ -5,7 +5,9 @@ include_guard(GLOBAL)
 set(GLANCELOT_VIEWER_SOURCES
   src/app/viewer_controller.cpp include/glancelot/viewer_controller.hpp
   src/app/decode_cache.cpp src/app/decode_cache.hpp
-  src/app/settings_file.cpp include/glancelot/settings_file.hpp)
+  src/app/settings_file.cpp include/glancelot/settings_file.hpp
+  # B9 (F057): the controller's restore offer for a workspace recovered after an unexpected exit.
+  src/app/restore_offer.cpp src/app/restore_offer.hpp)
 # EN-04: the context services src/app/viewer_context.hpp installs beyond the controller.
 # Every target that loads the shipped ui/Main.qml through that helper compiles this list
 # (input_ui, pathbar_ui, grid_ui, fs_watch_ui, monitor_customization_ui, command_routing).
