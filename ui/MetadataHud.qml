@@ -159,6 +159,7 @@ Rectangle {
                         }
                     }
                 }
+                GpsMapActions { model: root.model; Layout.fillWidth: true } // F3 (F072): Show on map, Copy coordinates
             }
         }
 

@@ -408,6 +408,7 @@ UiDialog {
                     text: qsTr("Drag to pan. Hold the right mouse button for a 100% loupe. Double-click toggles full screen.")
                     visible: dialog.rowMatches("Viewing controls", text)
                 }
+                GpsMapSettings { settings: dialog } // F3 (F072): map provider for Show on map
                 UiButton {
                     text: qsTr("Reset viewing to defaults")
                     variant: "outline"
