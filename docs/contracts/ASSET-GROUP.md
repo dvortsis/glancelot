@@ -58,10 +58,10 @@ The header is frozen as committed: `kMaxMembers`, `kMaxExpandedItems`, `kMaxExcl
 
 `FileOperationService`'s summary lists at most `kMaxExcludedListed` companions, with a count for the rest.
 
-**Ratified with B1 (lead, November 12, 2026; review B1-REVIEW L-2 and L-4).** The applied header diffs are the text above plus the two `#include` lines their new signatures need. The summaries also carry three keys:
+**Ratified with B1 (lead, November 12, 2026; review B1-REVIEW L-2 and L-4).** The applied header diffs are the text above plus the two `#include` lines their new signatures need. The summaries also carry two keys, and the rows carry a `name` field:
 - `companionsNotListed`: the count of companions past the listed ones;
-- `companionsIncomplete`: true when `kExpandBudgetMs`, a cancel or an unreadable parent stopped the lookup;
-- `name`: the display name the confirmation uses for a single request.
+- `companionsIncomplete`: true when `kExpandBudgetMs` ran out or a parent folder couldn't be read. A cancel instead returns `Expansion::cancelled` (see "Failure and cancellation");
+- `name`: the file name shown on each `companions` row, and on the transfer summary's `collisions`, `targets` and `rejected` rows.
 
 ## Rules
 
@@ -101,9 +101,9 @@ When a requested file is itself a companion (the user selected the `.xmp`), Asse
 - *Move into the source's own folder.* Nothing to do, so a non-modal notice says "It's already in this folder." and the cut stays on the clipboard. A move where only some items are already there still confirms.
 
 **Lead decisions, November 12, 2026 (B1 review; `docs/decisions/2026-11-12-copy-into-own-folder.md`).**
-- *Copy into the source's own folder.* When every collision in a copy plan is a source colliding with itself, the paste runs straight through as keep both, with no dialog, as Explorer's duplicate does. Every member of an asset gets the same `(n)`. Any other collision, exclusion, `companionsIncomplete` or refusal still asks.
-- *What counts as one asset when keep both or skip applies.* Requests are keyed by group membership. A request with role `Other`, or a folder, is its own key, so `notes.txt` and `notes.pdf` are never one asset. A destination name that appears after the plan never splits an asset: either the asset is re-resolved as one at execution, or it is reported as changed and left untouched.
-- *Plan cost and cancel.* `planTransfer` checks cancel in every loop, including the `(n)` search. It reads each destination folder once, so a collision check is a lookup, not a stat.
+- *Copy into the source's own folder.* This rule applies to the first plan of a paste, which is file scope. It relaxes only the "no collisions" condition of the November 5 rule. A source collides with itself when its target is its own path, compared with the key the move's same-folder check uses. When every collision in a copy plan is of that kind, the paste runs straight through as keep both, with no dialog, as Windows Explorer's duplicate does. Requested files that belong to one group get the same `(n)`: selecting `IMG.CR2` and `IMG.CR2.xmp` gives `IMG (2).CR2` and `IMG (2).CR2.xmp`, so the sidecar still names its file. Companions (listed or `companionsNotListed`), any other collision, an exclusion, `companionsIncomplete` or a refusal still show the confirmation.
+- *What counts as one asset when keep both or skip applies.* This holds in both scopes. Requested files are keyed by group membership. A request whose role is `Other`, a `Derived` file left out beside a Raw or Rendered member, and a folder are each their own key, so `notes.txt` and `notes.pdf` are never one asset. A destination name that appears after the plan never splits an asset: either the asset is re-resolved as one at execution, or it is reported as changed and left untouched.
+- *Plan cost and cancel.* `planTransfer` checks cancel in every loop, including the destination read and the `(n)` search. It reads the destination folder once into a name set, with every entry (hidden, system and dangling links included) keyed by the stem-and-case rule above. A collision check is then a lookup, not a stat.
 
 **Overwrite (with B2).** Copy and Move collisions under asset scope take one decision per plan, never per member, and each overwritten member goes through the COPY-SAFETY-01 path (`copy_safety::replaceFileAtomically`). The decision applies only to members that collide. That can leave a destination companion the source asset doesn't have, such as an old `IMG.CR2.xmp`, beside the new photo, where it describes the wrong picture. B2 decides whether Overwrite also replaces or removes those companions through the journal, and tests it (the B2 queue row, `lead_note_b1`).
 

@@ -2,12 +2,17 @@
 
 Written for: B1, B2 and anyone changing copy, move or paste.
 
-**Decision (lead, November 12, 2026, under the user's rule that user experience and performance come first):** answers to the lead items in `docs/verification/B1-REVIEW.md` (on `claude/review-b1`, commit `e1a4859`), now in `docs/contracts/ASSET-GROUP.md`:
-- **L-1:** B1's edits to lead-owned files are ratified: the one `include` line in the root `CMakeLists.txt`, `cmake/AssetGroupTests.cmake`, and the `ui/Main.qml` call sites (`modalOpen` and one `TransferFlow` instance). After the main merge, the clipboard commands are handled in their owning component, under the EN-07 rule.
-- **L-2:** the header diffs are ratified: the contract text plus the two `#include` lines.
-- **L-3:** Ctrl+C then Ctrl+V in a file's own folder duplicates it with no dialog, as keep both, with the same `(n)` on every member of an asset. Any other collision still asks.
-- **L-4:** the summary keys and the B2 Overwrite note are now in the contract.
+**Decision (lead, November 12, 2026, under the user's rule that user experience and performance come first):** answers to the lead items in `docs/verification/B1-REVIEW.md` (on `claude/review-b1`, commit `e1a4859`):
+- **L-1:** B1's edits to lead-owned files are ratified: the one `include` line in the root `CMakeLists.txt`, `cmake/AssetGroupTests.cmake`, and the `ui/Main.qml` call sites (`modalOpen` and one `TransferFlow` instance). B1's round 2 moves the clipboard commands into their owning component under the EN-07 rule when it merges `main`. This item is recorded here, not in the contract.
+- **L-2:** the header diffs are ratified: the contract text plus the two `#include` lines. Now in `docs/contracts/ASSET-GROUP.md`.
+- **L-3:** Ctrl+C then Ctrl+V in a file's own folder duplicates it with no dialog, as keep both. Requested files of one group share the same `(n)`. Any other reason to confirm still asks. Now in the contract, under "Lead decisions, November 12, 2026".
+- **L-4:** the summary keys, the row `name` field and the B2 Overwrite note are now in the contract.
 
-**Why:** duplicating in place is a one-key habit in every desktop file manager, and before B1 it made `name (2)` with no prompt. Once B1 made it ask, the habit gained a dialog that asks nothing the user doesn't already know: the only "collision" is the file itself, and keep both is the only useful answer. The other rules come from the review's findings I-2 and I-3. A plan on a slow share must stay cancellable and must not block the next paste. Unrelated files that happen to share a stem must not be renamed or skipped together.
+The review's findings I-2 (plan cost and cancel) and I-3 (what counts as one asset) became contract rules in the same block. B1's round 2 implements them.
 
-**Cost:** a user who wanted to be asked before every duplicate isn't asked. Nothing is overwritten, nothing unlisted is touched, and the copy can be deleted like any other file.
+**Why:**
+- Duplicating in place is a one-key habit in Windows Explorer and most desktop file managers. Before B1, it made `name (2)` with no prompt. B1 made it ask, and the question tells the user nothing they don't know: the only "collision" is the file itself, and keep both is the only useful answer.
+- A plan on a slow share must stay cancellable and must not hold up the next paste.
+- Unrelated files that happen to share a stem must not be renamed or skipped together.
+
+**Cost:** a user who wanted to be asked before every duplicate isn't asked. Keep both never overwrites, and execution re-checks each target. The run copies only the requested files, which were read and never changed, so the copy can be deleted like any other file.
