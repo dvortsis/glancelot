@@ -2,6 +2,8 @@
 // Unit tests construct their own ResourceLedger (shutdown() is irreversible). The adoption tests use the process
 // instance, as production does, and compare against a baseline snapshot taken at the start of each test.
 #include "glancelot/resource_ledger.hpp"
+#include "glancelot/display_manager.hpp"
+#include "canvas_texture_admission.hpp"
 
 #include <QSignalSpy>
 #include <QtTest>
@@ -426,6 +428,121 @@ private slots:
         QCOMPARE(live(ledger), 0);
         QCOMPARE(ledger.snapshot().aggregate, 0);
         QCOMPARE(ledger.ownerBytes(owner, Ledger::CpuPixels), 0);
+    }
+
+    // ---- Adoption: DisplayManager (owner "presentation") and CanvasTextureAdmission (one owner per canvas group) ----
+    void presentationSlotsAreChargedOnceAndMatchTheLegacyCount() {
+        auto& ledger = ResourceLedger::instance();
+        const auto baseline = ledger.snapshot();
+        {
+            glancelot::DisplayManager dm;
+            const auto p1 = frame(64, 64, 0xff112233), p2 = frame(64, 32, 0xff445566);
+            const qint64 one = p1.sizeInBytes(), half = p2.sizeInBytes();
+            dm.updateImage("p1", p1, 1);
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline.ledgers[int(Ledger::CpuPixels)].charged, one);
+            QCOMPARE(dm.retainedImageBytes(), one);
+            QVERIFY(dm.setReferenceImage("p1", p1, 1));   // the reference shares the current buffer
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline.ledgers[int(Ledger::CpuPixels)].charged, one);
+            QCOMPARE(dm.retainedImageBytes(), one);
+            dm.updateImage("p2", p2, 2);
+            QCOMPARE(dm.retainedImageBytes(), one + half);
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline.ledgers[int(Ledger::CpuPixels)].charged, one + half);
+            dm.clearReferenceImage();
+            QCOMPARE(dm.retainedImageBytes(), half);
+            dm.releaseCachedImages();
+            QCOMPARE(dm.retainedImageBytes(), half);
+        }
+        const auto after = ledger.snapshot();
+        QCOMPARE(after.ledgers[int(Ledger::CpuPixels)].charged, baseline.ledgers[int(Ledger::CpuPixels)].charged);
+        QCOMPARE(after.ledgers[int(Ledger::CpuPixels)].live, baseline.ledgers[int(Ledger::CpuPixels)].live);
+    }
+    void referenceAdmissionRefusesAtExactlyTheSameBudget() {
+        auto& ledger = ResourceLedger::instance();
+        const auto baseline = charged(ledger, Ledger::CpuPixels);
+        const auto p1 = frame(64, 64, 0xff010203), p2 = frame(64, 64, 0xff040506);
+        const qint64 one = p1.sizeInBytes();
+        {
+            BudgetScope budget(2 * one - 1);
+            glancelot::DisplayManager dm;
+            dm.updateImage("p1", p1, 1);
+            QVERIFY(!dm.setReferenceImage("p2", p2, 1));   // refused, nothing changes
+            QCOMPARE(dm.retainedImageBytes(), one);
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline, one);
+        }
+        {
+            BudgetScope budget(2 * one);
+            glancelot::DisplayManager dm;
+            dm.updateImage("p1", p1, 1);
+            QVERIFY(dm.setReferenceImage("p2", p2, 1));    // exactly at the budget: admitted, and the quota agrees
+            QCOMPARE(dm.retainedImageBytes(), 2 * one);
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline, 2 * one);
+            QSignalSpy shed(&dm, &glancelot::DisplayManager::referenceShed);
+            const auto p3 = frame(64, 65, 0xff070809);   // slightly larger: p2 and p3 no longer fit together
+            dm.updateImage("p3", p3, 2);
+            QCOMPARE(shed.count(), 1);              // the reference makes room for the newer frame
+            QCOMPARE(dm.retainedImageBytes(), p3.sizeInBytes());
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline, p3.sizeInBytes());
+        }
+        QCOMPARE(charged(ledger, Ledger::CpuPixels), baseline);
+    }
+    void textureAdmissionKeepsItsArithmeticAndHoldsReservations() {
+        auto& ledger = ResourceLedger::instance();
+        const auto baseline = charged(ledger, Ledger::GpuTextures);
+        const auto aggregate = ledger.snapshot().aggregate;
+        CanvasTextureAdmission admission;
+        QVERIFY(admission.reserve(60, 100));
+        QCOMPARE(ledger.snapshot().aggregate, aggregate);   // GpuTextures stays outside the aggregate in M1
+        QVERIFY(admission.ledgerOwner());
+        QCOMPARE(charged(ledger, Ledger::GpuTextures) - baseline, 60);
+        QCOMPARE(ledger.ownerBytes(admission.ledgerOwner(), Ledger::GpuTextures), 60);
+        QVERIFY(!admission.reserve(41, 100));   // the same limit as before
+        QVERIFY(admission.reserve(101, 1000));   // a larger group budget admits more
+        admission.release(101);
+        QVERIFY(admission.reserve(40, 100));
+        QCOMPARE(admission.bytes(), 100);
+        // Device loss: the renderer's reset releases every texture; recovery re-reserves within the quota.
+        admission.release(60); admission.release(40);
+        QCOMPARE(admission.bytes(), 0);
+        QCOMPARE(charged(ledger, Ledger::GpuTextures), baseline);
+        QVERIFY(admission.reserve(100, 100));
+        QVERIFY(!admission.reserve(1, 100));
+        admission.release(100);
+        QCOMPARE(charged(ledger, Ledger::GpuTextures), baseline);
+    }
+    void twoWindowsOnOneSourceChargeOnceAndCloseInAnyOrder_data() {
+        QTest::addColumn<QList<int>>("closeOrder");
+        QTest::newRow("main, reference, presentation") << QList<int>{0, 1, 2};
+        QTest::newRow("presentation, main, reference") << QList<int>{2, 0, 1};
+        QTest::newRow("reference, presentation, main") << QList<int>{1, 2, 0};
+    }
+    void twoWindowsOnOneSourceChargeOnceAndCloseInAnyOrder() {
+        QFETCH(QList<int>, closeOrder);
+        auto& ledger = ResourceLedger::instance();
+        const auto baseline = ledger.snapshot();
+        const auto source = frame(128, 64, 0xff336699);
+        const qint64 bytes = source.sizeInBytes();
+        {
+            auto dm = std::make_unique<glancelot::DisplayManager>();
+            dm->updateImage("same", source, 1);
+            QVERIFY(dm->setReferenceImage("same", source, 1));
+            // Main canvas, F040 reference canvas and presentation window: one GPU owner per canvas group.
+            std::array<std::unique_ptr<CanvasTextureAdmission>, 3> groups;
+            for (auto& group : groups) { group = std::make_unique<CanvasTextureAdmission>(); QVERIFY(group->reserve(bytes, 256 * MiB)); }
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline.ledgers[int(Ledger::CpuPixels)].charged, bytes);
+            QCOMPARE(charged(ledger, Ledger::GpuTextures) - baseline.ledgers[int(Ledger::GpuTextures)].charged, 3 * bytes);
+            for (const int index : closeOrder) {
+                groups[index]->release(bytes);
+                groups[index].reset();
+                if (index == 2) dm->clearReferenceImage();
+            }
+            QCOMPARE(charged(ledger, Ledger::GpuTextures), baseline.ledgers[int(Ledger::GpuTextures)].charged);
+            QCOMPARE(charged(ledger, Ledger::CpuPixels) - baseline.ledgers[int(Ledger::CpuPixels)].charged, bytes);
+        }
+        const auto after = ledger.snapshot();
+        for (int i = 0; i < kLedgerCount; ++i) {
+            QCOMPARE(after.ledgers[i].charged, baseline.ledgers[i].charged);
+            QCOMPARE(after.ledgers[i].live, baseline.ledgers[i].live);
+        }
     }
 };
 

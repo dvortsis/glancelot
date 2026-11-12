@@ -4,6 +4,7 @@
 #include <QPointer>
 #include "fs_source_token.hpp"
 #include "io_job_lease.hpp"
+#include "resource_ledger_setup.hpp" // E1
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -1274,7 +1275,7 @@ struct ViewerController::Private {
     }
 };
 
-ViewerController::ViewerController(QObject* parent):QObject(parent),d(std::make_unique<Private>(this)){}
+ViewerController::ViewerController(QObject* parent):QObject(parent),d((glancelot::resource::configureProcessLedger(),std::make_unique<Private>(this))){} // E1: ledger budget construction first
 ViewerController::~ViewerController()=default; // ~Private flushes the pending window position
 int ViewerController::windowSlot() const{return d->slot;}
 void ViewerController::setWindowSlot(int slot){
