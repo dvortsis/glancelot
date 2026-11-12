@@ -139,6 +139,7 @@ UiDialog {
         }
         if (secId === "about") {
             return rowMatches("About", "Glancelot local-first photo viewer")
+                || rowMatches("Glancelot", "About version commit built build")
                 || rowMatches("Settings management", "Export import backup reset")
                 || rowMatches("Early alpha", "")
                 || rowMatches("Type", "Geist fonts")
@@ -798,6 +799,9 @@ UiDialog {
                     font.pixelSize: Theme.textBody
                     font.weight: Font.Medium
                     visible: dialog.rowMatches("Glancelot", "About")
+                }
+                AboutBuildInfo { // REL-01: version, commit, build time and kind
+                    visible: info !== null && dialog.rowMatches("Glancelot", "About version commit built build")
                 }
                 Note {
                     text: qsTr("A local-first photo viewer. Viewing never changes your photos.")

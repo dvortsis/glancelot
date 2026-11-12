@@ -24,6 +24,7 @@
 #include "startup_environment.hpp"
 #include "settings_maintenance.hpp"
 #include "presentation_window.hpp"
+#include "build_info.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -62,7 +63,7 @@ namespace {
 void applicationMetadata() {
     QCoreApplication::setApplicationName("Glancelot");
     QCoreApplication::setOrganizationName("Glancelot");
-    QCoreApplication::setApplicationVersion("0.1.0-alpha.1");
+    QCoreApplication::setApplicationVersion(glancelot::build::current().version); // REL-01: project() plus GLANCELOT_VERSION_SUFFIX
 }
 bool writeOutput(const QByteArray& bytes) {
 #ifdef Q_OS_WIN
@@ -162,7 +163,7 @@ int main(int argc,char** argv) {
     if(intent.mode==Mode::Help||intent.mode==Mode::Version||intent.maintenance()) {
         QCoreApplication app(argc,argv);applicationMetadata();
         if(intent.mode==Mode::Help)return writeOutput(parser.helpText().toUtf8())?0:7;
-        if(intent.mode==Mode::Version)return writeOutput((QCoreApplication::applicationName()+" "+QCoreApplication::applicationVersion()+"\n").toUtf8())?0:7;
+        if(intent.mode==Mode::Version)return writeOutput(glancelot::build::versionText().toUtf8())?0:7; // REL-01
         const auto result=glancelot::startup::maintenance(intent,{glancelot::startup::resolveOriginalConfig(originalConfig)});
         return writeOutput(result.json)?result.exitCode:7;
     }
