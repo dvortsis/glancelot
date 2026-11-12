@@ -1581,6 +1581,7 @@ ApplicationWindow {
         z: 15
         Accessible.name: text
     }
+    WorkspaceRestore { host: app; z: 24; anchors.horizontalCenter: parent.horizontalCenter; y: app.paneRect("topbar").y + app.paneRect("topbar").height + Theme.gapSm } // B9 (F057)
     PaneArrangement { anchors.fill: parent; host: app; visible: app.layoutEditing; z: 20 }
     DropArea {
         anchors.fill: parent

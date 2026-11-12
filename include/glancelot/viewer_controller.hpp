@@ -166,6 +166,8 @@ public:
     // Reopens this slot's saved image, or the first image of its saved folder, unless something is already open;
     // an explicit open() always wins. A missing folder reports an actionable status and never erases the saved slot.
     Q_INVOKABLE void restoreWindow();
+    // B9 (F057): the restore offer for a workspace recovered after an unexpected exit (owned by the controller).
+    Q_INVOKABLE QObject* workspaceRestore() const;
     // Writes any pending position immediately (window close / application exit).
     void flushWindowPosition();
     // Filtering (FILTER-01 / NAV-05 / UX-02)

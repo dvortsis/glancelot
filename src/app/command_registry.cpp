@@ -140,6 +140,8 @@ static const std::vector<Command> registry {
     // B3 (F070)
     {"export-selection", "Export selection as CSV or path list", "Ctrl+Shift+E"},
     {"paste-path","Go to the folder path on the clipboard","",false,"global"},
+    // B9 (F057): move focus to the offer to restore a workspace recovered after an unexpected exit.
+    {"workspace-restore","Restore previous workspace","Ctrl+Shift+R",false,"global"},
     {"quit","Quit","Ctrl+Q"}
 };
     return {registry.data(),registry.size()};

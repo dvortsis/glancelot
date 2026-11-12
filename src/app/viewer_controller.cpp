@@ -13,6 +13,7 @@
 #include "binding_validation.hpp"
 #include "recovery_session.hpp"
 #include "recovery_tabs.hpp"
+#include "restore_offer.hpp" // B9 (F057)
 #include "window_claim_guard.hpp"
 #include "glancelot/io_scheduler.hpp"
 #include "glancelot/filter_state.hpp"
@@ -354,6 +355,7 @@ struct ViewerController::Private {
             if(state.begun&&(!recoveryResumeReady||beginFailureReported)) {
                 beginFailureReported=false;
                 recoveryResumeReady=true;recoveryResume=state.beginning.previous;
+                restoreOffer.recovered(recoveryResume); // B9: offered only if an explicit open keeps the resume from running
                 if(status=="Browsing recovery is unavailable. You can keep viewing images.") {
                     status="Browsing recovery is available.";emit q->stateChanged();
                     if(!alive||epoch!=recoveryEpoch)return;
@@ -1272,6 +1274,34 @@ struct ViewerController::Private {
             return NavigationResult{std::move(copy), destination};
         }});
     }
+    // B9 (F057): the in-app restore of a recovered workspace (src/app/restore_offer.*). Declared last so it is destroyed
+    // first and never reads a destroyed member. It reads this state and adds recovered tabs; it never navigates others.
+    glancelot::RestoreOffer::Context restoreContext() const {
+        const auto here=activeLocation();
+        return {safeMode,explicitPositionIntent,restoreRequested,q->navigating()||loading||directoryPending,slot,here.folder,here.image};
+    }
+    glancelot::RestoreOffer::Adopted adoptTabs(const QList<TabRecord>& add,int active) {
+        glancelot::RestoreOffer::Adopted result;
+        const auto here=activeLocation();const bool empty=here.folder.isEmpty()&&here.image.isEmpty();
+        QList<TabRecord> next=empty?QList<TabRecord>{}:tabList.isEmpty()?QList<TabRecord>{here}:tabList;
+        if(!empty&&!tabList.isEmpty())next[activeTabIndex]=here;
+        result.previous=empty?-1:tabList.isEmpty()?0:activeTabIndex;result.first=int(next.size());
+        for(int i=0;i<add.size();++i) {
+            if(const auto found=next.indexOf(add[i]);found>=0){if(i==active)result.target=int(found);continue;}
+            if(next.size()>=recovery::MaxTabs){++result.skipped;continue;}
+            next.append(add[i]);++result.added;if(i==active)result.target=int(next.size())-1;
+        }
+        if(result.target<0&&result.added)result.target=result.first;
+        if(result.target<0||(result.target==result.previous&&!result.added))return result;
+        tabList=next.size()>1?next:QList<TabRecord>{};
+        if(result.target==result.previous){activeTabIndex=result.previous;positionDirty=slot>0;if(positionDirty)positionTimer.start();emit q->tabsChanged();return result;}
+        activeTabIndex=next.size()>1?result.target:0;
+        const auto target=next[result.target];settleOn(target); // until the target is noted, the saved location is its own
+        positionDirty=slot>0;if(positionDirty)positionTimer.start();
+        emit q->tabsChanged();goToTarget(target);
+        return result;
+    }
+    glancelot::RestoreOffer restoreOffer{q,{[this]{return restoreContext();},[this](const QList<TabRecord>& add,int active){return adoptTabs(add,active);}},q};
 };
 
 ViewerController::ViewerController(QObject* parent):QObject(parent),d(std::make_unique<Private>(this)){}
@@ -1320,6 +1350,7 @@ void ViewerController::setWindowClaim(const glancelot::WindowClaim& identity){
 }
 void ViewerController::setSafeMode(bool enabled){if(d->safeMode==enabled)return;d->safeMode=enabled;emit stateChanged();}
 void ViewerController::flushWindowPosition(){d->writePosition();}
+QObject* ViewerController::workspaceRestore() const{return &d->restoreOffer;} // B9 (F057)
 void ViewerController::restoreWindow(){
     if(d->safeMode||d->explicitPositionIntent||d->slot<=0||!d->path.isEmpty()||d->restoreRequested)return;
     QString folder,image;

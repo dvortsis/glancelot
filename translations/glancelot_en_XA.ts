@@ -1820,6 +1820,45 @@
     </message>
 </context>
 <context>
+    <name>RestoreOffer</name>
+    <message>
+        <source>Restored %1 tabs from your previous session. Each loads when you switch to it.</source>
+        <translation>[Réstõréd %1 tàbs frõm ýõûr prévîõûs séssîõñ. Éàçh lõàds whéñ ýõû swîtçh tõ ît.]</translation>
+    </message>
+    <message>
+        <source>Restored your previous folder.</source>
+        <translation>[Réstõréd ýõûr prévîõûs fõldér.]</translation>
+    </message>
+    <message>
+        <source>Added %1 tabs from your previous session.</source>
+        <translation>[Àddéd %1 tàbs frõm ýõûr prévîõûs séssîõñ.]</translation>
+    </message>
+    <message>
+        <source>Added a tab from your previous session.</source>
+        <translation>[Àddéd à tàb frõm ýõûr prévîõûs séssîõñ.]</translation>
+    </message>
+    <message>
+        <source>Your previous workspace is already open.</source>
+        <translation>[Ýõûr prévîõûs wõrkspàçé îs àlréàdý õpéñ.]</translation>
+    </message>
+    <message>
+        <source>Restore cancelled. Your previous workspace is still offered.</source>
+        <translation>[Réstõré çàñçélléd. Ýõûr prévîõûs wõrkspàçé îs stîll õfféréd.]</translation>
+    </message>
+    <message>
+        <source>Restore stopped. Press F5 to try that folder again.</source>
+        <translation>[Réstõré stõppéd. Préss F5 tõ trý thàt fõldér àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>Dismissed. Your previous workspace won&apos;t be offered again.</source>
+        <translation>[Dîsmîsséd. Ýõûr prévîõûs wõrkspàçé wõñ&apos;t bé õfféréd àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>Dismissed for now. Glancelot could not remember this, so it may be offered again next time.</source>
+        <translation>[Dîsmîsséd fõr ñõw. Glàñçélõt çõûld ñõt rémémbér thîs, sõ ît màý bé õfféréd àgàîñ ñéxt tîmé.]</translation>
+    </message>
+</context>
+<context>
     <name>SettingRow</name>
     <message>
         <source>Modified from default</source>
@@ -2696,6 +2735,97 @@
     <message>
         <source>Modified from default</source>
         <translation>[Mõdîfîéd frõm défàûlt]</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceRestore</name>
+    <message>
+        <source>Restore your previous tabs?</source>
+        <translation>[Réstõré ýõûr prévîõûs tàbs?]</translation>
+    </message>
+    <message>
+        <source>Restore your previous folder?</source>
+        <translation>[Réstõré ýõûr prévîõûs fõldér?]</translation>
+    </message>
+    <message>
+        <source>Your previous folder isn&apos;t available</source>
+        <translation>[Ýõûr prévîõûs fõldér îsñ&apos;t àvàîlàblé]</translation>
+    </message>
+    <message>
+        <source>Restoring your previous workspace…</source>
+        <translation>[Réstõrîñg ýõûr prévîõûs wõrkspàçé…]</translation>
+    </message>
+    <message>
+        <source>Safe mode: nothing was restored</source>
+        <translation>[Sàfé mõdé: ñõthîñg wàs réstõréd]</translation>
+    </message>
+    <message>
+        <source>Settings were reset: nothing was restored</source>
+        <translation>[Séttîñgs wéré rését: ñõthîñg wàs réstõréd]</translation>
+    </message>
+    <message>
+        <source>Glancelot closed unexpectedly with %1 tabs open, last in %2. What you opened stays open; restoring adds those tabs beside it.</source>
+        <translation>[Glàñçélõt çlõséd ûñéxpéçtédlý wîth %1 tàbs õpéñ, làst îñ %2. Whàt ýõû õpéñéd stàýs õpéñ; réstõrîñg àdds thõsé tàbs bésîdé ît.]</translation>
+    </message>
+    <message>
+        <source>Glancelot closed unexpectedly while %1 was open. What you opened stays open; restoring adds that folder as a tab.</source>
+        <translation>[Glàñçélõt çlõséd ûñéxpéçtédlý whîlé %1 wàs õpéñ. Whàt ýõû õpéñéd stàýs õpéñ; réstõrîñg àdds thàt fõldér às à tàb.]</translation>
+    </message>
+    <message>
+        <source>%1 of those folders can&apos;t be found right now.</source>
+        <translation>[%1 õf thõsé fõldérs çàñ&apos;t bé fõûñd rîght ñõw.]</translation>
+    </message>
+    <message>
+        <source>One of those folders can&apos;t be found right now.</source>
+        <translation>[Õñé õf thõsé fõldérs çàñ&apos;t bé fõûñd rîght ñõw.]</translation>
+    </message>
+    <message>
+        <source>Glancelot closed unexpectedly with %1 tabs open, but none of their folders can be found now. Reconnect the drive to open them again.</source>
+        <translation>[Glàñçélõt çlõséd ûñéxpéçtédlý wîth %1 tàbs õpéñ, bût ñõñé õf théîr fõldérs çàñ bé fõûñd ñõw. Réçõññéçt thé drîvé tõ õpéñ thém àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>Glancelot closed unexpectedly while %1 was open, but that folder can&apos;t be found now: %2</source>
+        <translation>[Glàñçélõt çlõséd ûñéxpéçtédlý whîlé %1 wàs õpéñ, bût thàt fõldér çàñ&apos;t bé fõûñd ñõw: %2]</translation>
+    </message>
+    <message>
+        <source>Opening %1. Other restored tabs load when you switch to them.</source>
+        <translation>[Õpéñîñg %1. Õthér réstõréd tàbs lõàd whéñ ýõû swîtçh tõ thém.]</translation>
+    </message>
+    <message>
+        <source>Glancelot is using temporary settings. Your saved folders, tabs and preferences are kept unchanged. Restart Glancelot normally to return to them.</source>
+        <translation>[Glàñçélõt îs ûsîñg témpõràrý séttîñgs. Ýõûr sàvéd fõldérs, tàbs àñd préféréñçés àré képt ûñçhàñgéd. Réstàrt Glàñçélõt ñõrmàllý tõ rétûrñ tõ thém.]</translation>
+    </message>
+    <message>
+        <source>Defaults are active, so no folders or tabs were restored. Your previous settings are kept as %1.</source>
+        <translation>[Défàûlts àré àçtîvé, sõ ñõ fõldérs õr tàbs wéré réstõréd. Ýõûr prévîõûs séttîñgs àré képt às %1.]</translation>
+    </message>
+    <message>
+        <source>Defaults are active, so no folders or tabs were restored.</source>
+        <translation>[Défàûlts àré àçtîvé, sõ ñõ fõldérs õr tàbs wéré réstõréd.]</translation>
+    </message>
+    <message>
+        <source>There is no previous workspace to restore.</source>
+        <translation>[Théré îs ñõ prévîõûs wõrkspàçé tõ réstõré.]</translation>
+    </message>
+    <message>
+        <source>Restore tabs</source>
+        <translation>[Réstõré tàbs]</translation>
+    </message>
+    <message>
+        <source>Restore folder</source>
+        <translation>[Réstõré fõldér]</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>[Çàñçél]</translation>
+    </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>[Dîsmîss]</translation>
+    </message>
+    <message>
+        <source>Don&apos;t offer this workspace again</source>
+        <translation>[Dõñ&apos;t õffér thîs wõrkspàçé àgàîñ]</translation>
     </message>
 </context>
 </TS>
