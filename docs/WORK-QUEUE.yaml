@@ -12,9 +12,10 @@ lead_takeover_2026_10_22: "User decision: Claude Code Opus 5.5 lead owns all lan
 lead_plan_2026_10_22: "User-approved execution plan: enablement phase EN-01..EN-10, frozen Wave A stack correction, then six concurrent subsystem tracks A-F with cross-track contracts; CI lead-windows-gate is the only gate that decides done; physical qualification via RUNBOOK packets. Replaces takeover waves B-G. Plan: docs/handoff/LEAD-PLAN-2026-10-22.md"
 operating_model: "AGENTS.md (October 22, 2026): lead plus track and fresh-context review sessions; CI lead-windows-gate decides done. Lanes retired."
 phase0_memory_action: act_mvk70jg4_e555f0e2e57c
-current_cycle: docs/handoff/PHASE0-CYCLE1-2026-10-22.md
-slot_holds: {}
-new_slices_paused: "User decision (2026-11-05): finish the open slices (A1 PR 7 and PR 12, B1 PR 13, PR 14 and its part 3, EN-07), then stop; open no new ones. This overrides the Slots rule in AGENTS.md until the user lifts it. The hourly slot timer is cancelled."
+current_cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+slot_holds:
+  B3-FOLLOWUPS: "File conflict with a running slice: its Export context-menu item needs ui/PhotoGrid.qml, which A1 (PR 7) is rewriting in its main merge. Starts when PR 7 merges."
+slice_cap: "User decision (2026-11-12): up to 12 slices at once, as long as work is available. This overrides the four-session cap in AGENTS.md until AGENTS.md is updated. Unchanged: at most three local builds, none while a full gate holds the gate lock, and one gate at a time. Decision: docs/decisions/2026-11-12-slice-cap.md. Cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md."
 resumed: "User decision (2026-11-04): pause lifted; finish Phase 1, then continue the plan into Phase 2 with up to four child sessions at a time. All changes go through pull requests (AGENTS.md, Pull requests and merging; docs/decisions/2026-11-04-merge-protections.md)."
 planning_documents:
   feature_opportunities: docs/FEATURE-OPPORTUNITIES.md
@@ -1279,13 +1280,87 @@ tasks:
     state: ready
     depends: [B3]
     outcome: "An Export item in the grid's context menu (discoverability; needs a ui/Main.qml or PhotoGrid site); ExportDialog listed in translation_coverage_ui's surfaces; selection_export tests for zero rows with the option on and off (B3-REVIEW-R2 finding 1); translations/README.md message count corrected at the next catalog regeneration (B3-REVIEW-R3 R3-N1)"
-    acceptance: "Fresh review and a full gate; not started, per the user's November 5 decision to open no new slices"
+    acceptance: "Fresh review and a full gate; held under slot_holds until PR 7 merges"
   - id: REL-01
     title: Build provenance for releases
     owner: lead
-    state: ready
+    state: implementing
     outcome: "Version from project() plus GLANCELOT_VERSION_SUFFIX, full and short Git SHA, UTC build time and build kind injected at configure or build time; shown in About and printed by --version; Windows file version; Docker image OCI version, revision and created labels and a sha-<full SHA> tag; a release build fails without a SHA"
-    acceptance: "docs/RELEASING.md 'Build provenance'; no hand-written SHA in source; fresh review and full gate; not started while new slices are paused"
+    acceptance: "docs/RELEASING.md 'Build provenance'; no hand-written SHA in source; fresh review and full gate"
+    state_note: "Implementing from 2026-11-12 in a cloud session; branch claude/rel-01-provenance; cycle docs/handoff/PHASE3-CYCLE1-2026-11-12.md"
+    branch: claude/rel-01-provenance
+  - id: D1
+    title: DECODE-TIER + PERF-DECODE + F033
+    owner: lead
+    state: implementing
+    depends: [EN-05, PHASE2-CONTRACTS]
+    branch: claude/d1-decode-tier
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "docs/contracts/DECODE-TIER.md: fit-sized preview tier then full detail with identical orientation and colour; tier labels; tier in the decode-cache key; no stale or lower-tier replacement; measured launch, probe, decode and copy; persistent-worker experiment behind a switch; corrupt versus unsupported reporting; scaled fallback above 64 MP; animation decode off the GUI thread with a byte cap. Two stacked PRs."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/D1-HANDOFF.md with the pre-handoff checklist"
+  - id: E1
+    title: RESOURCE-LEDGER + PERF-RESOURCE
+    owner: lead
+    state: implementing
+    depends: [PHASE2-CONTRACTS]
+    branch: claude/e1-resource-ledger
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "docs/contracts/RESOURCE-LEDGER.md: one ledger behind the display_manager aggregate, canvas texture admission and IoScheduler budgets; effective limit = min(user cap, OS headroom, cgroup limit); pressure response with hysteresis; tests for crash after reserve, cancel during transfer, late completion and two windows on one source; closes the CACHE-01 and IO-01 follow-ups. Two stacked PRs."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/E1-HANDOFF.md with the pre-handoff checklist"
+  - id: D2
+    title: F043 capability model
+    owner: lead
+    state: implementing
+    depends: [PHASE2-CONTRACTS]
+    branch: claude/d2-capability
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "docs/contracts/CAPABILITY.md: decoder, colour, display and source status with explicit unknown, shown in Settings and the metadata HUD; replaces the fixed SDR text and the 'display profile not yet managed' noise."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/D2-HANDOFF.md with the pre-handoff checklist"
+  - id: B8
+    title: F066 tool slots + F068 shell and single instance + F069 CLI
+    owner: lead
+    state: implementing
+    depends: [EN-07]
+    branch: claude/b8-tools-shell-cli
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "Nine external tool slots with argument arrays and a settings page; shell associations and open-folder; QLocalServer instance routing that honours window slots; CLI folder, layout and temporary-config entry points with diagnostic exit codes. Owns app/main.cpp this cycle. Two or three stacked PRs."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/B8-HANDOFF.md with the pre-handoff checklist"
+  - id: B9
+    title: F057 restore UI
+    owner: lead
+    state: implementing
+    depends: [EN-07]
+    branch: claude/b9-restore-ui
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "In-app restore of a recovered workspace over the existing recovery engine: lazy restore, an explicit open wins, SAFE and reset states visible."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/B9-HANDOFF.md with the pre-handoff checklist"
+  - id: E5
+    title: Workspace completion
+    owner: lead
+    state: implementing
+    depends: [EN-07]
+    branch: claude/e5-workspace
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "E5a: F050 changed-from-default and import preview, F051 conflict view and import/export. E5b: F055 toolbar, F056 first-run hints. E5c: F031, F037, F002, F067 and F041 leftovers. Two or three PRs."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/E5-HANDOFF.md with the pre-handoff checklist"
+  - id: E6
+    title: High contrast and theme contrast (E6 first part)
+    owner: lead
+    state: implementing
+    depends: [EN-07]
+    branch: claude/e6-contrast
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "F052 and F053 native high-contrast detection; light-theme border and placeholder contrast from the UX audit; --window-size clamp. Plural forms, the 540x360 layout and the NVDA and Orca RUNBOOK stay for Phase 4."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/E6-HANDOFF.md with the pre-handoff checklist"
+  - id: F3
+    title: F072 GPS handoff
+    owner: lead
+    state: implementing
+    depends: [EN-07]
+    branch: claude/f3-gps-handoff
+    cycle: docs/handoff/PHASE3-CYCLE1-2026-11-12.md
+    outcome: "User-invoked map handoff for an image with valid GPS coordinates only; no background fetch, no network from the viewer except the user's own browser on request."
+    acceptance: "Fresh Opus review and a full Windows and Docker gate on the integrated commit; handoff docs/handoff/F3-HANDOFF.md with the pre-handoff checklist"
   - id: COPY-SAFETY-01
     title: Copy/move Overwrite never destroys the existing target
     requirements: [META-07, SYS-06, SYS-02]
