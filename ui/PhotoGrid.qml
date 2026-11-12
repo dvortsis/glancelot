@@ -25,6 +25,10 @@ Rectangle {
     property var resetViewport: null
     property bool moreRequested: false // "Show more" was pressed and its listing has not landed
     property bool moreHadFocus: false
+    // An explicit sort of a truncated folder re-lists it, which takes seconds at a million rows: the banner says so.
+    property bool reordering: false
+    readonly property string sortSignature: viewer.sortKey + "/" + viewer.sortDescending
+    onSortSignatureChanged: Qt.callLater(() => { panel.reordering = fileGrid.truncated && fileGrid.loading && !fileGrid.arriving })
     property string searchQuery: ""
     property string preSearchPath: "" // the file type-ahead started from: rows move while a listing arrives
     property bool filterExpanded: false
@@ -297,10 +301,13 @@ Rectangle {
         preSearchPath = ""
         searchTimer.stop()
         placeCursor = true
+        moreRequested = false // a page of the folder before says nothing about this one
+        reordering = false
     }
     Connections {
         target: fileGrid
         function onLoadingChanged() {
+            if (!fileGrid.loading) panel.reordering = false
             if (!fileGrid.loading && panel.moreRequested) { panel.moreRequested = false; Qt.callLater(panel.settleShowMore) }
             if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal)
         }
@@ -595,8 +602,9 @@ Rectangle {
             text: {
                 if (panel.moreRequested) return qsTr("Listing more items…")
                 const n = fileGrid.count.toLocaleString(Qt.locale(), "f", 0)
-                if (fileGrid.loadMoreRefused) return fileGrid.hasFilter ? qsTr("There is not enough free memory to list more items, so some matches may be missing.")
-                                                                        : qsTr("Showing %1 items. This folder has more, but there is not enough free memory to list them.").arg(n)
+                if (panel.reordering) return qsTr("Sorting the %1 items listed here…").arg(n)
+                if (fileGrid.loadMoreRefused) return fileGrid.hasFilter ? qsTr("There is not enough free memory to list more items, so some matches may be missing. Close other apps, then try again.")
+                                                                        : qsTr("Showing %1 items. There is not enough free memory to list more. Close other apps, then try again.").arg(n)
                 if (fileGrid.canLoadMore) return fileGrid.hasFilter ? qsTr("This folder has more items that are not listed here, so some matches may be missing.")
                                                                     : qsTr("Showing %1 items. This folder has more that are not listed here.").arg(n)
                 return fileGrid.hasFilter ? qsTr("Glancelot has reached the most items it can list in a folder, so some matches may be missing.")
@@ -620,8 +628,8 @@ Rectangle {
             onClicked: {
                 panel.moreHadFocus = activeFocus
                 fileGrid.loadMore()
-                panel.moreRequested = fileGrid.loading
-                if (fileGrid.loadMoreRefused) Qt.callLater(panel.settleShowMore) // the button leaves: focus goes to the grid
+                // Only a page that really started: not a refusal, and not a refresh that was already running.
+                panel.moreRequested = fileGrid.loading && !fileGrid.loadMoreRefused && !fileGrid.arriving
             }
         }
     }

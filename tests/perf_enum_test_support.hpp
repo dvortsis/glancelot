@@ -13,6 +13,7 @@ namespace {
 struct FakeFolder {
     std::function<QString(int)> name = [](int i) { return QString("f%1.png").arg(i, 7, 10, QChar('0')); };
     int total{}, heldAfter{-1}, failAfter{-1};
+    std::int64_t sizeBias{}; // added to every file's size, so a refresh can find the same rows with new sizes
     std::shared_ptr<std::atomic_int> emitted = std::make_shared<std::atomic_int>(0), starts = std::make_shared<std::atomic_int>(0), exits = std::make_shared<std::atomic_int>(0);
     std::shared_ptr<std::atomic_bool> released = std::make_shared<std::atomic_bool>(false);
     void release() const { released->store(true); }
@@ -33,7 +34,7 @@ struct FakeFolder {
                 const QString name = self.name(i);
                 entry.path = directory / directory_scan::nativePath(name);
                 entry.kind = name.startsWith("dir") ? glancelot::EntryKind::Folder : name.endsWith(".dat") ? glancelot::EntryKind::File : glancelot::EntryKind::Image;
-                entry.meta = {std::int64_t(i), std::uintmax_t(i), true};
+                entry.meta = {std::int64_t(i), std::uintmax_t(i + self.sizeBias), true};
                 if (!sink(std::move(entry))) { outcome = {}; outcome.cancelled = true; return outcome; }
                 ++*self.emitted;
             }

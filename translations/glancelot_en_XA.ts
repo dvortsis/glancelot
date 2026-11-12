@@ -502,6 +502,10 @@
 <context>
     <name>Grid</name>
     <message>
+        <source>There is not enough free memory to list this folder. Close other apps, then try again.</source>
+        <translation>[Théré îs ñõt éñõùgh fréé mémõrý tõ lîst thîs fõldér. Çlõsé õthér àpps, théñ trý àgàîñ.]</translation>
+    </message>
+    <message>
         <source>This folder can&apos;t be opened. It may have been moved or deleted, or you may not have permission to read it.</source>
         <translation>[Thîs fõldér çàñ&apos;t bé õpéñéd. Ît màý hàvé bééñ mõvéd õr délétéd, õr ýõû màý ñõt hàvé pérmîssîõñ tõ réàd ît.]</translation>
     </message>
@@ -1752,12 +1756,16 @@
         <translation>[Réàd-õñlý drîvé]</translation>
     </message>
     <message>
-        <source>There is not enough free memory to list more items, so some matches may be missing.</source>
-        <translation>[Théré îs ñõt éñõùgh fréé mémõrý tõ lîst mõré îtéms, sõ sõmé màtçhés màý bé mîssîñg.]</translation>
+        <source>There is not enough free memory to list more items, so some matches may be missing. Close other apps, then try again.</source>
+        <translation>[Théré îs ñõt éñõùgh fréé mémõrý tõ lîst mõré îtéms, sõ sõmé màtçhés màý bé mîssîñg. Çlõsé õthér àpps, théñ trý àgàîñ.]</translation>
     </message>
     <message>
-        <source>Showing %1 items. This folder has more, but there is not enough free memory to list them.</source>
-        <translation>[Shõwîñg %1 îtéms. Thîs fõldér hàs mõré, bùt théré îs ñõt éñõùgh fréé mémõrý tõ lîst thém.]</translation>
+        <source>Showing %1 items. There is not enough free memory to list more. Close other apps, then try again.</source>
+        <translation>[Shõwîñg %1 îtéms. Théré îs ñõt éñõùgh fréé mémõrý tõ lîst mõré. Çlõsé õthér àpps, théñ trý àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>Sorting the %1 items listed here…</source>
+        <translation>[Sõrtîñg thé %1 îtéms lîstéd héré…]</translation>
     </message>
     <message>
         <source>Showing %1 items. This folder has more that are not listed here.</source>

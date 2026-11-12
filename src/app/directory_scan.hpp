@@ -104,8 +104,16 @@ inline constexpr std::uint64_t kMemoryHeadroomBytes = std::uint64_t(512) * 1024 
 inline bool pageFits(std::optional<std::uint64_t> available, std::uint64_t averageBytes, std::size_t pageRows) {
     return !available || averageBytes * pageRows * kPagePeakFactor + kMemoryHeadroomBytes <= *available;
 }
-// `limit` and `usage` are a cgroup's memory limit and use, as its files read, empty when there are none.
-inline std::optional<std::uint64_t> linuxAvailableBytes(const QByteArray& meminfo, const QByteArray& limit, const QByteArray& usage) {
+// The most a listing of `wanted` rows can be cut to and still fit, in whole steps. The first step always fits: a folder
+// is never listed with less than it showed before "Show more" existed.
+inline std::size_t largestCapThatFits(std::optional<std::uint64_t> available, std::uint64_t averageBytes, std::size_t wanted, std::size_t step) {
+    std::size_t cap = wanted;
+    while (cap > step && !pageFits(available, averageBytes, cap)) cap = (cap - 1) / step * step;
+    return std::max(cap, step);
+}
+// `limit` and `usage` are a cgroup's memory limit and use, as its files read, empty when there are none. `stat` is its
+// memory.stat: the inactive page cache in it is reclaimable, so it does not count as used.
+inline std::optional<std::uint64_t> linuxAvailableBytes(const QByteArray& meminfo, const QByteArray& limit, const QByteArray& usage, const QByteArray& stat = {}) {
     std::optional<std::uint64_t> available;
     for (const QByteArray& line : meminfo.split('\n')) {
         if (!line.startsWith("MemAvailable:")) continue;
@@ -116,7 +124,16 @@ inline std::optional<std::uint64_t> linuxAvailableBytes(const QByteArray& meminf
         break;
     }
     bool hasLimit = false, hasUsage = false; // "max" reads as no limit
-    const quint64 most = limit.trimmed().toULongLong(&hasLimit), used = usage.trimmed().toULongLong(&hasUsage);
+    const quint64 most = limit.trimmed().toULongLong(&hasLimit);
+    quint64 used = usage.trimmed().toULongLong(&hasUsage);
+    for (const QByteArray& line : stat.split('\n')) {
+        const QList<QByteArray> parts = line.simplified().split(' ');
+        if (parts.size() != 2 || (parts[0] != "inactive_file" && parts[0] != "total_inactive_file")) continue; // v2, v1
+        bool ok = false;
+        const quint64 cache = parts[1].toULongLong(&ok);
+        if (ok) used = used > cache ? used - cache : 0;
+        break;
+    }
     if (hasLimit && hasUsage) {
         const std::uint64_t left = most > used ? most - used : 0;
         available = available ? std::min(*available, left) : left;
@@ -140,11 +157,13 @@ inline std::optional<std::uint64_t> availableMemoryBytes() {
         if (line.startsWith("0::")) group = QString::fromUtf8(line.mid(3)).trimmed();
     QByteArray limit = read(QStringLiteral("/sys/fs/cgroup") + group + QStringLiteral("/memory.max"));
     QByteArray usage = read(QStringLiteral("/sys/fs/cgroup") + group + QStringLiteral("/memory.current"));
+    QByteArray stat = read(QStringLiteral("/sys/fs/cgroup") + group + QStringLiteral("/memory.stat"));
     if (limit.isEmpty()) { // cgroup v1
         limit = read(QStringLiteral("/sys/fs/cgroup/memory/memory.limit_in_bytes"));
         usage = read(QStringLiteral("/sys/fs/cgroup/memory/memory.usage_in_bytes"));
+        stat = read(QStringLiteral("/sys/fs/cgroup/memory/memory.stat"));
     }
-    return linuxAvailableBytes(read(QStringLiteral("/proc/meminfo")), limit, usage);
+    return linuxAvailableBytes(read(QStringLiteral("/proc/meminfo")), limit, usage, stat);
 #endif
 }
 inline Row makeRow(const glancelot::DirectoryEntry& entry, const QString& base) {
@@ -162,6 +181,7 @@ inline Row makeRow(const glancelot::DirectoryEntry& entry, const QString& base) 
 struct Listing {
     std::vector<Row> rows;
     std::vector<Row> rawRows; // a copy of `rows` made on the worker, when the request asks for one
+    bool outOfMemory{};       // an allocation failed on the worker: nothing here is usable
     QHash<QString, int> index;
     bool accessible{true}, cancelled{}, truncated{};
     bool rowsPublished{};   // the rows already went out as the definitive batch; this result carries only identities
@@ -502,6 +522,7 @@ inline Listing scan(const Request& request, const std::shared_ptr<Arrivals>& arr
         definitive.truncated = result.truncated; definitive.rowCount = result.rowCount;
         if (result.identities.complete) probing = result.rows;
         definitive.rows = std::move(result.rows); definitive.index = std::move(result.index);
+        definitive.rawRows = std::move(result.rawRows); // so the GUI thread does not copy a million rows at the definitive order
         result.rows = {}; result.index = {};
         Batch batch;
         batch.definitive = std::move(definitive);

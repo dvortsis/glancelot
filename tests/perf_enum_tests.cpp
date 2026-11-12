@@ -72,6 +72,31 @@ std::vector<directory_scan::Row> sampledRows(const DirectoryEntryModel& model) {
     }
     return rows;
 }
+// A truncated folder with subfolders, so arrival positions and final rows differ by the folder count. Its next listing
+// can be held partway, or made to run out of memory.
+struct FoldersFolder : PagedFolder {
+    FakeFolder held;
+    std::shared_ptr<std::atomic_int> mode = std::make_shared<std::atomic_int>(0); // 0 lists, 1 holds, 2 throws bad_alloc on a page
+    explicit FoldersFolder(int total) : PagedFolder(total) {
+        folder.name = [total](int i) { return i % 10 == 0 ? QString("dir%1").arg(total - i, 7, 10, QChar('0')) : QString("f%1.png").arg(total - i, 7, 10, QChar('0')); };
+        held.total = total; held.name = folder.name; held.heldAfter = kPage / 2;
+    }
+    void installWithFolders() {
+        install();
+        directory_scan::testSeam.enumerator = [plain = folder.enumerator(), holding = held.enumerator(), use = mode](
+            const std::filesystem::path& directory, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
+            if (use->load() == 2 && limit > std::size_t(kPage)) throw std::bad_alloc();
+            if (use->load() == 3) throw std::bad_alloc();
+            return (use->load() == 1 ? holding : plain)(directory, hidden, cancel, limit, sink);
+        };
+    }
+};
+// Every row is found where it is, by path: the lookup Enter, a Shift range and delete all go through.
+int rowsLookedUpWrong(const DirectoryEntryModel& model) {
+    int wrong = 0;
+    for (int i = 0; i < model.count(); ++i) if (model.rowOf(model.pathAt(i)) != i) ++wrong;
+    return wrong;
+}
 bool listed(const DirectoryEntryModel& model, int rows) {
     return QTest::qWaitFor([&] { return !model.loading() && model.count() == rows; }, 10000);
 }
@@ -217,6 +242,31 @@ QStringList pathsFromRows(const DirectoryEntryModel& model) {
     QStringList paths;
     for (int i = 0; i < model.count(); ++i) if (model.data(model.index(i), DirectoryEntryModel::SelectedRole).toBool()) paths << model.pathAt(i);
     return paths;
+}
+// B1: a sort that lands on rows still in arrival order. Each case checks every lookup, the cursor, a Shift range,
+// a range at the last row and the refresh after.
+void checkLookupsAfterTheSort(DirectoryEntryModel& model, const QString& chosen) {
+    QCOMPARE(rowsLookedUpWrong(model), 0);
+    QCOMPARE(model.pathAt(model.cursorRow()), chosen);
+    const int cursor = model.cursorRow();
+    model.select(cursor); model.select(cursor, DirectoryEntryModel::Range);
+    QCOMPARE(model.selectedPaths(), QStringList{chosen});
+    model.select(model.count() - 1); model.select(model.count() - 1, DirectoryEntryModel::Range); // an anchor at the end
+    QCOMPARE(model.selectedCount(), 1);
+    QCOMPARE(model.selectedPaths(), QStringList{model.pathAt(model.count() - 1)});
+    int lowest = model.count();
+    const auto watch = QObject::connect(&model, &DirectoryEntryModel::countChanged, &model, [&] { lowest = std::min(lowest, model.count()); });
+    QSignalSpy resets(&model, &QAbstractItemModel::modelReset);
+    model.refresh();
+    QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
+    QObject::disconnect(watch);
+    QCOMPARE(lowest, kPage); // the grid does not blank
+    QCOMPARE(resets.count(), 0);
+    QCOMPARE(rowsLookedUpWrong(model), 0);
+}
+// The race: a sort, coming back to the grid, or a refresh of a folder listed whole, at a raised cap that no longer fits.
+std::uint64_t memoryForRows(const DirectoryEntryModel& model, double rows) {
+    return directory_scan::kMemoryHeadroomBytes + std::uint64_t(double(directory_scan::averageRowBytes(sampledRows(model)) * directory_scan::kPagePeakFactor) * rows);
 }
 class PerfEnumTests : public QObject {
     Q_OBJECT
@@ -1083,46 +1133,15 @@ private slots:
             QVERIFY(listed(model, 2500)); // the entry limit still holds, and this folder fits under it
             return;
         }
-        QVERIFY(model.loadMoreRefused()); QVERIFY(!model.canLoadMore());
+        QVERIFY(model.loadMoreRefused()); QVERIFY(model.canLoadMore()); // still offered: the next press checks again
         QCOMPARE(changed.count(), 1);
         QVERIFY(!model.loading()); QVERIFY(model.truncated());
         QCOMPARE(names(model), shown);
         QTest::qWait(64); // sleep-ok: several ticks in which a scan would start
         QCOMPARE(paged.folder.starts->load(), starts);
-        model.loadMore(); // nothing to do until the folder is opened again
+        model.loadMore(); // still too little
         QCOMPARE(paged.folder.starts->load(), starts);
-    }
-    void aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain() {
-        QTemporaryDir dir, other; PagedFolder paged(2500); paged.install();
-        auto spare = std::make_shared<std::atomic<std::uint64_t>>(0);
-        directory_scan::testSeam.availableMemory = [spare]() -> std::optional<std::uint64_t> { return spare->load(); };
-        DirectoryEntryModel model; model.setActive(true);
-        model.setDirectory(dir.path());
-        QVERIFY(listed(model, kPage));
-        model.loadMore();
         QVERIFY(model.loadMoreRefused());
-        QSignalSpy changed(&model, &DirectoryEntryModel::directoryChanged);
-        model.refresh(); // a change in the folder is not the user asking again
-        QVERIFY(model.loading());
-        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
-        QVERIFY(model.loadMoreRefused());
-        model.setDirectory(dir.path()); // opened again
-        QVERIFY(!model.loadMoreRefused()); QVERIFY(changed.count() > 0);
-        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
-        QVERIFY(model.canLoadMore());
-        model.loadMore();
-        QVERIFY(model.loadMoreRefused());
-        model.setDirectory(other.path());
-        QVERIFY(!model.loadMoreRefused());
-        QVERIFY(listed(model, kPage));
-        model.loadMore();
-        QVERIFY(model.loadMoreRefused());
-        model.setActive(false); model.setActive(true); // the grid left and came back
-        QVERIFY(!model.loadMoreRefused());
-        QVERIFY(listed(model, kPage));
-        spare->store(directory_scan::kMemoryHeadroomBytes * 4);
-        model.loadMore();
-        QVERIFY(listed(model, 2000));
     }
     // The estimate follows the rows this folder really has.
     void aFolderOfLongNamesNeedsMoreFreeMemory() {
@@ -1173,11 +1192,199 @@ private slots:
         QCOMPARE(directory_scan::linuxAvailableBytes("MemTotal: 1 kB\n", "", ""), std::optional<std::uint64_t>{}); // nothing to read
         QCOMPARE(directory_scan::linuxAvailableBytes("MemAvailable: x kB\n", "", ""), std::optional<std::uint64_t>{});
         QCOMPARE(directory_scan::linuxAvailableBytes("", "1048576", "4096"), std::optional<std::uint64_t>(1048576 - 4096));
+        // Page cache counts in memory.current, but the kernel reclaims the inactive part before refusing anything.
+        const QByteArray v2 = "anon 1000\nfile 600000\ninactive_file 500000\nactive_file 100000\n";
+        QCOMPARE(directory_scan::linuxAvailableBytes(meminfo, "1048576\n", "700000\n", v2), std::optional<std::uint64_t>(1048576 - 200000));
+        const QByteArray v1 = "cache 600000\ntotal_inactive_file 500000\n";
+        QCOMPARE(directory_scan::linuxAvailableBytes(meminfo, "1048576\n", "700000\n", v1), std::optional<std::uint64_t>(1048576 - 200000));
+        QCOMPARE(directory_scan::linuxAvailableBytes(meminfo, "1048576\n", "700000\n", "inactive_file 900000\n"), std::optional<std::uint64_t>(1048576)); // never below none used
     }
     void thisMachineReportsFreeMemory() {
         const auto available = directory_scan::availableMemoryBytes();
         QVERIFY(available.has_value());
         QVERIFY(*available > 0);
+    }
+    void aSortWhileTheGridIsHiddenKeepsEveryLookupRight() {
+        QTemporaryDir dir; FoldersFolder paged(2500); paged.installWithFolders();
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        QVERIFY(model.truncated());
+        const QString chosen = model.pathAt(kPage / 2);
+        QVERIFY(chosen.contains("/f"));
+        model.select(kPage / 2);
+        model.setActive(false); // the grid hidden: a photo is showing
+        model.setSort("name", true, 0);
+        model.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == kPage, 10000);
+        checkLookupsAfterTheSort(model, chosen);
+        if (QTest::currentTestFailed()) return;
+    }
+    void aSortDuringReArrivalKeepsEveryLookupRight() {
+        QTemporaryDir dir; FoldersFolder paged(2500); paged.installWithFolders();
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        const QString chosen = model.pathAt(kPage / 2);
+        model.select(kPage / 2);
+        model.setActive(false);
+        paged.mode->store(1);
+        model.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(model.arriving() && model.count() > 0, 10000); // held partway, published a batch at a time
+        model.setSort("name", true, 0);
+        paged.held.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == kPage, 10000);
+        paged.mode->store(0);
+        checkLookupsAfterTheSort(model, chosen);
+    }
+    // N4: while a truncated folder re-arrives, loadMore() does nothing, so nothing offers it.
+    void showMoreIsNotOfferedWhileATruncatedFolderReArrives() {
+        QTemporaryDir dir; FoldersFolder paged(2500); paged.installWithFolders();
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        QVERIFY(model.canLoadMore());
+        model.setActive(false);
+        paged.mode->store(1);
+        QSignalSpy changed(&model, &DirectoryEntryModel::directoryChanged);
+        model.setActive(true);
+        QTRY_VERIFY_WITH_TIMEOUT(model.arriving() && model.count() > 0, 10000);
+        QVERIFY(model.truncated());
+        QVERIFY(!model.canLoadMore());
+        QVERIFY(changed.count() > 0);
+        paged.held.release();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == kPage, 10000);
+        QVERIFY(model.canLoadMore());
+    }
+    // B2: the next press checks free memory again, so the page is offered as soon as memory frees up.
+    void aRefusedPressIsCheckedAgainOnTheNextPress() {
+        QTemporaryDir dir, other; PagedFolder paged(2500); paged.install();
+        auto spare = std::make_shared<std::atomic<std::uint64_t>>(0);
+        directory_scan::testSeam.availableMemory = [spare]() -> std::optional<std::uint64_t> { return spare->load(); };
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        model.loadMore();
+        QVERIFY(model.loadMoreRefused());
+        QVERIFY(model.canLoadMore()); // still offered
+        model.refresh(); // a change in the folder says nothing about memory
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
+        QVERIFY(model.loadMoreRefused());
+        spare->store(directory_scan::kMemoryHeadroomBytes * 4);
+        QSignalSpy changed(&model, &DirectoryEntryModel::directoryChanged);
+        model.loadMore();
+        QVERIFY(!model.loadMoreRefused());
+        QVERIFY(changed.count() > 0);
+        QVERIFY(listed(model, 2000));
+        spare->store(0);
+        model.loadMore();
+        QVERIFY(model.loadMoreRefused());
+        model.setDirectory(other.path()); // another folder starts with nothing refused
+        QVERIFY(!model.loadMoreRefused());
+    }
+    void aRaisedCapThatNoLongerFitsListsWhatDoes_data() {
+        QTest::addColumn<QString>("how");
+        QTest::newRow("sort") << "sort";
+        QTest::newRow("back to the grid") << "back";
+    }
+    void aRaisedCapThatNoLongerFitsListsWhatDoes() {
+        QFETCH(QString, how);
+        QTemporaryDir dir; PagedFolder paged(2500); paged.install();
+        auto spare = std::make_shared<std::atomic<std::uint64_t>>(std::numeric_limits<std::uint64_t>::max() / 2);
+        directory_scan::testSeam.availableMemory = [spare]() -> std::optional<std::uint64_t> { return spare->load(); };
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        model.loadMore();
+        QVERIFY(listed(model, 2000));
+        spare->store(memoryForRows(model, 1500)); // 1,000 rows fit, 2,000 do not
+        if (how == "sort") model.setSort("name", true, 0);
+        else { model.setActive(false); model.setActive(true); }
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == kPage, 10000);
+        QVERIFY(model.loadMoreRefused());
+        QVERIFY(model.truncated());
+        QVERIFY(model.canLoadMore());
+        spare->store(std::numeric_limits<std::uint64_t>::max() / 2);
+        model.loadMore();
+        QVERIFY(listed(model, 2000)); // one step on from what shows
+    }
+    void aWholeFolderRefreshedWithTooLittleMemoryShowsWhatFits() {
+        QTemporaryDir dir; PagedFolder paged(1800); paged.install();
+        auto spare = std::make_shared<std::atomic<std::uint64_t>>(std::numeric_limits<std::uint64_t>::max() / 2);
+        directory_scan::testSeam.availableMemory = [spare]() -> std::optional<std::uint64_t> { return spare->load(); };
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        model.loadMore();
+        QVERIFY(listed(model, 1800));
+        QVERIFY(!model.truncated());
+        spare->store(memoryForRows(model, 1500));
+        model.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
+        QCOMPARE(model.count(), kPage); // not 1,800 rows under a banner that says more are not listed
+        QVERIFY(model.truncated());
+        QVERIFY(model.loadMoreRefused());
+    }
+    // A failed allocation on the worker keeps the rows and says why, instead of ending the app.
+    void runningOutOfMemoryDuringAPageKeepsTheRows() {
+        QTemporaryDir dir; FoldersFolder paged(2500); paged.installWithFolders();
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, kPage));
+        const QStringList shown = names(model);
+        paged.mode->store(2);
+        model.loadMore();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
+        QCOMPARE(names(model), shown);
+        QVERIFY(model.loadMoreRefused());
+        QVERIFY(model.canLoadMore());
+        QCOMPARE(rowsLookedUpWrong(model), 0);
+        paged.mode->store(0);
+        model.loadMore();
+        QVERIFY(listed(model, 2000)); // the cap went back, so this is one step, not two
+    }
+    void runningOutOfMemoryOnAFirstListingSaysSo() {
+        QTemporaryDir dir; FoldersFolder paged(2500); paged.installWithFolders();
+        paged.mode->store(3);
+        DirectoryEntryModel model;
+        QSignalSpy failed(&model, &DirectoryEntryModel::listingFailed);
+        model.setActive(true);
+        model.setDirectory(dir.path());
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading(), 10000);
+        QCOMPARE(model.count(), 0);
+        QCOMPARE(failed.count(), 1);
+        QVERIFY(failed.first().first().toString().contains("not enough free memory"));
+    }
+    // A refresh that finds the same rows with new sizes changes the selected bytes.
+    void selectedBytesFollowANewSize() {
+        QTemporaryDir dir;
+        FakeFolder before, after; before.total = after.total = 500; after.sizeBias = 1000;
+        auto changed = std::make_shared<std::atomic_bool>(false);
+        SeamScope seam(nullptr);
+        directory_scan::testSeam.enumerator = [a = before.enumerator(), b = after.enumerator(), changed](
+            const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
+            return (changed->load() ? b : a)(d, hidden, cancel, limit, sink);
+        };
+        DirectoryEntryModel model; model.setActive(true);
+        model.setDirectory(dir.path());
+        QVERIFY(listed(model, 500));
+        model.select(10); model.select(20, DirectoryEntryModel::Toggle);
+        const qint64 bytes = model.selectedBytes();
+        QCOMPARE(model.selectedCount(), 2);
+        changed->store(true);
+        model.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.selectedBytes() != bytes, 10000);
+        QCOMPARE(model.selectedBytes(), bytes + 2000);
+        QCOMPARE(model.selectedCount(), 2);
+    }
+    void largestCapThatFitsStepsDown() {
+        const std::uint64_t perRow = 500 * directory_scan::kPagePeakFactor;
+        const auto memoryFor = [&](std::size_t rows) { return std::optional<std::uint64_t>(directory_scan::kMemoryHeadroomBytes + perRow * rows); };
+        QCOMPARE(directory_scan::largestCapThatFits(memoryFor(300000), 500, 300000, 100000), std::size_t(300000));
+        QCOMPARE(directory_scan::largestCapThatFits(memoryFor(299999), 500, 300000, 100000), std::size_t(200000));
+        QCOMPARE(directory_scan::largestCapThatFits(memoryFor(250000), 500, 350000, 100000), std::size_t(200000)); // between steps
+        QCOMPARE(directory_scan::largestCapThatFits(memoryFor(1), 500, 300000, 100000), std::size_t(100000)); // never below one step
+        QCOMPARE(directory_scan::largestCapThatFits(std::nullopt, 500, 300000, 100000), std::size_t(300000));
     }
     void failureDuringLoadMoreEndsTheOffer() {
         QTemporaryDir dir; PagedFolder paged(5000); paged.folder.failAfter = 1500; paged.install();
@@ -1331,6 +1538,7 @@ private slots:
         if (mode != "real") {
             // A folder of exactly 1,000,000 entries, listed whole, then refreshed: the in-place merge path.
             FakeFolder whole; whole.total = 1000000;
+            seam.reset(); // first, or its destructor would clear the seam made below
             seam = std::make_unique<SeamScope>(&whole, 2048);
             directory_scan::testSeam.tuning.entryStep = 1000000; directory_scan::testSeam.tuning.entryLimit = 1000000;
             DirectoryEntryModel model; model.setActive(true);

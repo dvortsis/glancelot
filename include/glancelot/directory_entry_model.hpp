@@ -21,9 +21,11 @@ class DirectoryEntryModel : public QAbstractListModel {
     Q_PROPERTY(bool truncated READ truncated NOTIFY directoryChanged)
     // True during a folder's first listing until its definitive order is published; rows may reorder once when it clears.
     Q_PROPERTY(bool arriving READ arriving NOTIFY arrivingChanged)
-    // True when `truncated` is set and the hard limit of 1,000,000 entries has not been reached, so loadMore() would list more.
+    // True when `truncated` is set, the folder is not arriving and the hard limit of 1,000,000 entries has not been reached,
+    // so loadMore() would list more if the page fits in free memory. Free memory is checked again on each call.
     Q_PROPERTY(bool canLoadMore READ canLoadMore NOTIFY directoryChanged)
-    // True when loadMore() found too little free memory for the next page. Rows stay; opening the folder again clears it.
+    // True when the last attempt to list more did not fit in free memory: a refused loadMore(), or a listing at a raised cap
+    // cut back to what fits. Rows stay. The next loadMore() that fits, or another folder, clears it.
     Q_PROPERTY(bool loadMoreRefused READ loadMoreRefused NOTIFY directoryChanged)
     Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
     Q_PROPERTY(qint64 selectedBytes READ selectedBytes NOTIFY selectionChanged)
