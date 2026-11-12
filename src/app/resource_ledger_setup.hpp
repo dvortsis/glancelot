@@ -9,7 +9,7 @@ inline constexpr qint64 kRetainedCacheCeilingBytes = 128LL << 20;   // DecodeCac
 inline constexpr qint64 kThumbnailCeilingBytes = 64LL << 20;        // ThumbnailService::kCacheBytes
 inline ResourceLedger& configureProcessLedger() {
     auto& ledger = ResourceLedger::instance();
-    ledger.setEnforcement(Enforcement::Shadow);   // M0: every site reserves; the legacy checks decide
+    ledger.setEnforcement(Enforcement::Enforce);   // M1: the same numbers, now enforced
     ledger.setLedgerCeiling(Ledger::RetainedCache, kRetainedCacheCeilingBytes);
     ledger.setLedgerCeiling(Ledger::Thumbnails, kThumbnailCeilingBytes);
     ledger.setAggregateMember(Ledger::GpuTextures, false);   // M1: textures are outside the aggregate
