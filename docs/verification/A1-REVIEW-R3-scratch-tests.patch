@@ -1,4 +1,4 @@
-# Reviewer scratch tests for A1 round 3, against 5018b8f. NOT RUN in this round (paused). Apply to tests/perf_enum_tests.cpp and tests/perf_enum_ui_tests.cpp.
+# Reviewer scratch tests for A1 round 3, against 5018b8f. Results are in A1-REVIEW-R3.md; the totals sort and rename cases and the UI chip probe stopped on setup errors in these tests. Apply to tests/perf_enum_tests.cpp and tests/perf_enum_ui_tests.cpp.
 diff --git a/tests/perf_enum_tests.cpp b/tests/perf_enum_tests.cpp
 index c759758..7724522 100644
 --- a/tests/perf_enum_tests.cpp
