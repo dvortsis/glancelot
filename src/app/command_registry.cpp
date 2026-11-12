@@ -140,6 +140,9 @@ static const std::vector<Command> registry {
     // B3 (F070)
     {"export-selection", "Export selection as CSV or path list", "Ctrl+Shift+E"},
     {"paste-path","Go to the folder path on the clipboard","",false,"global"},
+    // F3 (F072): explicit map handoff for the photo's GPS position, and its no-network alternative. Unbound by default.
+    {"show-on-map","Show location on map","",false,"workspace"},
+    {"copy-coordinates","Copy location coordinates","",false,"workspace"},
     {"quit","Quit","Ctrl+Q"}
 };
     return {registry.data(),registry.size()};

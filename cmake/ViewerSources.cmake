@@ -13,3 +13,6 @@ set(GLANCELOT_VIEWER_SOURCES
 set(GLANCELOT_VIEWER_CONTEXT_SOURCES
   src/app/favorites_model.cpp include/glancelot/favorites_model.hpp
   src/app/folder_history.cpp include/glancelot/folder_history.hpp)
+# F3 (F072): MetadataHud.qml instantiates GpsMapActions, whose GpsMapHandoff type registers itself at startup, so every
+# target that loads the shipped Main.qml compiles it.
+list(APPEND GLANCELOT_VIEWER_CONTEXT_SOURCES src/app/gps_map_handoff.cpp src/app/gps_map_handoff.hpp)

@@ -500,6 +500,132 @@
     </message>
 </context>
 <context>
+    <name>GpsMapActions</name>
+    <message>
+        <source>Opened %1 in your browser.</source>
+        <translation>[Õpéñéd %1 îñ ýõûr brõwsér.]</translation>
+    </message>
+    <message>
+        <source>The photo&apos;s location is still being read. Try again in a moment.</source>
+        <translation>[Thé phõtõ&apos;s lõçàtîõñ îs stîll béîñg réàd. Trý àgàîñ îñ à mõméñt.]</translation>
+    </message>
+    <message>
+        <source>This photo has no location data.</source>
+        <translation>[Thîs phõtõ hàs ñõ lõçàtîõñ dàtà.]</translation>
+    </message>
+    <message>
+        <source>The location data is incomplete, so there is no map link.</source>
+        <translation>[Thé lõçàtîõñ dàtà îs îñçõmplété, sõ théré îs ñõ màp lîñk.]</translation>
+    </message>
+    <message>
+        <source>The location has no valid north/south or east/west reference, so there is no map link.</source>
+        <translation>[Thé lõçàtîõñ hàs ñõ vàlîd ñõrth/sõûth õr éàst/wést référéñçé, sõ théré îs ñõ màp lîñk.]</translation>
+    </message>
+    <message>
+        <source>The recorded coordinates are out of range, so there is no map link.</source>
+        <translation>[Thé réçõrdéd çõõrdîñàtés àré õût õf ràñgé, sõ théré îs ñõ màp lîñk.]</translation>
+    </message>
+    <message>
+        <source>The location is 0, 0, which cameras record when they had no position, so there is no map link.</source>
+        <translation>[Thé lõçàtîõñ îs 0, 0, whîçh çàméràs réçõrd whéñ théý hàd ñõ põsîtîõñ, sõ théré îs ñõ màp lîñk.]</translation>
+    </message>
+    <message>
+        <source>The custom map link in Settings is not usable. Fix it or choose OpenStreetMap.</source>
+        <translation>[Thé çûstõm màp lîñk îñ Séttîñgs îs ñõt ûsàblé. Fîx ît õr çhõõsé ÕpéñStréétMàp.]</translation>
+    </message>
+    <message>
+        <source>The system could not open a browser for the map link.</source>
+        <translation>[Thé sýstém çõûld ñõt õpéñ à brõwsér fõr thé màp lîñk.]</translation>
+    </message>
+    <message>
+        <source>Coordinates copied: %1</source>
+        <translation>[Çõõrdîñàtés çõpîéd: %1]</translation>
+    </message>
+    <message>
+        <source>Show on map</source>
+        <translation>[Shõw õñ màp]</translation>
+    </message>
+    <message>
+        <source>Opens %1 in your web browser with this photo&apos;s coordinates</source>
+        <translation>[Õpéñs %1 îñ ýõûr wéb brõwsér wîth thîs phõtõ&apos;s çõõrdîñàtés]</translation>
+    </message>
+    <message>
+        <source>Copy coordinates</source>
+        <translation>[Çõpý çõõrdîñàtés]</translation>
+    </message>
+    <message>
+        <source>Copy %1 as decimal degrees, without opening anything</source>
+        <translation>[Çõpý %1 às déçîmàl dégréés, wîthõût õpéñîñg àñýthîñg]</translation>
+    </message>
+</context>
+<context>
+    <name>GpsMapSettings</name>
+    <message>
+        <source>Map links</source>
+        <translation>[Màp lîñks]</translation>
+    </message>
+    <message>
+        <source>Show on map provider OpenStreetMap custom link location privacy</source>
+        <translation>[Shõw õñ màp prõvîdér ÕpéñStréétMàp çûstõm lîñk lõçàtîõñ prîvàçý]</translation>
+    </message>
+    <message>
+        <source>The link is too long.</source>
+        <translation>[Thé lîñk îs tõõ lõñg.]</translation>
+    </message>
+    <message>
+        <source>The link needs both %1 and %2.</source>
+        <translation>[Thé lîñk ñééds bõth %1 àñd %2.]</translation>
+    </message>
+    <message>
+        <source>Only %1, %2 and %3 can be filled in.</source>
+        <translation>[Õñlý %1, %2 àñd %3 çàñ bé fîlléd îñ.]</translation>
+    </message>
+    <message>
+        <source>The link must start with %1 or %2.</source>
+        <translation>[Thé lîñk mûst stàrt wîth %1 õr %2.]</translation>
+    </message>
+    <message>
+        <source>That is not a valid web address.</source>
+        <translation>[Thàt îs ñõt à vàlîd wéb àddréss.]</translation>
+    </message>
+    <message>
+        <source>Map provider</source>
+        <translation>[Màp prõvîdér]</translation>
+    </message>
+    <message>
+        <source>Used by Show on map in the metadata inspector.</source>
+        <translation>[Ûséd bý Shõw õñ màp îñ thé métàdàtà îñspéçtõr.]</translation>
+    </message>
+    <message>
+        <source>OpenStreetMap</source>
+        <translation>[ÕpéñStréétMàp]</translation>
+    </message>
+    <message>
+        <source>Custom link</source>
+        <translation>[Çûstõm lîñk]</translation>
+    </message>
+    <message>
+        <source>Custom map link</source>
+        <translation>[Çûstõm màp lîñk]</translation>
+    </message>
+    <message>
+        <source>%1 and %2 become decimal degrees and %3 a street-level zoom.</source>
+        <translation>[%1 àñd %2 béçõmé déçîmàl dégréés àñd %3 à stréét-lévél zõõm.]</translation>
+    </message>
+    <message>
+        <source>Show on map opens %1 in your web browser and sends it the photo&apos;s coordinates. Glancelot never contacts a map service itself, and Copy coordinates sends nothing.</source>
+        <translation>[Shõw õñ màp õpéñs %1 îñ ýõûr wéb brõwsér àñd séñds ît thé phõtõ&apos;s çõõrdîñàtés. Glàñçélõt ñévér çõñtàçts à màp sérvîçé îtsélf, àñd Çõpý çõõrdîñàtés séñds ñõthîñg.]</translation>
+    </message>
+    <message>
+        <source>Glancelot never contacts a map service itself. Show on map stays off until the custom link is valid; Copy coordinates sends nothing.</source>
+        <translation>[Glàñçélõt ñévér çõñtàçts à màp sérvîçé îtsélf. Shõw õñ màp stàýs õff ûñtîl thé çûstõm lîñk îs vàlîd; Çõpý çõõrdîñàtés séñds ñõthîñg.]</translation>
+    </message>
+    <message>
+        <source>The map provider could not be saved. It applies until Glancelot closes.</source>
+        <translation>[Thé màp prõvîdér çõûld ñõt bé sàvéd. Ît àpplîés ûñtîl Glàñçélõt çlõsés.]</translation>
+    </message>
+</context>
+<context>
     <name>Grid</name>
     <message>
         <source>This folder can&apos;t be opened. It may have been moved or deleted, or you may not have permission to read it.</source>

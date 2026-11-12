@@ -316,6 +316,8 @@ void parseTiffIFD(const TiffReader& tiff, int ifdOffset, MetadataRecord& record,
             case 0x0001: { // GPSLatitudeRef
                 const QString ref = tiff.string(valueOffset, count);
                 if (!ref.isEmpty()) record.gpsLatitudeStr = ref;
+                // F3: kept as an item so the map handoff can tell a missing or invalid hemisphere from a valid one.
+                if (!ref.isEmpty()) record.items.append(MetadataItem{QStringLiteral("Exif.GPSInfo.GPSLatitudeRef"), QStringLiteral("Latitude Reference"), ref, ref, QStringLiteral("GPS")});
                 break;
             }
             case 0x0002: { // GPSLatitude (3 rationals: deg, min, sec)
@@ -337,6 +339,7 @@ void parseTiffIFD(const TiffReader& tiff, int ifdOffset, MetadataRecord& record,
             case 0x0003: { // GPSLongitudeRef
                 const QString ref = tiff.string(valueOffset, count);
                 if (!ref.isEmpty()) record.gpsLongitudeStr = ref;
+                if (!ref.isEmpty()) record.items.append(MetadataItem{QStringLiteral("Exif.GPSInfo.GPSLongitudeRef"), QStringLiteral("Longitude Reference"), ref, ref, QStringLiteral("GPS")}); // F3
                 break;
             }
             case 0x0004: { // GPSLongitude (3 rationals: deg, min, sec)
