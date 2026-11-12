@@ -5,9 +5,11 @@ import Glancelot
 
 // Palette gallery for Settings > Appearance. It does not scroll by itself: the settings page scrolls.
 // Arrow keys move between cards, Enter or Space applies one; a click applies immediately.
+// E6 (F052/F053): the high-contrast choice leads the gallery, because high contrast replaces the palette's colours.
 ColumnLayout {
     id: picker
     property alias searchField: search
+    readonly property bool viewerAvailable: typeof viewer !== "undefined" && viewer !== null
     readonly property int columns: width >= 600 ? 4 : (width >= 420 ? 3 : 2)
     readonly property var shown: theme.families.filter(family => family.name.toLowerCase().indexOf(search.text.trim().toLowerCase()) >= 0)
     spacing: Theme.gapMd
@@ -28,6 +30,44 @@ ColumnLayout {
         }
     }
 
+    SettingRow {
+        label: qsTr("High contrast")
+        description: Theme.systemHighContrast
+            ? qsTr("Your desktop's high-contrast setting is on, so the interface uses high contrast.")
+            : qsTr("Follow system turns high contrast on and off with your desktop's setting.")
+        modified: picker.viewerAvailable && viewer.highContrast
+        RowLayout {
+            id: contrastChoice
+            objectName: "highContrastChoice"
+            spacing: Theme.gapXs
+            enabled: picker.viewerAvailable
+            readonly property bool always: picker.viewerAvailable && viewer.highContrast
+            UiButton {
+                objectName: "highContrastFollowSystem"
+                text: qsTr("Follow system")
+                selected: !contrastChoice.always
+                onClicked: viewer.highContrast = false
+                Accessible.name: qsTr("High contrast: follow system")
+                Accessible.description: Theme.systemHighContrast ? qsTr("Your desktop's high-contrast setting is on") : qsTr("Your desktop's high-contrast setting is off")
+            }
+            UiButton {
+                objectName: "highContrastAlwaysOn"
+                text: qsTr("Always on")
+                selected: contrastChoice.always
+                onClicked: viewer.highContrast = true
+                Accessible.name: qsTr("High contrast: always on")
+            }
+        }
+    }
+    Label {
+        objectName: "highContrastPaletteNote"
+        visible: Theme.highContrast
+        Layout.fillWidth: true
+        text: qsTr("High contrast is on, so the interface uses black, white and one strong accent. The palette you choose applies when it is off.")
+        color: Theme.muted
+        font.pixelSize: Theme.textSmall
+        wrapMode: Text.Wrap
+    }
     UiTextField {
         id: search
         Layout.fillWidth: true
@@ -60,7 +100,8 @@ ColumnLayout {
             id: card
             required property int index
             required property var modelData
-            readonly property var preview: Theme.dark ? modelData.dark : modelData.light
+            // The family's catalog roles plus its derived ones (controlBorder), as the interface would draw them.
+            readonly property var preview: theme.preview(modelData.id, Theme.dark)
             readonly property bool selected: theme.family === modelData.id
             readonly property bool cursor: GridView.isCurrentItem && cards.activeFocus
             function apply() { theme.family = modelData.id }
@@ -75,7 +116,7 @@ ColumnLayout {
                 radius: Theme.radiusCard
                 color: card.preview.background
                 border.width: card.selected || card.cursor ? Theme.focusWidth : Theme.borderWidth
-                border.color: card.cursor ? Theme.focusRing : (card.selected ? Theme.primary : card.preview.border)
+                border.color: card.cursor ? Theme.focusRing : (card.selected ? Theme.primary : card.preview.controlBorder)
                 HoverHandler { id: cardHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler { onTapped: { cards.currentIndex = card.index; card.apply() } }
                 ColumnLayout {
@@ -105,7 +146,7 @@ ColumnLayout {
                                 radius: Theme.radiusSmall
                                 color: modelData
                                 border.width: Theme.borderWidth
-                                border.color: card.preview.border
+                                border.color: card.preview.controlBorder // a swatch is a graphic the user compares: 3:1
                             }
                         }
                     }

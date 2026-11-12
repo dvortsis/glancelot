@@ -9,7 +9,11 @@ QtObject {
     readonly property bool dark: theme.dark
     // F053 high contrast: pure black/white text and surfaces, text-coloured borders and focus ring, no dimmed role. Every pair below
     // is checked at WCAG AAA (7:1 text, 3:1 borders) in both modes by input_ui_tests.
-    property bool highContrast: (typeof viewer !== "undefined" && viewer && viewer.highContrast) ? viewer.highContrast : false
+    // F052/F053 (E6): it follows the operating system (Windows high contrast; GNOME's high-contrast setting or a HighContrast GTK
+    // theme) while the app runs, and Settings > Appearance > Palette can keep it on regardless (viewer.highContrast).
+    readonly property bool systemHighContrast: theme.colors.systemHighContrast === true
+    readonly property bool highContrastAlways: (typeof viewer !== "undefined" && viewer) ? viewer.highContrast === true : false
+    property bool highContrast: highContrastAlways || systemHighContrast
     property bool largeTargets: (typeof viewer !== "undefined" && viewer && viewer.largeTargets) ? viewer.largeTargets : false
     readonly property color background: highContrast ? (dark ? "#000000" : "#ffffff") : theme.colors.background
     readonly property color surface: highContrast ? (dark ? "#0d0d0d" : "#ffffff") : theme.colors.surface
@@ -18,8 +22,12 @@ QtObject {
     readonly property color primary: highContrast ? (dark ? "#ffd400" : "#0030b0") : theme.colors.primary
     readonly property color textOnPrimary: highContrast ? (dark ? "#000000" : "#ffffff") : theme.colors.onPrimary // "on…" names would read as signal handlers
     readonly property color accent: highContrast ? primary : theme.colors.accent
-    readonly property color border: highContrast ? (dark ? "#ffffff" : "#000000") : theme.colors.border
-    readonly property color hover: highContrast ? (dark ? "#333333" : "#d9d9d9") : theme.colors.hover
+    readonly property color border: highContrast ? (dark ? "#ffffff" : "#000000") : theme.colors.border // separators and quiet outlines
+    // E6: the boundary of a field, button or card, 3:1 against background and surface in every family (WCAG 1.4.11).
+    readonly property color controlBorder: highContrast ? border : (theme.colors.controlBorder || theme.colors.border)
+    // Hover and pressed fills, and the preview placeholder tile, are mixed from the family's own surface and text (theme_contrast.hpp).
+    readonly property color hover: highContrast ? (dark ? "#333333" : "#d9d9d9") : (theme.colors.familyHover || theme.colors.hover)
+    readonly property color placeholder: highContrast ? hover : (theme.colors.placeholder || theme.colors.hover)
     readonly property color danger: highContrast ? (dark ? "#ff8a8a" : "#a00018") : theme.colors.danger
     // Derived roles
     readonly property color pressed: Qt.tint(hover, Qt.alpha(text, 0.08))

@@ -2632,6 +2632,46 @@
         <source>No palettes match “%1”.</source>
         <translation>[Ñõ pàléttés màtçh “%1”.]</translation>
     </message>
+    <message>
+        <source>High contrast</source>
+        <translation>[Hîgh çõñtràst]</translation>
+    </message>
+    <message>
+        <source>Your desktop&apos;s high-contrast setting is on, so the interface uses high contrast.</source>
+        <translation>[Ýõûr désktõp&apos;s hîgh-çõñtràst séttîñg îs õñ, sõ thé îñtérfàçé ûsés hîgh çõñtràst.]</translation>
+    </message>
+    <message>
+        <source>Follow system turns high contrast on and off with your desktop&apos;s setting.</source>
+        <translation>[Fõllõw sýstém tûrñs hîgh çõñtràst õñ àñd õff wîth ýõûr désktõp&apos;s séttîñg.]</translation>
+    </message>
+    <message>
+        <source>Follow system</source>
+        <translation>[Fõllõw sýstém]</translation>
+    </message>
+    <message>
+        <source>High contrast: follow system</source>
+        <translation>[Hîgh çõñtràst: fõllõw sýstém]</translation>
+    </message>
+    <message>
+        <source>Your desktop&apos;s high-contrast setting is on</source>
+        <translation>[Ýõûr désktõp&apos;s hîgh-çõñtràst séttîñg îs õñ]</translation>
+    </message>
+    <message>
+        <source>Your desktop&apos;s high-contrast setting is off</source>
+        <translation>[Ýõûr désktõp&apos;s hîgh-çõñtràst séttîñg îs õff]</translation>
+    </message>
+    <message>
+        <source>Always on</source>
+        <translation>[Àlwàýs õñ]</translation>
+    </message>
+    <message>
+        <source>High contrast: always on</source>
+        <translation>[Hîgh çõñtràst: àlwàýs õñ]</translation>
+    </message>
+    <message>
+        <source>High contrast is on, so the interface uses black, white and one strong accent. The palette you choose applies when it is off.</source>
+        <translation>[Hîgh çõñtràst îs õñ, sõ thé îñtérfàçé ûsés blàçk, whîté àñd õñé strõñg àççéñt. Thé pàlétté ýõû çhõõsé àpplîés whéñ ît îs õff.]</translation>
+    </message>
 </context>
 <context>
     <name>TransferHud</name>

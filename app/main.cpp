@@ -293,7 +293,7 @@ int main(int argc,char** argv) {
             ++graphicsEvidence->invalidations;graphicsEvidence->observed=false;
         },Qt::DirectConnection);
     }
-    if(window&&parser.isSet("window-size")) { const auto dimensions=parser.value("window-size").split('x'); if(dimensions.size()==2)window->resize(qMax(540,dimensions[0].toInt()),qMax(360,dimensions[1].toInt())); }
+    if(window&&parser.isSet("window-size")) { const auto value=parser.value("window-size").trimmed(); const auto dimensions=value.split(QLatin1Char('x')); bool wide=false,tall=false; const int width=dimensions.size()==2?dimensions[0].trimmed().toInt(&wide):0,height=dimensions.size()==2?dimensions[1].trimmed().toInt(&tall):0; if(!wide||!tall||width<=0||height<=0)std::fprintf(stderr,"Glancelot: --window-size needs WIDTHxHEIGHT in pixels, such as 1280x800, not \"%s\"; the window keeps its size\n",qPrintable(value)); else { const QRect area=window->screen()?window->screen()->availableGeometry():QRect(0,0,width,height); const QSize size(std::clamp(width,540,std::max(540,area.width())),std::clamp(height,360,std::max(360,area.height()))); if(size!=QSize(width,height))std::fprintf(stderr,"Glancelot: --window-size %dx%d is outside the 540x360 minimum or the %dx%d screen area; using %dx%d\n",width,height,area.width(),area.height(),size.width(),size.height()); window->resize(size); } }
     if(window&&parser.isSet("frameless"))window->setProperty("frameless",true);
     // The decorated title bar follows the theme where the OS allows it (Windows); a no-op elsewhere.
     QPointer<glancelot::NativeTitleBarSync> titleBar=window?new glancelot::NativeTitleBarSync(window,&theme):nullptr;
