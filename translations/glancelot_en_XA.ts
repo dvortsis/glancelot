@@ -502,6 +502,10 @@
 <context>
     <name>Grid</name>
     <message>
+        <source>There is not enough free memory to list this folder. Close other apps, then try again.</source>
+        <translation>[Théré îs ñõt éñõùgh fréé mémõrý tõ lîst thîs fõldér. Çlõsé õthér àpps, théñ trý àgàîñ.]</translation>
+    </message>
+    <message>
         <source>This folder can&apos;t be opened. It may have been moved or deleted, or you may not have permission to read it.</source>
         <translation>[Thîs fõldér çàñ&apos;t bé õpéñéd. Ît màý hàvé bééñ mõvéd õr délétéd, õr ýõû màý ñõt hàvé pérmîssîõñ tõ réàd ît.]</translation>
     </message>
@@ -1752,8 +1756,44 @@
         <translation>[Réàd-õñlý drîvé]</translation>
     </message>
     <message>
-        <source>Showing 100,000 items. This folder has more that are not listed here.</source>
-        <translation>[Shõwîñg 100,000 îtéms. Thîs fõldér hàs mõré thàt àré ñõt lîstéd héré.]</translation>
+        <source>There is not enough free memory to list more items, so some matches may be missing. Close other apps, then try again.</source>
+        <translation>[Théré îs ñõt éñõùgh fréé mémõrý tõ lîst mõré îtéms, sõ sõmé màtçhés màý bé mîssîñg. Çlõsé õthér àpps, théñ trý àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>Showing %1 items. There is not enough free memory to list more. Close other apps, then try again.</source>
+        <translation>[Shõwîñg %1 îtéms. Théré îs ñõt éñõùgh fréé mémõrý tõ lîst mõré. Çlõsé õthér àpps, théñ trý àgàîñ.]</translation>
+    </message>
+    <message>
+        <source>Sorting the %1 items listed here…</source>
+        <translation>[Sõrtîñg thé %1 îtéms lîstéd héré…]</translation>
+    </message>
+    <message>
+        <source>Showing %1 items. This folder has more that are not listed here.</source>
+        <translation>[Shõwîñg %1 îtéms. Thîs fõldér hàs mõré thàt àré ñõt lîstéd héré.]</translation>
+    </message>
+    <message>
+        <source>Showing %1 items, the most Glancelot can list in a folder. This one has more that are not listed here.</source>
+        <translation>[Shõwîñg %1 îtéms, thé mõst Glàñçélõt çàñ lîst îñ à fõldér. Thîs õñé hàs mõré thàt àré ñõt lîstéd héré.]</translation>
+    </message>
+    <message>
+        <source>This folder has more items that are not listed here, so some matches may be missing.</source>
+        <translation>[Thîs fõldér hàs mõré îtéms thàt àré ñõt lîstéd héré, sõ sõmé màtçhés mày bé mîssîñg.]</translation>
+    </message>
+    <message>
+        <source>Glancelot has reached the most items it can list in a folder, so some matches may be missing.</source>
+        <translation>[Glàñçélõt hàs réàçhéd thé mõst îtéms ît çàñ lîst îñ à fõldér, sõ sõmé màtçhés mày bé mîssîñg.]</translation>
+    </message>
+    <message>
+        <source>Listing more items…</source>
+        <translation>[Lîstîñg mõré îtéms…]</translation>
+    </message>
+    <message>
+        <source>Show more</source>
+        <translation>[Shõw mõré]</translation>
+    </message>
+    <message>
+        <source>Show more items in this folder</source>
+        <translation>[Shõw mõré îtéms îñ thîs fõldér]</translation>
     </message>
     <message>
         <source>No preview</source>

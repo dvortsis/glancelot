@@ -23,6 +23,12 @@ Rectangle {
     property int liveDelegateCount: 0
     property string noticeText: ""
     property var resetViewport: null
+    property bool moreRequested: false // "Show more" was pressed and its listing has not landed
+    property bool moreHadFocus: false
+    // An explicit sort of a truncated folder re-lists it, which takes seconds at a million rows: the banner says so.
+    property bool reordering: false
+    readonly property string sortSignature: viewer.sortKey + "/" + viewer.sortDescending
+    onSortSignatureChanged: Qt.callLater(() => { panel.reordering = fileGrid.truncated && fileGrid.loading && !fileGrid.arriving })
     property string searchQuery: ""
     property string preSearchPath: "" // the file type-ahead started from: rows move while a listing arrives
     property bool filterExpanded: false
@@ -187,6 +193,12 @@ Rectangle {
         else grid.positionViewAtIndex(fileGrid.cursorRow, GridView.Contain)
     }
     function showNotice(text) { noticeText = text; noticeTimer.restart() }
+    // Keyboard focus was on "Show more" when it was pressed; if the button goes when the listing lands, focus goes to the grid.
+    function settleShowMore() {
+        if (moreRequested) return // pressed again before this ran; the next listing's end settles it
+        if (moreHadFocus && !showMore.visible) focusGrid()
+        moreHadFocus = false
+    }
     function rememberViewport() {
         // A failed or empty relisting of the same folder keeps the viewport saved before it, so a transient error
         // followed by recovery returns to the browsed position.
@@ -289,10 +301,16 @@ Rectangle {
         preSearchPath = ""
         searchTimer.stop()
         placeCursor = true
+        moreRequested = false // a page of the folder before says nothing about this one
+        reordering = false
     }
     Connections {
         target: fileGrid
-        function onLoadingChanged() { if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal) }
+        function onLoadingChanged() {
+            if (!fileGrid.loading) panel.reordering = false
+            if (!fileGrid.loading && panel.moreRequested) { panel.moreRequested = false; Qt.callLater(panel.settleShowMore) }
+            if (panel.visible && !fileGrid.loading) Qt.callLater(panel.reveal)
+        }
         function onArrivingChanged() {
             if (!panel.visible) return
             if (fileGrid.arriving) {
@@ -568,22 +586,51 @@ Rectangle {
     Rectangle {
         id: truncatedBanner
         objectName: "gridTruncated"
-        visible: fileGrid.truncated && fileGrid.count > 0
+        visible: fileGrid.truncated && (fileGrid.count > 0 || fileGrid.hasFilter) // a filter hiding every listed row may have matches further on
         anchors { left: parent.left; right: parent.right; top: header.bottom; leftMargin: Theme.gapMd; rightMargin: Theme.gapMd }
-        height: visible ? truncatedText.implicitHeight + 2 * Theme.gapSm : 0
+        height: visible ? Math.max(truncatedText.implicitHeight, showMore.visible ? showMore.implicitHeight : 0) + 2 * Theme.gapSm : 0
         radius: Theme.radiusControl
         color: Theme.surface
         border.width: Theme.borderWidth
         border.color: Theme.border
         Label {
             id: truncatedText
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Theme.gapMd }
+            objectName: "gridTruncatedText"
+            anchors { left: parent.left; right: showMore.visible ? showMore.left : parent.right; verticalCenter: parent.verticalCenter; leftMargin: Theme.gapMd; rightMargin: Theme.gapMd }
             // The limit keeps enumeration order, not display order, so this must not claim "the first" items.
-            text: qsTr("Showing 100,000 items. This folder has more that are not listed here.")
+            // A filtered count is not how much of the folder is listed, so a filter gets no number.
+            text: {
+                if (panel.moreRequested) return qsTr("Listing more items…")
+                const n = fileGrid.count.toLocaleString(Qt.locale(), "f", 0)
+                if (panel.reordering) return qsTr("Sorting the %1 items listed here…").arg(n)
+                if (fileGrid.loadMoreRefused) return fileGrid.hasFilter ? qsTr("There is not enough free memory to list more items, so some matches may be missing. Close other apps, then try again.")
+                                                                        : qsTr("Showing %1 items. There is not enough free memory to list more. Close other apps, then try again.").arg(n)
+                if (fileGrid.canLoadMore) return fileGrid.hasFilter ? qsTr("This folder has more items that are not listed here, so some matches may be missing.")
+                                                                    : qsTr("Showing %1 items. This folder has more that are not listed here.").arg(n)
+                return fileGrid.hasFilter ? qsTr("Glancelot has reached the most items it can list in a folder, so some matches may be missing.")
+                                          : qsTr("Showing %1 items, the most Glancelot can list in a folder. This one has more that are not listed here.").arg(n)
+            }
             wrapMode: Text.Wrap
             color: Theme.text
             font.pixelSize: Theme.textSmall
             Accessible.role: Accessible.AlertMessage
+        }
+        UiButton {
+            id: showMore
+            objectName: "gridShowMore"
+            visible: fileGrid.canLoadMore
+            anchors { right: parent.right; rightMargin: Theme.gapSm; verticalCenter: parent.verticalCenter }
+            variant: "outline"
+            text: qsTr("Show more")
+            Accessible.name: qsTr("Show more items in this folder")
+            enabled: panel.inputEnabled
+            // Stays enabled while listing, so it keeps keyboard focus; a second press does nothing in the model.
+            onClicked: {
+                panel.moreHadFocus = activeFocus
+                fileGrid.loadMore()
+                // Only a page that really started: not a refusal, and not a refresh that was already running.
+                panel.moreRequested = fileGrid.loading && !fileGrid.loadMoreRefused && !fileGrid.arriving
+            }
         }
     }
     GridView {
@@ -1128,14 +1175,55 @@ Rectangle {
         }
     }
 
+    // The window, for the commands below that ask which pane owns keys. Declared here so the block stays one unit.
+    property var host: null
     Connections {
         target: viewer
         function onViewCommand(id) {
+            // A selection made from a menu is as explicit as one made with a key.
+            if (["select-all", "grid-select-all", "clear-selection", "invert-selection"].indexOf(id) >= 0) panel.settleByUser()
             if (id === "filter") {
                 panel.openFilter()
             }
-            // A selection made from a menu is as explicit as one made with a key.
-            if (["select-all", "grid-select-all", "clear-selection", "invert-selection"].indexOf(id) >= 0) panel.settleByUser()
+            // F009
+            else if (id === "view-details") panel.details = !panel.details
+            // INPUT-02
+            else if (id === "grid-open") panel.activate()
+            else if (id === "grid-up") panel.goUp()
+            else if (id === "grid-select-all") fileGrid.selectAll()
+            else if (id === "select-all") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) fileGrid.selectAll() }
+            else if (id === "clear-selection") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) fileGrid.clearSelection() }
+            else if (id === "invert-selection") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) fileGrid.invertSelection() }
+            else if (id === "grid-zoom-in") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) panel.zoomIn() }
+            else if (id === "grid-zoom-out") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) panel.zoomOut() }
+            else if (id === "grid-zoom-reset") { if (panel.host.paneAvailable("grid") || panel.host.gridScope) panel.resetZoom() }
+            else if (id === "reveal-in-file-manager") {
+                let target = ""
+                const hasGridFocusOrSelection = panel.host.focusWithin(panel) || panel.host.gridScope || panel.selectedCount > 0
+                const targets = panel.deletionTargets()
+                if (hasGridFocusOrSelection && (panel.selectedPath.length > 0 || targets.length > 0)) {
+                    target = panel.selectedPath.length > 0 ? panel.selectedPath : targets[0]
+                } else if (viewer.filePath.length > 0) {
+                    target = viewer.filePath
+                } else {
+                    target = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
+                }
+                viewer.revealInFileManager(target)
+            }
+            else if (id === "copy-path" || id === "copy-file") {
+                let targets = []
+                const gridActive = panel.host.focusWithin(panel) || panel.host.gridScope || panel.host.gridMode || (panel.host.paneAvailable("grid") && fileGrid.count > 0) || panel.selectedCount > 0
+                if (gridActive) {
+                    const dt = panel.deletionTargets()
+                    if (dt.length > 0) targets = dt
+                    else if (panel.selectedPath.length > 0) targets = [panel.selectedPath]
+                }
+                if (targets.length === 0 && viewer.filePath.length > 0) {
+                    targets = [viewer.filePath]
+                }
+                if (id === "copy-path") viewer.copyFilePath(targets)
+                else viewer.copyFileUrls(targets)
+            }
         }
     }
 }

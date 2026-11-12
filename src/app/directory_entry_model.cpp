@@ -11,6 +11,7 @@
 #include <QThreadPool>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
+#include <algorithm>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -20,7 +21,6 @@ using directory_scan::keyFor;
 using directory_scan::Listing;
 using directory_scan::Row;
 constexpr int kMaxConcurrentListings = 2;
-constexpr std::size_t kMaxEntries = 100000;
 // Above this many separate insertion/removal runs a refresh resets instead of merging in place (bounded GUI work).
 constexpr int kMaxMergeRuns = 32;
 // Arrival publication: one delta per tick, so a large folder arriving costs the GUI thread a bounded share of each frame.
@@ -71,40 +71,60 @@ struct DirectoryEntryModel::Private {
     bool arriving{};                   // a first listing whose definitive order is not published yet
     bool provisional{};                // rows are in arrival order, and `index` holds segment positions
     bool refreshAfterArrival{};        // a change arrived mid-listing: finish it, then refresh, rather than start over
+    bool loadingMore{};                // the user asked for the next page, and its listing has not been published yet
+    bool orderAsked{};                 // the user changed the sort or hidden files in a truncated folder, and that listing has not been published yet
+    bool memoryRefused{};              // the last attempt to list more did not fit in free memory; the next press checks again
+    std::size_t listingLimit{};        // the cap the running scan uses: entryLimit, or less when free memory is short
+    std::size_t limitBeforePage{};     // entryLimit before the running page, to go back to if the page cannot be made
+    std::uint64_t lastRowBytes{};      // the rows' average cost when last measured, for a listing that starts with none
+    bool cutShort{};                   // this listing was cut for memory in a folder that showed everything: publish it
+    std::size_t entryLimit{};          // this folder's cap; "Show more" raises it, opening another folder resets it
     int provisionalFolders{};
     directory_scan::Tuning tuning;
     directory_scan::Enumerator enumerator;
     std::function<void(std::stop_token)> beforeProbes;
+    std::function<std::optional<std::uint64_t>()> availableMemory = directory_scan::availableMemoryBytes;
 #ifdef GLANCELOT_PERF_ENUM_TESTING
     std::function<void()> beforeDryCheck;
 #endif
     // Heap-allocated so a listing wedged in the OS (dead network share) can be abandoned at teardown.
     QThreadPool* pool = new QThreadPool;
+    // Its own thread, so freeing a million rows never delays the next listing (it held a first row back 0.8 s).
+    QThreadPool* retirePool = new QThreadPool;
 
     explicit Private(DirectoryEntryModel* owner) : q(owner) {
         pool->setMaxThreadCount(kMaxConcurrentListings);
+        retirePool->setMaxThreadCount(1);
 #ifdef GLANCELOT_PERF_ENUM_TESTING
         tuning = directory_scan::testSeam.tuning; enumerator = directory_scan::testSeam.enumerator; beforeProbes = directory_scan::testSeam.beforeProbes;
         beforeDryCheck = directory_scan::testSeam.beforeDryCheck;
+        if (directory_scan::testSeam.availableMemory) availableMemory = directory_scan::testSeam.availableMemory;
 #endif
+        entryLimit = tuning.entryStep;
         drainTimer.setInterval(kDrainIntervalMs);
         QObject::connect(&drainTimer, &QTimer::timeout, q, [this] { drain(); });
-        // Connected before anything outside the model, so the totals are forgotten before any reader hears of a change.
-        const auto forget = [this] { selectionTotals.reset(); };
-        QObject::connect(q, &DirectoryEntryModel::selectionChanged, q, forget);
+        // Connected before anything outside the model, so the totals are forgotten before any reader hears that the rows
+        // changed. The selection commands and a tick's inserts update them in place instead, and a new order changes no
+        // totals, so neither selectionChanged nor layoutChanged forgets them.
+        const auto forget = [this] { if (!keepTotals) selectionTotals.reset(); };
         QObject::connect(q, &DirectoryEntryModel::countChanged, q, forget);
         QObject::connect(q, &DirectoryEntryModel::directoryChanged, q, forget);
         QObject::connect(q, &QAbstractItemModel::rowsInserted, q, forget);
         QObject::connect(q, &QAbstractItemModel::rowsRemoved, q, forget);
         QObject::connect(q, &QAbstractItemModel::modelReset, q, forget);
-        QObject::connect(q, &QAbstractItemModel::layoutChanged, q, forget);
-        QObject::connect(q, &QAbstractItemModel::dataChanged, q, forget);
+        QObject::connect(q, &QAbstractItemModel::dataChanged, q, [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles) {
+            const bool selectionOnly = !roles.isEmpty() && std::all_of(roles.cbegin(), roles.cend(), [](int role) { return role == SelectedRole || role == CursorRole; });
+            if (!selectionOnly && !keepTotals) selectionTotals.reset();
+        });
     }
-    // Every selectionChanged makes QML read the count, the bytes and the summary several times. Walking 100,000 rows
-    // for each read cost about 50 ms per signal with one row selected, so the totals come from the selected keys,
-    // once, and are kept until the rows or the selection change.
+    // Every selectionChanged makes QML read the count, the bytes and the summary several times. Walking the rows for each
+    // read cost about 50 ms per signal at 100,000 rows with one selected, and a recount with every row selected cost
+    // 300 ms at a million. So the totals are kept: each selection command and each arrival tick updates them, and only a
+    // change of which rows exist (a merge, a reset, a filter) has them counted again, once.
     struct SelectionTotals { int count{}; qint64 bytes{}; };
     mutable std::optional<SelectionTotals> selectionTotals;
+    bool keepTotals{};
+    static qint64 bytesOf(const Row& row) { return row.size > 0 ? row.size : 0; }
     // Inside a merge or a tick's inserts the index lags the rows, so a lookup by key is not yet true there. A reader
     // woken by a signal from inside one walks the rows instead, and nothing is kept.
     int changingRows{};
@@ -124,10 +144,13 @@ struct DirectoryEntryModel::Private {
         return result;
     }
     SelectionTotals totals() const {
-        if (selectionTotals) return *selectionTotals;
+        if (!accessible) return {};
         if (changingRows) return walkRows();
+        if (selectionTotals) return *selectionTotals;
+        // With most rows selected, one pass over the rows is cheaper than finding each key.
+        if (selected.size() > qsizetype(rows.size()) / 4) return *(selectionTotals = walkRows());
         SelectionTotals result;
-        if (accessible) {
+        {
             for (const auto& key : selected) {
                 const int row = rowOfKey(key);
                 if (row < 0 || row >= int(rows.size()) || rows[std::size_t(row)].key != key) continue;
@@ -141,6 +164,7 @@ struct DirectoryEntryModel::Private {
     ~Private() {
         stop.request_stop();
         if (pool->waitForDone(1000)) delete pool;
+        if (retirePool->waitForDone(5000)) delete retirePool; // frees only memory, so it always finishes
         // else: abandon the pool; its job owns only by-value captures.
     }
     int rowOfKey(const QString& key) const {
@@ -148,15 +172,36 @@ struct DirectoryEntryModel::Private {
         if (value < 0 || !provisional) return value;
         return value & kFolderSegment ? value & ~kFolderSegment : provisionalFolders + value;
     }
+    // Not while a folder re-arrives: loadMore() does nothing then, and a button that does nothing is worse than none.
+    bool canLoadMore() const { return truncated && !arriving && (loadingMore || entryLimit < tuning.entryLimit); }
+    void setRefused(bool value) { if (memoryRefused != value) { memoryRefused = value; emit q->directoryChanged(); } }
+    // Rows, their index and the filter's copy are freed in the pool: a million of them took up to 0.9 s on the GUI thread.
+    struct Retired { std::vector<Row> rows; QHash<QString, int> index; Listing listing; };
+    void retireRows(std::vector<Row>&& oldRows, QHash<QString, int>&& oldIndex) {
+        if (oldRows.empty() && oldIndex.isEmpty()) return;
+        auto old = std::make_shared<Retired>();
+        old->rows = std::move(oldRows); old->index = std::move(oldIndex);
+        retire(std::move(old));
+    }
+    void retireListing(Listing&& listing) {
+        if (listing.rows.empty() && listing.rawRows.empty() && listing.index.isEmpty()) return;
+        retire(std::make_shared<Listing>(std::move(listing)));
+    }
     bool passesFilter(const Row& row) const {
         return (!filter.isActive() || filter.matches(row.name)) && (kindWanted < 0 || int(row.kind) == kindWanted);
     }
     void setLoading(bool value) { if (loading != value) { loading = value; emit q->loadingChanged(); } }
-    void setArriving(bool value) { if (arriving != value) { arriving = value; emit q->arrivingChanged(); } }
+    void setArriving(bool value) {
+        if (arriving == value) return;
+        const bool couldLoadMore = canLoadMore();
+        arriving = value;
+        emit q->arrivingChanged();
+        if (couldLoadMore != canLoadMore()) emit q->directoryChanged();
+    }
     void applyFilter() {
         q->beginResetModel();
-        rows.clear();
-        index.clear();
+        retireRows(std::move(rows), std::move(index));
+        rows = {}; index = {};
         if (provisional) {
             // rawListing is in arrival order here and has no index yet.
             provisionalFolders = 0;
@@ -193,6 +238,12 @@ struct DirectoryEntryModel::Private {
         wanted = true;
         // Provisional rows belong to the abandoned scan, in an order nothing will finish.
         if (provisional) release();
+        // A raised cap costs a page's peak on every listing, not only on "Show more": a sort, a refresh or coming back to
+        // the grid. If it does not fit, list as much as does, and say so once that listing is published.
+        listingLimit = entryLimit;
+        if (!rawListing.rows.empty()) lastRowBytes = directory_scan::averageRowBytes(rawListing.rows);
+        if (entryLimit > tuning.entryStep && lastRowBytes)
+            listingLimit = directory_scan::largestCapThatFits(availableMemory(), lastRowBytes, entryLimit, tuning.entryStep);
         // A folder with rows on screen keeps them until its new listing is finished; only a first listing arrives.
         if (rows.empty() && rawListing.rows.empty()) {
             arrivals = std::make_shared<directory_scan::Arrivals>(std::size_t(std::max(1, tuning.queuedRows)));
@@ -209,7 +260,19 @@ struct DirectoryEntryModel::Private {
         setArriving(false);
     }
     void refresh() {
-        if (arrivals) refreshAfterArrival = true; else request();
+        if (arrivals || loadingMore || orderAsked) refreshAfterArrival = true; else request();
+    }
+    // An allocation failed on the worker. The rows on screen stay, and the banner says why.
+    void outOfMemory() {
+        if (loadingMore) entryLimit = limitBeforePage;
+        loadingMore = false; orderAsked = false;
+        const bool wasProvisional = provisional;
+        abandonScan();
+        if (wasProvisional) release(); // an arrival that cannot finish has no order to show
+        setLoading(false);
+        setRefused(true);
+        emit q->directoryChanged();
+        if (rows.empty()) emit q->listingFailed(QCoreApplication::translate("Grid", "There is not enough free memory to list this folder. Close other apps, then try again."));
     }
     void pump() {
         if (!wanted || inFlight >= kMaxConcurrentListings) return;
@@ -223,16 +286,23 @@ struct DirectoryEntryModel::Private {
             // leaving a second copy for deferred watcher destruction.
             static_assert(std::is_nothrow_move_constructible_v<Listing>);
             auto listing = watcher->future().takeResult(); watcher->deleteLater(); --inFlight;
-            if (token != generation || !active || listing.cancelled) {
+            if (token == generation && active && listing.outOfMemory) outOfMemory();
+            else if (token != generation || !active || listing.cancelled) {
                 glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, token);
                 publication.setFlags(token != generation || !active ? glancelot::perf::Stale : glancelot::perf::Cancelled);
             } else { finished = std::move(listing); drain(); }
             pump();
         });
-        directory_scan::Request scan{directory, sort, includeHidden, kMaxEntries, identities, tuning, enumerator, beforeProbes};
+        // The worker copies the rows for the filter's raw listing whenever the model will keep one, so no publish copies
+        // a million rows on the GUI thread.
+        directory_scan::Request scan{directory, sort, includeHidden, listingLimit, identities, tuning, enumerator, beforeProbes, !filtering()};
         watcher->setFuture(QtConcurrent::run(pool, [scan = std::move(scan), queue = arrivals, cancel = stop.get_token(), token] {
             glancelot::perf::detail::GenerationContext context(token);
-            return directory_scan::scan(scan, queue, cancel);
+            try {
+                return directory_scan::scan(scan, queue, cancel);
+            } catch (const std::bad_alloc&) { // a failed allocation must not end the app: viewing writes nothing, so nothing is lost
+                Listing failed; failed.outOfMemory = true; return failed;
+            }
         }));
     }
     // Queued rows first, under the budget; the finished scan publishes once nothing queued before it is left.
@@ -250,6 +320,7 @@ struct DirectoryEntryModel::Private {
         { glancelot::perf::ScopedSpan publication(glancelot::perf::Stage::Publish, generation);
         std::vector<Row> folders, files;
         const int cursorBefore = rowOfKey(cursorKey);
+        const std::optional<SelectionTotals> totalsBefore = selectionTotals;
         const auto admit = [&](std::vector<Row>& from, std::vector<Row>& to, bool folder) {
             for (auto& row : from) {
                 rawListing.rows.push_back(row);
@@ -272,6 +343,12 @@ struct DirectoryEntryModel::Private {
         // would call again for a finished scan.
         dry = definitive.has_value() || (!batch && budget.elapsed() < kDrainBudgetMs);
         publication.setBytes(folders.size() + files.size());
+        // The totals grow by whatever of this tick was already selected (a selection kept across leaving the grid).
+        SelectionTotals added;
+        if (!selected.isEmpty())
+            for (const auto* part : {&folders, &files})
+                for (const auto& row : *part) if (selected.contains(row.key)) { ++added.count; added.bytes += bytesOf(row); }
+        keepTotals = true;
         { const ChangingRows changing(changingRows);
         if (!folders.empty()) {
             q->beginInsertRows({}, provisionalFolders, provisionalFolders + int(folders.size()) - 1);
@@ -285,10 +362,13 @@ struct DirectoryEntryModel::Private {
             q->endInsertRows();
         }
         }
+        if (totalsBefore) selectionTotals = SelectionTotals{totalsBefore->count + added.count, totalsBefore->bytes + added.bytes};
+        else selectionTotals.reset();
         // Every selectionChanged re-reads the selection, so this says only what changed: the cursor's row moved below
         // inserted folders, or it has just arrived.
         if (rowOfKey(cursorKey) != cursorBefore) emit q->selectionChanged();
         if (!folders.empty() || !files.empty()) emit q->countChanged();
+        keepTotals = false;
         if (provisional && !accessible) { accessible = true; emit q->directoryChanged(); } // recovering: rows, not the failure, are showing
         }
         if (definitive) publishDefinitive(std::move(*definitive));
@@ -336,40 +416,57 @@ struct DirectoryEntryModel::Private {
 #endif
         if (refreshAfterArrival) { refreshAfterArrival = false; request(); }
     }
-    void publishRows(Listing listing) {
+    // Returns whether the listing was published.
+    bool publishRows(Listing listing) {
 #ifdef GLANCELOT_FS_WATCH_TESTING
         QElapsedTimer phase;phase.start();
 #endif
         const int oldCount = int(rows.size());
         // Filtering is a projection: identity matching/pruning uses the full
         // physical listing, never just the visible rows.
-        if (!truncated || provisional || (filtering() ? rawListing.rows.empty() : rows.empty())) {
+        // A refresh of a truncated folder is not published, so a folder that changes does not reorder under the user.
+        const bool asked = loadingMore || orderAsked || cutShort;
+        if (!truncated || provisional || asked || (filtering() ? rawListing.rows.empty() : rows.empty())) {
 #ifdef GLANCELOT_FS_WATCH_TESTING
             publicationStats.applied=true;publicationStats.filtered=filtering();
 #endif
             if (!filtering()) {
-                merge(std::move(listing));
+                if (asked) replaceRows(std::move(listing));
+                else {
+                    // After a merge the rows equal the listing's, so the worker's copy of them is the raw listing.
+                    std::vector<Row> raw = std::move(listing.rawRows);
+                    merge(std::move(listing));
+                    retireRows(std::move(rawListing.rows), {});
+                    rawListing.rows = raw.size() == rows.size() ? std::move(raw) : rows;
+                    retireRows(std::move(raw), {});
+                    rawListing.index = index;
+                }
 #ifdef GLANCELOT_FS_WATCH_TESTING
                 publicationStats.mergeMs=phase.restart();
 #endif
-                rawListing.rows = rows;
-                rawListing.index = index;
                 if (int(rows.size()) != oldCount) emit q->countChanged();
             } else {
                 provisional = false; provisionalFolders = 0;
+                retireListing(std::move(rawListing));
                 rawListing = std::move(listing);
+                retireRows(std::move(rawListing.rawRows), {});
+                rawListing.rawRows = {};
                 applyFilter();
             }
-        }
 #ifdef GLANCELOT_FS_WATCH_TESTING
-        publicationStats.projectionMs=phase.restart();
+            publicationStats.projectionMs=phase.restart();
 #endif
+            return true;
+        }
+        // Not published: its rows go to the pool, not to the GUI thread, which took 0.4 s at a million.
+        retireListing(std::move(listing));
+        return false;
     }
     void apply(Listing listing) {
 #ifdef GLANCELOT_FS_WATCH_TESTING
         QElapsedTimer phase;phase.start();
 #endif
-        const bool wasAccessible = accessible, wasTruncated = truncated;
+        const bool wasAccessible = accessible, wasTruncated = truncated, couldLoadMore = canLoadMore();
         accessible = listing.accessible; truncated = listing.truncated;
         const bool rowsWerePublished = listing.rowsPublished;
         const QSet<QString> selectedBefore = rowsWerePublished ? selected : QSet<QString>{};
@@ -386,6 +483,7 @@ struct DirectoryEntryModel::Private {
             if(listing.renamed.contains(anchorKey))anchorKey=keyFor(listing.renamed[anchorKey]);
             if(listing.renamed.contains(cursorKey))cursorKey=keyFor(listing.renamed[cursorKey]);
             previousSelection.clear();previousAnchor.clear();previousCursor.clear();
+            selectionTotals.reset();
         }
         // An incomplete identity scan cannot replace the last complete baseline
         // for this scope. Do not carry that baseline across unrelated navigation.
@@ -394,7 +492,13 @@ struct DirectoryEntryModel::Private {
 #ifdef GLANCELOT_FS_WATCH_TESTING
         publicationStats.identityMs=phase.restart();
 #endif
-        if (!rowsWerePublished) publishRows(std::move(listing));
+        const std::size_t listedAt = listingLimit;
+        const bool cut = accessible && truncated && listedAt < entryLimit;
+        cutShort = cut && !wasTruncated;
+        const bool published = rowsWerePublished || publishRows(std::move(listing));
+        cutShort = false;
+        // A listing cut short for memory is what now shows, so the cap follows it, and the banner says why.
+        if (published && cut) { entryLimit = listedAt; setRefused(true); }
 #ifdef GLANCELOT_FS_WATCH_TESTING
         else { publicationStats.applied=true;publicationStats.filtered=filtering(); }
         phase.restart();
@@ -415,9 +519,10 @@ struct DirectoryEntryModel::Private {
             changedRows(QSet<QString>(selectedBefore).unite(selected), {SelectedRole});
             changedRows({cursorBefore, cursorKey}, {CursorRole});
         }
+        loadingMore = false; orderAsked = false;
         setArriving(false);
         setLoading(false);
-        if (wasAccessible != accessible || wasTruncated != truncated) emit q->directoryChanged();
+        if (wasAccessible != accessible || wasTruncated != truncated || couldLoadMore != canLoadMore()) emit q->directoryChanged();
         emit q->selectionChanged();
         if (!accessible) emit q->listingFailed(QCoreApplication::translate("Grid","This folder can't be opened. It may have been moved or deleted, or you may not have permission to read it."));
     }
@@ -441,6 +546,7 @@ struct DirectoryEntryModel::Private {
             publicationStats.mergeScanMs=scanClock.elapsed();
 #endif
             updateMetadata(listing);
+            retireListing(std::move(listing));
             return;
         }
         // The definitive order of rows already showing: same rows, so views keep their delegates and position.
@@ -494,6 +600,7 @@ struct DirectoryEntryModel::Private {
             i = end;
         }
         updateMetadata(listing);
+        retireListing(std::move(listing));
     }
     // Both merge paths have established identical row keys and order here.
     // Preserve delegates and publish changed metadata through the same signal.
@@ -518,6 +625,7 @@ struct DirectoryEntryModel::Private {
         QStringList keys;
         keys.reserve(before.size());
         for (const auto& at : before) keys << (at.row() < int(rows.size()) ? rows[std::size_t(at.row())].key : QString());
+        retireRows(std::move(rows), std::move(index));
         rows = std::move(listing.rows);
         index = std::move(listing.index);
         QModelIndexList after;
@@ -531,26 +639,47 @@ struct DirectoryEntryModel::Private {
         QElapsedTimer resetClock;resetClock.start();
 #endif
         q->beginResetModel();
+        retireRows(std::move(rows), std::move(index));
         rows = std::move(listing.rows);
         index = std::move(listing.index);
         q->endResetModel();
+        retireListing(std::move(listing));
 #ifdef GLANCELOT_FS_WATCH_TESTING
         publicationStats.resetMs+=resetClock.elapsed();
 #endif
     }
+    // A new page lands anywhere in the order, across up to a million rows. Merging would hash them all here, and copying
+    // or freeing that many rows here would stall the GUI, so the worker made the copy and the pool frees the old rows.
+    // Selection is by key, and the view restores its anchor after a reset.
+    void replaceRows(Listing listing) {
+        // A sort can land on rows still in arrival order: those positions are by segment, and these are not.
+        provisional = false; provisionalFolders = 0;
+        q->beginResetModel();
+        auto old = std::make_shared<Listing>(std::move(rawListing));
+        old->rawRows = std::move(rows);
+        rows = std::move(listing.rows);
+        index = std::move(listing.index);
+        rawListing = {};
+        rawListing.rows = listing.rawRows.empty() ? rows : std::move(listing.rawRows);
+        rawListing.index = index;
+        q->endResetModel();
+        retire(std::move(old));
+    }
+    template <typename T> void retire(std::shared_ptr<T> old) { retirePool->start([old = std::move(old)]() mutable { old.reset(); }); }
     void release() {
         provisional = false; provisionalFolders = 0;
         if (!rows.empty() || !rawListing.rows.empty()) {
             q->beginResetModel();
-            rows.clear();
-            index.clear();
-            rawListing.rows.clear();
-            rawListing.index.clear();
+            retireRows(std::move(rows), std::move(index));
+            retireListing(std::move(rawListing));
+            rows = {}; index = {}; rawListing = {};
             q->endResetModel();
             emit q->countChanged();
         }
     }
     void changedRows(const QSet<QString>& keys, const QList<int>& roles) {
+        // Past a few rows, one signal over every row is cheaper than finding each one.
+        if (keys.size() > 64) { if (!rows.empty()) emit q->dataChanged(q->index(0), q->index(int(rows.size()) - 1), roles); return; }
         int first = -1, last = -1, n = 0;
         QList<int> found;
         for (const auto& key : keys) {
@@ -597,6 +726,8 @@ bool DirectoryEntryModel::loading() const { return d->loading; }
 bool DirectoryEntryModel::accessible() const { return d->accessible; }
 bool DirectoryEntryModel::truncated() const { return d->truncated; }
 bool DirectoryEntryModel::arriving() const { return d->arriving; }
+bool DirectoryEntryModel::canLoadMore() const { return d->canLoadMore(); }
+bool DirectoryEntryModel::loadMoreRefused() const { return d->memoryRefused; }
 
 void DirectoryEntryModel::setDirectory(const QString& directory) {
     const QString key = keyFor(directory);
@@ -612,7 +743,9 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     d->abandonScan();
     d->directory = directory; d->directoryKey = key;
     d->accessible = true; d->truncated = false;
+    d->loadingMore = false; d->orderAsked = false; d->memoryRefused = false; d->entryLimit = d->tuning.entryStep;
     d->release();
+    d->lastRowBytes = 0; // another folder's names
     d->selected.clear(); d->anchorKey.clear(); d->cursorKey.clear();
     // Going up a level puts the cursor on the folder that was just left, as file managers do.
     if (!previous.isEmpty() && !key.isEmpty() && previous.startsWith(key)
@@ -623,11 +756,28 @@ void DirectoryEntryModel::setDirectory(const QString& directory) {
     if (d->active && !directory.isEmpty()) d->request(); else d->setLoading(false);
 }
 void DirectoryEntryModel::refresh() { d->refresh(); }
+void DirectoryEntryModel::loadMore() {
+    if (!d->active || d->arriving || d->loadingMore || !d->canLoadMore()) return;
+    const std::size_t next = std::min(d->entryLimit + d->tuning.entryStep, d->tuning.entryLimit);
+    // Checked on every press, so the page is offered again as soon as memory frees up.
+    if (!directory_scan::pageFits(d->availableMemory(), directory_scan::averageRowBytes(d->rawListing.rows), next)) {
+        d->setRefused(true);
+        return;
+    }
+    d->setRefused(false);
+    d->limitBeforePage = d->entryLimit;
+    d->entryLimit = next;
+    d->loadingMore = true;
+    d->request();
+}
 void DirectoryEntryModel::setActive(bool active) {
     if (active == d->active) return;
     d->active = active;
     if (active) { d->request(); return; }
     d->abandonScan();
+    const bool couldLoadMore = d->canLoadMore();
+    d->loadingMore = false; d->orderAsked = false;
+    if (couldLoadMore != d->canLoadMore()) emit directoryChanged();
     d->setLoading(false);
     d->release(); // keys (selection/cursor) are kept and re-filtered against the next listing
 }
@@ -636,42 +786,62 @@ void DirectoryEntryModel::setSort(const QString& key, bool descending, quint64 s
     next.seed = seed;
     if (next == d->sort) return;
     d->sort = next;
+    // Only rows on screen in their final order need asking for: an inactive grid or an arrival lists afresh anyway.
+    d->orderAsked = d->truncated && d->active && !d->provisional;
     d->request();
 }
 void DirectoryEntryModel::setIncludeHidden(bool include) {
     if (include == d->includeHidden) return;
     d->includeHidden = include;
+    d->orderAsked = d->truncated && d->active && !d->provisional;
     d->request();
 }
 
 void DirectoryEntryModel::select(int row, SelectMode mode) {
     if (row < 0 || row >= count()) return;
     const QString key = d->rows[std::size_t(row)].key;
-    QSet<QString> touched = d->selected;
+    const qint64 bytes = Private::bytesOf(d->rows[std::size_t(row)]);
+    // A large selection is neither copied nor freed here: one signal covers every row, and the pool frees the old keys.
+    const bool wasLarge = d->selected.size() > 64;
+    QSet<QString> touched = wasLarge ? QSet<QString>{} : d->selected;
     const QString oldCursor = d->cursorKey;
+    auto& totals = d->selectionTotals;
+    const auto replaceSelection = [&](QSet<QString> next) {
+        if (wasLarge) d->retire(std::make_shared<QSet<QString>>(std::move(d->selected)));
+        d->selected = std::move(next);
+    };
     switch (mode) {
-    case Replace: d->selected = {key}; d->anchorKey = key; break;
+    case Replace: replaceSelection({key}); d->anchorKey = key; totals = Private::SelectionTotals{1, bytes}; break;
     case Toggle:
-        if (d->selected.contains(key)) d->selected.remove(key); else d->selected.insert(key);
+        if (d->selected.contains(key)) { d->selected.remove(key); if (totals) { --totals->count; totals->bytes -= bytes; } }
+        else { d->selected.insert(key); if (totals) { ++totals->count; totals->bytes += bytes; } }
         d->anchorKey = key; break;
     case Range: case ExtendRange: {
         // Range (Shift): the selection becomes anchor..row. ExtendRange (Ctrl+Shift): anchor..row is added.
         if (d->anchorKey.isEmpty() || d->rowOfKey(d->anchorKey) < 0) d->anchorKey = key;
         const int anchor = d->rowOfKey(d->anchorKey);
-        if (mode == Range) d->selected.clear();
-        for (int i = std::min(anchor, row); i <= std::max(anchor, row); ++i) d->selected.insert(d->rows[std::size_t(i)].key);
+        if (mode == Range) { replaceSelection({}); totals = Private::SelectionTotals{}; }
+        for (int i = std::min(anchor, row); i <= std::max(anchor, row); ++i) {
+            const auto& at = d->rows[std::size_t(i)];
+            if (d->selected.contains(at.key)) continue;
+            d->selected.insert(at.key);
+            if (totals) { ++totals->count; totals->bytes += Private::bytesOf(at); }
+        }
         break;
     }
     }
     d->cursorKey = key;
-    touched.unite(d->selected);
-    d->changedRows(touched, {SelectedRole});
+    if (wasLarge || d->selected.size() > 64) { if (count() > 0) emit dataChanged(index(0), index(count() - 1), {SelectedRole}); }
+    else { touched.unite(d->selected); d->changedRows(touched, {SelectedRole}); }
     d->changedRows({oldCursor, key}, {CursorRole});
     emit selectionChanged();
 }
 void DirectoryEntryModel::selectAll() {
     if (d->rows.empty()) return;
-    for (const auto& row : d->rows) d->selected.insert(row.key);
+    d->selected.reserve(d->selected.size() + qsizetype(d->rows.size()));
+    Private::SelectionTotals all;
+    for (const auto& row : d->rows) { d->selected.insert(row.key); ++all.count; all.bytes += Private::bytesOf(row); }
+    d->selectionTotals = all;
     if (d->cursorKey.isEmpty()) d->cursorKey = d->rows.front().key;
     if (d->anchorKey.isEmpty()) d->anchorKey = d->cursorKey;
     emit dataChanged(index(0), index(count() - 1), {SelectedRole, CursorRole});
@@ -679,18 +849,26 @@ void DirectoryEntryModel::selectAll() {
 }
 void DirectoryEntryModel::clearSelection() {
     if (d->selected.isEmpty()) return;
-    const auto previous = d->selected;
-    d->selected.clear();
-    d->changedRows(previous, {SelectedRole});
+    auto previous = std::make_shared<QSet<QString>>(std::move(d->selected));
+    d->selected = {};
+    d->selectionTotals = Private::SelectionTotals{};
+    // Past a few rows, one signal over every row beats finding each one, and the old keys are freed in the pool.
+    if (previous->size() > 64) { if (count() > 0) emit dataChanged(index(0), index(count() - 1), {SelectedRole}); }
+    else d->changedRows(*previous, {SelectedRole});
+    d->retire(std::move(previous));
     emit selectionChanged();
 }
 void DirectoryEntryModel::invertSelection() {
     if (d->rows.empty()) return;
     QSet<QString> newSelected;
+    newSelected.reserve(qsizetype(d->rows.size()));
+    Private::SelectionTotals inverted;
     for (const auto& row : d->rows) {
-        if (!d->selected.contains(row.key)) newSelected.insert(row.key);
+        if (!d->selected.contains(row.key)) { newSelected.insert(row.key); ++inverted.count; inverted.bytes += Private::bytesOf(row); }
     }
+    d->retire(std::make_shared<QSet<QString>>(std::move(d->selected)));
     d->selected = std::move(newSelected);
+    d->selectionTotals = inverted;
     emit dataChanged(index(0), index(count() - 1), {SelectedRole});
     emit selectionChanged();
 }

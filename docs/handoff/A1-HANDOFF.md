@@ -330,3 +330,382 @@ None. The lead answered the review's two product questions: Select all stays on 
 ## UI skills
 
 `application-interface-design` was read before the QML edits. The visible changes in this PR are the "so far" wording in the existing count label and in the footer, with no new control or layout. `layout-spacing`, `component-geometry`, `responsive-layout` and `typography-ui` were read for the banner in PR 2.
+
+---
+
+# PR 2: Show more for folders beyond the first 100,000 entries
+
+- **Branch:** `claude/a1-load-more`
+- **Code tip:** `a80f9bf`, the fixes for the PR 12 review. The commit after it changes only this file and `docs/verification/A1/`.
+- **Exact base:** `5018b8f`, the tip of `claude/a1-perf-enum` (PR 1) under its round 3 review, merged in `3170dcd`. `main` at `30803be` (EN-07) is merged in `973fca9`, as the lead asked. PR 1 does not have that merge yet, so the PR's diff against its base also shows EN-07's files until it does. The PR targets PR 1's branch, and stays a draft until PR 1 merges.
+- **PR:** the pull request from this branch into `claude/a1-perf-enum`.
+
+## What a user sees
+
+- A folder over the cap shows the banner "Showing 100,000 items. This folder has more that are not listed here." with a **Show more** button.
+- Each press lists 100,000 more, up to 1,000,000. The banner says "Listing more items…" while it works, and the rows change once, when the page lands.
+- With too little free memory for the next page, the rows stay and the banner says "Showing 100,000 items. There is not enough free memory to list more. Close other apps, then try again." **Show more** stays, and each press checks free memory again, so the page starts as soon as it fits.
+- Changing the sort or the hidden-files setting in a truncated folder shows its result, with the selection and the row at the top kept. While the folder is listed again the banner says "Sorting the 100,000 items listed here…", then that more items are not listed.
+- While a truncated folder is listed again (coming back from a photo, for example), Show more is not offered until its rows are in order.
+- The selection, the cursor and the row in view stay put. If the keyboard cursor was in view it stays in view. If the user was browsing with the wheel, the row at the top stays at the top.
+- At 1,000,000 the button goes and the banner says that is the most Glancelot can list. When everything is listed the banner goes. Either way, focus moves to the grid rather than being lost with the button.
+- With a filter, the banner gives no number and says some matches may be missing, because the count on screen is not how much of the folder is listed.
+
+## Before and after
+
+`docs/verification/A1/million-traces.txt` has every line. Milliseconds and MB, under the gate lock. An empty process is 15 MB.
+
+| Rows | Page wait, real files | Page wait, synthetic | Working set, real / synthetic | Peak, real / synthetic | Publish on the GUI thread, real → synthetic |
+| --- | --- | --- | --- | --- | --- |
+| 100,000 | 622 | 884 | 94 / 90 | 137 / 137 | 15 → 46 |
+| 200,000 | 1113 | 1585 | 174 / 228 | 270 / 288 | 37 → 0 |
+| 500,000 | 2963 | 2866 | 418 / 641 | 751 / 800 | 162 → 0 |
+| 800,000 | 4416 | 2569 | 671 / 1153 | 1222 / 1303 | 294 → 0 |
+| 1,000,000 | 5614 | 3386 | 989 / 1463 | 1563 / 1650 | 387 → 0 |
+
+- **"Real" is 1,000,100 generated empty files, measured before the page moved off the GUI thread.** I did not repeat it: generating the files takes over 10 minutes, and the change does not touch enumeration. **"Synthetic" is the seam folder, on the code in this PR.** The two columns differ in code as well as in source, so the page wait is not a before and after. The machine was also not equally quiet between runs, which is why the synthetic wait does not rise evenly.
+- The 100,000 row is the first listing, not a page, so it does not use the new publish path.
+- The synthetic working set is sampled just after the page lands, before the pool has freed the old rows. **Once it has, a million rows rest at 944 MB.**
+- **Worst GUI gap with a page landing: 12 to 15 ms at every size**, against 403 ms at 1,000,000 before this change, both with the fixed tracer. The first page's gap was 58 ms, on the first-listing path and under the 250 ms budget.
+- Setting a filter across 1,000,000 rows takes 165 ms on the GUI thread and clearing it 40 ms. Filtering has always run there. It is now reachable at this size and is under budget.
+
+**The tracer's blind spot.** Its heartbeat stopped when `loading` cleared, so the last publish went uncounted. The first measurement here reported 14 ms for a 390 ms stall. This PR fixes it. PR 1 has the same tracer, but its last publish is 12 to 13 ms at 100,000, so PR 1's table stands.
+
+## PR 12 review: CHANGES REQUIRED, and what changed
+
+The review is `docs/verification/A1-REVIEW-PR12.md` on `claude/review-a1-pr12`, at `a687a30`. Everything is fixed in `a80f9bf`.
+
+- **B1, a sort while the grid is hidden or re-arriving.** Two defences, both kept. `replaceRows` now clears the provisional offsets, the reviewer's fix. `setSort` and `setIncludeHidden` now ask for a republish only when the folder is truncated, active and in its definitive order, the reviewer's other suggestion. Otherwise the next first listing publishes the new order anyway. Tests, with folders in the listing and every row lookup checked, including the refresh afterwards:
+  - `aSortWhileTheGridIsHiddenKeepsEveryLookupRight` and `aSortDuringReArrivalKeepsEveryLookupRight`, on the model.
+  - `aSortInThePhotoViewKeepsTheGridsRowsRight`, through the shipped QML and the real `grid` and `sort-reverse` commands.
+
+  With both defences off, all three fail. With either one off they pass, because either defence alone closes the bug.
+- **B2, a refusal with no way forward.** The lead chose the reviewer's recommendation. Show more stays visible and enabled, and each press checks free memory again. The banner ends "Close other apps, then try again." `allowLoadMoreAgain` is gone, along with `aRefusedPageIsOfferedAgainWhenTheFolderIsOpenedAgain`, which called `setDirectory` directly. Tests:
+  - `aRefusedPressIsCheckedAgainOnTheNextPress`, and `loadMoreChecksFreeMemory`, updated.
+  - Through the shipped QML: `notEnoughMemorySaysWhatToDoAndTheNextPressChecksAgain`, which presses the real button, is refused, frees memory and presses again, and `aRefusedPressDuringARefreshSaysWhy`.
+- **B3, large frees and copies on the GUI thread.** Every large free now goes to a dedicated one-thread pool: the unpublished listing, the rows a merge replaces, `release()`, a reorder, a reset, a filter and a large selection. Sharing the scan pool held a first row back 0.8 s. The definitive order also takes the worker's copy of the rows instead of copying them on the GUI thread. Numbers are under "Before and after, this round".
+- **N0 and N1, selection cost at a million rows.** The selected count and bytes are now kept. Each selection command and each arrival tick updates them, and only a change of which rows exist has them counted again, once. Past 64 changed keys, one `dataChanged` covers every row. PR 1 has the same change at 100,000 rows.
+- **N2, the memory estimate.** Corrected under "Memory bound".
+- **N3, no sign of a sort at large sizes.** The banner says "Sorting the %1 items listed here…" while an explicit sort lists a truncated folder again. Test: `aSortOfATruncatedFolderSaysItIsSorting`.
+- **N4, Show more during re-arrival.** `canLoadMore` is false while arriving, and the end of arrival notifies. Tests: `showMoreIsNotOfferedWhileATruncatedFolderReArrives` and `showMoreIsNotOfferedWhileTheFolderReArrives`.
+- **N5, "Listing more items…" after a change of folder.** A new folder clears it. Test: `anotherFolderDuringAPageDoesNotSayListingMore`.
+- **N6, a refused press during a refresh.** "Listing more items…" shows only for a page that really started. Test: `aRefusedPressDuringARefreshSaysWhy`.
+- **N7, the 1180 px check.** `bannerFitsAtNarrowAndWideWidths` now waits for the banner to grow by 500 px before checking it at 1180. The screenshots are under "Not verified".
+- **N8.** `aFilterHidingEveryListedRowKeepsTheOffer` now checks the filtered wording while more can be listed.
+- **N9, page cache in a cgroup.** `memory.stat`'s `inactive_file` (`total_inactive_file` on cgroup v1) no longer counts as used. New parser cases are in `linuxFreeMemoryReadsMemAvailableAndTheCgroup`.
+- **N10.** The `canLoadMore` and `loadMoreRefused` comments now say what they do, under the lead's grant. The diff is under "Files changed".
+- **The memory race.** A listing at a raised cap now checks free memory as it starts, whatever started it: a page, a sort or a refresh. If the cap no longer fits, it lists the most whole steps that do. Then the cap drops to what was listed, and the banner gives the refusal. A whole folder refreshed with too little memory publishes what fits rather than throwing it away. If an allocation fails on the worker anyway, the model catches `std::bad_alloc`, keeps the rows, puts the cap back and sets the refusal, or says the folder could not be listed if it had no rows. Tests:
+  - `aRaisedCapThatNoLongerFitsListsWhatDoes`, `aWholeFolderRefreshedWithTooLittleMemoryShowsWhatFits` and `largestCapThatFitsStepsDown`.
+  - `runningOutOfMemoryDuringAPageKeepsTheRows` and `runningOutOfMemoryOnAFirstListingSaysSo`.
+- **Merges.** PR 1's `5018b8f` merged clean in `3170dcd`. `main`'s `30803be` merged in `973fca9`. `CMakeLists.txt` keeps both test includes. EN-07 moved the grid commands into PhotoGrid's `Connections { target: viewer }` handler, and PR 1's menu settle line now sits before that handler's command chain.
+
+### Before and after, this round
+
+1,000,000 rows, synthetic seam folder, under the gate lock. Worst GUI gap or call time, in milliseconds.
+
+- **Before:** `a687a30`'s code, measured by me on 2026-11-05. The whole-folder refresh is the reviewer's figure, because my tracer could not measure it then. The selection rows were measured on PR 1's code before its totals change.
+- **After:** `a80f9bf`, on 2026-11-12. Every line is in `docs/verification/A1/million-traces-pr12-review.txt`.
+
+| Path | Before | After |
+| --- | --- | --- |
+| Refresh of a truncated folder | 308 | 12 |
+| Refresh of a folder listed whole | 586 | 162 |
+| Coming back to the grid, worst gap | 339 | 85 |
+| Coming back to the grid, first row | 786 | 24 |
+| Leaving the grid | 508 | 0 |
+| Opening another folder | 557 | 0 |
+| One selection signal, every row selected | 298 | 0.01 |
+| Select all | 751 | 205 |
+| Clear | 235 | 0.2 |
+| Invert | 244 | 155 |
+
+- **Every path is now under the 250 ms budget.**
+- **The whole-folder refresh** still merges on the GUI thread, comparing a million rows: `publish_ms=162`. It is in budget, so I did not move the merge to the worker.
+- **A page** still costs the GUI thread 12 to 13 ms at every size. It takes 0.5 to 2.6 s to land from 200,000 to 1,000,000 rows.
+- **A million rows** rest at 855 MB and peak at 1,671 MB.
+- **Select all and invert** are explicit commands, and they visit every row once.
+
+## Memory bound
+
+Before a page starts, `loadMore()` estimates the page's peak and compares it with free memory. `GlobalMemoryStatusEx` gives free memory on Windows. On Linux it is `MemAvailable`, or what the process's cgroup has left if that is less.
+
+- **Estimate:** the average of `directory_scan::rowBytes` over up to about 1,024 evenly spaced rows of this folder, times the page's row count, times 2.
+- **Why 2:** the new listing exists beside the rows on screen until it is published, with its rows, their copy for the filter, the index, the identity baseline and the sort keys. These short names average 450 bytes, so the last page is estimated at 858 MB.
+- **The estimate is about 6% short (review N2).** The reviewer measured the last page at `a687a30`, after the pool had freed the rows before it, and found a peak 908 MB over the rows at rest, against the 858 MB estimate. My earlier 372 MB read its baseline before the pool had freed the old rows, so it was wrong, and my 767 MB real-file figure predates the move off the GUI thread. About half of each row's cost does not scale with the name, so the estimate falls further short with very short paths, about 150 MB at a million rows by the reviewer's arithmetic, and over-estimates with long ones.
+- **Why it is still safe:** the 512 MB headroom covers the shortfall. The last page leaves about 460 MB free rather than 512 MB, and nothing pages. I kept the factor rather than adding a fixed per-row term, so the check refuses no more than before. The race between the check and the page is closed separately: see "The memory race" above.
+- **Headroom:** the page must also leave 512 MB free, so the last page of this folder needs about 1.37 GB free.
+- **A cheap way to lower the peak:** I did not find one. The old rows are on screen until the new ones are published, so they cannot go earlier. Dropping the filter's copy of them would save about 96 bytes a row, but a filter set during the page needs it back, which is a rework. The peak is unchanged: 1,673 MB against 1.65 GB before.
+
+Today's numbers are at the end of `docs/verification/A1/million-traces.txt`.
+
+## Files changed
+
+Grant check, `git diff --name-only ac49031..e057520`, with `docs/` left out of the list:
+
+```text
+include/glancelot/directory_entry_model.hpp
+src/app/directory_entry_model.cpp
+src/app/directory_scan.hpp
+tests/perf_enum_tests.cpp
+tests/perf_enum_ui_tests.cpp
+translations/glancelot_en_XA.ts
+ui/PhotoGrid.qml
+```
+
+All are in the brief's grant except the header, which the lead granted, and the translation file, which the lead's copy condition requires. `ui/Main.qml` is untouched.
+
+Lead's grant for `loadMore()`: "Grant for PR 2 only: add exactly that `loadMore()` declaration and comment". Lead's grant for `canLoadMore`: "approved for PR 2, with one change. `canLoadMore` must notify whenever its value changes, including after `loadMore()` reaches the limit in the same folder, when `directoryChanged` does not fire. Use the signal `truncated` uses if it fires on every such change; otherwise add one small notify signal to this grant and show that diff in the handoff." The diff:
+
+```diff
++    // True when `truncated` is set and the hard limit of 1,000,000 entries has not been reached, so loadMore() would list more.
++    Q_PROPERTY(bool canLoadMore READ canLoadMore NOTIFY directoryChanged)
++    bool canLoadMore() const;
++    // Lists the next page when `truncated` is set: re-enumerates with a higher cap (hard limit 1,000,000 entries) and publishes the new order once. No-op otherwise.
++    Q_INVOKABLE void loadMore();
+```
+
+**This round,** `git diff --name-only 973fca9..a80f9bf`:
+
+```text
+include/glancelot/directory_entry_model.hpp
+src/app/directory_entry_model.cpp
+src/app/directory_scan.hpp
+tests/perf_enum_test_support.hpp
+tests/perf_enum_tests.cpp
+tests/perf_enum_ui_tests.cpp
+translations/glancelot_en_XA.ts
+ui/PhotoGrid.qml
+```
+
+All are in the grant. `tests/perf_enum_test_support.hpp` is PR 1's seam folder, which gains a size offset. The header change is the comment the lead granted under N10:
+
+```diff
+-    // True when `truncated` is set and the hard limit of 1,000,000 entries has not been reached, so loadMore() would list more.
++    // True when `truncated` is set, the folder is not arriving and the hard limit of 1,000,000 entries has not been reached,
++    // so loadMore() would list more if the page fits in free memory. Free memory is checked again on each call.
+     Q_PROPERTY(bool canLoadMore READ canLoadMore NOTIFY directoryChanged)
+-    // True when loadMore() found too little free memory for the next page. Rows stay; opening the folder again clears it.
++    // True when the last attempt to list more did not fit in free memory: a refused loadMore(), or a listing at a raised cap
++    // cut back to what fits. Rows stay. The next loadMore() that fits, or another folder, clears it.
+     Q_PROPERTY(bool loadMoreRefused READ loadMoreRefused NOTIFY directoryChanged)
+```
+
+Against PR 1's branch, the PR also shows the files `main` brought in `973fca9`, among them `scripts/ci/*`, `AGENTS.md` and root `CMakeLists.txt`. They are EN-07 and the commit rules, not this packet's changes, and they leave the PR's diff once PR 1 has `main` too.
+
+Lead's grant for the refusal: "You're granted one added property or signal for the refusal reason in `directory_entry_model.hpp`, beyond the existing `loadMore()` and `canLoadMore` grant." The diff:
+
+```diff
++    // True when loadMore() found too little free memory for the next page. Rows stay; opening the folder again clears it.
++    Q_PROPERTY(bool loadMoreRefused READ loadMoreRefused NOTIFY directoryChanged)
+-    bool canLoadMore() const;
++    bool canLoadMore() const; bool loadMoreRefused() const;
+```
+
+**Notify condition:** no new signal was needed. `truncated` uses `directoryChanged`, and I made it fire on every `canLoadMore` change: `apply()` emits it when the value differs from the start of the call, and `setActive(false)` emits it when abandoning the last page ends the offer. Tests: `theHardLimitStopsOffering`, `abandoningTheLastPageNotifiesThatTheOfferEnded`, and through QML `atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid`, where the button becomes the limit message in place without reopening the folder.
+
+## Lead's conditions
+
+| Condition | Where |
+| --- | --- |
+| Selection and anchor survive, and the photo stays in view | `selectionCursorAndAnchorSurviveLoadMore`, `showMoreFromTheKeyboardKeepsThePhotoInView`, `showMoreKeepsTheVisibleRowWhileBrowsing` |
+| Bounded step, published once | `shippedContinuationSteps`, `loadMoreListsTheNextPageAndPublishesOnce` |
+| A newer folder cancels it | `aNewerFolderCancelsLoadMoreAndStartsAtTheFirstCap` |
+| A second press does nothing | `aSecondPressWhileListingDoesNothing` |
+| Keyboard, accessible name, `qsTr`, sentence case | `showMoreFromTheKeyboardKeepsThePhotoInView` |
+| Checked at 560 and 1180 px | `bannerFitsAtNarrowAndWideWidths`, plus `docs/verification/A1/banner-560.png` and `banner-1180.png`, which I looked at |
+| The limit says so rather than offering again | `theHardLimitStopsOffering`, `atTheLimitTheBannerSaysSoAndFocusGoesToTheGrid`, `aHardLimitBetweenStepsIsStillTheLimit` |
+| Memory and time at 100,000 and 1,000,000 | The table above |
+| An explicit sort or hidden-files change republishes through the single publish, keeping the selection and the row at the top | `aSortChangeRepublishesATruncatedFolderOnce`, `aHiddenFilesToggleRepublishesATruncatedFolderOnce`, `aSortChangeUnderAFilterReachesTheWholeListing`, `aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner` |
+| File-watch refreshes stay on the current rule | `anOrdinaryRefreshKeepsATruncatedFoldersRows`, `aRefreshAfterASortChangeDoesNotPublish`, `aRefreshDuringASortChangeWaitsForIt` |
+| The banner still says more items are not listed | `aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner` |
+| A bound below 1,000,000, from the rows' actual cost | `aFolderOfLongNamesNeedsMoreFreeMemory`, `averageRowBytesComesFromTheRows`, `pageFitsLeavesTheHeadroomFree` |
+| Refused, allowed and failed reading | `loadMoreChecksFreeMemory` |
+| Refused: rows kept, Show more kept, the reason and what to do in plain words, checked again on the next press (the lead's B2 decision) | `notEnoughMemorySaysWhatToDoAndTheNextPressChecksAgain`, `aRefusedPressIsCheckedAgainOnTheNextPress` |
+| `MemAvailable` and the cgroup limit on Linux | `linuxFreeMemoryReadsMemAvailableAndTheCgroup`, `thisMachineReportsFreeMemory` |
+
+`translations/glancelot_en_XA.ts` was edited by hand, because `lupdate` is not available on Windows here.
+
+## Tests
+
+**This round, at `a80f9bf`.** The 20 targeted suites ran in a build slot on 2026-11-12, all passing on their first run:
+
+```text
+ 1/20 Test  #4: directory_listing ................   Passed   14.74 sec
+ 2/20 Test  #7: viewer_acceptance ................   Passed    9.96 sec
+ 3/20 Test #16: directory_model ..................   Passed   21.35 sec
+ 4/20 Test #20: grid_search ......................   Passed    0.27 sec
+ 5/20 Test #21: grid_density .....................   Passed    0.19 sec
+ 6/20 Test #23: fs_watch .........................   Passed   86.65 sec
+ 7/20 Test #26: fs_watch_ui ......................   Passed    2.83 sec
+ 8/20 Test #30: filter ...........................   Passed    2.61 sec
+ 9/20 Test #31: cache ............................   Passed    5.50 sec
+10/20 Test #40: recovery .........................   Passed   13.23 sec
+11/20 Test #41: recovery_startup .................   Passed    0.49 sec
+12/20 Test #42: recovery_controller ..............   Passed   14.57 sec
+13/20 Test #43: recovery_process .................   Passed   28.31 sec
+14/20 Test #44: tabs_recovery ....................   Passed   65.64 sec
+15/20 Test #48: translation_coverage_ui ..........   Passed   22.84 sec
+16/20 Test #51: perf_enum ........................   Passed   43.75 sec
+17/20 Test #52: perf_enum_ui .....................   Passed   84.06 sec
+18/20 Test #53: command_handlers_ui ..............   Passed   62.51 sec
+19/20 Test #56: export_ui ........................   Passed   74.86 sec
+20/20 Test #57: stack_confirm_ui .................   Passed  243.46 sec
+100% tests passed out of 20
+Total Test time (real) = 798.64 sec
+perf_enum    Totals: 71 passed, 0 failed, 1 skipped, 0 blacklisted, 30469ms
+perf_enum_ui Totals: 52 passed, 0 failed, 1 skipped, 0 blacklisted, 83813ms
+```
+
+The budget suites ran under the gate lock. They passed on their first run, so no rerun was needed:
+
+```text
+1/3 Test #12: folder_grid ......................   Passed  195.77 sec
+2/3 Test #13: input_ui .........................   Passed   83.11 sec
+3/3 Test #24: fs_watch_budget ..................   Passed   76.68 sec
+100% tests passed out of 3
+Total Test time (real) = 355.75 sec
+folder_grid Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 195634ms
+input_ui Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 82997ms
+```
+
+**A flake to know about.** The run before the pause, on 2026-11-05 at the same code, failed `perf_enum_ui` once, in PR 1's `theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder(every 7th a folder)`, with "1 lines from the anchor". It passed 4 of 4 alone on both branches, and it passed in today's run. It is PR 1's test and code, so I left it for PR 1's next round rather than change it here.
+
+**At `9a9482e`.** One test changed, to drive the real `sort-reverse` command instead of calling the model. `perf_enum_ui` passes in a build slot: 35 passed, 0 failed, 77.69 sec. Its first version failed `tryAgainWithTheOrderUnchangedReturnsToTheBrowsedPosition` (`layouts.count()` 1, expected 0), because the command saves the sort and the next test started from it. That test passed alone and failed straight after the sort test. The sort test now has its own config folder. The saved settings were in the run's temporary folder, never the user's.
+
+**At `e057520`,** every other suite. The first 18 ran in a build slot, and the last 3 under the gate lock, once a review's gate had finished. All pass on their first run. No local full suite ran.
+
+```text
+ 1/18 Test  #4: directory_listing ................   Passed   27.88 sec
+ 2/18 Test  #7: viewer_acceptance ................   Passed   14.12 sec
+ 3/18 Test #16: directory_model ..................   Passed   42.46 sec
+ 4/18 Test #20: grid_search ......................   Passed    0.38 sec
+ 5/18 Test #21: grid_density .....................   Passed    0.28 sec
+ 6/18 Test #23: fs_watch .........................   Passed  102.28 sec
+ 7/18 Test #26: fs_watch_ui ......................   Passed    5.92 sec
+ 8/18 Test #30: filter ...........................   Passed    4.85 sec
+ 9/18 Test #31: cache ............................   Passed    8.12 sec
+10/18 Test #40: recovery .........................   Passed   16.08 sec
+11/18 Test #41: recovery_startup .................   Passed    0.72 sec
+12/18 Test #42: recovery_controller ..............   Passed   16.28 sec
+13/18 Test #43: recovery_process .................   Passed   38.47 sec
+14/18 Test #44: tabs_recovery ....................   Passed   69.71 sec
+15/18 Test #48: translation_coverage_ui ..........   Passed   30.14 sec
+16/18 Test #51: perf_enum ........................   Passed   85.13 sec
+17/18 Test #52: perf_enum_ui .....................   Passed   82.35 sec
+18/18 Test #55: stack_confirm_ui .................   Passed  230.31 sec
+100% tests passed out of 18
+1/3 Test #12: folder_grid ......................   Passed  382.64 sec
+2/3 Test #13: input_ui .........................   Passed  165.19 sec
+3/3 Test #24: fs_watch_budget ..................   Passed  108.01 sec
+100% tests passed out of 3
+folder_grid Totals: 74 passed, 0 failed, 4 skipped, 0 blacklisted, 382341ms
+input_ui Totals: 33 passed, 0 failed, 1 skipped, 0 blacklisted, 164879ms
+```
+
+`ac49031` was merged clean in `f734041`. The bug below was reproduced before the fix, at `f734041` plus the new tests, in `docs/verification/A1/mutations-sort-memory.txt`. The 29 Show more mutations from the first round were not rerun after these merges and fixes.
+
+**Earlier,** at `ac4e040`. Two runs, because the first found the bug now fixed on PR 1 (`definitiveOrderBeforeAnyFrameKeepsTheVisibleRow`):
+
+```text
+First run, before the fix (the three new model tests were not yet in):
+13/13 Test #51: perf_enum_ui .....................***Failed   58.36 sec
+FAIL!  : PerfEnumUiTests::scrollDuringArrivalKeepsTheVisibleRow() 'anchored()' returned FALSE. ()
+92% tests passed, 1 tests failed out of 13
+
+Run at ac4e040:
+ 1/13 Test  #4: directory_listing ................   Passed   26.48 sec
+ 2/13 Test #12: folder_grid ......................   Passed  306.40 sec
+ 3/13 Test #16: directory_model ..................   Passed   25.43 sec
+ 4/13 Test #20: grid_search ......................   Passed    0.34 sec
+ 5/13 Test #21: grid_density .....................   Passed    0.22 sec
+ 6/13 Test #23: fs_watch .........................   Passed   87.78 sec
+ 7/13 Test #24: fs_watch_budget ..................   Passed  109.92 sec
+ 8/13 Test #26: fs_watch_ui ......................   Passed    3.47 sec
+ 9/13 Test #30: filter ...........................   Passed    3.04 sec
+10/13 Test #31: cache ............................   Passed    5.13 sec
+11/13 Test #47: translation_coverage_ui ..........   Passed   24.05 sec
+12/13 Test #50: perf_enum ........................   Passed   62.82 sec
+13/13 Test #51: perf_enum_ui .....................   Passed   23.11 sec
+100% tests passed out of 13
+Total Test time (real) = 678.94 sec
+```
+
+No budget oracle changed.
+
+**Full suite:** by the lead's decision, implementers no longer queue local full suites. The PR's hosted `viewer` job is the full suite, and the tester gates the exact head before merge. The last local full suite was PR 1's, at `902a765`: 53 of 53.
+
+## Fail-before evidence
+
+**This round:** `docs/verification/A1/mutations-pr12-review.txt`. There are 28 mutations, one per fix.
+
+- **Rerun today at `a80f9bf`: 10 of them,** the B1, B2 and N4 set. Then I stopped the run to fit the session's time. All 10 behave as expected:
+  - Eight fail their tests.
+  - `b1-only-the-clear-off` and `b1-only-the-guard-off` pass, by design, because either defence alone closes B1. With both off, all three B1 tests fail.
+- **The other 18 ran on 2026-11-05,** at the code before the last selection-totals changes. That log was overwritten when today's run started, so only the summary below remains.
+  - 16 failed their tests: N5, N6, N3, the four race mutations, the three out-of-memory mutations, N9, the cap step-down, and three of the totals mutations.
+  - **`totals-rename-not-recounted` survived.** No test reaches it. Dropping the totals on a rename is a conservative reset, so I kept it.
+  - **`totals-metadata-kept` survived then.** `selectedBytesFollowANewSize` was added for it afterwards, and was not rerun against it.
+- **Two mutations were dropped,** because the code they mutated has since gone: `race-no-cost-without-rows` and `totals-prune-not-recounted`.
+
+**Earlier rounds:** `docs/verification/A1/mutations-more.txt`. 29 mutations, one per behaviour.
+
+- **24 failed on the first run.**
+- **4 survived, so those tests could not fail.** `ac4e040` adds tests, and all four now fail:
+  - `no-hard-limit`: the shipped limit is a multiple of the step, so the clamp never mattered. New test `aHardLimitBetweenStepsIsStillTheLimit`.
+  - `raw-rows-not-updated` and `raw-index-not-updated`: no test set a filter after a page. Without those lines the filter finds nothing and clearing it loses every row's index. New test `aFilterAfterLoadMoreSeesTheNewPageAndClearingItRestoresTheIndex`.
+  - `filter-not-fed-the-page`: the existing test's last page was not truncated, so it published anyway. New test `aFilteredPageThatIsStillTruncatedShowsItsMatches`.
+- **1 still survives: `rows-copied-on-gui`.** Copying a million rows on the GUI thread costs about 60 ms (publish 61 ms and gap 63 ms, against 0 and 12), under the 250 ms budget, so the budget check cannot see it. I kept the worker-side copy because it saves about four frames for a few lines. I did not add a tighter threshold to make this mutation fail, since any number would be arbitrary on a shared machine. If a reviewer prefers less code, removing `copyRows` stays in budget.
+- **`old-rows-freed-on-gui` is caught by timing,** and `traceOneMillion` only runs when `GLANCELOT_PERF_ENUM_MILLION` is set, so CI does not run either check.
+- **The `forceLayout` fix,** now on PR 1, has its before and after at the end of the same file.
+- **Sort, hidden files and free memory:** `docs/verification/A1/mutations-sort-memory.txt`, with the reproduction before the fix. 27 mutations, of which 26 fail their tests. `sort-change-merges` first ran against a test where a merge also resets, so it is recorded against the hidden-files test too, which catches it.
+- **`no-rows-copy-for-a-sort-change` survives,** for the same reason as `rows-copied-on-gui`: the copy then runs on the GUI thread, which costs about 60 ms at a million rows, under the budget.
+
+## Failure and cancellation cases covered
+
+- A newer folder during a page cancels it, and the new folder starts at the first cap.
+- Going inactive during a page keeps the raised cap. If that page was the last one, the offer ends and QML is notified.
+- A folder failing during a page clears the rows, marks it inaccessible and ends the offer.
+- A refresh during a page or a sort change waits for it and then refreshes. An ordinary refresh keeps a truncated folder's rows.
+- Too little free memory refuses the page before any scan starts. A failed reading allows it, and the 1,000,000 limit still holds.
+- Pressing again while listing, pressing at the limit and pressing when inactive do nothing.
+- A filter hiding every listed row keeps the offer, because the match may be further on.
+
+## Decisions taken
+
+- **A page is a model reset, not a merge.** New rows land anywhere in the order, and merging would hash up to a million rows on the GUI thread to save a reset. The view restores its anchor after the reset, and selection is by key. The alternative, a layout change plus inserts, is far more work for the same picture.
+- **The worker makes the second copy and the pool frees the old rows.** Together with the reset, this removes the 390 ms stall.
+- **Re-enumerate rather than hold a find handle open.** A held handle would be cheaper per page, but it keeps the folder open while idle and goes stale as files change. The cost is that each page re-reads the rows before it, which is why the page wait grows.
+- **The button stays enabled while listing,** so keyboard focus is not thrown away. A second press does nothing, and the banner text shows the work.
+- **Filtered messages carry no number,** because a filtered count is not how much of the folder is listed.
+- **The banner stays when a filter hides every listed row,** because that is when further pages matter most.
+- **A sort change restarts the scan and publishes with the same reset as a page.** The folder's first rows are read again, so a folder that changed meanwhile can list slightly different rows, which is what a whole-folder relist would show. The alternative, sorting the rows held in memory, would miss a hidden-files change and need a second code path.
+- **A selected hidden file that leaves the list stays in the selection keys** and comes back if hidden files are shown again. Selection counts and delete targets read the listed rows, so an unlisted row is never acted on.
+- **Refused keeps Show more enabled, and each press checks again.** This was the lead's decision on B2, replacing my earlier choice to hide the button. It costs no timer or watcher, and focus stays on the button.
+- **A cap that no longer fits is cut to whole steps, never below the first 100,000.** A folder is never listed with less than it showed before Show more existed. The cut lowers the folder's cap to what was listed, so the next press is a normal page that checks memory again.
+- **Running out of memory on the worker keeps the rows and sets the refusal,** instead of ending the app. This uses the same banner as a refusal, because the user's next step is the same.
+- **B1 keeps both defences.** Either alone fixes the bug. The clear in `replaceRows` makes the publish correct whatever state it meets. The guard in `setSort` avoids a reset that a first listing does not need.
+- **A dedicated pool for frees,** one thread, so freeing a million rows never queues ahead of a listing. It waits up to 5 s at teardown, because it only frees memory.
+- **Selection totals are kept, not cached between signals.** Caching still recounted after every change: 300 ms at a million rows with everything selected. Keeping them makes a selection signal cost the same at any size. A change of which rows exist still recounts once.
+- **512 MB headroom, not the viewer's 40% of free memory.** 40% would refuse the last page on a machine with 2 GB free, even though about 1.1 GB would remain. A fixed figure ties the check to the question asked: can this page start the machine paging?
+
+## Open questions for the lead
+
+- **`guard` against PR 1's branch.** `python scripts/ci/pr_guard.py --base origin/claude/a1-perf-enum --head-ref claude/a1-load-more --pr 12` reports three errors, all `scripts/ci/*` files that came from `main` in `973fca9`: `commit_lint.py`, `pr_guard.py` and `test_pr_guard.py`, "lead-owned; a packet needs the lead's lead-grant label". This packet does not change them. They go once PR 1 has `main` too. Until then, the hosted `guard` on PR 12 is expected to fail on them, unless the lead adds the label. Against `origin/main` the only error is the size of PR 1 and PR 2 together, 4,217 lines.
+
+## Not verified
+
+- QML delegate rebuild cost at 1,000,000. The trace covers the GUI thread during the publish, but not the first frame after it with a real renderer.
+- A slow or dead network share. Those paths are covered through the seam only.
+- Physical hardware and a real display. All UI evidence is offscreen with the software backend.
+- `docker build`, and the full suite locally (see "Tests").
+- A real low-memory machine. The refusal is driven through the test seam, and this PC only proved that a reading comes back.
+- A hidden-files change from the app. Nothing in the app calls `setIncludeHidden` today, so that half of the fix is tested on the model and users cannot reach it yet. The sort half is: `sort` and `sort-reverse` reach `grid.setSort` through `file_grid_wiring::followViewer`, and `aSortChangeInATruncatedFolderKeepsTheVisibleRowAndTheBanner` drives `sort-reverse`.
+- A real cgroup. The Linux parser is tested with sample text on every platform, including `memory.stat`, and `thisMachineReportsFreeMemory` runs on Linux only in the hosted jobs. The reader takes the process's own group and cgroup v1's root, not the tightest ancestor.
+- A real `std::bad_alloc` on the worker. The tests raise one through the seam.
+- `banner-560.png` and `banner-1180.png` were not retaken (review N7). `bannerFitsAtNarrowAndWideWidths` now checks that the banner has grown at 1180, but nobody has looked at a new 1180 picture.
+- The 18 mutations not rerun today (see "Fail-before evidence").
+- The pseudo-locale on screen. `translation_coverage_ui` passes, but I edited the `.ts` file by hand and did not look at the result.
+
+## UI skills
+
+`application-interface-design`, `component-geometry`, `responsive-layout`, `layout-spacing` and `typography-ui` were read before the banner work. `design-review` was not run: the change is one outline button and one line of text in an existing banner.

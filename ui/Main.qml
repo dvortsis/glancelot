@@ -779,42 +779,9 @@ ApplicationWindow {
         else if (id === "layout-reset") paneLayout.reset()
         else if (id === "view-preview" || id === "view-grid" || id === "view-combined") setContentMode(id.slice(5))
         // toggle-metadata, animation-* and presentation-* run once in ViewerController::trigger; here they only end the loupe.
+        // EN-07: so do the ids a feature component handles in its own Connections on this signal: PhotoGrid, FolderTree (including
+        // navigate-back/-forward), DeleteFlow, RenameFlow, TransferHud and the exportFlow Loader.
         else if (id === "combined-orientation") toggleOrientation()
-        else if (id === "delete-selection") {
-            const blocked = commandBlockedReason(id)
-            if (blocked.length) { deleteFlow.showNotice(blocked); return }
-            const treeFolder = treePanel.currentSelectedFolder()
-            if (treeFolder.length > 0) {
-                deleteFlow.request([treeFolder], "tree", "")
-            } else if (focusWithin(photoGrid) || (paneAvailable("grid") && fileGrid.count > 0)) {
-                if (photoGrid.deletionTargets().length > 0) {
-                    deleteFlow.request(photoGrid.deletionTargets(), "command", fileGrid.directory)
-                } else if (workspace._previewShown && viewer.filePath.length > 0) {
-                    deleteFlow.request([viewer.filePath], "command", viewer.directory)
-                } else {
-                    deleteFlow.showNotice(qsTr("Select items in the grid to move them to the %1.").arg(deleteFlow.trashName))
-                }
-            } else if (viewer.filePath.length > 0) {
-                deleteFlow.request([viewer.filePath], "command", viewer.directory)
-            } else {
-                deleteFlow.showNotice(qsTr("Select items in the grid to move them to the %1.").arg(deleteFlow.trashName))
-            }
-        }
-        else if (id === "delete-current-file") {
-            if (viewer.filePath.length > 0) {
-                deleteFlow.request([viewer.filePath], "command", viewer.directory)
-            } else {
-                deleteFlow.showNotice(qsTr("No photo is currently open to move to the %1.").arg(deleteFlow.trashName))
-            }
-        }
-        else if (id === "delete-current-folder") {
-            const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
-            if (folder.length > 0) {
-                deleteFlow.request([folder], "command", "")
-            } else {
-                deleteFlow.showNotice(qsTr("No folder is currently open to move to the %1.").arg(deleteFlow.trashName))
-            }
-        }
         // F040
         else if (id === "reference-pin") {
             // A decoded photo that is still refused hit the image budget; the status says what stayed and what to free.
@@ -822,8 +789,6 @@ ApplicationWindow {
                 deleteFlow.showNotice(viewer.imageReady ? viewer.status : qsTr("Open a photo first to pin it as a reference."))
         }
         else if (id === "reference-close") viewer.clearReference()
-        // F009
-        else if (id === "view-details") photoGrid.details = !photoGrid.details
         // F049
         else if (id === "layout-preset-next") {
             const names = paneLayout.presetNames
@@ -853,113 +818,9 @@ ApplicationWindow {
         else if (id === "navigator") navigatorOn = !navigatorOn
         // INPUT-02
         else if (id === "hold-actual") canvas.actualSize() // reached without its key: nothing to release, so just show 1:1
-        else if (id === "grid-open") photoGrid.activate()
-        else if (id === "grid-up") photoGrid.goUp()
-        else if (id === "grid-select-all") fileGrid.selectAll()
-        else if (id === "tree-open-folder") treePanel.openCursor()
-        else if (id === "focus-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.focusAddress) }
-        else if (id === "copy-folder-path") { if (viewer.directory.length > 0) viewer.copyDirectory() }
-        else if (id === "paste-path") { if (!viewer.treeVisible) viewer.treeVisible = true; Qt.callLater(treePanel.pasteAddress) }
-        else if (id === "rename") {
-            let target = ""
-            const treeFolder = treePanel.currentSelectedFolder()
-            if (focusWithin(treePanel) && treeFolder.length > 0) {
-                target = treeFolder
-            } else if (focusWithin(photoGrid) || gridScope || (paneAvailable("grid") && fileGrid.count > 0)) {
-                if (photoGrid.selectedPath && photoGrid.selectedPath.length > 0) {
-                    target = photoGrid.selectedPath
-                } else {
-                    const targets = photoGrid.deletionTargets()
-                    if (targets.length > 0) target = targets[0]
-                    else if (workspace._previewShown && viewer.filePath.length > 0) target = viewer.filePath
-                }
-            } else if (viewer.filePath.length > 0) {
-                target = viewer.filePath
-            } else if (treeFolder.length > 0) {
-                target = treeFolder
-            }
-            if (target.length > 0) {
-                renameFlow.openRename(target)
-            }
-        }
-        else if (id === "new-folder") {
-            let folder = ""
-            const treeFolder = treePanel.currentSelectedFolder()
-            if (focusWithin(treePanel) && treeFolder.length > 0) {
-                folder = treeFolder
-            } else {
-                folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
-            }
-            if (folder.length > 0) {
-                renameFlow.openNewFolder(folder)
-            }
-        }
-        else if (id === "cut-selection") {
-            const targets = photoGrid.deletionTargets()
-            if (targets.length > 0) {
-                viewer.copyMoveService.markCut(targets)
-            } else if (viewer.filePath.length > 0) {
-                viewer.copyMoveService.markCut([viewer.filePath])
-            }
-        }
-        else if (id === "copy-selection") {
-            const targets = photoGrid.deletionTargets()
-            if (targets.length > 0) {
-                viewer.copyMoveService.markCopy(targets)
-            } else if (viewer.filePath.length > 0) {
-                viewer.copyMoveService.markCopy([viewer.filePath])
-            }
-        }
-        else if (id === "export-selection") exportFlow.request()
-        else if (id === "paste") {
-            let dest = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
-            const treeFolder = treePanel.currentSelectedFolder()
-            if (focusWithin(treePanel) && treeFolder.length > 0) dest = treeFolder
-            if (dest.length > 0) {
-                viewer.copyMoveService.pasteTo(dest)
-            }
-        }
-        else if (id === "reveal-in-file-manager") {
-            let target = ""
-            const hasGridFocusOrSelection = focusWithin(photoGrid) || gridScope || photoGrid.selectedCount > 0
-            const targets = photoGrid.deletionTargets()
-            if (hasGridFocusOrSelection && (photoGrid.selectedPath.length > 0 || targets.length > 0)) {
-                target = photoGrid.selectedPath.length > 0 ? photoGrid.selectedPath : targets[0]
-            } else if (viewer.filePath.length > 0) {
-                target = viewer.filePath
-            } else {
-                target = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
-            }
-            viewer.revealInFileManager(target)
-        }
-        else if (id === "open-terminal") {
-            const folder = viewer.directory.length > 0 ? viewer.directory : fileGrid.directory
-            viewer.openTerminal(folder)
-        }
-        else if (id === "copy-path" || id === "copy-file") {
-            let targets = []
-            const gridActive = focusWithin(photoGrid) || gridScope || gridMode || (paneAvailable("grid") && fileGrid.count > 0) || photoGrid.selectedCount > 0
-            if (gridActive) {
-                const dt = photoGrid.deletionTargets()
-                if (dt.length > 0) targets = dt
-                else if (photoGrid.selectedPath.length > 0) targets = [photoGrid.selectedPath]
-            }
-            if (targets.length === 0 && viewer.filePath.length > 0) {
-                targets = [viewer.filePath]
-            }
-            if (id === "copy-path") viewer.copyFilePath(targets)
-            else viewer.copyFileUrls(targets)
-        }
         else if (id === "copy-image") {
             viewer.copyImageBitmap()
         }
-        else if (id === "select-all") { if (paneAvailable("grid") || gridScope) fileGrid.selectAll() }
-        else if (id === "clear-selection") { if (paneAvailable("grid") || gridScope) fileGrid.clearSelection() }
-        else if (id === "invert-selection") { if (paneAvailable("grid") || gridScope) fileGrid.invertSelection() }
-        else if (id === "grid-zoom-in") { if (paneAvailable("grid") || gridScope) photoGrid.zoomIn() }
-        else if (id === "grid-zoom-out") { if (paneAvailable("grid") || gridScope) photoGrid.zoomOut() }
-        else if (id === "grid-zoom-reset") { if (paneAvailable("grid") || gridScope) photoGrid.resetZoom() }
-        // navigate-back/-forward run once in FolderTree's onViewCommand (FolderTree is always instantiated); here they only end the loupe.
         else if (id === "quit") close()
     }
     onActiveChanged: if (!active) { canvas.endLoupe(); chordCancel(); stopSlideshow() }
@@ -969,7 +830,6 @@ ApplicationWindow {
     }
     Connections {
         target: viewer
-        function onViewCommand(id) { app.handleViewCommand(id) }
         function onTreeShown() { app.hudVisible = true; hideHud.restart(); Qt.callLater(treePanel.focusList) }
     }
     Instantiator { // one Shortcut per first key; a chord starter arms the pending state instead of running
@@ -1484,6 +1344,7 @@ ApplicationWindow {
         id: photoGrid
         z: -3 // Stable controller layer survives native reparenting.
         objectName: "photoGrid"
+        host: app
         x: app.paneRect("grid").x; y: app.paneRect("grid").y
         width: app.paneRect("grid").width; height: app.paneRect("grid").height
         visible: app.paneAvailable("grid")
@@ -2091,6 +1952,7 @@ ApplicationWindow {
         id: deleteFlow
         objectName: "deleteFlow"
         host: app
+        gridPane: photoGrid; treePane: treePanel
         anchors.fill: parent
         z: 25
         onFlowClosed: if (!app.modalOpen) Qt.callLater(app.focusContent)
@@ -2099,6 +1961,7 @@ ApplicationWindow {
         id: renameFlow
         objectName: "renameFlow"
         host: app
+        gridPane: photoGrid; treePane: treePanel
         mutationService: viewer.mutationService
         anchors.fill: parent
         z: 26
@@ -2107,6 +1970,7 @@ ApplicationWindow {
     TransferHud { // COPY-MOVE-01 (F020) async file copy and move progress HUD
         id: transferHud
         objectName: "transferHud"
+        host: app; gridPane: photoGrid; treePane: treePanel
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.gapXl
@@ -2334,6 +2198,10 @@ ApplicationWindow {
             if (item) item.request(targets(), fileGrid.directory.length ? fileGrid.directory : viewer.directory)
         }
         onLoaded: { item.host = app; item.targetsProvider = targets }
+        Connections { // here, not in ExportDialog.qml: the dialog does not exist until this first request
+            target: viewer
+            function onViewCommand(id) { if (id === "export-selection") exportFlow.request() }
+        }
         Connections {
             target: exportFlow.item
             function onNotice(text) { deleteFlow.showNotice(text) }
@@ -2372,5 +2240,11 @@ ApplicationWindow {
             cursorShape: (edgeLeft && edgeTop) || (edgeRight && edgeBottom) ? Qt.SizeFDiagCursor : (edgeRight && edgeTop) || (edgeLeft && edgeBottom) ? Qt.SizeBDiagCursor : edgeLeft || edgeRight ? Qt.SizeHorCursor : Qt.SizeVerCursor
             onPressed: app.startSystemResize((edgeLeft ? Qt.LeftEdge : 0) | (edgeRight ? Qt.RightEdge : 0) | (edgeTop ? Qt.TopEdge : 0) | (edgeBottom ? Qt.BottomEdge : 0))
         }
+    }
+    // Declared last on purpose: QML connects a file's Connections in reverse declaration order (measured on Qt 6.8.3), so the
+    // loupe ends here before any feature component's own handler runs, as it did when they were one chain.
+    Connections {
+        target: viewer
+        function onViewCommand(id) { app.handleViewCommand(id) }
     }
 }

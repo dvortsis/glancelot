@@ -326,6 +326,7 @@ if(GLANCELOT_BUILD_VIEWER)
   if(BUILD_TESTING)
     include(cmake/CommandRoutingTests.cmake) # EN-06; needs the monitor-customization helper above
     include(cmake/PerfEnumTests.cmake) # A1 PERF-ENUM + F016
+    include(cmake/CommandHandlersTests.cmake) # EN-07; needs the same helper
   endif()
   include(cmake/ReferencePinTests.cmake)
   include(cmake/ExportUiTests.cmake) # B3 (F070)

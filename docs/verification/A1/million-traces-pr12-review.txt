@@ -1,0 +1,44 @@
+A1 PR 12, review round: million-row traces at a80f9bf, 2026-11-12, under the gate lock, offscreen. Synthetic seam folder.
+
+perf_enum_tests traceOneMillion (GLANCELOT_PERF_ENUM_MILLION=synthetic):
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic before rows=0 working_set_mb=14 peak_mb=14
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE first-page first_row_ms=26 full_count_ms=294 definitive_ms=333 settled_ms=344 worst_gui_gap_ms=24 enumerate_ms=0 sort_ms=15 publish_ms=13 resets=0 layouts=0 inserts=18 largest_insert=8192 partial_seen=1
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic first-page rows=100000 settled_ms=344 working_set_mb=89 peak_mb=147
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=515 full_count_ms=515 definitive_ms=-1 settled_ms=515 worst_gui_gap_ms=13 enumerate_ms=0 sort_ms=35 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=200000 settled_ms=515 working_set_mb=227 peak_mb=292
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=759 full_count_ms=759 definitive_ms=-1 settled_ms=760 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=61 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=300000 settled_ms=760 working_set_mb=359 peak_mb=458
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1012 full_count_ms=1012 definitive_ms=-1 settled_ms=1012 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=81 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=400000 settled_ms=1012 working_set_mb=498 peak_mb=632
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1324 full_count_ms=1324 definitive_ms=-1 settled_ms=1324 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=108 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=500000 settled_ms=1324 working_set_mb=640 peak_mb=810
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1546 full_count_ms=1546 definitive_ms=-1 settled_ms=1546 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=135 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=600000 settled_ms=1546 working_set_mb=798 peak_mb=962
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=1851 full_count_ms=1851 definitive_ms=-1 settled_ms=1851 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=153 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=700000 settled_ms=1851 working_set_mb=991 peak_mb=1138
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=2134 full_count_ms=2134 definitive_ms=-1 settled_ms=2134 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=180 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=800000 settled_ms=2134 working_set_mb=1152 peak_mb=1320
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=2352 full_count_ms=2352 definitive_ms=-1 settled_ms=2352 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=208 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=900000 settled_ms=2352 working_set_mb=1304 peak_mb=1493
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE show-more first_row_ms=2627 full_count_ms=2627 definitive_ms=-1 settled_ms=2627 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=245 publish_ms=0 resets=1 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic show-more rows=1000000 settled_ms=2627 working_set_mb=1461 peak_mb=1671
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic estimate rows=1000000 average_row_bytes=450 estimated_page_peak_mb=858
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic rested rows=1000000 working_set_mb=855 peak_mb=1671
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_FILTER synthetic rows=1000000 set_ms=82 clear_ms=46
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE refresh-truncated first_row_ms=-1 full_count_ms=-1 definitive_ms=-1 settled_ms=2646 worst_gui_gap_ms=12 enumerate_ms=0 sort_ms=235 publish_ms=0 resets=0 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic refresh-truncated rows=1000000 settled_ms=2646 working_set_mb=1514 peak_mb=1724
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE reenter-grid first_row_ms=24 full_count_ms=275 definitive_ms=2946 settled_ms=2957 worst_gui_gap_ms=85 enumerate_ms=0 sort_ms=222 publish_ms=73 resets=0 layouts=0 inserts=119 largest_insert=12288 partial_seen=1
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_MEMORY synthetic reenter-grid rows=1000000 settled_ms=2957 working_set_mb=1075 peak_mb=1724
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_PATHS synthetic leave_grid_ms=0 open_other_folder_ms=0
+QINFO  : PerfEnumTests::traceOneMillion() PERF_ENUM_TRACE refresh-whole first_row_ms=-1 full_count_ms=-1 definitive_ms=-1 settled_ms=3068 worst_gui_gap_ms=162 enumerate_ms=0 sort_ms=274 publish_ms=162 resets=0 layouts=0 inserts=0 largest_insert=0 partial_seen=0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 28011ms
+
+perf_enum_ui_tests traceSelectionChangedCost (GLANCELOT_PERF_ENUM_SELECTION=1000000, software backend):
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION emit-no-selection runs=41 median_us=7 worst_us=26
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION emit-one-selected runs=41 median_us=10 worst_us=18
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION select-next-row runs=41 median_us=28 worst_us=89
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION emit-all-selected runs=41 median_us=11 worst_us=66
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION select-all rows=1000000 runs=5 median_us=204902 worst_us=216757
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION clear-all rows=1000000 runs=5 median_us=230 worst_us=283
+QINFO  : PerfEnumUiTests::traceSelectionChangedCost() PERF_ENUM_SELECTION invert-all rows=1000000 runs=5 median_us=154777 worst_us=158909
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 7697ms
