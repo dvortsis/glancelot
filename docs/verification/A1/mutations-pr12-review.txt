@@ -1,0 +1,47 @@
+A1 PR 12, review round (A1-REVIEW-PR12): fail-before evidence.
+Each mutation was applied to the file named, the test target rebuilt in a build slot, the named tests run, and the file restored.
+Run on 2026-11-12 at the code committed in a80f9bf, offscreen with the software backend. The run was stopped after 10 of 28
+mutations to fit the session's time; the other 18 ran on 2026-11-05 at the code before the last selection-totals changes and are
+summarised in docs/handoff/A1-HANDOFF.md, "PR 2", "Fail-before evidence".
+exit 0 with no FAIL! means the mutation survived. The two b1-only-* survivals are by design: either defence alone closes B1.
+### b1-both-defences-off [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortWhileTheGridIsHiddenKeepsEveryLookupRight aSortDuringReArrivalKeepsEveryLookupRight
+exit 2
+  FAIL!  : PerfEnumTests::aSortWhileTheGridIsHiddenKeepsEveryLookupRight() Compared values are not the same
+  FAIL!  : PerfEnumTests::aSortDuringReArrivalKeepsEveryLookupRight() Compared values are not the same
+  Totals: 2 passed, 2 failed, 0 skipped, 0 blacklisted, 225ms
+### b1-both-defences-off-ui [src/app/directory_entry_model.cpp] -> perf_enum_ui_tests aSortInThePhotoViewKeepsTheGridsRowsRight
+exit 1
+  FAIL!  : PerfEnumUiTests::aSortInThePhotoViewKeepsTheGridsRowsRight() Compared values are not the same
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 3215ms
+### b1-only-the-clear-off [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortWhileTheGridIsHiddenKeepsEveryLookupRight aSortDuringReArrivalKeepsEveryLookupRight
+exit 0
+  Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 325ms
+### b1-only-the-guard-off [src/app/directory_entry_model.cpp] -> perf_enum_tests aSortWhileTheGridIsHiddenKeepsEveryLookupRight aSortDuringReArrivalKeepsEveryLookupRight
+exit 0
+  Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 335ms
+### b2-refusal-hides-the-button [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefusedPressIsCheckedAgainOnTheNextPress loadMoreChecksFreeMemory
+exit 2
+  FAIL!  : PerfEnumTests::aRefusedPressIsCheckedAgainOnTheNextPress() 'model.canLoadMore()' returned FALSE. ()
+  FAIL!  : PerfEnumTests::loadMoreChecksFreeMemory(too little free) 'model.canLoadMore()' returned FALSE. ()
+  Totals: 4 passed, 2 failed, 0 skipped, 0 blacklisted, 145ms
+### b2-refusal-hides-the-button-ui [src/app/directory_entry_model.cpp] -> perf_enum_ui_tests notEnoughMemorySaysWhatToDoAndTheNextPressChecksAgain
+exit 1
+  FAIL!  : PerfEnumUiTests::notEnoughMemorySaysWhatToDoAndTheNextPressChecksAgain() 'f.showMore()->isVisible()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2911ms
+### b2-refusal-sticks [src/app/directory_entry_model.cpp] -> perf_enum_tests aRefusedPressIsCheckedAgainOnTheNextPress
+exit 1
+  FAIL!  : PerfEnumTests::aRefusedPressIsCheckedAgainOnTheNextPress() '!model.loadMoreRefused()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 83ms
+### b2-no-way-forward-in-the-banner [ui/PhotoGrid.qml] -> perf_enum_ui_tests notEnoughMemorySaysWhatToDoAndTheNextPressChecksAgain
+exit 1
+  FAIL!  : PerfEnumUiTests::notEnoughMemorySaysWhatToDoAndTheNextPressChecksAgain() 'f.bannerText().contains("Close other apps, then try again")' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 3363ms
+### n4-offered-while-arriving [src/app/directory_entry_model.cpp] -> perf_enum_tests showMoreIsNotOfferedWhileATruncatedFolderReArrives
+exit 1
+  FAIL!  : PerfEnumTests::showMoreIsNotOfferedWhileATruncatedFolderReArrives() '!model.canLoadMore()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 68ms
+### n4-offered-while-arriving-ui [src/app/directory_entry_model.cpp] -> perf_enum_ui_tests showMoreIsNotOfferedWhileTheFolderReArrives
+exit 1
+  FAIL!  : PerfEnumUiTests::showMoreIsNotOfferedWhileTheFolderReArrives() '!f.showMore()->isVisible()' returned FALSE. ()
+  Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 4071ms
+
