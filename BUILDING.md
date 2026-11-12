@@ -57,6 +57,8 @@ cmake --build build --parallel 4
 QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
 ```
 
+Release, release-candidate and development builds set `GLANCELOT_BUILD_KIND` and `GLANCELOT_VERSION_SUFFIX` (and `GLANCELOT_GIT_SHA` without `.git`); see [docs/RELEASING.md](docs/RELEASING.md), "Build provenance". A default build is `local`: About and `--version` show the commit when the tree is a Git checkout, otherwise "unknown".
+
 Core-only CI needs no Qt: pass `-DGLANCELOT_BUILD_VIEWER=OFF`. Native Wayland/X11, HDR and physical-monitor accuracy require real desktop hardware and are not validated by a headless build.
 
 ## Local evidence

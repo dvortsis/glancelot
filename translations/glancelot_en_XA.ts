@@ -2,6 +2,53 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_XA" sourcelanguage="en">
 <context>
+    <name>AboutBuildInfo</name>
+    <message>
+        <source>Release</source>
+        <translation>[Réléàsé]</translation>
+    </message>
+    <message>
+        <source>Release candidate</source>
+        <translation>[Réléàsé çàñdîdàté]</translation>
+    </message>
+    <message>
+        <source>Development build</source>
+        <translation>[Dévélõpméñt bûîld]</translation>
+    </message>
+    <message>
+        <source>Local build</source>
+        <translation>[Lõçàl bûîld]</translation>
+    </message>
+    <message>
+        <source>Commit</source>
+        <translation>[Çõmmît]</translation>
+    </message>
+    <message>
+        <source>Unknown</source>
+        <translation>[Ûñkñõwñ]</translation>
+    </message>
+    <message>
+        <source>Commit %1</source>
+        <translation>[Çõmmît %1]</translation>
+    </message>
+    <message>
+        <source>This build does not record its commit.</source>
+        <translation>[Thîs bûîld dõés ñõt réçõrd îts çõmmît.]</translation>
+    </message>
+    <message>
+        <source>Built</source>
+        <translation>[Bûîlt]</translation>
+    </message>
+    <message>
+        <source>Built %1</source>
+        <translation>[Bûîlt %1]</translation>
+    </message>
+    <message>
+        <source>Build</source>
+        <translation>[Bûîld]</translation>
+    </message>
+</context>
+<context>
     <name>AnimationBar</name>
     <message>
         <source>Frame %1 / %2</source>

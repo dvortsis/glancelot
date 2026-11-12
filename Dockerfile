@@ -19,7 +19,20 @@ COPY ui ui
 COPY tests tests
 COPY translations translations
 COPY scripts scripts
-RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON && cmake --build /build --parallel 4
+# REL-01 provenance (docs/RELEASING.md). The context has no .git, so the commit comes in as a build arg;
+# scripts/docker_build_args.py prints all of them for a checkout. Without them the image is a local build ("unknown").
+ARG GLANCELOT_VERSION_SUFFIX=
+ARG GLANCELOT_BUILD_KIND=
+ARG GLANCELOT_REVISION=
+ARG GLANCELOT_VERSION=
+ARG GLANCELOT_CREATED=
+ARG SOURCE_DATE_EPOCH
+RUN cmake -S . -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DGLANCELOT_VERSION_SUFFIX="$GLANCELOT_VERSION_SUFFIX" -DGLANCELOT_BUILD_KIND="$GLANCELOT_BUILD_KIND" -DGLANCELOT_GIT_SHA="$GLANCELOT_REVISION" && cmake --build /build --parallel 4
+# The labels below must describe this binary: each label arg that is given must match what --version reports.
+RUN set -eu; v="$(/build/glancelot --version)"; printf '%s\n' "$v"; field() { printf '%s\n' "$v" | sed -n "s/^$1: //p"; }; \
+    if [ -n "$GLANCELOT_VERSION" ] && [ "$(printf '%s\n' "$v" | head -n1 | cut -d' ' -f2)" != "$GLANCELOT_VERSION" ]; then echo "GLANCELOT_VERSION=$GLANCELOT_VERSION does not match the build" >&2; exit 1; fi; \
+    if [ -n "$GLANCELOT_REVISION" ] && [ "$(field commit)" != "$(printf '%s' "$GLANCELOT_REVISION" | tr 'A-F' 'a-f')" ]; then echo "GLANCELOT_REVISION does not match the build" >&2; exit 1; fi; \
+    if [ -n "$GLANCELOT_CREATED" ] && [ "$(field built)" != "$GLANCELOT_CREATED" ]; then echo "GLANCELOT_CREATED=$GLANCELOT_CREATED does not match the build time $(field built); pass SOURCE_DATE_EPOCH for the same instant" >&2; exit 1; fi
 RUN QT_QPA_PLATFORM=offscreen ctest --test-dir /build --output-on-failure
 
 FROM ubuntu:24.04 AS runtime
@@ -41,3 +54,8 @@ WORKDIR /photos
 EXPOSE 6080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6080/vnc.html', timeout=2).read(1)"
 ENTRYPOINT ["/usr/bin/tini", "--", "python3", "/opt/glancelot/start.py"]
+# REL-01: OCI provenance labels, from the same build args as the binary (checked in the build stage).
+ARG GLANCELOT_VERSION=
+ARG GLANCELOT_REVISION=
+ARG GLANCELOT_CREATED=
+LABEL org.opencontainers.image.version="$GLANCELOT_VERSION" org.opencontainers.image.revision="$GLANCELOT_REVISION" org.opencontainers.image.created="$GLANCELOT_CREATED"

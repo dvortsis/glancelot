@@ -1284,11 +1284,12 @@ tasks:
   - id: REL-01
     title: Build provenance for releases
     owner: lead
-    state: implementing
+    state: review
     outcome: "Version from project() plus GLANCELOT_VERSION_SUFFIX, full and short Git SHA, UTC build time and build kind injected at configure or build time; shown in About and printed by --version; Windows file version; Docker image OCI version, revision and created labels and a sha-<full SHA> tag; a release build fails without a SHA"
     acceptance: "docs/RELEASING.md 'Build provenance'; no hand-written SHA in source; fresh review and full gate"
-    state_note: "Implementing from 2026-11-12 in a cloud session; branch claude/rel-01-provenance; cycle docs/handoff/PHASE3-CYCLE1-2026-11-12.md"
+    state_note: "Implemented 2026-11-12 in a cloud session on base 15a8fe8; awaiting a fresh review and the full gate; cycle docs/handoff/PHASE3-CYCLE1-2026-11-12.md"
     branch: claude/rel-01-provenance
+    handoff: docs/handoff/REL-01-HANDOFF.md
   - id: D1
     title: DECODE-TIER + PERF-DECODE + F033
     owner: lead

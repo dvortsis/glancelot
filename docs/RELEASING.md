@@ -97,4 +97,54 @@ Publishing is outward, so only the lead prepares a release, and only after the u
 
 Every distributable build carries the semantic version, the full Git SHA (with the short SHA for display), a UTC ISO 8601 build time taken once per build, and the build kind (`release`, `rc`, `dev` or `local`). The app shows them in About and prints them for `--version`. No network is involved: the viewer sends nothing anywhere (AGENTS.md). A release build fails if it can't determine the SHA.
 
-Queue row REL-01 implements this. Until it lands, builds carry only the CMake version, and no release should be made.
+REL-01 implements this in `cmake/Provenance.cmake` and `src/app/build_info.*`.
+
+**CMake cache variables:**
+
+| Variable | Values | Default |
+| --- | --- | --- |
+| `GLANCELOT_VERSION_SUFFIX` | empty, `-rc.N` or `-dev.N` (N without leading zeros) | empty |
+| `GLANCELOT_BUILD_KIND` | `release`, `rc`, `dev` or `local` | empty: `-rc.N` gives `rc`, `-dev.N` gives `dev`, no suffix gives `local`. A release is never inferred |
+| `GLANCELOT_GIT_SHA` | the full 40- or 64-character commit SHA | empty: ask Git about this source tree |
+
+**Rules, checked at configure time:**
+- `release` and `local` take no suffix; `rc` needs `-rc.N` and `dev` needs `-dev.N`.
+- `release` and `rc` fail when no SHA can be determined: no Git, not a checkout, or a source tree that is only a subdirectory of another repository (its host's SHA is never used).
+- `dev` without a SHA warns and records `unknown`; `local` records `unknown` quietly.
+- `SOURCE_DATE_EPOCH`, when set, fixes the build time, for reproducible builds.
+
+**What the build does.** The values go into one generated translation unit, `build_info_values.cpp` in the build tree, never into a tracked source file. Every build re-reads `HEAD`, so a new commit needs no reconfigure. The file is rewritten only when the version, SHA, kind, `SOURCE_DATE_EPOCH` or its template change; then only that file is recompiled and the executables are relinked. The build time is taken when the file is written, so a fresh build has one build time. On Windows, `glancelot.exe` gets a VERSIONINFO resource: the numeric `X.Y.Z.0` file and product version, the full version string, and the prerelease flag for `rc` and `dev`.
+
+**Commands:**
+
+```sh
+# Release (from the tagged commit, clean tree)
+cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DGLANCELOT_BUILD_KIND=release
+# Release candidate (kind rc inferred)
+cmake -S . -B build-rc -G Ninja -DCMAKE_BUILD_TYPE=Release -DGLANCELOT_VERSION_SUFFIX=-rc.1
+# A tree without .git (source archive)
+cmake -S . -B build -G Ninja -DGLANCELOT_BUILD_KIND=release -DGLANCELOT_GIT_SHA=<full SHA>
+```
+
+On Windows, pass the same `-D` options to CMake.
+
+**`--version`** prints four lines:
+
+```text
+Glancelot 0.1.0-rc.1 (0123456)
+commit: 0123456789abcdef0123456789abcdef01234567
+built: 2026-11-12T08:09:10Z
+kind: rc
+```
+
+A build without a SHA prints `(unknown)` and `commit: unknown`. About shows the same values: the version in its heading, then the short commit (the full SHA is in its tooltip and accessible description), the build time and the kind. Values are selectable for copying.
+
+**Docker.** The build context has no `.git`, so the commit and the label values come in as build args. `scripts/docker_build_args.py` prints them for the checkout: the version from `project()`, the suffix, the kind, `git rev-parse HEAD`, and one UTC instant, passed as both `SOURCE_DATE_EPOCH` and the created label. With `--image NAME` it also prints the `NAME:X.Y.Z` and `NAME:sha-<full SHA>` tags.
+
+```sh
+docker build $(python3 scripts/docker_build_args.py --kind release --image glancelot-browser) .
+```
+
+In PowerShell, write `@(python scripts/docker_build_args.py --suffix=-rc.1 --image glancelot-browser)` in place of `$(...)`. Write a suffix as `--suffix=-rc.N`, with the `=`.
+
+The image gets the `org.opencontainers.image.version`, `revision` and `created` labels. The build stage fails if a given label arg disagrees with what the binary's `--version` reports. A plain `docker build .` still works: it is a `local` build with an `unknown` commit and empty labels.
