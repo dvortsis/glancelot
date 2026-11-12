@@ -58,6 +58,11 @@ The header is frozen as committed: `kMaxMembers`, `kMaxExpandedItems`, `kMaxExcl
 
 `FileOperationService`'s summary lists at most `kMaxExcludedListed` companions, with a count for the rest.
 
+**Ratified with B1 (lead, November 12, 2026; review B1-REVIEW L-2 and L-4).** The applied header diffs are the text above plus the two `#include` lines their new signatures need. The summaries also carry three keys:
+- `companionsNotListed`: the count of companions past the listed ones;
+- `companionsIncomplete`: true when `kExpandBudgetMs`, a cancel or an unreadable parent stopped the lookup;
+- `name`: the display name the confirmation uses for a single request.
+
 ## Rules
 
 **Stem and case.** Stem = file name up to the last dot (`IMG.CR2.xmp` has stem `IMG.CR2`, which makes it a FullName sidecar of `IMG.CR2`). Keys are case-folded (`QString::toCaseFolded` semantics) on case-insensitive volumes, and exact on case-sensitive ones. On a case-sensitive volume, `a.JPG` and `a.jpg` are distinct members and set `Collision`.
@@ -95,7 +100,12 @@ When a requested file is itself a companion (the user selected the `.xmp`), Asse
 - *Destination-name collisions under asset scope.* When any member's name is already taken at the destination, the whole asset is handled as one. Keep both gives every member the same numbered name: `IMG.CR2` becomes `IMG (2).CR2`, `IMG.jpg` becomes `IMG (2).jpg`, and the FullName sidecar `IMG.CR2.xmp` becomes `IMG (2).CR2.xmp`, so it still names its file. Skip leaves the whole asset behind. These are not grouping `Collision` groups, which are covered above. A sidecar never lands beside a different photo of the same name. B2's Overwrite keeps its rule below.
 - *Move into the source's own folder.* Nothing to do, so a non-modal notice says "It's already in this folder." and the cut stays on the clipboard. A move where only some items are already there still confirms.
 
-**Overwrite (with B2).** Copy and Move collisions under asset scope take one decision per plan, never per member, and each overwritten member goes through the COPY-SAFETY-01 path (`copy_safety::replaceFileAtomically`). The decision applies only to members that collide.
+**Lead decisions, November 12, 2026 (B1 review; `docs/decisions/2026-11-12-copy-into-own-folder.md`).**
+- *Copy into the source's own folder.* When every collision in a copy plan is a source colliding with itself, the paste runs straight through as keep both, with no dialog, as Explorer's duplicate does. Every member of an asset gets the same `(n)`. Any other collision, exclusion, `companionsIncomplete` or refusal still asks.
+- *What counts as one asset when keep both or skip applies.* Requests are keyed by group membership. A request with role `Other`, or a folder, is its own key, so `notes.txt` and `notes.pdf` are never one asset. A destination name that appears after the plan never splits an asset: either the asset is re-resolved as one at execution, or it is reported as changed and left untouched.
+- *Plan cost and cancel.* `planTransfer` checks cancel in every loop, including the `(n)` search. It reads each destination folder once, so a collision check is a lookup, not a stat.
+
+**Overwrite (with B2).** Copy and Move collisions under asset scope take one decision per plan, never per member, and each overwritten member goes through the COPY-SAFETY-01 path (`copy_safety::replaceFileAtomically`). The decision applies only to members that collide. That can leave a destination companion the source asset doesn't have, such as an old `IMG.CR2.xmp`, beside the new photo, where it describes the wrong picture. B2 decides whether Overwrite also replaces or removes those companions through the journal, and tests it (the B2 queue row, `lead_note_b1`).
 
 **Snapshot and revalidation.** `expand` runs inside the existing plan step (worker). Its `included` list becomes the immutable target snapshot (`planDeletion` input, or journal intents), and from there on `executeDeletion`-style identity revalidation applies unchanged.
 
