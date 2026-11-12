@@ -46,7 +46,9 @@ if(GLANCELOT_BUILD_VIEWER)
     src/app/mutation_service.cpp include/glancelot/mutation_service.hpp
     src/app/copy_move_service.cpp include/glancelot/copy_move_service.hpp
     src/app/raw_preview.cpp include/glancelot/raw_preview.hpp
-    src/app/display_manager.cpp include/glancelot/display_manager.hpp)
+    src/app/display_manager.cpp include/glancelot/display_manager.hpp
+    # E1: RESOURCE-LEDGER
+    src/app/resource_ledger.cpp include/glancelot/resource_ledger.hpp src/app/resource_ledger_setup.hpp)
   target_include_directories(glancelot_platform PUBLIC include)
   target_link_libraries(glancelot_platform PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent)
   if(WIN32)
@@ -330,6 +332,7 @@ if(GLANCELOT_BUILD_VIEWER)
   include(cmake/ReferencePinTests.cmake)
   include(cmake/ExportUiTests.cmake) # B3 (F070)
   include(cmake/StackConfirmTests.cmake)
+  include(cmake/ResourceLedgerTests.cmake) # E1
   glancelot_attach_recovery_consumers()
   install(TARGETS glancelot glancelot-decoder RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   qt_generate_deploy_qml_app_script(TARGET glancelot OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)

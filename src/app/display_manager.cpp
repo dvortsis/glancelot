@@ -1,5 +1,6 @@
 #include "glancelot/display_manager.hpp"
 #include "monitor_customization_topology.hpp"
+#include "glancelot/resource_ledger.hpp"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -11,6 +12,7 @@
 #include <QSet>
 #include <QTimer>
 #include <QFileInfo>
+#include <array>
 #include <utility>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -129,6 +131,53 @@ struct DisplayManager::Private {
 
     std::unique_ptr<IPresentationWindow> presentationWindow;
     QPointer<QScreen> presentationScreen;
+
+    // E1 (RESOURCE-LEDGER M1): every retained slot holds a CpuPixels reservation keyed by QImage::cacheKey(), so a
+    // buffer held by several slots (or by the controller) is charged once. The owner quota is the image budget, so the
+    // ledger's owner view equals the deduplicated legacy count. enforceBudget() and the transactional pin and
+    // reference admission still decide what is kept; syncLedger() then reconciles the reservations with the slots.
+    struct LedgerSlot { resource::Reservation held; quint64 key{}; qint64 bytes{}; };
+    resource::OwnerId ledgerOwner;
+    std::array<LedgerSlot, 6> ledgerSlots;
+    qint64 unaccountedBytes{};   // slots the ledger refused (only a lone current frame above a lowered budget)
+    void syncLedger() {
+        auto& ledger = resource::ResourceLedger::instance();
+        if (!ledgerOwner) ledgerOwner = ledger.registerOwner(QStringLiteral("presentation"));
+        if (!ledgerOwner) return;   // kMaxOwners reached: retainedImageBytes() falls back to the local count
+        ledger.setOwnerQuota(ledgerOwner, resource::Ledger::CpuPixels, s_imageBudgetBytes);
+        // Most essential first. The current frame, the output pin and the reference are never refused for pressure.
+        const std::array<std::pair<const QImage*, resource::Priority>, 6> images{{
+            {&currentImage, resource::Priority::Foreground}, {&pinnedImage, resource::Priority::Foreground},
+            {&referenceImage, resource::Priority::Foreground}, {&pendingImage, resource::Priority::Visible},
+            {&comparisonImage, resource::Priority::Visible}, {&previousImage, resource::Priority::Background}}};
+        const auto identity = [](const QImage& image) {
+            return std::pair<quint64, qint64>(image.isNull() ? 0 : quint64(image.cacheKey()), image.isNull() ? 0 : image.sizeInBytes());
+        };
+        // Release every slot that changed first, so the new set is admitted against the quota it will really occupy.
+        for (std::size_t i = 0; i < images.size(); ++i) {
+            const auto [key, bytes] = identity(*images[i].first);
+            auto& slot = ledgerSlots[i];
+            if (slot.key != key || slot.bytes != bytes) { slot.held.release(); slot.held = {}; slot.key = 0; slot.bytes = 0; }
+        }
+        QSet<quint64> refused, accounted;
+        for (std::size_t i = 0; i < images.size(); ++i) {
+            const auto [key, bytes] = identity(*images[i].first);
+            auto& slot = ledgerSlots[i];
+            if (!key) continue;
+            if (!(slot.key == key && slot.held)) {
+                slot.held = ledger.tryReserve({resource::Ledger::CpuPixels, images[i].second, ledgerOwner, bytes, key,
+                                               currentGeneration, "presentation"});
+                slot.key = key; slot.bytes = bytes;
+            }
+            if (slot.held) accounted.insert(key); else refused.insert(key);
+        }
+        unaccountedBytes = 0;
+        for (std::size_t i = 0; i < images.size(); ++i) {
+            const auto [key, bytes] = identity(*images[i].first);
+            if (key && refused.contains(key) && !accounted.contains(key)) { unaccountedBytes += bytes; refused.remove(key); }
+        }
+    }
+    struct LedgerSync { Private& d; ~LedgerSync() { d.syncLedger(); } };
 
     explicit Private(DisplayManager* owner) : q(owner) {
         cadence.setInterval(3000);cadence.setSingleShot(true);
@@ -334,6 +383,8 @@ DisplayManager::DisplayManager(QObject* parent)
 
 DisplayManager::~DisplayManager() {
     closePresentation();
+    for (auto& slot : d->ledgerSlots) slot.held.release();
+    if (d->ledgerOwner) resource::ResourceLedger::instance().unregisterOwner(d->ledgerOwner);
 }
 
 QList<DisplayInfo> DisplayManager::displays() const {
@@ -482,6 +533,7 @@ quint64 DisplayManager::outputGeneration() const{return d->mode==PresentationMod
 QString DisplayManager::routingStatus() const{return d->routeStatus;}
 
 bool DisplayManager::openPresentation(const QString& displayId, PresentationMode mode) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if(!d->active){d->folderHeld=false;emit currentImageRequested();d->followFolder=d->currentPath.isEmpty()?QString{}:QFileInfo(d->currentPath).absolutePath();}
     if (d->presentationWindow && !d->activeId.isEmpty()) {
         if (d->viewports.size()>=64 && !d->viewports.contains(d->activeId)) d->viewports.erase(d->viewports.begin());
@@ -535,6 +587,7 @@ bool DisplayManager::openPresentation(const QString& displayId, PresentationMode
 }
 
 void DisplayManager::closePresentation() {
+    Private::LedgerSync ledgerSync{*d};   // E1
     d->cadence.stop();
     if(d->pendingValid){d->currentImage=d->pendingImage;d->currentPath=d->pendingPath;d->displayedGeneration=d->pendingGeneration;}
     d->pendingValid=false;d->pendingImage={};d->pendingPath.clear();d->folderHeld=false;d->followFolder.clear();
@@ -586,6 +639,7 @@ void DisplayManager::setPresentationMode(const QString& mode) {
 }
 
 void DisplayManager::setMode(PresentationMode mode) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (d->mode == mode) return;
     d->mode = mode;
     d->folderHeld=false;d->followFolder=d->currentPath.isEmpty()?QString{}:QFileInfo(d->currentPath).absolutePath();
@@ -595,6 +649,7 @@ void DisplayManager::setMode(PresentationMode mode) {
 }
 
 void DisplayManager::updateImage(const QString& path, const QImage& image, quint64 generation) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (d->capturingWithheld) {   // pinCurrentImage() asked for the withheld frame; it is admitted there, not routed
         if (generation >= d->currentGeneration) { d->capturedPath = path; d->capturedImage = image; d->capturedGeneration = generation; }
         return;
@@ -641,6 +696,7 @@ void DisplayManager::updateImage(const QString& path, const QImage& image, quint
 }
 
 void DisplayManager::setRoutingPolicy(const QVariantMap& policy) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     d->preferredId=policy.value("displayId").toString();
     const QVariantMap next{{"followSelection",policy.value("followSelection",true)},
         {"folderChange",policy.value("folderChange","follow")},{"slideshowTiming",policy.value("slideshowTiming","shared")}};
@@ -668,6 +724,7 @@ void DisplayManager::synchronizePresentationScreen(QScreen* screen) {
 }
 
 void DisplayManager::pinCurrentImage() {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (!d->currentWithheld) { pinImage(d->currentPath, d->currentImage, d->displayedGeneration); return; }
     // The pinned output held back the newer main frame. Ask the controller for it without routing it anywhere, then
     // admit it as the new pin in one step (round 3: never drop the old pin first).
@@ -692,6 +749,7 @@ void DisplayManager::pinCurrentImage() {
 }
 
 void DisplayManager::pinImage(const QString& path, const QImage& image, quint64 generation) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (generation < d->pinnedGeneration) return;   // stale pin request
     if (!d->admitPin(path, image, generation, false)) return;   // refused: old pin, mode and reference unchanged
     if (d->mode == PresentationMode::Pinned) d->applyImagesToWindow();
@@ -699,6 +757,7 @@ void DisplayManager::pinImage(const QString& path, const QImage& image, quint64 
     emit pinnedPathChanged(path);
 }
 void DisplayManager::unpin() {
+    Private::LedgerSync ledgerSync{*d};   // E1
     d->pinnedPath.clear();
     d->pinnedImage = QImage();
     d->pinnedGeneration = 0;
@@ -707,6 +766,7 @@ void DisplayManager::unpin() {
 }
 
 void DisplayManager::setComparisonImage(const QString& path, const QImage& image, quint64 generation) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (generation < d->comparisonGenerationHighWater) return;   // stale comparison request
     d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, generation);
     d->comparisonPath = path;
@@ -718,6 +778,7 @@ void DisplayManager::setComparisonImage(const QString& path, const QImage& image
 }
 
 void DisplayManager::compareWithPinnedOrPrevious() {
+    Private::LedgerSync ledgerSync{*d};   // E1
     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
     d->comparisonGenerationHighWater = (std::max)(d->comparisonGenerationHighWater, d->currentGeneration);
     setMode(PresentationMode::Comparison);
@@ -725,6 +786,7 @@ void DisplayManager::compareWithPinnedOrPrevious() {
 }
 
 bool DisplayManager::setReferenceImage(const QString& path, const QImage& image, quint64 generation) {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (image.isNull() || generation < d->referenceGenerationHighWater) return false;   // nothing to pin, or stale
     if (image.cacheKey() == d->referenceImage.cacheKey() && path == d->referencePath) {
         d->referenceGenerationHighWater = generation;
@@ -760,6 +822,7 @@ bool DisplayManager::setReferenceImage(const QString& path, const QImage& image,
 }
 
 void DisplayManager::clearReferenceImage() {
+    Private::LedgerSync ledgerSync{*d};   // E1
     if (d->referenceImage.isNull() && d->referencePath.isEmpty()) return;
     d->referenceImage = QImage(); d->referencePath.clear();
     emit referenceChanged();
@@ -810,9 +873,14 @@ qint64 DisplayManager::outputColorResourceBytes() const {
     return d->presentationWindow?d->presentationWindow->colorResourceBytes():0;
 }
 
-qint64 DisplayManager::retainedImageBytes() const { return d->retainedBytes(); }
+// M1: a read-only view over the ledger's owner bytes (deduplicated by buffer), equal to the local count.
+qint64 DisplayManager::retainedImageBytes() const {
+    if (!d->ledgerOwner) return d->retainedBytes();
+    return resource::ResourceLedger::instance().ownerBytes(d->ledgerOwner, resource::Ledger::CpuPixels) + d->unaccountedBytes;
+}
 
 void DisplayManager::releaseCachedImages() {
+    Private::LedgerSync ledgerSync{*d};   // E1
     d->pendingImage=QImage();d->pendingPath.clear();d->pendingValid=false;d->cadence.stop();
     d->previousImage = QImage(); d->previousPath.clear();
     d->comparisonImage = QImage(); d->comparisonPath.clear(); d->comparisonGeneration = 0;
