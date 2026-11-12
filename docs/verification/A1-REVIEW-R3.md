@@ -47,8 +47,34 @@ python scripts/ci/pr_guard.py --base 20f1210 --head-ref 5018b8fb86979b6003f688b0
 pr_guard: code=True, 0 error(s)
 ```
 
+### Targeted `ctest` on the unmodified head
+
+Clean build from an empty build directory, in a build slot. A colleague's build was also running in another slot.
+
+```text
+1/9 Test  #4: directory_listing ................   Passed   25.89 sec
+2/9 Test  #7: viewer_acceptance ................   Passed   12.64 sec
+3/9 Test #16: directory_model ..................   Passed   28.43 sec
+4/9 Test #20: grid_search ......................   Passed    0.39 sec
+5/9 Test #26: fs_watch_ui ......................   Passed    3.69 sec
+6/9 Test #30: filter ...........................   Passed    3.45 sec
+7/9 Test #48: translation_coverage_ui ..........   Passed   26.32 sec
+8/9 Test #51: perf_enum ........................   Passed   55.01 sec
+9/9 Test #52: perf_enum_ui .....................***Failed   57.77 sec
+89% tests passed, 1 tests failed out of 9
+Total Test time (real) = 214.05 sec
+
+perf-enum-ui-results.txt:
+FAIL!  : PerfEnumUiTests::theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder(every 7th a folder) 'linesOff < 1' returned FALSE. (1 lines from the anchor at the definitive order)
+tests\perf_enum_ui_tests.cpp(407) : failure location
+Totals: 38 passed, 1 failed, 1 skipped, 0 blacklisted, 57637ms
+```
+
+`theViewIsOnTheAnchorBeforeAnyFrameAfterTheDefinitiveOrder` is the committed test for R2-B2, and it failed on the head as committed. The view was exactly one line from the anchor when `arriving` cleared. Reruns are recorded under F1 below.
+
 ## Open findings
 
+0. **F1. The committed R2-B2 test failed on the head: one line off at the definitive order.** See the output above. With every 7th row a folder, the top of the view was a whole line from the anchor at the moment `arriving` cleared, which is before any frame. Folder ticks after `release()` insert rows above the view. My reading, not proven, is that the position read by `rememberViewport` in `onLayoutAboutToBeChanged` can still reflect a folder insert the view has not yet compensated for. That would make it a timing race in the fix, not only in the test. Whatever the cause, a committed test that fails on this machine will turn the gate red. **Reruns:** RERUNS_PENDING
 1. **Filtered definitive order (candidate R2-B2 class).** With a text or kind filter active, `publishRows` publishes through `applyFilter`, which is a model reset. `ui/PhotoGrid.qml:310` restores through `Qt.callLater(panel.restoreViewport, panel.resetViewport)`, so a frame can be drawn first. Scratch test: `zFilteredDefinitiveOrderFirstFrame`.
 2. **`selectedCount` lags while a kept selection arrives.** `publishBatches` emits `selectionChanged` only when the cursor's row moves. Kept selected rows that arrive in other ticks change the count, bytes and summary with no notify. The chip (`PhotoGrid.qml:503`), Clear and Invert, and the footer read through that notify. Actions read live values: `deletionTargets()` and `selectedPaths()`, and the trash confirmation counts its targets. Scratch tests: `zSelectedCountNotifiedAsSelectedRowsArrive` (model) and `zKeptSelectionCountDuringArrival` (UI).
 3. **Footer number format (non-blocking).** The arriving branches format with `toLocaleString` ("1,024 selected of 1,024 so far"). The settled branch does not ("1024 selected"), so the same count changes its format when the listing lands.

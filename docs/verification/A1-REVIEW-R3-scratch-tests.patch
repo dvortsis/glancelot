@@ -1,0 +1,281 @@
+# Reviewer scratch tests for A1 round 3, against 5018b8f. NOT RUN in this round (paused). Apply to tests/perf_enum_tests.cpp and tests/perf_enum_ui_tests.cpp.
+diff --git a/tests/perf_enum_tests.cpp b/tests/perf_enum_tests.cpp
+index c759758..7724522 100644
+--- a/tests/perf_enum_tests.cpp
++++ b/tests/perf_enum_tests.cpp
+@@ -887,6 +887,159 @@ private slots:
+         QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
+         QCOMPARE(model.pathAt(model.cursorRow()), f.path);
+     }
++    // ---- reviewer r3 scratch, not committed ----
++    // Totals against the rows after a sort, a deleted selected file, selections made during arrival, and a kind filter
++    // during arrival. Reads at every signal, loadingChanged and arrivingChanged included.
++    void zSelectionTotalsMoreChanges() {
++        QTemporaryDir dir;
++        FakeFolder plain, fewer, held, held2;
++        const auto names = [](int i) { return i % 10 == 0 ? QString("dir%1").arg(2000 - i, 5, 10, QChar('0')) : QString("f%1.png").arg(2000 - i, 5, 10, QChar('0')); };
++        plain.total = held.total = held2.total = 2000; fewer.total = 1990; plain.name = fewer.name = held.name = held2.name = names;
++        held.heldAfter = held2.heldAfter = 1024;
++        auto source = std::make_shared<std::atomic_int>(0);
++        SeamScope seam(nullptr);
++        directory_scan::testSeam.enumerator = [a = plain.enumerator(), b = fewer.enumerator(), c = held.enumerator(), e = held2.enumerator(), source](
++            const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
++            const int which = source->load();
++            return (which == 0 ? a : which == 1 ? b : which == 2 ? c : e)(d, hidden, cancel, limit, sink);
++        };
++        DirectoryEntryModel model; model.setActive(true);
++        model.setDirectory(dir.path());
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
++        int stale = 0, reads = 0; QStringList staleAt;
++        const auto readNow = [&](const char* signal) { return [&, signal] { ++reads; if (std::make_pair(model.selectedCount(), model.selectedBytes()) != totalsFromRows(model)) { ++stale; staleAt << signal; } }; };
++        connect(&model, &QAbstractItemModel::rowsInserted, this, readNow("rowsInserted"));
++        connect(&model, &QAbstractItemModel::rowsRemoved, this, readNow("rowsRemoved"));
++        connect(&model, &QAbstractItemModel::modelReset, this, readNow("modelReset"));
++        connect(&model, &QAbstractItemModel::layoutChanged, this, readNow("layoutChanged"));
++        connect(&model, &QAbstractItemModel::dataChanged, this, readNow("dataChanged"));
++        connect(&model, &DirectoryEntryModel::countChanged, this, readNow("countChanged"));
++        connect(&model, &DirectoryEntryModel::selectionChanged, this, readNow("selectionChanged"));
++        connect(&model, &DirectoryEntryModel::directoryChanged, this, readNow("directoryChanged"));
++        connect(&model, &DirectoryEntryModel::loadingChanged, this, readNow("loadingChanged"));
++        connect(&model, &DirectoryEntryModel::arrivingChanged, this, readNow("arrivingChanged"));
++        connect(&model, &DirectoryEntryModel::filterChanged, this, readNow("filterChanged"));
++        const auto check = [&](const char* when) {
++            const auto expected = totalsFromRows(model);
++            qInfo() << "TOTALS" << when << model.selectedCount() << model.selectedBytes() << "rows say" << expected.first << expected.second;
++            QVERIFY2(model.selectedCount() == expected.first, when);
++            QVERIFY2(model.selectedBytes() == expected.second, when);
++            QVERIFY2(model.selectedPaths() == pathsFromRows(model), when);
++            QVERIFY2(model.selectedSummary().contains(QString::number(expected.first)) || expected.first == 0, when);
++        };
++        const QString doomed = QDir(dir.path()).filePath("f00005.png");
++        model.select(model.rowOf(doomed)); model.select(100, DirectoryEntryModel::Toggle); model.select(1500, DirectoryEntryModel::Toggle);
++        QCOMPARE(model.selectedCount(), 3);
++        check("three selected");
++        const QString firstBefore = model.pathAt(0);
++        model.setSort("name", true);
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.pathAt(0) != firstBefore, 10000);
++        check("sorted by name, descending");
++        model.setSort("name", false);
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.pathAt(0) == firstBefore, 10000);
++        check("sorted back");
++        source->store(1);
++        model.refresh();
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 1990, 10000);
++        QCOMPARE(model.selectedCount(), 2);
++        check("selected file deleted");
++        model.setActive(false);
++        source->store(2);
++        model.setActive(true);
++        QTRY_VERIFY_WITH_TIMEOUT(model.count() == 1024 && model.arriving(), 10000);
++        check("arriving, kept");
++        model.select(5, DirectoryEntryModel::Toggle);
++        check("toggle during arrival");
++        model.select(40, DirectoryEntryModel::Range);
++        check("range during arrival");
++        model.invertSelection();
++        check("invert during arrival");
++        held.release();
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
++        check("arrived");
++        model.setActive(false);
++        source->store(3);
++        model.setActive(true);
++        QTRY_VERIFY_WITH_TIMEOUT(model.count() == 1024 && model.arriving(), 10000);
++        model.setKindFilter("image");
++        QTRY_VERIFY_WITH_TIMEOUT(model.arriving() && model.count() > 0, 10000);
++        check("kind filter during arrival");
++        model.selectAll();
++        check("select all, filtered, during arrival");
++        held2.release();
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && !model.arriving(), 10000);
++        check("arrived filtered");
++        model.setKindFilter({});
++        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 2000, 10000);
++        check("filter off");
++        qInfo() << "READS" << reads << "STALE" << stale << staleAt;
++        QCOMPARE(stale, 0);
++    }
++    // A rename on disk after the baseline is known: the selection follows the renamed key inside apply(), where
++    // loadingChanged and arrivingChanged come before the final selectionChanged. Read at every signal.
++    void zSelectionTotalsAcrossARename() {
++        QTemporaryDir dir; QVERIFY(generate(dir.path(), 300));
++        directory_scan::testSeam = {};
++        DirectoryEntryModel model; model.setActive(true);
++        model.setDirectory(dir.path());
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 300, 30000);
++        const QString before = dir.filePath("img17.png"), after = dir.filePath("renamed.png");
++        model.select(model.rowOf(before)); model.select(model.rowOf(dir.filePath("img2.png")), DirectoryEntryModel::Toggle);
++        model.select(model.rowOf(dir.filePath("img40.png")), DirectoryEntryModel::Toggle);
++        QCOMPARE(model.selectedCount(), 3);
++        int stale = 0, reads = 0; QStringList staleAt;
++        const auto readNow = [&](const char* signal) { return [&, signal] { ++reads; if (std::make_pair(model.selectedCount(), model.selectedBytes()) != totalsFromRows(model)) { ++stale; staleAt << signal; } }; };
++        connect(&model, &QAbstractItemModel::rowsInserted, this, readNow("rowsInserted"));
++        connect(&model, &QAbstractItemModel::rowsRemoved, this, readNow("rowsRemoved"));
++        connect(&model, &QAbstractItemModel::modelReset, this, readNow("modelReset"));
++        connect(&model, &QAbstractItemModel::layoutChanged, this, readNow("layoutChanged"));
++        connect(&model, &QAbstractItemModel::dataChanged, this, readNow("dataChanged"));
++        connect(&model, &DirectoryEntryModel::countChanged, this, readNow("countChanged"));
++        connect(&model, &DirectoryEntryModel::selectionChanged, this, readNow("selectionChanged"));
++        connect(&model, &DirectoryEntryModel::directoryChanged, this, readNow("directoryChanged"));
++        connect(&model, &DirectoryEntryModel::loadingChanged, this, readNow("loadingChanged"));
++        connect(&model, &DirectoryEntryModel::arrivingChanged, this, readNow("arrivingChanged"));
++        const bool renameKnown = QFileInfo(before).birthTime().isValid();
++        QVERIFY(QFile::rename(before, after));
++        model.refresh();
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.rowOf(after) >= 0, 30000);
++        const auto expected = totalsFromRows(model);
++        qInfo() << "RENAME known" << renameKnown << "selected" << model.selectedCount() << model.selectedBytes() << "rows say" << expected.first << expected.second
++                << "paths" << model.selectedPaths() << "reads" << reads << "stale" << stale << staleAt;
++        QCOMPARE(model.selectedCount(), expected.first);
++        QCOMPARE(model.selectedBytes(), expected.second);
++        QCOMPARE(model.selectedPaths(), pathsFromRows(model));
++        if (renameKnown) QVERIFY(model.selectedPaths().contains(after));
++        QCOMPARE(stale, 0);
++    }
++    // A kept selection whose rows arrive in a tick that does not move the cursor: is selectedCount notified?
++    void zSelectedCountNotifiedAsSelectedRowsArrive() {
++        QTemporaryDir dir;
++        FakeFolder plain, held;
++        plain.total = held.total = 2000; held.heldAfter = 1024;
++        plain.name = held.name = [](int i) { return QString("f%1.png").arg(2000 - i, 5, 10, QChar('0')); };
++        auto hold = std::make_shared<std::atomic_bool>(false);
++        SeamScope seam(nullptr);
++        directory_scan::testSeam.enumerator = [a = plain.enumerator(), b = held.enumerator(), hold](
++            const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
++            return (hold->load() ? b : a)(d, hidden, cancel, limit, sink);
++        };
++        DirectoryEntryModel model; model.setActive(true);
++        model.setDirectory(dir.path());
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
++        model.select(100); model.select(1500, DirectoryEntryModel::Toggle); model.select(1900, DirectoryEntryModel::Toggle);
++        QCOMPARE(model.selectedCount(), 3);
++        model.setActive(false); hold->store(true); model.setActive(true);
++        QTRY_VERIFY_WITH_TIMEOUT(model.count() == 1024 && model.arriving(), 10000);
++        int notified = model.selectedCount(), lagging = 0, worst = 0;
++        connect(&model, &DirectoryEntryModel::selectionChanged, this, [&] { notified = model.selectedCount(); });
++        connect(&model, &DirectoryEntryModel::countChanged, this, [&] { if (model.arriving() && notified != model.selectedCount()) { ++lagging; worst = std::max(worst, model.selectedCount() - notified); } });
++        qInfo() << "LAG before release: notified" << notified << "actual" << model.selectedCount();
++        held.release();
++        QTRY_VERIFY_WITH_TIMEOUT(!model.loading() && model.count() == 2000, 10000);
++        qInfo() << "LAG ticks where the notified count was behind:" << lagging << "worst" << worst << "final notified" << notified << model.selectedCount();
++        QCOMPARE(lagging, 0);
++    }
+     void arrivalsQueueBlocksAtCapacityAndWakesOnStop() {
+         directory_scan::Arrivals queue(100);
+         std::atomic_int pushed{}; std::atomic_bool refused{};
+diff --git a/tests/perf_enum_ui_tests.cpp b/tests/perf_enum_ui_tests.cpp
+index 03c23f9..dcf06db 100644
+--- a/tests/perf_enum_ui_tests.cpp
++++ b/tests/perf_enum_ui_tests.cpp
+@@ -678,6 +678,111 @@ private slots:
+         f.h->fileGrid.setFilter("f02000", true); // i == 1000: already here
+         QTRY_COMPARE_WITH_TIMEOUT(f.countText(), QString("1 match so far"), 10000);
+     }
++    // ---- reviewer r3 scratch, not committed ----
++    // Finding 2: a kept multi-selection whose cursor row arrives first and whose other rows arrive in later file ticks.
++    // Does the chip, the Clear/Invert buttons and the footer show the real count while the listing is held?
++    void zKeptSelectionCountDuringArrival() {
++        Media media{2, QSize(64, 48)};
++        constexpr int kHeld = 2900;
++        const auto names = [](int i) { return i == 2950 ? QString("p1.png") : i == 2960 ? QString("p2.png") : QString("f%1.txt").arg(kRows - i, 5, 10, QChar('0')); };
++        FakeFolder plain; plain.total = kRows; plain.name = names;
++        FakeFolder held; held.total = kRows; held.name = names; held.heldAfter = kHeld;
++        auto useHeld = std::make_shared<std::atomic_bool>(false);
++        SeamScope seam(nullptr, 64);
++        directory_scan::testSeam.enumerator = [a = plain.enumerator(), b = held.enumerator(), useHeld](
++            const std::filesystem::path& d, bool hidden, std::stop_token cancel, std::size_t limit, const directory_scan::Sink& sink) {
++            return (useHeld->load() ? b : a)(d, hidden, cancel, limit, sink);
++        };
++        Harness h; QVERIFY(h.window); h.window->resize(1180, 780);
++        h.viewer.setFilmstripVisible(false);
++        h.viewer.open(media.path(0));
++        h.viewer.trigger("grid");
++        auto* grid = h.window->findChild<QQuickItem*>("photoGrid");
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == kRows && h.viewer.imageReady() && !grid->property("placeCursor").toBool(), 15000);
++        runPlacements();
++        // Arrival positions 2800 and 1500 first, then position 0 last, so the cursor's row is the first to arrive.
++        h.fileGrid.select(h.fileGrid.rowOf(media.dir.filePath("f00200.txt")));
++        h.fileGrid.select(h.fileGrid.rowOf(media.dir.filePath("f01500.txt")), DirectoryEntryModel::Toggle);
++        h.fileGrid.select(h.fileGrid.rowOf(media.dir.filePath("f03000.txt")), DirectoryEntryModel::Toggle);
++        QCOMPARE(h.fileGrid.selectedCount(), 3);
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(!grid->isVisible() && h.fileGrid.count() == 0, 10000);
++        h.viewer.open(media.path(1));
++        QTRY_VERIFY_WITH_TIMEOUT(h.viewer.imageReady(), 15000);
++        int ticks = 0;
++        connect(&h.fileGrid, &DirectoryEntryModel::countChanged, this, [&] { if (h.fileGrid.arriving()) ++ticks; });
++        useHeld->store(true);
++        h.viewer.trigger("grid");
++        QTRY_VERIFY_WITH_TIMEOUT(grid->isVisible() && h.fileGrid.count() == kHeld && h.fileGrid.arriving(), 10000);
++        auto* chip = named(h.window, "gridSelectionCount");
++        auto* clear = named(h.window, "gridClearSelection");
++        QVERIFY(chip && clear);
++        const auto footer = [&] {
++            const auto items = h.window->findChildren<QQuickItem*>();
++            for (auto* item : items) { const QString text = item->property("text").toString(); if (item->isVisible() && text.endsWith("so far") && text.contains(" of ")) return text; }
++            return QString();
++        };
++        // Give the view several event-loop turns to show what it has been told.
++        QTest::qWait(300); // sleep-ok: reviewer probe, a held listing; nothing further arrives
++        const int actual = h.fileGrid.selectedCount();
++        const int told = grid->property("selectedCount").toInt();
++        qInfo() << "KEPT during arrival: ticks" << ticks << "actual" << actual << "QML selectedCount" << told << "chip visible" << chip->isVisible()
++                << "chip text" << chip->property("text").toString() << "clear visible" << clear->isVisible() << "footer" << footer();
++        QVariant targets; QMetaObject::invokeMethod(grid, "deletionTargets", Q_RETURN_ARG(QVariant, targets));
++        qInfo() << "KEPT deletion targets" << targets.toStringList().size();
++        held.release();
++        QTRY_VERIFY_WITH_TIMEOUT(!h.fileGrid.loading() && h.fileGrid.count() == kRows, 10000);
++        QTRY_VERIFY_WITH_TIMEOUT(grid->property("selectedCount").toInt() == 3, 10000);
++        qInfo() << "KEPT settled: QML selectedCount" << grid->property("selectedCount").toInt() << "chip" << chip->isVisible() << chip->property("text").toString();
++        QCOMPARE(told, actual);
++        QCOMPARE(chip->isVisible(), actual > 1);
++    }
++    // R2-B2's check with a filter on: the definitive order then publishes through applyFilter, a model reset.
++    void zFilteredDefinitiveOrderFirstFrame_data() {
++        QTest::addColumn<QString>("filter");
++        QTest::newRow("none") << QString();
++        QTest::newRow("kind image") << QString("kind");
++        QTest::newRow("text f, pinned") << QString("text");
++    }
++    void zFilteredDefinitiveOrderFirstFrame() {
++        QFETCH(QString, filter);
++        ArrivalFixture f; QVERIFY(f.start());
++        if (filter == "kind") f.h->fileGrid.setKindFilter("image");
++        if (filter == "text") f.h->fileGrid.setFilter("f", true);
++        QTRY_VERIFY_WITH_TIMEOUT(f.h->fileGrid.count() > 900 && f.h->fileGrid.arriving(), 10000);
++        runPlacements();
++        QMetaObject::invokeMethod(f.view(), "movementStarted");
++        f.scrollDown(600);
++        QTRY_VERIFY_WITH_TIMEOUT(f.rowAtViewTop() > 0, 10000);
++        const QString anchor = f.h->fileGrid.pathAt(f.rowAtViewTop());
++        const int columns = f.columns();
++        const qreal cell = f.view()->property("cellHeight").toReal();
++        const auto line = [&] { return (f.contentY() - f.view()->property("originY").toReal()) / cell; };
++        qreal linesOff = -1; int rowsMoved = 0;
++        const int rowBefore = f.h->fileGrid.rowOf(anchor);
++        QSignalSpy resets(&f.h->fileGrid, &QAbstractItemModel::modelReset);
++        QSignalSpy layouts(&f.h->fileGrid, &QAbstractItemModel::layoutChanged);
++        connect(&f.h->fileGrid, &DirectoryEntryModel::arrivingChanged, this, [&] {
++            if (f.h->fileGrid.arriving()) return;
++            rowsMoved = std::abs(f.h->fileGrid.rowOf(anchor) - rowBefore);
++            linesOff = std::abs(line() - f.h->fileGrid.rowOf(anchor) / columns);
++        });
++        QList<int> frameDrift;
++        connect(f.h->window, &QQuickWindow::frameSwapped, this, [&] {
++            const int row = f.h->fileGrid.rowOf(anchor), top = f.rowAtViewTop();
++            if (!f.h->fileGrid.arriving() && row >= 0 && top >= 0) frameDrift << std::abs(row / columns - top / columns);
++        }, Qt::DirectConnection);
++        f.folder.release();
++        QTRY_VERIFY_WITH_TIMEOUT(!f.h->fileGrid.loading() && !f.h->fileGrid.arriving(), 10000);
++        runPlacements();
++        const bool anchored = QTest::qWaitFor([&] { return f.anchoredOn(anchor); }, 10000);
++        qInfo() << "FILTERED" << filter << "resets" << resets.count() << "layouts" << layouts.count() << "rowsMoved" << rowsMoved
++                << "linesOff at definitive" << linesOff << "frames after" << frameDrift << "anchored at end" << anchored
++                << "top" << f.rowAtViewTop() << "anchor row" << f.h->fileGrid.rowOf(anchor);
++        QVERIFY2(linesOff < 1, qPrintable(QString("%1 lines from the anchor at the definitive order").arg(linesOff)));
++        for (const int drift : std::as_const(frameDrift)) QCOMPARE(drift, 0);
++        QVERIFY(anchored);
++    }
+ };
+ QTEST_MAIN(PerfEnumUiTests)
+ #include "perf_enum_ui_tests.moc"
