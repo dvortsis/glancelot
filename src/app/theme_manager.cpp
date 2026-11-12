@@ -13,6 +13,9 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QSaveFile>
+// Last: system_contrast.hpp brings in <windows.h> on Windows.
+#include "theme_contrast.hpp"
+#include "system_contrast.hpp"
 
 namespace {
 QString settingsPath() {
@@ -35,15 +38,28 @@ ThemeManager::ThemeManager(QObject* parent):QObject(parent) {
         }
     }
     if(qGuiApp)connect(qGuiApp->styleHints(),&QStyleHints::colorSchemeChanged,this,[this]{if(m_mode=="system")emit changed();});
+    // E6 (F052/F053): follow the operating system's high-contrast setting while the app runs. The watch is a child, so
+    // this class's public interface is unchanged; colors() reports it and dark() follows its polarity.
+    new glancelot::SystemContrastWatch(this,[this]{emit changed();});
 }
 bool ThemeManager::dark() const {
-    return m_mode=="dark" || (m_mode=="system" && (!qGuiApp || qGuiApp->styleHints()->colorScheme()!=Qt::ColorScheme::Light));
+    if(m_mode=="dark")return true;
+    if(m_mode=="light")return false;
+    // A system high-contrast theme states its own polarity on Windows (black or white window background).
+    if(const auto contrast=glancelot::systemContrastOf(this);contrast.high&&contrast.dark)return *contrast.dark;
+    return !qGuiApp || qGuiApp->styleHints()->colorScheme()!=Qt::ColorScheme::Light;
 }
 QVariantMap ThemeManager::preview(const QString& family,bool isDark) const {
-    for(const auto& row:m_families) {const auto value=row.toMap();if(value.value("id").toString()==family)return value.value(isDark?"dark":"light").toMap();}
+    // Catalog roles exactly as supplied, plus the derived controlBorder, familyHover and placeholder (theme_contrast.hpp).
+    for(const auto& row:m_families) {const auto value=row.toMap();if(value.value("id").toString()==family)return glancelot::theme::withDerivedRoles(value.value(isDark?"dark":"light").toMap(),isDark);}
     return {};
 }
-QVariantMap ThemeManager::colors() const {return preview(m_family,dark());}
+QVariantMap ThemeManager::colors() const {
+    auto palette=preview(m_family,dark());
+    // Not a colour: whether the desktop asks for high contrast. Theme.qml combines it with the user's choice.
+    palette.insert(QStringLiteral("systemHighContrast"),glancelot::systemContrastOf(this).high);
+    return palette;
+}
 void ThemeManager::setFamily(const QString& family) {if(family==m_family||preview(family,true).isEmpty())return;m_family=family;save("family");emit changed();}
 void ThemeManager::setMode(const QString& mode) {if(mode==m_mode||(mode!="system"&&mode!="dark"&&mode!="light"))return;m_mode=mode;save("mode");emit changed();}
 void ThemeManager::save(const char* key) {
